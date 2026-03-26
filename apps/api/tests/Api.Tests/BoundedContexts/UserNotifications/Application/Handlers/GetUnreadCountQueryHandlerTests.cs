@@ -1,4 +1,5 @@
-using Api.BoundedContexts.UserNotifications.Application.Handlers;
+using Api.BoundedContexts.UserNotifications.Application.Commands;
+using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.Tests.Constants;
@@ -46,8 +47,8 @@ public class GetUnreadCountQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

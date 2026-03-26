@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -8,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -53,10 +55,10 @@ public class ChangeUserRoleCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(userId.ToString(), result.Id);
-        Assert.Equal(Role.Admin.Value, result.Role);
-        Assert.Equal("user@example.com", result.Email);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(userId.ToString());
+        result.Role.Should().Be(Role.Admin.Value);
+        result.Email.Should().Be("user@example.com");
 
         _userRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
@@ -88,7 +90,7 @@ public class ChangeUserRoleCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(Role.Editor.Value, result.Role);
+        result.Role.Should().Be(Role.Editor.Value);
 
         _userRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
@@ -118,7 +120,7 @@ public class ChangeUserRoleCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(Role.User.Value, result.Role);
+        result.Role.Should().Be(Role.User.Value);
 
         _userRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
@@ -147,7 +149,7 @@ public class ChangeUserRoleCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(Role.User.Value, result.Role);
+        result.Role.Should().Be(Role.User.Value);
 
         _userRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
@@ -168,10 +170,10 @@ public class ChangeUserRoleCommandHandlerTests
             NewRole: Role.Admin.Value);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
-        Assert.Contains($"User {userId} not found", exception.Message);
+        exception.Message.Should().Contain($"User {userId} not found");
 
         // Verify update and save were NOT called
         _userRepositoryMock.Verify(
@@ -204,7 +206,7 @@ public class ChangeUserRoleCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Should still save (idempotent operation)
-        Assert.Equal(Role.Admin.Value, result.Role);
+        result.Role.Should().Be(Role.Admin.Value);
         _userRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -237,11 +239,11 @@ public class ChangeUserRoleCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All user details should be preserved
-        Assert.Equal(userId.ToString(), result.Id);
-        Assert.Equal("test@example.com", result.Email);
-        Assert.Equal("Test User", result.DisplayName);
-        Assert.Equal(Role.Editor.Value, result.Role);
-        Assert.Equal(originalCreatedAt, result.CreatedAt);
+        result.Id.Should().Be(userId.ToString());
+        result.Email.Should().Be("test@example.com");
+        result.DisplayName.Should().Be("Test User");
+        result.Role.Should().Be(Role.Editor.Value);
+        result.CreatedAt.Should().Be(originalCreatedAt);
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
@@ -291,8 +293,8 @@ public class ChangeUserRoleCommandHandlerTests
             NewRole: Role.Admin.Value);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -310,8 +312,8 @@ public class ChangeUserRoleCommandHandlerTests
             NewRole: newRole);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -325,8 +327,8 @@ public class ChangeUserRoleCommandHandlerTests
             NewRole: Role.Admin.Value);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -345,8 +347,8 @@ public class ChangeUserRoleCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<DomainException>();
 
         _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }

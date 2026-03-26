@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities.SessionInvite;
 
@@ -20,17 +21,17 @@ public sealed class SessionInviteTests
     {
         var invite = Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, UserId, 10);
 
-        Assert.NotEqual(Guid.Empty, invite.Id);
-        Assert.Equal(SessionId, invite.SessionId);
-        Assert.Equal(UserId, invite.CreatedByUserId);
-        Assert.NotNull(invite.Pin);
-        Assert.Equal(6, invite.Pin.Length);
-        Assert.NotNull(invite.LinkToken);
-        Assert.Equal(32, invite.LinkToken.Length); // Guid without hyphens
-        Assert.Equal(10, invite.MaxUses);
-        Assert.Equal(0, invite.CurrentUses);
-        Assert.False(invite.IsRevoked);
-        Assert.True(invite.IsUsable);
+        invite.Id.Should().NotBe(Guid.Empty);
+        invite.SessionId.Should().Be(SessionId);
+        invite.CreatedByUserId.Should().Be(UserId);
+        invite.Pin.Should().NotBeNull();
+        invite.Pin.Length.Should().Be(6);
+        invite.LinkToken.Should().NotBeNull();
+        invite.LinkToken.Length.Should().Be(32); // Guid without hyphens
+        invite.MaxUses.Should().Be(10);
+        invite.CurrentUses.Should().Be(0);
+        (invite.IsRevoked).Should().BeFalse();
+        (invite.IsUsable).Should().BeTrue();
     }
 
     [Fact]
@@ -40,38 +41,42 @@ public sealed class SessionInviteTests
         var invite = Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, UserId, 5, expiryMinutes: 60);
         var after = DateTime.UtcNow;
 
-        Assert.True(invite.ExpiresAt >= before.AddMinutes(60));
-        Assert.True(invite.ExpiresAt <= after.AddMinutes(60).AddSeconds(1));
-        Assert.True(invite.CreatedAt >= before);
-        Assert.True(invite.CreatedAt <= after);
+        (invite.ExpiresAt >= before.AddMinutes(60)).Should().BeTrue();
+        (invite.ExpiresAt <= after.AddMinutes(60).AddSeconds(1)).Should().BeTrue();
+        (invite.CreatedAt >= before).Should().BeTrue();
+        (invite.CreatedAt <= after).Should().BeTrue();
     }
 
     [Fact]
     public void Create_WithInvalidSessionId_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(Guid.Empty, UserId, 10));
+        var act = () =>
+            Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(Guid.Empty, UserId, 10);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithInvalidUserId_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, Guid.Empty, 10));
+        var act = () =>
+            Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, Guid.Empty, 10);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithZeroMaxUses_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, UserId, 0));
+        var act = () =>
+            Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, UserId, 0);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithZeroExpiry_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, UserId, 10, expiryMinutes: 0));
+        var act = () =>
+            Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, UserId, 10, expiryMinutes: 0);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -80,10 +85,10 @@ public sealed class SessionInviteTests
         var invite = Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, UserId, 5);
 
         invite.RecordUse();
-        Assert.Equal(1, invite.CurrentUses);
+        invite.CurrentUses.Should().Be(1);
 
         invite.RecordUse();
-        Assert.Equal(2, invite.CurrentUses);
+        invite.CurrentUses.Should().Be(2);
     }
 
     [Fact]
@@ -92,19 +97,20 @@ public sealed class SessionInviteTests
         var invite = Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, UserId, 1);
         invite.RecordUse(); // Uses up the single use
 
-        Assert.Throws<InvalidOperationException>(() => invite.RecordUse());
+        var act = () => invite.RecordUse();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
     public void IsUsable_WhenRevoked_ReturnsFalse()
     {
         var invite = Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, UserId, 10);
-        Assert.True(invite.IsUsable);
+        (invite.IsUsable).Should().BeTrue();
 
         invite.Revoke();
 
-        Assert.True(invite.IsRevoked);
-        Assert.False(invite.IsUsable);
+        (invite.IsRevoked).Should().BeTrue();
+        (invite.IsUsable).Should().BeFalse();
     }
 
     [Fact]
@@ -113,7 +119,8 @@ public sealed class SessionInviteTests
         var invite = Api.BoundedContexts.GameManagement.Domain.Entities.SessionInvite.Create(SessionId, UserId, 10);
         invite.Revoke();
 
-        Assert.Throws<InvalidOperationException>(() => invite.RecordUse());
+        var act = () => invite.RecordUse();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -124,7 +131,7 @@ public sealed class SessionInviteTests
 
         foreach (var c in invite.Pin)
         {
-            Assert.Contains(c, allowedChars);
+            allowedChars.Should().Contain(c.ToString());
         }
     }
 }

@@ -192,13 +192,13 @@ public sealed class NotificationTests
     }
 
     [Fact]
-    public void MarkAsRead_WhenAlreadyRead_IsIdempotent()
+    public async Task MarkAsRead_WhenAlreadyRead_IsIdempotent()
     {
         // Arrange
         var notification = CreateTestNotification();
         notification.MarkAsRead();
         var firstReadAt = notification.ReadAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         notification.MarkAsRead();
@@ -209,13 +209,13 @@ public sealed class NotificationTests
     }
 
     [Fact]
-    public void MarkAsRead_CalledMultipleTimes_PreservesOriginalReadTimestamp()
+    public async Task MarkAsRead_CalledMultipleTimes_PreservesOriginalReadTimestamp()
     {
         // Arrange
         var notification = CreateTestNotification();
         notification.MarkAsRead();
         var originalReadAt = notification.ReadAt!.Value;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         notification.MarkAsRead();
@@ -430,7 +430,7 @@ public sealed class NotificationTests
     #region Read/Unread Workflow Tests
 
     [Fact]
-    public void Notification_FullReadUnreadCycle_WorksCorrectly()
+    public async Task Notification_FullReadUnreadCycle_WorksCorrectly()
     {
         // Arrange
         var notification = CreateTestNotification();
@@ -451,7 +451,7 @@ public sealed class NotificationTests
         notification.ReadAt.Should().BeNull();
 
         // Mark as read again
-        Thread.Sleep(10);
+        await Task.Delay(50);
         notification.MarkAsRead();
         notification.IsRead.Should().BeTrue();
         notification.ReadAt.Should().NotBeNull();

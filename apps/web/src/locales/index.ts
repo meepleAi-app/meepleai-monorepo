@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe typed Record access with Locale keys and message paths */
 /**
  * i18n Locales Configuration
  *

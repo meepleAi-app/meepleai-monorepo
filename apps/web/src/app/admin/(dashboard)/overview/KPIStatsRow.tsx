@@ -11,11 +11,14 @@ import { KPICard } from '@/components/admin/KPICard';
 export interface KPIStatsRowProps {
   totalGames: number;
   totalUsers: number;
+  activeUsers?: number;
   pendingApprovals: number;
   /** Backend gap — wire when available */
   totalDocuments?: number;
   /** Backend gap — wire when available */
   queueDepth?: number;
+  /** Recently submitted games (last 7 days) */
+  recentSubmissions?: number;
 }
 
 // ============================================================================
@@ -25,15 +28,22 @@ export interface KPIStatsRowProps {
 export function KPIStatsRow({
   totalGames,
   totalUsers,
+  activeUsers,
   pendingApprovals,
   totalDocuments,
   queueDepth,
+  recentSubmissions,
 }: KPIStatsRowProps) {
   const showDocuments = totalDocuments !== undefined;
   const showPending = pendingApprovals > 0;
 
+  // Compute active-user ratio as a proxy trend indicator
+  const activeRatio =
+    activeUsers !== undefined && totalUsers > 0
+      ? Math.round((activeUsers / totalUsers) * 100)
+      : undefined;
+
   // Compute the number of visible cards to set responsive grid cols
-  // Tailwind requires complete class names (no interpolation) for static analysis
   const cardCount = 2 + (showDocuments ? 1 : 0) + (showPending ? 1 : 0);
   const gridColsClass: Record<number, string> = {
     2: 'lg:grid-cols-2',
@@ -52,6 +62,12 @@ export function KPIStatsRow({
         value={totalGames}
         icon={<Gamepad2 className="h-5 w-5" />}
         subtitle="nel catalogo condiviso"
+        badge={
+          recentSubmissions !== undefined && recentSubmissions > 0
+            ? `+${recentSubmissions} recenti`
+            : undefined
+        }
+        badgeVariant="success"
         data-testid="kpi-games"
       />
 
@@ -74,6 +90,10 @@ export function KPIStatsRow({
         value={totalUsers}
         icon={<Users className="h-5 w-5" />}
         subtitle="registrati"
+        badge={activeUsers !== undefined && activeUsers > 0 ? `${activeUsers} attivi` : undefined}
+        badgeVariant="success"
+        trend={activeRatio}
+        trendLabel="tasso attività"
         data-testid="kpi-users"
       />
 

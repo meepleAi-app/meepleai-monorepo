@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
-using Api.BoundedContexts.SessionTracking.Application.Handlers;
+using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -9,6 +10,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Handlers;
 
@@ -73,8 +75,8 @@ public class SendSessionChatMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.MessageId);
-        Assert.Equal(1, result.SequenceNumber);
+        result.MessageId.Should().NotBe(Guid.Empty);
+        result.SequenceNumber.Should().Be(1);
         _mockChatRepo.Verify(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockChatRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockMediator.Verify(m => m.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -89,8 +91,8 @@ public class SendSessionChatMessageCommandHandlerTests
 
         var command = new SendSessionChatMessageCommand(sessionId, Guid.NewGuid(), "msg", null, null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _mockChatRepo.Verify(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -108,8 +110,8 @@ public class SendSessionChatMessageCommandHandlerTests
 
         var command = new SendSessionChatMessageCommand(sessionId, senderId, "msg", null, null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<NotFoundException>();
     }
 }
 
@@ -140,8 +142,8 @@ public class SendSystemEventCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.MessageId);
-        Assert.Equal(5, result.SequenceNumber);
+        result.MessageId.Should().NotBe(Guid.Empty);
+        result.SequenceNumber.Should().Be(5);
         _mockChatRepo.Verify(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockChatRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -233,10 +235,10 @@ public class AskSessionAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.MessageId);
-        Assert.Equal(0.85f, result.Confidence); // LLM success returns 0.85 confidence
-        Assert.Equal("tutor", result.AgentType);
-        Assert.True(saveCalledAfterFirstAdd, "SaveChangesAsync should be called after the first AddAsync (user message) to prevent sequence number race condition");
+        result.MessageId.Should().NotBe(Guid.Empty);
+        result.Confidence.Should().Be(0.85f); // LLM success returns 0.85 confidence
+        result.AgentType.Should().Be("tutor");
+        saveCalledAfterFirstAdd.Should().BeTrue("SaveChangesAsync should be called after the first AddAsync (user message) to prevent sequence number race condition");
         _mockChatRepo.Verify(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         _mockChatRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
@@ -250,8 +252,8 @@ public class AskSessionAgentCommandHandlerTests
 
         var command = new AskSessionAgentCommand(sessionId, Guid.NewGuid(), "Question", 1);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act3 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act3.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -266,8 +268,8 @@ public class AskSessionAgentCommandHandlerTests
 
         var command = new AskSessionAgentCommand(sessionId, Guid.NewGuid(), "Question", 1);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act4 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act4.Should().ThrowAsync<NotFoundException>();
     }
 }
 
@@ -300,7 +302,7 @@ public class DeleteChatMessageCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(message.IsDeleted);
+        message.IsDeleted.Should().BeTrue();
         _mockChatRepo.Verify(r => r.UpdateAsync(message, It.IsAny<CancellationToken>()), Times.Once);
         _mockChatRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -314,8 +316,8 @@ public class DeleteChatMessageCommandHandlerTests
 
         var command = new DeleteChatMessageCommand(messageId, Guid.NewGuid());
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act5 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act5.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -329,8 +331,8 @@ public class DeleteChatMessageCommandHandlerTests
 
         var command = new DeleteChatMessageCommand(message.Id, Guid.NewGuid());
 
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act6 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act6.Should().ThrowAsync<ForbiddenException>();
 
         _mockChatRepo.Verify(r => r.UpdateAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -348,8 +350,8 @@ public class DeleteChatMessageCommandHandlerTests
 
         // SenderId is null for system events, so ForbiddenException won't fire (null != requesterId is false with HasValue check)
         // Instead, it reaches the MessageType check
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act7 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act7.Should().ThrowAsync<InvalidOperationException>();
     }
 }
 
@@ -384,9 +386,9 @@ public class MediaQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal("a.jpg", result[0].FileName);
-        Assert.Equal("b.png", result[1].FileName);
+        result.Count.Should().Be(2);
+        result[0].FileName.Should().Be("a.jpg");
+        result[1].FileName.Should().Be("b.png");
     }
 
     [Fact]
@@ -408,8 +410,8 @@ public class MediaQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal(snapshotId, result[0].SnapshotId);
+        result.Should().ContainSingle();
+        result[0].SnapshotId.Should().Be(snapshotId);
     }
 }
 
@@ -444,9 +446,9 @@ public class ChatQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Messages.Count);
-        Assert.Equal(2, result.TotalCount);
-        Assert.Equal("Text", result.Messages[0].MessageType);
-        Assert.Equal("SystemEvent", result.Messages[1].MessageType);
+        result.Messages.Count.Should().Be(2);
+        result.TotalCount.Should().Be(2);
+        result.Messages[0].MessageType.Should().Be("Text");
+        result.Messages[1].MessageType.Should().Be("SystemEvent");
     }
 }

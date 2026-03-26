@@ -195,11 +195,11 @@ describe('TagStrip Integration with MeepleCard', () => {
     expect(handleCardClick).toHaveBeenCalled();
   });
 
-  it('renders correctly in all 5 MeepleCard variants', () => {
-    const variants: Array<'grid' | 'list' | 'compact' | 'featured' | 'hero'> = [
+  it('renders correctly in all supported MeepleCard variants', () => {
+    // compact variant does not render a tag strip by design
+    const variants: Array<'grid' | 'list' | 'featured' | 'hero'> = [
       'grid',
       'list',
-      'compact',
       'featured',
       'hero',
     ];

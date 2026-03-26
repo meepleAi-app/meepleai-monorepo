@@ -12,11 +12,12 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  actions: read
 
 jobs:
   auto-merge:
     name: Auto-merge Dependabot PRs
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     # Only run for Dependabot PRs with automerge label
     if: |
       github.actor == 'dependabot[bot]' &&

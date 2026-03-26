@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -50,25 +51,11 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         _databaseName = $"test_playrecord_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>();
         services.AddScoped<IGameRepository, GameRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
         services.AddSingleton<TimeProvider>(_timeProvider);
-
-        // Register domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
-
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -98,22 +85,22 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     {
         // Arrange
         var game = await CreateTestGameAsync();
-        var userId = Guid.NewGuid();
+        var userId = await SeedTestUserAsync();
         var command = new CreatePlayRecordCommand(
             userId,
             game.Id,
             game.Title.Value,
-            DateTime.UtcNow.AddDays(-1),
+            _timeProvider.UtcNow.AddDays(-1),
             PlayRecordVisibility.Private);
 
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
-
         // Act
-        var recordId = await mediator.Send(command, TestCancellationToken);
+        var recordId = await SendInScopeAsync(command);
 
         // Assert
         recordId.Should().NotBeEmpty();
-        var record = await DbContext.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var record = await db.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
         record.Should().NotBeNull();
         record!.GameId.Should().Be(game.Id);
         record.GameName.Should().Be(game.Title.Value);
@@ -124,7 +111,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task CreatePlayRecordCommand_FreeForm_CreatesSuccessfully()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        var userId = await SeedTestUserAsync();
         var scoringDimensions = new List<string> { "points", "ranking" };
         var dimensionUnits = new Dictionary<string, string>
         {
@@ -136,19 +123,19 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
             userId,
             null,
             "Poker",
-            DateTime.UtcNow.AddHours(-2),
+            _timeProvider.UtcNow.AddHours(-2),
             PlayRecordVisibility.Private,
             ScoringDimensions: scoringDimensions,
             DimensionUnits: dimensionUnits);
 
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
-
         // Act
-        var recordId = await mediator.Send(command, TestCancellationToken);
+        var recordId = await SendInScopeAsync(command);
 
         // Assert
         recordId.Should().NotBeEmpty();
-        var record = await DbContext.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var record = await db.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
         record.Should().NotBeNull();
         record!.GameId.Should().BeNull();
         record.GameName.Should().Be("Poker");
@@ -162,14 +149,12 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
             Guid.NewGuid(),
             Guid.NewGuid(),
             "NonExistent",
-            DateTime.UtcNow,
+            _timeProvider.UtcNow,
             PlayRecordVisibility.Private);
 
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
-
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            mediator.Send(command, TestCancellationToken));
+        var act = () => SendInScopeAsync(command);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     #endregion
@@ -181,15 +166,16 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     {
         // Arrange
         var recordId = await CreateTestRecordAsync();
-        var userId = Guid.NewGuid();
+        var userId = await SeedTestUserAsync(); // FK constraint: record_players.UserId references users
         var command = new AddPlayerToRecordCommand(recordId, userId, "Alice");
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
 
         // Act
-        await mediator.Send(command, TestCancellationToken);
+        await SendInScopeAsync(command);
 
         // Assert
-        var players = await DbContext.RecordPlayers
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var players = await db.RecordPlayers
             .Where(p => p.PlayRecordId == recordId)
             .ToListAsync(TestCancellationToken);
 
@@ -204,13 +190,14 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         // Arrange
         var recordId = await CreateTestRecordAsync();
         var command = new AddPlayerToRecordCommand(recordId, null, "Bob");
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
 
         // Act
-        await mediator.Send(command, TestCancellationToken);
+        await SendInScopeAsync(command);
 
         // Assert
-        var players = await DbContext.RecordPlayers
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var players = await db.RecordPlayers
             .Where(p => p.PlayRecordId == recordId)
             .ToListAsync(TestCancellationToken);
 
@@ -231,13 +218,14 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         var playerId = await AddTestPlayerAsync(recordId);
 
         var command = new RecordScoreCommand(recordId, playerId, "points", 42, "pts");
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
 
         // Act
-        await mediator.Send(command, TestCancellationToken);
+        await SendInScopeAsync(command);
 
         // Assert
-        var scores = await DbContext.RecordScores
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var scores = await db.RecordScores
             .Where(s => s.RecordPlayerId == playerId)
             .ToListAsync(TestCancellationToken);
 
@@ -256,13 +244,14 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         // Arrange
         var recordId = await CreateTestRecordAsync();
         var command = new StartPlayRecordCommand(recordId);
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
 
         // Act
-        await mediator.Send(command, TestCancellationToken);
+        await SendInScopeAsync(command);
 
         // Assert
-        var record = await DbContext.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var record = await db.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
         record.Should().NotBeNull();
         record!.Status.Should().Be((int)PlayRecordStatus.InProgress);
         record.StartTime.Should().NotBeNull();
@@ -274,13 +263,12 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         // Arrange
         var recordId = await CreateTestRecordAsync();
         var startCommand = new StartPlayRecordCommand(recordId);
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
 
-        await mediator.Send(startCommand, TestCancellationToken);
+        await SendInScopeAsync(startCommand);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            mediator.Send(startCommand, TestCancellationToken));
+        var act = () => SendInScopeAsync(startCommand);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     #endregion
@@ -294,13 +282,14 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         var recordId = await CreateTestRecordAsync();
         var duration = TimeSpan.FromHours(2);
         var command = new CompletePlayRecordCommand(recordId, duration);
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
 
         // Act
-        await mediator.Send(command, TestCancellationToken);
+        await SendInScopeAsync(command);
 
         // Assert
-        var record = await DbContext.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var record = await db.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
         record.Should().NotBeNull();
         record!.Status.Should().Be((int)PlayRecordStatus.Completed);
         record.Duration.Should().Be(duration);
@@ -315,20 +304,20 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     {
         // Arrange
         var recordId = await CreateTestRecordAsync();
-        var newDate = DateTime.UtcNow.AddDays(-2);
+        var newDate = _timeProvider.UtcNow.AddDays(-2);
         var command = new UpdatePlayRecordCommand(
             recordId,
             SessionDate: newDate,
             Notes: "Great game!",
             Location: "Home");
 
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
-
         // Act
-        await mediator.Send(command, TestCancellationToken);
+        await SendInScopeAsync(command);
 
         // Assert
-        var record = await DbContext.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var record = await db.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
         record.Should().NotBeNull();
         record!.SessionDate.Should().BeCloseTo(newDate, TimeSpan.FromSeconds(1));
         record.Notes.Should().Be("Great game!");
@@ -355,29 +344,68 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         return game;
     }
 
+    /// <summary>
+    /// Seeds a UserEntity in the database to satisfy FK constraints on play_records.CreatedByUserId.
+    /// </summary>
+    private async Task<Guid> SeedTestUserAsync(Guid? userId = null)
+    {
+        var id = userId ?? Guid.NewGuid();
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        db.Set<UserEntity>().Add(new UserEntity
+        {
+            Id = id,
+            Email = $"test-{id:N}@meepleai.dev",
+            DisplayName = "Test User",
+            Role = "user",
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync(TestCancellationToken);
+        return id;
+    }
+
+    /// <summary>
+    /// Sends a MediatR command using a fresh DI scope to avoid DbContext tracking conflicts
+    /// when multiple commands operate on the same entities.
+    /// </summary>
+    private async Task<TResult> SendInScopeAsync<TResult>(IRequest<TResult> command)
+    {
+        using var scope = ServiceProvider.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        return await mediator.Send(command, TestCancellationToken);
+    }
+
+    private async Task SendInScopeAsync(IRequest command)
+    {
+        using var scope = ServiceProvider.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        await mediator.Send(command, TestCancellationToken);
+    }
+
     private async Task<Guid> CreateTestRecordAsync()
     {
         var game = await CreateTestGameAsync();
-        var userId = Guid.NewGuid();
+        var userId = await SeedTestUserAsync();
 
         var command = new CreatePlayRecordCommand(
             userId,
             game.Id,
             game.Title.Value,
-            DateTime.UtcNow.AddHours(-1),
+            _timeProvider.UtcNow.AddHours(-1),
             PlayRecordVisibility.Private);
 
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
-        return await mediator.Send(command, TestCancellationToken);
+        return await SendInScopeAsync(command);
     }
 
     private async Task<Guid> AddTestPlayerAsync(Guid recordId)
     {
-        var command = new AddPlayerToRecordCommand(recordId, Guid.NewGuid(), "TestPlayer");
-        var mediator = ServiceProvider.GetRequiredService<IMediator>();
-        await mediator.Send(command, TestCancellationToken);
+        var playerUserId = await SeedTestUserAsync(); // FK constraint: record_players.UserId references users
+        var command = new AddPlayerToRecordCommand(recordId, playerUserId, "TestPlayer");
+        await SendInScopeAsync(command);
 
-        var player = await DbContext.RecordPlayers
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var player = await db.RecordPlayers
             .Where(p => p.PlayRecordId == recordId)
             .FirstAsync(TestCancellationToken);
 

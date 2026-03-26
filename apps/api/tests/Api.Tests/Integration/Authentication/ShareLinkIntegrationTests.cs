@@ -15,6 +15,7 @@ using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Integration.Authentication;
 
@@ -62,7 +63,7 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
             _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
             // Build service provider with all required dependencies
-            var services = new ServiceCollection();
+            var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
             // Configuration
             var configuration = new ConfigurationBuilder()
@@ -74,12 +75,6 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
                 .Build();
             services.AddSingleton<IConfiguration>(configuration);
 
-            // DbContext with EF Core
-            services.AddDbContext<MeepleAiDbContext>(options =>
-                options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()) // Issue #3547
-                    .ConfigureWarnings(warnings =>
-                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
             // Redis distributed cache
             services.AddStackExchangeRedisCache(options =>
             {
@@ -89,12 +84,6 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
 
             // Repositories
             services.AddScoped<IShareLinkRepository, ShareLinkRepository>();
-
-            // MediatR for handlers
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateShareLinkCommandHandler).Assembly));
-
-            services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector,
-                Api.SharedKernel.Application.Services.DomainEventCollector>();
 
             _serviceProvider = services.BuildServiceProvider();
 
@@ -164,20 +153,20 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEqual(Guid.Empty, result.ShareLinkId);
-        Assert.NotEmpty(result.Token);
-        Assert.StartsWith(TestBaseUrl, result.ShareableUrl);
+        result.Should().NotBeNull();
+        result.ShareLinkId.Should().NotBe(Guid.Empty);
+        result.Token.Should().NotBeEmpty();
+        result.ShareableUrl.Should().StartWith(TestBaseUrl);
 
         // Verify persistence
         var repository = _serviceProvider!.GetRequiredService<IShareLinkRepository>();
         var persistedLink = await repository.GetByIdAsync(result.ShareLinkId, TestCancellationToken);
 
-        Assert.NotNull(persistedLink);
-        Assert.Equal(threadId, persistedLink.ThreadId);
-        Assert.Equal(userId, persistedLink.CreatorId);
-        Assert.Equal(ShareLinkRole.View, persistedLink.Role);
-        Assert.Equal("Integration test link", persistedLink.Label);
+        persistedLink.Should().NotBeNull();
+        persistedLink.ThreadId.Should().Be(threadId);
+        persistedLink.CreatorId.Should().Be(userId);
+        persistedLink.Role.Should().Be(ShareLinkRole.View);
+        persistedLink.Label.Should().Be("Integration test link");
     }
 
     [Fact]
@@ -210,8 +199,8 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         var repository = _serviceProvider!.GetRequiredService<IShareLinkRepository>();
         var persistedLink = await repository.GetByIdAsync(result.ShareLinkId, TestCancellationToken);
 
-        Assert.NotNull(persistedLink);
-        Assert.Equal(ShareLinkRole.Comment, persistedLink.Role);
+        persistedLink.Should().NotBeNull();
+        persistedLink.Role.Should().Be(ShareLinkRole.Comment);
     }
 
     [Fact]
@@ -240,9 +229,8 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => mediator.Send(command, TestCancellationToken)
-        );
+        var act = () => mediator.Send(command, TestCancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     #endregion
@@ -280,11 +268,11 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         var validateResult = await mediator.Send(validateQuery, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(validateResult);
-        Assert.True(validateResult.IsValid);
-        Assert.Equal(createResult.ShareLinkId, validateResult.ShareLinkId);
-        Assert.Equal(threadId, validateResult.ThreadId);
-        Assert.Equal(ShareLinkRole.View, validateResult.Role);
+        validateResult.Should().NotBeNull();
+        validateResult.IsValid.Should().BeTrue();
+        validateResult.ShareLinkId.Should().Be(createResult.ShareLinkId);
+        validateResult.ThreadId.Should().Be(threadId);
+        validateResult.Role.Should().Be(ShareLinkRole.View);
     }
 
     [Fact]
@@ -300,7 +288,7 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         var validateResult = await mediator.Send(validateQuery, TestCancellationToken);
 
         // Assert
-        Assert.Null(validateResult);
+        validateResult.Should().BeNull();
     }
 
     [Fact]
@@ -318,11 +306,11 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
 
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
 
-        // Create share link with very short expiration (200ms)
+        // Create share link with very short expiration (2 seconds)
         var createCommand = new CreateShareLinkCommand(
             ThreadId: threadId,
             Role: ShareLinkRole.View,
-            ExpiresAt: DateTime.UtcNow.AddMilliseconds(200),
+            ExpiresAt: DateTime.UtcNow.AddSeconds(2),
             Label: "Expiration test link",
             UserId: userId
         );
@@ -332,18 +320,18 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         // Verify token is valid initially
         var validateQuery1 = new ValidateShareLinkQuery(createResult.Token);
         var validateResult1 = await mediator.Send(validateQuery1, TestCancellationToken);
-        Assert.NotNull(validateResult1);
-        Assert.True(validateResult1.IsValid, "Token should be valid immediately after creation");
+        validateResult1.Should().NotBeNull();
+        validateResult1.IsValid.Should().BeTrue("Token should be valid immediately after creation");
 
         // Wait for token to expire
-        await Task.Delay(300, TestCancellationToken);
+        await Task.Delay(2500, TestCancellationToken);
 
         // Act - validate the expired token
         var validateQuery2 = new ValidateShareLinkQuery(createResult.Token);
         var validateResult2 = await mediator.Send(validateQuery2, TestCancellationToken);
 
         // Assert - token should be invalid due to expiration (returns null for invalid JWT)
-        Assert.Null(validateResult2);
+        validateResult2.Should().BeNull();
     }
 
     #endregion
@@ -379,8 +367,8 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         // Verify token is valid before revocation
         var validateQuery1 = new ValidateShareLinkQuery(createResult.Token);
         var validateResult1 = await mediator.Send(validateQuery1, TestCancellationToken);
-        Assert.NotNull(validateResult1);
-        Assert.True(validateResult1.IsValid);
+        validateResult1.Should().NotBeNull();
+        validateResult1.IsValid.Should().BeTrue();
 
         // Act - revoke the share link
         var revokeCommand = new RevokeShareLinkCommand(
@@ -391,14 +379,14 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         var revokeResult = await mediator.Send(revokeCommand, TestCancellationToken);
 
         // Assert
-        Assert.True(revokeResult);
+        revokeResult.Should().BeTrue();
 
         // Verify token is now invalid (blacklisted)
         var validateQuery2 = new ValidateShareLinkQuery(createResult.Token);
         var validateResult2 = await mediator.Send(validateQuery2, TestCancellationToken);
 
-        Assert.NotNull(validateResult2);
-        Assert.False(validateResult2.IsValid);
+        validateResult2.Should().NotBeNull();
+        validateResult2.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -438,14 +426,14 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         var revokeResult = await mediator.Send(revokeCommand, TestCancellationToken);
 
         // Assert
-        Assert.False(revokeResult);
+        revokeResult.Should().BeFalse();
 
         // Verify token is still valid
         var validateQuery = new ValidateShareLinkQuery(createResult.Token);
         var validateResult = await mediator.Send(validateQuery, TestCancellationToken);
 
-        Assert.NotNull(validateResult);
-        Assert.True(validateResult.IsValid);
+        validateResult.Should().NotBeNull();
+        validateResult.IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -468,7 +456,7 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         var revokeResult = await mediator.Send(revokeCommand, TestCancellationToken);
 
         // Assert
-        Assert.False(revokeResult);
+        revokeResult.Should().BeFalse();
     }
 
     #endregion
@@ -500,17 +488,17 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         );
 
         var createResult = await mediator.Send(createCommand, TestCancellationToken);
-        Assert.NotNull(createResult);
-        Assert.NotEmpty(createResult.Token);
+        createResult.Should().NotBeNull();
+        createResult.Token.Should().NotBeEmpty();
 
         // Step 2: Validate - should be valid
         var validateQuery1 = new ValidateShareLinkQuery(createResult.Token);
         var validateResult1 = await mediator.Send(validateQuery1, TestCancellationToken);
 
-        Assert.NotNull(validateResult1);
-        Assert.True(validateResult1.IsValid);
-        Assert.Equal(ShareLinkRole.Comment, validateResult1.Role);
-        Assert.Equal(userId, validateResult1.CreatorId);
+        validateResult1.Should().NotBeNull();
+        validateResult1.IsValid.Should().BeTrue();
+        validateResult1.Role.Should().Be(ShareLinkRole.Comment);
+        validateResult1.CreatorId.Should().Be(userId);
 
         // Step 3: Revoke
         var revokeCommand = new RevokeShareLinkCommand(
@@ -519,14 +507,14 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         );
 
         var revokeResult = await mediator.Send(revokeCommand, TestCancellationToken);
-        Assert.True(revokeResult);
+        revokeResult.Should().BeTrue();
 
         // Step 4: Validate again - should be invalid (blacklisted)
         var validateQuery2 = new ValidateShareLinkQuery(createResult.Token);
         var validateResult2 = await mediator.Send(validateQuery2, TestCancellationToken);
 
-        Assert.NotNull(validateResult2);
-        Assert.False(validateResult2.IsValid);
+        validateResult2.Should().NotBeNull();
+        validateResult2.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -568,10 +556,10 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         var validate1Before = await mediator.Send(new ValidateShareLinkQuery(result1.Token), TestCancellationToken);
         var validate2Before = await mediator.Send(new ValidateShareLinkQuery(result2.Token), TestCancellationToken);
 
-        Assert.NotNull(validate1Before);
-        Assert.True(validate1Before.IsValid);
-        Assert.NotNull(validate2Before);
-        Assert.True(validate2Before.IsValid);
+        validate1Before.Should().NotBeNull();
+        validate1Before.IsValid.Should().BeTrue();
+        validate2Before.Should().NotBeNull();
+        validate2Before.IsValid.Should().BeTrue();
 
         // Act - revoke only the first link
         var revokeCommand = new RevokeShareLinkCommand(
@@ -585,11 +573,11 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         var validate1After = await mediator.Send(new ValidateShareLinkQuery(result1.Token), TestCancellationToken);
         var validate2After = await mediator.Send(new ValidateShareLinkQuery(result2.Token), TestCancellationToken);
 
-        Assert.NotNull(validate1After);
-        Assert.False(validate1After.IsValid); // Revoked
+        validate1After.Should().NotBeNull();
+        validate1After.IsValid.Should().BeFalse(); // Revoked
 
-        Assert.NotNull(validate2After);
-        Assert.True(validate2After.IsValid); // Still valid
+        validate2After.Should().NotBeNull();
+        validate2After.IsValid.Should().BeTrue(); // Still valid
     }
 
     #endregion

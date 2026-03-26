@@ -8,11 +8,17 @@
 'use client';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Separator } from '@/components/ui/navigation/separator';
 import type { GameState } from '@/types/game-state';
 
-import { PlayerStateCard } from './PlayerStateCard';
+import { MeeplePlayerStateCard } from './MeeplePlayerStateCard';
 
 interface GameStateViewerProps {
   state: GameState;
@@ -106,7 +112,7 @@ export function GameStateViewer({ state, currentPlayerIndex }: GameStateViewerPr
         </h3>
         <div className="grid grid-cols-1 gap-3 sm:gap-4">
           {state.players.map((player, index) => (
-            <PlayerStateCard
+            <MeeplePlayerStateCard
               key={`${player.playerName}-${index}`}
               player={player}
               isCurrentPlayer={currentPlayerIndex === index}

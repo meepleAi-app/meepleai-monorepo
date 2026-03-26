@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Administration.Application.Handlers.AlertConfiguration;
+using Api.BoundedContexts.Administration.Application.Commands.AlertConfiguration;
 using Api.BoundedContexts.Administration.Application.Queries.AlertConfiguration;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertConfigurations;
 using Api.BoundedContexts.Administration.Domain.Repositories;
@@ -100,8 +100,9 @@ public class GetAlertConfigurationQueryHandlerTests
             .ReturnsAsync(new List<AlertConfiguration>());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(query, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(query, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("No configuration found");
         exception.Message.Should().Contain("PagerDuty");
@@ -145,8 +146,9 @@ public class GetAlertConfigurationQueryHandlerTests
         var query = new GetAlertConfigurationQuery("InvalidCategory");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _handler.Handle(query, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(query, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentException>();
 
         _mockRepository.Verify(r => r.GetByCategoryAsync(It.IsAny<ConfigCategory>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -213,8 +215,9 @@ public class GetAlertConfigurationQueryHandlerTests
         GetAlertConfigurationQuery? query = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(query!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(query!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
 
         _mockRepository.Verify(r => r.GetByCategoryAsync(It.IsAny<ConfigCategory>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -223,6 +226,7 @@ public class GetAlertConfigurationQueryHandlerTests
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new GetAlertConfigurationQueryHandler(null!));
+        var act = () => new GetAlertConfigurationQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

@@ -38,16 +38,29 @@ export { ViewModeToggle, type ViewModeToggleProps, type ViewMode } from './ViewM
 // Library Navigation Tabs (Issue #4055)
 export { LibraryNavTabs } from './LibraryNavTabs';
 
-// BGG Search Integration (Issue #4053)
-export { BggGameSearch, type BggGameSearchProps } from './BggGameSearch';
-export { AddPrivateGameWithBgg, type AddPrivateGameWithBggProps } from './AddPrivateGameWithBgg';
-
-// Game Detail Components (Issue #3513)
+// Game Table Components (replaces legacy game-detail — Issue #3513)
 export {
-  GameDetailHero,
-  type GameDetailHeroProps,
-  GameSideCard,
-  type GameSideCardProps,
-  UserActionSection,
-  type UserActionSectionProps,
-} from './game-detail';
+  GameTableLayout,
+  GameTableDrawer,
+  GameTableZoneTools,
+  GameTableZoneKnowledge,
+  GameTableZoneSessions,
+  GameStatsPanel,
+  GameTableSkeleton,
+} from './game-table';
+
+// Shelf Components — vetrina layout for library browse pages
+export { ShelfCard, type ShelfCardProps, type ManaPip, type ManaPipType } from './ShelfCard';
+export { ShelfRow, type ShelfRowProps } from './ShelfRow';
+
+// Mechanic Filter Chip Row
+export { MechanicFilter, type MechanicFilterProps } from './MechanicFilter';
+
+// Personal Library Page — vetrina layout
+export { PersonalLibraryPage, type PersonalLibraryPageProps } from './PersonalLibraryPage';
+
+// Library Toolbar — search + count controls
+export { LibraryToolbar, type LibraryToolbarProps } from './LibraryToolbar';
+
+// Public Library Page — shared catalog browse experience
+export { PublicLibraryPage, type PublicLibraryPageProps } from './PublicLibraryPage';

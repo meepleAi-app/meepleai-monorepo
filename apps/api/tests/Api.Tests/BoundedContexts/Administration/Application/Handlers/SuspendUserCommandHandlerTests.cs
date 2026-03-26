@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.Entities;
@@ -12,6 +13,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -64,9 +66,9 @@ public class SuspendUserCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.IsSuspended);
-        Assert.Equal(reason, result.SuspendReason);
+        result.Should().NotBeNull();
+        result.IsSuspended.Should().BeTrue();
+        result.SuspendReason.Should().Be(reason);
         _mockUserRepository.Verify(
             r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -125,8 +127,8 @@ public class SuspendUserCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -151,8 +153,8 @@ public class SuspendUserCommandHandlerTests
             .ReturnsAsync(user);
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -179,8 +181,8 @@ public class SuspendUserCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.IsSuspended);
-        Assert.Null(result.SuspendReason);
+        result.Should().NotBeNull();
+        result.IsSuspended.Should().BeTrue();
+        result.SuspendReason.Should().BeNull();
     }
 }

@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.BoundedContexts.GameToolkit.Domain.Events;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameToolkit.Domain;
 
@@ -23,18 +24,18 @@ public class GameToolkitDomainTests
         var id = Guid.NewGuid();
         var toolkit = new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(id, GameId, "Test Toolkit", UserId);
 
-        Assert.Equal(id, toolkit.Id);
-        Assert.Equal(GameId, toolkit.GameId);
-        Assert.Equal("Test Toolkit", toolkit.Name);
-        Assert.Equal(UserId, toolkit.CreatedByUserId);
-        Assert.Equal(1, toolkit.Version);
-        Assert.False(toolkit.IsPublished);
-        Assert.Empty(toolkit.DiceTools);
-        Assert.Empty(toolkit.CardTools);
-        Assert.Empty(toolkit.TimerTools);
-        Assert.Empty(toolkit.CounterTools);
-        Assert.Null(toolkit.ScoringTemplate);
-        Assert.Null(toolkit.TurnTemplate);
+        toolkit.Id.Should().Be(id);
+        toolkit.GameId.Should().Be(GameId);
+        toolkit.Name.Should().Be("Test Toolkit");
+        toolkit.CreatedByUserId.Should().Be(UserId);
+        toolkit.Version.Should().Be(1);
+        toolkit.IsPublished.Should().BeFalse();
+        toolkit.DiceTools.Should().BeEmpty();
+        toolkit.CardTools.Should().BeEmpty();
+        toolkit.TimerTools.Should().BeEmpty();
+        toolkit.CounterTools.Should().BeEmpty();
+        toolkit.ScoringTemplate.Should().BeNull();
+        toolkit.TurnTemplate.Should().BeNull();
     }
 
     [Fact]
@@ -43,10 +44,10 @@ public class GameToolkitDomainTests
         var toolkit = CreateToolkit();
         var events = toolkit.DomainEvents;
 
-        Assert.Single(events);
-        var created = Assert.IsType<ToolkitCreatedEvent>(events.First());
-        Assert.Equal(toolkit.Id, created.ToolkitId);
-        Assert.Equal(GameId, created.GameId);
+        events.Should().ContainSingle();
+        var created = events.First().Should().BeOfType<ToolkitCreatedEvent>().Subject;
+        created.ToolkitId.Should().Be(toolkit.Id);
+        created.GameId.Should().Be(GameId);
     }
 
     [Theory]
@@ -54,8 +55,9 @@ public class GameToolkitDomainTests
     [InlineData("   ")]
     public void Constructor_WithEmptyName_ThrowsArgumentException(string name)
     {
-        Assert.Throws<ArgumentException>(() =>
-            new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(Guid.NewGuid(), GameId, name, UserId));
+        var act = () =>
+            new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(Guid.NewGuid(), GameId, name, UserId);
+        act.Should().Throw<ArgumentException>();
     }
 
     // ========================================================================
@@ -69,11 +71,11 @@ public class GameToolkitDomainTests
         var toolkit = new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(
             Guid.NewGuid(), null, "Private Toolkit", UserId, privateGameId);
 
-        Assert.Null(toolkit.GameId);
-        Assert.Equal(privateGameId, toolkit.PrivateGameId);
-        Assert.False(toolkit.OverridesTurnOrder);
-        Assert.False(toolkit.OverridesScoreboard);
-        Assert.False(toolkit.OverridesDiceSet);
+        toolkit.GameId.Should().BeNull();
+        toolkit.PrivateGameId.Should().Be(privateGameId);
+        toolkit.OverridesTurnOrder.Should().BeFalse();
+        toolkit.OverridesScoreboard.Should().BeFalse();
+        toolkit.OverridesDiceSet.Should().BeFalse();
     }
 
     [Fact]
@@ -83,9 +85,9 @@ public class GameToolkitDomainTests
             Guid.NewGuid(), GameId, "Flagged Toolkit", UserId,
             overridesTurnOrder: true, overridesScoreboard: true, overridesDiceSet: false);
 
-        Assert.True(toolkit.OverridesTurnOrder);
-        Assert.True(toolkit.OverridesScoreboard);
-        Assert.False(toolkit.OverridesDiceSet);
+        toolkit.OverridesTurnOrder.Should().BeTrue();
+        toolkit.OverridesScoreboard.Should().BeTrue();
+        toolkit.OverridesDiceSet.Should().BeFalse();
     }
 
     [Fact]
@@ -93,17 +95,19 @@ public class GameToolkitDomainTests
     {
         var privateGameId = Guid.NewGuid();
 
-        Assert.Throws<ArgumentException>(() =>
+        var act2 = () =>
             new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(
-                Guid.NewGuid(), GameId, "Bad Toolkit", UserId, privateGameId));
+                Guid.NewGuid(), GameId, "Bad Toolkit", UserId, privateGameId);
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithNeitherGameIdNorPrivateGameId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act3 = () =>
             new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(
-                Guid.NewGuid(), null, "Bad Toolkit", UserId, null));
+                Guid.NewGuid(), null, "Bad Toolkit", UserId, null);
+        act3.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -114,10 +118,10 @@ public class GameToolkitDomainTests
 
         toolkit.UpdateOverrideFlags(true, true, true);
 
-        Assert.True(toolkit.OverridesTurnOrder);
-        Assert.True(toolkit.OverridesScoreboard);
-        Assert.True(toolkit.OverridesDiceSet);
-        Assert.True(toolkit.UpdatedAt >= before);
+        toolkit.OverridesTurnOrder.Should().BeTrue();
+        toolkit.OverridesScoreboard.Should().BeTrue();
+        toolkit.OverridesDiceSet.Should().BeTrue();
+        (toolkit.UpdatedAt >= before).Should().BeTrue();
     }
 
     [Fact]
@@ -129,9 +133,9 @@ public class GameToolkitDomainTests
 
         toolkit.UpdateOverrideFlags(false, false, false);
 
-        Assert.False(toolkit.OverridesTurnOrder);
-        Assert.False(toolkit.OverridesScoreboard);
-        Assert.False(toolkit.OverridesDiceSet);
+        toolkit.OverridesTurnOrder.Should().BeFalse();
+        toolkit.OverridesScoreboard.Should().BeFalse();
+        toolkit.OverridesDiceSet.Should().BeFalse();
     }
 
     // ========================================================================
@@ -146,8 +150,8 @@ public class GameToolkitDomainTests
 
         toolkit.UpdateDetails("Updated Name");
 
-        Assert.Equal("Updated Name", toolkit.Name);
-        Assert.True(toolkit.UpdatedAt >= before);
+        toolkit.Name.Should().Be("Updated Name");
+        (toolkit.UpdatedAt >= before).Should().BeTrue();
     }
 
     [Fact]
@@ -160,9 +164,9 @@ public class GameToolkitDomainTests
 
         toolkit.UpdateDetails(null);
 
-        Assert.Equal(originalName, toolkit.Name);
-        Assert.Equal(originalUpdatedAt, toolkit.UpdatedAt);
-        Assert.Empty(toolkit.DomainEvents);
+        toolkit.Name.Should().Be(originalName);
+        toolkit.UpdatedAt.Should().Be(originalUpdatedAt);
+        toolkit.DomainEvents.Should().BeEmpty();
     }
 
     // ========================================================================
@@ -176,8 +180,8 @@ public class GameToolkitDomainTests
 
         toolkit.Publish();
 
-        Assert.True(toolkit.IsPublished);
-        Assert.Equal(2, toolkit.Version);
+        toolkit.IsPublished.Should().BeTrue();
+        toolkit.Version.Should().Be(2);
     }
 
     [Fact]
@@ -189,10 +193,10 @@ public class GameToolkitDomainTests
         toolkit.Publish();
 
         var events = toolkit.DomainEvents;
-        Assert.Single(events);
-        var published = Assert.IsType<ToolkitPublishedEvent>(events.First());
-        Assert.Equal(toolkit.Id, published.ToolkitId);
-        Assert.Equal(2, published.Version);
+        events.Should().ContainSingle();
+        var published = events.First().Should().BeOfType<ToolkitPublishedEvent>().Subject;
+        published.ToolkitId.Should().Be(toolkit.Id);
+        published.Version.Should().Be(2);
     }
 
     // ========================================================================
@@ -207,10 +211,10 @@ public class GameToolkitDomainTests
 
         toolkit.AddDiceTool(config);
 
-        Assert.Single(toolkit.DiceTools);
-        Assert.Equal("Attack", toolkit.DiceTools[0].Name);
-        Assert.Equal(DiceType.D6, toolkit.DiceTools[0].DiceType);
-        Assert.Equal(2, toolkit.DiceTools[0].Quantity);
+        toolkit.DiceTools.Should().ContainSingle();
+        toolkit.DiceTools[0].Name.Should().Be("Attack");
+        toolkit.DiceTools[0].DiceType.Should().Be(DiceType.D6);
+        toolkit.DiceTools[0].Quantity.Should().Be(2);
     }
 
     [Fact]
@@ -218,7 +222,7 @@ public class GameToolkitDomainTests
     {
         var toolkit = CreateToolkit();
 
-        Assert.Throws<ArgumentNullException>(() => toolkit.AddDiceTool(null!));
+        ((Action)(() => toolkit.AddDiceTool(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -228,10 +232,11 @@ public class GameToolkitDomainTests
         for (int i = 0; i < 20; i++)
             toolkit.AddDiceTool(new DiceToolConfig($"Dice_{i}", DiceType.D6, 1, null, true, null));
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            toolkit.AddDiceTool(new DiceToolConfig("TooMany", DiceType.D6, 1, null, true, null)));
+        var act4 = () =>
+            toolkit.AddDiceTool(new DiceToolConfig("TooMany", DiceType.D6, 1, null, true, null));
+        var ex = act4.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("20", ex.Message);
+        ex.Message.Should().Contain("20");
     }
 
     [Fact]
@@ -242,8 +247,8 @@ public class GameToolkitDomainTests
 
         var removed = toolkit.RemoveDiceTool("Attack");
 
-        Assert.True(removed);
-        Assert.Empty(toolkit.DiceTools);
+        removed.Should().BeTrue();
+        toolkit.DiceTools.Should().BeEmpty();
     }
 
     [Fact]
@@ -253,7 +258,7 @@ public class GameToolkitDomainTests
 
         var removed = toolkit.RemoveDiceTool("NonExistent");
 
-        Assert.False(removed);
+        removed.Should().BeFalse();
     }
 
     // ========================================================================
@@ -268,10 +273,10 @@ public class GameToolkitDomainTests
 
         toolkit.AddCounterTool(config);
 
-        Assert.Single(toolkit.CounterTools);
-        Assert.Equal("Health", toolkit.CounterTools[0].Name);
-        Assert.Equal(50, toolkit.CounterTools[0].DefaultValue);
-        Assert.True(toolkit.CounterTools[0].IsPerPlayer);
+        toolkit.CounterTools.Should().ContainSingle();
+        toolkit.CounterTools[0].Name.Should().Be("Health");
+        toolkit.CounterTools[0].DefaultValue.Should().Be(50);
+        toolkit.CounterTools[0].IsPerPlayer.Should().BeTrue();
     }
 
     [Fact]
@@ -279,7 +284,7 @@ public class GameToolkitDomainTests
     {
         var toolkit = CreateToolkit();
 
-        Assert.Throws<ArgumentNullException>(() => toolkit.AddCounterTool(null!));
+        ((Action)(() => toolkit.AddCounterTool(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -289,10 +294,11 @@ public class GameToolkitDomainTests
         for (int i = 0; i < 20; i++)
             toolkit.AddCounterTool(new CounterToolConfig($"Counter_{i}", 0, 100, 0, false, null, null));
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            toolkit.AddCounterTool(new CounterToolConfig("TooMany", 0, 100, 0, false, null, null)));
+        var act5 = () =>
+            toolkit.AddCounterTool(new CounterToolConfig("TooMany", 0, 100, 0, false, null, null));
+        var ex = act5.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("20", ex.Message);
+        ex.Message.Should().Contain("20");
     }
 
     [Fact]
@@ -303,8 +309,8 @@ public class GameToolkitDomainTests
 
         var removed = toolkit.RemoveCounterTool("Health");
 
-        Assert.True(removed);
-        Assert.Empty(toolkit.CounterTools);
+        removed.Should().BeTrue();
+        toolkit.CounterTools.Should().BeEmpty();
     }
 
     [Fact]
@@ -314,7 +320,7 @@ public class GameToolkitDomainTests
 
         var removed = toolkit.RemoveCounterTool("NonExistent");
 
-        Assert.False(removed);
+        removed.Should().BeFalse();
     }
 
     // ========================================================================
@@ -329,9 +335,9 @@ public class GameToolkitDomainTests
 
         toolkit.AddCardTool(config);
 
-        Assert.Single(toolkit.CardTools);
-        Assert.Equal("Main Deck", toolkit.CardTools[0].Name);
-        Assert.Equal("standard", toolkit.CardTools[0].DeckType);
+        toolkit.CardTools.Should().ContainSingle();
+        toolkit.CardTools[0].Name.Should().Be("Main Deck");
+        toolkit.CardTools[0].DeckType.Should().Be("standard");
     }
 
     [Fact]
@@ -350,14 +356,14 @@ public class GameToolkitDomainTests
 
         toolkit.AddCardTool(config);
 
-        Assert.Single(toolkit.CardTools);
-        Assert.Equal(2, toolkit.CardTools[0].CardCount); // Derived from entries
-        Assert.Equal(2, toolkit.CardTools[0].CardEntries.Count);
-        Assert.False(toolkit.CardTools[0].Shuffleable);
-        Assert.Equal(CardZone.TableArea, toolkit.CardTools[0].DefaultZone);
-        Assert.Equal(CardOrientation.FaceUp, toolkit.CardTools[0].DefaultOrientation);
-        Assert.True(toolkit.CardTools[0].AllowPeek);
-        Assert.True(toolkit.CardTools[0].AllowReturnToDeck);
+        toolkit.CardTools.Should().ContainSingle();
+        toolkit.CardTools[0].CardCount.Should().Be(2); // Derived from entries
+        toolkit.CardTools[0].CardEntries.Count.Should().Be(2);
+        toolkit.CardTools[0].Shuffleable.Should().BeFalse();
+        toolkit.CardTools[0].DefaultZone.Should().Be(CardZone.TableArea);
+        toolkit.CardTools[0].DefaultOrientation.Should().Be(CardOrientation.FaceUp);
+        toolkit.CardTools[0].AllowPeek.Should().BeTrue();
+        toolkit.CardTools[0].AllowReturnToDeck.Should().BeTrue();
     }
 
     [Fact]
@@ -365,7 +371,7 @@ public class GameToolkitDomainTests
     {
         var toolkit = CreateToolkit();
 
-        Assert.Throws<ArgumentNullException>(() => toolkit.AddCardTool(null!));
+        ((Action)(() => toolkit.AddCardTool(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -375,10 +381,11 @@ public class GameToolkitDomainTests
         for (int i = 0; i < 20; i++)
             toolkit.AddCardTool(new CardToolConfig($"Deck_{i}", "standard"));
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            toolkit.AddCardTool(new CardToolConfig("TooMany", "standard")));
+        var act6 = () =>
+            toolkit.AddCardTool(new CardToolConfig("TooMany", "standard"));
+        var ex = act6.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("20", ex.Message);
+        ex.Message.Should().Contain("20");
     }
 
     [Fact]
@@ -389,8 +396,8 @@ public class GameToolkitDomainTests
 
         var removed = toolkit.RemoveCardTool("Main Deck");
 
-        Assert.True(removed);
-        Assert.Empty(toolkit.CardTools);
+        removed.Should().BeTrue();
+        toolkit.CardTools.Should().BeEmpty();
     }
 
     [Fact]
@@ -400,7 +407,7 @@ public class GameToolkitDomainTests
 
         var removed = toolkit.RemoveCardTool("NonExistent");
 
-        Assert.False(removed);
+        removed.Should().BeFalse();
     }
 
     // ========================================================================
@@ -415,10 +422,10 @@ public class GameToolkitDomainTests
 
         toolkit.AddTimerTool(config);
 
-        Assert.Single(toolkit.TimerTools);
-        Assert.Equal("Round Timer", toolkit.TimerTools[0].Name);
-        Assert.Equal(60, toolkit.TimerTools[0].DurationSeconds);
-        Assert.Equal(TimerType.CountDown, toolkit.TimerTools[0].TimerType);
+        toolkit.TimerTools.Should().ContainSingle();
+        toolkit.TimerTools[0].Name.Should().Be("Round Timer");
+        toolkit.TimerTools[0].DurationSeconds.Should().Be(60);
+        toolkit.TimerTools[0].TimerType.Should().Be(TimerType.CountDown);
     }
 
     [Fact]
@@ -429,10 +436,10 @@ public class GameToolkitDomainTests
 
         toolkit.AddTimerTool(config);
 
-        Assert.Single(toolkit.TimerTools);
-        Assert.Equal(TimerType.Chess, toolkit.TimerTools[0].TimerType);
-        Assert.True(toolkit.TimerTools[0].IsPerPlayer);
-        Assert.Equal(30, toolkit.TimerTools[0].WarningThresholdSeconds);
+        toolkit.TimerTools.Should().ContainSingle();
+        toolkit.TimerTools[0].TimerType.Should().Be(TimerType.Chess);
+        toolkit.TimerTools[0].IsPerPlayer.Should().BeTrue();
+        toolkit.TimerTools[0].WarningThresholdSeconds.Should().Be(30);
     }
 
     [Fact]
@@ -440,7 +447,7 @@ public class GameToolkitDomainTests
     {
         var toolkit = CreateToolkit();
 
-        Assert.Throws<ArgumentNullException>(() => toolkit.AddTimerTool(null!));
+        ((Action)(() => toolkit.AddTimerTool(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -450,10 +457,11 @@ public class GameToolkitDomainTests
         for (int i = 0; i < 20; i++)
             toolkit.AddTimerTool(new TimerToolConfig($"Timer_{i}", 60));
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            toolkit.AddTimerTool(new TimerToolConfig("TooMany", 60)));
+        var act7 = () =>
+            toolkit.AddTimerTool(new TimerToolConfig("TooMany", 60));
+        var ex = act7.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("20", ex.Message);
+        ex.Message.Should().Contain("20");
     }
 
     [Fact]
@@ -464,8 +472,8 @@ public class GameToolkitDomainTests
 
         var removed = toolkit.RemoveTimerTool("Round Timer");
 
-        Assert.True(removed);
-        Assert.Empty(toolkit.TimerTools);
+        removed.Should().BeTrue();
+        toolkit.TimerTools.Should().BeEmpty();
     }
 
     [Fact]
@@ -475,7 +483,7 @@ public class GameToolkitDomainTests
 
         var removed = toolkit.RemoveTimerTool("NonExistent");
 
-        Assert.False(removed);
+        removed.Should().BeFalse();
     }
 
     // ========================================================================
@@ -490,10 +498,10 @@ public class GameToolkitDomainTests
 
         toolkit.SetScoringTemplate(template);
 
-        Assert.NotNull(toolkit.ScoringTemplate);
-        Assert.Equal(2, toolkit.ScoringTemplate.Dimensions.Length);
-        Assert.Equal("VP", toolkit.ScoringTemplate.DefaultUnit);
-        Assert.Equal(ScoreType.Points, toolkit.ScoringTemplate.ScoreType);
+        toolkit.ScoringTemplate.Should().NotBeNull();
+        toolkit.ScoringTemplate.Dimensions.Length.Should().Be(2);
+        toolkit.ScoringTemplate.DefaultUnit.Should().Be("VP");
+        toolkit.ScoringTemplate.ScoreType.Should().Be(ScoreType.Points);
     }
 
     [Fact]
@@ -501,7 +509,7 @@ public class GameToolkitDomainTests
     {
         var toolkit = CreateToolkit();
 
-        Assert.Throws<ArgumentNullException>(() => toolkit.SetScoringTemplate(null!));
+        ((Action)(() => toolkit.SetScoringTemplate(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -512,9 +520,9 @@ public class GameToolkitDomainTests
 
         toolkit.SetTurnTemplate(template);
 
-        Assert.NotNull(toolkit.TurnTemplate);
-        Assert.Equal(TurnOrderType.RoundRobin, toolkit.TurnTemplate.TurnOrderType);
-        Assert.Equal(3, toolkit.TurnTemplate.Phases.Length);
+        toolkit.TurnTemplate.Should().NotBeNull();
+        toolkit.TurnTemplate.TurnOrderType.Should().Be(TurnOrderType.RoundRobin);
+        toolkit.TurnTemplate.Phases.Length.Should().Be(3);
     }
 
     [Fact]
@@ -522,7 +530,7 @@ public class GameToolkitDomainTests
     {
         var toolkit = CreateToolkit();
 
-        Assert.Throws<ArgumentNullException>(() => toolkit.SetTurnTemplate(null!));
+        ((Action)(() => toolkit.SetTurnTemplate(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -533,10 +541,10 @@ public class GameToolkitDomainTests
 
         toolkit.SetStateTemplate(definition);
 
-        Assert.NotNull(toolkit.StateTemplate);
-        Assert.Equal("Chess Setup", toolkit.StateTemplate.Name);
-        Assert.Equal(TemplateCategory.Strategy, toolkit.StateTemplate.Category);
-        Assert.Equal("{\"tools\":[]}", toolkit.StateTemplate.SchemaJson);
+        toolkit.StateTemplate.Should().NotBeNull();
+        toolkit.StateTemplate.Name.Should().Be("Chess Setup");
+        toolkit.StateTemplate.Category.Should().Be(TemplateCategory.Strategy);
+        toolkit.StateTemplate.SchemaJson.Should().Be("{\"tools\":[]}");
     }
 
     [Fact]
@@ -548,8 +556,8 @@ public class GameToolkitDomainTests
 
         toolkit.SetStateTemplate(definition);
 
-        Assert.NotNull(toolkit.StateTemplate);
-        Assert.Equal("A fun party game template", toolkit.StateTemplate.Description);
+        toolkit.StateTemplate.Should().NotBeNull();
+        toolkit.StateTemplate.Description.Should().Be("A fun party game template");
     }
 
     [Fact]
@@ -560,7 +568,7 @@ public class GameToolkitDomainTests
 
         toolkit.SetStateTemplate(null);
 
-        Assert.Null(toolkit.StateTemplate);
+        toolkit.StateTemplate.Should().BeNull();
     }
 
     // ========================================================================
@@ -571,11 +579,11 @@ public class GameToolkitDomainTests
     public void ClearDomainEvents_RemovesAllEvents()
     {
         var toolkit = CreateToolkit();
-        Assert.NotEmpty(toolkit.DomainEvents);
+        toolkit.DomainEvents.Should().NotBeEmpty();
 
         toolkit.ClearDomainEvents();
 
-        Assert.Empty(toolkit.DomainEvents);
+        toolkit.DomainEvents.Should().BeEmpty();
     }
 
     // ========================================================================
@@ -588,9 +596,9 @@ public class GameToolkitDomainTests
         var faces = new[] { "Hit", "Miss", "Critical" };
         var config = new DiceToolConfig("Custom", DiceType.Custom, 1, faces, true, "#000");
 
-        Assert.Equal(DiceType.Custom, config.DiceType);
-        Assert.Equal(3, config.CustomFaces!.Length);
-        Assert.Equal("Critical", config.CustomFaces[2]);
+        config.DiceType.Should().Be(DiceType.Custom);
+        config.CustomFaces!.Length.Should().Be(3);
+        config.CustomFaces[2].Should().Be("Critical");
     }
 
     [Fact]
@@ -598,10 +606,10 @@ public class GameToolkitDomainTests
     {
         var config = new CounterToolConfig("Gold", 0, 9999, 100, false, "coin", "#FFD700");
 
-        Assert.Equal(0, config.MinValue);
-        Assert.Equal(9999, config.MaxValue);
-        Assert.Equal(100, config.DefaultValue);
-        Assert.False(config.IsPerPlayer);
+        config.MinValue.Should().Be(0);
+        config.MaxValue.Should().Be(9999);
+        config.DefaultValue.Should().Be(100);
+        config.IsPerPlayer.Should().BeFalse();
     }
 
     // ========================================================================

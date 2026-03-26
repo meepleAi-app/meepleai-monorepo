@@ -2,7 +2,8 @@ using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Application.Commands;
-using Api.BoundedContexts.UserNotifications.Application.Handlers;
+using Api.BoundedContexts.UserNotifications.Application.Commands;
+using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Configuration;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -64,8 +66,8 @@ public class HandleSlackInteractionCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Invalid signature", result.ResponseMessage);
+        result.Success.Should().BeFalse();
+        result.ResponseMessage.Should().Be("Invalid signature");
         _mediatorMock.Verify(m => m.Send(It.IsAny<IRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -86,8 +88,8 @@ public class HandleSlackInteractionCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("expired", result.ResponseMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ResponseMessage.Should().ContainEquivalentOf("expired");
     }
 
     [Fact]
@@ -103,8 +105,8 @@ public class HandleSlackInteractionCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Invalid action", result.ResponseMessage!);
+        result.Success.Should().BeFalse();
+        result.ResponseMessage!.Should().Contain("Invalid action");
     }
 
     [Fact]
@@ -121,8 +123,8 @@ public class HandleSlackInteractionCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Invalid action", result.ResponseMessage!);
+        result.Success.Should().BeFalse();
+        result.ResponseMessage!.Should().Contain("Invalid action");
     }
 
     [Fact]
@@ -152,12 +154,12 @@ public class HandleSlackInteractionCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Contains("approved", result.ResponseMessage!, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeTrue();
+        result.ResponseMessage!.Should().ContainEquivalentOf("approved");
 
-        var dispatched = Assert.IsType<ApproveShareRequestCommand>(capturedCommand);
-        Assert.Equal(resourceId, dispatched.ShareRequestId);
-        Assert.Equal(userId, dispatched.AdminId);
+        var dispatched = capturedCommand.Should().BeOfType<ApproveShareRequestCommand>().Subject;
+        dispatched.ShareRequestId.Should().Be(resourceId);
+        dispatched.AdminId.Should().Be(userId);
     }
 
     [Fact]
@@ -177,8 +179,8 @@ public class HandleSlackInteractionCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Unknown action", result.ResponseMessage);
+        result.Success.Should().BeFalse();
+        result.ResponseMessage.Should().Be("Unknown action");
     }
 
     #region Helpers

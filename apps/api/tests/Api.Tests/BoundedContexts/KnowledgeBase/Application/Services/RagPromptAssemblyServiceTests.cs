@@ -31,6 +31,7 @@ public class RagPromptAssemblyServiceTests
     private readonly Mock<IQueryComplexityClassifier> _complexityClassifierMock;
     private readonly Mock<IRetrievalRelevanceEvaluator> _relevanceEvaluatorMock;
     private readonly Mock<IQueryExpander> _queryExpanderMock;
+    private readonly Mock<IGraphRetrievalService> _graphRetrievalMock;
     private readonly Mock<ILogger<RagPromptAssemblyService>> _loggerMock;
 
     private static readonly Guid TestGameId = Guid.NewGuid();
@@ -47,6 +48,7 @@ public class RagPromptAssemblyServiceTests
         _complexityClassifierMock = new Mock<IQueryComplexityClassifier>();
         _relevanceEvaluatorMock = new Mock<IRetrievalRelevanceEvaluator>();
         _queryExpanderMock = new Mock<IQueryExpander>();
+        _graphRetrievalMock = new Mock<IGraphRetrievalService>();
         _loggerMock = new Mock<ILogger<RagPromptAssemblyService>>();
 
         // Default: query expansion returns empty (no expansions)
@@ -78,6 +80,7 @@ public class RagPromptAssemblyServiceTests
             _complexityClassifierMock.Object,
             _relevanceEvaluatorMock.Object,
             _queryExpanderMock.Object,
+            _graphRetrievalMock.Object,
             _loggerMock.Object);
     }
 
@@ -715,7 +718,7 @@ public class RagPromptAssemblyServiceTests
     {
         var act = () => new RagPromptAssemblyService(
             null!, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
-            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("embeddingService");
     }
@@ -725,7 +728,7 @@ public class RagPromptAssemblyServiceTests
     {
         var act = () => new RagPromptAssemblyService(
             _embeddingMock.Object, null!, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
-            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("reranker");
     }
@@ -735,7 +738,7 @@ public class RagPromptAssemblyServiceTests
     {
         var act = () => new RagPromptAssemblyService(
             _embeddingMock.Object, _rerankerMock.Object, null!, _textSearchMock.Object, _expansionResolverMock.Object,
-            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("llmService");
     }
@@ -745,7 +748,7 @@ public class RagPromptAssemblyServiceTests
     {
         var act = () => new RagPromptAssemblyService(
             _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, null!, _expansionResolverMock.Object,
-            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("textSearch");
     }
@@ -755,7 +758,7 @@ public class RagPromptAssemblyServiceTests
     {
         var act = () => new RagPromptAssemblyService(
             _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, null!,
-            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("expansionResolver");
     }
@@ -765,7 +768,7 @@ public class RagPromptAssemblyServiceTests
     {
         var act = () => new RagPromptAssemblyService(
             _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
-            null!, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+            null!, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("ragEnhancementService");
     }
@@ -775,7 +778,7 @@ public class RagPromptAssemblyServiceTests
     {
         var act = () => new RagPromptAssemblyService(
             _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
-            _ragEnhancementMock.Object, null!, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+            _ragEnhancementMock.Object, null!, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("complexityClassifier");
     }
@@ -785,7 +788,7 @@ public class RagPromptAssemblyServiceTests
     {
         var act = () => new RagPromptAssemblyService(
             _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
-            _ragEnhancementMock.Object, _complexityClassifierMock.Object, null!, _queryExpanderMock.Object, _loggerMock.Object);
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, null!, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("relevanceEvaluator");
     }
@@ -795,9 +798,19 @@ public class RagPromptAssemblyServiceTests
     {
         var act = () => new RagPromptAssemblyService(
             _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
-            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, null!, _loggerMock.Object);
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, null!, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("queryExpander");
+    }
+
+    [Fact]
+    public void Constructor_NullGraphRetrievalService_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, null!, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("graphRetrievalService");
     }
 
     [Fact]
@@ -805,7 +818,7 @@ public class RagPromptAssemblyServiceTests
     {
         var act = () => new RagPromptAssemblyService(
             _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
-            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, null!);
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }

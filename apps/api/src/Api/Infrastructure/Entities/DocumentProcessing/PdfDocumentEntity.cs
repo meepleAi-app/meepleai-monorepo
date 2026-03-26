@@ -89,6 +89,9 @@ public class PdfDocumentEntity
     public Guid? CopyrightDisclaimerAcceptedBy { get; set; }
     public bool IsActiveForRag { get; set; } = true;
 
+    // RAG Copyright KB Cards: license tier for citation rendering (0=Copyrighted, 1=CreativeCommons, 2=PublicDomain)
+    public int LicenseType { get; set; } // Default: 0 = Copyrighted
+
     // Issue #5447: User-editable version label
     public string? VersionLabel { get; set; }
 

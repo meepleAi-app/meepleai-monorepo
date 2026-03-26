@@ -27,9 +27,6 @@ import { cn } from '@/lib/utils';
 
 export type KbIndexingStatus = 'processing' | 'indexed' | 'failed' | 'none';
 
-/** @deprecated Use KbIndexingStatus instead */
-export type DocumentIndexingStatus = KbIndexingStatus;
-
 interface KbStatusBadgeProps {
   status: KbIndexingStatus;
   size?: 'sm' | 'md';
@@ -96,7 +93,6 @@ export const KbStatusBadge = memo(function KbStatusBadge({
   size = 'sm',
   className,
 }: KbStatusBadgeProps) {
-  // eslint-disable-next-line security/detect-object-injection -- status is from typed union
   const config = statusConfig[status];
   const Icon = config.icon;
 
@@ -124,6 +120,3 @@ export const KbStatusBadge = memo(function KbStatusBadge({
     </span>
   );
 });
-
-/** @deprecated Use KbStatusBadge instead */
-export const DocumentStatusBadge = KbStatusBadge;

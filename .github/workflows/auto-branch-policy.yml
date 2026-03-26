@@ -5,10 +5,11 @@ on:
     branches:
       - main
       - main-staging
+      - main-dev
 
 jobs:
   validate-source-branch:
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Validate PR source branch
         env:
@@ -20,27 +21,42 @@ jobs:
           # ============================================
           # MAIN branch policy
           # ============================================
-          # main can only be updated from main-dev
+          # main can only be updated from main-staging
           if [[ "$BASE_BRANCH" == "main" ]]; then
-            if [[ "$SOURCE_BRANCH" != "main-dev" ]]; then
-              echo "::error::Branch 'main' can only be updated from 'main-dev'"
+            if [[ "$SOURCE_BRANCH" != "main-staging" ]]; then
+              echo "::error::Branch 'main' can only be updated from 'main-staging'"
               echo "::error::Attempted merge from: $SOURCE_BRANCH"
               echo ""
-              echo "Workflow: feature -> frontend-dev -> main-dev -> main"
+              echo "Workflow: feature -> frontend-dev/backend-dev -> main-dev -> main-staging -> main"
               exit 1
             fi
-            echo "✅ Valid: main-dev -> main"
+            echo "✅ Valid: main-staging -> main"
+          fi
+
+          # ============================================
+          # MAIN-STAGING branch policy
+          # ============================================
+          # main-staging can only be updated from main-dev
+          if [[ "$BASE_BRANCH" == "main-staging" ]]; then
+            if [[ "$SOURCE_BRANCH" != "main-dev" ]]; then
+              echo "::error::Branch 'main-staging' can only be updated from 'main-dev'"
+              echo "::error::Attempted merge from: $SOURCE_BRANCH"
+              echo ""
+              echo "Workflow: feature -> frontend-dev/backend-dev -> main-dev -> main-staging -> main"
+              exit 1
+            fi
+            echo "✅ Valid: main-dev -> main-staging"
           fi
 
           # ============================================
           # MAIN-DEV branch policy
           # ============================================
           # main-dev can be updated from:
-          # - frontend-dev (primary path)
+          # - frontend-dev, backend-dev (primary paths)
           # - feature/* branches (hotfixes, backend features)
           # - fix/*, docs/*, refactor/*, chore/* branches
           if [[ "$BASE_BRANCH" == "main-dev" ]]; then
-            ALLOWED_PATTERNS="^(frontend-dev|feature/|fix/|docs/|test/|refactor/|chore/|release/)"
+            ALLOWED_PATTERNS="^(frontend-dev|backend-dev|feature/|fix/|docs/|test/|refactor/|chore/|release/|merge/)"
 
             if ! echo "$SOURCE_BRANCH" | grep -qE "$ALLOWED_PATTERNS"; then
               echo "::error::Branch 'main-dev' can only be updated from allowed branches"
@@ -48,6 +64,7 @@ jobs:
               echo ""
               echo "Allowed patterns:"
               echo "  - frontend-dev"
+              echo "  - backend-dev"
               echo "  - feature/*"
               echo "  - fix/*"
               echo "  - docs/*"
@@ -55,6 +72,7 @@ jobs:
               echo "  - refactor/*"
               echo "  - chore/*"
               echo "  - release/*"
+              echo "  - merge/*"
               exit 1
             fi
             echo "✅ Valid: $SOURCE_BRANCH -> main-dev"

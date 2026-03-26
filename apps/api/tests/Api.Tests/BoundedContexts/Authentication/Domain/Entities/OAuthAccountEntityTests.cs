@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
@@ -32,16 +33,16 @@ public class OAuthAccountEntityTests
         );
 
         // Assert
-        Assert.Equal(id, account.Id);
-        Assert.Equal(userId, account.UserId);
-        Assert.Equal("google", account.Provider); // Normalized to lowercase
-        Assert.Equal(providerUserId, account.ProviderUserId);
-        Assert.Equal(accessToken, account.AccessTokenEncrypted);
-        Assert.Equal(refreshToken, account.RefreshTokenEncrypted);
-        Assert.Equal(expiresAt, account.TokenExpiresAt);
-        Assert.True(account.CreatedAt <= DateTime.UtcNow);
+        account.Id.Should().Be(id);
+        account.UserId.Should().Be(userId);
+        account.Provider.Should().Be("google"); // Normalized to lowercase
+        account.ProviderUserId.Should().Be(providerUserId);
+        account.AccessTokenEncrypted.Should().Be(accessToken);
+        account.RefreshTokenEncrypted.Should().Be(refreshToken);
+        account.TokenExpiresAt.Should().Be(expiresAt);
+        (account.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
         // CreatedAt and UpdatedAt should be very close (within milliseconds)
-        Assert.True((account.UpdatedAt - account.CreatedAt).TotalMilliseconds < 10);
+        ((account.UpdatedAt - account.CreatedAt).TotalMilliseconds < 10).Should().BeTrue();
     }
 
     [Fact]
@@ -53,8 +54,8 @@ public class OAuthAccountEntityTests
             .Build();
 
         // Assert
-        Assert.Equal("google", account.Provider);
-        Assert.NotNull(account.RefreshTokenEncrypted);
+        account.Provider.Should().Be("google");
+        account.RefreshTokenEncrypted.Should().NotBeNull();
     }
 
     [Fact]
@@ -66,8 +67,8 @@ public class OAuthAccountEntityTests
             .Build();
 
         // Assert
-        Assert.Equal("discord", account.Provider);
-        Assert.NotNull(account.RefreshTokenEncrypted);
+        account.Provider.Should().Be("discord");
+        account.RefreshTokenEncrypted.Should().NotBeNull();
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class OAuthAccountEntityTests
             .Build();
 
         // Assert
-        Assert.Equal("github", account.Provider);
+        account.Provider.Should().Be("github");
     }
 
     [Fact]
@@ -95,59 +96,59 @@ public class OAuthAccountEntityTests
         );
 
         // Assert
-        Assert.Equal("google", account.Provider);
+        account.Provider.Should().Be("google");
     }
 
     [Fact]
     public void Constructor_WithUnsupportedProvider_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
+        var act = () =>
             new OAuthAccount(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 "unsupported_provider",
                 "user123",
                 "access_token"
-            )
-        );
+            );
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("Unsupported OAuth provider", exception.Message);
-        Assert.Contains("unsupported_provider", exception.Message);
+        exception.Message.Should().Contain("Unsupported OAuth provider");
+        exception.Message.Should().Contain("unsupported_provider");
     }
 
     [Fact]
     public void Constructor_WithEmptyProviderUserId_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
+        var act = () =>
             new OAuthAccount(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 "google",
                 "", // Empty
                 "access_token"
-            )
-        );
+            );
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("Provider user ID", exception.Message);
+        exception.Message.Should().Contain("Provider user ID");
     }
 
     [Fact]
     public void Constructor_WithEmptyAccessToken_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
+        var act = () =>
             new OAuthAccount(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 "google",
                 "user123",
                 "" // Empty
-            )
-        );
+            );
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("Access token", exception.Message);
+        exception.Message.Should().Contain("Access token");
     }
 
     [Fact]
@@ -163,7 +164,7 @@ public class OAuthAccountEntityTests
         );
 
         // Assert
-        Assert.Null(account.RefreshTokenEncrypted);
+        account.RefreshTokenEncrypted.Should().BeNull();
     }
 
     [Fact]
@@ -179,7 +180,7 @@ public class OAuthAccountEntityTests
         );
 
         // Assert
-        Assert.Null(account.TokenExpiresAt);
+        account.TokenExpiresAt.Should().BeNull();
     }
     [Theory]
     [InlineData("google")]
@@ -200,7 +201,7 @@ public class OAuthAccountEntityTests
         );
 
         // Assert
-        Assert.Equal(provider.ToLowerInvariant(), account.Provider);
+        account.Provider.Should().Be(provider.ToLowerInvariant());
     }
 
     [Theory]
@@ -212,15 +213,15 @@ public class OAuthAccountEntityTests
     public void Constructor_WithUnsupportedProvider_Throws(string provider)
     {
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
+        var act = () =>
             new OAuthAccount(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 provider,
                 "user123",
                 "access_token"
-            )
-        );
+            );
+        act.Should().Throw<ValidationException>();
     }
     [Fact]
     public async Task UpdateTokens_WithValidTokens_UpdatesSuccessfully()
@@ -238,10 +239,10 @@ public class OAuthAccountEntityTests
         account.UpdateTokens(newAccessToken, newRefreshToken, newExpiry);
 
         // Assert
-        Assert.Equal(newAccessToken, account.AccessTokenEncrypted);
-        Assert.Equal(newRefreshToken, account.RefreshTokenEncrypted);
-        Assert.Equal(newExpiry, account.TokenExpiresAt);
-        Assert.True(account.UpdatedAt > originalUpdatedAt);
+        account.AccessTokenEncrypted.Should().Be(newAccessToken);
+        account.RefreshTokenEncrypted.Should().Be(newRefreshToken);
+        account.TokenExpiresAt.Should().Be(newExpiry);
+        (account.UpdatedAt > originalUpdatedAt).Should().BeTrue();
     }
 
     [Fact]
@@ -258,8 +259,8 @@ public class OAuthAccountEntityTests
         account.UpdateTokens(newAccessToken, originalRefreshToken); // Preserve refresh token
 
         // Assert
-        Assert.Equal(newAccessToken, account.AccessTokenEncrypted);
-        Assert.Equal(originalRefreshToken, account.RefreshTokenEncrypted); // Unchanged
+        account.AccessTokenEncrypted.Should().Be(newAccessToken);
+        account.RefreshTokenEncrypted.Should().Be(originalRefreshToken); // Unchanged
     }
 
     [Fact]
@@ -273,8 +274,8 @@ public class OAuthAccountEntityTests
         account.UpdateTokens("new_token");
 
         // Assert
-        Assert.True(account.UpdatedAt >= beforeUpdate);
-        Assert.True(account.UpdatedAt <= DateTime.UtcNow);
+        (account.UpdatedAt >= beforeUpdate).Should().BeTrue();
+        (account.UpdatedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -284,11 +285,11 @@ public class OAuthAccountEntityTests
         var account = new OAuthAccountBuilder().Build();
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            account.UpdateTokens("")
-        );
+        var act = () =>
+            account.UpdateTokens("");
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("Access token", exception.Message);
+        exception.Message.Should().Contain("Access token");
     }
 
     [Fact]
@@ -298,9 +299,9 @@ public class OAuthAccountEntityTests
         var account = new OAuthAccountBuilder().Build();
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            account.UpdateTokens(null!)
-        );
+        var act = () =>
+            account.UpdateTokens(null!);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -310,13 +311,13 @@ public class OAuthAccountEntityTests
         var account = new OAuthAccountBuilder()
             .AsGoogle()
             .Build();
-        Assert.NotNull(account.RefreshTokenEncrypted);
+        account.RefreshTokenEncrypted.Should().NotBeNull();
 
         // Act
         account.UpdateTokens("new_access", null, null);
 
         // Assert
-        Assert.Null(account.RefreshTokenEncrypted);
+        account.RefreshTokenEncrypted.Should().BeNull();
     }
     [Fact]
     public void IsTokenExpired_WithNoExpiration_ReturnsFalse()
@@ -329,8 +330,8 @@ public class OAuthAccountEntityTests
         var isExpired = account.IsTokenExpired();
 
         // Assert
-        Assert.False(isExpired);
-        Assert.Null(account.TokenExpiresAt);
+        isExpired.Should().BeFalse();
+        account.TokenExpiresAt.Should().BeNull();
     }
 
     [Fact]
@@ -345,7 +346,7 @@ public class OAuthAccountEntityTests
         var isExpired = account.IsTokenExpired();
 
         // Assert
-        Assert.False(isExpired);
+        isExpired.Should().BeFalse();
     }
 
     [Fact]
@@ -360,7 +361,7 @@ public class OAuthAccountEntityTests
         var isExpired = account.IsTokenExpired();
 
         // Assert
-        Assert.True(isExpired);
+        isExpired.Should().BeTrue();
     }
 
     [Fact]
@@ -376,7 +377,7 @@ public class OAuthAccountEntityTests
         var isExpired = account.IsTokenExpired();
 
         // Assert
-        Assert.True(isExpired);
+        isExpired.Should().BeTrue();
     }
 
     [Fact]
@@ -391,7 +392,7 @@ public class OAuthAccountEntityTests
         var isExpired = account.IsTokenExpired();
 
         // Assert
-        Assert.False(isExpired);
+        isExpired.Should().BeFalse();
     }
     [Fact]
     public void SupportsRefresh_WithGoogleAndRefreshToken_ReturnsTrue()
@@ -405,8 +406,8 @@ public class OAuthAccountEntityTests
         var supportsRefresh = account.SupportsRefresh();
 
         // Assert
-        Assert.True(supportsRefresh);
-        Assert.NotNull(account.RefreshTokenEncrypted);
+        supportsRefresh.Should().BeTrue();
+        account.RefreshTokenEncrypted.Should().NotBeNull();
     }
 
     [Fact]
@@ -421,8 +422,8 @@ public class OAuthAccountEntityTests
         var supportsRefresh = account.SupportsRefresh();
 
         // Assert
-        Assert.True(supportsRefresh);
-        Assert.NotNull(account.RefreshTokenEncrypted);
+        supportsRefresh.Should().BeTrue();
+        account.RefreshTokenEncrypted.Should().NotBeNull();
     }
 
     [Fact]
@@ -437,7 +438,7 @@ public class OAuthAccountEntityTests
         var supportsRefresh = account.SupportsRefresh();
 
         // Assert
-        Assert.False(supportsRefresh);
+        supportsRefresh.Should().BeFalse();
     }
 
     [Fact]
@@ -457,7 +458,7 @@ public class OAuthAccountEntityTests
         var supportsRefresh = account.SupportsRefresh();
 
         // Assert
-        Assert.False(supportsRefresh);
+        supportsRefresh.Should().BeFalse();
     }
 
     [Fact]
@@ -477,7 +478,7 @@ public class OAuthAccountEntityTests
         var supportsRefresh = account.SupportsRefresh();
 
         // Assert
-        Assert.False(supportsRefresh);
+        supportsRefresh.Should().BeFalse();
     }
 
     [Fact]
@@ -497,7 +498,7 @@ public class OAuthAccountEntityTests
         var supportsRefresh = account.SupportsRefresh();
 
         // Assert
-        Assert.False(supportsRefresh);
+        supportsRefresh.Should().BeFalse();
     }
     [Fact]
     public void Constructor_RequiresEncryptedAccessToken()
@@ -508,7 +509,7 @@ public class OAuthAccountEntityTests
             .Build();
 
         // Assert
-        Assert.Equal("encrypted_token_value", account.AccessTokenEncrypted);
+        account.AccessTokenEncrypted.Should().Be("encrypted_token_value");
     }
 
     [Fact]
@@ -520,7 +521,7 @@ public class OAuthAccountEntityTests
             .Build();
 
         // Assert
-        Assert.Equal("encrypted_refresh_value", account.RefreshTokenEncrypted);
+        account.RefreshTokenEncrypted.Should().Be("encrypted_refresh_value");
     }
     [Fact]
     public void Builder_CreateDefault_ProducesValidOAuthAccount()
@@ -529,9 +530,9 @@ public class OAuthAccountEntityTests
         var account = OAuthAccountBuilder.CreateDefault();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, account.Id);
-        Assert.NotEqual(Guid.Empty, account.UserId);
-        Assert.NotNull(account.AccessTokenEncrypted);
+        account.Id.Should().NotBe(Guid.Empty);
+        account.UserId.Should().NotBe(Guid.Empty);
+        account.AccessTokenEncrypted.Should().NotBeNull();
     }
 
     [Fact]
@@ -544,9 +545,9 @@ public class OAuthAccountEntityTests
         var account = OAuthAccountBuilder.CreateGoogleForUser(user);
 
         // Assert
-        Assert.Equal("google", account.Provider);
-        Assert.Equal(user.Id, account.UserId);
-        Assert.NotNull(account.RefreshTokenEncrypted);
+        account.Provider.Should().Be("google");
+        account.UserId.Should().Be(user.Id);
+        account.RefreshTokenEncrypted.Should().NotBeNull();
     }
 
     [Fact]
@@ -559,9 +560,9 @@ public class OAuthAccountEntityTests
         var account = OAuthAccountBuilder.CreateDiscordForUser(user);
 
         // Assert
-        Assert.Equal("discord", account.Provider);
-        Assert.Equal(user.Id, account.UserId);
-        Assert.NotNull(account.RefreshTokenEncrypted);
+        account.Provider.Should().Be("discord");
+        account.UserId.Should().Be(user.Id);
+        account.RefreshTokenEncrypted.Should().NotBeNull();
     }
 
     [Fact]
@@ -574,25 +575,25 @@ public class OAuthAccountEntityTests
         var account = OAuthAccountBuilder.CreateGitHubForUser(user);
 
         // Assert
-        Assert.Equal("github", account.Provider);
-        Assert.Equal(user.Id, account.UserId);
+        account.Provider.Should().Be("github");
+        account.UserId.Should().Be(user.Id);
     }
     [Fact]
     public void SupportedProviders_ContainsExpectedProviders()
     {
-        // Assert - Use Assert.Contains for collection membership checks
-        Assert.Contains("google", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
-        Assert.Contains("discord", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
-        Assert.Contains("github", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
-        Assert.Equal(3, OAuthAccount.SupportedProviders.Count);
+        // Assert - Use Should().Contain for collection membership checks
+        ((System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders).Should().Contain("google");
+        ((System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders).Should().Contain("discord");
+        ((System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders).Should().Contain("github");
+        OAuthAccount.SupportedProviders.Count.Should().Be(3);
     }
 
     [Fact]
     public void SupportedProviders_IsCaseInsensitive()
     {
-        // Assert - Use Assert.Contains for collection membership checks (case-insensitive support tested elsewhere)
-        Assert.Contains("GOOGLE", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
-        Assert.Contains("Discord", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
-        Assert.Contains("github", (System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders);
+        // Assert - Use Should().Contain for collection membership checks (case-insensitive support tested elsewhere)
+        ((System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders).Should().Contain("GOOGLE");
+        ((System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders).Should().Contain("Discord");
+        ((System.Collections.Generic.IEnumerable<string>)OAuthAccount.SupportedProviders).Should().Contain("github");
     }
 }

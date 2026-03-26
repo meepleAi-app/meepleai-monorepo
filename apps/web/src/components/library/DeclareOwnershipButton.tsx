@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 
 import { ShieldCheck } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
 
 import { OwnershipConfirmationDialog } from './OwnershipConfirmationDialog';
@@ -76,7 +76,11 @@ export function DeclareOwnershipButton({
           sharedGameId={sharedGameId}
           ownershipResult={ownershipResult}
           open={confirmationOpen}
-          onOpenChange={setConfirmationOpen}
+          onOpenChange={open => {
+            setConfirmationOpen(open);
+            // Re-trigger parent callback on close to ensure query refetch completes
+            if (!open) onOwnershipDeclared?.(ownershipResult);
+          }}
         />
       )}
     </>

@@ -1,10 +1,12 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
 
@@ -38,7 +40,7 @@ public class GetEvaluationResultsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // Note: Result count depends on cache state - this test validates handler doesn't crash
     }
 
@@ -57,8 +59,8 @@ public class GetEvaluationResultsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.All(result, r => Assert.Equal("test-dataset", r.DatasetName, ignoreCase: true));
+        result.Should().NotBeNull();
+        result.Should().AllSatisfy(r => r.DatasetName.Should().BeEquivalentTo("test-dataset"));
     }
 
     [Fact]
@@ -76,7 +78,7 @@ public class GetEvaluationResultsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.All(result, r => Assert.Equal("baseline", r.Configuration, ignoreCase: true));
+        result.Should().NotBeNull();
+        result.Should().AllSatisfy(r => r.Configuration.Should().BeEquivalentTo("baseline"));
     }
 }

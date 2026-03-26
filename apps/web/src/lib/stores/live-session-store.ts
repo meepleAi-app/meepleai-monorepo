@@ -31,6 +31,12 @@ export interface RuleDispute {
   ruleReferences: string[];
   raisedByPlayerName: string;
   timestamp: string;
+  // v2 fields (optional for backward compatibility)
+  confidence?: 'High' | 'Medium' | 'Low';
+  outcome?: 'Pending' | 'VerdictAccepted' | 'VerdictOverridden';
+  votesAccepted?: number;
+  votesRejected?: number;
+  overrideRule?: string;
 }
 
 export type SessionStatus = 'InProgress' | 'Paused' | 'Completed';
@@ -60,16 +66,26 @@ interface LiveSessionState {
   reset: () => void;
 }
 
-const initialState = {
-  sessionId: null as string | null,
+const initialState: Omit<
+  LiveSessionState,
+  | 'setSession'
+  | 'updateScore'
+  | 'addProposal'
+  | 'resolveProposal'
+  | 'addDispute'
+  | 'setConnected'
+  | 'setOffline'
+  | 'reset'
+> = {
+  sessionId: null,
   gameName: '',
-  status: 'InProgress' as SessionStatus,
+  status: 'InProgress',
   currentTurn: 1,
-  currentPhase: null as string | null,
-  players: [] as PlayerInfo[],
-  scores: {} as Record<string, number>,
-  pendingProposals: [] as ScoreProposal[],
-  disputes: [] as RuleDispute[],
+  currentPhase: null,
+  players: [],
+  scores: {},
+  pendingProposals: [],
+  disputes: [],
   isConnected: false,
   isOffline: false,
   elapsedSeconds: 0,

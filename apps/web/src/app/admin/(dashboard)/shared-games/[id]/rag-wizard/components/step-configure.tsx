@@ -12,16 +12,16 @@ import { useCallback, useState } from 'react';
 
 import { FileText } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 
 import type { FileConfig } from './rag-wizard';
 import type { DocumentType } from '../lib/rag-api';

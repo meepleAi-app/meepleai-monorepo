@@ -54,10 +54,10 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
         // Create unique database for test isolation
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext($"ApproveGameProposalFlowTest_{Guid.NewGuid()}");
 
-        _shareRequestRepo = new ShareRequestRepository(_dbContext);
         var eventCollector = TestDbContextFactory.CreateMockEventCollector();
+        _shareRequestRepo = new ShareRequestRepository(_dbContext, eventCollector.Object);
         _privateGameRepo = new PrivateGameRepository(_dbContext, eventCollector.Object);
-        _sharedGameRepo = new SharedGameRepository(_dbContext);
+        _sharedGameRepo = new SharedGameRepository(_dbContext, eventCollector.Object);
         _documentServiceMock = new Mock<IShareRequestDocumentService>();
         _unitOfWork = new UnitOfWork(_dbContext);
 
@@ -358,8 +358,8 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
             AdminNotes: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _commandHandler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _commandHandler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -383,8 +383,8 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
             AdminNotes: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _commandHandler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _commandHandler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]

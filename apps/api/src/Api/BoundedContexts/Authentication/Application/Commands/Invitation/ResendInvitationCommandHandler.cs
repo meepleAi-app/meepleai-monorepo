@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Infrastructure.Security;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -91,7 +92,7 @@ internal sealed class ResendInvitationCommandHandler : ICommandHandler<ResendInv
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to send resend invitation email to {Email}", existingInvitation.Email);
+            _logger.LogWarning(ex, "Failed to send resend invitation email to {Email}", DataMasking.MaskEmail(existingInvitation.Email));
         }
 #pragma warning restore CA1031
 

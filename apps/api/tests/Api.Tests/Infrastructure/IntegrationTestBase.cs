@@ -54,10 +54,10 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
                 SslMode = SslMode.Disable,
                 KeepAlive = 10,
                 Pooling = true,
-                MinPoolSize = 1,
-                MaxPoolSize = 2, // CI service containers have max_connections=100 (default)
-                ConnectionIdleLifetime = 30,
-                ConnectionPruningInterval = 5,
+                MinPoolSize = 0,
+                MaxPoolSize = 2, // CI: max_connections=100, ClearAllPools() in teardown prevents accumulation
+                ConnectionIdleLifetime = 5,
+                ConnectionPruningInterval = 3,
                 Timeout = 30,
                 CommandTimeout = 60
             };
@@ -116,6 +116,10 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
         {
             await DbContext.DisposeAsync();
         }
+
+        // Release all pooled connections back to PostgreSQL to prevent
+        // "too many clients" exhaustion across parallel test classes in CI.
+        NpgsqlConnection.ClearAllPools();
 
         if (_postgresContainer != null)
         {

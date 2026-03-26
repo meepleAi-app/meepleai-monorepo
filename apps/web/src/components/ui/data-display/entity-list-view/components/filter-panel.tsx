@@ -13,8 +13,8 @@ import React from 'react';
 
 import { Filter } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 import { FilterChip } from './filter-chip';

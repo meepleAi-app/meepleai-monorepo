@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -12,6 +13,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -94,13 +96,13 @@ public sealed class PlaygroundChatCommandHandlerTests
         }
 
         // Assert
-        Assert.NotEmpty(events);
-        Assert.Contains(events, e => e.Type == StreamingEventType.StateUpdate);
-        Assert.Contains(events, e => e.Type == StreamingEventType.Token);
-        Assert.Contains(events, e => e.Type == StreamingEventType.Complete);
+        events.Should().NotBeEmpty();
+        events.Should().Contain(e => e.Type == StreamingEventType.StateUpdate);
+        events.Should().Contain(e => e.Type == StreamingEventType.Token);
+        events.Should().Contain(e => e.Type == StreamingEventType.Complete);
 
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.Equal(3, tokenEvents.Count);
+        tokenEvents.Count.Should().Be(3);
     }
 
     [Fact]
@@ -122,15 +124,15 @@ public sealed class PlaygroundChatCommandHandlerTests
         }
 
         // Assert - StateUpdate("Loading...") + Error
-        Assert.Equal(2, events.Count);
-        Assert.Equal(StreamingEventType.StateUpdate, events[0].Type);
+        events.Count.Should().Be(2);
+        events[0].Type.Should().Be(StreamingEventType.StateUpdate);
 
         var errorEvent = events[1];
-        Assert.Equal(StreamingEventType.Error, errorEvent.Type);
+        errorEvent.Type.Should().Be(StreamingEventType.Error);
 
-        var error = Assert.IsType<StreamingError>(errorEvent.Data);
-        Assert.Contains(agentDefId.ToString(), error.errorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("AGENT_NOT_FOUND", error.errorCode);
+        var error = errorEvent.Data.Should().BeOfType<StreamingError>().Which;
+        error.errorMessage.Should().ContainEquivalentOf(agentDefId.ToString());
+        error.errorCode.Should().Be("AGENT_NOT_FOUND");
     }
 
     [Fact]
@@ -153,10 +155,10 @@ public sealed class PlaygroundChatCommandHandlerTests
         }
 
         // Assert - StateUpdate("Loading...") + Error
-        Assert.Equal(2, events.Count);
-        Assert.Equal(StreamingEventType.StateUpdate, events[0].Type);
-        var error = Assert.IsType<StreamingError>(events[1].Data);
-        Assert.Equal("AGENT_INACTIVE", error.errorCode);
+        events.Count.Should().Be(2);
+        events[0].Type.Should().Be(StreamingEventType.StateUpdate);
+        var error = events[1].Data.Should().BeOfType<StreamingError>().Which;
+        error.errorCode.Should().Be("AGENT_INACTIVE");
     }
 
     [Fact]
@@ -182,15 +184,13 @@ public sealed class PlaygroundChatCommandHandlerTests
 
         // Assert
         var stateEvents = events.Where(e => e.Type == StreamingEventType.StateUpdate).ToList();
-        Assert.True(stateEvents.Count >= 1);
+        (stateEvents.Count >= 1).Should().BeTrue();
 
         // StateUpdate should mention the agent name or model
         var agentLoadedEvent = stateEvents.Last();
-        var stateUpdate = Assert.IsType<StreamingStateUpdate>(agentLoadedEvent.Data);
-        Assert.True(
-            stateUpdate.message.Contains("Chess Master AI", StringComparison.OrdinalIgnoreCase)
-            || stateUpdate.message.Contains("gpt-4", StringComparison.OrdinalIgnoreCase),
-            $"Expected state update to mention agent name or model, got: {stateUpdate.message}");
+        var stateUpdate = agentLoadedEvent.Data.Should().BeOfType<StreamingStateUpdate>().Which;
+        (stateUpdate.message.Contains("Chess Master AI", StringComparison.OrdinalIgnoreCase)
+            || stateUpdate.message.Contains("gpt-4", StringComparison.OrdinalIgnoreCase)).Should().BeTrue($"Expected state update to mention agent name or model, got: {stateUpdate.message}");
     }
 
     [Fact]
@@ -216,15 +216,15 @@ public sealed class PlaygroundChatCommandHandlerTests
 
         // Assert
         var completeEvent = events.Last();
-        Assert.Equal(StreamingEventType.Complete, completeEvent.Type);
+        completeEvent.Type.Should().Be(StreamingEventType.Complete);
 
-        var complete = Assert.IsType<PlaygroundStreamingComplete>(completeEvent.Data);
-        Assert.NotNull(complete.agentConfig);
-        Assert.Equal("Test Agent", complete.agentConfig.AgentName);
-        Assert.Equal("gpt-4", complete.agentConfig.Model);
-        Assert.Equal("TestProvider", complete.agentConfig.Provider);
-        Assert.NotNull(complete.latencyBreakdown);
-        Assert.True(complete.latencyBreakdown.totalMs >= 0);
+        var complete = completeEvent.Data.Should().BeOfType<PlaygroundStreamingComplete>().Which;
+        complete.agentConfig.Should().NotBeNull();
+        complete.agentConfig.AgentName.Should().Be("Test Agent");
+        complete.agentConfig.Model.Should().Be("gpt-4");
+        complete.agentConfig.Provider.Should().Be("TestProvider");
+        complete.latencyBreakdown.Should().NotBeNull();
+        (complete.latencyBreakdown.totalMs >= 0).Should().BeTrue();
     }
 
     [Fact]
@@ -251,10 +251,10 @@ public sealed class PlaygroundChatCommandHandlerTests
         }
 
         // Assert
-        Assert.Contains(events, e => e.Type == StreamingEventType.FollowUpQuestions);
+        events.Should().Contain(e => e.Type == StreamingEventType.FollowUpQuestions);
         var fuqEvent = events.First(e => e.Type == StreamingEventType.FollowUpQuestions);
-        var fuq = Assert.IsType<StreamingFollowUpQuestions>(fuqEvent.Data);
-        Assert.NotEmpty(fuq.questions);
+        var fuq = fuqEvent.Data.Should().BeOfType<StreamingFollowUpQuestions>().Which;
+        fuq.questions.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -288,20 +288,21 @@ public sealed class PlaygroundChatCommandHandlerTests
 
         // Assert
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.Equal(2, tokenEvents.Count);
+        tokenEvents.Count.Should().Be(2);
     }
 
     [Fact]
     public async Task Should_Throw_When_Command_Is_Null()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+        Func<Task> act = async () =>
         {
             await foreach (var _ in _handler.Handle(null!, CancellationToken.None))
             {
                 // Should not reach here
             }
-        });
+        };
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -395,10 +396,10 @@ public sealed class PlaygroundChatCommandHandlerTests
 
         // Assert
         var completeEvent = events.Last();
-        var complete = Assert.IsType<PlaygroundStreamingComplete>(completeEvent.Data);
-        Assert.Equal(100, complete.promptTokens);
-        Assert.Equal(50, complete.completionTokens);
-        Assert.Equal(150, complete.totalTokens);
+        var complete = completeEvent.Data.Should().BeOfType<PlaygroundStreamingComplete>().Which;
+        complete.promptTokens.Should().Be(100);
+        complete.completionTokens.Should().Be(50);
+        complete.totalTokens.Should().Be(150);
     }
 
     [Fact]
@@ -476,17 +477,17 @@ public sealed class PlaygroundChatCommandHandlerTests
         }
 
         // Assert
-        Assert.Contains(events, e => e.Type == StreamingEventType.Citations);
+        events.Should().Contain(e => e.Type == StreamingEventType.Citations);
         var citationsEvent = events.First(e => e.Type == StreamingEventType.Citations);
-        var citations = Assert.IsType<StreamingCitations>(citationsEvent.Data);
-        Assert.Single(citations.citations);
-        Assert.Contains("Place the board", citations.citations[0].text, StringComparison.OrdinalIgnoreCase);
+        var citations = citationsEvent.Data.Should().BeOfType<StreamingCitations>().Which;
+        citations.citations.Should().ContainSingle();
+        citations.citations[0].text.Should().ContainEquivalentOf("Place the board");
 
         // Verify confidence is set from RAG results
         var completeEvent = events.Last();
-        var complete = Assert.IsType<PlaygroundStreamingComplete>(completeEvent.Data);
-        Assert.NotNull(complete.confidence);
-        Assert.True(complete.confidence > 0);
+        var complete = completeEvent.Data.Should().BeOfType<PlaygroundStreamingComplete>().Which;
+        complete.confidence.Should().NotBeNull();
+        (complete.confidence > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -511,7 +512,7 @@ public sealed class PlaygroundChatCommandHandlerTests
         }
 
         // Assert - no citations, no search called
-        Assert.DoesNotContain(events, e => e.Type == StreamingEventType.Citations);
+        events.Should().NotContain(e => e.Type == StreamingEventType.Citations);
         _mockHybridSearchService.Verify(
             s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(),
@@ -544,12 +545,14 @@ public sealed class PlaygroundChatCommandHandlerTests
             prompts.Add(AgentPromptTemplate.Create("system", systemPrompt));
         }
 
-        return AgentDefinitionEntity.Create(
+        var agent = AgentDefinitionEntity.Create(
             name: name,
             description: $"Test agent: {name}",
             type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f),
             prompts: prompts);
+        agent.Activate(); // Create() defaults to inactive; activate for "active" helper
+        return agent;
     }
 
     private static AgentDefinitionEntity CreateInactiveAgentDefinition(Guid id, string name)
@@ -560,6 +563,9 @@ public sealed class PlaygroundChatCommandHandlerTests
             type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f));
 
+        // Create() sets IsActive=false by default, so agent is already inactive.
+        // Activate then Deactivate to ensure the domain event fires correctly.
+        agentDef.Activate();
         agentDef.Deactivate();
         return agentDef;
     }

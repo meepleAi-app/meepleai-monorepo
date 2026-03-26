@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Application.Commands;
-using Api.BoundedContexts.Authentication.Application.Handlers;
+using Api.BoundedContexts.Authentication.Application.Commands;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -12,6 +13,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers;
 
@@ -65,10 +67,10 @@ public class ExportUserDataCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("test@example.com", result.Profile.Email);
-        Assert.Equal(userId, result.Profile.Id);
-        Assert.True(result.ExportedAt <= DateTime.UtcNow);
+        result.Should().NotBeNull();
+        result.Profile.Email.Should().Be("test@example.com");
+        result.Profile.Id.Should().Be(userId);
+        (result.ExportedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -83,8 +85,9 @@ public class ExportUserDataCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -101,10 +104,10 @@ public class ExportUserDataCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(0, result.Summary.TotalLibraryGames);
-        Assert.Equal(0, result.Summary.TotalChatThreads);
-        Assert.Equal(0, result.Summary.TotalNotifications);
-        Assert.Equal(42, result.Summary.TotalConversationMemories);
+        result.Summary.TotalLibraryGames.Should().Be(0);
+        result.Summary.TotalChatThreads.Should().Be(0);
+        result.Summary.TotalNotifications.Should().Be(0);
+        result.Summary.TotalConversationMemories.Should().Be(42);
     }
 
     [Fact]
@@ -124,7 +127,7 @@ public class ExportUserDataCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Null(result.AiConsent);
+        result.AiConsent.Should().BeNull();
     }
 
     [Fact]
@@ -141,9 +144,9 @@ public class ExportUserDataCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result.Preferences);
-        Assert.NotNull(result.Preferences.Language);
-        Assert.NotNull(result.Preferences.Theme);
+        result.Preferences.Should().NotBeNull();
+        result.Preferences.Language.Should().NotBeNull();
+        result.Preferences.Theme.Should().NotBeNull();
     }
 
     private void SetupMocks(Guid userId, User user, int memoryCount = 0)

@@ -12,7 +12,12 @@ import React from 'react';
 
 import { AlertTriangle, TrendingUp } from 'lucide-react';
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import {
   COLLECTION_LIMITS,
@@ -57,7 +62,6 @@ export const CollectionLimitIndicator = React.memo(function CollectionLimitIndic
   onUpgrade,
   className,
 }: CollectionLimitIndicatorProps) {
-  // eslint-disable-next-line security/detect-object-injection
   const limits = COLLECTION_LIMITS[tier];
   const isEnterprise = tier === 'Enterprise';
 
@@ -75,12 +79,13 @@ export const CollectionLimitIndicator = React.memo(function CollectionLimitIndic
   const showUpgradeCTA = gamePercent >= 90 || storagePercent >= 90;
 
   return (
-    <div className={cn('space-y-4 p-4 rounded-lg border border-border bg-card', className)} data-testid="collection-limit-indicator">
+    <div
+      className={cn('space-y-4 p-4 rounded-lg border border-border bg-card', className)}
+      data-testid="collection-limit-indicator"
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">
-          Your Collection ({tier} Tier)
-        </h3>
+        <h3 className="text-sm font-semibold text-foreground">Your Collection ({tier} Tier)</h3>
         {showUpgradeCTA && !isEnterprise && onUpgrade && (
           <Button
             onClick={onUpgrade}
@@ -103,10 +108,16 @@ export const CollectionLimitIndicator = React.memo(function CollectionLimitIndic
               <div className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   Games
-                  {showGameWarning && <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-500" data-testid="game-warning-icon" />}
+                  {showGameWarning && (
+                    <AlertTriangle
+                      className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-500"
+                      data-testid="game-warning-icon"
+                    />
+                  )}
                 </span>
                 <span className="font-semibold text-foreground">
-                  {formatGameCount(stats.gameCount)}/{isEnterprise ? '∞' : formatGameCount(limits.maxGames)}
+                  {formatGameCount(stats.gameCount)}/
+                  {isEnterprise ? '∞' : formatGameCount(limits.maxGames)}
                 </span>
               </div>
               <Progress
@@ -144,10 +155,16 @@ export const CollectionLimitIndicator = React.memo(function CollectionLimitIndic
               <div className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   Storage
-                  {showStorageWarning && <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-500" data-testid="storage-warning-icon" />}
+                  {showStorageWarning && (
+                    <AlertTriangle
+                      className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-500"
+                      data-testid="storage-warning-icon"
+                    />
+                  )}
                 </span>
                 <span className="font-semibold text-foreground">
-                  {formatStorage(stats.storageMB)}/{isEnterprise ? '∞' : formatStorage(limits.storageMB)}
+                  {formatStorage(stats.storageMB)}/
+                  {isEnterprise ? '∞' : formatStorage(limits.storageMB)}
                 </span>
               </div>
               <Progress

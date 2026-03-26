@@ -33,13 +33,7 @@ export function GameHeroSection({
       {/* Cover Image */}
       <div className="relative h-64 md:h-80 w-full overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800">
         {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={`${title} cover`}
-            fill
-            className="object-cover"
-            priority
-          />
+          <Image src={imageUrl} alt={`${title} cover`} fill className="object-cover" priority />
         ) : (
           <div className="flex items-center justify-center h-full">
             <span className="text-neutral-400 dark:text-neutral-600">No image</span>
@@ -52,7 +46,6 @@ export function GameHeroSection({
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50">{title}</h1>
           <span
-            // eslint-disable-next-line security/detect-object-injection -- Safe: status is a typed union literal from props
             className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[status]}`}
             role="status"
             aria-label={`Game status: ${status}`}

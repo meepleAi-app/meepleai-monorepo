@@ -41,8 +41,8 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
     entity,
     title,
     subtitle,
-    imageUrl,
-    avatarUrl,
+    imageUrl: _imageUrl,
+    avatarUrl: _avatarUrl,
     actions = [],
     customColor,
     onClick,
@@ -50,10 +50,10 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
     className,
     'data-testid': testId,
     showWishlist,
-    isWishlisted,
-    onWishlistToggle,
+    isWishlisted: _isWishlisted,
+    onWishlistToggle: _onWishlistToggle,
     quickActions,
-    userRole,
+    userRole: _userRole,
     selectable,
     selected,
     onSelect,
@@ -62,21 +62,19 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
     showInfoButton,
     entityId,
     infoHref,
-    infoTooltip,
-    unreadCount,
+    infoTooltip: _infoTooltip,
+    unreadCount: _unreadCount,
     hasAgent,
     agentId,
     onCreateAgent,
     navigateTo,
+    stateLabel: _stateLabel,
   } = props;
 
   const variant = 'compact' as const;
-  const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
-  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = !!(quickActions && quickActions.length > 0);
   const showWishlistBtn = !!showWishlist && !hasQuickActions;
-  // eslint-disable-next-line security/detect-object-injection
   const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -141,7 +139,6 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
             }
           : undefined
       }
-      // eslint-disable-next-line security/detect-object-injection
       aria-label={`${entityColors[entity].name}: ${title}`}
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
@@ -168,21 +165,6 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
           entity={entity}
           customColor={customColor}
           actions={actions}
-          entityQuickActions={entityQuickActions}
-          quickActions={quickActions}
-          userRole={userRole}
-          showWishlistBtn={showWishlistBtn}
-          isWishlisted={isWishlisted}
-          onWishlistToggle={onWishlistToggle}
-          showInfoButton={showInfoButton}
-          entityId={entityId}
-          infoHref={infoHref}
-          infoTooltip={infoTooltip}
-          drawerEntityType={drawerEntityType}
-          onDrawerOpen={() => setDrawerOpen(true)}
-          testId={testId}
-          unreadCount={unreadCount}
-          hasQuickActions={hasQuickActions}
         />
 
         <h3 className="font-quicksand font-bold leading-tight text-sm text-card-foreground">

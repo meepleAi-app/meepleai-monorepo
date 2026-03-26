@@ -55,17 +55,17 @@ internal static class InfrastructureServiceExtensions
         {
             // SEC-03: Debug block removed (Issue #2152 resolved). Connection string must never be logged.
 
-            // Issue #2152: Try SecretsHelper FIRST (reads POSTGRES_* vars)
+            // SEC-708: Explicit connection string takes highest priority (allows SSL Mode, extra params)
+            var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
+
+            // Issue #2152: Try SecretsHelper (reads POSTGRES_* vars) as fallback
             var secretsHelperResult = SecretsHelper.BuildPostgresConnectionString(configuration);
 
-            // SEC-708: Build connection string from Docker Secrets if available
-            var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
-            var connectionString = secretsHelperResult != null
-                ? secretsHelperResult
-                : (envVarConnectionString
-                    ?? configuration["ConnectionStrings__Postgres"]
-                    ?? configuration.GetConnectionString("Postgres")
-                    ?? throw new InvalidOperationException("No PostgreSQL connection string configured"));
+            var connectionString = envVarConnectionString
+                ?? secretsHelperResult
+                ?? configuration["ConnectionStrings__Postgres"]
+                ?? configuration.GetConnectionString("Postgres")
+                ?? throw new InvalidOperationException("No PostgreSQL connection string configured");
 
             // PERF-09: Optimize Postgres connection pooling for better throughput
             services.AddDbContext<MeepleAiDbContext>(options =>
@@ -404,6 +404,9 @@ internal static class InfrastructureServiceExtensions
         // Admin Invitation Flow: background services for invitation lifecycle
         services.AddHostedService<Infrastructure.BackgroundServices.InvitationCleanupService>();
         services.AddHostedService<Infrastructure.BackgroundServices.GameSuggestionProcessorService>();
+
+        // Issue #3695: Daily database metrics snapshots for growth tracking
+        services.AddHostedService<Infrastructure.BackgroundServices.DatabaseMetricsSnapshotService>();
 
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>

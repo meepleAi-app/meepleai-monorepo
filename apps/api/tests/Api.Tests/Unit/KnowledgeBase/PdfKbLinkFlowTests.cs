@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.KnowledgeBase;
 
@@ -26,9 +27,9 @@ public sealed class PdfKbLinkFlowTests
             OriginalGameName: "My Game",
             SharedGameId: null);
 
-        Assert.Equal("user", dto.Source);
-        Assert.Null(dto.SharedGameId);
-        Assert.Equal(50, dto.TotalChunks);
+        dto.Source.Should().Be("user");
+        dto.SharedGameId.Should().BeNull();
+        dto.TotalChunks.Should().Be(50);
     }
 
     [Fact]
@@ -44,9 +45,9 @@ public sealed class PdfKbLinkFlowTests
             OriginalGameName: "Community Game",
             SharedGameId: sharedId);
 
-        Assert.Equal("shared", dto.Source);
-        Assert.Equal(sharedId, dto.SharedGameId);
-        Assert.Null(dto.TotalChunks);
+        dto.Source.Should().Be("shared");
+        dto.SharedGameId.Should().Be(sharedId);
+        dto.TotalChunks.Should().BeNull();
     }
 
     [Fact]
@@ -63,17 +64,17 @@ public sealed class PdfKbLinkFlowTests
 
         var result = new PdfUploadResult(true, "Existing KB found", null, kbInfo);
 
-        Assert.True(result.Success);
-        Assert.NotNull(result.ExistingKb);
-        Assert.Equal("shared", result.ExistingKb.Source);
-        Assert.Equal(108, result.ExistingKb.TotalChunks);
+        result.Success.Should().BeTrue();
+        result.ExistingKb.Should().NotBeNull();
+        result.ExistingKb.Source.Should().Be("shared");
+        result.ExistingKb.TotalChunks.Should().Be(108);
     }
 
     [Fact]
     public void PdfUploadResult_WithoutExistingKb_ShouldHaveNullKbInfo()
     {
         var result = new PdfUploadResult(true, "Upload OK", null);
-        Assert.Null(result.ExistingKb);
+        result.ExistingKb.Should().BeNull();
     }
 
     [Fact]
@@ -85,8 +86,8 @@ public sealed class PdfKbLinkFlowTests
             PdfDocumentId: Guid.NewGuid(),
             Status: "linked");
 
-        Assert.Equal("linked", result.Status);
-        Assert.NotEqual(Guid.Empty, result.VectorDocumentId);
+        result.Status.Should().Be("linked");
+        result.VectorDocumentId.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -98,8 +99,8 @@ public sealed class PdfKbLinkFlowTests
             PdfDocumentId: Guid.NewGuid(),
             Status: "pending");
 
-        Assert.Equal("pending", result.Status);
-        Assert.Equal(Guid.Empty, result.VectorDocumentId);
+        result.Status.Should().Be("pending");
+        result.VectorDocumentId.Should().Be(Guid.Empty);
     }
 
     [Fact]
@@ -117,9 +118,9 @@ public sealed class PdfKbLinkFlowTests
         var json = System.Text.Json.JsonSerializer.Serialize(original);
         var deserialized = System.Text.Json.JsonSerializer.Deserialize<ExistingKbInfoDto>(json);
 
-        Assert.NotNull(deserialized);
-        Assert.Equal(original.PdfDocumentId, deserialized!.PdfDocumentId);
-        Assert.Equal(original.Source, deserialized.Source);
-        Assert.Equal(original.TotalChunks, deserialized.TotalChunks);
+        deserialized.Should().NotBeNull();
+        deserialized!.PdfDocumentId.Should().Be(original.PdfDocumentId);
+        deserialized.Source.Should().Be(original.Source);
+        deserialized.TotalChunks.Should().Be(original.TotalChunks);
     }
 }

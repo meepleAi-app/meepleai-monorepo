@@ -405,44 +405,23 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Test 5: AskAsync with low confidence results - should still return but with lower confidence score.
+    /// Test 5: AskAsync with no vector retrieval (Qdrant removed) - returns "Not specified" with no snippets.
     /// </summary>
     [Fact]
-    public async Task AskAsync_WithLowConfidenceResults_ReturnsResultWithLowConfidence()
+    public async Task AskAsync_WithNoVectorRetrieval_ReturnsNotSpecified()
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
         var query = "Obscure rule";
 
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(query, "en", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[384] } });
-
-        var lowConfidenceResults = new List<SearchResultItem>
-        {
-            new SearchResultItem { Text = "Some tangentially related text", PdfId = "pdf_1", Page = 10, Score = 0.55f }
-        };
-
-        _rerankerMock
-            .Setup(x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()))
-            .ReturnsAsync(lowConfidenceResults);
-
-        _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new LlmCompletionResult
-            {
-                Success = true,
-                Response = "Not specified",
-                Usage = new LlmUsage(PromptTokens: 100, CompletionTokens: 20, TotalTokens: 120)
-            });
-
-        // Act
+        // Act — AskAsync uses the removed Qdrant path, so retrieval returns empty
         var result = await _ragService.AskAsync(gameId, query, cancellationToken: TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert — with no retrieval results, AskAsync returns "Not specified"
         result.Should().NotBeNull();
-        result.confidence.Should().BeApproximately(0.55, 0.001, "confidence should be below threshold");
-        result.answer.Should().Contain("Not specified");
+        result.answer.Should().Be("Not specified");
+        result.snippets.Should().BeEmpty();
+        result.confidence.Should().BeNull();
     }
 
     #endregion
@@ -613,130 +592,56 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
     #region Test 9-10: Query Expansion and Reranking
 
     /// <summary>
-    /// Test 9: AskAsync with query expansion - validates query variations improve recall.
+    /// Test 9: AskAsync with no vector retrieval (Qdrant removed) - query expansion is not called.
     /// </summary>
     [Fact]
-    public async Task AskAsync_WithQueryExpansion_GeneratesMultipleSearchQueries()
+    public async Task AskAsync_WithQueryExpansion_ReturnsNotSpecifiedWhenNoVectorStore()
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
         var query = "win condition";
 
-        var queryVariations = new List<string> { "win condition", "victory condition", "winning criteria" };
-        _queryExpansionServiceMock
-            .Setup(x => x.GenerateQueryVariationsAsync(query, "en", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(queryVariations);
-
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), "en", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[384] } });
-
-        var searchResults = new List<SearchResultItem>
-        {
-            new SearchResultItem { Text = "Win by collecting points", PdfId = "pdf_1", Page = 10, Score = 0.90f }
-        };
-
-        _rerankerMock
-            .Setup(x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()))
-            .ReturnsAsync(searchResults);
-
-        _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new LlmCompletionResult
-            {
-                Success = true,
-                Response = "Win by collecting points.",
-                Usage = new LlmUsage(PromptTokens: 100, CompletionTokens: 40, TotalTokens: 140)
-            });
-
-        // Act
+        // Act — AskAsync uses the removed Qdrant path, so retrieval returns empty
         var result = await _ragService.AskAsync(gameId, query, cancellationToken: TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert — with no retrieval results, returns "Not specified"
         result.Should().NotBeNull();
+        result.answer.Should().Be("Not specified");
+        result.snippets.Should().BeEmpty();
 
-        // Verify query expansion was called
+        // Verify query expansion and reranker are NOT called (vector retrieval skipped)
         _queryExpansionServiceMock.Verify(
-            x => x.GenerateQueryVariationsAsync(query, "en", It.IsAny<CancellationToken>()),
-            Times.Once
+            x => x.GenerateQueryVariationsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
-
-        // Verify embeddings generated for each variation
-        _embeddingServiceMock.Verify(
-            x => x.GenerateEmbeddingAsync(It.IsAny<string>(), "en", It.IsAny<CancellationToken>()),
-            Times.Exactly(queryVariations.Count)
-        );
-
-        // Verify reranker fused multiple search results
         _rerankerMock.Verify(
             x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()),
-            Times.Once
+            Times.Never
         );
     }
 
     /// <summary>
-    /// Test 10: SearchResultReranker fusion - validates RRF deduplication and ranking.
+    /// Test 10: AskAsync with no vector retrieval (Qdrant removed) - reranker is not called.
     /// </summary>
     [Fact]
-    public async Task AskAsync_WithReranker_FusesAndDeduplicatesSearchResults()
+    public async Task AskAsync_WithReranker_ReturnsNotSpecifiedWhenNoVectorStore()
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
         var query = "game setup";
 
-        // Setup query expansion to return TWO variations (to trigger multiple searches)
-        var queryVariations = new List<string> { "game setup", "setup instructions" };
-        _queryExpansionServiceMock
-            .Setup(x => x.GenerateQueryVariationsAsync(query, "en", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(queryVariations);
-
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), "en", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[384] } });
-
-        var searchResults1 = new List<SearchResultItem>
-        {
-            new SearchResultItem { Text = "Setup: Place board", PdfId = "pdf_1", Page = 2, Score = 0.95f },
-            new SearchResultItem { Text = "Distribute cards", PdfId = "pdf_1", Page = 3, Score = 0.85f }
-        };
-
-        var searchResults2 = new List<SearchResultItem>
-        {
-            new SearchResultItem { Text = "Setup: Place board", PdfId = "pdf_1", Page = 2, Score = 0.90f },
-            new SearchResultItem { Text = "Give tokens to players", PdfId = "pdf_1", Page = 3, Score = 0.80f }
-        };
-
-        var fusedResults = new List<SearchResultItem>
-        {
-            new SearchResultItem { Text = "Setup: Place board", PdfId = "pdf_1", Page = 2, Score = 0.95f },
-            new SearchResultItem { Text = "Distribute cards", PdfId = "pdf_1", Page = 3, Score = 0.85f },
-            new SearchResultItem { Text = "Give tokens to players", PdfId = "pdf_1", Page = 3, Score = 0.80f }
-        };
-
-        _rerankerMock
-            .Setup(x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()))
-            .ReturnsAsync(fusedResults);
-
-        _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new LlmCompletionResult
-            {
-                Success = true,
-                Response = "Setup by placing board, distributing cards, and giving tokens.",
-                Usage = new LlmUsage(PromptTokens: 150, CompletionTokens: 60, TotalTokens: 210)
-            });
-
-        // Act
+        // Act — AskAsync uses the removed Qdrant path, so retrieval returns empty
         var result = await _ragService.AskAsync(gameId, query, cancellationToken: TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert — with no retrieval results, returns "Not specified"
         result.Should().NotBeNull();
-        result.snippets.Should().HaveCount(3, "should have deduplicated results");
+        result.answer.Should().Be("Not specified");
+        result.snippets.Should().BeEmpty();
 
-        // Verify reranker was called with 2 successful search results
+        // Verify reranker was NOT called (vector retrieval skipped)
         _rerankerMock.Verify(
-            x => x.FuseSearchResultsAsync(It.Is<List<SearchResult>>(list => list.Count == 2 && list.All(r => r.Success))),
-            Times.Once
+            x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()),
+            Times.Never
         );
     }
 

@@ -11,14 +11,14 @@
  * - Flip card with lazy-fetched SharedGameDetail (description, categories, mechanics)
  * - Quick actions: Avvia Sessione, Rimuovi dalla Libreria, Condividi
  * - Footer navigateTo: KB / Agents / Chats / Sessions
- * - Info button → /games/{id}
+ * - Info button → /library/games/{id}
  *
  * @example
  * ```tsx
  * <MeepleUserLibraryCard
  *   game={userGameDto}
  *   variant="grid"
- *   onClick={(id) => router.push(`/games/${id}`)}
+ *   onClick={(id) => router.push(`/library/games/${id}`)}
  * />
  * ```
  */
@@ -143,7 +143,7 @@ export function MeepleUserLibraryCard({
       icon: Share2,
       label: 'Condividi',
       onClick: () => {
-        navigator.clipboard?.writeText(`${window.location.origin}/games/${game.id}`);
+        navigator.clipboard?.writeText(`${window.location.origin}/library/games/${game.id}`);
       },
     },
   ];
@@ -190,7 +190,7 @@ export function MeepleUserLibraryCard({
         navigateTo={drawerNavLinks}
         entityQuickActions={quickActions}
         showInfoButton
-        infoHref={`/games/${game.id}`}
+        infoHref={`/library/games/${game.id}`}
         infoTooltip="Vai al dettaglio"
         className={className}
         data-testid={`library-game-card-${game.id}`}

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -9,13 +11,11 @@ namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 /// EF Core implementation of IToolkitSessionStateRepository.
 /// Issue #5148 — Epic B5.
 /// </summary>
-internal sealed class ToolkitSessionStateRepository : IToolkitSessionStateRepository
+internal sealed class ToolkitSessionStateRepository : RepositoryBase, IToolkitSessionStateRepository
 {
-    private readonly MeepleAiDbContext _context;
-
-    public ToolkitSessionStateRepository(MeepleAiDbContext context)
+    public ToolkitSessionStateRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context;
     }
 
     public async Task<ToolkitSessionState?> GetBySessionAsync(
@@ -23,14 +23,14 @@ internal sealed class ToolkitSessionStateRepository : IToolkitSessionStateReposi
         Guid toolkitId,
         CancellationToken cancellationToken = default)
     {
-        return await _context.ToolkitSessionStates
+        return await DbContext.ToolkitSessionStates
             .FirstOrDefaultAsync(s => s.SessionId == sessionId && s.ToolkitId == toolkitId, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task AddAsync(ToolkitSessionState state, CancellationToken cancellationToken = default)
     {
-        await _context.ToolkitSessionStates
+        await DbContext.ToolkitSessionStates
             .AddAsync(state, cancellationToken)
             .ConfigureAwait(false);
     }

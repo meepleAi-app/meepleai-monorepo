@@ -424,7 +424,7 @@ docker exec meepleai-redis redis-cli ping             # Redis
 | [BGG API](./boardgamegeek-api-setup.md) | BoardGameGeek API setup |
 | [Cost Optimization](./github-alternatives-cost-optimization.md) | GitHub Alternatives & Cost |
 
-**Related**: [Monitoring](../02-development/README.md#monitoring), [Testing](../05-testing/README.md), [Security](../06-security/README.md)
+**Related**: [Monitoring](../development/README.md#monitoring), [Testing](../testing/README.md), [Security](../security/README.md)
 
 ---
 

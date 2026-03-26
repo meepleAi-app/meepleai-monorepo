@@ -1,6 +1,7 @@
 using Api.Tests.Infrastructure;
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
@@ -58,25 +59,7 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
         _databaseName = $"test_updatecomment_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        // Register domain event infrastructure
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-        // Register MediatR
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(UpdateRuleCommentCommandHandler).Assembly));
-
-        // Register TimeProvider
-        services.AddSingleton(TimeProvider.System);
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Register handler explicitly
         services.AddScoped<UpdateRuleCommentCommandHandler>();

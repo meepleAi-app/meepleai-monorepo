@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Integration.DocumentProcessing;
@@ -169,11 +170,11 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var result = await _sut.StoreAsync(stream, "test-document.pdf", gameId);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotNull(result.FileId);
-        Assert.NotNull(result.FilePath);
-        Assert.Contains($"pdf_uploads/{gameId}/", result.FilePath);
-        Assert.Equal(content.Length, result.FileSizeBytes);
+        result.Success.Should().BeTrue();
+        result.FileId.Should().NotBeNull();
+        result.FilePath.Should().NotBeNull();
+        result.FilePath.Should().Contain($"pdf_uploads/{gameId}/");
+        result.FileSizeBytes.Should().Be(content.Length);
     }
 
     [Fact]
@@ -186,13 +187,13 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         using var stream = new MemoryStream(content);
         var gameId = Guid.NewGuid().ToString("N");
         var storeResult = await _sut.StoreAsync(stream, "exists-test.pdf", gameId);
-        Assert.True(storeResult.Success);
+        storeResult.Success.Should().BeTrue();
 
         // Act
         var exists = await _sut.ExistsAsync(storeResult.FileId!, gameId);
 
         // Assert
-        Assert.True(exists);
+        exists.Should().BeTrue();
     }
 
     [Fact]
@@ -205,17 +206,17 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         using var storeStream = new MemoryStream(originalContent);
         var gameId = Guid.NewGuid().ToString("N");
         var storeResult = await _sut.StoreAsync(storeStream, "retrieve-test.pdf", gameId);
-        Assert.True(storeResult.Success);
+        storeResult.Success.Should().BeTrue();
 
         // Act
         using var retrievedStream = await _sut.RetrieveAsync(storeResult.FileId!, gameId);
 
         // Assert
-        Assert.NotNull(retrievedStream);
+        retrievedStream.Should().NotBeNull();
         using var memoryStream = new MemoryStream();
         await retrievedStream.CopyToAsync(memoryStream);
         var retrievedContent = memoryStream.ToArray();
-        Assert.Equal(originalContent, retrievedContent);
+        retrievedContent.Should().BeEquivalentTo(originalContent);
     }
 
     [Fact]
@@ -228,23 +229,23 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         using var stream = new MemoryStream(content);
         var gameId = Guid.NewGuid().ToString("N");
         var storeResult = await _sut.StoreAsync(stream, "presigned-test.pdf", gameId);
-        Assert.True(storeResult.Success);
+        storeResult.Success.Should().BeTrue();
 
         // Act
         var url = await _sut.GetPresignedDownloadUrlAsync(storeResult.FileId!, gameId, expirySeconds: 300);
 
         // Assert
-        Assert.NotNull(url);
-        Assert.Contains(_options.BucketName, url);
-        Assert.Contains("X-Amz-Signature", url);
+        url.Should().NotBeNull();
+        url.Should().Contain(_options.BucketName);
+        url.Should().Contain("X-Amz-Signature");
 
         // Verify the URL is downloadable via HTTP
         using var httpClient = new HttpClient();
         var response = await httpClient.GetAsync(url);
-        Assert.True(response.IsSuccessStatusCode, $"Presigned URL download failed: {response.StatusCode}");
+        (response.IsSuccessStatusCode).Should().BeTrue($"Presigned URL download failed: {response.StatusCode}");
 
         var downloadedContent = await response.Content.ReadAsByteArrayAsync();
-        Assert.Equal(content, downloadedContent);
+        downloadedContent.Should().BeEquivalentTo(content);
     }
 
     [Fact]
@@ -257,15 +258,15 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         using var stream = new MemoryStream(content);
         var gameId = Guid.NewGuid().ToString("N");
         var storeResult = await _sut.StoreAsync(stream, "delete-test.pdf", gameId);
-        Assert.True(storeResult.Success);
-        Assert.True(await _sut.ExistsAsync(storeResult.FileId!, gameId));
+        storeResult.Success.Should().BeTrue();
+        (await _sut.ExistsAsync(storeResult.FileId!, gameId)).Should().BeTrue();
 
         // Act
         var deleted = await _sut.DeleteAsync(storeResult.FileId!, gameId);
 
         // Assert
-        Assert.True(deleted);
-        Assert.False(await _sut.ExistsAsync(storeResult.FileId!, gameId));
+        deleted.Should().BeTrue();
+        (await _sut.ExistsAsync(storeResult.FileId!, gameId)).Should().BeFalse();
     }
 
     [Fact]
@@ -277,7 +278,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var result = await _sut.ExistsAsync("file123", "../../../etc/passwd");
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -292,7 +293,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var result = await _sut.RetrieveAsync("nonexistentfile", gameId);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -307,7 +308,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var result = await _sut.DeleteAsync("nonexistentfile", gameId);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -322,7 +323,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var result = await _sut.GetPresignedDownloadUrlAsync("nonexistentfile", gameId);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -348,8 +349,8 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         // Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("S3 storage accessible", result.Description);
+        result.Status.Should().Be(HealthStatus.Healthy);
+        result.Description.Should().Contain("S3 storage accessible");
     }
 
     [Fact]
@@ -364,27 +365,27 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         // 1. Store
         using var storeStream = new MemoryStream(content);
         var storeResult = await _sut.StoreAsync(storeStream, "lifecycle-test.pdf", gameId);
-        Assert.True(storeResult.Success, "Store failed");
+        (storeResult.Success).Should().BeTrue("Store failed");
 
         // 2. Exists
-        Assert.True(await _sut.ExistsAsync(storeResult.FileId!, gameId), "Exists failed after Store");
+        (await _sut.ExistsAsync(storeResult.FileId!, gameId)).Should().BeTrue("Exists failed after Store");
 
         // 3. Retrieve and verify content
         using var retrieveStream = await _sut.RetrieveAsync(storeResult.FileId!, gameId);
-        Assert.NotNull(retrieveStream);
+        retrieveStream.Should().NotBeNull();
         using var ms = new MemoryStream();
         await retrieveStream.CopyToAsync(ms);
-        Assert.Equal(content, ms.ToArray());
+        ms.ToArray().Should().BeEquivalentTo(content);
 
         // 4. Presigned URL
         var url = await _sut.GetPresignedDownloadUrlAsync(storeResult.FileId!, gameId);
-        Assert.NotNull(url);
+        url.Should().NotBeNull();
 
         // 5. Delete
-        Assert.True(await _sut.DeleteAsync(storeResult.FileId!, gameId), "Delete failed");
+        (await _sut.DeleteAsync(storeResult.FileId!, gameId)).Should().BeTrue("Delete failed");
 
         // 6. Verify deletion
-        Assert.False(await _sut.ExistsAsync(storeResult.FileId!, gameId), "File still exists after Delete");
-        Assert.Null(await _sut.RetrieveAsync(storeResult.FileId!, gameId));
+        (await _sut.ExistsAsync(storeResult.FileId!, gameId)).Should().BeFalse("File still exists after Delete");
+        (await _sut.RetrieveAsync(storeResult.FileId!, gameId)).Should().BeNull();
     }
 }

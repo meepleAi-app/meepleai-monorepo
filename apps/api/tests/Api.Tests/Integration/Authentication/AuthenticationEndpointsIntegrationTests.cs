@@ -1,21 +1,18 @@
 using System.Net;
 using System.Net.Http.Json;
-using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
-using MediatR;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using FluentAssertions;
 using Moq;
-using StackExchange.Redis;
 using Xunit;
 
 namespace Api.Tests.Integration.Authentication;
@@ -45,43 +42,18 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
     {
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
-        _factory = new WebApplicationFactory<Program>()
+        _factory = IntegrationWebApplicationFactory.Create(connectionString)
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, configBuilder) =>
-                {
-                    configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["OPENROUTER_API_KEY"] = "test-key",
-                        ["ConnectionStrings:Postgres"] = connectionString
-                    });
-                });
-
                 builder.ConfigureTestServices(services =>
                 {
-                    // Replace DbContext with test database
-                    services.RemoveAll(typeof(DbContextOptions<MeepleAiDbContext>));
-                    services.AddDbContext<MeepleAiDbContext>(options =>
-                        options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
-
-                    // Mock Redis for HybridCache
-                    services.RemoveAll(typeof(IConnectionMultiplexer));
-                    var mockRedis = new Mock<IConnectionMultiplexer>();
-                    services.AddSingleton(mockRedis.Object);
-
-                    // Mock vector/embedding services
-                    services.RemoveAll(typeof(Api.Services.IEmbeddingService));
-                    services.AddScoped<Api.Services.IEmbeddingService>(_ => Mock.Of<Api.Services.IEmbeddingService>());
-
-                    // Mock IHybridCacheService
-                    services.RemoveAll(typeof(Api.Services.IHybridCacheService));
-                    services.AddScoped<Api.Services.IHybridCacheService>(_ => Mock.Of<Api.Services.IHybridCacheService>());
-
-                    // Ensure domain event collector is registered
-                    services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector,
-                        Api.SharedKernel.Application.Services.DomainEventCollector>();
+                    // Enable public registration so /auth/register doesn't return 403
+                    services.RemoveAll(typeof(IConfigurationService));
+                    var mockConfig = new Mock<IConfigurationService>();
+                    mockConfig
+                        .Setup(c => c.GetValueAsync<bool?>("Registration:PublicEnabled", It.IsAny<bool?>(), It.IsAny<string?>()))
+                        .ReturnsAsync(true);
+                    services.AddSingleton<IConfigurationService>(mockConfig.Object);
                 });
             });
 
@@ -121,16 +93,16 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<RegisterResponseDto>();
-        Assert.NotNull(result);
-        Assert.NotNull(result.User);
-        Assert.Equal(payload.Email, result.User.Email);
-        Assert.Equal(payload.DisplayName, result.User.DisplayName);
+        result.Should().NotBeNull();
+        result.User.Should().NotBeNull();
+        result.User.Email.Should().Be(payload.Email);
+        result.User.DisplayName.Should().Be(payload.DisplayName);
 
         // Verify session cookie was set
         var setCookieHeader = response.Headers.GetValues("Set-Cookie").FirstOrDefault();
-        Assert.Contains("meepleai_session", setCookieHeader);
+        setCookieHeader.Should().Contain("meepleai_session");
     }
 
     [Fact]
@@ -146,7 +118,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", payload2);
 
         // Assert - DomainException returns 400 BadRequest
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -164,7 +136,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Assert - FluentValidation returns 422 UnprocessableEntity
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     [Fact]
@@ -182,7 +154,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Assert - FluentValidation returns 422 UnprocessableEntity
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     // ========================================
@@ -210,15 +182,15 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         });
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
-        Assert.NotNull(result);
-        Assert.NotNull(result.User);
-        Assert.Equal(email, result.User.Email);
+        result.Should().NotBeNull();
+        result.User.Should().NotBeNull();
+        result.User.Email.Should().Be(email);
 
         // Verify session cookie was set
         var setCookieHeader = response.Headers.GetValues("Set-Cookie").FirstOrDefault();
-        Assert.Contains("meepleai_session", setCookieHeader);
+        setCookieHeader.Should().Contain("meepleai_session");
     }
 
     [Fact]
@@ -241,7 +213,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         });
 
         // Assert - DomainException "Invalid email or password" returns 400 BadRequest
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -255,7 +227,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         });
 
         // Assert - DomainException "Invalid email or password" returns 400 BadRequest
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -265,7 +237,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { Email = "", Password = "" });
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     // ========================================
@@ -294,7 +266,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         // Extract session cookie
         var cookies = loginResponse.Headers.GetValues("Set-Cookie");
         var sessionCookie = cookies.FirstOrDefault(c => c.Contains("meepleai_session"));
-        Assert.NotNull(sessionCookie);
+        sessionCookie.Should().NotBeNull();
 
         // Create request with session cookie
         var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
@@ -304,9 +276,9 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(logoutRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<OkResponseDto>();
-        Assert.True(result?.Ok);
+        result?.Ok.Should().BeTrue();
     }
 
     [Fact]
@@ -316,7 +288,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsync("/api/v1/auth/logout", null);
 
         // Assert - Should succeed even without session
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     // ========================================
@@ -354,12 +326,12 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(meRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<MeResponseDto>();
-        Assert.NotNull(result);
-        Assert.NotNull(result.User);
-        Assert.Equal(email, result.User.Email);
-        Assert.Equal(displayName, result.User.DisplayName);
+        result.Should().NotBeNull();
+        result.User.Should().NotBeNull();
+        result.User.Email.Should().Be(email);
+        result.User.DisplayName.Should().Be(displayName);
     }
 
     [Fact]
@@ -369,7 +341,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/auth/me");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -393,10 +365,10 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<SessionStatusResponseDto>();
-        Assert.NotNull(result);
-        Assert.True(result.RemainingMinutes > 0);
+        result.Should().NotBeNull();
+        (result.RemainingMinutes > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -406,7 +378,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/auth/session/status");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -436,16 +408,14 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         // Assert - With mocked cache service, session validation in middleware may fail
         // This is expected behavior in test environment. The endpoint code itself is exercised.
         // In production with real cache, this would return OK.
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected OK or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected OK or Unauthorized, got {response.StatusCode}");
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
             var result = await response.Content.ReadFromJsonAsync<ExtendSessionResponseDto>();
-            Assert.NotNull(result);
-            Assert.True(result.ExpiresAt > DateTime.UtcNow);
+            result.Should().NotBeNull();
+            (result.ExpiresAt > DateTime.UtcNow).Should().BeTrue();
         }
     }
 
@@ -470,7 +440,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     // ========================================
@@ -510,9 +480,9 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<OkResponseDto>();
-        Assert.True(result?.Ok);
+        result?.Ok.Should().BeTrue();
     }
 
     // ========================================
@@ -537,9 +507,9 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<RevokeAllResponseDto>();
-        Assert.True(result?.Ok);
+        result?.Ok.Should().BeTrue();
     }
 
     [Fact]
@@ -550,7 +520,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
             new { IncludeCurrentSession = false });
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================

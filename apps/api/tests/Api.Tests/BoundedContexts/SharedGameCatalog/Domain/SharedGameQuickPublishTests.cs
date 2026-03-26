@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Domain;
 
@@ -23,9 +24,9 @@ public class SharedGameQuickPublishTests
         game.QuickPublish(TestUserId);
 
         // Assert
-        Assert.Equal(GameStatus.Published, game.Status);
-        Assert.Equal(TestUserId, game.ModifiedBy);
-        Assert.NotNull(game.ModifiedAt);
+        game.Status.Should().Be(GameStatus.Published);
+        game.ModifiedBy.Should().Be(TestUserId);
+        game.ModifiedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -39,10 +40,10 @@ public class SharedGameQuickPublishTests
         game.QuickPublish(TestUserId);
 
         // Assert
-        Assert.Single(game.DomainEvents);
-        var publishedEvent = Assert.IsType<SharedGameQuickPublishedEvent>(game.DomainEvents.First());
-        Assert.Equal(game.Id, publishedEvent.GameId);
-        Assert.Equal(TestUserId, publishedEvent.PublishedBy);
+        game.DomainEvents.Should().ContainSingle();
+        var publishedEvent = game.DomainEvents.First().Should().BeOfType<SharedGameQuickPublishedEvent>().Subject;
+        publishedEvent.GameId.Should().Be(game.Id);
+        publishedEvent.PublishedBy.Should().Be(TestUserId);
     }
 
     [Fact]
@@ -53,9 +54,10 @@ public class SharedGameQuickPublishTests
         game.SubmitForApproval(TestUserId); // Draft → PendingApproval
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => game.QuickPublish(TestUserId));
-        Assert.Contains("PendingApproval", exception.Message);
-        Assert.Contains("Only Draft games can be quick-published", exception.Message);
+        var act = () => game.QuickPublish(TestUserId);
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("PendingApproval");
+        exception.Message.Should().Contain("Only Draft games can be quick-published");
     }
 
     [Fact]
@@ -65,8 +67,9 @@ public class SharedGameQuickPublishTests
         var game = CreateDraftGame();
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => game.QuickPublish(Guid.Empty));
-        Assert.Equal("publishedBy", exception.ParamName);
+        var act = () => game.QuickPublish(Guid.Empty);
+        var exception = act.Should().Throw<ArgumentException>().Which;
+        exception.ParamName.Should().Be("publishedBy");
     }
 
     [Fact]
@@ -77,8 +80,9 @@ public class SharedGameQuickPublishTests
         game.QuickPublish(TestUserId); // Draft → Published
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => game.QuickPublish(Guid.NewGuid()));
-        Assert.Contains("Published", exception.Message);
+        var act = () => game.QuickPublish(Guid.NewGuid());
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("Published");
     }
 
     [Fact]
@@ -90,8 +94,9 @@ public class SharedGameQuickPublishTests
         game.Archive(TestUserId);       // Published → Archived
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => game.QuickPublish(Guid.NewGuid()));
-        Assert.Contains("Archived", exception.Message);
+        var act = () => game.QuickPublish(Guid.NewGuid());
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("Archived");
     }
 
     private static SharedGame CreateDraftGame()

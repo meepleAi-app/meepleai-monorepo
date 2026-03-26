@@ -28,7 +28,7 @@ import { Textarea } from '@/components/ui/primitives/textarea';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
-import { PdfReferenceCard, type PdfReference } from './PdfReferenceCard';
+import { MeeplePdfReferenceCard, type PdfReference } from './MeeplePdfReferenceCard';
 import { TypingIndicator } from './TypingIndicator';
 
 export interface ChatMessage {
@@ -309,7 +309,7 @@ export function AgentChatPanel({
 
                 {/* PDF References */}
                 {message.pdfReferences?.map((ref, idx) => (
-                  <PdfReferenceCard
+                  <MeeplePdfReferenceCard
                     key={`${ref.pdfId}-${ref.pageNumber}-${idx}`}
                     reference={ref}
                     onJumpToPage={onPdfReferenceClick}

@@ -89,9 +89,11 @@ export const DRAWER_ENTITY_TYPE_MAP: Partial<
 
 export const meepleCardVariants = cva(
   // Base styles for all variants — v2 warm styling (Issue #4604)
+  // Env-aware: reads --env-card-lift from parent .env-tavolo/.env-hub
   [
     'group relative overflow-hidden cursor-pointer',
     'transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]',
+    'motion-reduce:transition-none',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
   ],
   {
@@ -99,28 +101,30 @@ export const meepleCardVariants = cva(
       variant: {
         grid: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card border border-border/50',
+          'bg-[var(--nh-bg-surface)] border border-[var(--nh-border-default)]',
+          'border-l-[3px] [border-left-color:var(--mc-entity-color,transparent)]',
           '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          // Neon Holo: 3D tilt + performance containment
           'hover:-translate-y-2',
           '[contain:layout_paint]',
         ],
         list: [
           'flex flex-row items-center gap-4 p-3 rounded-xl',
-          'bg-card border border-border/50',
+          'bg-[var(--nh-bg-surface)] border border-[var(--nh-border-default)]',
+          'border-l-[3px] [border-left-color:var(--mc-entity-color,transparent)]',
           '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-md)]',
           'hover:translate-x-1',
         ],
         compact: [
           'flex flex-row items-center gap-2 p-2 rounded-lg',
-          'bg-card/80 border border-border/30',
-          'hover:bg-card',
+          'bg-[var(--nh-bg-surface)] border border-[var(--nh-border-default)]',
+          'border-l-[3px] [border-left-color:var(--mc-entity-color,transparent)]',
+          'hover:bg-[var(--nh-bg-elevated)]',
         ],
         featured: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card border border-border/50',
+          'bg-[var(--nh-bg-surface)] border border-[var(--nh-border-default)]',
+          'border-l-[3px] [border-left-color:var(--mc-entity-color,transparent)]',
           '[box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          // Neon Holo: hover lift + performance containment
           'hover:-translate-y-2',
           '[contain:layout_paint]',
         ],
@@ -129,10 +133,12 @@ export const meepleCardVariants = cva(
           'min-h-[320px]',
           '[box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)]',
           'hover:scale-[1.01]',
+          '[background-image:var(--texture-parchment)]',
         ],
         expanded: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card border border-border/50',
+          'bg-[var(--nh-bg-surface)] border border-[var(--nh-border-default)]',
+          'border-l-[3px] [border-left-color:var(--mc-entity-color,transparent)]',
           '[box-shadow:var(--shadow-warm-md)]',
         ],
       },
@@ -170,3 +176,26 @@ export const contentVariants = cva('', {
   },
   defaultVariants: { variant: 'grid' },
 });
+
+// ============================================================================
+// Cover Overlay Styles (MtG-inspired)
+// ============================================================================
+
+/**
+ * Styles for the MtG-inspired cover overlay slots.
+ * - container: absolute bar at bottom of cover image
+ * - subtypeIcon: bottom-left classification icon slot
+ * - stateLabel: bottom-right state badge slot with semantic color variants
+ */
+export const coverOverlayStyles = {
+  container:
+    'absolute bottom-0 left-0 right-0 flex items-end justify-between p-1.5 pointer-events-none',
+  subtypeIcon: 'pointer-events-auto rounded-sm bg-black/60 p-0.5 backdrop-blur-sm',
+  stateLabel: {
+    base: 'pointer-events-auto rounded-sm px-1.5 py-0.5 text-[10px] font-semibold backdrop-blur-sm',
+    success: 'bg-emerald-500/80 text-white',
+    warning: 'bg-amber-500/80 text-black',
+    error: 'bg-red-500/80 text-white',
+    info: 'bg-blue-500/80 text-white',
+  },
+} as const;

@@ -98,7 +98,7 @@
 | Problema | Diagnosi |
 |----------|----------|
 | Gioco non trovato in /discover | `curl http://localhost:8080/api/v1/shared-games?searchTerm=Catan` |
-| PDF non Ready | `curl http://localhost:8080/api/v1/pdfs/{pdfId}/progress -b cookies.txt` |
+| PDF non Completed | `curl http://localhost:8080/api/v1/pdfs/{pdfId}/progress -b cookies.txt` (check `currentStep`=`Completed`) |
 | Nessuna risposta RAG | `pwsh -c "docker logs meepleai-embedding-service --tail=20"` |
 | Chat timeout | Verificare OpenRouter key: `cat infra/secrets/dev/openrouter.secret` |
 | Agent creation fails | Possibile limite slot agente — verificare tier utente |

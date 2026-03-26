@@ -12,7 +12,7 @@
  * - Performance optimized (CSS-only, GPU accelerated)
  * - Responsive with subtle opacity adjustment
  *
- * Design Reference: docs/design-proposals/meepleai-style/admin-dashboard-v2.html (lines 24-44)
+ * Design Reference: docs/design-proposals/meepleai-style/admin-dashboard.html (lines 24-44)
  */
 
 export interface BackgroundTextureProps {
@@ -50,7 +50,6 @@ export function BackgroundTexture({
     return null;
   }
 
-  // eslint-disable-next-line security/detect-object-injection -- Safe: intensity is a typed union literal from props
   const multiplier = INTENSITY_MULTIPLIERS[intensity];
 
   // Calculate adjusted opacity values for texture layers

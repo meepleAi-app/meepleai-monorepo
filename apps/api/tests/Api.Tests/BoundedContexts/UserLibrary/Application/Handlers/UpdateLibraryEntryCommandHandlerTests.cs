@@ -2,7 +2,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
-using Api.BoundedContexts.UserLibrary.Application.Handlers;
+using Api.BoundedContexts.UserLibrary.Application.Commands;
+using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.SharedKernel.Domain.Exceptions;
@@ -45,8 +46,8 @@ public class UpdateLibraryEntryCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -69,7 +70,7 @@ public class UpdateLibraryEntryCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("not in your library");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -102,7 +103,7 @@ public class UpdateLibraryEntryCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("not found in catalog");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

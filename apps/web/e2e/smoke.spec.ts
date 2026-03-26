@@ -10,7 +10,7 @@ const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function mockAdminAuth(page: import('@playwright/test').Page) {
-  await page.route(`${API_BASE}/api/v1/auth/me`, (route) =>
+  await page.route(`${API_BASE}/api/v1/auth/me`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -20,8 +20,12 @@ async function mockAdminAuth(page: import('@playwright/test').Page) {
       }),
     })
   );
-  await page.route(`${API_BASE}/api/v1/**`, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
+  await page.route(`${API_BASE}/api/v1/**`, route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [] }),
+    })
   );
 }
 
@@ -36,7 +40,9 @@ test.describe('Smoke Test — 8 step pre-deploy', () => {
 
   test('2. Auth login form visibile', async ({ page }) => {
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('input[type="email"], input[name="email"]').first()).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('input[type="email"], input[name="email"]').first()).toBeVisible({
+      timeout: 8000,
+    });
   });
 
   test('3. Dashboard carica dopo auth mock', async ({ page }) => {
@@ -46,7 +52,7 @@ test.describe('Smoke Test — 8 step pre-deploy', () => {
   });
 
   test('4. Catalog giochi carica con MeepleCard', async ({ page }) => {
-    await page.route(`${API_BASE}/api/v1/shared-games**`, (route) =>
+    await page.route(`${API_BASE}/api/v1/shared-games**`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -59,7 +65,7 @@ test.describe('Smoke Test — 8 step pre-deploy', () => {
         }),
       })
     );
-    await page.goto('/games', { waitUntil: 'domcontentloaded' });
+    await page.goto('/library', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -71,8 +77,12 @@ test.describe('Smoke Test — 8 step pre-deploy', () => {
 
   test('6. Pipeline Diagram visibile', async ({ page }) => {
     await mockAdminAuth(page);
-    await page.route(`${API_BASE}/api/v1/admin/rag/**`, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
+    await page.route(`${API_BASE}/api/v1/admin/rag/**`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: [] }),
+      })
     );
     await page.goto('/admin/agents/pipeline', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toBeVisible();
@@ -80,7 +90,7 @@ test.describe('Smoke Test — 8 step pre-deploy', () => {
 
   test('7. Documents table carica', async ({ page }) => {
     await mockAdminAuth(page);
-    await page.route(`${API_BASE}/api/v1/admin/knowledge-base/documents**`, (route) =>
+    await page.route(`${API_BASE}/api/v1/admin/knowledge-base/documents**`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -93,7 +103,7 @@ test.describe('Smoke Test — 8 step pre-deploy', () => {
 
   test('8. Chat interface carica', async ({ page }) => {
     await mockAdminAuth(page);
-    await page.route(`${API_BASE}/api/v1/agents**`, (route) =>
+    await page.route(`${API_BASE}/api/v1/agents**`, route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
     );
     await page.goto('/chat/new', { waitUntil: 'domcontentloaded' });

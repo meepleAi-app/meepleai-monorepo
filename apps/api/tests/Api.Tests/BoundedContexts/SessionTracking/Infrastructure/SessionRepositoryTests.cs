@@ -19,7 +19,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
     }
 
     protected override SessionRepository CreateRepository(MeepleAiDbContext dbContext)
-        => new SessionRepository(dbContext);
+        => new SessionRepository(dbContext, MockEventCollector.Object);
 
     private async Task<Guid> CreateTestUserAsync(string email = "test@example.com")
     {

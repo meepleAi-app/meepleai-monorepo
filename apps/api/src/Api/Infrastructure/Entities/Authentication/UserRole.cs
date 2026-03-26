@@ -25,5 +25,10 @@ public enum UserRole
     /// <summary>
     /// Full system access, can manage other admins and global feature flags
     /// </summary>
-    SuperAdmin = 3
+    SuperAdmin = 3,
+
+    /// <summary>
+    /// Content creation (agents, collections, uploads)
+    /// </summary>
+    Creator = 4
 }

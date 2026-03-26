@@ -3,6 +3,8 @@ using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.Authentication;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Infrastructure.Repositories;
@@ -11,19 +13,14 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Repositories;
 /// Repository implementation for InvitationToken aggregate.
 /// Handles mapping between domain and infrastructure entities.
 /// </summary>
-internal sealed class InvitationTokenRepository : IInvitationTokenRepository
+internal sealed class InvitationTokenRepository : RepositoryBase, IInvitationTokenRepository
 {
-    private readonly MeepleAiDbContext _context;
-
-    public InvitationTokenRepository(MeepleAiDbContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        _context = context;
-    }
+    public InvitationTokenRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector) { }
 
     public async Task<InvitationToken?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.InvitationTokens
+        var entity = await DbContext.InvitationTokens
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken)
             .ConfigureAwait(false);
         return entity == null ? null : MapToDomain(entity);
@@ -31,7 +28,7 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
 
     public async Task<IReadOnlyList<InvitationToken>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _context.InvitationTokens
+        var entities = await DbContext.InvitationTokens
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -41,14 +38,16 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
     public async Task AddAsync(InvitationToken entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
+        CollectDomainEvents(entity);
         var infrastructureEntity = MapToInfrastructure(entity);
-        await _context.InvitationTokens.AddAsync(infrastructureEntity, cancellationToken).ConfigureAwait(false);
+        await DbContext.InvitationTokens.AddAsync(infrastructureEntity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(InvitationToken entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        var existingEntity = await _context.InvitationTokens
+        CollectDomainEvents(entity);
+        var existingEntity = await DbContext.InvitationTokens
             .FindAsync(new object[] { entity.Id }, cancellationToken)
             .ConfigureAwait(false);
 
@@ -65,26 +64,26 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
     public async Task DeleteAsync(InvitationToken entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        var existingEntity = await _context.InvitationTokens
+        var existingEntity = await DbContext.InvitationTokens
             .FindAsync(new object[] { entity.Id }, cancellationToken)
             .ConfigureAwait(false);
 
         if (existingEntity != null)
         {
-            _context.InvitationTokens.Remove(existingEntity);
+            DbContext.InvitationTokens.Remove(existingEntity);
         }
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _context.InvitationTokens
+        return await DbContext.InvitationTokens
             .AnyAsync(t => t.Id == id, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task<InvitationToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.InvitationTokens
+        var entity = await DbContext.InvitationTokens
             .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, cancellationToken)
             .ConfigureAwait(false);
         return entity == null ? null : MapToDomain(entity);
@@ -94,7 +93,7 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
     {
         var normalizedEmail = email.Trim().ToLowerInvariant();
         var pendingStatus = InvitationStatus.Pending.ToString();
-        var entity = await _context.InvitationTokens
+        var entity = await DbContext.InvitationTokens
             .FirstOrDefaultAsync(t => t.Email == normalizedEmail && t.Status == pendingStatus, cancellationToken)
             .ConfigureAwait(false);
         return entity == null ? null : MapToDomain(entity);
@@ -103,7 +102,7 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
     public async Task<IReadOnlyList<InvitationToken>> GetByStatusAsync(
         InvitationStatus? status, int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        var query = _context.InvitationTokens.AsQueryable();
+        var query = DbContext.InvitationTokens.AsQueryable();
         if (status.HasValue)
         {
             var statusString = status.Value.ToString();
@@ -123,14 +122,14 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
     public async Task<int> CountByStatusAsync(InvitationStatus status, CancellationToken cancellationToken = default)
     {
         var statusString = status.ToString();
-        return await _context.InvitationTokens
+        return await DbContext.InvitationTokens
             .CountAsync(t => t.Status == statusString, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task<int> CountAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.InvitationTokens
+        return await DbContext.InvitationTokens
             .CountAsync(cancellationToken)
             .ConfigureAwait(false);
     }

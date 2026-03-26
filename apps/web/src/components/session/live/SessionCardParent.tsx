@@ -13,7 +13,7 @@ import { Loader2, Pause, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
 import { useLiveSessionStore, type SessionStatus } from '@/lib/stores/live-session-store';
 

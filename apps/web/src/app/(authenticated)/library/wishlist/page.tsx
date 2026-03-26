@@ -13,10 +13,10 @@
 
 import { Heart, PlusCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
-import { WishlistCard } from '@/components/wishlist/WishlistCard';
+import { MeepleWishlistCard } from '@/components/wishlist/MeepleWishlistCard';
 import { useRemoveFromWishlist, useWishlist } from '@/hooks/queries/useWishlist';
 
 // ============================================================================
@@ -112,7 +112,7 @@ export default function WishlistPage() {
       {!isLoading && !isError && items && items.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {items.map(item => (
-            <WishlistCard key={item.id} item={item} onRemove={handleRemove} />
+            <MeepleWishlistCard key={item.id} item={item} onRemove={handleRemove} />
           ))}
         </div>
       )}

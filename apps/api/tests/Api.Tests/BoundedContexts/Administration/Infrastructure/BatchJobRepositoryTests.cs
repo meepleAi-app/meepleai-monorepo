@@ -2,10 +2,12 @@ using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Enums;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Repositories;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
@@ -20,6 +22,7 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
 public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainersFixture>, IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
+    private readonly Mock<IDomainEventCollector> _eventCollectorMock = new();
     private readonly string _databaseName;
     private string? _connectionString;
     private static readonly Guid TestUserId = Guid.NewGuid();
@@ -54,7 +57,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
         var job = BatchJob.Create(JobType.ResourceForecast, "{\"days\":30}", TestUserId);
 
         // Act
@@ -77,7 +80,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
         var job = BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId);
         await repository.AddAsync(job);
         await dbContext.SaveChangesAsync();
@@ -95,7 +98,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
         var nonExistentId = Guid.NewGuid();
 
         // Act
@@ -114,7 +117,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
         await repository.AddAsync(BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId));
         await repository.AddAsync(BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId));
         await repository.AddAsync(BatchJob.Create(JobType.DataCleanup, "{}", TestUserId));
@@ -132,7 +135,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
 
         // Create 5 jobs
         for (int i = 0; i < 5; i++)
@@ -160,7 +163,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
 
         var queuedJob = BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId);
         var runningJob = BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId);
@@ -187,7 +190,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
 
         var job1 = BatchJob.Create(JobType.BggSync, "{}", TestUserId);
         var job2 = BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId);
@@ -210,7 +213,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
 
         var failedJob = BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId);
         failedJob.Start();
@@ -236,7 +239,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
         var job = BatchJob.Create(JobType.DataCleanup, "{}", TestUserId);
         await repository.AddAsync(job);
         await dbContext.SaveChangesAsync();
@@ -258,7 +261,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
         var job = BatchJob.Create(JobType.BggSync, "{}", TestUserId);
         await repository.AddAsync(job);
         await dbContext.SaveChangesAsync();
@@ -283,7 +286,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
         var job = BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId);
         await repository.AddAsync(job);
         await dbContext.SaveChangesAsync();
@@ -306,7 +309,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
 
         var job1 = BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId);
         await repository.AddAsync(job1);
@@ -335,7 +338,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
 
         await repository.AddAsync(BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId));
         await repository.AddAsync(BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId));
@@ -357,7 +360,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new BatchJobRepository(dbContext);
+        var repository = new BatchJobRepository(dbContext, _eventCollectorMock.Object);
 
         await repository.AddAsync(BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId));
         await repository.AddAsync(BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId));

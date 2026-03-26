@@ -70,12 +70,9 @@ env:
   POSTGRES_DB: 'meepleai_test'
 
 jobs:
-  # ============================================
-  # CHANGE DETECTION
-  # ============================================
   changes:
     name: Detect Changes
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     outputs:
       web: ${{ steps.filter.outputs.web || 'true' }}
       api: ${{ steps.filter.outputs.api || 'true' }}
@@ -100,7 +97,7 @@ jobs:
   # ============================================
   k6-tests:
     name: K6 Performance Tests
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: changes
     timeout-minutes: 45
     continue-on-error: true
@@ -383,7 +380,7 @@ jobs:
   # ============================================
   lighthouse-build:
     name: Build Next.js (Lighthouse)
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: changes
     if: |
       (github.event_name == 'workflow_dispatch' && inputs.run_lighthouse != 'false') ||
@@ -432,7 +429,7 @@ jobs:
 
   lighthouse-ci:
     name: Lighthouse CI
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: [changes, lighthouse-build]
     continue-on-error: true
     defaults:
@@ -594,7 +591,7 @@ jobs:
   # ============================================
   notify-failure:
     name: Notify on Failure
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: [k6-tests, lighthouse-ci]
     if: failure() && github.event_name == 'schedule'
     permissions:

@@ -13,11 +13,12 @@ using Api.Tests.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
 using Npgsql;
 using Pgvector.EntityFrameworkCore; // Issue #3547: Enable pgvector type mapping
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Integration.Authentication;
 
@@ -73,37 +74,25 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             CommandTimeout = 30
         };
 
-        var services = new ServiceCollection();
         _timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
 
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
-        services.AddSingleton<TimeProvider>(_timeProvider);
+        var services = IntegrationServiceCollectionBuilder.CreateBase(enforcedBuilder.ConnectionString);
 
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector type mapping
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        // Override TimeProvider with FakeTimeProvider
+        services.RemoveAll<TimeProvider>();
+        services.AddSingleton<TimeProvider>(_timeProvider);
 
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Register domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
 
         // Register password hashing
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
 
-        // Register MediatR
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(HandleOAuthCallbackCommandHandler).Assembly));
-
-        // Register mock services for event handlers
+        // Override IEmailService with NoOpEmailService (has behavior)
+        services.RemoveAll<IEmailService>();
         services.AddSingleton<IEmailService>(new Api.Tests.TestHelpers.NoOpEmailService());
 
         _serviceProvider = services.BuildServiceProvider();
@@ -207,12 +196,12 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         var activeSession = await _dbContext!.UserSessions
             .FirstOrDefaultAsync(s => s.UserId == userId && s.RevokedAt == null, TestCancellationToken);
 
-        Assert.NotNull(storedUser);
-        Assert.Equal(userEmail, storedUser.Email.Value);
-        Assert.Single(linkedAccounts);
-        Assert.Equal("google", linkedAccounts[0].Provider);
-        Assert.NotNull(activeSession);
-        Assert.True(session.IsValid(_timeProvider));
+        storedUser.Should().NotBeNull();
+        storedUser.Email.Value.Should().Be(userEmail);
+        linkedAccounts.Should().ContainSingle();
+        linkedAccounts[0].Provider.Should().Be("google");
+        activeSession.Should().NotBeNull();
+        session.IsValid(_timeProvider).Should().BeTrue();
 
         _output("✓ Complete OAuth registration flow verified");
     }
@@ -277,9 +266,9 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             .Where(s => s.UserId == userId && s.RevokedAt == null)
             .ToListAsync(TestCancellationToken);
 
-        Assert.Single(activeSessions);
-        Assert.True(newSession.IsValid(_timeProvider));
-        Assert.Equal("10.0.0.1", activeSessions[0].IpAddress);
+        activeSessions.Should().ContainSingle();
+        newSession.IsValid(_timeProvider).Should().BeTrue();
+        activeSessions[0].IpAddress.Should().Be("10.0.0.1");
 
         _output("✓ OAuth login flow for existing user verified");
     }
@@ -342,9 +331,9 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         // Assert all providers accessible
         var linkedAccounts = await oauthAccountRepository.GetByUserIdAsync(userId, TestCancellationToken);
 
-        Assert.Equal(2, linkedAccounts.Count);
-        Assert.Contains(linkedAccounts, a => a.Provider == "google");
-        Assert.Contains(linkedAccounts, a => a.Provider == "discord");
+        linkedAccounts.Count.Should().Be(2);
+        linkedAccounts.Should().Contain(a => a.Provider == "google");
+        linkedAccounts.Should().Contain(a => a.Provider == "discord");
 
         _output("✓ Multi-provider OAuth linking verified");
     }
@@ -379,7 +368,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
         _output("Step 1: User created without 2FA");
 
-        Assert.False(user.IsTwoFactorEnabled);
+        user.IsTwoFactorEnabled.Should().BeFalse();
 
         // Step 2: Generate and enable 2FA
         var totpSecret = TotpSecret.FromEncrypted("test_encrypted_totp_secret_base64");
@@ -391,9 +380,9 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         // Assert 2FA is now required
         _dbContext!.ChangeTracker.Clear(); // Force fresh fetch from DB
         var updatedUser = await userRepository.GetByIdAsync(userId, TestCancellationToken);
-        Assert.NotNull(updatedUser);
-        Assert.True(updatedUser.IsTwoFactorEnabled);
-        Assert.NotNull(updatedUser.TotpSecret);
+        updatedUser.Should().NotBeNull();
+        updatedUser.IsTwoFactorEnabled.Should().BeTrue();
+        updatedUser.TotpSecret.Should().NotBeNull();
 
         _output("✓ 2FA setup flow verified - TOTP now required for login");
     }
@@ -431,11 +420,11 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
 
         // Step 1: Password verification succeeds
         var passwordValid = passwordHashingService.VerifySecret("SecurePassword123!", user.PasswordHash.Value);
-        Assert.True(passwordValid);
+        passwordValid.Should().BeTrue();
         _output("Step 1: Password verified");
 
         // Step 2: 2FA challenge - validate that 2FA is required
-        Assert.True(user.RequiresTwoFactor());
+        user.RequiresTwoFactor().Should().BeTrue();
         _output("Step 2: 2FA challenge required");
 
         // Step 3: Create session after successful 2FA (simulating TOTP validation passed)
@@ -454,7 +443,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         _output("Step 3: Session created after 2FA");
 
         // Assert
-        Assert.True(session.IsValid(_timeProvider));
+        session.IsValid(_timeProvider).Should().BeTrue();
 
         _output("✓ 2FA login flow with valid TOTP verified");
     }
@@ -487,7 +476,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         await userRepository.AddAsync(user, TestCancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
-        Assert.True(user.IsTwoFactorEnabled);
+        user.IsTwoFactorEnabled.Should().BeTrue();
         _output("Setup: User with 2FA enabled");
 
         // Act: Disable 2FA
@@ -499,9 +488,9 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         // Assert
         _dbContext!.ChangeTracker.Clear(); // Force fresh fetch from DB
         var updatedUser = await userRepository.GetByIdAsync(userId, TestCancellationToken);
-        Assert.NotNull(updatedUser);
-        Assert.False(updatedUser.IsTwoFactorEnabled);
-        Assert.Null(updatedUser.TotpSecret);
+        updatedUser.Should().NotBeNull();
+        updatedUser.IsTwoFactorEnabled.Should().BeFalse();
+        updatedUser.TotpSecret.Should().BeNull();
 
         _output("✓ 2FA disable flow verified");
     }
@@ -551,7 +540,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         _output("Session created with 1-hour lifetime");
 
         // Assert session is valid now
-        Assert.True(session.IsValid(_timeProvider));
+        session.IsValid(_timeProvider).Should().BeTrue();
         _output("Session is valid immediately after creation");
 
         // Act: Advance time past expiration
@@ -559,7 +548,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         _output("Time advanced 2 hours");
 
         // Assert session is expired
-        Assert.False(session.IsValid(_timeProvider));
+        session.IsValid(_timeProvider).Should().BeFalse();
 
         _output("✓ Session expiration flow verified");
     }
@@ -602,7 +591,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         await sessionRepository.AddAsync(session, TestCancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
-        Assert.True(session.IsValid(_timeProvider));
+        session.IsValid(_timeProvider).Should().BeTrue();
         _output("Active session created");
 
         // Act: Revoke session (logout)
@@ -611,8 +600,8 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         _output("Session revoked (logout)");
 
         // Assert session cannot be reused
-        Assert.False(session.IsValid(_timeProvider));
-        Assert.NotNull(session.RevokedAt);
+        session.IsValid(_timeProvider).Should().BeFalse();
+        session.RevokedAt.Should().NotBeNull();
 
         _output("✓ Session revocation flow verified");
     }
@@ -660,7 +649,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
 
         // Advance time 30 minutes (within lifetime)
         _timeProvider.Advance(TimeSpan.FromMinutes(30));
-        Assert.True(session.IsValid(_timeProvider));
+        session.IsValid(_timeProvider).Should().BeTrue();
         _output("Session still valid after 30 minutes");
 
         // Act: Extend session by 1 hour
@@ -671,12 +660,12 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         _output($"New expiry after extension: {newExpiry}");
 
         // Assert session extended
-        Assert.True(newExpiry > originalExpiry);
-        Assert.True(session.IsValid(_timeProvider));
+        (newExpiry > originalExpiry).Should().BeTrue();
+        session.IsValid(_timeProvider).Should().BeTrue();
 
         // Now advance 50 more minutes - would have expired without extension
         _timeProvider.Advance(TimeSpan.FromMinutes(50));
-        Assert.True(session.IsValid(_timeProvider));
+        session.IsValid(_timeProvider).Should().BeTrue();
 
         _output("✓ Session renewal flow verified - session still valid after extension");
     }
@@ -728,7 +717,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
         _output("3 sessions created from different devices");
 
-        Assert.All(sessions, s => Assert.True(s.IsValid(_timeProvider)));
+        sessions.Should().OnlyContain(s => s.IsValid(_timeProvider));
 
         // Act: Force logout all sessions using repository method
         await sessionRepository.RevokeAllUserSessionsAsync(userId, TestCancellationToken);
@@ -739,7 +728,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             .Where(s => s.UserId == userId && s.RevokedAt == null)
             .CountAsync(TestCancellationToken);
 
-        Assert.Equal(0, activeSessions);
+        activeSessions.Should().Be(0);
 
         _output("✓ Force logout all sessions flow verified");
     }

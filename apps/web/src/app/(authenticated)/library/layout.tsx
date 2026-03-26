@@ -1,6 +1,6 @@
 /**
  * Library Section Layout
- * Carte in Mano — NavConfig removed, navigation handled by UnifiedShell card system.
+ * Simplified: ContextBar removed, filters inline in page.
  */
 
 import { type ReactNode } from 'react';

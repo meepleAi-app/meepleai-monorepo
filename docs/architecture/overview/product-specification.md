@@ -334,9 +334,9 @@ PDF (5MB avg):
 ## Related Documentation
 
 - **Architecture**: [01-architecture/README.md](../README.md)
-- **Bounded Contexts**: [09-bounded-contexts/](../../09-bounded-contexts/)
-- **Testing Strategy**: [05-testing/](../../05-testing/)
-- **Deployment**: [04-deployment/](../../04-deployment/)
+- **Bounded Contexts**: [bounded-contexts/](../../bounded-contexts/)
+- **Testing Strategy**: [05-testing/](../../testing/)
+- **Deployment**: [04-deployment/](../../deployment/)
 
 ---
 

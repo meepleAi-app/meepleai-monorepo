@@ -11,7 +11,7 @@ services:
 
   postgres:
     restart: always
-    env_file: [./secrets/staging/database.secret]
+    env_file: [./secrets/database.secret]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
       POSTGRES_USER: ${POSTGRES_USER:-meepleai}
@@ -21,27 +21,11 @@ services:
 
   redis:
     restart: always
-    env_file: [./secrets/staging/redis.secret]
+    env_file: [./secrets/redis.secret]
     command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
     volumes:
       - redisdata-staging:/data
       - ./redis/redis.conf:/etc/redis/redis.conf:ro
-
-  qdrant:
-    restart: always
-    env_file: [./secrets/staging/qdrant.secret]
-    environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
-    volumes:
-      - qdrantdata-staging:/qdrant/storage
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.qdrant.rule=Host(`meepleai.app`) && PathPrefix(`/services/qdrant`)"
-      - "traefik.http.routers.qdrant.entrypoints=websecure"
-      - "traefik.http.routers.qdrant.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.qdrant.middlewares=integration-auth,strip-services-qdrant"
-      - "traefik.http.middlewares.strip-services-qdrant.stripprefix.prefixes=/services/qdrant"
-      - "traefik.http.services.qdrant.loadbalancer.server.port=6333"
 
   # ===========================================================================
   # Application Services
@@ -50,16 +34,15 @@ services:
   api:
     restart: always
     env_file:
-      - ./secrets/staging/database.secret
-      - ./secrets/staging/jwt.secret
-      - ./secrets/staging/admin.secret
-      - ./secrets/staging/openrouter.secret
-      - ./secrets/staging/oauth.secret
-      - ./secrets/staging/redis.secret
-      - ./secrets/staging/qdrant.secret
-      - ./secrets/staging/embedding-service.secret
-      - ./secrets/staging/email.secret
-      - ./secrets/staging/storage.secret
+      - ./secrets/database.secret
+      - ./secrets/jwt.secret
+      - ./secrets/admin.secret
+      - ./secrets/openrouter.secret
+      - ./secrets/oauth.secret
+      - ./secrets/redis.secret
+      - ./secrets/embedding-service.secret
+      - ./secrets/email.secret
+      - ./secrets/storage.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
       ASPNETCORE_URLS: http://+:8080
@@ -67,14 +50,15 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-meepleai}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
       REDIS_HOST: redis
-      QDRANT_URL: http://qdrant:6333
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       Embedding__LocalServiceUrl: http://embedding-service:8000
       RERANKER_URL: http://reranker-service:8003
+      EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      Embedding__Dimensions: 768
       Authentication__OAuth__CallbackBaseUrl: "https://meepleai.app"
-      FrontendUrl: "https://meepleai.app"
+      Frontend__BaseUrl: "https://meepleai.app"
       Authentication__SessionCookie__Secure: "true"
       Authentication__SessionCookie__SameSite: "Lax"
     volumes:
@@ -99,6 +83,7 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE: "https://meepleai.app"
       NEXT_PUBLIC_APP_URL: "https://meepleai.app"
+      API_BASE_URL: http://api:8080
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web.rule=Host(`meepleai.app`)"
@@ -174,7 +159,7 @@ services:
 
   grafana:
     restart: always
-    env_file: [./secrets/staging/monitoring.secret]
+    env_file: [./secrets/monitoring.secret]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`meepleai.app`) && PathPrefix(`/grafana`)"
@@ -224,6 +209,7 @@ services:
     volumes:
       - ./traefik/traefik.staging.yml:/etc/traefik/traefik.yml:ro
     labels:
+      - "traefik.enable=true"
       - "traefik.http.middlewares.integration-auth.basicauth.users=${INTEGRATION_BASIC_AUTH}"
       - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
       - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
@@ -234,8 +220,6 @@ services:
 volumes:
   pgdata-staging:
     name: meepleai-pgdata-staging
-  qdrantdata-staging:
-    name: meepleai-qdrantdata-staging
   redisdata-staging:
     name: meepleai-redisdata-staging
   prometheus-staging:

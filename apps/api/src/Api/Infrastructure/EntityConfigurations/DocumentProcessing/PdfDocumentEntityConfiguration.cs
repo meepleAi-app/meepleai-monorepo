@@ -148,6 +148,12 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.HasIndex(e => e.IsActiveForRag)
             .HasDatabaseName("ix_pdf_documents_is_active_for_rag");
 
+        // RAG Copyright KB Cards: license tier for citation rendering
+        builder.Property(e => e.LicenseType)
+            .IsRequired()
+            .HasColumnName("license_type")
+            .HasDefaultValue(0);
+
         // Issue #5447: User-editable version label
         builder.Property(e => e.VersionLabel)
             .HasMaxLength(100)

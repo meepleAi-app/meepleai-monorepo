@@ -7,6 +7,8 @@
  * @module components/ui/data-display/meeple-card/types
  */
 
+import type React from 'react';
+
 import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 
 import type { EntityLinkType } from '../entity-link/entity-link-types';
@@ -18,7 +20,7 @@ import type { ChatAgent } from '../meeple-card-features/ChatAgentInfo';
 import type { ChatGame } from '../meeple-card-features/ChatGameContext';
 import type { ChatStats } from '../meeple-card-features/ChatStatsDisplay';
 import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
-import type { DocumentIndexingStatus } from '../meeple-card-features/DocumentStatusBadge';
+import type { KbIndexingStatus } from '../meeple-card-features/DocumentStatusBadge';
 import type { DragData } from '../meeple-card-features/DragHandle';
 import type { MeepleCardFlipData } from '../meeple-card-features/FlipCard';
 import type { GameBackData, GameBackActions } from '../meeple-card-features/GameBackContent';
@@ -40,6 +42,28 @@ import type { meepleCardVariants } from '../meeple-card-styles';
 import type { MeepleEntityType, MeepleCardVariant } from '../meeple-card-styles';
 import type { VariantProps } from 'class-variance-authority';
 import type { LucideIcon } from 'lucide-react';
+
+// ============================================================================
+// Cover Overlay Types (4-corner system)
+// ============================================================================
+
+/** Label displayed in the cover overlay top-left slot */
+export interface CoverLabel {
+  /** Label text */
+  text: string;
+  /** HSL color string (defaults to entity color) */
+  color?: string;
+  /** Primary label uses larger font (default false) */
+  primary?: boolean;
+}
+
+/** Subtype icon displayed in the cover overlay bottom-left slot */
+export interface SubtypeIcon {
+  /** Icon content (emoji or React node) */
+  icon: React.ReactNode;
+  /** Tooltip text on hover */
+  tooltip: string;
+}
 
 // ============================================================================
 // Core Interfaces (defined in meeple-card.tsx)
@@ -244,6 +268,8 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   primaryActions?: PrimaryAction[];
   /** Card glow state for status visualization */
   glowState?: GlowState;
+  /** Opt-in holographic overlay effect. Default: false. Use for hero/featured cards. */
+  showHolo?: boolean;
 
   // ========== AGENT ACTION FOOTER (Issue #4777, #4999) ==========
 
@@ -261,7 +287,7 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   // ========== DOCUMENT / KB ENTITY FEATURES (Issue #5001) ==========
 
   /** KB document indexing status (drives DocumentStatusBadge) */
-  documentStatus?: DocumentIndexingStatus;
+  documentStatus?: KbIndexingStatus;
 
   // ========== ENTITY LINKS (Issue #5129) ==========
 
@@ -280,8 +306,21 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
    * Only rendered when entity='game' and kbCards.length > 0.
    */
   kbCards?: {
-    status: DocumentIndexingStatus;
+    status: KbIndexingStatus;
   }[];
+
+  // ========== COVER OVERLAY 4-CORNER SYSTEM ==========
+
+  /** Top-left label stack in cover overlay */
+  coverLabels?: CoverLabel[];
+  /** Bottom-left subtype classification icons in cover overlay */
+  subtypeIcons?: SubtypeIcon[];
+
+  /** Bottom-right state badge in cover overlay */
+  stateLabel?: {
+    text: string;
+    variant: 'success' | 'warning' | 'error' | 'info';
+  };
 
   // ========== SESSION ENTITY FEATURES (Issue #4751) ==========
 
@@ -347,7 +386,7 @@ export type { ChatStats } from '../meeple-card-features/ChatStatsDisplay';
 export type { ChatGame } from '../meeple-card-features/ChatGameContext';
 export type { DragData } from '../meeple-card-features/DragHandle';
 export type { TagConfig, TagPresetKey } from '../meeple-card-features/tag-presets';
-export type { DocumentIndexingStatus } from '../meeple-card-features/DocumentStatusBadge';
+export type { KbIndexingStatus } from '../meeple-card-features/DocumentStatusBadge';
 export type {
   SessionStatus,
   SessionPlayerInfo,

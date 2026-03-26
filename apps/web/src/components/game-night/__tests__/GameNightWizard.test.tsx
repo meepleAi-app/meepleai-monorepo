@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 const mockSearch = vi.fn();
-const mockBggSearch = vi.fn();
 const mockCreateSession = vi.fn();
 const mockAddPlayer = vi.fn();
 const mockStartSession = vi.fn();
@@ -13,9 +12,6 @@ vi.mock('@/lib/api', () => ({
   api: {
     sharedGames: {
       search: (...args: unknown[]) => mockSearch(...args),
-    },
-    bgg: {
-      search: (...args: unknown[]) => mockBggSearch(...args),
     },
     liveSessions: {
       createSession: (...args: unknown[]) => mockCreateSession(...args),
@@ -170,43 +166,5 @@ describe('GameNightWizard', () => {
     // Add a player
     await user.click(screen.getByTestId('add-player-button'));
     expect(screen.getByTestId('player-input-2')).toBeInTheDocument();
-  });
-
-  it('creates session without gameId for BGG-only games', async () => {
-    const user = userEvent.setup();
-    // No catalog results → triggers BGG fallback
-    mockSearch.mockResolvedValue({ items: [], totalCount: 0 });
-    mockBggSearch.mockResolvedValue({
-      results: [{ bggId: 42, name: 'Everdell', thumbnailUrl: null, yearPublished: 2018 }],
-    });
-    mockCreateSession.mockResolvedValue('sess-bgg');
-    mockAddPlayer.mockResolvedValue(undefined);
-    mockStartSession.mockResolvedValue(undefined);
-
-    render(<GameNightWizard onComplete={onComplete} />);
-
-    // Search triggers BGG fallback
-    await user.type(screen.getByTestId('game-search-input'), 'Everdell{Enter}');
-    await waitFor(() => expect(screen.getByText('Everdell')).toBeInTheDocument());
-    await user.click(screen.getByText('Everdell'));
-
-    // Skip PDF upload
-    await user.click(screen.getByTestId('skip-rules-button'));
-
-    // Add players and create session
-    await user.type(screen.getByTestId('player-input-0'), 'Anna');
-    await user.type(screen.getByTestId('player-input-1'), 'Paolo');
-    await user.click(screen.getByTestId('create-session-button'));
-
-    await waitFor(() => {
-      // Should create with gameName only, no gameId
-      expect(mockCreateSession).toHaveBeenCalledWith(
-        expect.objectContaining({ gameName: 'Everdell' })
-      );
-      const callArg = mockCreateSession.mock.calls[0][0];
-      expect(callArg).not.toHaveProperty('gameId');
-    });
-
-    expect(onComplete).toHaveBeenCalledWith('sess-bgg');
   });
 });

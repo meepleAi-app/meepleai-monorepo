@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -84,6 +85,14 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
             .HasMaxLength(10)
             .HasDefaultValue("auto")
             .IsRequired();
+
+        // Status lifecycle (Draft -> Testing -> Published)
+        builder.Property(a => a.Status)
+            .HasColumnName("status")
+            .HasDefaultValue(AgentDefinitionStatus.Draft)
+            .IsRequired();
+
+        builder.HasIndex(a => a.Status).HasDatabaseName("ix_agent_definitions_status");
 
         builder.Property(a => a.IsActive).HasColumnName("is_active").IsRequired();
         builder.Property(a => a.CreatedAt).HasColumnName("created_at").IsRequired();

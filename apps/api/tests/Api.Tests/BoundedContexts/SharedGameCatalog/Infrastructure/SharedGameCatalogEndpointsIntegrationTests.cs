@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
@@ -12,24 +14,16 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
-using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
-using MediatR;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Moq;
-using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
@@ -62,45 +56,13 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         // Create isolated test database
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
-        // Create WebApplicationFactory
-        _factory = new WebApplicationFactory<Program>()
+        // Create WebApplicationFactory using shared factory + test-specific policies
+        _factory = IntegrationWebApplicationFactory.Create(connectionString)
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, configBuilder) =>
-                {
-                    configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["OPENROUTER_API_KEY"] = "test-key",
-                        ["ConnectionStrings:Postgres"] = connectionString
-                    });
-                });
-
                 builder.ConfigureTestServices(services =>
                 {
-                    // Replace DbContext with test database
-                    services.RemoveAll(typeof(DbContextOptions<MeepleAiDbContext>));
-                    services.AddDbContext<MeepleAiDbContext>(options =>
-                        options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
-
-                    // Mock Redis for HybridCache
-                    services.RemoveAll(typeof(IConnectionMultiplexer));
-                    var mockRedis = new Mock<IConnectionMultiplexer>();
-                    services.AddSingleton(mockRedis.Object);
-
-                    // Mock vector/embedding services
-                    services.RemoveAll(typeof(Api.Services.IEmbeddingService));
-                    services.AddScoped<Api.Services.IEmbeddingService>(_ => Mock.Of<Api.Services.IEmbeddingService>());
-
-                    // Ensure domain event collector is registered
-                    services.AddScoped<IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
-
-                    // Issue #2688: Mock IHybridCacheService (required for session validation)
-                    services.RemoveAll(typeof(Api.Services.IHybridCacheService));
-                    services.AddScoped<Api.Services.IHybridCacheService>(_ => Mock.Of<Api.Services.IHybridCacheService>());
-
-                    // Register authorization policies
+                    // Register authorization policies (test-specific)
                     services.AddSharedGameCatalogPolicies();
                 });
             });
@@ -157,10 +119,10 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/shared-games/categories");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var categories = await response.Content.ReadFromJsonAsync<List<GameCategoryDto>>();
-        Assert.NotNull(categories);
-        Assert.NotEmpty(categories);
+        categories.Should().NotBeNull();
+        categories.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -170,10 +132,10 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/shared-games/mechanics");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var mechanics = await response.Content.ReadFromJsonAsync<List<GameMechanicDto>>();
-        Assert.NotNull(mechanics);
-        Assert.NotEmpty(mechanics);
+        mechanics.Should().NotBeNull();
+        mechanics.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -183,9 +145,9 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/shared-games?pageNumber=1&pageSize=20");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<SharedGameDto>>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Fact]
@@ -198,7 +160,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/shared-games/{nonExistentId}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // ========================================
@@ -224,14 +186,14 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Issue #2707: Use fresh scope for assertions to prevent ObjectDisposedException
         using var assertScope = _factory.Services.CreateScope();
         var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var updatedGame = await dbContext.SharedGames.FindAsync(game.Id);
-        Assert.NotNull(updatedGame);
-        Assert.Equal((int)GameStatus.PendingApproval, updatedGame.Status);
+        updatedGame.Should().NotBeNull();
+        updatedGame.Status.Should().Be((int)GameStatus.PendingApproval);
     }
 
     [Fact]
@@ -252,14 +214,14 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Issue #2707: Use fresh scope for assertions to prevent ObjectDisposedException
         using var assertScope = _factory.Services.CreateScope();
         var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var updatedGame = await dbContext.SharedGames.FindAsync(game.Id);
-        Assert.NotNull(updatedGame);
-        Assert.Equal((int)GameStatus.Published, updatedGame.Status);
+        updatedGame.Should().NotBeNull();
+        updatedGame.Status.Should().Be((int)GameStatus.Published);
     }
 
     [Fact]
@@ -282,14 +244,14 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Issue #2707: Use fresh scope for assertions to prevent ObjectDisposedException
         using var assertScope = _factory.Services.CreateScope();
         var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var updatedGame = await dbContext.SharedGames.FindAsync(game.Id);
-        Assert.NotNull(updatedGame);
-        Assert.Equal((int)GameStatus.Draft, updatedGame.Status);
+        updatedGame.Should().NotBeNull();
+        updatedGame.Status.Should().Be((int)GameStatus.Draft);
     }
 
     [Fact]
@@ -312,11 +274,16 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<PagedResult<SharedGameDto>>();
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Total);
-        Assert.All(result.Items, g => Assert.Equal(GameStatus.PendingApproval, g.Status));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
+        };
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<SharedGameDto>>(jsonOptions);
+        result.Should().NotBeNull();
+        result.Total.Should().Be(2);
+        result.Items.Should().AllSatisfy(g => g.Status.Should().Be(GameStatus.PendingApproval));
     }
 
     // ========================================
@@ -333,7 +300,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/admin/shared-games/pending-approvals?pageNumber=1&pageSize=20");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -354,7 +321,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     // ========================================
@@ -395,18 +362,18 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var gameId = await response.Content.ReadFromJsonAsync<Guid>();
-        Assert.NotEqual(Guid.Empty, gameId);
+        gameId.Should().NotBe(Guid.Empty);
 
         // Verify game was created in DB with Draft status
         using var assertScope = _factory.Services.CreateScope();
         var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var createdGame = await dbContext.SharedGames.FindAsync(gameId);
-        Assert.NotNull(createdGame);
-        Assert.Equal("Test Board Game", createdGame.Title);
-        Assert.Equal((int)GameStatus.Draft, createdGame.Status);
-        Assert.Equal(adminUserId, createdGame.CreatedBy);
+        createdGame.Should().NotBeNull();
+        createdGame.Title.Should().Be("Test Board Game");
+        createdGame.Status.Should().Be((int)GameStatus.Draft);
+        createdGame.CreatedBy.Should().Be(adminUserId);
     }
 
     [Fact]
@@ -430,7 +397,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/admin/shared-games", requestBody);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -463,7 +430,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -500,17 +467,17 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var gameId = await response.Content.ReadFromJsonAsync<Guid>();
-        Assert.NotEqual(Guid.Empty, gameId);
+        gameId.Should().NotBe(Guid.Empty);
 
         // Verify game was created with Editor as creator
         using var assertScope = _factory.Services.CreateScope();
         var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var createdGame = await dbContext.SharedGames.FindAsync(gameId);
-        Assert.NotNull(createdGame);
-        Assert.Equal("Editor Created Game", createdGame.Title);
-        Assert.Equal(editorUserId, createdGame.CreatedBy);
+        createdGame.Should().NotBeNull();
+        createdGame.Title.Should().Be("Editor Created Game");
+        createdGame.CreatedBy.Should().Be(editorUserId);
     }
 
     // ========================================
@@ -534,10 +501,8 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert - Accept either 200 (results) or 503 (BGG unavailable in test env)
         // In integration tests, the real BGG API isn't mocked at endpoint level
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.ServiceUnavailable,
-            $"Expected OK or ServiceUnavailable, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.ServiceUnavailable).Should().BeTrue($"Expected OK or ServiceUnavailable, got {response.StatusCode}");
     }
 
     [Fact]
@@ -547,7 +512,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/admin/shared-games/bgg/search?query=Catan");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -569,10 +534,8 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert - Accept either 200 (no duplicate) or 503 (BGG unavailable)
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.ServiceUnavailable,
-            $"Expected OK or ServiceUnavailable, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.ServiceUnavailable).Should().BeTrue($"Expected OK or ServiceUnavailable, got {response.StatusCode}");
     }
 
     [Fact]
@@ -595,10 +558,8 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert - Accept either 200 (duplicate found) or 503 (BGG unavailable)
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.ServiceUnavailable,
-            $"Expected OK or ServiceUnavailable, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.ServiceUnavailable).Should().BeTrue($"Expected OK or ServiceUnavailable, got {response.StatusCode}");
     }
 
     [Fact]
@@ -608,7 +569,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/admin/shared-games/bgg/check-duplicate/123456");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -631,7 +592,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -647,7 +608,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
             requestBody);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -670,7 +631,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>

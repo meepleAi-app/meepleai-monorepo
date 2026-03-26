@@ -59,16 +59,15 @@ export interface ActivityTimelineResponse {
 
 export const activityTimelineKeys = {
   all: ['activity-timeline'] as const,
-  filtered: (params: ActivityTimelineRequest) =>
-    [...activityTimelineKeys.all, params] as const,
+  filtered: (params: ActivityTimelineRequest) => [...activityTimelineKeys.all, params] as const,
 };
 
 // ============================================================================
 // API Client
 // ============================================================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DASHBOARD !== 'false';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DASHBOARD === 'true';
 
 /**
  * Mock data for development (until backend integration is stable)
@@ -149,14 +148,14 @@ function filterMockItems(params: ActivityTimelineRequest): ActivityTimelineRespo
 
   // Filter by types
   if (params.types.length > 0) {
-    filtered = filtered.filter((item) => params.types.includes(item.type));
+    filtered = filtered.filter(item => params.types.includes(item.type));
   }
 
   // Filter by search (case-insensitive on gameName/topic)
   if (params.search) {
     const searchLower = params.search.toLowerCase();
     filtered = filtered.filter(
-      (item) =>
+      item =>
         item.gameName?.toLowerCase().includes(searchLower) ||
         item.topic?.toLowerCase().includes(searchLower)
     );
@@ -186,7 +185,7 @@ export async function fetchActivityTimeline(
   params: ActivityTimelineRequest
 ): Promise<ActivityTimelineResponse> {
   if (USE_MOCK_DATA) {
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 200));
     return filterMockItems(params);
   }
 

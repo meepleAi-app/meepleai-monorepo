@@ -1,5 +1,5 @@
 # Local development environment
-# All ports bound to 127.0.0.1, secrets from ./secrets/dev/
+# All ports bound to 127.0.0.1, secrets from ./secrets/
 #
 # Usage:
 #   docker compose -f docker-compose.yml -f compose.dev.yml up -d                    # core only
@@ -12,7 +12,7 @@ services:
   # ===========================================================================
 
   postgres:
-    env_file: [./secrets/dev/database.secret]
+    env_file: [./secrets/database.secret]
     ports: ["127.0.0.1:5432:5432"]
     environment:
       POSTGRES_SHARED_BUFFERS: 512MB
@@ -22,15 +22,9 @@ services:
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
   redis:
-    env_file: [./secrets/dev/redis.secret]
+    env_file: [./secrets/redis.secret]
     ports: ["127.0.0.1:6379:6379"]
     command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
-
-  qdrant:
-    env_file: [./secrets/dev/qdrant.secret]
-    ports: ["127.0.0.1:6333:6333", "127.0.0.1:6334:6334"]
-    environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
 
   # ===========================================================================
   # Application Services
@@ -38,14 +32,16 @@ services:
 
   api:
     env_file:
-      - ./secrets/dev/database.secret
-      - ./secrets/dev/redis.secret
-      - ./secrets/dev/qdrant.secret
-      - ./secrets/dev/jwt.secret
-      - ./secrets/dev/openrouter.secret
-      - ./secrets/dev/admin.secret
-      - ./secrets/dev/embedding-service.secret
-      - ./secrets/dev/storage.secret
+      - ./secrets/database.secret
+      - ./secrets/redis.secret
+      - ./secrets/jwt.secret
+      - ./secrets/openrouter.secret
+      - ./secrets/admin.secret
+      - ./secrets/embedding-service.secret
+      - ./secrets/unstructured-service.secret
+      - ./secrets/smoldocling-service.secret
+      - ./secrets/storage.secret
+      - ./secrets/db-sync.secret
       - ./env/api.env.dev
     ports: ["127.0.0.1:8080:8080"]
     environment:
@@ -53,24 +49,27 @@ services:
       ASPNETCORE_URLS: http://+:8080
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
-      QDRANT_URL: http://qdrant:6333
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
-      EMBEDDING_MODEL: intfloat/multilingual-e5-large
-      EMBEDDING_DIMENSIONS: 1024
-      Embedding__Dimensions: 1024
+      EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      EMBEDDING_DIMENSIONS: 768
+      Embedding__Dimensions: 768
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       Embedding__LocalServiceUrl: http://embedding-service:8000
       EMBEDDING_FALLBACK_ENABLED: "false"
       Embedding__FallbackEnabled: "false"
       RERANKER_URL: http://reranker-service:8003
+      UNSTRUCTURED_API_URL: http://unstructured-service:8001
+      SMOLDOCLING_API_URL: http://smoldocling-service:8002
     volumes:
-      - ./secrets/dev:/app/infra/secrets:ro
+      - ./secrets:/app/infra/secrets:ro
 
   web:
     env_file: [./env/web.env.dev]
     ports: ["127.0.0.1:3000:3000"]
+    environment:
+      API_BASE_URL: http://api:8080
 
   # ===========================================================================
   # AI Services (profile: ai) — ports only
@@ -92,15 +91,13 @@ services:
     ports: ["127.0.0.1:8003:8003"]
 
   orchestration-service:
-    env_file: [./secrets/dev/database.secret, ./secrets/dev/redis.secret]
+    env_file: [./secrets/database.secret, ./secrets/redis.secret]
     ports: ["127.0.0.1:8004:8004"]
     environment:
       EMBEDDING_SERVICE_URL: http://embedding-service:8000
       RERANKER_SERVICE_URL: http://reranker-service:8003
       UNSTRUCTURED_SERVICE_URL: http://unstructured-service:8001
       SMOLDOCLING_SERVICE_URL: http://smoldocling-service:8002
-      QDRANT_URL: http://qdrant:6333
-
   # ===========================================================================
   # Monitoring (profile: monitoring)
   # ===========================================================================
@@ -114,7 +111,7 @@ services:
       - '--web.enable-lifecycle'
 
   grafana:
-    env_file: [./secrets/dev/monitoring.secret]
+    env_file: [./secrets/monitoring.secret]
     ports: ["127.0.0.1:3001:3000"]
     environment:
       GF_SECURITY_ADMIN_USER: admin
@@ -126,7 +123,7 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
 
   alertmanager:
-    env_file: [./secrets/dev/monitoring.secret]
+    env_file: [./secrets/monitoring.secret]
     ports: ["127.0.0.1:9093:9093"]
 
   cadvisor:
@@ -140,7 +137,7 @@ services:
   # ===========================================================================
 
   n8n:
-    env_file: [./secrets/dev/database.secret, ./secrets/dev/n8n.secret, ./env/n8n.env.dev]
+    env_file: [./secrets/database.secret, ./secrets/n8n.secret, ./env/n8n.env.dev]
     ports: ["127.0.0.1:5678:5678"]
 
   mailpit:
@@ -151,11 +148,34 @@ services:
   # ===========================================================================
 
   minio:
-    env_file: [./secrets/dev/storage.secret]
+    env_file: [./secrets/storage.secret]
     ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+
+  # ===========================================================================
+  # Database Sync (profile: db-sync)
+  # ===========================================================================
+
+  ssh-tunnel-sidecar:
+    build:
+      context: ./sidecar/ssh-tunnel
+      dockerfile: Dockerfile
+    container_name: meepleai-ssh-tunnel-sidecar
+    restart: "no"
+    volumes:
+      - ${SSH_KEY_PATH:-~/.ssh/meepleai-staging}:/root/.ssh/key:ro
+    env_file:
+      - ./secrets/db-sync.secret
+    environment:
+      - ALLOWED_HOSTS=204.168.135.69
+      - MAX_TUNNEL_DURATION=3600
+      - DEFAULT_HOST=204.168.135.69
+    networks:
+      - meepleai
+    profiles:
+      - db-sync
 
 # =============================================================================
 # Dev-specific volumes (separate from base to avoid conflicts)

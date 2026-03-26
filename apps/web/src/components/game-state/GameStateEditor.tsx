@@ -25,7 +25,7 @@ import { logger } from '@/lib/logger';
 import { useGameStateStore } from '@/lib/stores/game-state-store';
 import type { GameState } from '@/types/game-state';
 
-import { PlayerStateCard } from './PlayerStateCard';
+import { MeeplePlayerStateCard } from './MeeplePlayerStateCard';
 
 import type { IChangeEvent } from '@rjsf/core';
 import type { JSONSchema7 } from 'json-schema';
@@ -162,7 +162,7 @@ export function GameStateEditor({ sessionId, onSave, onCancel }: GameStateEditor
               </h3>
               <div className="grid grid-cols-1 gap-3 sm:gap-4">
                 {currentState.players.map((player, index) => (
-                  <PlayerStateCard
+                  <MeeplePlayerStateCard
                     key={`${player.playerName}-${index}`}
                     player={player}
                     isCurrentPlayer={currentState.currentPlayerIndex === index}

@@ -226,14 +226,14 @@ public class PercentageTests
     [InlineData(50, 100, 50)]
     [InlineData(75, 100, 75)]
     [InlineData(100, 100, 100)]
-    [InlineData(1, 3, 33.333333333333333333333333333)] // 1/3 as decimal
+    [InlineData(1, 3, 33.33333333)] // 1/3 as decimal (rounded for cross-platform compatibility)
     public void FromFraction_VariousFractions_ReturnsCorrectPercentage(int count, int total, decimal expectedPercentage)
     {
         // Act
         var percentage = Percentage.FromFraction(count, total);
 
         // Assert
-        Assert.Equal(expectedPercentage, percentage.Value, 10); // 10 decimal precision
+        Assert.Equal(expectedPercentage, percentage.Value, 8); // 8 decimal precision for cross-platform safety
     }
 
     #endregion

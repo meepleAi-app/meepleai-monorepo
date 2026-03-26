@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -18,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -91,10 +93,10 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.AgentId);
-        Assert.NotEqual(Guid.Empty, result.ThreadId);
-        Assert.Equal(1, result.SlotUsed);
-        Assert.False(result.GameAddedToCollection);
+        result.AgentId.Should().NotBe(Guid.Empty);
+        result.ThreadId.Should().NotBe(Guid.Empty);
+        result.SlotUsed.Should().Be(1);
+        result.GameAddedToCollection.Should().BeFalse();
 
         _mockAgentRepo.Verify(r => r.AddAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockChatRepo.Verify(r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -115,7 +117,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.GameAddedToCollection);
+        result.GameAddedToCollection.Should().BeTrue();
         _mockLibraryRepo.Verify(
             r => r.AddAsync(It.IsAny<UserLibraryEntry>(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -135,7 +137,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.GameAddedToCollection);
+        result.GameAddedToCollection.Should().BeFalse();
         _mockLibraryRepo.Verify(
             r => r.AddAsync(It.IsAny<UserLibraryEntry>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -171,8 +173,8 @@ public class CreateAgentWithSetupCommandHandlerTests
         var command = CreateCommand(tier: "free");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -195,7 +197,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.SlotUsed);
+        result.SlotUsed.Should().Be(3);
     }
 
     [Fact]
@@ -219,7 +221,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - should succeed (2 active + 1 new = 3 = max for free)
-        Assert.Equal(3, result.SlotUsed);
+        result.SlotUsed.Should().Be(3);
     }
 
     [Fact]
@@ -232,7 +234,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("MyCustomAgent", result.AgentName);
+        result.AgentName.Should().Be("MyCustomAgent");
     }
 
     [Fact]
@@ -245,7 +247,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.StartsWith("RAG-", result.AgentName);
+        result.AgentName.Should().StartWith("RAG-");
     }
 
     [Fact]
@@ -263,7 +265,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("MyAgent-1", result.AgentName);
+        result.AgentName.Should().Be("MyAgent-1");
     }
 
     [Fact]
@@ -277,8 +279,8 @@ public class CreateAgentWithSetupCommandHandlerTests
         var command = CreateCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _mockUnitOfWork.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -287,8 +289,8 @@ public class CreateAgentWithSetupCommandHandlerTests
     [Fact]
     public async Task Handle_NullRequest_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -309,7 +311,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - should succeed (admin bypasses limits)
-        Assert.Equal(201, result.SlotUsed);
+        result.SlotUsed.Should().Be(201);
     }
 
     [Fact]

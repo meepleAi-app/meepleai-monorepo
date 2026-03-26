@@ -112,8 +112,8 @@ describe('Select - Accessibility', () => {
       </div>
     );
 
-    const button = getByRole('button', { hidden: true });
-    expect(button).toHaveClass('focus:ring-2');
+    const trigger = getByRole('combobox');
+    expect(trigger.className).toContain('focus:ring-2');
   });
 
   it('should have proper ARIA attributes', () => {
@@ -131,16 +131,16 @@ describe('Select - Accessibility', () => {
       </div>
     );
 
-    const button = getByRole('button', { hidden: true });
-    expect(button).toHaveAttribute('aria-label');
+    const trigger = getByRole('combobox');
+    expect(trigger).toHaveAttribute('aria-label');
   });
 
   it('should be disabled when disabled prop is true', () => {
     const { getByRole } = render(
       <div>
         <label htmlFor="test-select-disabled-check">Select Option</label>
-        <Select>
-          <SelectTrigger id="test-select-disabled-check" disabled>
+        <Select disabled>
+          <SelectTrigger id="test-select-disabled-check">
             <SelectValue placeholder="Disabled" />
           </SelectTrigger>
           <SelectContent>
@@ -150,7 +150,7 @@ describe('Select - Accessibility', () => {
       </div>
     );
 
-    const button = getByRole('button', { hidden: true });
-    expect(button).toBeDisabled();
+    const trigger = getByRole('combobox');
+    expect(trigger).toBeDisabled();
   });
 });

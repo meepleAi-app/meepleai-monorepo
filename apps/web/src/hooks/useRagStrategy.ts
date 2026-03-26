@@ -52,7 +52,9 @@ export interface UseRagStrategyReturn {
   /**
    * Get strategy data from rag-data.ts.
    */
-  getStrategyData: (strategy: RagStrategy) => typeof STRATEGIES[keyof typeof STRATEGIES] | undefined;
+  getStrategyData: (
+    strategy: RagStrategy
+  ) => (typeof STRATEGIES)[keyof typeof STRATEGIES] | undefined;
 }
 
 /**
@@ -64,7 +66,14 @@ const TIER_HIERARCHY: UserTier[] = ['Anonymous', 'User', 'Editor', 'Admin', 'Pre
 /**
  * All available RAG strategies.
  */
-const ALL_STRATEGIES: RagStrategy[] = ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'];
+const ALL_STRATEGIES: RagStrategy[] = [
+  'FAST',
+  'BALANCED',
+  'PRECISE',
+  'EXPERT',
+  'CONSENSUS',
+  'CUSTOM',
+];
 
 /**
  * Hook for RAG strategy access control based on user tier.
@@ -79,7 +88,7 @@ export function useRagStrategy(): UseRagStrategyReturn {
    * Get available strategies for a tier.
    */
   const getAvailableStrategies = useCallback((tier: UserTier): RagStrategy[] => {
-    const tierAccess = TIER_STRATEGY_ACCESS.find((t) => t.tier === tier);
+    const tierAccess = TIER_STRATEGY_ACCESS.find(t => t.tier === tier);
 
     if (!tierAccess || !tierAccess.hasRagAccess) {
       return [];
@@ -105,7 +114,7 @@ export function useRagStrategy(): UseRagStrategyReturn {
    */
   const getRequiredTier = useCallback((strategy: RagStrategy): UserTier | null => {
     for (const tier of TIER_HIERARCHY) {
-      const tierAccess = TIER_STRATEGY_ACCESS.find((t) => t.tier === tier);
+      const tierAccess = TIER_STRATEGY_ACCESS.find(t => t.tier === tier);
 
       if (tierAccess?.availableStrategies.includes(strategy)) {
         return tier as UserTier;
@@ -119,7 +128,7 @@ export function useRagStrategy(): UseRagStrategyReturn {
    * Check if a tier has RAG access.
    */
   const hasRagAccess = useCallback((tier: UserTier): boolean => {
-    const tierAccess = TIER_STRATEGY_ACCESS.find((t) => t.tier === tier);
+    const tierAccess = TIER_STRATEGY_ACCESS.find(t => t.tier === tier);
     return tierAccess?.hasRagAccess ?? false;
   }, []);
 
@@ -146,7 +155,7 @@ export function useRagStrategy(): UseRagStrategyReturn {
    */
   const getAllStrategiesWithAccess = useCallback(
     (tier: UserTier): StrategyAccessInfo[] => {
-      return ALL_STRATEGIES.map((strategy) => getStrategyAccessInfo(tier, strategy));
+      return ALL_STRATEGIES.map(strategy => getStrategyAccessInfo(tier, strategy));
     },
     [getStrategyAccessInfo]
   );
@@ -154,13 +163,9 @@ export function useRagStrategy(): UseRagStrategyReturn {
   /**
    * Get strategy data from rag-data.ts.
    */
-  const getStrategyData = useCallback(
-    (strategy: RagStrategy) => {
-      // eslint-disable-next-line security/detect-object-injection -- Type-safe: strategy is RagStrategy enum
-      return STRATEGIES[strategy];
-    },
-    []
-  );
+  const getStrategyData = useCallback((strategy: RagStrategy) => {
+    return STRATEGIES[strategy];
+  }, []);
 
   return useMemo(
     () => ({

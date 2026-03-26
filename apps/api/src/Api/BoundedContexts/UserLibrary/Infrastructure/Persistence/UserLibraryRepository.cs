@@ -157,17 +157,19 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var dates = await DbContext.UserLibraryEntries
+        // Project Min/Max in the database instead of materializing all dates into memory
+        var result = await DbContext.UserLibraryEntries
             .AsNoTracking()
             .Where(e => e.UserId == userId && e.SharedGameId != null) // exclude private-game entries for consistency with count
-            .Select(e => e.AddedAt)
-            .ToListAsync(cancellationToken)
+            .GroupBy(_ => 1)
+            .Select(g => new { Oldest = g.Min(e => (DateTime?)e.AddedAt), Newest = g.Max(e => (DateTime?)e.AddedAt) })
+            .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (dates.Count == 0)
+        if (result is null)
             return (null, null);
 
-        return (dates.Min(), dates.Max());
+        return (result.Oldest, result.Newest);
     }
 
     public async Task<UserLibraryEntry?> GetUserGameWithStatsAsync(

@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
@@ -62,8 +63,8 @@ public class UnlinkOAuthAccountCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
+        result.Success.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
         _oauthAccountRepositoryMock.Verify(
             r => r.DeleteAsync(It.IsAny<OAuthAccount>(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -119,8 +120,8 @@ public class UnlinkOAuthAccountCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("User not found", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("User not found");
         _oauthAccountRepositoryMock.Verify(
             r => r.DeleteAsync(It.IsAny<OAuthAccount>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -146,8 +147,8 @@ public class UnlinkOAuthAccountCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("not linked", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("not linked");
         _oauthAccountRepositoryMock.Verify(
             r => r.DeleteAsync(It.IsAny<OAuthAccount>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -177,8 +178,8 @@ public class UnlinkOAuthAccountCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("authentication method", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("authentication method");
         _oauthAccountRepositoryMock.Verify(
             r => r.DeleteAsync(It.IsAny<OAuthAccount>(), It.IsAny<CancellationToken>()),
             Times.Never);

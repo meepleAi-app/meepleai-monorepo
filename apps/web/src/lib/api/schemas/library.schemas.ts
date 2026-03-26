@@ -56,6 +56,10 @@ export const UserLibraryEntrySchema = z.object({
   playingTimeMinutes: z.number().int().nullable().optional(),
   complexityRating: z.number().nullable().optional(),
   averageRating: z.number().nullable().optional(),
+  // Issue #3663: Private game distinction fields
+  privateGameId: z.string().uuid().nullable().optional(), // non-null when entry is a private/custom game
+  isPrivateGame: z.boolean().default(false), // computed flag from backend
+  canProposeToCatalog: z.boolean().default(false), // whether private game can be proposed
 });
 
 export type UserLibraryEntry = z.infer<typeof UserLibraryEntrySchema>;
@@ -64,6 +68,7 @@ export type UserLibraryEntry = z.infer<typeof UserLibraryEntrySchema>;
 export const UserLibraryStatsSchema = z.object({
   totalGames: z.number().int().nonnegative(),
   favoriteGames: z.number().int().nonnegative(),
+  privatePdfs: z.number().int().nonnegative().default(0),
   oldestAddedAt: z.string().datetime().nullable().optional(),
   newestAddedAt: z.string().datetime().nullable().optional(),
   nuovoCount: z.number().int().nonnegative().default(0),
@@ -87,10 +92,23 @@ export const PaginatedLibraryResponseSchema = z.object({
 
 export type PaginatedLibraryResponse = z.infer<typeof PaginatedLibraryResponseSchema>;
 
+// Associated data that would be lost if a game is removed from library (Issue #4259)
+export const AssociatedDataSchema = z.object({
+  hasCustomAgent: z.boolean(),
+  hasPrivatePdf: z.boolean(),
+  chatSessionsCount: z.number().int(),
+  gameSessionsCount: z.number().int(),
+  checklistItemsCount: z.number().int(),
+  labelsCount: z.number().int(),
+});
+
+export type AssociatedData = z.infer<typeof AssociatedDataSchema>;
+
 // Game in library status
 export const GameInLibraryStatusSchema = z.object({
   inLibrary: z.boolean(),
   isFavorite: z.boolean(),
+  associatedData: AssociatedDataSchema.nullable().optional(),
 });
 
 export type GameInLibraryStatus = z.infer<typeof GameInLibraryStatusSchema>;

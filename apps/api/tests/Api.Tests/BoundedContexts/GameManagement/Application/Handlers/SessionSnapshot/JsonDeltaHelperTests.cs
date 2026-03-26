@@ -1,6 +1,7 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers.SessionSnapshot;
+using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.SessionSnapshot;
 
@@ -17,7 +18,7 @@ public class JsonDeltaHelperTests
     {
         var json = "{\"a\":1,\"b\":2}";
         var delta = JsonDeltaHelper.ComputeDelta(json, json);
-        Assert.Equal("[]", delta);
+        delta.Should().Be("[]");
     }
 
     [Fact]
@@ -27,9 +28,9 @@ public class JsonDeltaHelperTests
         var current = "{\"a\":1,\"b\":2}";
         var delta = JsonDeltaHelper.ComputeDelta(previous, current);
 
-        Assert.Contains("\"op\":\"add\"", delta);
-        Assert.Contains("\"path\":\"/b\"", delta);
-        Assert.Contains("\"value\":2", delta);
+        delta.Should().Contain("\"op\":\"add\"");
+        delta.Should().Contain("\"path\":\"/b\"");
+        delta.Should().Contain("\"value\":2");
     }
 
     [Fact]
@@ -39,8 +40,8 @@ public class JsonDeltaHelperTests
         var current = "{\"a\":1}";
         var delta = JsonDeltaHelper.ComputeDelta(previous, current);
 
-        Assert.Contains("\"op\":\"remove\"", delta);
-        Assert.Contains("\"path\":\"/b\"", delta);
+        delta.Should().Contain("\"op\":\"remove\"");
+        delta.Should().Contain("\"path\":\"/b\"");
     }
 
     [Fact]
@@ -50,9 +51,9 @@ public class JsonDeltaHelperTests
         var current = "{\"a\":42}";
         var delta = JsonDeltaHelper.ComputeDelta(previous, current);
 
-        Assert.Contains("\"op\":\"replace\"", delta);
-        Assert.Contains("\"path\":\"/a\"", delta);
-        Assert.Contains("\"value\":42", delta);
+        delta.Should().Contain("\"op\":\"replace\"");
+        delta.Should().Contain("\"path\":\"/a\"");
+        delta.Should().Contain("\"value\":42");
     }
 
     [Fact]
@@ -62,9 +63,9 @@ public class JsonDeltaHelperTests
         var current = "{\"obj\":{\"x\":99}}";
         var delta = JsonDeltaHelper.ComputeDelta(previous, current);
 
-        Assert.Contains("\"op\":\"replace\"", delta);
-        Assert.Contains("\"path\":\"/obj/x\"", delta);
-        Assert.Contains("\"value\":99", delta);
+        delta.Should().Contain("\"op\":\"replace\"");
+        delta.Should().Contain("\"path\":\"/obj/x\"");
+        delta.Should().Contain("\"value\":99");
     }
 
     [Fact]
@@ -74,8 +75,8 @@ public class JsonDeltaHelperTests
         var current = "{\"arr\":[1,2,3,4]}";
         var delta = JsonDeltaHelper.ComputeDelta(previous, current);
 
-        Assert.Contains("\"op\":\"replace\"", delta);
-        Assert.Contains("\"path\":\"/arr\"", delta);
+        delta.Should().Contain("\"op\":\"replace\"");
+        delta.Should().Contain("\"path\":\"/arr\"");
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public class JsonDeltaHelperTests
         var current = "{\"x\":1,\"y\":2}";
         var delta = JsonDeltaHelper.ComputeDelta(previous, current);
 
-        Assert.Contains("\"op\":\"add\"", delta);
+        delta.Should().Contain("\"op\":\"add\"");
     }
 
     [Fact]
@@ -95,7 +96,7 @@ public class JsonDeltaHelperTests
         var current = "{}";
         var delta = JsonDeltaHelper.ComputeDelta(previous, current);
 
-        Assert.Contains("\"op\":\"remove\"", delta);
+        delta.Should().Contain("\"op\":\"remove\"");
     }
 
     [Fact]
@@ -105,8 +106,8 @@ public class JsonDeltaHelperTests
         var current = "{\"val\":42}";
         var delta = JsonDeltaHelper.ComputeDelta(previous, current);
 
-        Assert.Contains("\"op\":\"replace\"", delta);
-        Assert.Contains("\"path\":\"/val\"", delta);
+        delta.Should().Contain("\"op\":\"replace\"");
+        delta.Should().Contain("\"path\":\"/val\"");
     }
 
     // ========================================================================
@@ -118,7 +119,7 @@ public class JsonDeltaHelperTests
     {
         var baseState = "{\"a\":1}";
         var result = JsonDeltaHelper.ApplyDelta(baseState, "[]");
-        Assert.Equal("{\"a\":1}", result);
+        result.Should().Be("{\"a\":1}");
     }
 
     [Fact]
@@ -128,8 +129,8 @@ public class JsonDeltaHelperTests
         var delta = "[{\"op\":\"add\",\"path\":\"/b\",\"value\":2}]";
         var result = JsonDeltaHelper.ApplyDelta(baseState, delta);
 
-        Assert.Contains("\"a\":1", result);
-        Assert.Contains("\"b\":2", result);
+        result.Should().Contain("\"a\":1");
+        result.Should().Contain("\"b\":2");
     }
 
     [Fact]
@@ -139,7 +140,7 @@ public class JsonDeltaHelperTests
         var delta = "[{\"op\":\"replace\",\"path\":\"/a\",\"value\":99}]";
         var result = JsonDeltaHelper.ApplyDelta(baseState, delta);
 
-        Assert.Contains("\"a\":99", result);
+        result.Should().Contain("\"a\":99");
     }
 
     [Fact]
@@ -149,8 +150,8 @@ public class JsonDeltaHelperTests
         var delta = "[{\"op\":\"remove\",\"path\":\"/b\"}]";
         var result = JsonDeltaHelper.ApplyDelta(baseState, delta);
 
-        Assert.Contains("\"a\":1", result);
-        Assert.DoesNotContain("\"b\"", result);
+        result.Should().Contain("\"a\":1");
+        result.Should().NotContain("\"b\"");
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public class JsonDeltaHelperTests
         var delta = "[{\"op\":\"add\",\"path\":\"/obj/x\",\"value\":42}]";
         var result = JsonDeltaHelper.ApplyDelta(baseState, delta);
 
-        Assert.Contains("\"x\":42", result);
+        result.Should().Contain("\"x\":42");
     }
 
     [Fact]
@@ -170,9 +171,9 @@ public class JsonDeltaHelperTests
         var delta = "[{\"op\":\"replace\",\"path\":\"/a\",\"value\":10},{\"op\":\"remove\",\"path\":\"/b\"},{\"op\":\"add\",\"path\":\"/c\",\"value\":3}]";
         var result = JsonDeltaHelper.ApplyDelta(baseState, delta);
 
-        Assert.Contains("\"a\":10", result);
-        Assert.DoesNotContain("\"b\"", result);
-        Assert.Contains("\"c\":3", result);
+        result.Should().Contain("\"a\":10");
+        result.Should().NotContain("\"b\"");
+        result.Should().Contain("\"c\":3");
     }
 
     // ========================================================================
@@ -184,7 +185,7 @@ public class JsonDeltaHelperTests
     {
         var checkpoint = "{\"turn\":0,\"score\":0}";
         var result = JsonDeltaHelper.ReconstructState(checkpoint, Array.Empty<string>());
-        Assert.Equal(checkpoint, result);
+        result.Should().Be(checkpoint);
     }
 
     [Fact]
@@ -195,8 +196,8 @@ public class JsonDeltaHelperTests
 
         var result = JsonDeltaHelper.ReconstructState(checkpoint, new[] { delta });
 
-        Assert.Contains("\"turn\":1", result);
-        Assert.Contains("\"score\":10", result);
+        result.Should().Contain("\"turn\":1");
+        result.Should().Contain("\"score\":10");
     }
 
     [Fact]
@@ -209,8 +210,8 @@ public class JsonDeltaHelperTests
 
         var result = JsonDeltaHelper.ReconstructState(checkpoint, new[] { delta1, delta2, delta3 });
 
-        Assert.Contains("\"turn\":3", result);
-        Assert.Contains("\"score\":20", result);
+        result.Should().Contain("\"turn\":3");
+        result.Should().Contain("\"score\":20");
     }
 
     // ========================================================================
@@ -230,15 +231,9 @@ public class JsonDeltaHelperTests
         var expected = System.Text.Json.JsonDocument.Parse(current);
         var actual = System.Text.Json.JsonDocument.Parse(reconstructed);
 
-        Assert.Equal(
-            expected.RootElement.GetProperty("a").GetInt32(),
-            actual.RootElement.GetProperty("a").GetInt32());
-        Assert.Equal(
-            expected.RootElement.GetProperty("b").GetString(),
-            actual.RootElement.GetProperty("b").GetString());
-        Assert.Equal(
-            expected.RootElement.GetProperty("c").GetBoolean(),
-            actual.RootElement.GetProperty("c").GetBoolean());
+        actual.RootElement.GetProperty("a").GetInt32().Should().Be(expected.RootElement.GetProperty("a").GetInt32());
+        actual.RootElement.GetProperty("b").GetString().Should().Be(expected.RootElement.GetProperty("b").GetString());
+        actual.RootElement.GetProperty("c").GetBoolean().Should().Be(expected.RootElement.GetProperty("c").GetBoolean());
     }
 
     [Fact]
@@ -251,8 +246,8 @@ public class JsonDeltaHelperTests
         var reconstructed = JsonDeltaHelper.ApplyDelta(previous, delta);
 
         var actual = System.Text.Json.JsonDocument.Parse(reconstructed);
-        Assert.Equal(25, actual.RootElement.GetProperty("player").GetProperty("score").GetInt32());
-        Assert.Equal(2, actual.RootElement.GetProperty("turn").GetInt32());
+        actual.RootElement.GetProperty("player").GetProperty("score").GetInt32().Should().Be(25);
+        actual.RootElement.GetProperty("turn").GetInt32().Should().Be(2);
     }
 
     [Fact]
@@ -268,8 +263,8 @@ public class JsonDeltaHelperTests
         var reconstructed = JsonDeltaHelper.ReconstructState(state0, new[] { delta01, delta12 });
 
         var actual = System.Text.Json.JsonDocument.Parse(reconstructed);
-        Assert.Equal(2, actual.RootElement.GetProperty("turn").GetInt32());
-        Assert.Equal(10, actual.RootElement.GetProperty("players").GetProperty("alice").GetInt32());
-        Assert.Equal(15, actual.RootElement.GetProperty("players").GetProperty("bob").GetInt32());
+        actual.RootElement.GetProperty("turn").GetInt32().Should().Be(2);
+        actual.RootElement.GetProperty("players").GetProperty("alice").GetInt32().Should().Be(10);
+        actual.RootElement.GetProperty("players").GetProperty("bob").GetInt32().Should().Be(15);
     }
 }

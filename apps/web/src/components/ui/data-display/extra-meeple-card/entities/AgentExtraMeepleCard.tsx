@@ -2,28 +2,42 @@
 
 /**
  * AgentExtraMeepleCard — expanded card for Agent entities
- * Issue #5026 — Agent detail card with 4 tabs (Epic #5023)
+ * Issue #5026 — Agent detail card with 5 tabs (Epic #5023)
+ *
+ * When enableChat is true, adds an embedded Chat tab with:
+ * - Agent readiness validation (KB populated, RAG initialized)
+ * - Blocking UI if agent not ready with link to configuration
+ * - Embedded ChatThreadView with SSE streaming
+ * - Fullscreen toggle for immersive chat
  */
 
 import React, { useState } from 'react';
 
 import {
+  AlertCircle,
   Bot,
   ExternalLink,
   FileText,
   Gamepad2,
   Loader2,
+  Maximize2,
   MessageCircle,
   MessageSquare,
+  Minimize2,
   Settings,
   Zap,
 } from 'lucide-react';
 
+import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
 import { AgentModelInfo } from '@/components/ui/data-display/meeple-card-features/AgentModelInfo';
 import { AgentStatsDisplay } from '@/components/ui/data-display/meeple-card-features/AgentStatsDisplay';
 import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
-import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
+import { Button } from '@/components/ui/primitives/button';
+import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
+import { useAgentStatus } from '@/hooks/useAgentStatus';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 import {
@@ -42,13 +56,15 @@ import type { AgentDetailData, ChatThreadPreview, KbDocumentPreview } from '../t
 
 export interface AgentExtraMeepleCardProps {
   data: AgentDetailData;
+  /** Enable embedded chat tab with SSE streaming and readiness validation */
+  enableChat?: boolean;
   loading?: boolean;
   error?: string;
   className?: string;
   'data-testid'?: string;
 }
 
-type AgentTab = 'overview' | 'stats' | 'history' | 'kb';
+type AgentTab = 'chat' | 'overview' | 'stats' | 'history' | 'kb';
 
 // ============================================================================
 // AgentExtraMeepleCard
@@ -56,15 +72,26 @@ type AgentTab = 'overview' | 'stats' | 'history' | 'kb';
 
 export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
   data,
+  enableChat = false,
   loading,
   error,
   className,
   'data-testid': testId,
 }: AgentExtraMeepleCardProps) {
-  const [activeTab, setActiveTab] = useState<AgentTab>('overview');
-  const { threads, loading: threadsLoading } = useAgentThreads(data.id);
-  const { docs, loading: docsLoading } = useAgentKbDocs(data.gameId);
+  const [activeTab, setActiveTab] = useState<AgentTab>(enableChat ? 'chat' : 'overview');
+  const [chatThreadId, setChatThreadId] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const { data: threads = [], isLoading: threadsLoading } = useAgentThreads(data.id);
+  const { data: docs = [], isLoading: docsLoading } = useAgentKbDocs(data.gameId);
   const colors = ENTITY_COLORS.agent;
+
+  // Agent readiness validation — always called (rules of hooks) but result
+  // is only consumed when enableChat is true
+  const {
+    status: chatReadiness,
+    isLoading: readinessLoading,
+    error: readinessError,
+  } = useAgentStatus(data.id);
 
   // Derive AgentStatus from flags
   const agentStatus = !data.isActive ? 'error' : data.isIdle ? 'idle' : 'active';
@@ -82,9 +109,11 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
         'flex w-[600px] flex-col rounded-2xl overflow-hidden',
         'bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20',
         'max-md:w-full',
+        enableChat && 'w-full max-w-[800px]',
         className
       )}
-      data-testid={testId}
+      style={enableChat ? { minHeight: '600px' } : undefined}
+      data-testid={testId ?? 'agent-info-card'}
     >
       {/* Header */}
       <EntityHeader
@@ -102,6 +131,14 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
         className="flex flex-1 flex-col"
       >
         <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+          {enableChat && (
+            <EntityTabTrigger
+              value="chat"
+              icon={MessageCircle}
+              label="Chat"
+              activeAccent={colors.activeAccent}
+            />
+          )}
           <EntityTabTrigger
             value="overview"
             icon={Bot}
@@ -129,6 +166,23 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
         </TabsList>
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
+          {/* ── Chat Tab (readiness validation + embedded ChatThreadView) ── */}
+          {enableChat && (
+            <TabsContent value="chat" className="mt-0 flex flex-col h-full">
+              <AgentChatTab
+                agentId={data.id}
+                agentName={data.name}
+                readiness={chatReadiness}
+                readinessLoading={readinessLoading}
+                readinessError={readinessError}
+                chatThreadId={chatThreadId}
+                onThreadCreated={setChatThreadId}
+                isFullscreen={isFullscreen}
+                onFullscreenToggle={() => setIsFullscreen(!isFullscreen)}
+              />
+            </TabsContent>
+          )}
+
           {/* ── Overview Tab ─────────────────────────────────────── */}
           <TabsContent value="overview" className="mt-0">
             <div className="space-y-3">
@@ -161,20 +215,37 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
 
               {/* Quick actions */}
               <div className="grid grid-cols-2 gap-2">
-                <a
-                  href={`/chat/new?agentId=${data.id}`}
-                  className={cn(
-                    'flex items-center justify-center gap-1.5 rounded-lg border py-2.5 px-3',
-                    'bg-blue-600 border-blue-700 text-white',
-                    'font-nunito text-xs font-medium',
-                    'transition-colors duration-150 hover:bg-blue-700',
-                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1'
-                  )}
-                  data-testid="agent-action-start-chat"
-                >
-                  <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                  Avvia Chat
-                </a>
+                {enableChat ? (
+                  <button
+                    onClick={() => setActiveTab('chat')}
+                    className={cn(
+                      'flex items-center justify-center gap-1.5 rounded-lg border py-2.5 px-3',
+                      'bg-blue-600 border-blue-700 text-white',
+                      'font-nunito text-xs font-medium',
+                      'transition-colors duration-150 hover:bg-blue-700',
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1'
+                    )}
+                    data-testid="agent-action-start-chat"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                    Avvia Chat
+                  </button>
+                ) : (
+                  <a
+                    href={`/chat/new?agentId=${data.id}`}
+                    className={cn(
+                      'flex items-center justify-center gap-1.5 rounded-lg border py-2.5 px-3',
+                      'bg-blue-600 border-blue-700 text-white',
+                      'font-nunito text-xs font-medium',
+                      'transition-colors duration-150 hover:bg-blue-700',
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1'
+                    )}
+                    data-testid="agent-action-start-chat"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                    Avvia Chat
+                  </a>
+                )}
                 {data.gameId && (
                   <a
                     href={`/library/games/${data.gameId}/agent`}
@@ -267,9 +338,207 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
           </TabsContent>
         </div>
       </Tabs>
+
+      {/* Fullscreen Modal for Chat */}
+      {isFullscreen && chatThreadId && (
+        <div className="fixed inset-0 z-50 bg-background" data-testid="fullscreen-chat-modal">
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="p-2 rounded-lg bg-white/80 dark:bg-card/80 backdrop-blur-md border border-border/50 hover:bg-white dark:hover:bg-card transition-colors"
+              title="Esci da schermo intero"
+              data-testid="fullscreen-close"
+            >
+              <Minimize2 className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </div>
+          <div className="h-full w-full">
+            <ChatThreadView threadId={chatThreadId} />
+          </div>
+        </div>
+      )}
     </div>
   );
 });
+
+// ============================================================================
+// AgentChatTab — embedded chat with readiness validation
+// ============================================================================
+
+interface AgentChatTabProps {
+  agentId: string;
+  agentName: string;
+  readiness: {
+    isReady: boolean;
+    documentCount: number;
+    ragStatus: string;
+    blockingReason?: string | null;
+  } | null;
+  readinessLoading: boolean;
+  readinessError: string | null;
+  chatThreadId: string | null;
+  onThreadCreated: (threadId: string) => void;
+  isFullscreen: boolean;
+  onFullscreenToggle: () => void;
+}
+
+function AgentChatTab({
+  agentId,
+  agentName,
+  readiness,
+  readinessLoading,
+  readinessError,
+  chatThreadId,
+  onThreadCreated,
+  isFullscreen,
+  onFullscreenToggle,
+}: AgentChatTabProps) {
+  const [threadError, setThreadError] = useState<string | null>(null);
+  const [creatingThread, setCreatingThread] = useState(false);
+  // Loading status
+  if (readinessLoading) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
+        <Loader2 className="mb-3 h-8 w-8 animate-spin text-blue-500" />
+        <p className="font-nunito text-sm text-slate-500">
+          Verifica disponibilit&agrave; agente...
+        </p>
+      </div>
+    );
+  }
+
+  // Error loading status
+  if (readinessError) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50">
+          <AlertCircle className="h-8 w-8 text-red-400" />
+        </div>
+        <h4 className="mb-2 font-quicksand text-lg font-semibold text-slate-800">Errore</h4>
+        <p className="max-w-xs font-nunito text-sm text-red-600 mb-4">{readinessError}</p>
+      </div>
+    );
+  }
+
+  // Agent not ready - Blocking UI
+  if (readiness && !readiness.isReady) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50">
+          <AlertCircle className="h-8 w-8 text-amber-500" />
+        </div>
+        <h4 className="mb-2 font-quicksand text-lg font-semibold text-slate-800">
+          Agente non configurato
+        </h4>
+        <p className="max-w-xs font-nunito text-sm text-slate-500 mb-1">
+          {readiness.blockingReason || 'Configura la Knowledge Base per abilitare la chat'}
+        </p>
+        <p className="max-w-xs font-nunito text-xs text-slate-400 mb-4">
+          Documenti: {readiness.documentCount} | Status RAG: {readiness.ragStatus}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => (window.location.href = `/admin/ai-lab/agents/${agentId}/edit`)}
+          className="rounded-full gap-2"
+        >
+          <Settings className="h-4 w-4" />
+          Configura Agente
+        </Button>
+      </div>
+    );
+  }
+
+  // Agent ready - show chat or start button
+  if (readiness?.isReady) {
+    if (chatThreadId) {
+      return (
+        <div className="flex-1 min-h-0 flex flex-col relative">
+          {/* Fullscreen toggle button */}
+          <div className="absolute top-2 right-2 z-10">
+            <button
+              onClick={onFullscreenToggle}
+              className="p-2 rounded-lg bg-white/80 dark:bg-card/80 backdrop-blur-md border border-border/50 hover:bg-white dark:hover:bg-card transition-colors"
+              title={isFullscreen ? 'Esci da schermo intero' : 'Schermo intero'}
+              data-testid="fullscreen-toggle"
+            >
+              {isFullscreen ? (
+                <Minimize2 className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Maximize2 className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          </div>
+
+          {!isFullscreen && (
+            <div className="flex-1 min-h-0">
+              <ChatThreadView threadId={chatThreadId} />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50">
+          <MessageSquare className="h-8 w-8 text-blue-500" />
+        </div>
+        <h4 className="mb-2 font-quicksand text-lg font-semibold text-slate-800">
+          Chat con {agentName}
+        </h4>
+        <p className="max-w-xs font-nunito text-sm text-slate-500 mb-4">
+          Pronto per chattare &bull; {readiness.documentCount} documenti nella KB
+        </p>
+        <Button
+          variant="default"
+          size="sm"
+          disabled={creatingThread}
+          onClick={async () => {
+            setThreadError(null);
+            setCreatingThread(true);
+            try {
+              const thread = await api.chat.createThread({
+                agentId,
+                title: `Chat con ${agentName}`,
+              });
+              if (thread?.id) {
+                onThreadCreated(thread.id);
+              }
+            } catch (err) {
+              const message =
+                err instanceof Error ? err.message : 'Impossibile creare la conversazione';
+              setThreadError(message);
+            } finally {
+              setCreatingThread(false);
+            }
+          }}
+          className="rounded-full"
+        >
+          {creatingThread ? (
+            <>
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+              Creazione...
+            </>
+          ) : (
+            'Inizia Conversazione'
+          )}
+        </Button>
+        {threadError && (
+          <p
+            className="mt-2 max-w-xs font-nunito text-xs text-red-600"
+            role="alert"
+            data-testid="thread-creation-error"
+          >
+            {threadError}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
 
 // ── Agent sub-components ───────────────────────────────────────────────────
 
@@ -323,108 +592,7 @@ function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
         <p className="font-nunito text-xs font-medium text-slate-700 truncate">{doc.fileName}</p>
         <p className="font-nunito text-[10px] text-slate-400">{date}</p>
       </div>
-      <DocumentStatusBadge status={doc.status} size="sm" />
+      <KbStatusBadge status={doc.status} size="sm" />
     </div>
   );
-}
-
-// ── Agent data-fetching hooks  ──────────────────────────────────────────────
-
-function useAgentThreads(agentId: string) {
-  const [threads, setThreads] = React.useState<ChatThreadPreview[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    if (!agentId) return;
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/v1/chat/threads?agentId=${agentId}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) return;
-        const json = (await res.json()) as unknown[];
-        setThreads(mapThreads(json));
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return;
-      } finally {
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      controller.abort();
-    };
-  }, [agentId]);
-
-  return { threads, loading };
-}
-
-function useAgentKbDocs(gameId: string | undefined) {
-  const [docs, setDocs] = React.useState<KbDocumentPreview[]>([]);
-  const [loading, setLoading] = React.useState(!!gameId);
-
-  React.useEffect(() => {
-    if (!gameId) {
-      setLoading(false);
-      return;
-    }
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/v1/library/games/${gameId}/documents`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) return;
-        const json = (await res.json()) as unknown[];
-        setDocs(mapKbDocs(json));
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return;
-      } finally {
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      controller.abort();
-    };
-  }, [gameId]);
-
-  return { docs, loading };
-}
-
-function mapThreads(json: unknown[]): ChatThreadPreview[] {
-  return json.map(raw => {
-    const t = raw as Record<string, unknown>;
-    const messages = Array.isArray(t.messages) ? (t.messages as Record<string, unknown>[]) : [];
-    const firstMsg = messages[0];
-    const preview = typeof firstMsg?.content === 'string' ? firstMsg.content : '';
-    return {
-      id: String(t.id ?? ''),
-      createdAt: String(t.createdAt ?? t.startedAt ?? new Date().toISOString()),
-      messageCount: messages.length,
-      firstMessagePreview: preview,
-    };
-  });
-}
-
-function mapKbDocs(json: unknown[]): KbDocumentPreview[] {
-  return json.map(raw => {
-    const d = raw as Record<string, unknown>;
-    const statusMap: Record<string, KbDocumentPreview['status']> = {
-      indexed: 'indexed',
-      processing: 'processing',
-      failed: 'failed',
-      none: 'none',
-    };
-    const rawStatus = String(d.status ?? 'none').toLowerCase();
-    return {
-      id: String(d.id ?? ''),
-      fileName: String(d.fileName ?? d.name ?? 'Documento'),
-      uploadedAt: String(d.uploadedAt ?? d.createdAt ?? new Date().toISOString()),
-      status: statusMap[rawStatus] ?? 'none',
-    };
-  });
 }

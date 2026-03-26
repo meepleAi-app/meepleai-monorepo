@@ -30,6 +30,26 @@ internal static class FeatureFlagSeeder
         new("api_access", "REST API access via API keys", true, false, false, true),
         new("Features.PdfUpload", "Enable/disable PDF upload feature (standard + chunked)", true, true, true, true),
         new("Features.StreamingResponses", "Enable/disable SSE streaming AI responses", true, true, true, true),
+        new("alpha_layout", "Alpha mobile-first layout with 4-tab navigation (AlphaShell)", false, false, false, false),
+        new("oauth_login", "Enable OAuth login (Google, Discord, GitHub) — disable for invite-only alpha", false, false, false, false),
+
+        // Game Night v2 feature flags
+        new("Features:SetupWizard.Enabled", "Enable Setup Wizard for live sessions", true, true, true, true),
+        new("Features:SetupWizard.BggFallback", "Enable BGG data fallback in setup checklist cascade", false, false, false, false),
+        new("Features:Arbitro.StructuredDisputes", "Enable v2 structured dispute system", true, true, true, true),
+        new("Features:Arbitro.DemocraticOverride", "Enable democratic override voting on dispute verdicts", true, true, true, true),
+        new("Features:AgentMemory.Enabled", "Enable persistent agent memory system", true, true, true, true),
+        new("Features:AgentMemory.GuestClaim", "Enable guest account claiming for player history", true, true, true, true),
+
+        // Admin tools
+        new("Features.DatabaseSync", "Enable Database Sync admin tool", false, false, false, false),
+
+        // RAG Enhancement flags
+        new("rag.enhancement.adaptive-routing", "Adaptive RAG: skip retrieval for simple queries", true, false, true, true),
+        new("rag.enhancement.crag-evaluation", "CRAG: evaluate retrieval quality before generation", true, false, false, true),
+        new("rag.enhancement.rag-fusion-queries", "RAG-Fusion: multi-query retrieval for better recall", true, false, true, true),
+        new("rag.enhancement.raptor-retrieval", "RAPTOR: hierarchical summary retrieval", true, false, false, true),
+        new("rag.enhancement.graph-traversal", "Graph RAG: entity relation context injection", true, false, false, true),
     ];
 
     /// <summary>

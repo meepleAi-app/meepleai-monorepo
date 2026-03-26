@@ -10,6 +10,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Services;
 
@@ -55,7 +56,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledForTierAsync(featureName, tier);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockConfigService.Verify(c => c.GetValueAsync<bool?>(expectedKey, null, null), Times.Once);
     }
 
@@ -74,7 +75,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledForTierAsync(featureName, tier);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledForTierAsync(featureName, tier);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockConfigService.Verify(c => c.GetValueAsync<bool?>(tierKey, null, null), Times.Once);
         _mockConfigService.Verify(c => c.GetValueAsync<bool?>(featureName, null, null), Times.Once);
     }
@@ -113,15 +114,15 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledForTierAsync(featureName, tier);
 
         // Assert - Default true for backward compatibility
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
     public async Task IsEnabledForTierAsync_WithNullTier_ThrowsArgumentNullException()
     {
         // Arrange & Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _service.IsEnabledForTierAsync("Features.Test", null!));
+        var act = () => _service.IsEnabledForTierAsync("Features.Test", null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Theory]
@@ -142,7 +143,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledForTierAsync(featureName, tier);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockConfigService.Verify(c => c.GetValueAsync<bool?>(expectedKey, null, null), Times.Once);
     }
 
@@ -205,8 +206,8 @@ public class FeatureFlagServiceTests
     public async Task EnableFeatureForTierAsync_WithNullTier_ThrowsArgumentNullException()
     {
         // Arrange & Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _service.EnableFeatureForTierAsync("Features.Test", null!, "user-id"));
+        var act2 = () => _service.EnableFeatureForTierAsync("Features.Test", null!, "user-id");
+        await act2.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -289,21 +290,21 @@ public class FeatureFlagServiceTests
         var result = await _service.GetAllFeatureFlagsAsync();
 
         // Assert
-        Assert.Equal(3, result.Count);
+        result.Count.Should().Be(3);
 
         var premiumFlag = result.First(f => f.TierRestriction == "premium");
-        Assert.Equal("Features.RAG", premiumFlag.FeatureName);
-        Assert.True(premiumFlag.IsEnabled);
-        Assert.Null(premiumFlag.RoleRestriction);
+        premiumFlag.FeatureName.Should().Be("Features.RAG");
+        premiumFlag.IsEnabled.Should().BeTrue();
+        premiumFlag.RoleRestriction.Should().BeNull();
 
         var freeFlag = result.First(f => f.TierRestriction == "free");
-        Assert.Equal("Features.RAG", freeFlag.FeatureName);
-        Assert.False(freeFlag.IsEnabled);
+        freeFlag.FeatureName.Should().Be("Features.RAG");
+        freeFlag.IsEnabled.Should().BeFalse();
 
         var globalFlag = result.First(f => f.FeatureName == "Features.Chat");
-        Assert.Null(globalFlag.TierRestriction);
-        Assert.Null(globalFlag.RoleRestriction);
-        Assert.True(globalFlag.IsEnabled);
+        globalFlag.TierRestriction.Should().BeNull();
+        globalFlag.RoleRestriction.Should().BeNull();
+        globalFlag.IsEnabled.Should().BeTrue();
     }
 
     [Fact]
@@ -328,11 +329,11 @@ public class FeatureFlagServiceTests
 
         // Assert
         var adminFlag = result.First(f => f.RoleRestriction == "Admin");
-        Assert.Equal("Features.AdminDashboard", adminFlag.FeatureName);
-        Assert.Null(adminFlag.TierRestriction);
+        adminFlag.FeatureName.Should().Be("Features.AdminDashboard");
+        adminFlag.TierRestriction.Should().BeNull();
 
         var editorFlag = result.First(f => f.RoleRestriction == "Editor");
-        Assert.Equal("Features.EditContent", editorFlag.FeatureName);
+        editorFlag.FeatureName.Should().Be("Features.EditContent");
     }
 
     [Fact]
@@ -357,14 +358,14 @@ public class FeatureFlagServiceTests
 
         // Assert
         var tierFlag = result.First(f => f.TierRestriction != null);
-        Assert.Equal("Features.Test", tierFlag.FeatureName);
-        Assert.Equal("premium", tierFlag.TierRestriction);
-        Assert.Null(tierFlag.RoleRestriction);
+        tierFlag.FeatureName.Should().Be("Features.Test");
+        tierFlag.TierRestriction.Should().Be("premium");
+        tierFlag.RoleRestriction.Should().BeNull();
 
         var roleFlag = result.First(f => f.RoleRestriction != null);
-        Assert.Equal("Features.Test", roleFlag.FeatureName);
-        Assert.Equal("Admin", roleFlag.RoleRestriction);
-        Assert.Null(roleFlag.TierRestriction);
+        roleFlag.FeatureName.Should().Be("Features.Test");
+        roleFlag.RoleRestriction.Should().Be("Admin");
+        roleFlag.TierRestriction.Should().BeNull();
     }
 
     #endregion

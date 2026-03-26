@@ -18,7 +18,8 @@ const PORT = process.env.MOCK_API_PORT || 8081;
 const server = http.createServer((req, res) => {
   // Log requests in CI for debugging
   if (process.env.CI || process.env.DEBUG) {
-    console.log(`[MockAPI] ${req.method} ${req.url}`);
+    const safeUrl = (req.url || '').replace(/[\n\r]/g, '');
+    console.log(`[MockAPI] ${req.method} ${safeUrl}`);
   }
 
   // Set CORS headers (required for browser requests)

@@ -19,7 +19,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import DOMPurify from 'dompurify';
 import {
   BookOpen,
   Calendar,
@@ -49,6 +48,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { api } from '@/lib/api';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
+import { createSafeMarkup } from '@/lib/security/sanitize';
 import { cn } from '@/lib/utils';
 
 import { KnowledgeBaseTab } from './KnowledgeBaseTab';
@@ -127,7 +127,7 @@ export function SharedGameDetailModal({
   const handleShare = useCallback(() => {
     if (gameId) {
       // Copy link to clipboard
-      const url = `${window.location.origin}/games/catalog/${gameId}`;
+      const url = `${window.location.origin}/library/games/${gameId}`;
       navigator.clipboard.writeText(url).then(() => {
         onShare?.(gameId);
       });
@@ -399,46 +399,8 @@ interface RulesTabProps {
 }
 
 function RulesTab({ rules }: RulesTabProps) {
-  // Sanitize HTML content with DOMPurify to prevent XSS
-  const sanitizedContent = useMemo(() => {
-    return DOMPurify.sanitize(rules.content, {
-      ALLOWED_TAGS: [
-        'p',
-        'br',
-        'strong',
-        'em',
-        'b',
-        'i',
-        'u',
-        'h1',
-        'h2',
-        'h3',
-        'h4',
-        'h5',
-        'h6',
-        'ul',
-        'ol',
-        'li',
-        'blockquote',
-        'pre',
-        'code',
-        'a',
-        'img',
-        'table',
-        'thead',
-        'tbody',
-        'tr',
-        'th',
-        'td',
-        'div',
-        'span',
-      ],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'rel'],
-      ADD_ATTR: ['target'],
-      FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input'],
-      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
-    });
-  }, [rules.content]);
+  // SEC-I3: Use centralized sanitization from @/lib/security/sanitize
+  const safeMarkup = useMemo(() => createSafeMarkup(rules.content), [rules.content]);
 
   return (
     <div>
@@ -454,7 +416,7 @@ function RulesTab({ rules }: RulesTabProps) {
 
       <div
         className="prose prose-sm max-w-none dark:prose-invert"
-        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+        dangerouslySetInnerHTML={safeMarkup}
       />
     </div>
   );

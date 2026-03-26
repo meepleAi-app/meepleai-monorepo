@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -39,7 +41,7 @@ public class DeleteRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -49,10 +51,11 @@ public class DeleteRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<DeleteRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new DeleteRuleCommentCommandHandler(
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -62,10 +65,11 @@ public class DeleteRuleCommentCommandHandlerTests
         using var context = CreateFreshDbContext();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new DeleteRuleCommentCommandHandler(
                 context,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_AsOwner_ConstructsCorrectly()
@@ -80,9 +84,9 @@ public class DeleteRuleCommentCommandHandlerTests
             IsAdmin: false);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(userId, command.UserId);
-        Assert.False(command.IsAdmin);
+        command.CommentId.Should().Be(commentId);
+        command.UserId.Should().Be(userId);
+        (command.IsAdmin).Should().BeFalse();
     }
 
     [Fact]
@@ -98,9 +102,9 @@ public class DeleteRuleCommentCommandHandlerTests
             IsAdmin: true);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(adminUserId, command.UserId);
-        Assert.True(command.IsAdmin);
+        command.CommentId.Should().Be(commentId);
+        command.UserId.Should().Be(adminUserId);
+        (command.IsAdmin).Should().BeTrue();
     }
 
     [Fact]
@@ -123,9 +127,9 @@ public class DeleteRuleCommentCommandHandlerTests
             IsAdmin: true);
 
         // Assert
-        Assert.NotEqual(command1.CommentId, command2.CommentId);
-        Assert.NotEqual(command1.UserId, command2.UserId);
-        Assert.NotEqual(command1.IsAdmin, command2.IsAdmin);
+        command2.CommentId.Should().NotBe(command1.CommentId);
+        command2.UserId.Should().NotBe(command1.UserId);
+        command2.IsAdmin.Should().NotBe(command1.IsAdmin);
     }
     // NOTE: Full integration tests for Handle method (comment deletion, ownership validation,
     // admin authorization, cascade deletion of replies) should be in integration test suite

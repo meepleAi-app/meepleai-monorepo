@@ -1,6 +1,9 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -51,6 +54,7 @@ public sealed class BulkUserOperationsE2ETests : IAsyncLifetime
     private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IUserRepository? _userRepository;
+    private IUserProfileRepository? _userProfileRepository;
     private IUnitOfWork? _unitOfWork;
     private readonly Action<string> _output;
 
@@ -81,33 +85,26 @@ public sealed class BulkUserOperationsE2ETests : IAsyncLifetime
             CommandTimeout = 30
         };
 
-        var services = new ServiceCollection();
-
-        // DbContext
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
-        // MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-        // Repositories and Unit of Work
+        var services = IntegrationServiceCollectionBuilder.CreateBase(enforcedBuilder.ConnectionString);
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector,
-            Api.SharedKernel.Application.Services.DomainEventCollector>();
-
-        // Logging
-        services.AddLogging(builder => builder.AddConsole());
+        services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
         _userRepository = serviceProvider.GetRequiredService<IUserRepository>();
+        _userProfileRepository = serviceProvider.GetRequiredService<IUserProfileRepository>();
         _unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
 
         // Run migrations
         await _dbContext.Database.MigrateAsync(TestCancellationToken);
+
+        // Create user projection views that are normally created at Program.cs startup
+        // but are not part of EF migrations (Issue #3010)
+        await _dbContext.Database.ExecuteSqlRawAsync(@"
+            CREATE OR REPLACE VIEW vw_user_profiles AS SELECT * FROM users;
+            CREATE OR REPLACE VIEW vw_user_budgets AS SELECT * FROM users;
+            CREATE OR REPLACE VIEW vw_user_preferences AS SELECT * FROM users;
+        ", TestCancellationToken);
 
         _output("E2E test infrastructure initialized successfully");
     }
@@ -173,7 +170,7 @@ user3@e2etest.com,User Three,user,Password789!";
 
         // Act 3: Export
         var exportLogger = new Mock<ILogger<BulkExportUsersQueryHandler>>();
-        var exportHandler = new BulkExportUsersQueryHandler(_userRepository!, exportLogger.Object);
+        var exportHandler = new BulkExportUsersQueryHandler(_userProfileRepository!, exportLogger.Object);
         var exportQuery = new BulkExportUsersQuery(null, null);
         var exportResult = await exportHandler.Handle(exportQuery, TestCancellationToken);
 
@@ -365,8 +362,8 @@ duplicate@test.com,Duplicate User,user,Password123!";
         var command = new BulkImportUsersCommand(csvContent, adminId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.DomainException>()).Which;
 
         exception.Message.Should().Contain("already exist");
     }
@@ -385,7 +382,7 @@ duplicate@test.com,Duplicate User,user,Password123!";
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         var logger = new Mock<ILogger<BulkExportUsersQueryHandler>>();
-        var handler = new BulkExportUsersQueryHandler(_userRepository!, logger.Object);
+        var handler = new BulkExportUsersQueryHandler(_userProfileRepository!, logger.Object);
         var query = new BulkExportUsersQuery("admin", null);
 
         // Act

@@ -2,6 +2,8 @@ using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -12,18 +14,17 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 /// EF Core repository for AdminReport aggregate
 /// ISSUE-916: Repository implementation with domain/entity mapping
 /// </summary>
-internal sealed class AdminReportRepository : IAdminReportRepository
+internal sealed class AdminReportRepository : RepositoryBase, IAdminReportRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
 
-    public AdminReportRepository(MeepleAiDbContext dbContext)
+    public AdminReportRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<AdminReport?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.AdminReports
+        var entity = await DbContext.AdminReports
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -33,7 +34,7 @@ internal sealed class AdminReportRepository : IAdminReportRepository
 
     public async Task<IReadOnlyList<AdminReport>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.AdminReports
+        var entities = await DbContext.AdminReports
             .AsNoTracking()
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(cancellationToken)
@@ -44,7 +45,7 @@ internal sealed class AdminReportRepository : IAdminReportRepository
 
     public async Task<IReadOnlyList<AdminReport>> GetActiveScheduledReportsAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.AdminReports
+        var entities = await DbContext.AdminReports
             .AsNoTracking()
             .Where(r => r.IsActive && r.ScheduleExpression != null)
             .ToListAsync(cancellationToken)
@@ -56,27 +57,27 @@ internal sealed class AdminReportRepository : IAdminReportRepository
     public async Task AddAsync(AdminReport report, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(report);
-        await _dbContext.AdminReports.AddAsync(entity, cancellationToken).ConfigureAwait(false);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.AdminReports.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(AdminReport report, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(report);
-        _dbContext.AdminReports.Update(entity);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        DbContext.AdminReports.Update(entity);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.AdminReports
+        var entity = await DbContext.AdminReports
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
         if (entity is not null)
         {
-            _dbContext.AdminReports.Remove(entity);
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            DbContext.AdminReports.Remove(entity);
+            await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 

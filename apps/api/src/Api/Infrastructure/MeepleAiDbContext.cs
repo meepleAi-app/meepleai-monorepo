@@ -81,6 +81,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
     public DbSet<BoundedContexts.Administration.Domain.Entities.UserAiConsent> UserAiConsents => Set<BoundedContexts.Administration.Domain.Entities.UserAiConsent>(); // ISSUE-5512: GDPR AI consent
+    public DbSet<BoundedContexts.Administration.Domain.Entities.UserProfile> UserProfiles => Set<BoundedContexts.Administration.Domain.Entities.UserProfile>(); // Phase 6: Admin user profile projection
+    public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget> UserBudgets => Set<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget>(); // Phase 6: Budget/tier projection
+    public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences> UserPreferences => Set<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences>(); // Phase 6: User preferences projection
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
@@ -106,6 +109,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AlertRuleEntity> AlertRules => Set<AlertRuleEntity>(); // ISSUE-921: Dynamic alert rules
     public DbSet<AlertConfigurationEntity> AlertConfigurations => Set<AlertConfigurationEntity>(); // ISSUE-921: Dynamic alert config
     public DbSet<ServiceHealthStateEntity> ServiceHealthStates => Set<ServiceHealthStateEntity>(); // ISSUE-448: Service health monitoring
+    public DbSet<DatabaseMetricsSnapshotEntity> DatabaseMetricsSnapshots => Set<DatabaseMetricsSnapshotEntity>(); // Database growth tracking
     public DbSet<UserBackupCodeEntity> UserBackupCodes => Set<UserBackupCodeEntity>(); // AUTH-07
     public DbSet<TempSessionEntity> TempSessions => Set<TempSessionEntity>(); // AUTH-07
     public DbSet<UsedTotpCodeEntity> UsedTotpCodes => Set<UsedTotpCodeEntity>(); // SEC-07: Issue #1787 TOTP Replay Prevention
@@ -202,6 +206,10 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameNightPlaylistEntity> GameNightPlaylists => Set<GameNightPlaylistEntity>(); // ISSUE-5582: Game Night Playlist
     public DbSet<GameNightEventEntity> GameNightEvents => Set<GameNightEventEntity>(); // ISSUE-42: Game Night Event
     public DbSet<GameNightRsvpEntity> GameNightRsvps => Set<GameNightRsvpEntity>(); // ISSUE-42: Game Night RSVP
+    public DbSet<RuleDisputeEntity> RuleDisputes => Set<RuleDisputeEntity>(); // Structured rule dispute persistence
+    public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity> GameMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity>(); // AgentMemory: per-game memory
+    public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity> GroupMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity>(); // AgentMemory: play group memory
+    public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity> PlayerMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity>(); // AgentMemory: player statistics
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity> SessionChatMessages => Set<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>(); // ISSUE-4760
 
     // Issue #4220: Notification preferences
@@ -313,8 +321,13 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment>(); // ISSUE-5360
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionPlayer>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionTeam>(); // ISSUE-4747
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RuleDispute>(); // Structured rule dispute aggregate
+        modelBuilder.Ignore<BoundedContexts.AgentMemory.Domain.Entities.GameMemory>(); // AgentMemory: domain aggregate
+        modelBuilder.Ignore<BoundedContexts.AgentMemory.Domain.Entities.GroupMemory>(); // AgentMemory: domain aggregate
+        modelBuilder.Ignore<BoundedContexts.AgentMemory.Domain.Entities.PlayerMemory>(); // AgentMemory: domain aggregate
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
+        modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.DatabaseMetricsSnapshot>(); // Database growth tracking
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.DocumentCollection>(); // ISSUE-2051
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>(); // ISSUE-2370
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameCategory>(); // ISSUE-2370

@@ -7,21 +7,14 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
-using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Moq;
-using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
@@ -61,115 +54,8 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         // Create isolated test database
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
-        // Set environment variables for rate limiting bypass (must be set before factory creation)
-        // The rate limiting middleware checks for these environment variables
-        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
-        Environment.SetEnvironmentVariable("RateLimiting__Enabled", "false");
-        // Set ASPNETCORE_ENVIRONMENT to Testing to skip secret validation in Program.cs
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
-
-        // Create WebApplicationFactory
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                // Use Testing environment (matches ASPNETCORE_ENVIRONMENT) to skip secret validation
-                // and avoid startup failures from missing secret files
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, configBuilder) =>
-                {
-                    // Clear existing configuration to ensure test config takes precedence
-                    configBuilder.Sources.Clear();
-
-                    configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        // Database connection (must use DefaultConnection - that's what the app expects)
-                        ["ConnectionStrings:DefaultConnection"] = connectionString,
-                        // JWT configuration (required for session authentication)
-                        ["Jwt:Secret"] = "test-secret-key-for-integration-tests-minimum-32-characters-long",
-                        ["Jwt:Issuer"] = "MeepleAI-Test",
-                        ["Jwt:Audience"] = "MeepleAI-Test",
-                        // OpenRouter
-                        ["OpenRouter:ApiKey"] = "test-key",
-                        ["OpenRouter:BaseUrl"] = "https://test.local",
-                        // Disable external services
-                        ["BoardGameGeek:Enabled"] = "false",
-                        ["Embedding:Enabled"] = "false",
-                        ["Embedding:Url"] = "http://localhost:8000",
-                        ["Qdrant:Enabled"] = "false",
-                        ["Qdrant:Host"] = "localhost",
-                        ["Qdrant:Port"] = "6333",
-                        // Redis configuration
-                        ["Redis:Enabled"] = "true",
-                        ["Redis:ConnectionString"] = _fixture.RedisConnectionString,
-                        // Session configuration
-                        ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
-                        // Admin configuration
-                        ["Admin:Email"] = "admin@test.local",
-                        ["Admin:Password"] = "TestAdmin123!",
-                        ["Admin:DisplayName"] = "Test Admin",
-                        // CI environment admin seeding configuration (required by AutoConfigurationService)
-                        ["INITIAL_ADMIN_EMAIL"] = "admin@test.local",
-                        ["INITIAL_ADMIN_PASSWORD"] = "TestAdmin123!",
-                        ["INITIAL_ADMIN_DISPLAY_NAME"] = "Test Admin",
-                        // Disable observability
-                        ["Observability:Enabled"] = "false",
-                        ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "",
-                        // Disable rate limiting
-                        ["RateLimiting:Enabled"] = "false"
-                    });
-                });
-
-                builder.ConfigureServices(services =>
-                {
-                    // Remove all hosted services to prevent startup failures
-                    // Hosted services might fail during startup and cause the host to dispose
-                    var hostedServiceDescriptors = services
-                        .Where(d => d.ServiceType == typeof(IHostedService))
-                        .ToList();
-                    foreach (var descriptor in hostedServiceDescriptors)
-                    {
-                        services.Remove(descriptor);
-                    }
-
-                    // Remove and replace DbContext with test database
-                    services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
-                    services.RemoveAll<MeepleAiDbContext>();
-                    services.RemoveAll<IDomainEventCollector>();
-
-                    // Register domain event collector
-                    services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-                    services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
-                    {
-                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-                        var connStr = configuration.GetConnectionString("DefaultConnection")
-                            ?? throw new InvalidOperationException("DefaultConnection not configured");
-
-                        options.UseNpgsql(connStr, o => o.UseVector()); // Issue #3547: Enable pgvector
-                        options.EnableSensitiveDataLogging();
-                        options.ConfigureWarnings(warnings =>
-                            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-                    });
-
-                    // Mock Redis for HybridCache with proper database mock
-                    services.RemoveAll(typeof(IConnectionMultiplexer));
-                    var mockRedis = new Mock<IConnectionMultiplexer>();
-                    var mockDatabase = new Mock<IDatabase>();
-                    mockRedis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
-                        .Returns(mockDatabase.Object);
-                    services.AddSingleton(mockRedis.Object);
-
-                    // Mock vector/embedding services
-                    services.RemoveAll(typeof(Api.Services.IEmbeddingService));
-                    services.AddScoped<Api.Services.IEmbeddingService>(_ => Mock.Of<Api.Services.IEmbeddingService>());
-
-                    // Mock IHybridCacheService (required for ReviewLockConfigService and session validation)
-                    // Must actually execute the factory function to return proper values
-                    services.RemoveAll(typeof(Api.Services.IHybridCacheService));
-                    services.AddScoped<Api.Services.IHybridCacheService, TestHybridCacheService>();
-                });
-            });
+        // Create WebApplicationFactory using shared factory
+        _factory = IntegrationWebApplicationFactory.Create(connectionString);
 
         // Initialize database using scoped context
         using (var scope = _factory.Services.CreateScope())
@@ -243,13 +129,13 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<StartReviewResponse>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Equal(shareRequestId, result.ShareRequestId);
-        Assert.True(result.LockExpiresAt > DateTime.UtcNow);
-        Assert.True(result.LockExpiresAt <= DateTime.UtcNow.AddMinutes(31));
+        result.Should().NotBeNull();
+        result.ShareRequestId.Should().Be(shareRequestId);
+        (result.LockExpiresAt > DateTime.UtcNow).Should().BeTrue();
+        (result.LockExpiresAt <= DateTime.UtcNow.AddMinutes(31)).Should().BeTrue();
     }
 
     [Fact]
@@ -266,7 +152,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -283,7 +169,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -300,7 +186,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -317,7 +203,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert - InvalidShareRequestStateException is mapped to Conflict (409)
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     #endregion
@@ -338,7 +224,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify lock was released
         using var scope = _factory.Services.CreateScope();
@@ -346,9 +232,9 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var entity = await dbContext.Set<ShareRequestEntity>()
             .FirstOrDefaultAsync(sr => sr.Id == shareRequestId);
 
-        Assert.NotNull(entity);
-        Assert.NotEqual((int)ShareRequestStatus.InReview, entity.Status);
-        Assert.Null(entity.ReviewingAdminId);
+        entity.Should().NotBeNull();
+        entity.Status.Should().NotBe((int)ShareRequestStatus.InReview);
+        entity.ReviewingAdminId.Should().BeNull();
     }
 
     [Fact]
@@ -365,7 +251,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -382,7 +268,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -402,11 +288,11 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -423,15 +309,15 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
 
         var review = result.First();
-        Assert.Equal(shareRequestId, review.ShareRequestId);
-        Assert.Equal(ShareRequestStatus.InReview, review.Status);
+        review.ShareRequestId.Should().Be(shareRequestId);
+        review.Status.Should().Be(ShareRequestStatus.InReview);
     }
 
     [Fact]
@@ -450,11 +336,11 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(3);
     }
 
     [Fact]
@@ -473,12 +359,12 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.All(result, r => Assert.Equal(ShareRequestStatus.InReview, r.Status));
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
+        result.Should().AllSatisfy(r => r.Status.Should().Be(ShareRequestStatus.InReview));
     }
 
     [Fact]
@@ -495,17 +381,17 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
 
         var review = result.First();
-        Assert.NotEqual(Guid.Empty, review.SourceGameId);
-        Assert.NotNull(review.GameTitle);
-        Assert.Equal(TestContributorId, review.ContributorId);
-        Assert.NotNull(review.ContributorName);
+        review.SourceGameId.Should().NotBe(Guid.Empty);
+        review.GameTitle.Should().NotBeNull();
+        review.ContributorId.Should().Be(TestContributorId);
+        review.ContributorName.Should().NotBeNull();
     }
 
     [Fact]
@@ -526,25 +412,22 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
 
         var review = result.First();
 
         // ReviewStartedAt should be in the past (created as UtcNow - 10 minutes)
-        Assert.NotNull(review.ReviewStartedAt);
-        Assert.True(review.ReviewStartedAt < beforeCreation,
-            $"ReviewStartedAt ({review.ReviewStartedAt:O}) should be before creation time ({beforeCreation:O})");
-        Assert.True(review.ReviewStartedAt > beforeCreation.AddMinutes(-15),
-            "ReviewStartedAt should be within 15 minutes of test execution");
+        review.ReviewStartedAt.Should().NotBe(default);
+        (review.ReviewStartedAt < beforeCreation).Should().BeTrue($"ReviewStartedAt ({review.ReviewStartedAt:O}) should be before creation time ({beforeCreation:O})");
+        (review.ReviewStartedAt > beforeCreation.AddMinutes(-15)).Should().BeTrue("ReviewStartedAt should be within 15 minutes of test execution");
 
         // ReviewLockExpiresAt should be in the future (created as UtcNow + 20 minutes)
-        Assert.NotNull(review.ReviewLockExpiresAt);
-        Assert.True(review.ReviewLockExpiresAt > DateTime.UtcNow,
-            "ReviewLockExpiresAt should be in the future");
+        review.ReviewLockExpiresAt.Should().NotBe(default);
+        (review.ReviewLockExpiresAt > DateTime.UtcNow).Should().BeTrue("ReviewLockExpiresAt should be in the future");
     }
 
     #endregion
@@ -597,31 +480,4 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
     }
 
     #endregion
-}
-
-/// <summary>
-/// Test stub for IHybridCacheService that executes factory functions directly.
-/// Required for integration tests where cached services need to execute their factories.
-/// </summary>
-internal sealed class TestHybridCacheService : Api.Services.IHybridCacheService
-{
-    public async Task<T> GetOrCreateAsync<T>(
-        string cacheKey,
-        Func<CancellationToken, Task<T>> factory,
-        string[]? tags = null,
-        TimeSpan? expiration = null,
-        CancellationToken ct = default) where T : class
-    {
-        // Execute factory directly - no caching in tests
-        return await factory(ct).ConfigureAwait(false);
-    }
-
-    public Task RemoveAsync(string cacheKey, CancellationToken ct = default) => Task.CompletedTask;
-
-    public Task<int> RemoveByTagAsync(string tag, CancellationToken ct = default) => Task.FromResult(0);
-
-    public Task<int> RemoveByTagsAsync(string[] tags, CancellationToken ct = default) => Task.FromResult(0);
-
-    public Task<Api.Services.HybridCacheStats> GetStatsAsync(CancellationToken ct = default)
-        => Task.FromResult(new Api.Services.HybridCacheStats());
 }

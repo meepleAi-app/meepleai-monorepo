@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -45,7 +47,7 @@ public class UpdateRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -56,11 +58,12 @@ public class UpdateRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<UpdateRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UpdateRuleCommentCommandHandler(
                 null!,
                 timeProviderMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -71,11 +74,12 @@ public class UpdateRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<UpdateRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UpdateRuleCommentCommandHandler(
                 context,
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -86,11 +90,12 @@ public class UpdateRuleCommentCommandHandlerTests
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UpdateRuleCommentCommandHandler(
                 context,
                 timeProviderMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_WithValidProperties_ConstructsCorrectly()
@@ -105,9 +110,9 @@ public class UpdateRuleCommentCommandHandlerTests
             UserId: userId);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal("Updated comment text", command.CommentText);
-        Assert.Equal(userId, command.UserId);
+        command.CommentId.Should().Be(commentId);
+        command.CommentText.Should().Be("Updated comment text");
+        command.UserId.Should().Be(userId);
     }
 
     [Fact]
@@ -120,7 +125,7 @@ public class UpdateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Equal("OK", command.CommentText);
+        command.CommentText.Should().Be("OK");
     }
 
     [Fact]
@@ -134,7 +139,7 @@ public class UpdateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Equal(8000, command.CommentText.Length);
+        command.CommentText.Length.Should().Be(8000);
     }
 
     [Fact]
@@ -147,8 +152,8 @@ public class UpdateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Contains("🎲", command.CommentText);
-        Assert.Contains("émojis", command.CommentText);
+        command.CommentText.Should().Contain("🎲");
+        command.CommentText.Should().Contain("émojis");
     }
     // NOTE: Full integration tests for Handle method (comment update, ownership validation,
     // UpdatedAt timestamp, navigation property reloading) should be in integration test suite

@@ -12,6 +12,7 @@ services:
     image: pgvector/pgvector:pg16
     container_name: meepleai-postgres
     restart: unless-stopped
+    env_file: [./secrets/database.secret]  # fallback; overrides replace this
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -32,35 +33,11 @@ services:
           cpus: '1.0'
           memory: 1G
 
-  qdrant:
-    image: qdrant/qdrant:v1.12.4
-    container_name: meepleai-qdrant
-    restart: unless-stopped
-    volumes:
-      - qdrant_data:/qdrant/storage
-    healthcheck:
-      # Note: wget/curl not available in Qdrant image, use bash TCP health check
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"HTTP/1.1 200\" <&3'"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    networks:
-      - meepleai
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 4G
-        reservations:
-          cpus: '1.0'
-          memory: 2G
-
   redis:
     image: redis:7.4.1-alpine3.20
     container_name: meepleai-redis
     restart: unless-stopped
-    # Password comes from env_file in the override; command references it at runtime
+    env_file: [./secrets/redis.secret]  # fallback; overrides replace this
     command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
     volumes:
       - ./redis/redis.conf:/etc/redis/redis.conf:ro
@@ -95,8 +72,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      qdrant:
-        condition: service_started
       redis:
         condition: service_healthy
     healthcheck:
@@ -204,8 +179,8 @@ services:
     profiles: [ai]
     environment:
       # Model selection: e5-large (quality), e5-base (2x faster), e5-small (4x faster)
-      # Override: EMBEDDING_MODEL=intfloat/multilingual-e5-base
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat/multilingual-e5-large}
+      # Model: e5-base (768d, 3.7x faster than e5-large on ARM64)
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat/multilingual-e5-base}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -587,7 +562,6 @@ services:
 volumes:
   # Database & Cache
   postgres_data:
-  qdrant_data:
 
   # ML Service Model Caches
   ollama_data:

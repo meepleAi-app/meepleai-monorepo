@@ -13,7 +13,6 @@ export type RsvpStatus = z.infer<typeof RsvpStatusSchema>;
 
 export const GameNightRsvpDtoSchema = z.object({
   id: z.string().uuid(),
-  eventId: z.string().uuid(),
   userId: z.string().uuid(),
   userName: z.string(),
   status: RsvpStatusSchema,
@@ -35,7 +34,9 @@ export const GameNightDtoSchema = z.object({
   status: GameNightStatusSchema,
   acceptedCount: z.number(),
   pendingCount: z.number(),
+  totalInvited: z.number(),
   createdAt: z.string(),
+  updatedAt: z.string().nullable().optional(),
 });
 export type GameNightDto = z.infer<typeof GameNightDtoSchema>;
 

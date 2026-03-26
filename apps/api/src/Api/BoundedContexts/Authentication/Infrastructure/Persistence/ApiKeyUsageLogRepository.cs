@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -9,15 +11,10 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Repository implementation for ApiKeyUsageLog aggregate.
 /// Handles persistence of API key usage logs.
 /// </summary>
-internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
+internal class ApiKeyUsageLogRepository : RepositoryBase, IApiKeyUsageLogRepository
 {
-    private readonly MeepleAiDbContext _context;
-
-    public ApiKeyUsageLogRepository(MeepleAiDbContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        _context = context;
-    }
+    public ApiKeyUsageLogRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector) { }
 
     public async Task AddAsync(ApiKeyUsageLog usageLog, CancellationToken cancellationToken = default)
     {
@@ -37,7 +34,7 @@ internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
             ApiKey = null! // Navigation property, will be resolved by EF Core
         };
 
-        await _context.ApiKeyUsageLogs.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.ApiKeyUsageLogs.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<List<ApiKeyUsageLog>> GetByKeyIdAsync(
@@ -46,7 +43,7 @@ internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
         int take = 100,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.ApiKeyUsageLogs
+        var entities = await DbContext.ApiKeyUsageLogs
             .AsNoTracking()
             .Where(e => e.KeyId == keyId)
             .OrderByDescending(e => e.UsedAt)
@@ -64,7 +61,7 @@ internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
         DateTime toDate,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.ApiKeyUsageLogs
+        var entities = await DbContext.ApiKeyUsageLogs
             .AsNoTracking()
             .Where(e => e.KeyId == keyId && e.UsedAt >= fromDate && e.UsedAt <= toDate)
             .OrderByDescending(e => e.UsedAt)
@@ -76,7 +73,7 @@ internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
 
     public async Task<int> GetUsageCountAsync(Guid keyId, CancellationToken cancellationToken = default)
     {
-        return await _context.ApiKeyUsageLogs
+        return await DbContext.ApiKeyUsageLogs
             .AsNoTracking()
             .CountAsync(e => e.KeyId == keyId, cancellationToken)
             .ConfigureAwait(false);
@@ -88,7 +85,7 @@ internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
         DateTime toDate,
         CancellationToken cancellationToken = default)
     {
-        return await _context.ApiKeyUsageLogs
+        return await DbContext.ApiKeyUsageLogs
             .AsNoTracking()
             .CountAsync(
                 e => e.KeyId == keyId && e.UsedAt >= fromDate && e.UsedAt <= toDate,
@@ -98,7 +95,7 @@ internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
 
     public async Task<int> DeleteOlderThanAsync(DateTime cutoffDate, CancellationToken cancellationToken = default)
     {
-        return await _context.ApiKeyUsageLogs
+        return await DbContext.ApiKeyUsageLogs
             .Where(e => e.UsedAt < cutoffDate)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -106,7 +103,7 @@ internal class ApiKeyUsageLogRepository : IApiKeyUsageLogRepository
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static ApiKeyUsageLog MapToDomain(ApiKeyUsageLogEntity entity)

@@ -36,7 +36,7 @@ permissions:
 jobs:
   changes:
     name: Detect Changes
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     outputs:
       e2e-needed: ${{ steps.filter.outputs.e2e }}
     steps:
@@ -55,7 +55,7 @@ jobs:
   # Issue #3082: Optimized from 4 to 6 shards for 30% faster execution
   e2e-tests:
     name: E2E Tests (Shard ${{ matrix.shard }})
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: changes
     if: needs.changes.outputs.e2e-needed == 'true' || github.event_name == 'workflow_dispatch'
 
@@ -269,7 +269,7 @@ jobs:
   # Aggregate results and enforce quality gates
   e2e-quality-gate:
     name: E2E Quality Gate
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: e2e-tests
     if: always()
     steps:
@@ -402,7 +402,7 @@ jobs:
   # Manual trigger for full suite (all browsers)
   e2e-full-suite:
     name: E2E Full Suite (All Browsers)
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     if: github.event_name == 'workflow_dispatch'
     needs: changes
 

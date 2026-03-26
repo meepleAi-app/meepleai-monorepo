@@ -48,20 +48,40 @@ function toAccessRequest(dto: AccessRequestDto): AccessRequest {
   };
 }
 
+/**
+ * Lightweight fetch without Zod schema validation for overview summary data.
+ * Avoids SchemaValidationError noise when backend DTOs have extra/missing fields.
+ */
+async function fetchJson<T>(path: string, fallback: T): Promise<T> {
+  try {
+    const res = await fetch(path, { credentials: 'include' });
+    if (!res.ok) return fallback;
+    return (await res.json()) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 async function fetchOverviewData(): Promise<OverviewData> {
   const [statsRes, pendingRes, gamesRes, usersRes, invitationsRes] = await Promise.all([
     api.admin.getOverviewStats().catch(() => null),
     api.accessRequests
       .getAccessRequests({ status: 'Pending', pageSize: 5 })
       .catch(() => ({ items: [] as AccessRequestDto[], totalCount: 0, page: 1, pageSize: 5 })),
-    api.sharedGames.getAll({ pageSize: 5, page: 1 }).catch(() => ({ items: [], total: 0 })),
-    api.admin.getAllUsers({ limit: 5 }).catch(() => []),
+    // Use lightweight fetch for summary data — avoids Zod schema mismatch errors
+    fetchJson<{ items?: Record<string, unknown>[]; total?: number }>(
+      '/api/v1/admin/shared-games?page=1&pageSize=5',
+      { items: [], total: 0 }
+    ),
+    fetchJson<{ items?: Record<string, unknown>[]; total?: number }>(
+      '/api/v1/admin/users?limit=5',
+      { items: [], total: 0 }
+    ),
     api.invitations
       .getInvitations({ status: 'Pending', pageSize: 5 })
       .catch(() => ({ items: [], totalCount: 0 })),
   ]);
 
-  const gamesResAny = gamesRes as { items?: unknown[] } | null;
   const invitationsResAny = invitationsRes as { items?: unknown[]; totalCount?: number } | null;
 
   return {
@@ -70,15 +90,12 @@ async function fetchOverviewData(): Promise<OverviewData> {
       items: (pendingRes.items ?? []).map(toAccessRequest),
       totalCount: pendingRes.totalCount ?? 0,
     },
-    recentGames: ((gamesResAny?.items ?? []) as Record<string, unknown>[]).map(g => ({
+    recentGames: ((gamesRes?.items ?? []) as Record<string, unknown>[]).map(g => ({
       id: String(g['id'] ?? ''),
       title: String(g['title'] ?? g['name'] ?? 'Untitled'),
       createdAt: String(g['createdAt'] ?? g['addedAt'] ?? new Date().toISOString()),
     })),
-    recentUsers: (Array.isArray(usersRes)
-      ? (usersRes as Record<string, unknown>[])
-      : (((usersRes as { items?: unknown[] } | null)?.items ?? []) as Record<string, unknown>[])
-    ).map(u => ({
+    recentUsers: ((usersRes?.items ?? []) as Record<string, unknown>[]).map(u => ({
       id: String(u['id'] ?? ''),
       displayName: u['displayName'] != null ? String(u['displayName']) : null,
       email: String(u['email'] ?? ''),

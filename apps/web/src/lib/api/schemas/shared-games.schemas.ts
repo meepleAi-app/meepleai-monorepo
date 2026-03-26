@@ -101,7 +101,7 @@ export const GameFaqSchema = z.object({
   question: z.string().min(1),
   answer: z.string().min(1),
   order: z.number().int().nonnegative(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string(),
 });
 
 export type GameFaq = z.infer<typeof GameFaqSchema>;
@@ -113,8 +113,8 @@ export const GameErrataSchema = z.object({
   id: z.string().uuid(),
   description: z.string().min(1),
   pageReference: z.string().min(1),
-  publishedDate: z.string().datetime(),
-  createdAt: z.string().datetime(),
+  publishedDate: z.string(),
+  createdAt: z.string(),
 });
 
 export type GameErrata = z.infer<typeof GameErrataSchema>;
@@ -132,7 +132,7 @@ export const SharedGameDocumentSchema = z.object({
   version: z.string().regex(/^\d+\.\d+$/),
   isActive: z.boolean(),
   tags: z.array(z.string()).default([]),
-  createdAt: z.string().datetime(),
+  createdAt: z.string(),
   createdBy: z.string().uuid(),
 });
 
@@ -165,36 +165,22 @@ export type GamePublisher = z.infer<typeof GamePublisherSchema>;
  */
 export const SharedGameSchema = z.object({
   id: z.string().uuid(),
-  bggId: z.number().int().nullable().optional(),
+  bggId: z.number().int().nullable(), // 0 is valid (no BGG match)
   title: z.string().min(1),
-  yearPublished: z.number().int().optional().default(0),
-  description: z.string().optional().default(''),
-  minPlayers: z.number().int().optional().default(0),
-  maxPlayers: z.number().int().optional().default(0),
-  playingTimeMinutes: z.number().int().optional().default(0),
-  minAge: z.number().int().optional().default(0),
+  yearPublished: z.number().int(),
+  description: z.string(),
+  minPlayers: z.number().int().nonnegative(), // 0 = unknown
+  maxPlayers: z.number().int().nonnegative(), // 0 = unknown
+  playingTimeMinutes: z.number().int().nonnegative(), // 0 = unknown
+  minAge: z.number().int().nonnegative(),
   complexityRating: z.number().nullable(),
   averageRating: z.number().nullable(),
-  imageUrl: z.string().default(''),
-  thumbnailUrl: z.string().default(''),
-  status: z
-    .union([GameStatusSchema, GameStatusNumericSchema])
-    .default('Draft')
-    .transform(v => {
-      if (typeof v === 'number') {
-        const map: Record<number, GameStatus> = {
-          0: 'Draft',
-          1: 'PendingApproval',
-          2: 'Published',
-          3: 'Archived',
-        };
-        return map[v] ?? 'Draft';
-      }
-      return v as GameStatus;
-    }), // Accept both string enum and numeric, normalize to string
-  isRagPublic: z.boolean().optional().default(false),
-  createdAt: z.string().optional().default(''),
-  modifiedAt: z.string().nullable().optional(),
+  imageUrl: z.string().catch(''), // coerce null/missing to empty string
+  thumbnailUrl: z.string().catch(''), // coerce null/missing to empty string
+  status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
+  isRagPublic: z.boolean().default(false), // whether RAG access is public for all owners
+  createdAt: z.string(), // Accept any datetime format from .NET serialization
+  modifiedAt: z.string().nullable(),
 });
 
 export type SharedGame = z.infer<typeof SharedGameSchema>;
@@ -205,24 +191,24 @@ export type SharedGame = z.infer<typeof SharedGameSchema>;
  */
 export const SharedGameDetailSchema = z.object({
   id: z.string().uuid(),
-  bggId: z.number().int().positive().nullable(),
+  bggId: z.number().int().nullable(), // 0 is valid (no BGG match)
   title: z.string().min(1),
   yearPublished: z.number().int(),
   description: z.string(),
-  minPlayers: z.number().int().positive(),
-  maxPlayers: z.number().int().positive(),
-  playingTimeMinutes: z.number().int().positive(),
+  minPlayers: z.number().int().nonnegative(), // 0 = unknown
+  maxPlayers: z.number().int().nonnegative(), // 0 = unknown
+  playingTimeMinutes: z.number().int().nonnegative(), // 0 = unknown
   minAge: z.number().int().nonnegative(),
   complexityRating: z.number().nullable(),
   averageRating: z.number().nullable(),
-  imageUrl: z.string(),
-  thumbnailUrl: z.string(),
+  imageUrl: z.string().catch(''), // coerce null/missing to empty string
+  thumbnailUrl: z.string().catch(''), // coerce null/missing to empty string
   rules: GameRulesSchema.nullable(),
   status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
   createdBy: z.string().uuid(),
   modifiedBy: z.string().uuid().nullable(),
-  createdAt: z.string().datetime(),
-  modifiedAt: z.string().datetime().nullable(),
+  createdAt: z.string(), // Accept any datetime format from .NET serialization
+  modifiedAt: z.string().nullable(),
   // Extended fields (Issue #2373)
   faqs: z.array(GameFaqSchema),
   erratas: z.array(GameErrataSchema),
@@ -259,7 +245,7 @@ export const DeleteRequestSchema = z.object({
   gameTitle: z.string(),
   requestedBy: z.string().uuid(),
   reason: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string(),
 });
 
 export type DeleteRequest = z.infer<typeof DeleteRequestSchema>;
@@ -403,7 +389,7 @@ export type UpdateFaqRequest = z.infer<typeof UpdateFaqRequestSchema>;
 export const AddErrataRequestSchema = z.object({
   description: z.string().min(1).max(2000),
   pageReference: z.string().min(1).max(100),
-  publishedDate: z.string().datetime(),
+  publishedDate: z.string(),
 });
 
 export type AddErrataRequest = z.infer<typeof AddErrataRequestSchema>;
@@ -414,7 +400,7 @@ export type AddErrataRequest = z.infer<typeof AddErrataRequestSchema>;
 export const UpdateErrataRequestSchema = z.object({
   description: z.string().min(1).max(2000),
   pageReference: z.string().min(1).max(100),
-  publishedDate: z.string().datetime(),
+  publishedDate: z.string(),
 });
 
 export type UpdateErrataRequest = z.infer<typeof UpdateErrataRequestSchema>;

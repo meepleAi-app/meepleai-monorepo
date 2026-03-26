@@ -53,7 +53,6 @@ import { cn } from '@/lib/utils';
 export interface MeepleInfoCardProps {
   gameId: string;
   gameTitle: string;
-  bggId?: number | null;
   /** true for public pages (hides upload buttons, add link buttons) */
   readOnly?: boolean;
   showKnowledgeBase?: boolean;
@@ -123,7 +122,6 @@ const linkTypeIcons: Record<string, typeof Globe> = {
 export function MeepleInfoCard({
   gameId,
   gameTitle,
-  bggId,
   readOnly = false,
   showKnowledgeBase = true,
   showSocialLinks = true,

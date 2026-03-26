@@ -12,7 +12,6 @@ import { TrendingGamesRow } from './TrendingGamesRow';
 
 interface LibraryEmptyStateProps {
   onExploreCatalog?: () => void;
-  onImportBgg?: () => void;
   onCreateCustom?: () => void;
   className?: string;
 }
@@ -45,13 +44,11 @@ const QUICK_START_CARDS = [
 
 export function LibraryEmptyState({
   onExploreCatalog,
-  onImportBgg,
   onCreateCustom,
   className,
 }: LibraryEmptyStateProps) {
-  const handleAction = (action: 'catalog' | 'bgg' | 'custom') => {
+  const handleAction = (action: 'catalog' | 'custom') => {
     if (action === 'catalog') onExploreCatalog?.();
-    else if (action === 'bgg') onImportBgg?.();
     else onCreateCustom?.();
   };
 

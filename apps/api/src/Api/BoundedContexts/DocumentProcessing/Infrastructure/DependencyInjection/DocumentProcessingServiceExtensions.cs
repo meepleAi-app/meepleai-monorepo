@@ -76,6 +76,9 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #5445: Language detection for PDF pipeline routing
         services.AddSingleton<ILanguageDetector, LanguageDetector>();
 
+        // RAG translation: LLM-based chunk translation for cross-language retrieval
+        services.AddScoped<IChunkTranslationService, ChunkTranslationService>();
+
         // Infrastructure Adapters (scoped - may use file I/O)
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();
         services.AddScoped<IPdfValidator, DocnetPdfValidator>(); // PDF-09: DDD validation adapter

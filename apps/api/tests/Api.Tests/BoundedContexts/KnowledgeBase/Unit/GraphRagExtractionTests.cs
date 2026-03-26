@@ -264,6 +264,8 @@ public class GraphRagExtractionTests : IDisposable
             _blobStorageServiceMock.Object,
             _timeProvider,
             _logger,
+            Mock.Of<ILanguageDetector>(),
+            Mock.Of<IChunkTranslationService>(),
             raptorIndexer: null,
             entityExtractor: withEntityExtractor ? _entityExtractorMock.Object : null,
             vectorStore: null,

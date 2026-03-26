@@ -20,8 +20,8 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 /// </summary>
 internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineService
 {
-    private const int ChunkSize = 512;
-    private const int ChunkOverlap = 50;
+    private const int ChunkSize = 1024;
+    private const int ChunkOverlap = 150;
     private const int EmbeddingBatchSize = 20;
 
     private readonly MeepleAiDbContext _db;

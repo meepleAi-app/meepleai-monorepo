@@ -7,28 +7,28 @@ namespace Api.Constants;
 internal static class ChunkingConstants
 {
     /// <summary>
-    /// Default chunk size in characters (512).
+    /// Default chunk size in characters (1024).
     /// Balanced size for most documents.
     /// </summary>
-    public const int DefaultChunkSize = 512;
+    public const int DefaultChunkSize = 1024;
 
     /// <summary>
-    /// Minimum chunk size in characters (256).
+    /// Minimum chunk size in characters (200).
     /// Prevents overly small chunks that lack context.
     /// </summary>
-    public const int MinChunkSize = 256;
+    public const int MinChunkSize = 200;
 
     /// <summary>
-    /// Maximum chunk size in characters (768).
+    /// Maximum chunk size in characters (1500).
     /// Prevents overly large chunks that exceed embedding model limits.
     /// </summary>
-    public const int MaxChunkSize = 768;
+    public const int MaxChunkSize = 1500;
 
     /// <summary>
-    /// Default chunk overlap in characters (50).
+    /// Default chunk overlap in characters (150).
     /// Overlap between consecutive chunks to maintain context continuity.
     /// </summary>
-    public const int DefaultChunkOverlap = 50;
+    public const int DefaultChunkOverlap = 150;
 
     /// <summary>
     /// Embedding token size limit (512 tokens).

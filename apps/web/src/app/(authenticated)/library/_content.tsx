@@ -65,6 +65,15 @@ const PublicLibraryPageClient = dynamicImport(() => import('./public/PublicLibra
   loading: () => <LibraryLoadingSkeleton />,
 });
 
+// Wishlist tab: user's wishlist (US-10)
+const WishlistPageClient = dynamicImport(
+  () => import('./wishlist/page').then(mod => ({ default: mod.default })),
+  {
+    ssr: false,
+    loading: () => <LibraryLoadingSkeleton />,
+  }
+);
+
 // ── Tab switcher + drawer controller ──────────────────────────────────────────
 
 export function LibraryContent() {
@@ -84,7 +93,13 @@ export function LibraryContent() {
   return (
     <>
       {/* Tab content — PersonalLibraryPage now includes its own sidebar */}
-      {tab === 'public' ? <PublicLibraryPageClient /> : <PersonalLibraryPageClient />}
+      {tab === 'wishlist' ? (
+        <WishlistPageClient />
+      ) : tab === 'public' ? (
+        <PublicLibraryPageClient />
+      ) : (
+        <PersonalLibraryPageClient />
+      )}
 
       {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}
       <AddGameDrawerController />

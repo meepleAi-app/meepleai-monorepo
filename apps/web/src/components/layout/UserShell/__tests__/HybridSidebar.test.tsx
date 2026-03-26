@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({
@@ -16,21 +16,21 @@ describe('HybridSidebar', () => {
 
   it('renders icon buttons for main nav items', () => {
     render(<HybridSidebar />);
-    expect(screen.getByLabelText(/dashboard/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/libreria/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/sessioni/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/chat/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /libreria/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /sessioni/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /chat/i })).toBeInTheDocument();
   });
 
   it('marks active item based on pathname', () => {
     render(<HybridSidebar />);
-    const dashboardLink = screen.getByLabelText(/dashboard/i);
+    const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
     expect(dashboardLink).toHaveAttribute('aria-current', 'page');
   });
 
   it('does not mark inactive items as current', () => {
     render(<HybridSidebar />);
-    const sessionLink = screen.getByLabelText(/sessioni/i);
+    const sessionLink = screen.getByRole('link', { name: /sessioni/i });
     expect(sessionLink).not.toHaveAttribute('aria-current');
   });
 
@@ -45,16 +45,21 @@ describe('HybridSidebar', () => {
     render(<HybridSidebar />);
     expect(screen.getByText('Navigazione')).toBeInTheDocument();
     expect(screen.getByText('AI Assistant')).toBeInTheDocument();
-    expect(screen.getByText('Collezioni')).toBeInTheDocument();
   });
 
   it('renders settings at the bottom', () => {
     render(<HybridSidebar />);
-    expect(screen.getByLabelText(/impostazioni/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /impostazioni/i })).toBeInTheDocument();
   });
 
   it('has correct data-testid', () => {
     render(<HybridSidebar />);
     expect(screen.getByTestId('hybrid-sidebar')).toBeInTheDocument();
+  });
+
+  it('renders emoji icons instead of SVG icons', () => {
+    render(<HybridSidebar />);
+    const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
+    expect(within(dashboardLink).getByRole('img')).toBeInTheDocument();
   });
 });

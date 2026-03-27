@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -201,6 +201,7 @@ export function GameCatalogGrid({
     if (statusFilter !== 'all') {
       const statusMap: Record<string, string> = {
         published: 'Published',
+        pending: 'PendingApproval',
         draft: 'Draft',
         archived: 'Archived',
       };
@@ -224,6 +225,11 @@ export function GameCatalogGrid({
 
   // Selection state for bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Clear selection when filters change to avoid bulk actions on hidden games
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchQuery, categoryFilter, statusFilter, playersFilter]);
 
   const toggleSelection = useCallback((id: string) => {
     setSelectedIds(prev => {

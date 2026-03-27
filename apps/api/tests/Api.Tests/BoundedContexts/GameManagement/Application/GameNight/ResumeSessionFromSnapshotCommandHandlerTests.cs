@@ -116,7 +116,7 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         return session;
     }
 
-    private PauseSnapshot CreateSnapshot(
+    private void CreateSnapshot(
         string? agentSummary = null,
         int currentTurn = 3)
     {
@@ -137,8 +137,6 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         _snapshotRepoMock
             .Setup(r => r.GetLatestBySessionIdAsync(TestSessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(snapshot);
-
-        return snapshot;
     }
 
     private static ResumeSessionFromSnapshotCommand BuildCommand(

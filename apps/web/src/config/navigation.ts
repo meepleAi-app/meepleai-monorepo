@@ -13,6 +13,7 @@
  */
 
 import {
+  Bell,
   BookOpen,
   Bot,
   Brain,
@@ -63,13 +64,14 @@ const LIBRARY_CHILDREN: UnifiedNavSubItem[] = LIBRARY_TABS.map(tab => ({
  *
  * | id        | label     | priority | visibility   | note                     |
  * |-----------|-----------|----------|-------------|--------------------------|
- * | welcome      | Welcome   | 0        | anonOnly    | landing page only        |
- * | library      | Libreria  | 2        | authOnly    | children: tabs           |
- * | chat         | Chat      | 3        | authOnly    |                          |
- * | game-nights  | Serate    | 5        | authOnly    |                          |
- * | profile      | Profilo   | 6        | authOnly    |                          |
- * | agents       | Agenti    | 7        | authOnly    |                          |
- * | sessions     | Sessioni  | 8        | authOnly    |                          |
+ * | welcome       | Welcome   | 0        | anonOnly    | landing page only        |
+ * | library       | Libreria  | 2        | authOnly    | children: tabs           |
+ * | chat          | Chat      | 3        | authOnly    |                          |
+ * | notifications | Notifiche | 4        | authOnly    | hideFromMainNav          |
+ * | game-nights   | Serate    | 5        | authOnly    |                          |
+ * | profile       | Profilo   | 6        | authOnly    |                          |
+ * | agents        | Agenti    | 7        | authOnly    |                          |
+ * | sessions      | Sessioni  | 8        | authOnly    |                          |
  */
 const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
   {
@@ -108,6 +110,19 @@ const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
     testId: 'nav-chat',
     activePattern: /^\/chat/,
     visibility: { authOnly: true },
+  },
+  {
+    id: 'notifications',
+    href: '/notifications',
+    icon: Bell,
+    iconName: 'bell',
+    label: 'Notifiche',
+    ariaLabel: 'Navigate to notifications',
+    priority: 4,
+    testId: 'nav-notifications',
+    activePattern: /^\/notifications/,
+    visibility: { authOnly: true },
+    hideFromMainNav: true,
   },
   {
     id: 'game-nights',
@@ -230,6 +245,7 @@ const ALPHA_NAV_IDS = new Set([
   'sessions',
   'play-records',
   'game-nights',
+  'notifications',
 ]);
 
 /** Unified navigation items — filtered by ALPHA_MODE when active */

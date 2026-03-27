@@ -46,6 +46,7 @@ import {
   Trash2,
   Bot,
   Heart,
+  HeartHandshake,
   Gamepad2,
   Trophy,
 } from 'lucide-react';
@@ -62,6 +63,7 @@ import type {
   GameBackData,
   GameBackActions,
 } from '@/components/ui/data-display/meeple-card-features/GameBackContent';
+import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
 import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
@@ -184,6 +186,9 @@ export function MeepleLibraryGameCard({
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
   const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
 
+  // Wishlist dialog state (US-10)
+  const [wishlistDialogOpen, setWishlistDialogOpen] = useState(false);
+
   // Drawer states
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
   const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
@@ -286,6 +291,11 @@ export function MeepleLibraryGameCard({
         label: game.isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti',
         onClick: handleToggleFavorite,
         disabled: isTogglingFavorite,
+      },
+      {
+        icon: HeartHandshake,
+        label: 'Aggiungi alla Wishlist',
+        onClick: () => setWishlistDialogOpen(true),
       },
       {
         icon: Trash2,
@@ -524,6 +534,14 @@ export function MeepleLibraryGameCard({
         onClose={() => setAgentSheetOpen(false)}
         initialGameId={game.gameId}
         initialGameTitle={game.gameTitle}
+      />
+
+      {/* US-10: Add to Wishlist dialog */}
+      <AddToWishlistDialog
+        gameId={game.gameId}
+        gameName={game.gameTitle}
+        open={wishlistDialogOpen}
+        onOpenChange={setWishlistDialogOpen}
       />
     </>
   );

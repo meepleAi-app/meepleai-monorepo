@@ -153,7 +153,7 @@ describe('Step4EnrichAndConfirm', () => {
 
       // Should detect playTime conflict (60 vs 90)
       expect(screen.getByText('Resolve Conflicts')).toBeInTheDocument();
-      expect(screen.getByText(/1 conflict detected/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 conflitto rilevato/i)).toBeInTheDocument();
     });
 
     it('displays final preview card', () => {

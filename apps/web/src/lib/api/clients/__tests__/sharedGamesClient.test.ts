@@ -73,7 +73,7 @@ describe('SharedGamesClient - Issue #3026', () => {
         });
 
         expect(mockHttpClient.get).toHaveBeenCalledWith(
-          expect.stringContaining('searchTerm=catan'),
+          expect.stringContaining('search=catan'),
           expect.any(Object)
         );
         expect(mockHttpClient.get).toHaveBeenCalledWith(
@@ -98,19 +98,19 @@ describe('SharedGamesClient - Issue #3026', () => {
         vi.mocked(mockHttpClient.get).mockResolvedValue(mockGame);
 
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
-        const result = await client.getById('game-123');
+        const validUuid = '00000000-0000-0000-0000-000000000123';
+        const result = await client.getById(validUuid);
 
         expect(result).toEqual(mockGame);
         expect(mockHttpClient.get).toHaveBeenCalledWith(
-          '/api/v1/shared-games/game-123',
+          `/api/v1/shared-games/${validUuid}`,
           expect.any(Object)
         );
       });
 
       it('should return null for non-existent game', async () => {
-        vi.mocked(mockHttpClient.get).mockResolvedValue(null);
-
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
+        // Non-UUID format is rejected by client-side validation
         const result = await client.getById('nonexistent');
 
         expect(result).toBeNull();

@@ -222,11 +222,15 @@ describe('UsagePage', () => {
 
     renderWithQuery(<UsagePage />);
 
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toBeInTheDocument();
-    });
+    // Component has its own retry logic (up to 3 retries), so wait longer
+    await waitFor(
+      () => {
+        expect(screen.getByRole('alert')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
-    expect(screen.getByText(/Redis unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/Failed to load usage data.*Redis unavailable/i)).toBeInTheDocument();
   });
 
   it('shows charts section component headings', async () => {

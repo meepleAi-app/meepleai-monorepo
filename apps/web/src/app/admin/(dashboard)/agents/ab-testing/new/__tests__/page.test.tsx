@@ -15,6 +15,11 @@ vi.mock('../../../NavConfig', () => ({
   AgentsNavConfig: () => null,
 }));
 
+vi.mock('@/hooks/useAdminConfig', () => ({
+  useAdminConfig: () => ({ data: undefined, isLoading: false }),
+  parseConfigValue: () => null,
+}));
+
 const mockCreateAbTest = vi.fn();
 vi.mock('@/lib/api', () => ({
   api: {

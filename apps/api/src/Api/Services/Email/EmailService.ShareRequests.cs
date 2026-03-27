@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Mail;
+using Api.Helpers;
 using Api.Infrastructure.Security;
 
 namespace Api.Services;
@@ -41,7 +42,7 @@ internal partial class EmailService
             _logger.LogInformation(
                 "Share request created email sent to {Email} for game {GameTitle}",
                 DataMasking.MaskEmail(toEmail),
-                gameTitle);
+                LogSanitizer.Sanitize(gameTitle));
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -88,7 +89,7 @@ internal partial class EmailService
             _logger.LogInformation(
                 "Share request approved email sent to {Email} for game {GameTitle}",
                 DataMasking.MaskEmail(toEmail),
-                gameTitle);
+                LogSanitizer.Sanitize(gameTitle));
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -134,7 +135,7 @@ internal partial class EmailService
             _logger.LogInformation(
                 "Share request rejected email sent to {Email} for game {GameTitle}",
                 DataMasking.MaskEmail(toEmail),
-                gameTitle);
+                LogSanitizer.Sanitize(gameTitle));
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -181,7 +182,7 @@ internal partial class EmailService
             _logger.LogInformation(
                 "Share request changes requested email sent to {Email} for game {GameTitle}",
                 DataMasking.MaskEmail(toEmail),
-                gameTitle);
+                LogSanitizer.Sanitize(gameTitle));
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -228,7 +229,7 @@ internal partial class EmailService
             _logger.LogInformation(
                 "Review started email sent to {Email} for game {GameTitle}",
                 DataMasking.MaskEmail(toEmail),
-                gameTitle);
+                LogSanitizer.Sanitize(gameTitle));
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -274,7 +275,7 @@ internal partial class EmailService
             _logger.LogInformation(
                 "KB merged email sent to {Email} for game {GameTitle}",
                 DataMasking.MaskEmail(toEmail),
-                gameTitle);
+                LogSanitizer.Sanitize(gameTitle));
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)

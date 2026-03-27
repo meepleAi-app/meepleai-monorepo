@@ -1,5 +1,4 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -306,7 +305,7 @@ public sealed class ImportBggGameCommandHandlerTests
         SetupNoDuplicate();
         _bggApiClientMock
             .Setup(x => x.GetGameDetailsAsync(TestBggId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((BggGameDetails?)null);
+            .ReturnsAsync(null as BggGameDetails);
 
         var command = CreateCommand();
 
@@ -324,7 +323,7 @@ public sealed class ImportBggGameCommandHandlerTests
         SetupNoDuplicate();
         _bggApiClientMock
             .Setup(x => x.GetGameDetailsAsync(TestBggId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((BggGameDetails?)null);
+            .ReturnsAsync(null as BggGameDetails);
 
         var command = CreateCommand();
 

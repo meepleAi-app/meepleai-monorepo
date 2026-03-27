@@ -19,7 +19,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
-public class RaptorSummarySearchTests : IDisposable
+public sealed class RaptorSummarySearchTests : IDisposable
 {
     private readonly MeepleAiDbContext _db;
     private readonly TextChunkSearchService _sut;

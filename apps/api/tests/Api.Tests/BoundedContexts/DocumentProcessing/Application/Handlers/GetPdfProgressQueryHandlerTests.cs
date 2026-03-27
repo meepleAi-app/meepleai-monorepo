@@ -1,6 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
-using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;

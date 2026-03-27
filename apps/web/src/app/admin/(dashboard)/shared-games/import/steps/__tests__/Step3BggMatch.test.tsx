@@ -284,7 +284,7 @@ describe('Step3BggMatch', () => {
         const alert = screen.getByRole('alert');
         expect(within(alert).getByText('Game Selected')).toBeInTheDocument();
         // Text content is split: "Selected: " + <strong>Catan</strong> + " (ID #13)"
-        expect(within(alert).getByText(/selected:/i)).toBeInTheDocument();
+        expect(within(alert).getByText(/selezionato:/i)).toBeInTheDocument();
         expect(within(alert).getByText('Catan')).toBeInTheDocument();
         expect(within(alert).getByText(/\(ID #13\)/i)).toBeInTheDocument();
       });
@@ -560,7 +560,7 @@ describe('Step3BggMatch', () => {
       const alert = screen.getByRole('alert');
       expect(within(alert).getByText('Game Selected')).toBeInTheDocument();
       // Text split across elements: "Selected: " + <strong>Catan</strong> + " (ID #13)"
-      expect(within(alert).getByText(/selected:/i)).toBeInTheDocument();
+      expect(within(alert).getByText(/selezionato:/i)).toBeInTheDocument();
       expect(within(alert).getByText('Catan')).toBeInTheDocument();
       expect(within(alert).getByText(/\(ID #13\)/i)).toBeInTheDocument();
     });

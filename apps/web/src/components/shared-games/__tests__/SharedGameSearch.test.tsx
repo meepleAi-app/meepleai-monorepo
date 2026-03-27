@@ -346,10 +346,6 @@ describe('SharedGameSearch', () => {
   // ==========================================================================
 
   describe('No Results', () => {
-    beforeEach(() => {
-      vi.useRealTimers();
-    });
-
     it('shows no results message when catalog returns empty', async () => {
       // Override to return empty results
       mockSearchFn.mockResolvedValue({
@@ -364,12 +360,14 @@ describe('SharedGameSearch', () => {
 
       fireEvent.change(input, { target: { value: 'notfound' } });
 
-      await waitFor(
-        () => {
-          expect(screen.getByText('Nessun gioco trovato nel catalogo.')).toBeInTheDocument();
-        },
-        { timeout: 1000 }
-      );
+      // Advance past debounce (300ms)
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/nessun risultato per/i)).toBeInTheDocument();
+      });
     });
   });
 

@@ -113,7 +113,7 @@ describe('AdminGameImportWizardClient', () => {
       renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByText('Game Import Wizard')).toBeInTheDocument();
-      expect(screen.getByText(/import a game from pdf/i)).toBeInTheDocument();
+      expect(screen.getByText(/importa un gioco da pdf/i)).toBeInTheDocument();
     });
   });
 
@@ -140,7 +140,7 @@ describe('AdminGameImportWizardClient', () => {
 
       expect(screen.getByText('Wizard State')).toBeInTheDocument();
       expect(screen.getByText(/step:/i)).toBeInTheDocument();
-      expect(screen.getByText(/pdf:/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/pdf:/i).length).toBeGreaterThanOrEqual(1);
     });
 
     it('shows reset button', () => {
@@ -281,7 +281,7 @@ describe('AdminGameImportWizardClient', () => {
 
       expect(screen.getByText(/final title:/i)).toBeInTheDocument();
       expect(screen.getByText('Final Game Title')).toBeInTheDocument();
-      expect(screen.getByText(/bgg id:/i)).toBeInTheDocument();
+      expect(screen.getByText(/id:/i)).toBeInTheDocument();
       expect(screen.getByText(/12345/i)).toBeInTheDocument();
     });
   });

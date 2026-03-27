@@ -1,6 +1,5 @@
 using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
 using N8NConfiguration = Api.BoundedContexts.WorkflowIntegration.Domain.Entities.N8NConfiguration;
-using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
 using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;

@@ -39,7 +39,8 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
         // Role filter
         if (!string.IsNullOrWhiteSpace(query.RoleFilter) && !string.Equals(query.RoleFilter, "all", StringComparison.Ordinal))
         {
-            dbQuery = dbQuery.Where(u => u.Role == query.RoleFilter);
+            var roleNormalized = query.RoleFilter.ToLowerInvariant();
+            dbQuery = dbQuery.Where(u => u.Role.ToLower() == roleNormalized);
         }
 
         // Status filter (active/suspended)

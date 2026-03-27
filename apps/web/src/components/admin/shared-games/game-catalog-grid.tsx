@@ -2,20 +2,23 @@
  * GameCatalogGrid - Admin Shared Games Catalog
  * Issue #4909 - Uniform MeepleCard UI across dashboard, /games and admin
  *
- * Replaces mock data with real API data via useSharedGames.
+ * Server-side pagination, grid/list view toggle, denser grid layout.
  * Uses MeepleCard directly with admin-specific quick actions.
- * Status badge is integrated in MeepleCard (not external overlay).
  */
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArchiveRestore,
   CheckSquare,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   Clock,
+  LayoutGrid,
+  List,
   Pencil,
   Share2,
   Trash2,
@@ -38,6 +41,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
+import { Button } from '@/components/ui/primitives/button';
 import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 import { sharedGamesKeys } from '@/hooks/queries';
 import { api } from '@/lib/api';
@@ -45,6 +49,14 @@ import type { SharedGame } from '@/lib/api';
 import type { GameStatus } from '@/lib/api/schemas/shared-games.schemas';
 
 import { AdminSharedGameCardContainer } from './AdminSharedGameCardContainer';
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const PAGE_SIZE = 30;
+
+type ViewMode = 'grid' | 'list';
 
 // ============================================================================
 // Helpers
@@ -79,6 +91,7 @@ const STATUS_LABELS: Record<GameStatus, string> = {
 
 interface AdminGameCardProps {
   game: SharedGame;
+  viewMode: ViewMode;
   onPublish: (id: string) => void;
   onArchive: (id: string) => void;
   onDelete: (id: string) => void;
@@ -87,6 +100,7 @@ interface AdminGameCardProps {
 
 function AdminGameCard({
   game,
+  viewMode,
   onPublish,
   onArchive,
   onDelete,
@@ -142,7 +156,7 @@ function AdminGameCard({
     <MeepleCard
       id={game.id}
       entity="game"
-      variant="grid"
+      variant={viewMode}
       title={game.title}
       subtitle={game.yearPublished ? String(game.yearPublished) : undefined}
       imageUrl={game.imageUrl || undefined}
@@ -165,17 +179,72 @@ function AdminGameCard({
 // GameCatalogGrid
 // ============================================================================
 
-export function GameCatalogGrid() {
+export interface GameCatalogGridProps {
+  searchQuery?: string;
+  categoryFilter?: string;
+  statusFilter?: string;
+  playersFilter?: string;
+}
+
+export function GameCatalogGrid({
+  searchQuery = '',
+  categoryFilter = 'all',
+  statusFilter = 'all',
+  playersFilter = 'all',
+}: GameCatalogGridProps) {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+
   const { data, isLoading } = useQuery({
-    queryKey: [...sharedGamesKeys.all, 'admin-list'],
-    queryFn: () => api.sharedGames.getAll({ pageSize: 100 }),
+    queryKey: [...sharedGamesKeys.all, 'admin-list', page, PAGE_SIZE],
+    queryFn: () => api.sharedGames.getAll({ page, pageSize: PAGE_SIZE }),
     staleTime: 2 * 60 * 1000,
   });
-  const games = data?.items ?? [];
+  const allGames = data?.items ?? [];
+  const total = data?.total ?? 0;
+
+  // Client-side filtering
+  const games = allGames.filter(game => {
+    // Search filter (title, description)
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const titleMatch = game.title?.toLowerCase().includes(q);
+      const descMatch = game.description?.toLowerCase().includes(q);
+      if (!titleMatch && !descMatch) return false;
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      const statusMap: Record<string, string> = {
+        published: 'Published',
+        pending: 'PendingApproval',
+        draft: 'Draft',
+        archived: 'Archived',
+      };
+      if (game.status !== statusMap[statusFilter]) return false;
+    }
+
+    // Players filter
+    if (playersFilter !== 'all') {
+      const min = game.minPlayers ?? 0;
+      const max = game.maxPlayers ?? 99;
+      if (playersFilter === '1-2' && min > 2) return false;
+      if (playersFilter === '3-4' && (max < 3 || min > 4)) return false;
+      if (playersFilter === '5+' && max < 5) return false;
+    }
+
+    return true;
+  });
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   // Selection state for bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Clear selection when filters change to avoid bulk actions on hidden games
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchQuery, categoryFilter, statusFilter, playersFilter]);
 
   const toggleSelection = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -277,8 +346,10 @@ export function GameCatalogGrid() {
     setConfirmAction(null);
   };
 
-  const published = games.filter(g => g.status === 'Published').length;
-  const draft = games.filter(g => g.status === 'Draft').length;
+  const published = allGames.filter(g => g.status === 'Published').length;
+  const draft = allGames.filter(g => g.status === 'Draft').length;
+  const isFiltered =
+    searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' || playersFilter !== 'all';
 
   return (
     <div className="space-y-6">
@@ -346,36 +417,66 @@ export function GameCatalogGrid() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
-          <div className="text-sm text-slate-600 dark:text-zinc-400">Totale</div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-zinc-100">
-            {isLoading ? '—' : games.length}
+      {/* Stats Summary + View Toggle */}
+      <div className="flex items-end justify-between gap-4">
+        <div className="grid grid-cols-3 gap-4 flex-1">
+          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
+            <div className="text-sm text-slate-600 dark:text-zinc-400">Totale</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-zinc-100">
+              {isLoading ? '—' : total}
+            </div>
+          </div>
+          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
+            <div className="text-sm text-slate-600 dark:text-zinc-400">Pubblicati</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {isLoading ? '—' : published}
+            </div>
+          </div>
+          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
+            <div className="text-sm text-slate-600 dark:text-zinc-400">Bozze</div>
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+              {isLoading ? '—' : draft}
+            </div>
           </div>
         </div>
-        <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
-          <div className="text-sm text-slate-600 dark:text-zinc-400">Pubblicati</div>
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {isLoading ? '—' : published}
-          </div>
-        </div>
-        <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
-          <div className="text-sm text-slate-600 dark:text-zinc-400">Bozze</div>
-          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-            {isLoading ? '—' : draft}
-          </div>
+
+        {/* View Toggle */}
+        <div className="flex items-center rounded-lg border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/70 p-1">
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setViewMode('grid')}
+            aria-label="Vista griglia"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setViewMode('list')}
+            aria-label="Vista lista"
+          >
+            <List className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Game Grid */}
+      {/* Game Grid / List */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4'
+              : 'flex flex-col gap-3'
+          }
+        >
+          {[...Array(viewMode === 'grid' ? 10 : 5)].map((_, i) => (
             <MeepleCard
               key={i}
               entity="game"
-              variant="grid"
+              variant={viewMode}
               title=""
               loading
               data-testid="admin-game-card-skeleton"
@@ -384,11 +485,26 @@ export function GameCatalogGrid() {
         </div>
       ) : games.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg mb-2">Nessun gioco nel catalogo</p>
-          <p className="text-sm">Aggiungi il primo gioco al catalogo condiviso.</p>
+          {isFiltered ? (
+            <>
+              <p className="text-lg mb-2">Nessun gioco corrisponde ai filtri</p>
+              <p className="text-sm">Prova a modificare i criteri di ricerca.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg mb-2">Nessun gioco nel catalogo</p>
+              <p className="text-sm">Aggiungi il primo gioco al catalogo condiviso.</p>
+            </>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4'
+              : 'flex flex-col gap-3'
+          }
+        >
           {games.map(game => (
             <div key={game.id} className="relative">
               {/* Selection checkbox */}
@@ -397,7 +513,7 @@ export function GameCatalogGrid() {
                   e.stopPropagation();
                   toggleSelection(game.id);
                 }}
-                className={`absolute top-2 left-2 z-10 flex h-6 w-6 items-center justify-center rounded border transition-colors ${
+                className={`absolute ${viewMode === 'list' ? 'top-1/2 -translate-y-1/2 left-2' : 'top-2 left-2'} z-10 flex h-6 w-6 items-center justify-center rounded border transition-colors ${
                   selectedIds.has(game.id)
                     ? 'bg-primary border-primary text-primary-foreground'
                     : 'bg-white/80 dark:bg-zinc-800/80 border-slate-300 dark:border-zinc-600 hover:border-primary'
@@ -408,6 +524,7 @@ export function GameCatalogGrid() {
               </button>
               <AdminGameCard
                 game={game}
+                viewMode={viewMode}
                 onPublish={handlePublish}
                 onArchive={handleArchive}
                 onDelete={handleDelete}
@@ -415,6 +532,44 @@ export function GameCatalogGrid() {
               />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} di {total}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={page <= 1}
+              onClick={() => {
+                setPage(p => p - 1);
+                setSelectedIds(new Set());
+              }}
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </Button>
+            <span className="px-3 text-sm">
+              {page} di {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={page >= totalPages}
+              onClick={() => {
+                setPage(p => p + 1);
+                setSelectedIds(new Set());
+              }}
+            >
+              <ChevronRightIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 

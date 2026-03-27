@@ -13,6 +13,7 @@ import { use, useMemo } from 'react';
 
 import { AlertCircle, Clock, Gauge, Users } from 'lucide-react';
 
+import { GameRelationships } from '@/components/game-detail/GameRelationships';
 import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
@@ -114,6 +115,11 @@ export default function SharedGamePage({ params }: SharedGamePageProps) {
           <MeepleInfoCard gameId={id} gameTitle={game.title} readOnly />
         </div>
       </section>
+
+      {/* Game Relationships (returns null if none) */}
+      <div className="mx-auto max-w-4xl">
+        <GameRelationships gameId={id} gameName={game.title} />
+      </div>
 
       {/* Contributors Section */}
       <div className="mx-auto max-w-4xl">

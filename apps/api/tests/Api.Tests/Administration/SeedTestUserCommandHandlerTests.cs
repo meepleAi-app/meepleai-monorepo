@@ -1,12 +1,11 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -15,11 +14,13 @@ using Api.Tests.Constants;
 namespace Api.Tests.Administration.AutoConfiguration;
 
 [Trait("Category", TestCategories.Unit)]
-
 public sealed class SeedTestUserCommandHandlerTests
 {
+    private const string TestPassword = "TestSeed2026!xK";
+
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IConfiguration> _configurationMock;
     private readonly Mock<ILogger<SeedTestUserCommandHandler>> _loggerMock;
     private readonly SeedTestUserCommandHandler _handler;
 
@@ -28,10 +29,13 @@ public sealed class SeedTestUserCommandHandlerTests
         _userRepositoryMock = new Mock<IUserRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<SeedTestUserCommandHandler>>();
+        _configurationMock = new Mock<IConfiguration>();
+        _configurationMock.Setup(c => c["SEED_TEST_PASSWORD"]).Returns(TestPassword);
 
         _handler = new SeedTestUserCommandHandler(
             _userRepositoryMock.Object,
             _unitOfWorkMock.Object,
+            _configurationMock.Object,
             _loggerMock.Object
         );
     }
@@ -39,46 +43,25 @@ public sealed class SeedTestUserCommandHandlerTests
     [Fact]
     public async Task Handle_WhenTestUserExists_ShouldSkipSeed()
     {
-        // Arrange
-        var testEmail = new Email("Test@meepleai.com");
-        var existingUser = CreateTestUser();
-
         _userRepositoryMock
-            .Setup(x => x.GetByEmailAsync(It.Is<Email>(e => e.Value == testEmail.Value), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingUser);
+            .Setup(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateTestUser());
 
-        var command = new SeedTestUserCommand();
+        await _handler.Handle(new SeedTestUserCommand(), CancellationToken.None);
 
-        // Act
-        await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        _userRepositoryMock.Verify(
-            x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
-            Times.Never
-        );
-
-        _unitOfWorkMock.Verify(
-            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
-            Times.Never
-        );
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task Handle_WhenNoTestUserExists_ShouldCreateTestUser()
     {
-        // Arrange
         _userRepositoryMock
             .Setup(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        var command = new SeedTestUserCommand();
+        await _handler.Handle(new SeedTestUserCommand(), CancellationToken.None);
 
-        // Act
-        await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        // Note: Email value object normalizes to lowercase
         _userRepositoryMock.Verify(
             x => x.AddAsync(It.Is<User>(u =>
                 u.Email.Value == "test@meepleai.com" &&
@@ -87,23 +70,52 @@ public sealed class SeedTestUserCommandHandlerTests
             ), It.IsAny<CancellationToken>()),
             Times.Once
         );
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
 
-        _unitOfWorkMock.Verify(
-            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
-            Times.Once
+    [Fact]
+    public async Task Handle_WhenPasswordNotConfigured_ShouldSkipSeed()
+    {
+        var configMock = new Mock<IConfiguration>();
+        configMock.Setup(c => c["SEED_TEST_PASSWORD"]).Returns((string?)null);
+
+        var handler = new SeedTestUserCommandHandler(
+            _userRepositoryMock.Object,
+            _unitOfWorkMock.Object,
+            configMock.Object,
+            _loggerMock.Object
         );
+
+        await handler.Handle(new SeedTestUserCommand(), CancellationToken.None);
+
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenPasswordTooShort_ShouldSkipSeed()
+    {
+        var configMock = new Mock<IConfiguration>();
+        configMock.Setup(c => c["SEED_TEST_PASSWORD"]).Returns("short");
+
+        var handler = new SeedTestUserCommandHandler(
+            _userRepositoryMock.Object,
+            _unitOfWorkMock.Object,
+            configMock.Object,
+            _loggerMock.Object
+        );
+
+        await handler.Handle(new SeedTestUserCommand(), CancellationToken.None);
+
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static User CreateTestUser()
     {
-        var testEmail = new Email("Test@meepleai.com");
-        var passwordHash = PasswordHash.Create("Demo123!");
-
         return new User(
             Guid.NewGuid(),
-            testEmail,
+            new Email("Test@meepleai.com"),
             "Test User",
-            passwordHash,
+            PasswordHash.Create(TestPassword),
             Role.User
         );
     }

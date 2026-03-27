@@ -77,7 +77,7 @@ describe('AlertsTab', () => {
     render(<AlertsTab />);
 
     await waitFor(() => {
-      expect(screen.getByText('Alert Rules')).toBeInTheDocument();
+      expect(screen.getByText('Regole di Alert')).toBeInTheDocument();
     });
   });
 

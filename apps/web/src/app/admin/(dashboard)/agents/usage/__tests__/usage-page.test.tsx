@@ -4,6 +4,7 @@
  */
 
 import { screen, waitFor } from '@testing-library/react';
+import { QueryClient } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
@@ -22,31 +23,31 @@ vi.mock('recharts', () => ({
   PieChart: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="pie-chart">{children}</div>
   ),
-  Area:          () => <div data-testid="area" />,
-  Pie:           () => <div data-testid="pie" />,
-  Cell:          () => <div data-testid="cell" />,
-  XAxis:         () => <div data-testid="x-axis" />,
-  YAxis:         () => <div data-testid="y-axis" />,
+  Area: () => <div data-testid="area" />,
+  Pie: () => <div data-testid="pie" />,
+  Cell: () => <div data-testid="cell" />,
+  XAxis: () => <div data-testid="x-axis" />,
+  YAxis: () => <div data-testid="y-axis" />,
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
-  Tooltip:       () => <div data-testid="tooltip" />,
-  Legend:        () => <div data-testid="legend" />,
+  Tooltip: () => <div data-testid="tooltip" />,
+  Legend: () => <div data-testid="legend" />,
 }));
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
-const mockGetOpenRouterStatus  = vi.hoisted(() => vi.fn());
-const mockGetUsageTimeline     = vi.hoisted(() => vi.fn());
-const mockGetUsageCosts        = vi.hoisted(() => vi.fn());
-const mockGetUsageFreeQuota    = vi.hoisted(() => vi.fn());
-const mockGetRecentRequests    = vi.hoisted(() => vi.fn());
+const mockGetOpenRouterStatus = vi.hoisted(() => vi.fn());
+const mockGetUsageTimeline = vi.hoisted(() => vi.fn());
+const mockGetUsageCosts = vi.hoisted(() => vi.fn());
+const mockGetUsageFreeQuota = vi.hoisted(() => vi.fn());
+const mockGetRecentRequests = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api/clients/adminClient', () => ({
   createAdminClient: () => ({
     getOpenRouterStatus: mockGetOpenRouterStatus,
-    getUsageTimeline:    mockGetUsageTimeline,
-    getUsageCosts:       mockGetUsageCosts,
-    getUsageFreeQuota:   mockGetUsageFreeQuota,
-    getRecentRequests:   mockGetRecentRequests,
+    getUsageTimeline: mockGetUsageTimeline,
+    getUsageCosts: mockGetUsageCosts,
+    getUsageFreeQuota: mockGetUsageFreeQuota,
+    getRecentRequests: mockGetRecentRequests,
   }),
   HttpClient: vi.fn(),
 }));
@@ -62,46 +63,46 @@ vi.mock('@/hooks/useSetNavConfig', () => ({
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const mockStatus = {
-  balanceUsd:         4.5,
-  dailySpendUsd:      0.0025,
-  todayRequestCount:  42,
-  currentRpm:         80,
-  limitRpm:           200,
+  balanceUsd: 4.5,
+  dailySpendUsd: 0.0025,
+  todayRequestCount: 42,
+  currentRpm: 80,
+  limitRpm: 200,
   utilizationPercent: 0.4,
-  isThrottled:        false,
-  isFreeTier:         false,
-  rateLimitInterval:  'minute',
-  lastUpdated:        '2026-02-22T10:00:00Z',
+  isThrottled: false,
+  isFreeTier: false,
+  rateLimitInterval: 'minute',
+  lastUpdated: '2026-02-22T10:00:00Z',
 };
 
 const mockTimeline = {
-  buckets:       [],
-  period:        '24h',
+  buckets: [],
+  period: '24h',
   groupedByHour: true,
   totalRequests: 0,
-  totalCostUsd:  0,
+  totalCostUsd: 0,
 };
 
 const mockCosts = {
-  byModel:       [],
-  bySource:      [],
-  byTier:        [],
-  totalCostUsd:  0,
+  byModel: [],
+  bySource: [],
+  byTier: [],
+  totalCostUsd: 0,
   totalRequests: 0,
-  period:        '7d',
+  period: '7d',
 };
 
 const mockFreeQuota = {
-  models:                 [],
+  models: [],
   totalFreeRequestsToday: 0,
-  generatedAt:            '2026-02-22T10:00:00Z',
+  generatedAt: '2026-02-22T10:00:00Z',
 };
 
 const mockRequests = {
-  items:      [],
-  total:      0,
-  page:       1,
-  pageSize:   20,
+  items: [],
+  total: 0,
+  page: 1,
+  pageSize: 20,
   totalPages: 0,
 };
 
@@ -220,11 +221,29 @@ describe('UsagePage', () => {
   it('shows error banner on failure', async () => {
     mockGetOpenRouterStatus.mockRejectedValue(new Error('Redis unavailable'));
 
-    renderWithQuery(<UsagePage />);
-
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toBeInTheDocument();
+    // Component-level retry overrides test client defaults;
+    // use a custom QueryClient with retryDelay: 0 to speed up retries.
+    const fastClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+          staleTime: 0,
+          refetchOnMount: false,
+          refetchOnWindowFocus: false,
+          refetchOnReconnect: false,
+          retryDelay: 0,
+        },
+      },
     });
+
+    renderWithQuery(<UsagePage />, { queryClient: fastClient });
+
+    await waitFor(
+      () => {
+        expect(screen.getByRole('alert')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     expect(screen.getByText(/Redis unavailable/i)).toBeInTheDocument();
   });

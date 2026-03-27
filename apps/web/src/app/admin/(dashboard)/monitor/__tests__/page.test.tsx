@@ -65,7 +65,7 @@ describe('AdminMonitorPage', () => {
   it('renders heading', async () => {
     const page = await AdminMonitorPage({ searchParams: Promise.resolve({}) });
     render(page);
-    expect(screen.getByText('Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Monitoraggio')).toBeInTheDocument();
   });
 
   it('renders export tab content', async () => {

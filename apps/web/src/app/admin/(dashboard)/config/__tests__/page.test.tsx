@@ -50,9 +50,9 @@ describe('AdminConfigPage', () => {
   it('renders heading and description', async () => {
     const page = await AdminConfigPage({ searchParams: Promise.resolve({}) });
     render(page);
-    expect(screen.getByText('Configuration')).toBeInTheDocument();
+    expect(screen.getByText('Configurazione')).toBeInTheDocument();
     expect(
-      screen.getByText('System settings, feature flags, and rate limits.')
+      screen.getByText('Impostazioni di sistema, feature flag e limiti di frequenza.')
     ).toBeInTheDocument();
   });
 
@@ -62,7 +62,7 @@ describe('AdminConfigPage', () => {
     });
     render(page);
     // n8n tab no longer exists — renderTabContent returns null for unknown tabs
-    expect(screen.getByText('Configuration')).toBeInTheDocument();
+    expect(screen.getByText('Configurazione')).toBeInTheDocument();
   });
 
   it('renders nothing for unknown tab (wizard)', async () => {
@@ -71,6 +71,6 @@ describe('AdminConfigPage', () => {
     });
     render(page);
     // wizard tab no longer exists — renderTabContent returns null for unknown tabs
-    expect(screen.getByText('Configuration')).toBeInTheDocument();
+    expect(screen.getByText('Configurazione')).toBeInTheDocument();
   });
 });

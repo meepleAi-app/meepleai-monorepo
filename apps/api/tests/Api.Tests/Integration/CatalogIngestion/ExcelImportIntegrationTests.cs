@@ -291,7 +291,7 @@ public sealed class ExcelImportIntegrationTests : IAsyncLifetime
         {
             worksheet.Cell(i + 2, 1).Value = games[i].Name;
             if (games[i].BggId.HasValue)
-                worksheet.Cell(i + 2, 2).Value = games[i].BggId.Value;
+                worksheet.Cell(i + 2, 2).Value = games[i].BggId.GetValueOrDefault();
         }
 
         return WorkbookToFormFile(workbook);

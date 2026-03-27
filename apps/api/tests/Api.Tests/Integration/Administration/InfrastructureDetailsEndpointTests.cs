@@ -1,6 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
-using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Models;
 using Api.BoundedContexts.Administration.Domain.Services;
 using FluentAssertions;

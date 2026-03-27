@@ -4,7 +4,6 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
-using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -651,8 +650,8 @@ public class StreamQaQueryHandlerTests
         var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
 
         // Validate confidence is below ADR-006 threshold (0.70)
-        complete.confidence.HasValue.Should().BeTrue();
-        (complete.confidence.Value < 0.70).Should().BeTrue($"Expected confidence < 0.70 (warning threshold), got {complete.confidence.Value}");
+        complete.confidence.Should().NotBeNull();
+        (complete.confidence!.Value < 0.70).Should().BeTrue($"Expected confidence < 0.70 (warning threshold), got {complete.confidence.Value}");
         complete.confidence.Value.Should().BeApproximately(0.65, 0.001);
 
         // Verify response still completes (no error)
@@ -755,8 +754,8 @@ public class StreamQaQueryHandlerTests
         var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
 
         // Verify overall confidence reflects low LLM confidence (hallucination detection)
-        complete.confidence.HasValue.Should().BeTrue();
-        (complete.confidence.Value < 0.90).Should().BeTrue("Overall confidence should be reduced when LLM provides no citations");
+        complete.confidence.Should().NotBeNull();
+        (complete.confidence!.Value < 0.90).Should().BeTrue("Overall confidence should be reduced when LLM provides no citations");
 
         // Verify search confidence was high but LLM confidence was low
         _qualityTrackingServiceMock.Verify(

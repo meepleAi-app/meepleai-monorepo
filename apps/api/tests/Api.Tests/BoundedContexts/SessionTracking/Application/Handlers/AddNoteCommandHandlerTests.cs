@@ -30,7 +30,7 @@ public class AddNoteCommandHandlerTests
         var mediatorMock = new Mock<IMediator>();
         var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
         _contextMock = new Mock<MeepleAiDbContext>(
-            MockBehavior.Loose, options, mediatorMock.Object, eventCollectorMock.Object, null);
+            MockBehavior.Loose, options, mediatorMock.Object, eventCollectorMock.Object, null!);
     }
 
     [Fact]

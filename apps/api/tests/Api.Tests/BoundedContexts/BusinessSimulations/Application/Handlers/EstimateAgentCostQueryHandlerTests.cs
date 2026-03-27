@@ -1,6 +1,5 @@
 using Api.BoundedContexts.BusinessSimulations.Application.Commands;
 using Api.BoundedContexts.BusinessSimulations.Application.Queries;
-using Api.BoundedContexts.BusinessSimulations.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Tests.Constants;

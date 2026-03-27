@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
-using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.Administration.Domain.Services;
 using FluentAssertions;

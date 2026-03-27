@@ -1,4 +1,3 @@
-using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -14,13 +13,11 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 
 /// <summary>
 /// Handler for SeedE2ETestUsersCommand.
-/// Creates E2E test users for Playwright tests with predictable credentials.
+/// Creates E2E test users for Playwright tests with credentials from secrets.
 /// Idempotent: Skips users that already exist.
 /// </summary>
 internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETestUsersCommand>
 {
-    private const string TestPassword = "Demo123!";
-
     private static readonly (string Email, string DisplayName, Role Role)[] NonAdminTestUsers =
     [
         ("editor@meepleai.dev", "E2E Editor User", Role.Editor),
@@ -48,10 +45,21 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        var testPassword = SecretsHelper.GetSeedTestPassword(_configuration, _logger);
+        if (string.IsNullOrWhiteSpace(testPassword))
+        {
+            _logger.LogWarning("SEED_TEST_PASSWORD not configured — skipping E2E test user seed");
+            return;
+        }
+        if (testPassword.Length < 8)
+        {
+            _logger.LogWarning("SEED_TEST_PASSWORD is too short (min 8 chars) — skipping E2E user seed");
+            return;
+        }
+
         var usersCreated = 0;
 
-        // Admin E2E user: use email/password from secret (same source as SeedAdminUserCommandHandler)
-        // This avoids creating a second admin with a different email than the one in admin.secret.
+        // Admin E2E user
         var adminEmail = _configuration["INITIAL_ADMIN_EMAIL"]
             ?? Environment.GetEnvironmentVariable("INITIAL_ADMIN_EMAIL")
             ?? _configuration["ADMIN_EMAIL"]
@@ -70,7 +78,7 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
             {
                 var adminPassword = SecretsHelper.GetSecretOrValue(_configuration, "ADMIN_PASSWORD", _logger, required: false)
                     ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
-                    ?? TestPassword;
+                    ?? testPassword;
 
                 var adminUser = new User(
                     id: Guid.NewGuid(),
@@ -90,7 +98,7 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
             _logger.LogWarning("INITIAL_ADMIN_EMAIL not configured — skipping E2E admin user seed");
         }
 
-        // Non-admin E2E users: hardcoded emails and password
+        // Non-admin E2E users
         foreach (var (emailStr, displayName, role) in NonAdminTestUsers)
         {
             var email = new Email(emailStr);
@@ -106,7 +114,7 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
                 id: Guid.NewGuid(),
                 email: email,
                 displayName: displayName,
-                passwordHash: PasswordHash.Create(TestPassword),
+                passwordHash: PasswordHash.Create(testPassword),
                 role: role
             );
 

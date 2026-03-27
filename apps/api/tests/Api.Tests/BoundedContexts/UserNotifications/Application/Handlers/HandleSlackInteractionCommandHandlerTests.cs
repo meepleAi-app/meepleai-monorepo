@@ -184,7 +184,7 @@ public class HandleSlackInteractionCommandHandlerTests
 
     #region Helpers
 
-    private SlackConnection SetupActiveSlackConnection(
+    private void SetupActiveSlackConnection(
         Guid? userId = null,
         string slackUserId = "U01TESTUSER")
     {
@@ -203,8 +203,6 @@ public class HandleSlackInteractionCommandHandlerTests
         _slackConnectionRepoMock
             .Setup(r => r.GetBySlackUserIdAsync(slackUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(connection);
-
-        return connection;
     }
 
     private static string BuildPayload(

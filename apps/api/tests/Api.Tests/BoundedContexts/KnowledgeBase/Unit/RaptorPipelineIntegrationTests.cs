@@ -24,7 +24,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
-public class RaptorPipelineIntegrationTests : IDisposable
+public sealed class RaptorPipelineIntegrationTests : IDisposable
 {
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IPdfTextExtractor> _pdfTextExtractorMock = new();

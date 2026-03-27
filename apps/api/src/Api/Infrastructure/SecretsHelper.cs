@@ -107,6 +107,16 @@ internal static class SecretsHelper
     }
 
     /// <summary>
+    /// Resolve seed test password from SEED_TEST_PASSWORD secret or env var.
+    /// Shared by SeedTestUserCommandHandler and SeedE2ETestUsersCommandHandler.
+    /// </summary>
+    public static string? GetSeedTestPassword(IConfiguration config, ILogger? logger = null)
+    {
+        return GetSecretOrValue(config, "SEED_TEST_PASSWORD", logger, required: false)
+            ?? Environment.GetEnvironmentVariable("SEED_TEST_PASSWORD");
+    }
+
+    /// <summary>
     /// Builds a PostgreSQL connection string using password from secret file or config.
     /// </summary>
     /// <param name="config">Configuration instance</param>

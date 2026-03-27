@@ -150,12 +150,12 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
     }
 
     [Fact]
-    public async Task UploadPdf_WithEditorRole_Returns200Ok()
+    public async Task UploadPdf_WithEditorRole_Returns403Forbidden()
     {
         // Arrange
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (userId, sessionToken) = await TestSessionHelper.CreateEditorSessionAsync(dbContext); // Editor role allowed
+        var (userId, sessionToken) = await TestSessionHelper.CreateEditorSessionAsync(dbContext); // Editor role no longer allowed (AdminOnlyPolicy)
 
         var content = CreateMultipartFormDataContent("test-game.pdf", "application/pdf", 1024);
         var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/admin/games/wizard/upload-pdf", sessionToken);
@@ -164,8 +164,8 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         // Act
         var response = await _client.SendAsync(request);
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Assert — Editor should now be rejected (AdminOnlyPolicy)
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     // ========================================

@@ -236,6 +236,26 @@ public class RaptorPipelineIntegrationTests : IDisposable
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    private static ILanguageDetector CreateLanguageDetectorMock()
+    {
+        var mock = new Mock<ILanguageDetector>();
+        mock.Setup(d => d.Detect(It.IsAny<string>()))
+            .Returns(new LanguageDetectionResult("en", true, 0.95));
+        return mock.Object;
+    }
+
+    private static IChunkTranslationService CreateChunkTranslationMock()
+    {
+        var mock = new Mock<IChunkTranslationService>();
+        mock.Setup(t => t.TranslateChunksAsync(
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TranslatedChunk>());
+        return mock.Object;
+    }
+
     private PdfProcessingPipelineService CreatePipelineService(bool withRaptor)
     {
         return new PdfProcessingPipelineService(
@@ -247,8 +267,8 @@ public class RaptorPipelineIntegrationTests : IDisposable
             _blobStorageServiceMock.Object,
             _timeProvider,
             _logger,
-            Mock.Of<ILanguageDetector>(),
-            Mock.Of<IChunkTranslationService>(),
+            CreateLanguageDetectorMock(),
+            CreateChunkTranslationMock(),
             raptorIndexer: withRaptor ? _raptorIndexerMock.Object : null,
             entityExtractor: null,
             vectorStore: null,

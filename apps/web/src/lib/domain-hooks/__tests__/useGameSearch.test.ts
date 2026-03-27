@@ -3,7 +3,7 @@
  *
  * Tests for game search hook with debouncing, API integration, and caching.
  * Issue #4273: Game Search Autocomplete
- * Target: ≥85% coverage
+ * Target: >=85% coverage
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -24,11 +24,32 @@ vi.mock('@/components/ui/data-display/entity-list-view/hooks/use-debounce', () =
   useDebounce: vi.fn((value: string) => value), // No debounce in tests by default
 }));
 
-const mockSearchResults: GameSearchResult[] = [
+// The hook maps backend results to GameSearchResult with source: 'catalog'
+const mockApiResponse = {
+  games: [
+    {
+      id: 'lib-123',
+      title: 'Catan',
+      imageUrl: 'https://example.com/catan.jpg',
+    },
+    {
+      id: 'cat-456',
+      title: 'Carcassonne',
+      imageUrl: 'https://example.com/carcassonne.jpg',
+    },
+    {
+      id: 'priv-789',
+      title: 'My Custom Game',
+    },
+  ],
+};
+
+// Expected mapped results (all source: 'catalog' per hook implementation)
+const expectedResults: GameSearchResult[] = [
   {
     id: 'lib-123',
     name: 'Catan',
-    source: 'library',
+    source: 'catalog',
     imageUrl: 'https://example.com/catan.jpg',
   },
   {
@@ -40,7 +61,8 @@ const mockSearchResults: GameSearchResult[] = [
   {
     id: 'priv-789',
     name: 'My Custom Game',
-    source: 'private',
+    source: 'catalog',
+    imageUrl: undefined,
   },
 ];
 
@@ -80,10 +102,10 @@ describe('useGameSearch', () => {
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it('should fetch games for query ≥ 2 characters', async () => {
+    it('should fetch games for query >= 2 characters', async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => mockSearchResults,
+        json: async () => mockApiResponse,
       } as Response);
 
       const { result } = renderHook(() => useGameSearch('Ca'), {
@@ -92,14 +114,14 @@ describe('useGameSearch', () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(result.current.data).toEqual(mockSearchResults);
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/games/search?q=Ca');
+      expect(result.current.data).toEqual(expectedResults);
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/games?search=Ca&pageSize=20');
     });
 
     it('should encode special characters in query', async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => ({ games: [] }),
       } as Response);
 
       const { result } = renderHook(() => useGameSearch('Catan & Cities'), {
@@ -108,7 +130,9 @@ describe('useGameSearch', () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/games/search?q=Catan%20%26%20Cities');
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/games?search=Catan%20%26%20Cities&pageSize=20'
+      );
     });
   });
 
@@ -123,7 +147,7 @@ describe('useGameSearch', () => {
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => mockSearchResults,
+        json: async () => mockApiResponse,
       } as Response);
 
       renderHook(() => useGameSearch('Catan'), {
@@ -143,10 +167,10 @@ describe('useGameSearch', () => {
   });
 
   describe('Result Handling', () => {
-    it('should return games with all source types', async () => {
+    it('should return games mapped with catalog source', async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => mockSearchResults,
+        json: async () => mockApiResponse,
       } as Response);
 
       const { result } = renderHook(() => useGameSearch('Game'), {
@@ -156,15 +180,16 @@ describe('useGameSearch', () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(result.current.data).toHaveLength(3);
-      expect(result.current.data![0].source).toBe('library');
+      // All results are mapped as 'catalog' source
+      expect(result.current.data![0].source).toBe('catalog');
       expect(result.current.data![1].source).toBe('catalog');
-      expect(result.current.data![2].source).toBe('private');
+      expect(result.current.data![2].source).toBe('catalog');
     });
 
     it('should handle empty results', async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => ({ games: [] }),
       } as Response);
 
       const { result } = renderHook(() => useGameSearch('NonExistent'), {
@@ -177,14 +202,15 @@ describe('useGameSearch', () => {
     });
 
     it('should include imageUrl when present', async () => {
-      const resultsWithImages = [
-        {
-          id: 'game-1',
-          name: 'Game with Image',
-          source: 'library' as const,
-          imageUrl: 'https://example.com/image.jpg',
-        },
-      ];
+      const resultsWithImages = {
+        games: [
+          {
+            id: 'game-1',
+            title: 'Game with Image',
+            imageUrl: 'https://example.com/image.jpg',
+          },
+        ],
+      };
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
@@ -201,13 +227,14 @@ describe('useGameSearch', () => {
     });
 
     it('should handle missing imageUrl', async () => {
-      const resultsWithoutImages = [
-        {
-          id: 'game-1',
-          name: 'Game without Image',
-          source: 'catalog' as const,
-        },
-      ];
+      const resultsWithoutImages = {
+        games: [
+          {
+            id: 'game-1',
+            title: 'Game without Image',
+          },
+        ],
+      };
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
@@ -258,7 +285,7 @@ describe('useGameSearch', () => {
     it('should cache results for 5 minutes (staleTime)', async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => mockSearchResults,
+        json: async () => mockApiResponse,
       } as Response);
 
       const { result, rerender } = renderHook(() => useGameSearch('Catan'), {
@@ -275,18 +302,18 @@ describe('useGameSearch', () => {
 
       // Should use cached data, no new fetch
       expect(global.fetch).not.toHaveBeenCalled();
-      expect(result.current.data).toEqual(mockSearchResults);
+      expect(result.current.data).toEqual(expectedResults);
     });
 
     it('should use different cache keys for different queries', async () => {
       vi.mocked(global.fetch)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [mockSearchResults[0]],
+          json: async () => ({ games: [mockApiResponse.games[0]] }),
         } as Response)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => [mockSearchResults[1]],
+          json: async () => ({ games: [mockApiResponse.games[1]] }),
         } as Response);
 
       const { result: result1 } = renderHook(() => useGameSearch('Catan'), {
@@ -303,8 +330,8 @@ describe('useGameSearch', () => {
 
       // Both queries should have been called
       expect(global.fetch).toHaveBeenCalledTimes(2);
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/games/search?q=Catan');
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/games/search?q=Carcassonne');
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/games?search=Catan&pageSize=20');
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/games?search=Carcassonne&pageSize=20');
     });
   });
 
@@ -317,7 +344,7 @@ describe('useGameSearch', () => {
               () =>
                 resolve({
                   ok: true,
-                  json: async () => mockSearchResults,
+                  json: async () => mockApiResponse,
                 } as Response),
               100
             )
@@ -336,7 +363,7 @@ describe('useGameSearch', () => {
 
       // After load
       expect(result.current.isLoading).toBe(false);
-      expect(result.current.data).toEqual(mockSearchResults);
+      expect(result.current.data).toEqual(expectedResults);
     });
   });
 
@@ -352,7 +379,7 @@ describe('useGameSearch', () => {
     it('should fetch when query becomes enabled', async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => mockSearchResults,
+        json: async () => mockApiResponse,
       } as Response);
 
       const { rerender } = renderHook(({ query }) => useGameSearch(query), {

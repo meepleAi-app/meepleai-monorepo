@@ -10,6 +10,7 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { api } from '@/lib/api';
 import type { GameMemoryDto } from '@/lib/api/clients/agentMemoryClient';
 
 // ========== Query Keys ==========
@@ -36,12 +37,7 @@ export const gameMemoryKeys = {
 export function useGameMemory(gameId: string | undefined): UseQueryResult<GameMemoryDto | null> {
   return useQuery({
     queryKey: gameMemoryKeys.detail(gameId ?? ''),
-    queryFn: async () => {
-      const res = await fetch(`/api/v1/agent-memory/games/${gameId}/memory`);
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error('Failed to fetch game memory');
-      return (await res.json()) as GameMemoryDto;
-    },
+    queryFn: () => api.agentMemory.getGameMemory(gameId!),
     enabled: !!gameId,
     staleTime: 60_000,
   });
@@ -66,14 +62,7 @@ export function useAddHouseRule(gameId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (description: string) => {
-      const res = await fetch(`/api/v1/agent-memory/games/${gameId}/memory/house-rules`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description }),
-      });
-      if (!res.ok) throw new Error('Failed to add house rule');
-    },
+    mutationFn: (description: string) => api.agentMemory.addHouseRule(gameId, description),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: gameMemoryKeys.detail(gameId) });
       toast.success('Regola di casa aggiunta!');

@@ -4,6 +4,7 @@ export const SECTION_EMOJI: Record<string, string> = {
   '/sessions': '🎲',
   '/chat': '✨',
   '/agents': '🤖',
+  '/notifications': '🔔',
   '/settings': '⚙️',
 };
 

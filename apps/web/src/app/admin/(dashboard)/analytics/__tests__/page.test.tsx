@@ -55,9 +55,9 @@ describe('AdminAnalyticsPage', () => {
   it('renders heading and description', async () => {
     const page = await AdminAnalyticsPage({ searchParams: Promise.resolve({}) });
     render(page);
-    expect(screen.getByText('Analytics')).toBeInTheDocument();
+    expect(screen.getByText('Analitiche')).toBeInTheDocument();
     expect(
-      screen.getByText('Usage statistics, AI analytics, audit logs, and reports.')
+      screen.getByText('Statistiche di utilizzo, analitiche AI, log di audit e report.')
     ).toBeInTheDocument();
   });
 });

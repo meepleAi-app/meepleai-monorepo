@@ -47,8 +47,8 @@ describe('RecentGames', () => {
     render(<RecentGames games={[]} />);
 
     expect(screen.getByText('La tua libreria è vuota')).toBeInTheDocument();
-    const cta = screen.getByRole('link', { name: /Esplora il catalogo/i });
-    expect(cta).toHaveAttribute('href', '/games');
+    const cta = screen.getByRole('link', { name: /Esplora la libreria/i });
+    expect(cta).toHaveAttribute('href', '/library');
   });
 
   it('renders 3 loading skeletons when loading is true', () => {

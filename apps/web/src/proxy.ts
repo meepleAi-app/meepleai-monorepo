@@ -51,6 +51,7 @@ const PROTECTED_ROUTES = [
   '/settings',
   '/games',
   '/agents',
+  '/sessions',
 ];
 
 /**
@@ -422,6 +423,7 @@ export async function proxy(request: NextRequest) {
       '/setup',
       '/join',
       '/agents',
+      '/sessions',
     ];
 
     const isAlphaRoute = ALPHA_ROUTE_PREFIXES.some(prefix => pathname.startsWith(prefix));

@@ -47,31 +47,27 @@ vi.mock('@/lib/api', () => ({
         ],
         totalCount: 1,
       }),
-      getEmbeddingInfo: vi
-        .fn()
-        .mockResolvedValue({
-          status: 'healthy',
-          model: 'e5-base',
-          device: null,
-          supportedLanguages: [],
-          dimension: 768,
-          maxInputChars: 512,
-          maxBatchSize: 32,
-        }),
-      getOpenRouterStatus: vi
-        .fn()
-        .mockResolvedValue({
-          balanceUsd: 10,
-          dailySpendUsd: 0.5,
-          todayRequestCount: 78,
-          currentRpm: 78,
-          limitRpm: 100,
-          utilizationPercent: 78,
-          isThrottled: false,
-          isFreeTier: false,
-          rateLimitInterval: '1m',
-          lastUpdated: null,
-        }),
+      getEmbeddingInfo: vi.fn().mockResolvedValue({
+        status: 'healthy',
+        model: 'e5-base',
+        device: null,
+        supportedLanguages: [],
+        dimension: 768,
+        maxInputChars: 512,
+        maxBatchSize: 32,
+      }),
+      getOpenRouterStatus: vi.fn().mockResolvedValue({
+        balanceUsd: 10,
+        dailySpendUsd: 0.5,
+        todayRequestCount: 78,
+        currentRpm: 78,
+        limitRpm: 100,
+        utilizationPercent: 78,
+        isThrottled: false,
+        isFreeTier: false,
+        rateLimitInterval: '1m',
+        lastUpdated: null,
+      }),
     },
   },
 }));
@@ -95,14 +91,15 @@ describe('Mission Control', () => {
   it('renders service health section', async () => {
     const { default: MissionControlPage } = await import('@/app/admin/(dashboard)/agents/page');
     render(<MissionControlPage />, { wrapper: Wrapper });
-    expect(await screen.findByText('Service Health')).toBeInTheDocument();
+    expect(await screen.findByText('Stato Servizi')).toBeInTheDocument();
   });
 
   it('renders quick action buttons', async () => {
     const { default: MissionControlPage } = await import('@/app/admin/(dashboard)/agents/page');
     render(<MissionControlPage />, { wrapper: Wrapper });
-    expect(await screen.findByText('Test RAG Query')).toBeInTheDocument();
+    expect(await screen.findByText('Testa Query RAG')).toBeInTheDocument();
     expect(screen.getByText('Ispeziona Esecuzioni')).toBeInTheDocument();
+    expect(screen.getByText('Nuovo Agente')).toBeInTheDocument();
   });
 
   it('renders recent executions table', async () => {

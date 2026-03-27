@@ -178,7 +178,7 @@ export default function MissionControlPage() {
     { label: 'Testa Query RAG', icon: Search, href: '/admin/agents/playground' },
     { label: 'Ispeziona Esecuzioni', icon: FileSearch, href: '/admin/agents/inspector' },
     { label: 'Report Costi', icon: CircleDollarSign, href: '/admin/agents/usage' },
-    { label: 'Nuovo Agent', icon: PlusCircle, href: '/admin/agents/definitions/create' },
+    { label: 'Nuovo Agente', icon: PlusCircle, href: '/admin/agents/definitions/create' },
   ];
 
   // ─── Render ──────────────────────────────────────────────────────────────

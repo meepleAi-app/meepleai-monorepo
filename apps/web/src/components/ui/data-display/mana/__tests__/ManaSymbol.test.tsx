@@ -23,7 +23,7 @@ describe('ManaSymbol', () => {
   it('renders at mini size', () => {
     render(<ManaSymbol entity="player" size="mini" />);
     const el = screen.getByTestId('mana-symbol-player');
-    expect(el.className).toContain('w-5');
+    expect(el.className).toContain('w-6');
   });
 
   it('shows display name when showLabel is true', () => {

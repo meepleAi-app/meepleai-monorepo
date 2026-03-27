@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -179,7 +179,19 @@ function AdminGameCard({
 // GameCatalogGrid
 // ============================================================================
 
-export function GameCatalogGrid() {
+export interface GameCatalogGridProps {
+  searchQuery?: string;
+  categoryFilter?: string;
+  statusFilter?: string;
+  playersFilter?: string;
+}
+
+export function GameCatalogGrid({
+  searchQuery = '',
+  categoryFilter = 'all',
+  statusFilter = 'all',
+  playersFilter = 'all',
+}: GameCatalogGridProps) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -189,12 +201,50 @@ export function GameCatalogGrid() {
     queryFn: () => api.sharedGames.getAll({ page, pageSize: PAGE_SIZE }),
     staleTime: 2 * 60 * 1000,
   });
-  const games = data?.items ?? [];
+  const allGames = data?.items ?? [];
   const total = data?.total ?? 0;
+
+  // Client-side filtering
+  const games = allGames.filter(game => {
+    // Search filter (title, description)
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const titleMatch = game.title?.toLowerCase().includes(q);
+      const descMatch = game.description?.toLowerCase().includes(q);
+      if (!titleMatch && !descMatch) return false;
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      const statusMap: Record<string, string> = {
+        published: 'Published',
+        pending: 'PendingApproval',
+        draft: 'Draft',
+        archived: 'Archived',
+      };
+      if (game.status !== statusMap[statusFilter]) return false;
+    }
+
+    // Players filter
+    if (playersFilter !== 'all') {
+      const min = game.minPlayers ?? 0;
+      const max = game.maxPlayers ?? 99;
+      if (playersFilter === '1-2' && min > 2) return false;
+      if (playersFilter === '3-4' && (max < 3 || min > 4)) return false;
+      if (playersFilter === '5+' && max < 5) return false;
+    }
+
+    return true;
+  });
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   // Selection state for bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Clear selection when filters change to avoid bulk actions on hidden games
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchQuery, categoryFilter, statusFilter, playersFilter]);
 
   const toggleSelection = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -296,8 +346,10 @@ export function GameCatalogGrid() {
     setConfirmAction(null);
   };
 
-  const published = games.filter(g => g.status === 'Published').length;
-  const draft = games.filter(g => g.status === 'Draft').length;
+  const published = allGames.filter(g => g.status === 'Published').length;
+  const draft = allGames.filter(g => g.status === 'Draft').length;
+  const isFiltered =
+    searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' || playersFilter !== 'all';
 
   return (
     <div className="space-y-6">
@@ -433,8 +485,17 @@ export function GameCatalogGrid() {
         </div>
       ) : games.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg mb-2">Nessun gioco nel catalogo</p>
-          <p className="text-sm">Aggiungi il primo gioco al catalogo condiviso.</p>
+          {isFiltered ? (
+            <>
+              <p className="text-lg mb-2">Nessun gioco corrisponde ai filtri</p>
+              <p className="text-sm">Prova a modificare i criteri di ricerca.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg mb-2">Nessun gioco nel catalogo</p>
+              <p className="text-sm">Aggiungi il primo gioco al catalogo condiviso.</p>
+            </>
+          )}
         </div>
       ) : (
         <div

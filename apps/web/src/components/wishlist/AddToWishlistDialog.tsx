@@ -35,7 +35,14 @@ import { useAddToWishlist } from '@/hooks/queries/useWishlist';
 
 interface AddToWishlistDialogProps {
   trigger?: React.ReactNode;
+  /** Pre-filled game ID (disables the game ID input) */
   gameId?: string;
+  /** Display name for the pre-filled game */
+  gameName?: string;
+  /** Controlled open state (when provided, dialog is externally controlled) */
+  open?: boolean;
+  /** Controlled open change handler */
+  onOpenChange?: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
@@ -43,8 +50,18 @@ interface AddToWishlistDialogProps {
 // Component
 // ============================================================================
 
-export function AddToWishlistDialog({ trigger, gameId, onSuccess }: AddToWishlistDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddToWishlistDialog({
+  trigger,
+  gameId,
+  gameName,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  onSuccess,
+}: AddToWishlistDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (controlledOnOpenChange ?? (() => {})) : setInternalOpen;
 
   const [formGameId, setFormGameId] = useState(gameId ?? '');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -87,31 +104,38 @@ export function AddToWishlistDialog({ trigger, gameId, onSuccess }: AddToWishlis
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {trigger ? (
-        <DialogTrigger asChild>{trigger}</DialogTrigger>
-      ) : (
-        <DialogTrigger asChild>
-          <Button>Add to Wishlist</Button>
-        </DialogTrigger>
-      )}
+      {!isControlled &&
+        (trigger ? (
+          <DialogTrigger asChild>{trigger}</DialogTrigger>
+        ) : (
+          <DialogTrigger asChild>
+            <Button>Add to Wishlist</Button>
+          </DialogTrigger>
+        ))}
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add to Wishlist</DialogTitle>
+          <DialogTitle>
+            {gameName ? `Add "${gameName}" to Wishlist` : 'Add to Wishlist'}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Game ID */}
           <div className="space-y-1.5">
-            <Label htmlFor="wishlist-game-id">Game ID</Label>
-            <Input
-              id="wishlist-game-id"
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              value={formGameId}
-              onChange={e => setFormGameId(e.target.value)}
-              required
-              disabled={!!gameId}
-            />
+            <Label htmlFor="wishlist-game-id">Game</Label>
+            {gameId && gameName ? (
+              <p className="text-sm font-medium py-2">{gameName}</p>
+            ) : (
+              <Input
+                id="wishlist-game-id"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                value={formGameId}
+                onChange={e => setFormGameId(e.target.value)}
+                required
+                disabled={!!gameId}
+              />
+            )}
           </div>
 
           {/* Priority */}

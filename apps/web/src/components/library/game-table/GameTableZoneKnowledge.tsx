@@ -23,6 +23,8 @@ import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
 import { useGameTableDrawer } from '@/lib/stores/gameTableDrawerStore';
 
+import { HouseRulesSection } from './HouseRulesSection';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -127,6 +129,9 @@ export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps):
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* House Rules */}
+      <HouseRulesSection gameId={gameId} />
 
       {/* Chat preview — only when an agent exists */}
       {resolvedAgentId && (

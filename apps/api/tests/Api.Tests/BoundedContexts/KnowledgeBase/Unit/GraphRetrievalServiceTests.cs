@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
-public class GraphRetrievalServiceTests : IDisposable
+public sealed class GraphRetrievalServiceTests : IDisposable
 {
     private readonly MeepleAiDbContext _db;
     private readonly GraphRetrievalService _sut;

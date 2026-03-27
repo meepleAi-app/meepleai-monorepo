@@ -305,7 +305,7 @@ public sealed class ImportBggGameCommandHandlerTests
         SetupNoDuplicate();
         _bggApiClientMock
             .Setup(x => x.GetGameDetailsAsync(TestBggId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(null as BggGameDetails);
+            .ReturnsAsync((BggGameDetails?)null);
 
         var command = CreateCommand();
 
@@ -323,7 +323,7 @@ public sealed class ImportBggGameCommandHandlerTests
         SetupNoDuplicate();
         _bggApiClientMock
             .Setup(x => x.GetGameDetailsAsync(TestBggId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(null as BggGameDetails);
+            .ReturnsAsync((BggGameDetails?)null);
 
         var command = CreateCommand();
 

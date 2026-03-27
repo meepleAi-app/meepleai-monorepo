@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
-using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;

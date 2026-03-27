@@ -1,6 +1,5 @@
 using Api.BoundedContexts.GameToolkit.Application.Commands;
 using Api.BoundedContexts.GameToolkit.Application.Queries;
-using Api.BoundedContexts.GameToolkit.Application.Queries;
 using Api.BoundedContexts.GameToolkit.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;

@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Configuration;

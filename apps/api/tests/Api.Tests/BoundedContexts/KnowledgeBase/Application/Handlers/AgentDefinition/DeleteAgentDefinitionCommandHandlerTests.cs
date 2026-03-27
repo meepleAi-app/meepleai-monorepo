@@ -1,5 +1,4 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
-using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Middleware.Exceptions;

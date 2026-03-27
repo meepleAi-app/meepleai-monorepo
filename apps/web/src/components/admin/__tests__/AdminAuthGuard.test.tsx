@@ -22,7 +22,7 @@ describe('AdminAuthGuard', () => {
       </AdminAuthGuard>
     );
 
-    expect(screen.getByText('Authenticating...')).toBeInTheDocument();
+    expect(screen.getByText('Verifica autorizzazioni...')).toBeInTheDocument();
     expect(screen.queryByText('secret content')).not.toBeInTheDocument();
   });
 
@@ -49,8 +49,8 @@ describe('AdminAuthGuard', () => {
       </AdminAuthGuard>
     );
 
-    expect(screen.getByText('Unauthorized Access')).toBeInTheDocument();
-    const loginLink = screen.getByRole('link', { name: /go to login/i });
+    expect(screen.getByText('Accesso Non Autorizzato')).toBeInTheDocument();
+    const loginLink = screen.getByRole('link', { name: /vai al login/i });
     expect(loginLink).toHaveAttribute('href', '/login');
     expect(screen.queryByText('should not render')).not.toBeInTheDocument();
   });
@@ -64,7 +64,7 @@ describe('AdminAuthGuard', () => {
       </AdminAuthGuard>
     );
 
-    expect(screen.getByText('Unauthorized Access')).toBeInTheDocument();
+    expect(screen.getByText('Accesso Non Autorizzato')).toBeInTheDocument();
     expect(screen.queryByText('viewer content')).not.toBeInTheDocument();
   });
 
@@ -76,6 +76,6 @@ describe('AdminAuthGuard', () => {
     );
 
     expect(screen.getByText('admin content')).toBeInTheDocument();
-    expect(screen.queryByText('Unauthorized Access')).not.toBeInTheDocument();
+    expect(screen.queryByText('Accesso Non Autorizzato')).not.toBeInTheDocument();
   });
 });

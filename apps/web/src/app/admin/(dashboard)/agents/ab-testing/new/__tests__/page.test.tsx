@@ -10,6 +10,7 @@ import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
+  redirect: vi.fn(),
   usePathname: () => '/admin/agents/ab-testing/new',
 }));
 

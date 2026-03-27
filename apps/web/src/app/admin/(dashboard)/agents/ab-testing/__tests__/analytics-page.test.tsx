@@ -22,6 +22,7 @@ vi.mock('@/hooks/useSetNavConfig', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
+  redirect: vi.fn(),
 }));
 
 // Mock recharts to avoid SVG rendering issues in jsdom

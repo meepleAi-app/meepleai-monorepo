@@ -9,6 +9,7 @@ import AbTestAnalyticsPage from '../page';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
+  redirect: vi.fn(),
   usePathname: () => '/admin/agents/ab-testing/results',
 }));
 

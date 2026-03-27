@@ -24,6 +24,7 @@ vi.mock('@/hooks/useSetNavConfig', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
+  redirect: vi.fn(),
 }));
 
 const SESSION_ID = '00000000-0000-0000-0000-000000000001';

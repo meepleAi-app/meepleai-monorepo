@@ -23,6 +23,7 @@ vi.mock('@/hooks/useSetNavConfig', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
+  redirect: vi.fn(),
 }));
 
 describe('NewAbTestPage', () => {

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Api.BoundedContexts.GameManagement.Application.Services;
+using Api.Helpers;
 using Api.Infrastructure.Security;
 using Api.Services;
 using Microsoft.Extensions.Logging;
@@ -71,7 +72,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
         """, unsubscribeUrl);
 
         await _emailService.SendRawEmailAsync(toEmail, subject, body, ct).ConfigureAwait(false);
-        _logger.LogInformation("Game night invitation email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), title);
+        _logger.LogInformation("Game night invitation email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), LogSanitizer.Sanitize(title));
     }
 
     public async Task SendGameNightReminder24hEmailAsync(
@@ -109,7 +110,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
         """, unsubscribeUrl);
 
         await _emailService.SendRawEmailAsync(toEmail, subject, body, ct).ConfigureAwait(false);
-        _logger.LogInformation("Game night 24h reminder email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), title);
+        _logger.LogInformation("Game night 24h reminder email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), LogSanitizer.Sanitize(title));
     }
 
     public async Task SendGameNightCancelledEmailAsync(
@@ -136,7 +137,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
         """, unsubscribeUrl);
 
         await _emailService.SendRawEmailAsync(toEmail, subject, body, ct).ConfigureAwait(false);
-        _logger.LogInformation("Game night cancelled email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), title);
+        _logger.LogInformation("Game night cancelled email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), LogSanitizer.Sanitize(title));
     }
 
     public async Task SendGameNightRsvpConfirmationEmailAsync(
@@ -167,7 +168,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
         """, unsubscribeUrl);
 
         await _emailService.SendRawEmailAsync(toEmail, subject, body, ct).ConfigureAwait(false);
-        _logger.LogInformation("Game night RSVP confirmation email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), title);
+        _logger.LogInformation("Game night RSVP confirmation email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), LogSanitizer.Sanitize(title));
     }
 
     /// <summary>

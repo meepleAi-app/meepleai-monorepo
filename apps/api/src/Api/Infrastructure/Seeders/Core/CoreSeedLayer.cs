@@ -26,6 +26,14 @@ internal sealed class CoreSeedLayer : ISeedLayer
         logger.LogInformation("[Core] Seeding admin user...");
         await mediator.Send(new SeedAdminUserCommand(), cancellationToken).ConfigureAwait(false);
 
+        // Non-fatal: test user (requires SEED_TEST_PASSWORD secret)
+        await SafeExecute("test user",
+            () => mediator.Send(new SeedTestUserCommand(), cancellationToken), logger).ConfigureAwait(false);
+
+        // Non-fatal: staging demo user (only runs in Staging environment)
+        await SafeExecute("staging demo user",
+            () => mediator.Send(new SeedStagingDemoUserCommand(), cancellationToken), logger).ConfigureAwait(false);
+
         // Non-fatal: log + continue on failure
         await SafeExecute("AI models",
             () => mediator.Send(new SeedAiModelsCommand(), cancellationToken), logger).ConfigureAwait(false);

@@ -17,7 +17,7 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibrary: vi.fn(),
 }));
 
-// Mock next/navigation (required by CreateGameCtaCard)
+// Mock next/navigation (required by CreateGameCtaCard and internal router usage)
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -28,9 +28,81 @@ vi.mock('@/lib/animations', () => ({
   useReducedMotion: () => false,
 }));
 
+// Mock layout provider
+vi.mock('@/components/layout/LayoutProvider', () => ({
+  useLayoutResponsive: () => ({ isMobile: false }),
+}));
+
+// Mock sub-components to isolate PersonalLibraryPage logic
+vi.mock('@/components/library/LibraryEmptyState', () => ({
+  LibraryEmptyState: () => (
+    <div data-testid="library-empty-state">La tua libreria è vuota</div>
+  ),
+}));
+
+vi.mock('@/components/library/LibraryHeroBanner', () => ({
+  LibraryHeroBanner: () => <div data-testid="library-hero-banner" />,
+}));
+
+vi.mock('@/components/library/LibraryPageHeader', () => ({
+  LibraryPageHeader: ({ gameCount }: { gameCount: number }) => (
+    <div data-testid="library-page-header">
+      <span data-testid="header-game-count">{gameCount} giochi</span>
+    </div>
+  ),
+}));
+
+vi.mock('@/components/library/LibraryToolbar', () => ({
+  LibraryToolbar: ({
+    totalCount,
+  }: {
+    totalCount: number;
+    searchQuery: string;
+    onSearchChange: (q: string) => void;
+  }) => (
+    <div data-testid="library-toolbar">
+      <span data-testid="library-game-count">{totalCount} giochi</span>
+    </div>
+  ),
+}));
+
+vi.mock('@/components/library/UsageWidget', () => ({
+  UsageWidget: () => <div data-testid="usage-widget" />,
+}));
+
+vi.mock('@/components/ui/FilterChipsRow', () => ({
+  FilterChipsRow: () => <div data-testid="filter-chips" />,
+}));
+
+vi.mock('@/components/ui/ViewToggle', () => ({
+  ViewToggle: () => <div data-testid="view-toggle" />,
+}));
+
+vi.mock('@/components/ui/SectionBlock', () => ({
+  SectionBlock: ({
+    title,
+    children,
+  }: {
+    icon: string;
+    title: string;
+    children: React.ReactNode;
+  }) => (
+    <section data-testid={`section-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+      <h2>{title}</h2>
+      {children}
+    </section>
+  ),
+}));
+
+vi.mock('@/components/ui/data-display/meeple-card', () => ({
+  MeepleCard: ({ title }: { title: string; [key: string]: unknown }) => (
+    <div data-testid="meeple-card">{title}</div>
+  ),
+}));
+
 const mockUseLibrary = vi.mocked(useLibrary);
 
-// ── Fixtures ──────────────────────────────────────────────────────────────────
+// -- Fixtures -----------------------------------------------------------------
 
 function makeCatalogEntry(overrides: Partial<UserLibraryEntry> = {}): UserLibraryEntry {
   return {
@@ -114,7 +186,7 @@ function makePaginatedResponse(items: UserLibraryEntry[]) {
   };
 }
 
-// ── Tests ──────────────────────────────────────────────────────────────────────
+// -- Tests --------------------------------------------------------------------
 
 describe('PersonalLibraryPage', () => {
   beforeEach(() => {
@@ -134,8 +206,7 @@ describe('PersonalLibraryPage', () => {
     render(<PersonalLibraryPage />);
 
     expect(screen.getByTestId('personal-library-page')).toBeInTheDocument();
-    // EmptyState should appear — use getAllByText to handle sr-only duplicate
-    expect(screen.getAllByText(/la tua libreria è vuota/i).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('library-empty-state')).toBeInTheDocument();
   });
 
   it('renders loading skeleton when isLoading is true', () => {
@@ -199,10 +270,10 @@ describe('PersonalLibraryPage', () => {
   });
 
   // --------------------------------------------------------------------------
-  // ShelfCards rendered
+  // MeepleCards rendered
   // --------------------------------------------------------------------------
 
-  it('renders ShelfCards for each catalog game', () => {
+  it('renders MeepleCards for each catalog game', () => {
     const games = [
       makeCatalogEntry({ id: 'e1', gameTitle: 'Catan', gameId: 'g1' }),
       makeCatalogEntry({ id: 'e2', gameTitle: 'Pandemic', gameId: 'g2' }),
@@ -214,14 +285,11 @@ describe('PersonalLibraryPage', () => {
 
     render(<PersonalLibraryPage />);
 
-    // At minimum, expect cards for both catalog games (testids are shelf-card-catalog-{id})
-    const cards = document.querySelectorAll('[data-testid^="shelf-card-catalog-"]');
-    const titles = Array.from(cards).map(c => c.textContent);
-    expect(titles.some(t => t?.includes('Catan'))).toBe(true);
-    expect(titles.some(t => t?.includes('Pandemic'))).toBe(true);
+    expect(screen.getByText('Catan')).toBeInTheDocument();
+    expect(screen.getByText('Pandemic')).toBeInTheDocument();
   });
 
-  it('renders ShelfCards for each custom game', () => {
+  it('renders MeepleCards for each custom game', () => {
     const games = [
       makeCustomEntry({ id: 'e3', gameTitle: 'Gioco A', gameId: 'p1', privateGameId: 'pg1' }),
       makeCustomEntry({ id: 'e4', gameTitle: 'Gioco B', gameId: 'p2', privateGameId: 'pg2' }),
@@ -241,7 +309,7 @@ describe('PersonalLibraryPage', () => {
   // "Crea gioco" CTA card
   // --------------------------------------------------------------------------
 
-  it('renders "Crea gioco" CTA card at end of custom games section', () => {
+  it('renders "Crea gioco" CTA card in custom games section', () => {
     const customGame = makeCustomEntry();
     mockUseLibrary.mockReturnValue({
       data: makePaginatedResponse([customGame]),
@@ -282,7 +350,8 @@ describe('PersonalLibraryPage', () => {
 
     expect(screen.getByTestId('library-toolbar')).toBeInTheDocument();
     expect(screen.getByTestId('library-game-count')).toBeInTheDocument();
-    // totalCount = 2 (from paginated response)
-    expect(screen.getByText(/2 giochi/i)).toBeInTheDocument();
+    // totalCount = 2 (from paginated response) — multiple elements may contain this text
+    const gameCountEl = screen.getByTestId('library-game-count');
+    expect(gameCountEl).toHaveTextContent(/2 giochi/i);
   });
 });

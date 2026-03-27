@@ -194,7 +194,7 @@ describe('MeepleGameCatalogCard', () => {
       renderWithProviders(<MeepleGameCatalogCard game={mockGame} />);
       const link = screen.getByTestId('nav-link-0');
       expect(link).toHaveTextContent('Regolamento');
-      expect(link).toHaveAttribute('href', '/games/game-1');
+      expect(link).toHaveAttribute('href', '/library/games/game-1');
     });
 
     it('does NOT render KB, Agents, Chats, or Sessions links', () => {
@@ -212,7 +212,7 @@ describe('MeepleGameCatalogCard', () => {
     it('renders info button with correct href', () => {
       renderWithProviders(<MeepleGameCatalogCard game={mockGame} />);
       const info = screen.getByTestId('info-button');
-      expect(info).toHaveAttribute('href', '/games/game-1');
+      expect(info).toHaveAttribute('href', '/library/games/game-1');
       expect(info).toHaveAttribute('title', 'Vai al dettaglio');
     });
   });

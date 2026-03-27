@@ -20,6 +20,8 @@ import type { WishlistItemDto } from '@/lib/api/schemas/wishlist.schemas';
 
 interface MeepleWishlistCardProps {
   item: WishlistItemDto;
+  /** Resolved game name — falls back to item.gameName or truncated gameId */
+  gameName?: string;
   onRemove?: (id: string) => void;
   onUpdate?: (id: string) => void;
 }
@@ -45,7 +47,12 @@ function formatPriorityItalian(priority: string): string {
 // Component
 // ============================================================================
 
-export function MeepleWishlistCard({ item, onRemove, onUpdate }: MeepleWishlistCardProps) {
+export function MeepleWishlistCard({
+  item,
+  gameName,
+  onRemove,
+  onUpdate,
+}: MeepleWishlistCardProps) {
   const metadata: MeepleCardMetadata[] = [];
 
   if (item.targetPrice != null) {
@@ -80,7 +87,7 @@ export function MeepleWishlistCard({ item, onRemove, onUpdate }: MeepleWishlistC
     <MeepleCard
       entity="game"
       variant="list"
-      title={item.gameId}
+      title={gameName || item.gameName || `Game ${item.gameId.slice(0, 8)}...`}
       subtitle={item.notes ?? undefined}
       badge={formatPriorityItalian(item.priority)}
       metadata={metadata}

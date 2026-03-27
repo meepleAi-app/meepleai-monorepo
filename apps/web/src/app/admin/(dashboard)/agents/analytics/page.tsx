@@ -13,6 +13,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
 import { Activity, Target, BarChart3, TrendingUp, RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 import type { AgentMetrics, TopAgent } from '@/app/(authenticated)/admin/agents/metrics/client';
 import { CostBreakdownChart } from '@/components/admin/agents/CostBreakdownChart';
@@ -23,6 +24,7 @@ import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Select,
   SelectContent,
@@ -87,6 +89,9 @@ async function fetchTopAgents(
 // ============================================================================
 
 export default function AgentAnalyticsPage() {
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get('tab') ?? 'overview';
+
   const [dateRange, setDateRange] = useState<DateRange>('7d');
   const [sortBy, setSortBy] = useState<'invocations' | 'cost' | 'confidence'>('invocations');
 
@@ -150,10 +155,10 @@ export default function AgentAnalyticsPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-            Agent Analytics
+            Analisi Agenti
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Monitor AI agent performance and costs
+            Monitora performance e costi degli agenti AI
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -193,110 +198,136 @@ export default function AgentAnalyticsPage() {
         </Card>
       )}
 
-      {/* KPI Cards */}
-      <MetricsKpiCards metrics={metrics} isLoading={metricsLoading} />
+      {/* Tabbed Content */}
+      <Tabs defaultValue={defaultTab}>
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="top-agents">Top Agents</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+        </TabsList>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Usage Over Time */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <TrendingUp className="h-4 w-4 text-blue-500" />
-              Usage Over Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {metricsLoading ? (
-              <Skeleton className="h-64 w-full" />
-            ) : metrics?.usageOverTime ? (
-              <UsageChart data={metrics.usageOverTime} />
-            ) : (
-              <div className="flex h-64 items-center justify-center text-muted-foreground">
-                No data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Overview Tab: KPI cards + usage/cost charts */}
+        <TabsContent value="overview" className="space-y-6 mt-6">
+          {/* KPI Cards */}
+          <MetricsKpiCards metrics={metrics} isLoading={metricsLoading} />
 
-        {/* Cost Breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <BarChart3 className="h-4 w-4 text-emerald-500" />
-              Cost Breakdown by Model
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {metricsLoading ? (
-              <Skeleton className="h-64 w-full" />
-            ) : metrics?.costBreakdown ? (
-              <CostBreakdownChart data={metrics.costBreakdown} />
-            ) : (
-              <div className="flex h-64 items-center justify-center text-muted-foreground">
-                No data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Usage Over Time */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <TrendingUp className="h-4 w-4 text-blue-500" />
+                  Usage Over Time
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {metricsLoading ? (
+                  <Skeleton className="h-64 w-full" />
+                ) : metrics?.usageOverTime ? (
+                  <UsageChart data={metrics.usageOverTime} />
+                ) : (
+                  <div className="flex h-64 items-center justify-center text-muted-foreground">
+                    No data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-      {/* Top Agents Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-            <Activity className="h-4 w-4 text-purple-500" />
-            Top Agents
-          </CardTitle>
-          <Select value={sortBy} onValueChange={(v: string) => setSortBy(v as typeof sortBy)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="invocations">By Usage</SelectItem>
-              <SelectItem value="cost">By Cost</SelectItem>
-              <SelectItem value="confidence">By Confidence</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardHeader>
-        <CardContent>
-          {topAgentsLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : topAgents && topAgents.length > 0 ? (
-            <TopAgentsTable agents={topAgents} />
-          ) : (
-            <div className="flex h-32 items-center justify-center text-muted-foreground">
-              No agents found
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {/* Cost Breakdown */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <BarChart3 className="h-4 w-4 text-emerald-500" />
+                  Cost Breakdown by Model
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {metricsLoading ? (
+                  <Skeleton className="h-64 w-full" />
+                ) : metrics?.costBreakdown ? (
+                  <CostBreakdownChart data={metrics.costBreakdown} />
+                ) : (
+                  <div className="flex h-64 items-center justify-center text-muted-foreground">
+                    No data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-      {/* Top Queries */}
-      {metrics?.topQueries && metrics.topQueries.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <Target className="h-4 w-4 text-amber-500" />
-              Top Queries
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {metrics.topQueries.map((query, idx) => (
-                <div key={idx} className="flex items-center justify-between rounded-lg border p-3">
-                  <span className="truncate text-sm">{query.query}</span>
-                  <Badge variant="secondary">{query.count}</Badge>
+        {/* Top Agents Tab: top agents table + top queries */}
+        <TabsContent value="top-agents" className="space-y-6 mt-6">
+          {/* Top Agents Table */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Activity className="h-4 w-4 text-purple-500" />
+                Top Agents
+              </CardTitle>
+              <Select value={sortBy} onValueChange={(v: string) => setSortBy(v as typeof sortBy)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="invocations">By Usage</SelectItem>
+                  <SelectItem value="cost">By Cost</SelectItem>
+                  <SelectItem value="confidence">By Confidence</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent>
+              {topAgentsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              ) : topAgents && topAgents.length > 0 ? (
+                <TopAgentsTable agents={topAgents} />
+              ) : (
+                <div className="flex h-32 items-center justify-center text-muted-foreground">
+                  No agents found
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Top Queries */}
+          {metrics?.topQueries && metrics.topQueries.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <Target className="h-4 w-4 text-amber-500" />
+                  Top Queries
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {metrics.topQueries.map((query, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <span className="truncate text-sm">{query.query}</span>
+                      <Badge variant="secondary">{query.count}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Trends Tab: date range selector + placeholder */}
+        <TabsContent value="trends" className="mt-6">
+          <EmptyFeatureState
+            title="Trends in arrivo"
+            description="Analisi storica delle esecuzioni RAG — visualizzazione delle tendenze nel tempo in sviluppo."
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

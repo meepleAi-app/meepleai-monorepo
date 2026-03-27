@@ -13,7 +13,9 @@
  */
 
 import {
+  Bell,
   BookOpen,
+  Bot,
   Brain,
   Calendar,
   Clock,
@@ -21,7 +23,6 @@ import {
   LayoutDashboard,
   ShieldIcon,
   User,
-  Users,
   Users2,
 } from 'lucide-react';
 
@@ -63,12 +64,14 @@ const LIBRARY_CHILDREN: UnifiedNavSubItem[] = LIBRARY_TABS.map(tab => ({
  *
  * | id        | label     | priority | visibility   | note                     |
  * |-----------|-----------|----------|-------------|--------------------------|
- * | welcome   | Welcome   | 0        | anonOnly    | landing page only        |
- * | library   | Libreria  | 2        | authOnly    | children: tabs           |
- * | chat      | Chat      | 3        | authOnly    |                          |
- * | profile   | Profilo   | 6        | authOnly    |                          |
- * | agents    | Agenti    | 7        | authOnly    |                          |
- * | sessions  | Sessioni  | 8        | authOnly    |                          |
+ * | welcome       | Welcome   | 0        | anonOnly    | landing page only        |
+ * | library       | Libreria  | 2        | authOnly    | children: tabs           |
+ * | chat          | Chat      | 3        | authOnly    |                          |
+ * | notifications | Notifiche | 4        | authOnly    | hideFromMainNav          |
+ * | game-nights   | Serate    | 5        | authOnly    |                          |
+ * | profile       | Profilo   | 6        | authOnly    |                          |
+ * | agents        | Agenti    | 7        | authOnly    |                          |
+ * | sessions      | Sessioni  | 8        | authOnly    |                          |
  */
 const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
   {
@@ -109,6 +112,31 @@ const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
     visibility: { authOnly: true },
   },
   {
+    id: 'notifications',
+    href: '/notifications',
+    icon: Bell,
+    iconName: 'bell',
+    label: 'Notifiche',
+    ariaLabel: 'Navigate to notifications',
+    priority: 4,
+    testId: 'nav-notifications',
+    activePattern: /^\/notifications/,
+    visibility: { authOnly: true },
+    hideFromMainNav: true,
+  },
+  {
+    id: 'game-nights',
+    href: '/game-nights',
+    icon: Calendar,
+    iconName: 'calendar',
+    label: 'Serate',
+    ariaLabel: 'Navigate to game nights',
+    priority: 5,
+    testId: 'nav-game-nights',
+    activePattern: /^\/game-nights/,
+    visibility: { authOnly: true },
+  },
+  {
     id: 'profile',
     href: '/profile',
     icon: User,
@@ -124,8 +152,8 @@ const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
   {
     id: 'agents',
     href: '/agents',
-    icon: Users,
-    iconName: 'users',
+    icon: Bot,
+    iconName: 'bot',
     label: 'Agenti',
     ariaLabel: 'Navigate to agents list',
     priority: 7,
@@ -213,6 +241,11 @@ const ALPHA_NAV_IDS = new Set([
   'catalog',
   'profile',
   'admin',
+  'agents',
+  'sessions',
+  'play-records',
+  'game-nights',
+  'notifications',
 ]);
 
 /** Unified navigation items — filtered by ALPHA_MODE when active */

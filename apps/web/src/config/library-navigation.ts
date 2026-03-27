@@ -59,7 +59,7 @@ const _ALL_LIBRARY_TABS: LibraryTab[] = [
 
 const isAlphaMode = process.env.NEXT_PUBLIC_ALPHA_MODE === 'true';
 
-const ALPHA_LIBRARY_TAB_IDS = new Set(['collection', 'private']);
+const ALPHA_LIBRARY_TAB_IDS = new Set(['collection', 'private', 'wishlist']);
 
 /** Library tabs — filtered by ALPHA_MODE when active */
 export const LIBRARY_TABS: LibraryTab[] = isAlphaMode

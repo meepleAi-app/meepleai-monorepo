@@ -36,8 +36,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 
-import { useQuery } from '@tanstack/react-query';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   MessageCircle,
   Settings,

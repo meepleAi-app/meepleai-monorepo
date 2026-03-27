@@ -328,6 +328,7 @@ catalog:
   - title: Codenames
     bggId: 178900
     language: en
+    pdf: codenames_rulebook.pdf
     bggEnhanced: true
     description: >+
       Two rival spymasters know the secret identities of 25 agents. Their teammates know the agents only by their codenames &mdash; single-word labels like "disease", "Germany", and "carrot". Yes, carrot. It's a legitimate codename. Each spymaster wants their team to identify their agents first...without uncovering the assassin by mistake.
@@ -405,6 +406,7 @@ catalog:
   - title: Terraforming Mars
     bggId: 167791
     language: en
+    pdf: terraforming-mars_rulebook.pdf
     bggEnhanced: true
     description: >+
       In the 2400s, mankind begins to terraform the planet Mars. Giant corporations, sponsored by the World Government on Earth, initiate huge projects to raise the temperature, the oxygen level, and the ocean coverage until the environment is habitable. In Terraforming Mars, you play one of those corporations and work together in the terraforming process, but compete for getting victory points that are awarded not only for your contribution to the terraforming, but also for advancing human infrastructure throughout the solar system, and doing other commendable things.
@@ -493,6 +495,7 @@ catalog:
   - title: 7 Wonders
     bggId: 68448
     language: en
+    pdf: 7-wonders_rulebook.pdf
     bggEnhanced: true
     description: >+
       You are the leader of one of the 7 great cities of the Ancient World. Gather resources, develop commercial routes, and affirm your military supremacy. Build your city and erect an architectural wonder which will transcend future times.
@@ -557,6 +560,7 @@ catalog:
   - title: Ticket to Ride
     bggId: 9209
     language: en
+    pdf: ticket-to-ride_rulebook.pdf
     bggEnhanced: true
     description: >+
       With elegantly simple gameplay, Ticket to Ride can be learned in under 15 minutes. Players collect cards of various types of train cars they then use to claim railway routes in North America. The longer the routes, the more points they earn. Additional points come to those who fulfill Destination Tickets &ndash; goal cards that connect distant cities; and to the player who builds the longest continuous route.
@@ -620,6 +624,7 @@ catalog:
   - title: Splendor
     bggId: 148228
     language: en
+    pdf: splendor_rulebook.pdf
     bggEnhanced: true
     description: >+
       Splendor is a game of chip-collecting and card development. Players are merchants of the Renaissance trying to buy gem mines, means of transportation, shops&mdash;all in order to acquire the most prestige points. If you're wealthy enough, you might even receive a visit from a noble at some point, which of course will further increase your prestige.
@@ -684,6 +689,7 @@ catalog:
   - title: 'Ticket to Ride: Europe'
     bggId: 14996
     language: en
+    pdf: ticket-to-ride-europe_rulebook.pdf
     bggEnhanced: true
     description: >+
       Ticket to Ride: Europe takes you on a new train adventure across Europe. From Edinburgh to Constantinople and from Lisbon to Moscow, you'll visit great cities of turn-of-the-century Europe. Like the original Ticket to Ride, the game remains elegantly simple, can be learned in 5 minutes, and appeals to both families and experienced gamers. Ticket to Ride: Europe is a complete, new game and does not require the original version.
@@ -754,6 +760,7 @@ catalog:
   - title: Dominion
     bggId: 36218
     language: en
+    pdf: dominion_rulebook.pdf
     bggEnhanced: true
     description: >+
       "You are a monarch, like your parents before you, a ruler of a small pleasant kingdom of rivers and evergreens. Unlike your parents, however, you have hopes and dreams! You want a bigger and more pleasant kingdom, with more rivers and a wider variety of trees. You want a Dominion! In all directions lie fiefs, freeholds, and feodums. All are small bits of land, controlled by petty lords and verging on anarchy. You will bring civilization to these people, uniting them under your banner.
@@ -826,6 +833,7 @@ catalog:
   - title: Scythe
     bggId: 169786
     language: en
+    pdf: scythe_rulebook.pdf
     bggEnhanced: true
     description: >+
       It is a time of unrest in 1920s Europa. The ashes from the first great war still darken the snow. The capitalistic city-state known simply as &ldquo;The Factory&rdquo;, which fueled the war with heavily armored mechs, has closed its doors, drawing the attention of several nearby countries.
@@ -899,6 +907,7 @@ catalog:
   - title: Patchwork
     bggId: 163412
     language: en
+    pdf: patchwork_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Patchwork, two players compete to build the most aesthetic (and high-scoring) patchwork quilt on a personal 9x9 game board. To start play, lay out all of the patches at random in a circle and place a marker directly clockwise of the 2-1 patch. Each player takes five buttons &mdash; the currency/points in the game &mdash; and someone is chosen as the start player.
@@ -978,6 +987,7 @@ catalog:
   - title: Love Letter
     bggId: 129622
     language: en
+    pdf: love-letter_rulebook.pdf
     bggEnhanced: true
     description: >+
       All of the eligible young men (and many of the not-so-young) seek to woo the princess of Tempest. Unfortunately, she has locked herself in the palace, and you must rely on others to take your romantic letters to her. Will yours reach her first?
@@ -1046,6 +1056,7 @@ catalog:
   - title: King of Tokyo
     bggId: 70323
     language: en
+    pdf: king-of-tokyo_rulebook.pdf
     bggEnhanced: true
     description: >+
       In King of Tokyo, you play mutant monsters, gigantic robots, and strange aliens&mdash;all of whom are destroying Tokyo and whacking each other in order to become the one and only King of Tokyo.
@@ -1132,6 +1143,7 @@ catalog:
   - title: Dixit
     bggId: 39856
     language: en
+    pdf: dixit_rulebook.pdf
     bggEnhanced: true
     description: >+
       Each turn in Dixit, one player is the storyteller who chooses one of the six cards in their hand, then expresses an idea, with sounds or words, that is reflected on that card's image, and places the card face down on the playing surface. Each other player then selects the card that best matches that expression, and passes the selected card to the storyteller, face down.
@@ -1193,6 +1205,7 @@ catalog:
   - title: Gloomhaven
     bggId: 174430
     language: en
+    pdf: gloomhaven_rulebook.pdf
     bggEnhanced: true
     description: >+
       Gloomhaven  is a game of Euro-inspired tactical combat in a persistent world of shifting motives. Players will take on the roles of wandering adventurers with their own special sets of skills and their own reasons for traveling to this dark corner of the world. Players must work together out of necessity to clear out menacing dungeons and forgotten ruins. In the process, they will enhance their abilities with experience and loot, discover new locations to explore and plunder, and expand an ever-branching story fueled by the decisions they make.
@@ -1259,6 +1272,7 @@ catalog:
   - title: Small World
     bggId: 40692
     language: en
+    pdf: small-world_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Small World, players vie for conquest and control of a world that is simply too small to accommodate them all.
@@ -1322,6 +1336,7 @@ catalog:
   - title: Everdell
     bggId: 199792
     language: en
+    pdf: everdell_rulebook.pdf
     bggEnhanced: true
     description: >+
       Within the charming valley of Everdell, beneath the boughs of towering trees, among meandering streams and mossy hollows, a civilization of forest critters is thriving and expanding. From Everfrost to Bellsong, many a year have come and gone, but the time has come for new territories to be settled and new cities established. You will be the leader of a group of critters intent on just such a task. There are buildings to construct, lively characters to meet, events to host&mdash;you have a busy year ahead of yourself. Will the sun shine brightest on your city before the winter moon rises?
@@ -1397,6 +1412,7 @@ catalog:
   - title: Munchkin
     bggId: 1927
     language: en
+    pdf: munchkin_rulebook.pdf
     bggEnhanced: true
     description: >+
       				
@@ -1524,6 +1540,7 @@ catalog:
   - title: Forbidden Island
     bggId: 65244
     language: en
+    pdf: forbidden-island_rulebook.pdf
     bggEnhanced: true
     description: >+
       Forbidden Island is a visually stunning cooperative board game. Instead of winning by competing with other players like most games, everyone must work together to win the game. Players take turns moving their pawns around the 'island', which is built by arranging the many beautifully screen-printed tiles before play begins. As the game progresses, more and more island tiles sink, becoming unavailable, and the pace increases. Players use strategies to keep the island from sinking, while trying to collect treasures and items. As the water level rises, it gets more difficult- sacrifices must be made.
@@ -1595,6 +1612,7 @@ catalog:
   - title: Root
     bggId: 237182
     language: en
+    pdf: root_rulebook.pdf
     bggEnhanced: true
     description: >+
       Root is a game of adventure and war in which 2 to 4 (1 to 6 with the 'Riverfolk' expansion, 2-6 with the 'Underworld', or 'Marauder' expansions) players battle for control of a vast wilderness. Like Vast: The Crystal Caverns, each player in Root has unique capabilities and a different victory condition. Now, with the aid of gorgeous, multi-use cards, a truly asymmetric design has never been more accessible.
@@ -1666,6 +1684,7 @@ catalog:
   - title: Sushi Go!
     bggId: 133473
     language: en
+    pdf: sushi-go_rulebook.pdf
     bggEnhanced: true
     description: >+
       In the super-fast sushi card game Sushi Go!, you are eating at a sushi restaurant and trying to grab the best combination of sushi dishes as they whiz by. Score points for collecting the most sushi rolls or making a full set of sashimi. Dip your favorite nigiri in wasabi to triple its value! And once you've eaten it all, finish your meal with all the pudding you've got! But be careful which sushi you allow your friends to take; it might be just what they need to beat you!
@@ -1725,6 +1744,7 @@ catalog:
   - title: Spirit Island
     bggId: 162886
     language: en
+    pdf: spirit-island_rulebook.pdf
     bggEnhanced: true
     description: >+
       In the most distant reaches of the world, magic still exists, embodied by spirits of the land, of the sky, and of every natural thing. As the great powers of Europe stretch their colonial empires further and further, they will inevitably lay claim to a place where spirits still hold power - and when they do, the land itself will fight back alongside the islanders who live there.
@@ -1796,6 +1816,7 @@ catalog:
   - title: Jaipur
     bggId: 54043
     language: en
+    pdf: jaipur_rulebook.pdf
     bggEnhanced: true
     description: >+
       You are one of the two most powerful traders in the city of Jaipur, the capital of Rajasthan, but that's not enough for you because only the merchant with two "seals of excellence" will have the privilege of being invited to the Maharaja's court. You are therefore going to have to do better than your direct competitor by buying, exchanging, and selling at better prices, all while keeping an eye on both your camel herds.
@@ -1858,6 +1879,7 @@ catalog:
   - title: The Quacks of Quedlinburg
     bggId: 244521
     language: en
+    pdf: quacks-of-quedlinburg_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Quacks, which was first released as The Quacks of Quedlinburg, players are charlatans &mdash; or quack doctors &mdash; each making their own secret brew by adding ingredients one at a time. Take care with what you add, though, for a pinch too much of this or that will spoil the whole mixture!
@@ -1920,6 +1942,7 @@ catalog:
   - title: 'The Crew: Quest for Planet Nine'
     bggId: 284083
     language: en
+    pdf: the-crew_rulebook.pdf
     bggEnhanced: true
     description: >+
       In the co-operative trick-taking game The Crew: The Quest for Planet Nine, the players set out as astronauts on an uncertain space adventure. What are the rumors regarding the unknown planet about? The eventful journey through space extends over 50 exciting missions. But this game can only be defeated by meeting common individual tasks of each player. In order to meet the varied challenges communication is essential in the team. But this is more difficult than expected in space.
@@ -1983,6 +2006,7 @@ catalog:
   - title: Coup
     bggId: 131357
     language: en
+    pdf: coup_rulebook.pdf
     bggEnhanced: true
     description: >+
       You are head of a family in an Italian city-state, a city run by a weak and corrupt court. You need to manipulate, bluff and bribe your way to power. Your object is to destroy the influence of all the other families, forcing them into exile. Only one family will survive...
@@ -2084,6 +2108,7 @@ catalog:
   - title: Exploding Kittens
     bggId: 172225
     language: en
+    pdf: exploding-kittens_rulebook.pdf
     bggEnhanced: true
     description: >+
       Exploding Kittens is a kitty-powered version of Russian Roulette. Players take turns drawing cards until someone draws an exploding kitten and loses the game. The deck is made up of cards that let you avoid exploding by peeking at cards before you draw, forcing your opponent to draw multiple cards, or shuffling the deck.
@@ -2144,6 +2169,7 @@ catalog:
   - title: Agricola
     bggId: 31260
     language: en
+    pdf: agricola_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Agricola, you're a farmer in a wooden shack with your spouse and little else. At first, on a turn, your family gets to take only two actions, one for you and one for your spouse, as might be found among all the possibilities on a farm: plowing fields; collecting materials; building fences, and so on. There are numerous choices available, and while the game progresses you'll have more and more, as each round a new action card is flipped over, offering one more possible action. You might think about having kids in order to get more work accomplished but first you'll need to expand your house to make room - and what are you going to feed all the little rug rats?
@@ -2207,6 +2233,7 @@ catalog:
   - title: Kingdomino
     bggId: 204583
     language: en
+    pdf: kingdomino_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Kingdomino, you are a lord seeking new lands in which to expand your kingdom. You must explore all the lands, including wheat fields, lakes, and mountains, in order to spot the best plots, while competing with other lords to acquire them first.
@@ -2269,6 +2296,7 @@ catalog:
   - title: Hanabi
     bggId: 98778
     language: en
+    pdf: hanabi_rulebook.pdf
     bggEnhanced: true
     description: >+
       Hanabi&mdash;named for the Japanese word for "fireworks"&mdash;is a cooperative game in which players try to create the perfect fireworks show by placing the cards on the table in the right order. (In Japanese, hanabi is written as 花火; these are the ideograms flower and fire, respectively.)
@@ -2336,6 +2364,7 @@ catalog:
   - title: 'Pandemic Legacy: Season 1'
     bggId: 161936
     language: en
+    pdf: pandemic-legacy-s1_rulebook.pdf
     bggEnhanced: true
     description: >+
       Pandemic Legacy is a co-operative campaign game, with an overarching story arc played through 12-24 sessions, depending on how well your group does at the game. At the beginning, the game starts in a very similar fashion as basic Pandemic, in which your team of disease-fighting specialists races against the clock to travel around the world, treating disease hot spots while researching cures for each of four plagues before they get out of hand.
@@ -2400,6 +2429,7 @@ catalog:
   - title: Cascadia
     bggId: 295947
     language: en
+    pdf: cascadia_rulebook.pdf
     bggEnhanced: true
     description: >+
       Cascadia is a puzzly tile-laying and token-drafting game featuring the habitats and wildlife of the Pacific Northwest.
@@ -2463,6 +2493,7 @@ catalog:
   - title: 'Gloomhaven: Jaws of the Lion'
     bggId: 291457
     language: en
+    pdf: gloomhaven-jaws-of-the-lion_rulebook.pdf
     bggEnhanced: true
     description: >+
       Gloomhaven: Jaws of the Lion is a standalone game that takes place before the events of Gloomhaven. The game includes four new characters &mdash; Valrath Red Guard (tank, crowd control), Inox Hatchet (ranged damage), Human Voidwarden (support, mind control), and Quatryl Demolitionist (melee damage, obstacle manipulation) &mdash; that can also be used in the original Gloomhaven game.
@@ -2530,6 +2561,7 @@ catalog:
   - title: Power Grid
     bggId: 2651
     language: en
+    pdf: power-grid_rulebook.pdf
     bggEnhanced: true
     description: >+
       Power Grid is the updated release of the Friedemann Friese crayon game Funkenschlag. It removes the crayon aspect from network building in the original edition, while retaining the fluctuating commodities market like Crude: The Oil Game and an auction round intensity reminiscent of The Princes of Florence.
@@ -2599,6 +2631,7 @@ catalog:
   - title: Betrayal at House on the Hill
     bggId: 10547
     language: en
+    pdf: betrayal-at-house-on-the-hill_rulebook.pdf
     bggEnhanced: true
     description: >+
       Betrayal at House on the Hill quickly builds suspense and excitement as players explore a haunted mansion of their own 'design', encountering spirits and frightening omens that foretell their fate. With an estimated one hour playing time, Betrayal at House on the Hill is ideal for parties, family gatherings or casual fun with friends.
@@ -2654,6 +2687,7 @@ catalog:
   - title: Ark Nova
     bggId: 342942
     language: en
+    pdf: ark-nova_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Ark Nova, you will plan and design a modern, scientifically managed zoo. With the ultimate goal of owning the most successful zoological establishment, you will build enclosures, accommodate animals, and support conservation projects all over the world. Specialists and unique buildings will help you in achieving this goal.
@@ -2733,6 +2767,7 @@ catalog:
   - title: Puerto Rico
     bggId: 3076
     language: en
+    pdf: puerto-rico_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Puerto Rico, players assume the roles of colonial governors on the island of Puerto Rico. The aim of the game is to amass victory points by shipping goods to Europe or by constructing buildings.
@@ -2797,6 +2832,7 @@ catalog:
   - title: Lost Ruins of Arnak
     bggId: 312484
     language: en
+    pdf: lost-ruins-of-arnak_rulebook.pdf
     bggEnhanced: true
     description: >+
       On an uninhabited island in uncharted seas, explorers have found traces of a great civilization. Now you will lead an expedition to explore the island, find lost artifacts, and face fearsome guardians, all in a quest to learn the island's secrets.
@@ -2874,6 +2910,7 @@ catalog:
   - title: The Castles of Burgundy
     bggId: 84876
     language: en
+    pdf: castles-of-burgundy_rulebook.pdf
     bggEnhanced: true
     description: >+
       The game is set in the Burgundy region of High Medieval France. Each player takes on the role of an aristocrat, originally controlling a small princedom. While playing they aim to build settlements and powerful castles, practice trade along the river, exploit silver mines, and use the knowledge of travelers. The game is about players taking settlement tiles from the game board and placing them into their princedom which is represented by the player board. Every tile has a function that starts when the tile is placed in the princedom. The princedom itself consists of several regions, each of which demands its own type of settlement tile.
@@ -2941,6 +2978,7 @@ catalog:
   - title: 'Arkham Horror: The Card Game'
     bggId: 205637
     language: en
+    pdf: arkham-horror-tcg_rulebook.pdf
     bggEnhanced: true
     description: >+
       Something evil stirs in Arkham, and only you can stop it. Blurring the traditional lines between role-playing and card game experiences, Arkham Horror: The Card Game is a Living Card Game of Lovecraftian mystery, monsters, and madness!
@@ -3011,6 +3049,7 @@ catalog:
   - title: Mysterium
     bggId: 181304
     language: en
+    pdf: mysterium_rulebook.pdf
     bggEnhanced: true
     description: >+
       In the 1920s, Mr. MacDowell, a gifted astrologer, immediately detected a supernatural being upon entering his new house in Scotland. He gathered eminent mediums of his time for an extraordinary s&eacute;ance, and they have seven hours to make contact with the ghost and investigate any clues that it can provide to unlock an old mystery.
@@ -3083,6 +3122,7 @@ catalog:
   - title: 'Dominion: Prosperity'
     bggId: 66690
     language: en
+    pdf: dominion-prosperity_rulebook.pdf
     bggEnhanced: true
     description: >+
       Released in late 2010, Prosperity is the 4th addition to the Dominion game family. It adds 25 new Kingdom cards to Dominion, plus 2 new Basic cards that let players keep building up past Gold and Province. The central theme is wealth; there are treasures with abilities, cards that interact with treasures, and powerful expensive cards. (Source: http://www.riograndegames.com/games.html?id=361 )
@@ -3134,6 +3174,7 @@ catalog:
   - title: 'Century: Spice Road'
     bggId: 209685
     language: en
+    pdf: century-spice-road_rulebook.pdf
     bggEnhanced: true
     description: >+
       Century: Spice Road is the first in a series of games that explores the history of each century with spice-trading as the theme for the first installment.  In Century: Spice Road, players are caravan leaders who travel the famed silk road to deliver spices to the far reaches of the continent for fame and glory. Each turn, players perform one of four actions:
@@ -3194,6 +3235,7 @@ catalog:
   - title: Gloom
     bggId: 12692
     language: en
+    pdf: gloom_rulebook.pdf
     bggEnhanced: true
     description: >+
       The world of Gloom is a sad and benighted place. The sky is gray, the tea is cold, and a new tragedy lies around every corner. Debt, disease, heartache, and packs of rabid flesh-eating mice&mdash;just when it seems like things can't get any worse, they do. But some say that one's reward in the afterlife is based on the misery endured in life. If so, there may yet be hope&mdash;if not in this world, then in the peace that lies beyond.
@@ -3236,6 +3278,7 @@ catalog:
   - title: Hive Pocket
     bggId: 154597
     language: en
+    pdf: hive-pocket_rulebook.pdf
     bggEnhanced: true
     description: >+
       Hive is a strategic game for two players that is not restricted by a board and can be played anywhere on any flat surface. The base game of Hive is made up of twenty two pieces, eleven black and eleven white, resembling a variety of creatures each with a unique way of moving. Hive Carbon and Hive Pocket include the Mosquito and Ladybug expansions, for a total of 26 pieces.
@@ -3295,6 +3338,7 @@ catalog:
   - title: Raiders of the North Sea
     bggId: 170042
     language: en
+    pdf: raiders-of-the-north-sea_rulebook.pdf
     bggEnhanced: true
     description: >+
       Raiders of the North Sea is set in the central years of the Viking Age. As Viking warriors, players seek to impress the Chieftain by raiding unsuspecting settlements. To do so, players need to assemble a crew, collect provisions, and journey north to plunder gold, iron and livestock. Glory can be found in battle, even at the hands of the Valkyrie, so gather your warriors because it's raiding season!
@@ -3355,6 +3399,7 @@ catalog:
   - title: 'Pandemic Legacy: Season 2'
     bggId: 221107
     language: en
+    pdf: pandemic-legacy-s2_rulebook.pdf
     bggEnhanced: true
     description: >+
       Description from the publisher:
@@ -3423,6 +3468,7 @@ catalog:
   - title: Imperial Settlers
     bggId: 154203
     language: en
+    pdf: imperial-settlers_rulebook.pdf
     bggEnhanced: true
     description: >+
       Settlers from four major powers of the world have discovered new lands, with new resources and opportunities. Romans, Barbarians, Egyptians and Japanese all at once move there to expand the boundaries of their empires. They build new buildings to strengthen their economy, they found mines and fields to gather resources, and they build barracks and training grounds to train soldiers. Soon after they discover that this land is far too small for everybody, then the war begins...
@@ -3478,6 +3524,7 @@ catalog:
   - title: Guillotine
     bggId: 116
     language: en
+    pdf: guillotine_rulebook.pdf
     bggEnhanced: true
     description: >+
       The French Revolution is famous in part for the use of the guillotine to put nobles to death, and this is the macabre subject of this light card game.  As executioners pandering to the masses, the players are trying to behead the most popular nobles.  Each day the nobles are lined up and players take turns killing the ones at the front of the line until all the nobles are gone.  However, players are given cards which will manipulate the line order right before 'harvesting' heads, which is what makes the game interesting.  After three days of chopping, the highest total carries the day.
@@ -3516,6 +3563,7 @@ catalog:
   - title: Harmonies
     bggId: 414317
     language: en
+    pdf: harmonies_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Harmonies, build landscapes by placing colored tokens and create habitats for your animals. To earn the most points and win the game, incorporate the habitats in your landscapes wisely and have as many animals as you can settle there.
@@ -3578,6 +3626,7 @@ catalog:
   - title: 'Dixit: Odyssey'
     bggId: 92828
     language: en
+    pdf: dixit-odyssey_rulebook.pdf
     bggEnhanced: true
     description: >+
       Dixit Odyssey is both a standalone game and an expansion (Dixit: Odyssey (expansion)) for Jean-Louis Roubira's Dixit, which won Germany's Spiel des Jahres award in 2010.
@@ -3635,6 +3684,7 @@ catalog:
   - title: Hanamikoji
     bggId: 158600
     language: en
+    pdf: hanamikoji_rulebook.pdf
     bggEnhanced: true
     description: >+
       Welcome to the most famed Geisha street in the old capital, Hanamikoji. Geishas are elegant and graceful women who are skilled in art, music, dance, and a variety of performances and ceremonies. Greatly respected and adored, Geishas are masters of entertainment.
@@ -3698,6 +3748,7 @@ catalog:
   - title: Sleeping Gods
     bggId: 255984
     language: en
+    pdf: sleeping-gods_rulebook.pdf
     bggEnhanced: true
     description: >+
       "Are the stars unfamiliar here?" she asked, and the sky grew suddenly dark, the star's patterns alien and exotic. "This is the Wandering Sea. The gods have brought you here, and you must wake them if you wish to return home."
@@ -3875,6 +3926,7 @@ catalog:
   - title: El Grande
     bggId: 93
     language: en
+    pdf: el-grande_rulebook.pdf
     bggEnhanced: true
     description: >+
       In this award-winning game, players take on the roles of Grandes in medieval Spain.  The king's power is flagging, and these powerful lords are vying for control of the various regions.  To that end, you draft caballeros (knights) into your court and subsequently move them onto the board to help seize control of regions.  After every third round, the regions are scored, and after the ninth round, the player with the most points is the winner.
@@ -3934,6 +3986,7 @@ catalog:
   - title: Aeon's End
     bggId: 191189
     language: en
+    pdf: aeons-end_rulebook.pdf
     bggEnhanced: true
     description: >+
       The survivors of a long-ago invasion have taken refuge in the forgotten underground city of Gravehold. There, the desperate remnants of society have learned that the energy of the very breaches the beings use to attack them can be repurposed through various gems, transforming the malign energies within into beneficial spells and weapons to aid their last line of defense: the breach mages.
@@ -3992,6 +4045,7 @@ catalog:
   - title: Res Arcana
     bggId: 262712
     language: en
+    pdf: res-arcana_rulebook.pdf
     bggEnhanced: true
     description: >+
       Prepare Your Place of Power!
@@ -4052,6 +4106,7 @@ catalog:
   - title: Hero Realms
     bggId: 198994
     language: en
+    pdf: hero-realms_rulebook.pdf
     bggEnhanced: true
     description: >+
       Hero Realms is a fantasy-themed deck-building game that is an adaptation of the award-winning Star Realms game. The game includes basic rules for two-player games, along with rules for multiplayer formats such as Free-For-All, Hunter, and Hydra.
@@ -4103,6 +4158,7 @@ catalog:
   - title: Roll Player
     bggId: 169426
     language: en
+    pdf: roll-player_rulebook.pdf
     bggEnhanced: true
     description: >+
       Mighty heroes don&rsquo;t just appear out of thin air -- you must create them! Race, class, alignment, skills, traits, and equipment are all elements of the perfect hero, who is ready to take on all opposition in the quest for glory and riches.
@@ -4326,6 +4382,7 @@ catalog:
   - title: Carcassonne
     bggId: 822
     language: en
+    pdf: carcassone_rulebook.pdf
     bggEnhanced: true
     description: >+
       Carcassonne is a tile placement game in which the players draw and place a tile with a piece of southern French landscape represented on it. The tile might feature a city, a road, a cloister, grassland or some combination thereof, and it must be placed adjacent to tiles that have already been played, in such a way that cities are connected to cities, roads to roads, et cetera. Having placed a tile, the player can then decide to place one of their meeples in one of the areas on it: in the city as a knight, on the road as a robber, in the cloister as a monk, or in the field as a farmer. When that area is complete that meeple scores points for its owner.
@@ -4475,6 +4532,7 @@ catalog:
   - title: Chess
     bggId: 171
     language: en
+    pdf: scacchi-fide_2017_rulebook.pdf
     bggEnhanced: true
     description: >+
       Chess is a two-player, abstract strategy board game that represents medieval warfare on an 8x8 board with alternating light and dark squares. Opposing pieces, traditionally designated White and Black, are initially lined up on either side of the board. Each type of piece has a unique form of movement and capturing occurs when a piece, via its movement, occupies the square of an opposing piece. Players take turns moving one of their pieces in an attempt to capture, attack, defend, or develop their positions. Chess games can end in checkmate (when the king cannot escape from the opponent's pieces), resignation (when one player recognizes that defeat is inevitable and ends the game), or one of several types of draws.
@@ -4909,6 +4967,7 @@ catalog:
   - title: Pandemic
     bggId: 30549
     language: en
+    pdf: pandemic_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Pandemic, several virulent diseases have broken out simultaneously all over the world! The players are disease-fighting specialists whose mission is to treat disease hotspots while researching cures for each of four plagues before they get out of hand.
@@ -6105,6 +6164,7 @@ catalog:
   - title: 'Survive: Escape from Atlantis!'
     bggId: 2653
     language: en
+    pdf: survive-escape-from-atlantis_rulebook.pdf
     bggEnhanced: true
     description: >+
       Survive is a cutthroat game where players seek to evacuate their pieces from an island that is breaking up, while remembering where their highest-valued pieces are located to maximize their score.
@@ -6171,6 +6231,7 @@ catalog:
   - title: Spot it!
     bggId: 63268
     language: en
+    pdf: spot-it_rulebook.pdf
     bggEnhanced: true
     description: >+
       Spot it!, a.k.a. Dobble, is a simple pattern recognition game in which players try to find an image shown on two cards.
@@ -6698,6 +6759,7 @@ catalog:
   - title: 'Brass: Birmingham'
     bggId: 224517
     language: en
+    pdf: brass-birmingham_rulebook.pdf
     bggEnhanced: true
     description: >+
       Brass: Birmingham is an economic strategy game sequel to Martin Wallace's 2007 masterpiece, Brass. Brass: Birmingham tells the story of competing entrepreneurs in Birmingham during the industrial revolution between the years of 1770 and 1870.
@@ -6787,6 +6849,7 @@ catalog:
   - title: 'Dune: Imperium'
     bggId: 316554
     language: en
+    pdf: dune-imperium_rulebook.pdf
     bggEnhanced: true
     description: >+
       Dune: Imperium is a game that uses deck building to add a hidden information angle to traditional worker placement. It finds inspiration in elements and characters from the Dune legacy, both the new film from Legendary Pictures and the seminal literary series from Frank Herbert, Brian Herbert, and Kevin J. Anderson.
@@ -6857,6 +6920,7 @@ catalog:
   - title: 'Twilight Imperium: Fourth Edition'
     bggId: 233078
     language: en
+    pdf: twilight-imperium-4e_rulebook.pdf
     bggEnhanced: true
     description: >+
       Twilight Imperium (Fourth Edition) is a game of galactic conquest in which three to six players each take on the role of one of seventeen factions vying for galactic domination through military might, political maneuvering, and economic bargaining. Every faction offers a completely different play experience, from the wormhole-hopping Ghosts of Creuss to the Emirates of Hacan, masters of trade and economics. These seventeen races are offered many paths to victory, but only one may sit upon the throne of Mecatol Rex as the new masters of the galaxy.
@@ -6932,6 +6996,7 @@ catalog:
   - title: 'Dune: Imperium - Uprising'
     bggId: 397598
     language: en
+    pdf: dune-imperium-uprising_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Dune: Imperium Uprising, you want to continue to balance military might with political intrigue, wielding new tools in pursuit of victory. Spies will shore up your plans, vital contracts will expand your resources, or you can learn the ways of the Fremen and ride mighty sandworms into battle!
@@ -6993,6 +7058,7 @@ catalog:
   - title: 'War of the Ring: Second Edition'
     bggId: 115746
     language: en
+    pdf: war-of-the-ring_rulebook.pdf
     bggEnhanced: true
     description: >+
       In War of the Ring, one player takes control of the Free Peoples (FP) while the other player controls Shadow Armies (SA). Initially, the Free People Nations are reluctant to take arms against Sauron, so they must be attacked by Sauron or persuaded by Gandalf or other Companions before they start to fight in earnest: this is represented by the Political Track which shows if a Nation is ready to fight in the War of the Ring or not.
@@ -7057,6 +7123,7 @@ catalog:
   - title: 'Star Wars: Rebellion'
     bggId: 187645
     language: en
+    pdf: star-wars-rebellion_rulebook.pdf
     bggEnhanced: true
     description: >+
       Star Wars: Rebellion is a board game of epic conflict between the Galactic Empire and Rebel Alliance for two to four players.
@@ -7127,6 +7194,7 @@ catalog:
   - title: Gaia Project
     bggId: 220308
     language: en
+    pdf: gaia-project_rulebook.pdf
     bggEnhanced: true
     description: >+
       Gaia Project is a new game in the line of Terra Mystica. As in the original Terra Mystica, fourteen different factions live on seven different kinds of planets, and factions are bound to their own home planets, so to develop and grow, they must terraform neighboring planets into their home environments in competition with the other groups. In addition, Gaia planets can be used by all factions for colonization, and Transdimensional planets can be changed into Gaia planets.
@@ -7196,6 +7264,7 @@ catalog:
   - title: Twilight Struggle
     bggId: 12333
     language: en
+    pdf: twilight-struggle_rulebook.pdf
     bggEnhanced: true
     description: >+
       Now the trumpet summons us again, not as a call to bear arms, though arms we need; not as a call to battle, though embattled we are &ndash; but a call to bear the burden of a long twilight struggle. &ndash; John F. Kennedy
@@ -7265,6 +7334,7 @@ catalog:
   - title: 'Through the Ages: A New Story of Civilization'
     bggId: 182028
     language: en
+    pdf: through-the-ages_rulebook.pdf
     bggEnhanced: true
     description: >+
       Through the Ages: A New Story of Civilization is the new edition of Through the Ages: A Story of Civilization, with many changes small and large to the game's cards over its three ages and extensive changes to how military works.
@@ -7325,6 +7395,7 @@ catalog:
   - title: Great Western Trail
     bggId: 193738
     language: en
+    pdf: great-western-trail_rulebook.pdf
     bggEnhanced: true
     description: >+
       America in the 19th century: You are a rancher and repeatedly herd your cattle from Texas to Kansas City, where you send them off by train. This earns you money and victory points. Needless to say, each time you arrive in Kansas City, you want to have your most valuable cattle in tow. However, the "Great Western Trail" not only requires that you keep your herd in good shape, but also that you wisely use the various buildings along the trail. Also, it might be a good idea to hire capable staff: cowboys to improve your herd, craftsmen to build your very own buildings, or engineers for the important railroad line.
@@ -7380,6 +7451,7 @@ catalog:
   - title: 'SETI: Search for Extraterrestrial Intelligence'
     bggId: 418059
     language: en
+    pdf: seti_rulebook.pdf
     bggEnhanced: true
     description: >+
       In SETI: Search for Extraterrestrial Intelligence, you lead a scientific institution tasked with searching for traces of life beyond planet Earth. The game draws inspiration from current or emerging technologies and efforts in space exploration. Players will explore nearby planets and their moons by launching probes from Earth while taking advantage of ever-shifting planetary positions. Decide whether to land on their surfaces to collect valuable samples or stay in orbit for a broader survey. Additionally, by directing your telescopes to gaze into distant star systems, you may detect traces of alien signals or undiscovered exoplanets, and collect promising data to examine and study back home.
@@ -7442,6 +7514,7 @@ catalog:
   - title: Frosthaven
     bggId: 295770
     language: en
+    pdf: frosthaven_rulebook.pdf
     bggEnhanced: true
     description: >+
       Frosthaven is the story of a small outpost far to the north of the capital city of White Oak.  It's an outpost barely surviving the harsh weather let alone invasions from forces both known and unknown. However, a group of mercenaries, at the end of their rope, will help bring this settlement back from the edge of destruction. Not only will they have to deal with the harsh elements, but with other, far more dangerous threats out in the unforgiving cold, as well. There are: Algox, the bigger, more yeti-like cousins of the Inox, attacking from the mountains; Lurkers flooding in from the northern sea; and rumors have it that there are machines that wander the frozen wastes of their own free will. The party of mercenaries must face all of these perils, and perhaps in doing so, make peace with these new races so they can work together against even more sinister forces.
@@ -7508,6 +7581,7 @@ catalog:
   - title: 'Eclipse: Second Dawn for the Galaxy'
     bggId: 246900
     language: en
+    pdf: eclipse-second-dawn_rulebook.pdf
     bggEnhanced: true
     description: >+
       A game of Eclipse places you in control of a vast interstellar civilization, competing for success with its rivals. You explore new star systems, research technologies, and build spaceships with which to wage war. There are many potential paths to victory, so you need to plan your strategy according to the strengths and weaknesses of your species, while paying attention to the other civilizations' endeavors.
@@ -7573,6 +7647,7 @@ catalog:
   - title: 'Slay the Spire: The Board Game'
     bggId: 338960
     language: en
+    pdf: slay-the-spire_rulebook.pdf
     bggEnhanced: true
     description: >+
       Slay the Spire: The Board Game is a co-operative deck-building, dungeon-crawling adventure. Craft a unique deck, encounter bizarre creatures, discover relics of immense power, and finally become strong enough to slay the Spire!
@@ -7630,6 +7705,7 @@ catalog:
   - title: 'Brass: Lancashire'
     bggId: 28720
     language: en
+    pdf: brass-lancashire_rulebook.pdf
     bggEnhanced: true
     description: >+
       Brass: Lancashire &mdash; first published as Brass &mdash; is an economic strategy game that tells the story of competing cotton entrepreneurs in Lancashire during the industrial revolution. You must develop, build and establish your industries and network so that you can capitalize on demand for iron, coal and cotton. The game is played over two halves: the canal phase and the rail phase. To win the game, score the most victory points (VPs), which are counted at the end of each phase. VPs are gained from your canals, rails, and established (flipped) industry tiles. Each round, players take turns according to the turn order track, receiving two actions to perform any of the following:
@@ -7717,6 +7793,7 @@ catalog:
   - title: 7 Wonders Duel
     bggId: 173346
     language: en
+    pdf: 7-wonders-duel_rulebook.pdf
     bggEnhanced: true
     description: >+
       In many ways 7 Wonders Duel resembles its parent game 7 Wonders. Over three ages, players acquire cards that provide resources or advance their military or scientific development in order to develop a civilization and complete wonders. What's different about 7 Wonders Duel is that, as the title suggests, the game is solely for two players.
@@ -7791,6 +7868,7 @@ catalog:
   - title: Nemesis
     bggId: 167355
     language: en
+    pdf: nemesis_rulebook.pdf
     bggEnhanced: true
     description: >+
       Playing Nemesis will take you into the heart of sci-fi survival horror in all its terror. A soldier fires blindly down a corridor, trying to stop the alien advance. A scientist races to find a solution in his makeshift lab. A traitor steals the last escape pod in the very last moment. Intruders you meet on the ship are not only reacting to the noise you make but also evolve as the time goes by. The longer the game takes, the stronger they become. During the game, you control one of the crew members with a unique set of skills, personal deck of cards, and individual starting equipment. These heroes cover all your basic SF horror needs. For example, the scientist is great with computers and research, but will have a hard time in combat. The soldier, on the other hand...
@@ -7850,6 +7928,7 @@ catalog:
   - title: A Feast for Odin
     bggId: 177736
     language: en
+    pdf: a-feast-for-odin_rulebook.pdf
     bggEnhanced: true
     description: >+
       A Feast for Odin is a saga in the form of a board game. You are reliving the cultural achievements, mercantile expeditions, and pillages of those tribes we know as Viking today &mdash; a term that was used quite differently towards the end of the first millennium.
@@ -7934,6 +8013,7 @@ catalog:
   - title: 'The Lord of the Rings: The Card Game'
     bggId: 421006
     language: en
+    pdf: lotr-card-game_rulebook.pdf
     bggEnhanced: true
     description: >+
       A dark rumour rises from Mordor. The Eye turns to Middle-earth. The hour has come. The Fellowship is reunited. The Heroes prepare for battle. Will you play as the Fellowship of the Ring to defend the free races and destroy the One Ring? Or will you play as Sauron and pursue Frodo and Sam while deploying your hordes to the gates of the enemy cities? The destiny of Middle-earth is in your hands!
@@ -8024,6 +8104,7 @@ catalog:
   - title: 'Clank! Legacy: Acquisitions Incorporated'
     bggId: 266507
     language: en
+    pdf: clank-legacy_rulebook.pdf
     bggEnhanced: true
     description: >+
       Clank! Legacy: Acquisitions Incorporated extends the deck-building fun of Clank! with legacy-style gameplay! Found your own franchise of the legendary adventuring company, Acquisitions Incorporated, and shepherd your fledgling treasure-hunters to immortal corporate glory over the course of multiple games. Your game board, your deck, and your world change as you play to create a unique campaign tailored to your adventuring party. Be cunning, be bold, and most importantly, be ready...
@@ -8080,6 +8161,7 @@ catalog:
   - title: Concordia
     bggId: 124361
     language: en
+    pdf: concordia_rulebook.pdf
     bggEnhanced: true
     description: >+
       Two thousand years ago, the Roman Empire ruled the lands around the Mediterranean Sea. With peace at the borders, harmony inside the provinces, uniform law, and a common currency, the economy thrived and gave rise to mighty Roman dynasties as they expanded throughout the numerous cities. Guide one of these dynasties and send colonists to the remote realms of the Empire; develop your trade network; and appease the ancient gods for their favor &mdash; all to gain the chance to emerge victorious!
@@ -8220,6 +8302,7 @@ catalog:
   - title: 'Skytear: Arena of Legends'
     bggId: 373106
     language: en
+    pdf: skytear_rulebook.pdf
     bggEnhanced: true
     description: >+
       Sky Team is a co-operative game, exclusively for two players, in which you play a pilot and co-pilot at the controls of an airliner. Your goal is to work together as a team to land your airplane in different airports around the world.
@@ -8286,6 +8369,7 @@ catalog:
   - title: Terra Mystica
     bggId: 120677
     language: en
+    pdf: terra-mystica_rulebook.pdf
     bggEnhanced: true
     description: >+
       In the land of Terra Mystica dwell 14 different peoples in seven landscapes, and each group is bound to its own home environment, so to develop and grow, they must terraform neighboring landscapes into their home environments in competition with the other groups.
@@ -8362,6 +8446,7 @@ catalog:
   - title: Too Many Bones
     bggId: 192135
     language: en
+    pdf: too-many-bones_rulebook.pdf
     bggEnhanced: true
     description: >+
       Too Many Bones comes loaded for bear by breaking into a new genre: the dice-builder RPG. This game takes everything you think you know about dice-rolling and turns it on its head. Dripping with strategy, this fantasy-based RPG puts you in the skin of a new race and takes you on an adventure to the northern territories to root out and defeat growing enemy forces and of course the infamous "baddie" responsible.
@@ -8418,6 +8503,7 @@ catalog:
   - title: Orleans
     bggId: 164928
     language: en
+    pdf: orleans_rulebook.pdf
     bggEnhanced: true
     description: >+
       During the medieval goings-on around Orl&eacute;ans, you must assemble a following of farmers, merchants, knights, monks, etc. to gain supremacy through trade, construction and science in medieval France.
@@ -8479,6 +8565,7 @@ catalog:
   - title: Mage Knight Board Game
     bggId: 96848
     language: en
+    pdf: mage-knight_rulebook.pdf
     bggEnhanced: true
     description: >+
       The Mage Knight board game puts you in control of one of four powerful Mage Knights as you explore (and conquer) a corner of the Mage Knight universe under the control of the Atlantean Empire. Build your army, fill your deck with powerful spells and actions, explore caves and dungeons, and eventually conquer powerful cities controlled by this once-great faction!  In competitive scenarios, opposing players may be powerful allies, but only one will be able to claim the land as their own.  In cooperative scenarios, the players win or lose as a group.  Solo rules are also included.
@@ -8533,6 +8620,7 @@ catalog:
   - title: Barrage
     bggId: 251247
     language: en
+    pdf: barrage_rulebook.pdf
     bggEnhanced: true
     description: >+
       In the dystopic 1930s, the industrial revolution pushed the exploitation of fossil-based resources to the limit, and now the only thing powerful enough to quench the thirst for power of the massive machines and of the unstoppable engineering progress is the unlimited hydroelectric energy provided by the rivers.
@@ -8593,6 +8681,7 @@ catalog:
   - title: 'Hegemony: Lead Your Class to Victory'
     bggId: 321608
     language: en
+    pdf: hegemony_rulebook.pdf
     bggEnhanced: true
     description: >+
       Extended edition includes Crisis & Control expansion.
@@ -8653,6 +8742,7 @@ catalog:
   - title: Viticulture Essential Edition
     bggId: 183394
     language: en
+    pdf: viticulture_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Viticulture, the players find themselves in the roles of people in rustic, pre-modern Tuscany who have inherited meagre vineyards. They have a few plots of land, an old crush pad, a tiny cellar, and three workers. They each have a dream of being the first to call their winery a true success.
@@ -8780,6 +8870,7 @@ catalog:
   - title: 'Heat: Pedal to the Metal'
     bggId: 366013
     language: en
+    pdf: heat_rulebook.pdf
     bggEnhanced: true
     description: >+
       Based on simple and intuitive hand management, Heat: Pedal to the Metal puts players in the driver's seat of intense car races, jockeying for position to cross the finish line first, while managing their car's speed if they don't want to overheat. Selecting the right upgrades for their car will help them hug the curves and keep their engine cool enough to maintain top speeds. Ultimately, their driving skills will be the key to victory!
@@ -8834,6 +8925,7 @@ catalog:
   - title: Kanban EV
     bggId: 284378
     language: en
+    pdf: kanban-ev_rulebook.pdf
     bggEnhanced: true
     description: >+
       Electric vehicles (EVs) have become more common since 2014 and are the future of the automobile industry. They are superior vehicles due to them being more efficient, easier to maintain, cleaner, and cheaper to run. They are computerized machines that use AI to improve safety and in the near future will provide autonomous driving. They receive software upgrades during their lifetime and are constantly improving, unlike their traditional combustion-engine counterparts, which start to become obsolete as soon as you start using them.
@@ -8891,6 +8983,7 @@ catalog:
   - title: 'Marvel Champions: The Card Game'
     bggId: 285774
     language: en
+    pdf: marvel-champions_rulebook.pdf
     bggEnhanced: true
     description: >+
       "With great power, there must also come great responsibility."
@@ -8948,6 +9041,7 @@ catalog:
   - title: Underwater Cities
     bggId: 247763
     language: en
+    pdf: underwater-cities_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Underwater Cities, which takes about 30-45 minutes per player, players represent the most powerful brains in the world, brains nominated due to the overpopulation of Earth to establish the best and most livable underwater areas possible.
@@ -9006,6 +9100,7 @@ catalog:
   - title: Food Chain Magnate
     bggId: 175914
     language: en
+    pdf: food-chain-magnate_rulebook.pdf
     bggEnhanced: true
     description: >+
       "Lemonade? They want lemonade? What is the world coming to? I want commercials for burgers on all channels, every 15 minutes. We are the Home of the Original Burger, not a hippie health haven. And place a billboard next to that new house on the corner. I want them craving beer every second they sit in their posh new garden." The new management trainee trembles in front of the CEO and tries to politely point out that... "How do you mean, we don't have enough staff? The HR director reports to you. Hire more people! Train them! But whatever you do, don't pay them any real wages. I did not go into business to become poor. And fire that discount manager, she is only costing me money. From now on, we'll sell gourmet burgers. Same crap, double the price. Get my marketing director in here!"
@@ -9066,6 +9161,7 @@ catalog:
   - title: 'Pax Pamir: Second Edition'
     bggId: 256960
     language: en
+    pdf: pax-pamir_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Pax Pamir, players assume the role of nineteenth century Afghan leaders attempting to forge a new state after the collapse of the Durrani Empire. Western histories often call this period "The Great Game" because of the role played by the Europeans who attempted to use central Asia as a theater for their own rivalries. In this game, those empires are viewed strictly from the perspective of the Afghans who sought to manipulate the interloping ferengi (foreigners) for their own purposes.
@@ -9129,6 +9225,7 @@ catalog:
   - title: 'Cthulhu: Death May Die'
     bggId: 253344
     language: en
+    pdf: cthulhu-death-may-die_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Cthulhu: Death May Die, inspired by the writings of H.P. Lovecraft, you and your fellow players represent investigators in the 1920s who instead of trying to stop the coming of Elder Gods, want to summon those otherworldly beings so that you can put a stop to them permanently. You start the game insane, and while your long-term goal is to shoot Cthulhu in the face, so to speak, at some point during the game you'll probably fail to mitigate your dice rolls properly and your insanity will cause you to do something terrible &mdash; or maybe advantageous. Hard to know for sure.
@@ -9185,6 +9282,7 @@ catalog:
   - title: Age of Innovation
     bggId: 383179
     language: en
+    pdf: age-of-innovation_rulebook.pdf
     bggEnhanced: true
     description: >+
       Age of Innovation is a standalone game set in the world of Terra Mystica.
@@ -9249,6 +9347,7 @@ catalog:
   - title: 'Clank!: A Deck-Building Adventure'
     bggId: 201808
     language: en
+    pdf: clank_rulebook.pdf
     bggEnhanced: true
     description: >+
       Burgle your way to adventure in the deck-building board game Clank! Sneak into an angry dragon's mountain lair to steal precious artifacts. Delve deeper to find more valuable loot. Acquire cards for your deck and watch your thievish abilities grow. Be quick and be quiet. One false step and CLANK! Each careless sound draws the attention of the dragon, and each artifact stolen increases its rage. You can enjoy your plunder only if you make it out of the depths alive!
@@ -9315,6 +9414,7 @@ catalog:
   - title: The White Castle
     bggId: 371942
     language: en
+    pdf: the-white-castle_rulebook.pdf
     bggEnhanced: true
     description: >+
       The heron flies over the Himeji sky while the Daimyo, from the top of the castle, watches his servants move. Gardeners tend the pond, where the koi carp live, warriors stand guard on the walls, and courtiers crowd the gates, pining for an audience that brings them closer to the innermost circles of the court. When night falls, the lanterns are lit and the workers return to their clan.
@@ -9384,6 +9484,7 @@ catalog:
   - title: Paladins of the West Kingdom
     bggId: 266810
     language: en
+    pdf: paladins-of-the-west-kingdom_rulebook.pdf
     bggEnhanced: true
     description: >+
       Paladins of the West Kingdom is set at a turbulent time of West Francia's story, circa 900 AD. Despite recent efforts to develop the city, outlying townships are still under threat from outsiders. Saracens scout the borders, while Vikings plunder wealth and livestock. Even the Byzantines from the east have shown their darker side. As noble men and women, players must gather workers from the city to defend against enemies, build fortifications and spread faith throughout the land. Fortunately you are not alone. In his great wisdom, the King has sent his finest knights to help aid in our efforts. So ready the horses and sharpen the swords. The Paladins are approaching.
@@ -9439,6 +9540,7 @@ catalog:
   - title: Le Havre
     bggId: 35677
     language: en
+    pdf: le-havre_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Le Havre, a player's turn consists of two parts: First, distribute newly supplied goods onto the offer spaces; then take an action. As an action, players may choose either to take all goods of one type from an offer space or to use one of the available buildings. Building actions allow players to upgrade goods, sell them or use them to build their own buildings and ships. Buildings are both an investment opportunity and a revenue stream, as players must pay an entry fee to use buildings that they do not own. Ships, on the other hand, are primarily used to provide the food that is needed to feed the workers.
@@ -9494,6 +9596,7 @@ catalog:
   - title: The Gallerist
     bggId: 125153
     language: en
+    pdf: the-gallerist_rulebook.pdf
     bggEnhanced: true
     description: >+
       This age of art and capitalism has created a need for a new occupation - The Gallerist.
@@ -9554,6 +9657,7 @@ catalog:
   - title: 'Android: Netrunner'
     bggId: 124742
     language: en
+    pdf: android-netrunner_rulebook.pdf
     bggEnhanced: true
     description: >+
       Welcome to New Angeles, home of the Beanstalk. From our branch offices in this monument of human achievement, NBN proudly broadcasts all your favorite media programming. We offer fully comprehensive streaming in music and threedee, news and sitcoms, classic movies and sensies. We cover it all. Ours is a brave new age, and as humanity hurtles into space and the future with an astonishing series of new advances every day, NBN and our affiliates are keeping pace, bringing you all the vid that's fit to view.
@@ -9612,6 +9716,7 @@ catalog:
   - title: 'Star Wars: Imperial Assault'
     bggId: 164153
     language: en
+    pdf: star-wars-imperial-assault_rulebook.pdf
     bggEnhanced: true
     description: >+
       Star Wars: Imperial Assault is a strategy board game of tactical combat and missions for two to five players, offering two distinct games of battle and adventure in the Star Wars universe!
@@ -9676,6 +9781,7 @@ catalog:
   - title: 'Great Western Trail: Argentina'
     bggId: 380607
     language: en
+    pdf: great-western-trail-argentina_rulebook.pdf
     bggEnhanced: true
     description: >+
       Kia ora, and welcome to Great Western Trail New Zealand!
@@ -9728,6 +9834,7 @@ catalog:
   - title: Agricola (Revised Edition)
     bggId: 200680
     language: en
+    pdf: agricola-revised_rulebook.pdf
     bggEnhanced: true
     description: >+
       Updated and streamlined for a new generation of players, Agricola, the award-winning and highly acclaimed game by Uwe Rosenberg, features a revised rulebook and gameplay, wood pieces and components, and a card selection from the base game as well as its expansions, revised and updated for this edition.
@@ -9788,6 +9895,7 @@ catalog:
   - title: Maracaibo
     bggId: 276025
     language: en
+    pdf: maracaibo_rulebook.pdf
     bggEnhanced: true
     description: >+
       Maracaibo, a strategy game for 1-4 players by Alexander Pfister, is set in the Caribbean during the 17th century. The players try to increase their influence in three nations in four rounds with a play time of 40 minutes per player.
@@ -9854,6 +9962,7 @@ catalog:
   - title: Mechs vs. Minions
     bggId: 209010
     language: en
+    pdf: mechs-vs-minions_rulebook.pdf
     bggEnhanced: true
     description: >+
       Mechs vs. Minions is a cooperative tabletop campaign for 2-4 players. Set in the world of Runeterra, players take on the roles of four intrepid Yordles: Corki, Tristana, Heimerdinger, and Ziggs, who must join forces and pilot their newly-crafted mechs against an army of marauding minions. With modular boards, programmatic command lines, and a story-driven campaign, each mission will be unique, putting your teamwork, programming, and piloting skills to the test.
@@ -9967,6 +10076,7 @@ catalog:
   - title: Darwin's Journey
     bggId: 322289
     language: en
+    pdf: darwins-journey_rulebook.pdf
     bggEnhanced: true
     description: >+
       When all you can identify in the horizon for many long days is the line that detaches the sea from the sky, the glimpse of a distant shore appearing before you will make you shiver at the understanding that the adventure is about to begin.
@@ -10027,6 +10137,7 @@ catalog:
   - title: Revive
     bggId: 332772
     language: en
+    pdf: revive_rulebook.pdf
     bggEnhanced: true
     description: >+
       Revive civilization, 5000 years after everything was destroyed. Lead your tribe and explore the frozen earth. Harness its resources. Recruit surface survivors to your cause. Build factories with powerful machines. And populate ancient sites to relearn your tribe's forgotten technologies.
@@ -10099,6 +10210,7 @@ catalog:
   - title: Race for the Galaxy
     bggId: 28143
     language: en
+    pdf: race-for-the-galaxy_rulebook.pdf
     bggEnhanced: true
     description: >+
       In Race for the Galaxy, players build galactic civilizations by playing cards representing worlds or technical and social developments.
@@ -10195,6 +10307,7 @@ catalog:
   - title: Voidfall
     bggId: 338111
     language: en
+    pdf: voidfall_rulebook.pdf
     bggEnhanced: true
     description: >+
       A trick-taking card game with cards featuring photos of contemporary United States Navy aircraft, surface ships, and submarines.
@@ -10238,6 +10351,7 @@ catalog:
   - title: 'Wingspan: Asia'
     bggId: 366161
     language: en
+    pdf: wingspan-asia_rulebook.pdf
     bggEnhanced: true
     description: >+
       Wingspan: Asia introduces the diverse and vibrant birds of the Asian continent. As always, the objective is to earn the most points by playing birds, achieving objectives, and laying eggs across your habitats. This release serves multiple roles within the Wingspan universe!
@@ -10298,6 +10412,7 @@ catalog:
   - title: Five Tribes
     bggId: 157354
     language: en
+    pdf: five-tribes_rulebook.pdf
     bggEnhanced: true
     description: >+
       Crossing into the Land of 1001 Nights, your caravan arrives at the fabled Sultanate of Naqala. The old sultan just died and control of Naqala is up for grabs! The oracles foretold of strangers who would maneuver the Five Tribes to gain influence over the legendary city-state. Will you fulfill the prophecy? Invoke the old Djinns and move the Tribes into position at the right time, and the Sultanate may become yours!
@@ -10353,6 +10468,7 @@ catalog:
   - title: Final Girl
     bggId: 277659
     language: en
+    pdf: final-girl_rulebook.pdf
     bggEnhanced: true
     description: >+
       Playing on a famous horror movie trope, Final Girl is a solitaire-only game that puts the player in the shoes of a female protagonist who must kill the slasher if she wants to survive.
@@ -10407,6 +10523,7 @@ catalog:
   - title: Fields of Arle
     bggId: 159675
     language: en
+    pdf: fields-of-arle_rulebook.pdf
     bggEnhanced: true
     description: >+
       Welcome to Arle
@@ -10469,6 +10586,7 @@ catalog:
   - title: 'Eclipse: New Dawn for the Galaxy'
     bggId: 72125
     language: en
+    pdf: eclipse_rulebook.pdf
     bggEnhanced: true
     description: >+
       The galaxy has been a peaceful place for many years. After the ruthless Terran&ndash;Hegemony War (30.027&ndash;33.364), much effort has been employed by all major spacefaring species to prevent the terrifying events from repeating themselves. The Galactic Council was formed to enforce precious peace, and it has taken many courageous efforts to prevent the escalation of malicious acts. Nevertheless, tension and discord are growing among the seven major species and in the Council itself. Old alliances are shattering, and hasty diplomatic treaties are made in secrecy. A confrontation of the superpowers seems inevitable &ndash; only the outcome of the galactic conflict remains to be seen. Which faction will emerge victorious and lead the galaxy under its rule?

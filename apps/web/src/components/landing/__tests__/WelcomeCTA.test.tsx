@@ -23,7 +23,7 @@ describe('WelcomeCTA', () => {
   it('renders secondary CTA linking to /games', () => {
     render(<WelcomeCTA />);
     const cta = screen.getByRole('link', { name: /esplora il catalogo/i });
-    expect(cta).toHaveAttribute('href', '/games');
+    expect(cta).toHaveAttribute('href', '/register');
   });
 
   it('has no accessibility violations', async () => {

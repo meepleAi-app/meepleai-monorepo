@@ -94,15 +94,23 @@ vi.stubGlobal('matchMedia', (query: string) => ({
 }));
 
 // ============================================================================
-// Mock Hooks
+// Mocks
 // ============================================================================
 
+const mockGetAll = vi.fn();
+
+vi.mock('@/lib/api', () => ({
+  api: {
+    sharedGames: {
+      getAll: (...args: unknown[]) => mockGetAll(...args),
+      publish: vi.fn(),
+      archive: vi.fn(),
+      delete: vi.fn(),
+    },
+  },
+}));
+
 vi.mock('@/hooks/queries', () => ({
-  useSharedGames: vi.fn(() => ({
-    data: mockPagedResponse,
-    isLoading: false,
-    error: null,
-  })),
   sharedGamesKeys: {
     all: ['sharedGames'],
     lists: () => ['sharedGames', 'list'],
@@ -110,22 +118,16 @@ vi.mock('@/hooks/queries', () => ({
   },
 }));
 
-vi.mock('@tanstack/react-query', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
-  return {
-    ...actual,
-    useMutation: vi.fn(() => ({
-      mutate: vi.fn(),
-      isPending: false,
-    })),
-  };
-});
-
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),
   }),
+}));
+
+// Mock sonner toast
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 // ============================================================================
@@ -142,9 +144,7 @@ function createTestQueryClient() {
 
 function renderWithProviders(ui: React.ReactElement) {
   const client = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
 // ============================================================================
@@ -154,10 +154,14 @@ function renderWithProviders(ui: React.ReactElement) {
 describe('GameCatalogGrid', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetAll.mockResolvedValue(mockPagedResponse);
   });
 
-  it('renders stats summary with correct counts', () => {
+  it('renders stats summary with correct counts', async () => {
     renderWithProviders(<GameCatalogGrid />);
+
+    // Wait for data to load (game title appears)
+    expect(await screen.findByText('Catan')).toBeInTheDocument();
 
     expect(screen.getByText('Totale')).toBeInTheDocument();
     expect(screen.getByText('Pubblicati')).toBeInTheDocument();
@@ -169,16 +173,19 @@ describe('GameCatalogGrid', () => {
     expect(screen.getByText('1')).toBeInTheDocument();
   });
 
-  it('displays game titles in the grid', () => {
+  it('displays game titles in the grid', async () => {
     renderWithProviders(<GameCatalogGrid />);
 
-    expect(screen.getByText('Catan')).toBeInTheDocument();
+    expect(await screen.findByText('Catan')).toBeInTheDocument();
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
     expect(screen.getByText('Azul')).toBeInTheDocument();
   });
 
-  it('shows status badges on cards', () => {
+  it('shows status badges on cards', async () => {
     renderWithProviders(<GameCatalogGrid />);
+
+    // Wait for data
+    await screen.findByText('Catan');
 
     const publishedBadges = screen.getAllByText('Pubblicato');
     expect(publishedBadges.length).toBeGreaterThanOrEqual(1);
@@ -186,38 +193,29 @@ describe('GameCatalogGrid', () => {
     expect(screen.getByText('Bozza')).toBeInTheDocument();
   });
 
-  it('shows loading skeletons when isLoading', async () => {
-    const { useSharedGames } = await import('@/hooks/queries');
-    vi.mocked(useSharedGames).mockReturnValueOnce({
-      data: undefined,
-      isLoading: true,
-      error: null,
-    } as ReturnType<typeof useSharedGames>);
+  it('shows loading state when query is loading', () => {
+    // Return a promise that never resolves to keep loading state
+    mockGetAll.mockReturnValue(new Promise(() => {}));
 
     renderWithProviders(<GameCatalogGrid />);
 
-    // MeepleCard renders a skeleton with data-testid="meeple-card-skeleton" when loading
-    const skeletons = screen.getAllByTestId('meeple-card-skeleton');
-    expect(skeletons.length).toBeGreaterThan(0);
+    // Stats show dash when loading
+    const dashes = screen.getAllByText('—');
+    expect(dashes.length).toBeGreaterThan(0);
   });
 
   it('shows empty state when no games', async () => {
-    const { useSharedGames } = await import('@/hooks/queries');
-    vi.mocked(useSharedGames).mockReturnValueOnce({
-      data: { ...mockPagedResponse, items: [], totalCount: 0 },
-      isLoading: false,
-      error: null,
-    } as ReturnType<typeof useSharedGames>);
+    mockGetAll.mockResolvedValue({ ...mockPagedResponse, items: [], totalCount: 0 });
 
     renderWithProviders(<GameCatalogGrid />);
 
-    expect(screen.getByText('Nessun gioco nel catalogo')).toBeInTheDocument();
+    expect(await screen.findByText('Nessun gioco nel catalogo')).toBeInTheDocument();
   });
 
-  it('renders admin-specific testids on game cards', () => {
+  it('renders admin-specific testids on game cards', async () => {
     renderWithProviders(<GameCatalogGrid />);
 
-    expect(screen.getByTestId('admin-game-card-game-1')).toBeInTheDocument();
+    expect(await screen.findByTestId('admin-game-card-game-1')).toBeInTheDocument();
     expect(screen.getByTestId('admin-game-card-game-2')).toBeInTheDocument();
     expect(screen.getByTestId('admin-game-card-game-3')).toBeInTheDocument();
   });

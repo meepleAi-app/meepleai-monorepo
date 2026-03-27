@@ -24,7 +24,7 @@ describe('TechActionsBar', () => {
 
     const actions = [
       { id: 'clear-cache', href: '/admin/config' },
-      { id: 'reindex-all', href: '/admin/ai/knowledge-base' },
+      { id: 'reindex-all', href: '/admin/knowledge-base/vectors' },
       { id: 'system-health', href: '/admin/monitor' },
       { id: 'export-users', href: '/admin/users' },
     ];

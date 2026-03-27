@@ -88,8 +88,14 @@ public sealed class WizardEndpointsIntegrationTests : IAsyncLifetime
 
                     services.AddScoped(_ => mockBggApi.Object);
 
+                    // Use TestAuthenticationHandler to bypass real auth
+                    services.AddAuthentication(TestAuthenticationHandler.SchemeName)
+                        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                            TestAuthenticationHandler.SchemeName, _ => { });
+
                     // Mock authorization - allow all for testing (both default and named policies)
                     var allowAllPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+                        .AddAuthenticationSchemes(TestAuthenticationHandler.SchemeName)
                         .RequireAssertion(_ => true)
                         .Build();
                     services.AddAuthorization(options =>
@@ -108,6 +114,8 @@ public sealed class WizardEndpointsIntegrationTests : IAsyncLifetime
         }
 
         _client = _factory.CreateClient();
+        _client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeader, Guid.NewGuid().ToString());
+        _client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeader, "admin");
     }
 
     public async ValueTask DisposeAsync()

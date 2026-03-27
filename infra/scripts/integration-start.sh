@@ -17,9 +17,30 @@ INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_DIR="$(cd "$INFRA_DIR/.." && pwd)"
 API_DIR="$REPO_DIR/apps/api/src/Api"
 WEB_DIR="$REPO_DIR/apps/web"
-SECRETS_DIR="$INFRA_DIR/secrets/integration"
+SECRETS_DIR="$INFRA_DIR/secrets"
+
+SSH_KEY="${HOME}/.ssh/meepleai-staging"
+STAGING_HOST="deploy@204.168.135.69"
 
 ACTION="${1:-all}"
+
+# Resolve staging DB credentials from the actual running container
+resolve_staging_db() {
+    echo "Resolving staging database credentials..."
+    local env_output
+    env_output=$(ssh -i "$SSH_KEY" "$STAGING_HOST" \
+        "docker inspect meepleai-postgres --format '{{range .Config.Env}}{{println .}}{{end}}'" 2>/dev/null)
+
+    STAGING_POSTGRES_USER=$(echo "$env_output" | grep "^POSTGRES_USER=" | cut -d= -f2-)
+    STAGING_POSTGRES_PASSWORD=$(echo "$env_output" | grep "^POSTGRES_PASSWORD=" | cut -d= -f2-)
+    STAGING_POSTGRES_DB=$(echo "$env_output" | grep "^POSTGRES_DB=" | cut -d= -f2-)
+
+    if [ -z "$STAGING_POSTGRES_PASSWORD" ]; then
+        echo "ERROR: Cannot resolve staging DB credentials. Is staging running?"
+        exit 1
+    fi
+    echo "  User: $STAGING_POSTGRES_USER | DB: $STAGING_POSTGRES_DB"
+}
 
 # Load secrets from .secret files
 load_secrets() {
@@ -39,14 +60,20 @@ load_secrets() {
 start_api() {
     echo "Starting API in integration mode..."
 
-    # Load secrets
+    # Load local secrets (for non-DB settings like JWT, admin email, etc.)
     load_secrets
+
+    # Resolve actual staging DB credentials from running container
+    resolve_staging_db
 
     # Override for integration
     export ASPNETCORE_ENVIRONMENT=Integration
     export ASPNETCORE_URLS="http://+:8080"
     export POSTGRES_HOST=localhost
     export POSTGRES_PORT=15432
+    export POSTGRES_USER="$STAGING_POSTGRES_USER"
+    export POSTGRES_DB="$STAGING_POSTGRES_DB"
+    export POSTGRES_PASSWORD="$STAGING_POSTGRES_PASSWORD"
     export POSTGRES_SSL_MODE=Disable
     export REDIS_HOST=localhost
     export REDIS_PORT=16379
@@ -63,7 +90,7 @@ start_api() {
     export Embedding__FallbackEnabled=false
 
     # Build connection string with SSL Mode=Disable (tunnel already encrypts)
-    export ConnectionStrings__Postgres="Host=localhost;Port=15432;Database=${POSTGRES_DB:-meepleai_staging};Username=${POSTGRES_USER:-meepleai};Password=${POSTGRES_PASSWORD};SSL Mode=Disable"
+    export ConnectionStrings__Postgres="Host=localhost;Port=15432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};SSL Mode=Disable"
 
     cd "$API_DIR"
     dotnet run &

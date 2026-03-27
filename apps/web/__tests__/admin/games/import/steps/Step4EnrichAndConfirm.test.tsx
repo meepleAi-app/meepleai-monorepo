@@ -112,7 +112,7 @@ describe('Step4EnrichAndConfirm', () => {
 
       expect(screen.getByText('Review & Confirm')).toBeInTheDocument();
       expect(
-        screen.getByText(/Resolve any conflicts between PDF and BGG data/i)
+        screen.getByText(/Risolvi eventuali conflitti tra dati PDF e catalogo/i)
       ).toBeInTheDocument();
     });
 
@@ -144,7 +144,7 @@ describe('Step4EnrichAndConfirm', () => {
 
       expect(screen.getByText('No Conflicts')).toBeInTheDocument();
       expect(
-        screen.getByText(/BGG and PDF data have been automatically merged/i)
+        screen.getByText(/I dati catalogo e PDF sono stati uniti automaticamente/i)
       ).toBeInTheDocument();
     });
 
@@ -189,7 +189,7 @@ describe('Step4EnrichAndConfirm', () => {
       renderWithQuery(<Step4EnrichAndConfirm />);
 
       expect(screen.getByText('Missing Data')).toBeInTheDocument();
-      expect(screen.getByText(/No extracted metadata or BGG data available/i)).toBeInTheDocument();
+      expect(screen.getByText(/Nessun metadato estratto o dati catalogo disponibili/i)).toBeInTheDocument();
     });
   });
 
@@ -227,7 +227,7 @@ describe('Step4EnrichAndConfirm', () => {
 
       // playTime conflict: PDF 60 vs BGG 90
       expect(screen.getByText('Play Time (minutes)')).toBeInTheDocument();
-      expect(screen.getByText(/Use BGG:/)).toBeInTheDocument();
+      expect(screen.getByText(/Usa catalogo:/)).toBeInTheDocument();
       expect(screen.getByText(/90/)).toBeInTheDocument(); // BGG value
       expect(screen.getByText(/Use PDF:/)).toBeInTheDocument();
       expect(screen.getByText(/60/)).toBeInTheDocument(); // PDF value
@@ -263,7 +263,8 @@ describe('Step4EnrichAndConfirm', () => {
 
       renderWithQuery(<Step4EnrichAndConfirm />);
 
-      expect(screen.getByText(/4 conflicts detected/i)).toBeInTheDocument();
+      expect(screen.getByText(/4/)).toBeInTheDocument();
+      expect(screen.getByText(/conflitti rilevati/i)).toBeInTheDocument();
     });
   });
 
@@ -273,8 +274,8 @@ describe('Step4EnrichAndConfirm', () => {
       renderWithQuery(<Step4EnrichAndConfirm />);
 
       // Find playTime conflict BGG radio button
-      const bggRadio = screen.getByRole('radio', { name: /Use BGG:.*90/ });
-      expect(bggRadio).toBeChecked(); // Default is BGG
+      const bggRadio = screen.getByRole('radio', { name: /Usa catalogo:.*90/ });
+      expect(bggRadio).toBeChecked(); // Default is catalogo
 
       // Click should keep it checked
       await user.click(bggRadio);

@@ -234,7 +234,7 @@ describe('GameCombobox', () => {
       });
     });
 
-    it('should show "Search on BGG" link when onNotFound is provided', async () => {
+    it('should show "Cerca nel catalogo" link when onNotFound is provided', async () => {
       mockUseGameSearch.mockReturnValue({
         data: [],
         isLoading: false,
@@ -250,11 +250,11 @@ describe('GameCombobox', () => {
       await user.type(searchInput, 'NonExistent');
 
       await waitFor(() => {
-        expect(screen.getByText('Search on BGG')).toBeInTheDocument();
+        expect(screen.getByText('Cerca nel catalogo')).toBeInTheDocument();
       });
     });
 
-    it('should not show "Search on BGG" link when onNotFound is not provided', async () => {
+    it('should not show "Cerca nel catalogo" link when onNotFound is not provided', async () => {
       mockUseGameSearch.mockReturnValue({
         data: [],
         isLoading: false,
@@ -266,11 +266,11 @@ describe('GameCombobox', () => {
       await user.click(screen.getByRole('combobox'));
 
       await waitFor(() => {
-        expect(screen.queryByText('Search on BGG')).not.toBeInTheDocument();
+        expect(screen.queryByText('Cerca nel catalogo')).not.toBeInTheDocument();
       });
     });
 
-    it('should call onNotFound when "Search on BGG" is clicked', async () => {
+    it('should call onNotFound when "Cerca nel catalogo" is clicked', async () => {
       mockUseGameSearch.mockReturnValue({
         data: [],
         isLoading: false,
@@ -284,13 +284,13 @@ describe('GameCombobox', () => {
       const searchInput = screen.getByPlaceholderText('Type to search...');
       await user.type(searchInput, 'NonExistent');
 
-      const bggLink = await screen.findByText('Search on BGG');
+      const bggLink = await screen.findByText('Cerca nel catalogo');
       await user.click(bggLink);
 
       expect(mockOnNotFound).toHaveBeenCalledTimes(1);
     });
 
-    it('should close popover when "Search on BGG" is clicked', async () => {
+    it('should close popover when "Cerca nel catalogo" is clicked', async () => {
       mockUseGameSearch.mockReturnValue({
         data: [],
         isLoading: false,
@@ -304,7 +304,7 @@ describe('GameCombobox', () => {
       const searchInput = screen.getByPlaceholderText('Type to search...');
       await user.type(searchInput, 'NonExistent');
 
-      const bggLink = await screen.findByText('Search on BGG');
+      const bggLink = await screen.findByText('Cerca nel catalogo');
       await user.click(bggLink);
 
       // Popover should be closed

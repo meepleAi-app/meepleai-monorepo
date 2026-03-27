@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
-using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;

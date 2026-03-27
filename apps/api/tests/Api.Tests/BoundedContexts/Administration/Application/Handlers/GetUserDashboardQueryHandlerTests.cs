@@ -1,6 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
-using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;

@@ -1,6 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Queries;
-using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;

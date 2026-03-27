@@ -1,6 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameSessionContext;
-using Api.BoundedContexts.GameManagement.Application.Queries.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;

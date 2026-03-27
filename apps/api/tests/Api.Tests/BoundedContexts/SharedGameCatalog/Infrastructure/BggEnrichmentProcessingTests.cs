@@ -32,7 +32,6 @@ public class BggEnrichmentProcessingTests
     private readonly Mock<ISharedGameRepository> _mockRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<IMediator> _mockMediator;
-    private readonly BggImportQueueBackgroundService _service;
     private readonly Mock<IServiceScopeFactory> _mockScopeFactory;
 
     private static readonly Guid TestUserId = Guid.NewGuid();
@@ -73,7 +72,8 @@ public class BggEnrichmentProcessingTests
             InitialDelayMinutes = 0
         });
 
-        _service = new BggImportQueueBackgroundService(
+        // Service constructed to verify DI wiring; tests exercise domain logic directly
+        _ = new BggImportQueueBackgroundService(
             _mockScopeFactory.Object,
             Mock.Of<ILogger<BggImportQueueBackgroundService>>(),
             config);

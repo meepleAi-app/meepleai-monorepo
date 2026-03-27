@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 ///
 /// Users created:
 /// - Admin: email from INITIAL_ADMIN_EMAIL secret, password from ADMIN_PASSWORD secret (Admin role)
-/// - editor@meepleai.dev / Demo123! (Editor role)
-/// - user@meepleai.dev / Demo123! (User role)
+/// - editor@meepleai.dev / password from SEED_TEST_PASSWORD secret (Editor role)
+/// - user@meepleai.dev / password from SEED_TEST_PASSWORD secret (User role)
 /// </summary>
 public sealed record SeedE2ETestUsersCommand : ICommand;

@@ -165,14 +165,62 @@ function AdminGameCard({
 // GameCatalogGrid
 // ============================================================================
 
-export function GameCatalogGrid() {
+export interface GameCatalogGridProps {
+  searchQuery?: string;
+  categoryFilter?: string;
+  statusFilter?: string;
+  playersFilter?: string;
+}
+
+export function GameCatalogGrid({
+  searchQuery = '',
+  categoryFilter = 'all',
+  statusFilter = 'all',
+  playersFilter = 'all',
+}: GameCatalogGridProps) {
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: [...sharedGamesKeys.all, 'admin-list'],
     queryFn: () => api.sharedGames.getAll({ pageSize: 100 }),
     staleTime: 2 * 60 * 1000,
   });
-  const games = data?.items ?? [];
+
+  const allGames = data?.items ?? [];
+
+  // Client-side filtering
+  const games = allGames.filter(game => {
+    // Search filter (title, description)
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const titleMatch = game.title?.toLowerCase().includes(q);
+      const descMatch = game.description?.toLowerCase().includes(q);
+      if (!titleMatch && !descMatch) return false;
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      const statusMap: Record<string, string> = {
+        published: 'Published',
+        draft: 'Draft',
+        archived: 'Archived',
+      };
+      if (game.status !== statusMap[statusFilter]) return false;
+    }
+
+    // Players filter
+    if (playersFilter !== 'all') {
+      const min = game.minPlayers ?? 0;
+      const max = game.maxPlayers ?? 99;
+      if (playersFilter === '1-2' && min > 2) return false;
+      if (playersFilter === '3-4' && (max < 3 || min > 4)) return false;
+      if (playersFilter === '5+' && max < 5) return false;
+    }
+
+    // Category filter — not available in list view DTO (SharedGame),
+    // only in SharedGameDetail. Skip for now until API supports server-side filtering.
+
+    return true;
+  });
 
   // Selection state for bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -277,8 +325,10 @@ export function GameCatalogGrid() {
     setConfirmAction(null);
   };
 
-  const published = games.filter(g => g.status === 'Published').length;
-  const draft = games.filter(g => g.status === 'Draft').length;
+  const published = allGames.filter(g => g.status === 'Published').length;
+  const draft = allGames.filter(g => g.status === 'Draft').length;
+  const isFiltered =
+    searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' || playersFilter !== 'all';
 
   return (
     <div className="space-y-6">
@@ -384,8 +434,17 @@ export function GameCatalogGrid() {
         </div>
       ) : games.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg mb-2">Nessun gioco nel catalogo</p>
-          <p className="text-sm">Aggiungi il primo gioco al catalogo condiviso.</p>
+          {isFiltered ? (
+            <>
+              <p className="text-lg mb-2">Nessun gioco corrisponde ai filtri</p>
+              <p className="text-sm">Prova a modificare i criteri di ricerca.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg mb-2">Nessun gioco nel catalogo</p>
+              <p className="text-sm">Aggiungi il primo gioco al catalogo condiviso.</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

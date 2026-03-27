@@ -96,6 +96,11 @@ vi.mock('@/components/ui/data-display/meeple-card-features/AgentStatusBadge', ()
   ),
 }));
 
+vi.mock('@/hooks/queries/useGameMemory', () => ({
+  useGameMemory: () => ({ data: null, isLoading: false }),
+  useAddHouseRule: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
 // ============================================================================
 // Tests
 // ============================================================================

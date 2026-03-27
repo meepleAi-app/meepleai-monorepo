@@ -97,7 +97,7 @@ describe('GamesFilterPanel', () => {
     it('renders "Tutti i giochi" link', () => {
       render(<GamesFilterPanel isCollapsed={false} />);
       expect(screen.getByText('Tutti i giochi')).toBeInTheDocument();
-      expect(screen.getByText('Tutti i giochi').closest('a')).toHaveAttribute('href', '/games');
+      expect(screen.getByText('Tutti i giochi').closest('a')).toHaveAttribute('href', '/library');
     });
 
     it('renders "Top Rated" link with sort params', () => {
@@ -105,7 +105,7 @@ describe('GamesFilterPanel', () => {
       expect(screen.getByText('Top Rated')).toBeInTheDocument();
       expect(screen.getByText('Top Rated').closest('a')).toHaveAttribute(
         'href',
-        '/games?sortBy=AverageRating&sortDesc=true'
+        '/library?sortBy=AverageRating&sortDesc=true'
       );
     });
 
@@ -114,7 +114,7 @@ describe('GamesFilterPanel', () => {
       expect(screen.getByText('2 Giocatori')).toBeInTheDocument();
       expect(screen.getByText('2 Giocatori').closest('a')).toHaveAttribute(
         'href',
-        '/games?minPlayers=2&maxPlayers=2'
+        '/library?minPlayers=2&maxPlayers=2'
       );
     });
 
@@ -123,7 +123,7 @@ describe('GamesFilterPanel', () => {
       expect(screen.getByText('3-6 Giocatori')).toBeInTheDocument();
       expect(screen.getByText('3-6 Giocatori').closest('a')).toHaveAttribute(
         'href',
-        '/games?minPlayers=3&maxPlayers=6'
+        '/library?minPlayers=3&maxPlayers=6'
       );
     });
 
@@ -132,7 +132,7 @@ describe('GamesFilterPanel', () => {
       expect(screen.getByText('Aggiunti di recente')).toBeInTheDocument();
       expect(screen.getByText('Aggiunti di recente').closest('a')).toHaveAttribute(
         'href',
-        '/games?sortBy=CreatedAt&sortDesc=true'
+        '/library?sortBy=CreatedAt&sortDesc=true'
       );
     });
 

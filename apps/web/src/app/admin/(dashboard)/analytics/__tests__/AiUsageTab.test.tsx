@@ -54,7 +54,7 @@ describe('AiUsageTab', () => {
   it('renders heading after loading', async () => {
     render(<AiUsageTab />);
     await waitFor(() => {
-      expect(screen.getByText('AI Usage Analytics')).toBeInTheDocument();
+      expect(screen.getByText('Analitiche Utilizzo AI')).toBeInTheDocument();
     });
   });
 

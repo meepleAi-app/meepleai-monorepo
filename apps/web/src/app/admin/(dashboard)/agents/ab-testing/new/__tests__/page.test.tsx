@@ -1,5 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -20,6 +22,7 @@ vi.mock('@/lib/api', () => ({
   api: {
     admin: {
       createAbTest: (...args: unknown[]) => mockCreateAbTest(...args),
+      getByCategory: vi.fn().mockResolvedValue([]),
     },
   },
 }));
@@ -82,14 +85,14 @@ describe('NewAbTestPage', () => {
 
   // 1. Renders the page heading
   it('renders the page title "New A/B Test"', () => {
-    render(<NewAbTestPage />);
+    renderWithQuery(<NewAbTestPage />);
 
     expect(screen.getByRole('heading', { name: /new a\/b test/i })).toBeInTheDocument();
   });
 
   // 2. All 8 model checkboxes are present
   it('renders all 8 model checkboxes', () => {
-    render(<NewAbTestPage />);
+    renderWithQuery(<NewAbTestPage />);
 
     for (const name of MODEL_NAMES) {
       expect(screen.getByText(name)).toBeInTheDocument();
@@ -102,7 +105,7 @@ describe('NewAbTestPage', () => {
 
   // 3. Generate button is disabled when no models and no query
   it('disables the Generate button when no models are selected or no query is entered', () => {
-    render(<NewAbTestPage />);
+    renderWithQuery(<NewAbTestPage />);
 
     const btn = getGenerateButton();
     expect(btn).toBeDisabled();
@@ -110,7 +113,7 @@ describe('NewAbTestPage', () => {
 
   // 4. Selecting models updates their checked state
   it('can select models and they show a checked state', () => {
-    render(<NewAbTestPage />);
+    renderWithQuery(<NewAbTestPage />);
 
     const checkboxes = screen.getAllByRole('checkbox');
     // All start unchecked
@@ -128,7 +131,7 @@ describe('NewAbTestPage', () => {
 
   // 5. Cannot select more than MAX_MODELS (4)
   it('cannot select more than 4 models', () => {
-    render(<NewAbTestPage />);
+    renderWithQuery(<NewAbTestPage />);
 
     // Select 4 models
     toggleModel('GPT-4o');
@@ -150,7 +153,7 @@ describe('NewAbTestPage', () => {
 
   // 6. Button enabled when query + 2 models
   it('enables the Generate button when a query is entered and at least 2 models are selected', () => {
-    render(<NewAbTestPage />);
+    renderWithQuery(<NewAbTestPage />);
 
     fillQuery('Explain the rules of Catan');
     toggleModel('GPT-4o');
@@ -168,7 +171,7 @@ describe('NewAbTestPage', () => {
   it('calls createAbTest on submit and redirects to the result page', async () => {
     mockCreateAbTest.mockResolvedValueOnce({ id: 'abc-123' });
 
-    render(<NewAbTestPage />);
+    renderWithQuery(<NewAbTestPage />);
 
     fillQuery('Compare model creativity');
     toggleModel('GPT-4o');
@@ -193,7 +196,7 @@ describe('NewAbTestPage', () => {
   it('shows an error alert when createAbTest fails', async () => {
     mockCreateAbTest.mockRejectedValueOnce(new Error('Service unavailable'));
 
-    render(<NewAbTestPage />);
+    renderWithQuery(<NewAbTestPage />);
 
     fillQuery('Test query');
     toggleModel('GPT-4o');

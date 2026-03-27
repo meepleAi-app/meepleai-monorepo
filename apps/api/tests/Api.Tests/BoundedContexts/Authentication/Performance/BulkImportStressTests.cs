@@ -184,7 +184,7 @@ public class BulkImportStressTests : IAsyncLifetime
         result.Errors.Should().BeEmpty();
 
         // Baseline should be faster than stress test (linear scaling check)
-        sw.Elapsed.TotalSeconds.Should().BeLessThan(MaxExecutionTimeSeconds / 2,
+        sw.Elapsed.TotalSeconds.Should().BeLessThan(MaxExecutionTimeSeconds / 2.0,
             "Baseline should complete in less than half the stress test time limit");
     }
 

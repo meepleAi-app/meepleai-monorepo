@@ -2,7 +2,6 @@ using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Application.Commands;
-using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
@@ -185,7 +184,7 @@ public class HandleSlackInteractionCommandHandlerTests
 
     #region Helpers
 
-    private SlackConnection SetupActiveSlackConnection(
+    private void SetupActiveSlackConnection(
         Guid? userId = null,
         string slackUserId = "U01TESTUSER")
     {
@@ -204,8 +203,6 @@ public class HandleSlackInteractionCommandHandlerTests
         _slackConnectionRepoMock
             .Setup(r => r.GetBySlackUserIdAsync(slackUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(connection);
-
-        return connection;
     }
 
     private static string BuildPayload(

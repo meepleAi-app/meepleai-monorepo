@@ -1,5 +1,4 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
-using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Tests.Constants;

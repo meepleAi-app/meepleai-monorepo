@@ -12,8 +12,8 @@ internal class UserProfileBuilder
     private Guid _id = Guid.NewGuid();
     private string _email = "test@example.com";
     private string? _displayName = "Test User";
-    private string? _avatarUrl;
-    private string? _bio;
+    private readonly string? _avatarUrl = null;
+    private readonly string? _bio = null;
     private string _role = "user";
     private string _tier = "free";
     private string _status = "Active";

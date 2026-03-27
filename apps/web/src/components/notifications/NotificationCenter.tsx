@@ -27,6 +27,7 @@ import {
   MessageSquare,
   Link as LinkIcon,
   ChevronRight,
+  Settings,
   Shield,
   Trophy,
   Clock,
@@ -180,15 +181,24 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
         {!error && notifications.length > 0 && (
           <>
             <Separator />
-            <div className="p-2">
+            <div className="flex items-center justify-between p-2">
               <Link
                 href="/notifications"
                 onClick={() => onOpenChange(false)}
-                className="flex items-center justify-center gap-1 p-2 text-sm text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-accent"
+                className="flex items-center gap-1 p-2 text-sm text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-accent"
                 data-testid="notification-center-view-all"
               >
                 {t('notificationCenter.viewAll')}
                 <ChevronRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/notifications/preferences"
+                onClick={() => onOpenChange(false)}
+                className="flex items-center gap-1 p-2 text-sm text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-accent"
+                data-testid="notification-center-preferences"
+                aria-label={t('notificationCenter.preferences') || 'Preferenze notifiche'}
+              >
+                <Settings className="h-4 w-4" />
               </Link>
             </div>
           </>

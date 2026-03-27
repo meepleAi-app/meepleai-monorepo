@@ -1,5 +1,4 @@
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
-using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;

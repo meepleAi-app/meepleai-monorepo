@@ -1,6 +1,5 @@
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Application.Queries;
-using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserNotifications;
 using Api.Tests.Constants;

@@ -1,6 +1,5 @@
 using System.Threading;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;

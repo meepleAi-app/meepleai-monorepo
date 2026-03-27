@@ -1,6 +1,5 @@
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
-using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;

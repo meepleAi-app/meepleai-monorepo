@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
-using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.SharedKernel.Domain.Exceptions;

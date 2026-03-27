@@ -41,7 +41,7 @@ export function InlineRoleSelect({
 }: InlineRoleSelectProps) {
   const queryClient = useQueryClient();
   const [pendingRole, setPendingRole] = useState<string | null>(null);
-  const isSuperAdmin = currentRole === 'SuperAdmin';
+  const isSuperAdmin = currentRole.toLowerCase() === 'superadmin';
 
   const mutation = useMutation({
     mutationFn: (newRole: string) => api.admin.changeUserRole(userId, newRole),

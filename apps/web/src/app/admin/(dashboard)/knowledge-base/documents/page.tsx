@@ -57,14 +57,35 @@ function formatFileSize(bytes: number): string {
 }
 
 function getStatusBadge(status: string) {
-  const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
-    Completed: { variant: 'default', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
-    Processing: { variant: 'default', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
-    Pending: { variant: 'secondary', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' },
+  const statusConfig: Record<
+    string,
+    { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }
+  > = {
+    Completed: {
+      variant: 'default',
+      className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    },
+    Processing: {
+      variant: 'default',
+      className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    },
+    Pending: {
+      variant: 'secondary',
+      className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    },
     Failed: { variant: 'destructive', className: '' },
-    Extracting: { variant: 'default', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
-    Chunking: { variant: 'default', className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300' },
-    Embedding: { variant: 'default', className: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300' },
+    Extracting: {
+      variant: 'default',
+      className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    },
+    Chunking: {
+      variant: 'default',
+      className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+    },
+    Embedding: {
+      variant: 'default',
+      className: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
+    },
   };
   const config = statusConfig[status] ?? { variant: 'outline' as const, className: '' };
   return (
@@ -82,15 +103,22 @@ export default function DocumentsLibraryPage() {
   const pageSize = 20;
 
   // Fetch documents
-  const { data: pdfsData, isLoading, error, refetch, isRefetching } = useQuery({
+  const {
+    data: pdfsData,
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
+  } = useQuery({
     queryKey: ['admin', 'pdfs', { page, pageSize, status: statusFilter, search }],
-    queryFn: () => adminClient.getAllPdfs({
-      page,
-      pageSize,
-      state: statusFilter !== 'all' ? statusFilter : undefined,
-      sortBy: 'uploadedAt',
-      sortOrder: 'desc',
-    }),
+    queryFn: () =>
+      adminClient.getAllPdfs({
+        page,
+        pageSize,
+        state: statusFilter !== 'all' ? statusFilter : undefined,
+        sortBy: 'uploadedAt',
+        sortOrder: 'desc',
+      }),
     staleTime: 30_000,
   });
 
@@ -140,9 +168,7 @@ export default function DocumentsLibraryPage() {
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const toggleSelect = (id: string) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
   };
   const toggleSelectAll = () => {
     if (!pdfsData?.items) return;
@@ -159,9 +185,10 @@ export default function DocumentsLibraryPage() {
 
   // Filter items by search client-side (for filename)
   const filteredItems = search
-    ? items.filter(item =>
-        item.fileName.toLowerCase().includes(search.toLowerCase()) ||
-        (item.gameTitle && item.gameTitle.toLowerCase().includes(search.toLowerCase()))
+    ? items.filter(
+        item =>
+          item.fileName.toLowerCase().includes(search.toLowerCase()) ||
+          (item.gameTitle && item.gameTitle.toLowerCase().includes(search.toLowerCase()))
       )
     : items;
 
@@ -180,7 +207,11 @@ export default function DocumentsLibraryPage() {
         <div className="flex items-center gap-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 text-amber-700 dark:text-amber-400">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-amber-700 dark:text-amber-400"
+              >
                 <RotateCcwIcon className="h-3.5 w-3.5" />
                 Purge Stale
               </Button>
@@ -189,7 +220,8 @@ export default function DocumentsLibraryPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Purge Stale Documents</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will mark documents stuck in processing for over 24 hours as failed. They can be reindexed later.
+                  This will mark documents stuck in processing for over 24 hours as failed. They can
+                  be reindexed later.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -203,7 +235,11 @@ export default function DocumentsLibraryPage() {
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 text-amber-700 dark:text-amber-400">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-amber-700 dark:text-amber-400"
+              >
                 <TrashIcon className="h-3.5 w-3.5" />
                 Cleanup Orphans
               </Button>
@@ -212,7 +248,8 @@ export default function DocumentsLibraryPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Cleanup Orphaned Chunks</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will delete text chunks that reference non-existent PDF documents. This operation is irreversible.
+                  This will delete text chunks that reference non-existent PDF documents. This
+                  operation is irreversible.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -261,7 +298,9 @@ export default function DocumentsLibraryPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-xl font-bold">{distribution?.countByState?.['Completed'] ?? '—'}</p>
+                <p className="text-xl font-bold">
+                  {distribution?.countByState?.['Completed'] ?? '—'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -277,9 +316,9 @@ export default function DocumentsLibraryPage() {
                 <p className="text-sm text-muted-foreground">Processing</p>
                 <p className="text-xl font-bold">
                   {(distribution?.countByState?.['Processing'] ?? 0) +
-                   (distribution?.countByState?.['Extracting'] ?? 0) +
-                   (distribution?.countByState?.['Chunking'] ?? 0) +
-                   (distribution?.countByState?.['Embedding'] ?? 0) || '—'}
+                    (distribution?.countByState?.['Extracting'] ?? 0) +
+                    (distribution?.countByState?.['Chunking'] ?? 0) +
+                    (distribution?.countByState?.['Embedding'] ?? 0) || '—'}
                 </p>
               </div>
             </div>
@@ -294,7 +333,9 @@ export default function DocumentsLibraryPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Storage</p>
-                <p className="text-xl font-bold">{storageHealth?.fileStorage?.totalSizeFormatted ?? '—'}</p>
+                <p className="text-xl font-bold">
+                  {storageHealth?.fileStorage?.totalSizeFormatted ?? '—'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -308,7 +349,10 @@ export default function DocumentsLibraryPage() {
             <div className="flex items-center gap-2">
               <DatabaseIcon className="h-4 w-4 text-blue-500" />
               <span className="text-muted-foreground">PostgreSQL:</span>
-              <span className="font-medium">{storageHealth.postgres.totalDocuments} docs, {storageHealth.postgres.totalChunks} chunks</span>
+              <span className="font-medium">
+                {storageHealth.postgres.totalDocuments} docs, {storageHealth.postgres.totalChunks}{' '}
+                chunks
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <DatabaseIcon className="h-4 w-4 text-purple-500" />
@@ -322,10 +366,19 @@ export default function DocumentsLibraryPage() {
             <div className="flex items-center gap-2">
               <HardDriveIcon className="h-4 w-4 text-green-500" />
               <span className="text-muted-foreground">Files:</span>
-              <span className="font-medium">{storageHealth.fileStorage.totalFiles} ({storageHealth.fileStorage.totalSizeFormatted})</span>
+              <span className="font-medium">
+                {storageHealth.fileStorage.totalFiles} (
+                {storageHealth.fileStorage.totalSizeFormatted})
+              </span>
             </div>
-            <Badge variant={storageHealth.overallHealth === 'Healthy' ? 'default' : 'destructive'}
-              className={storageHealth.overallHealth === 'Healthy' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ''}>
+            <Badge
+              variant={storageHealth.overallHealth === 'Healthy' ? 'default' : 'destructive'}
+              className={
+                storageHealth.overallHealth === 'Healthy'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                  : ''
+              }
+            >
               {storageHealth.overallHealth}
             </Badge>
           </div>
@@ -340,11 +393,20 @@ export default function DocumentsLibraryPage() {
             <Input
               placeholder="Search documents..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={e => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="pl-9 w-64 bg-white/70 dark:bg-zinc-800/70"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <Select
+            value={statusFilter}
+            onValueChange={v => {
+              setStatusFilter(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-40 bg-white/70 dark:bg-zinc-800/70">
               <SelectValue placeholder="Status filter" />
             </SelectTrigger>
@@ -370,7 +432,8 @@ export default function DocumentsLibraryPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Documents</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete {selectedIds.length} document(s) and their associated chunks. This action cannot be undone.
+                  This will permanently delete {selectedIds.length} document(s) and their associated
+                  chunks. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -392,12 +455,16 @@ export default function DocumentsLibraryPage() {
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-lg p-4 flex items-center gap-3">
           <AlertCircleIcon className="h-5 w-5 text-red-500 shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to load documents</p>
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">
+              Failed to load documents
+            </p>
             <p className="text-xs text-red-600 dark:text-red-400 mt-1">
               {error instanceof Error ? error.message : 'Unknown error'}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
         </div>
       )}
 
@@ -410,7 +477,9 @@ export default function DocumentsLibraryPage() {
                 <th className="text-left p-3 w-10">
                   <input
                     type="checkbox"
-                    checked={filteredItems.length > 0 && selectedIds.length === filteredItems.length}
+                    checked={
+                      filteredItems.length > 0 && selectedIds.length === filteredItems.length
+                    }
                     onChange={toggleSelectAll}
                     className="rounded border-slate-300 dark:border-zinc-600"
                   />
@@ -429,15 +498,33 @@ export default function DocumentsLibraryPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-slate-100 dark:border-zinc-800/60">
-                    <td className="p-3"><Skeleton className="h-4 w-4" /></td>
-                    <td className="p-3"><Skeleton className="h-4 w-48" /></td>
-                    <td className="p-3"><Skeleton className="h-4 w-24" /></td>
-                    <td className="p-3"><Skeleton className="h-5 w-20" /></td>
-                    <td className="p-3"><Skeleton className="h-4 w-8 ml-auto" /></td>
-                    <td className="p-3"><Skeleton className="h-4 w-8 ml-auto" /></td>
-                    <td className="p-3"><Skeleton className="h-4 w-16 ml-auto" /></td>
-                    <td className="p-3"><Skeleton className="h-4 w-20" /></td>
-                    <td className="p-3"><Skeleton className="h-8 w-16 ml-auto" /></td>
+                    <td className="p-3">
+                      <Skeleton className="h-4 w-4" />
+                    </td>
+                    <td className="p-3">
+                      <Skeleton className="h-4 w-48" />
+                    </td>
+                    <td className="p-3">
+                      <Skeleton className="h-4 w-24" />
+                    </td>
+                    <td className="p-3">
+                      <Skeleton className="h-5 w-20" />
+                    </td>
+                    <td className="p-3">
+                      <Skeleton className="h-4 w-8 ml-auto" />
+                    </td>
+                    <td className="p-3">
+                      <Skeleton className="h-4 w-8 ml-auto" />
+                    </td>
+                    <td className="p-3">
+                      <Skeleton className="h-4 w-16 ml-auto" />
+                    </td>
+                    <td className="p-3">
+                      <Skeleton className="h-4 w-20" />
+                    </td>
+                    <td className="p-3">
+                      <Skeleton className="h-8 w-16 ml-auto" />
+                    </td>
                   </tr>
                 ))
               ) : filteredItems.length === 0 ? (
@@ -450,7 +537,10 @@ export default function DocumentsLibraryPage() {
                 </tr>
               ) : (
                 filteredItems.map((item: PdfListItem) => (
-                  <tr key={item.id} className="border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/50 dark:hover:bg-zinc-700/30">
+                  <tr
+                    key={item.id}
+                    className="border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/50 dark:hover:bg-zinc-700/30"
+                  >
                     <td className="p-3">
                       <input
                         type="checkbox"
@@ -472,10 +562,31 @@ export default function DocumentsLibraryPage() {
                         {item.gameTitle ?? '—'}
                       </span>
                     </td>
-                    <td className="p-3">{getStatusBadge(item.processingState)}</td>
-                    <td className="p-3 text-right text-muted-foreground">{item.pageCount ?? '—'}</td>
+                    <td className="p-3">
+                      <div className="space-y-1">
+                        {getStatusBadge(item.processingState)}
+                        {item.processingState === 'Failed' && item.processingError && (
+                          <div className="text-xs text-red-600 dark:text-red-400 max-w-[220px]">
+                            {item.errorCategory && (
+                              <span className="font-semibold">[{item.errorCategory}]</span>
+                            )}{' '}
+                            {item.processingError}
+                            {item.retryCount > 0 && (
+                              <span className="text-muted-foreground ml-1">
+                                ({item.retryCount} {item.retryCount === 1 ? 'retry' : 'retries'})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3 text-right text-muted-foreground">
+                      {item.pageCount ?? '—'}
+                    </td>
                     <td className="p-3 text-right text-muted-foreground">{item.chunkCount}</td>
-                    <td className="p-3 text-right text-muted-foreground">{formatFileSize(item.fileSizeBytes)}</td>
+                    <td className="p-3 text-right text-muted-foreground">
+                      {formatFileSize(item.fileSizeBytes)}
+                    </td>
                     <td className="p-3 text-muted-foreground">
                       {format(new Date(item.uploadedAt), 'MMM d, yyyy')}
                     </td>
@@ -493,7 +604,12 @@ export default function DocumentsLibraryPage() {
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Delete document">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive"
+                              title="Delete document"
+                            >
                               <TrashIcon className="h-3.5 w-3.5" />
                             </Button>
                           </AlertDialogTrigger>
@@ -501,7 +617,8 @@ export default function DocumentsLibraryPage() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Document</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Delete &quot;{item.fileName}&quot; and all its chunks? This cannot be undone.
+                                Delete &quot;{item.fileName}&quot; and all its chunks? This cannot
+                                be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -528,7 +645,7 @@ export default function DocumentsLibraryPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 dark:border-zinc-700/40">
             <p className="text-sm text-muted-foreground">
-              Showing {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} of {total}
+              Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
             </p>
             <div className="flex items-center gap-1">
               <Button
@@ -540,7 +657,9 @@ export default function DocumentsLibraryPage() {
               >
                 <ChevronLeftIcon className="h-4 w-4" />
               </Button>
-              <span className="px-3 text-sm">Page {page} of {totalPages}</span>
+              <span className="px-3 text-sm">
+                Page {page} of {totalPages}
+              </span>
               <Button
                 variant="outline"
                 size="icon"

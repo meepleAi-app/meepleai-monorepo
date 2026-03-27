@@ -284,8 +284,8 @@ describe('GameCombobox', () => {
       const searchInput = screen.getByPlaceholderText('Type to search...');
       await user.type(searchInput, 'NonExistent');
 
-      const bggLink = await screen.findByText('Cerca nel catalogo');
-      await user.click(bggLink);
+      const catalogLink = await screen.findByText('Cerca nel catalogo');
+      await user.click(catalogLink);
 
       expect(mockOnNotFound).toHaveBeenCalledTimes(1);
     });
@@ -304,8 +304,8 @@ describe('GameCombobox', () => {
       const searchInput = screen.getByPlaceholderText('Type to search...');
       await user.type(searchInput, 'NonExistent');
 
-      const bggLink = await screen.findByText('Cerca nel catalogo');
-      await user.click(bggLink);
+      const catalogLink = await screen.findByText('Cerca nel catalogo');
+      await user.click(catalogLink);
 
       // Popover should be closed
       await waitFor(() => {

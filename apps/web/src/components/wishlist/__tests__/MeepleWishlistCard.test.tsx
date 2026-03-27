@@ -12,6 +12,7 @@ describe('MeepleWishlistCard', () => {
     id: '00000000-0000-0000-0000-000000000001',
     userId: '00000000-0000-0000-0000-000000000002',
     gameId: '00000000-0000-0000-0000-000000000003',
+    gameName: 'Catan',
     priority: 'high',
     targetPrice: null,
     notes: null,
@@ -26,8 +27,14 @@ describe('MeepleWishlistCard', () => {
     expect(card).toHaveAttribute('data-entity', 'game');
   });
 
-  it('displays game ID as title', () => {
+  it('displays game name as title', () => {
     render(<MeepleWishlistCard item={mockItem} />);
-    expect(screen.getByText(mockItem.gameId)).toBeInTheDocument();
+    expect(screen.getByText('Catan')).toBeInTheDocument();
+  });
+
+  it('falls back to truncated ID when no game name', () => {
+    const itemNoName = { ...mockItem, gameName: undefined };
+    render(<MeepleWishlistCard item={itemNoName} />);
+    expect(screen.getByText('Game 00000000...')).toBeInTheDocument();
   });
 });

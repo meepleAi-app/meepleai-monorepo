@@ -214,6 +214,7 @@ const ALPHA_NAV_IDS = new Set([
   'profile',
   'admin',
   'agents',
+  'sessions',
 ]);
 
 /** Unified navigation items — filtered by ALPHA_MODE when active */

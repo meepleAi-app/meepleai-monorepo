@@ -9,7 +9,7 @@
 
 import { Suspense } from 'react';
 
-import { Gamepad2, Share2, Database } from 'lucide-react';
+import { Share2, Database } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
@@ -22,7 +22,6 @@ interface AdminContentPageProps {
 }
 
 const TABS: readonly HubTab[] = [
-  { id: 'games', label: 'Games', href: '/admin/content?tab=games', icon: <Gamepad2 /> },
   { id: 'shared', label: 'Shared Games', href: '/admin/content?tab=shared', icon: <Share2 /> },
   { id: 'kb', label: 'Knowledge Base', href: '/admin/content?tab=kb', icon: <Database /> },
 ] as const;
@@ -44,16 +43,10 @@ function TabSkeleton() {
 
 function renderTabContent(tab: TabId) {
   switch (tab) {
-    case 'games':
-      return (
-        <Suspense fallback={<TabSkeleton />}>
-          <SharedGamesTab showCategories />
-        </Suspense>
-      );
     case 'shared':
       return (
         <Suspense fallback={<TabSkeleton />}>
-          <SharedGamesTab />
+          <SharedGamesTab showCategories />
         </Suspense>
       );
     case 'kb':

@@ -215,6 +215,7 @@ const ALPHA_NAV_IDS = new Set([
   'admin',
   'agents',
   'sessions',
+  'play-records',
 ]);
 
 /** Unified navigation items — filtered by ALPHA_MODE when active */

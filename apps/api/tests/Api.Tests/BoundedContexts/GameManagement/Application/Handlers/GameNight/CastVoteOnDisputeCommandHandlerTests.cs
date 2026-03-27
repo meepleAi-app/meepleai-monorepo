@@ -1,5 +1,4 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
-using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;

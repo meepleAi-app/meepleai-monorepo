@@ -24,7 +24,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
-public class GraphRagExtractionTests : IDisposable
+public sealed class GraphRagExtractionTests : IDisposable
 {
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IPdfTextExtractor> _pdfTextExtractorMock = new();
@@ -292,7 +292,7 @@ public class GraphRagExtractionTests : IDisposable
             featureFlagService: _featureFlagServiceMock.Object);
     }
 
-    private PdfDocumentEntity SeedPdfDocument(string state)
+    private void SeedPdfDocument(string state)
     {
         var pdfDoc = new PdfDocumentEntity
         {
@@ -308,7 +308,6 @@ public class GraphRagExtractionTests : IDisposable
         };
         _db.PdfDocuments.Add(pdfDoc);
         _db.SaveChanges();
-        return pdfDoc;
     }
 
     private void SetupBlobStorageToReturn()

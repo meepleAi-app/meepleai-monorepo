@@ -1,5 +1,4 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.Session;
-using Api.BoundedContexts.GameManagement.Application.Commands.Session;
 using Api.Hubs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
@@ -22,7 +21,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Session;
 /// E3-2: Host toggles AI agent access for a specific session participant.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class ToggleAgentAccessCommandHandlerTests : IDisposable
+public sealed class ToggleAgentAccessCommandHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IHubContext<GameStateHub>> _hubContextMock;

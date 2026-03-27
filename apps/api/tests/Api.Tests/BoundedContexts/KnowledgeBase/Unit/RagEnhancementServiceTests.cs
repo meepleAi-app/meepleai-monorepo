@@ -197,7 +197,7 @@ public class RagEnhancementServiceTests
     [Fact]
     public async Task GetActiveEnhancementsAsync_CancellationRequested_ShouldThrow()
     {
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         Func<Task> act = () => _sut.GetActiveEnhancementsAsync(UserTier.Premium, cts.Token);

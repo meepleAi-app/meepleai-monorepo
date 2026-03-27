@@ -109,9 +109,9 @@ export default function UsagePage() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold font-quicksand">Usage &amp; Costs</h1>
+          <h1 className="text-2xl font-semibold font-quicksand">Utilizzo &amp; Costi</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time OpenRouter account status, rate-limit utilization, and daily spend.
+            Stato account OpenRouter in tempo reale, utilizzo del rate limit e spesa giornaliera.
           </p>
         </div>
         <div className="flex items-center gap-3">

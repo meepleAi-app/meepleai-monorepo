@@ -75,6 +75,7 @@ function QueryTesterTab() {
     setResult(null);
 
     try {
+      // TODO: Wire to real API — POST /api/v1/admin/rag-pipeline/test
       // In a real implementation, this would call:
       // const client = createAdminClient({ httpClient: new HttpClient() });
       // const res = await client.testRagPipeline({ query, strategy, model, temperature, topK, gameScope, agent });

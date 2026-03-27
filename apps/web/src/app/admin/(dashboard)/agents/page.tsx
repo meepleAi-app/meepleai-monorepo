@@ -139,19 +139,19 @@ export default function MissionControlPage() {
   function healthBadge(status: HealthStatus) {
     const variants: Record<HealthStatus, { label: string; className: string }> = {
       healthy: {
-        label: 'Healthy',
+        label: 'Attivo',
         className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
       },
       degraded: {
-        label: 'Degraded',
+        label: 'Degradato',
         className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
       },
       down: {
-        label: 'Down',
+        label: 'Non disponibile',
         className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
       },
       unknown: {
-        label: 'Unknown',
+        label: 'Sconosciuto',
         className: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
       },
     };
@@ -175,7 +175,7 @@ export default function MissionControlPage() {
   // ─── Quick Actions ───────────────────────────────────────────────────────
 
   const quickActions = [
-    { label: 'Test RAG Query', icon: Search, href: '/admin/agents/playground' },
+    { label: 'Testa Query RAG', icon: Search, href: '/admin/agents/playground' },
     { label: 'Ispeziona Esecuzioni', icon: FileSearch, href: '/admin/agents/inspector' },
     { label: 'Report Costi', icon: CircleDollarSign, href: '/admin/agents/usage' },
     { label: 'Nuovo Agent', icon: PlusCircle, href: '/admin/agents/definitions/create' },
@@ -286,7 +286,7 @@ export default function MissionControlPage() {
         {/* Service Health */}
         <Card className="lg:col-span-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Service Health</CardTitle>
+            <CardTitle className="text-sm font-semibold">Stato Servizi</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {services.map(svc => {

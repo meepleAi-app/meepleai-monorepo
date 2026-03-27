@@ -72,6 +72,7 @@ export function CompareTab() {
   const [idA, setIdA] = useState('');
   const [idB, setIdB] = useState('');
 
+  // TODO: Wire to real API — GET /api/v1/admin/rag-executions/{id}
   // Placeholder: in a real implementation, these would fetch from the API
   const handleLoadA = () => {
     if (!idA.trim()) return;

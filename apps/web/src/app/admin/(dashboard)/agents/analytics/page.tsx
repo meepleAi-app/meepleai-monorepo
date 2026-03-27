@@ -13,6 +13,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
 import { Activity, Target, BarChart3, TrendingUp, RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 import type { AgentMetrics, TopAgent } from '@/app/(authenticated)/admin/agents/metrics/client';
 import { CostBreakdownChart } from '@/components/admin/agents/CostBreakdownChart';
@@ -88,6 +89,9 @@ async function fetchTopAgents(
 // ============================================================================
 
 export default function AgentAnalyticsPage() {
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get('tab') ?? 'overview';
+
   const [dateRange, setDateRange] = useState<DateRange>('7d');
   const [sortBy, setSortBy] = useState<'invocations' | 'cost' | 'confidence'>('invocations');
 
@@ -151,10 +155,10 @@ export default function AgentAnalyticsPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-            Agent Analytics
+            Analisi Agenti
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Monitor AI agent performance and costs
+            Monitora performance e costi degli agenti AI
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -195,7 +199,7 @@ export default function AgentAnalyticsPage() {
       )}
 
       {/* Tabbed Content */}
-      <Tabs defaultValue="overview">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="top-agents">Top Agents</TabsTrigger>

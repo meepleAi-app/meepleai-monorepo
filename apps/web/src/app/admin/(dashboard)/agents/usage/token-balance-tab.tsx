@@ -40,7 +40,7 @@ export function TokenBalanceTab() {
     <div className="space-y-6">
       {/* ── Balance Card ── */}
       <section aria-label="Token Balance">
-        <h2 className="text-lg font-medium font-quicksand mb-4">Balance Overview</h2>
+        <h2 className="text-lg font-medium font-quicksand mb-4">Panoramica Saldo</h2>
         {balanceLoading ? (
           <div className="h-28 animate-pulse rounded-xl bg-muted" />
         ) : balance ? (
@@ -84,7 +84,7 @@ export function TokenBalanceTab() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Tier Usage */}
         <section aria-label="Tier Usage">
-          <h2 className="text-lg font-medium font-quicksand mb-4">Usage by Tier</h2>
+          <h2 className="text-lg font-medium font-quicksand mb-4">Utilizzo per Livello</h2>
           {tierLoading ? (
             <div className="h-48 animate-pulse rounded-xl bg-muted" />
           ) : tierUsage && tierUsage.tiers.length > 0 ? (
@@ -119,7 +119,7 @@ export function TokenBalanceTab() {
 
         {/* Top Consumers */}
         <section aria-label="Top Consumers">
-          <h2 className="text-lg font-medium font-quicksand mb-4">Top Consumers</h2>
+          <h2 className="text-lg font-medium font-quicksand mb-4">Maggiori Consumatori</h2>
           {consumersLoading ? (
             <div className="h-48 animate-pulse rounded-xl bg-muted" />
           ) : topConsumers && topConsumers.consumers.length > 0 ? (

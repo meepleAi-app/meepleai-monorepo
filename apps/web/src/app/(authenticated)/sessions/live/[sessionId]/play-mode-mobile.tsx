@@ -29,24 +29,10 @@ import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { SessionBottomNav, type SessionTab } from '@/components/ui/navigation/SessionBottomNav';
 import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
+import { PLAYER_COLOR_HEX } from '@/lib/constants/player-colors';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/sessionStore';
 import { cn } from '@/lib/utils';
-
-// ========== Color map: PlayerColor enum → hex ==========
-
-const PLAYER_COLOR_HEX: Record<string, string> = {
-  Red: '#ef4444',
-  Blue: '#3b82f6',
-  Green: '#22c55e',
-  Yellow: '#eab308',
-  Purple: '#a855f7',
-  Orange: '#f97316',
-  White: '#e2e8f0',
-  Black: '#1f2937',
-  Pink: '#ec4899',
-  Teal: '#14b8a6',
-};
 
 // ========== Props ==========
 

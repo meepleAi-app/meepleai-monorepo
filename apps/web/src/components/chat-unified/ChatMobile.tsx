@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
-import { ArrowLeft, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
@@ -18,6 +18,8 @@ import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
 import type { ChatThreadDto, ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
 import { cn } from '@/lib/utils';
+
+import { QuickPromptChips } from './QuickPromptChips';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -43,42 +45,9 @@ export interface ChatMobileProps {
 
 function CitationChip({ citation }: { citation: CitationItem }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-[10px] font-nunito">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-nunito">
       {citation.title}
     </span>
-  );
-}
-
-// ─── Quick Prompt Chips ─────────────────────────────────────────────────────
-
-function QuickPromptChips({
-  questions,
-  onSelect,
-}: {
-  questions: string[];
-  onSelect: (q: string) => void;
-}) {
-  if (questions.length === 0) return null;
-
-  return (
-    <div className="flex gap-2 overflow-x-auto px-4 py-2 scrollbar-none">
-      {questions.map((q, i) => (
-        <button
-          key={i}
-          type="button"
-          onClick={() => onSelect(q)}
-          className={cn(
-            'shrink-0 px-3 py-1.5 rounded-full text-xs font-nunito',
-            'bg-amber-50 dark:bg-amber-950/30',
-            'text-amber-800 dark:text-amber-300',
-            'border border-amber-200/60 dark:border-amber-800/40',
-            'active:bg-amber-100 dark:active:bg-amber-900/40 transition-colors'
-          )}
-        >
-          {q}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -93,8 +62,8 @@ function MessageBubble({ message }: { message: LocalMessage }) {
         className={cn(
           'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm font-nunito',
           isUser
-            ? 'bg-gray-800 dark:bg-gray-700 text-white rounded-br-md'
-            : 'bg-white/80 dark:bg-card/80 backdrop-blur-sm border border-amber-200/40 dark:border-amber-800/30 text-foreground rounded-bl-md'
+            ? 'bg-[var(--gaming-bg-elevated)] text-white rounded-br-md'
+            : 'bg-[var(--gaming-bg-glass)] backdrop-blur-sm border border-[var(--gaming-border-glass)] text-[var(--gaming-text-primary)] rounded-bl-md'
         )}
       >
         <p className="whitespace-pre-wrap break-words">{message.content}</p>
@@ -119,7 +88,7 @@ function StreamingBubble({ content }: { content: string }) {
       <div
         className={cn(
           'max-w-[85%] rounded-2xl rounded-bl-md px-4 py-2.5 text-sm font-nunito',
-          'bg-white/80 dark:bg-card/80 backdrop-blur-sm border border-amber-200/40 dark:border-amber-800/30 text-foreground'
+          'bg-[var(--gaming-bg-glass)] backdrop-blur-sm border border-[var(--gaming-border-glass)] text-[var(--gaming-text-primary)]'
         )}
       >
         <p className="whitespace-pre-wrap break-words">{content}</p>
@@ -129,19 +98,19 @@ function StreamingBubble({ content }: { content: string }) {
   );
 }
 
-// ─── Loading State ──────────────────────────────────────────────────────────
+// ─── Streaming Loading Dots ─────────────────────────────────────────────────
 
-function AiLoadingState({ message }: { message: string }) {
+function StreamingLoadingDots({ message }: { message: string }) {
   return (
     <div className="flex justify-start">
-      <div className="max-w-[85%] rounded-2xl rounded-bl-md px-4 py-3 bg-white/60 dark:bg-card/60 border border-amber-200/30 dark:border-amber-800/20">
+      <div className="max-w-[85%] rounded-2xl rounded-bl-md px-4 py-3 bg-[var(--gaming-bg-glass)] border border-[var(--gaming-border-glass)]">
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce" />
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:0.15s]" />
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:0.3s]" />
           </div>
-          <span className="text-xs text-muted-foreground font-nunito">{message}</span>
+          <span className="text-xs text-[var(--gaming-text-secondary)] font-nunito">{message}</span>
         </div>
       </div>
     </div>
@@ -300,7 +269,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   // Loading
   if (isLoading) {
     return (
-      <div className="flex flex-col h-dvh bg-background">
+      <div className="flex flex-col h-dvh bg-[var(--gaming-bg-base)]">
         <MobileHeader title="Caricamento..." onBack={() => router.push('/chat')} />
         <div className="flex-1 flex items-center justify-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500" />
@@ -312,7 +281,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   // Load error
   if (loadError) {
     return (
-      <div className="flex flex-col h-dvh bg-background">
+      <div className="flex flex-col h-dvh bg-[var(--gaming-bg-base)]">
         <MobileHeader title="Errore" onBack={() => router.push('/chat')} />
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="text-center">
@@ -330,18 +299,14 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   }
 
   return (
-    <div className="flex flex-col h-dvh bg-background">
+    <div className="flex flex-col h-dvh bg-[var(--gaming-bg-base)]">
       {/* Header */}
-      <MobileHeader
-        title={headerTitle}
-        onBack={() => router.push('/chat')}
-        rightActions={<ArrowLeft className="h-0 w-0" aria-hidden="true" />}
-      />
+      <MobileHeader title={headerTitle} onBack={() => router.push('/chat')} />
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
         {messages.length === 0 && !streamState.isStreaming && (
-          <div className="text-center py-12 text-muted-foreground font-nunito">
+          <div className="text-center py-12 text-[var(--gaming-text-secondary)] font-nunito">
             <p className="text-sm">Inizia la conversazione inviando un messaggio.</p>
           </div>
         )}
@@ -356,12 +321,12 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         )}
 
         {streamState.isStreaming && !streamState.currentAnswer && streamState.statusMessage && (
-          <AiLoadingState message={streamState.statusMessage} />
+          <StreamingLoadingDots message={streamState.statusMessage} />
         )}
 
         {/* Stream error */}
         {streamState.error && (
-          <div className="mx-2 p-2 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg text-xs font-nunito border border-red-200 dark:border-red-500/20">
+          <div className="mx-2 p-2 bg-red-500/10 text-red-400 rounded-lg text-xs font-nunito border border-red-500/20">
             {streamState.error}
           </div>
         )}
@@ -371,11 +336,15 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
 
       {/* Quick prompts (hidden while streaming) */}
       {!streamState.isStreaming && activeFollowUps.length > 0 && (
-        <QuickPromptChips questions={activeFollowUps} onSelect={q => handleSend(q)} />
+        <QuickPromptChips
+          prompts={activeFollowUps}
+          onSelect={q => handleSend(q)}
+          className="px-4 py-2"
+        />
       )}
 
       {/* Input area */}
-      <div className="border-t border-border/40 px-3 py-3 bg-background/95 backdrop-blur-sm">
+      <div className="border-t border-[var(--gaming-border-glass)] px-3 py-3 bg-[var(--gaming-bg-elevated)] backdrop-blur-sm">
         <div className="flex items-end gap-2">
           <textarea
             value={inputValue}
@@ -384,9 +353,9 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             placeholder="Scrivi un messaggio..."
             rows={1}
             className={cn(
-              'flex-1 resize-none rounded-xl border border-border/50 px-4 py-2.5',
-              'bg-white/70 dark:bg-card/70 text-sm font-nunito',
-              'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40',
+              'flex-1 resize-none rounded-xl border border-[var(--gaming-border-glass)] px-4 py-2.5',
+              'bg-[var(--gaming-bg-glass)] text-sm font-nunito',
+              'placeholder:text-[var(--gaming-text-secondary)] focus:outline-none focus:ring-2 focus:ring-amber-500/40',
               'max-h-24'
             )}
             disabled={streamState.isStreaming}
@@ -398,7 +367,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
               'p-2.5 rounded-xl transition-all duration-200 shrink-0',
               inputValue.trim() && !streamState.isStreaming
                 ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                : 'bg-muted text-muted-foreground'
+                : 'bg-[var(--gaming-bg-glass)] text-[var(--gaming-text-secondary)]'
             )}
             aria-label="Invia messaggio"
           >

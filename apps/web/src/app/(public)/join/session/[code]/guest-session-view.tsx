@@ -22,21 +22,7 @@ import type { LiveScoreboardPlayer } from '@/components/game-night/LiveScoreboar
 import { Button } from '@/components/ui/primitives/button';
 import { GlassCard } from '@/components/ui/surfaces/GlassCard';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
-
-// ========== Color map ==========
-
-const PLAYER_COLOR_HEX: Record<string, string> = {
-  Red: '#ef4444',
-  Blue: '#3b82f6',
-  Green: '#22c55e',
-  Yellow: '#eab308',
-  Purple: '#a855f7',
-  Orange: '#f97316',
-  White: '#e2e8f0',
-  Black: '#1f2937',
-  Pink: '#ec4899',
-  Teal: '#14b8a6',
-};
+import { PLAYER_COLOR_HEX } from '@/lib/constants/player-colors';
 
 // ========== Types ==========
 
@@ -60,7 +46,8 @@ export function GuestSessionView({ code }: GuestSessionViewProps) {
     setErrorMessage(null);
 
     try {
-      const res = await fetch(`/api/v1/live-sessions/code/${encodeURIComponent(code)}`);
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/v1/live-sessions/code/${encodeURIComponent(code)}`);
       if (!res.ok) {
         setErrorMessage('Sessione non trovata o codice non valido.');
         setViewState('error');

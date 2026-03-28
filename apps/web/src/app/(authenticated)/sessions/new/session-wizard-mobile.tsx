@@ -119,12 +119,27 @@ export function SessionWizardMobile() {
         gameId: selectedGameId ?? undefined,
       });
 
-      // 2. Add all players
+      // 2. Add all players with error recovery
+      const addedPlayers: string[] = [];
       for (const player of players) {
-        await api.liveSessions.addPlayer(sessionId, {
-          displayName: player.displayName,
-          color: player.color,
-        });
+        try {
+          await api.liveSessions.addPlayer(sessionId, {
+            displayName: player.displayName,
+            color: player.color,
+          });
+          addedPlayers.push(player.displayName);
+        } catch (playerErr) {
+          const failedName = player.displayName;
+          const remaining = players.length - addedPlayers.length;
+          const msg = playerErr instanceof Error ? playerErr.message : 'Errore aggiunta giocatore';
+          setError(
+            `Errore aggiungendo "${failedName}" (${addedPlayers.length}/${players.length} aggiunti). ${msg}. ` +
+              (remaining > 1 ? `${remaining - 1} giocatori restanti non aggiunti.` : '')
+          );
+          // Still navigate — session was created and some players may have been added
+          router.push(`/sessions/live/${sessionId}`);
+          return;
+        }
       }
 
       // 3. Navigate to live session
@@ -132,6 +147,7 @@ export function SessionWizardMobile() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Errore nella creazione della sessione';
       setError(msg);
+    } finally {
       setIsCreating(false);
     }
   }, [selectedGameName, selectedGameId, players, router]);

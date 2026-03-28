@@ -21,7 +21,9 @@
     --gaming-accent-info: #3b82f6;
     --gaming-text-primary: #f8fafc;
     --gaming-text-secondary: #94a3b8;
+    --gaming-text-tertiary: #64748b;
     --gaming-text-accent: #fbbf24;
+    --gaming-surface: #1a1a2e;
     --gaming-blur: 12px;
   }
 }
@@ -104,5 +106,9 @@
   .glass-glow-event {
     box-shadow: 0 0 12px rgba(244, 63, 94, 0.15);
     border-color: rgba(244, 63, 94, 0.25);
+  }
+
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }

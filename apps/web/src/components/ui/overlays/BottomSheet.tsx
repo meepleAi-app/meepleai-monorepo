@@ -4,6 +4,7 @@ import React, { useCallback, useEffect } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 
+import { lockScroll, unlockScroll } from '@/lib/scroll-lock';
 import { cn } from '@/lib/utils';
 
 export interface BottomSheetProps {
@@ -29,6 +30,7 @@ export function BottomSheet({
   children,
   className,
 }: BottomSheetProps) {
+  const titleId = React.useId();
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onOpenChange(false);
@@ -39,12 +41,12 @@ export function BottomSheet({
   useEffect(() => {
     if (open) {
       document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
+      lockScroll();
     }
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       if (open) {
-        document.body.style.overflow = '';
+        unlockScroll();
       }
     };
   }, [open, handleKeyDown]);
@@ -66,7 +68,7 @@ export function BottomSheet({
             data-testid="bottom-sheet-content"
             role="dialog"
             aria-modal="true"
-            aria-labelledby={title ? 'bottom-sheet-title' : undefined}
+            aria-labelledby={title ? titleId : undefined}
             aria-label={title ? undefined : 'Sheet'}
             className={cn(
               'sheet-surface fixed inset-x-0 bottom-0 z-50 flex flex-col overflow-hidden',
@@ -84,7 +86,7 @@ export function BottomSheet({
             {title && (
               <div className="px-4 pb-3">
                 <h2
-                  id="bottom-sheet-title"
+                  id={titleId}
                   className="text-lg font-semibold text-[var(--gaming-text-primary)]"
                 >
                   {title}

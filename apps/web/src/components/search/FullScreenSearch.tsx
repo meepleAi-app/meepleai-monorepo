@@ -7,6 +7,7 @@ import { Search, X } from 'lucide-react';
 
 import { useSearchBggGames } from '@/hooks/queries/useSearchBggGames';
 import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
+import { lockScroll, unlockScroll } from '@/lib/scroll-lock';
 
 /**
  * Re-export BggSearchResult as BggGameResult for consumers
@@ -57,11 +58,13 @@ export function FullScreenSearch({ open, onClose, onSelectGame }: FullScreenSear
   useEffect(() => {
     if (open) {
       document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
+      lockScroll();
     }
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      if (open) {
+        unlockScroll();
+      }
     };
   }, [open, handleKeyDown]);
 

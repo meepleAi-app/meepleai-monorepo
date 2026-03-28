@@ -15,7 +15,7 @@ export interface GamePreviewSheetProps {
   open: boolean;
   game: BggGameSummary | null;
   onOpenChange: (open: boolean) => void;
-  onAdded: (result: { privateGameId: string; libraryEntryId: string }) => void;
+  onAdded: () => void;
 }
 
 export function GamePreviewSheet({ open, game, onOpenChange, onAdded }: GamePreviewSheetProps) {
@@ -33,7 +33,7 @@ export function GamePreviewSheet({ open, game, onOpenChange, onAdded }: GamePrev
       const result = await api.gameNightBgg.importGame(game.bggId);
       setIsAdded(true);
       toast.success(`"${game.title}" aggiunto alla libreria!`);
-      onAdded({ privateGameId: result.privateGameId, libraryEntryId: result.libraryEntryId });
+      onAdded();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Errore durante l'aggiunta";
       toast.error(message);

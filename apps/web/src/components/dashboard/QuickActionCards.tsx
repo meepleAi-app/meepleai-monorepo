@@ -55,8 +55,8 @@ export function QuickActionCards({ onSearchClick }: QuickActionCardsProps) {
           </Link>
         );
       })}
-      <button type="button" onClick={onSearchClick}>
-        <GlassCard className="flex flex-col gap-2 p-4 text-left">
+      <button type="button" onClick={onSearchClick} className="col-span-2">
+        <GlassCard className="flex items-center gap-3 p-4 text-left">
           <Search className="h-6 w-6 text-blue-400" />
           <div>
             <p className="text-sm font-semibold text-[var(--gaming-text-primary)]">Esplora</p>

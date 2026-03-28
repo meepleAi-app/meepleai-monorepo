@@ -22,10 +22,16 @@ export interface FullScreenSearchProps {
 
 export function FullScreenSearch({ open, onClose, onSelectGame }: FullScreenSearchProps) {
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
   const { data, isLoading, error } = useSearchBggGames({
-    query,
+    query: debouncedQuery,
     exact: false,
   });
 
@@ -55,13 +61,9 @@ export function FullScreenSearch({ open, onClose, onSelectGame }: FullScreenSear
     }
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      if (open) {
-        document.body.style.overflow = '';
-      }
+      document.body.style.overflow = '';
     };
   }, [open, handleKeyDown]);
-
-  if (!open) return null;
 
   const results = data?.results ?? [];
   const hasQuery = query.trim().length >= 2;
@@ -88,6 +90,7 @@ export function FullScreenSearch({ open, onClose, onSelectGame }: FullScreenSear
               className="flex-1 bg-transparent text-base text-[var(--gaming-text-primary)] placeholder:text-[var(--gaming-text-secondary)] focus:outline-none"
             />
             <button
+              type="button"
               onClick={onClose}
               aria-label="Chiudi ricerca"
               className="rounded-full p-1.5 text-[var(--gaming-text-secondary)] transition-colors hover:bg-white/10 hover:text-[var(--gaming-text-primary)]"

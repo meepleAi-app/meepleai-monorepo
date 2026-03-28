@@ -288,6 +288,9 @@ builder.Services.AddHttpContextAccessor();
 // SEC-07: Issue #1787 - TOTP Replay Attack Prevention Background Cleanup
 builder.Services.AddHostedService<Api.Infrastructure.BackgroundTasks.UsedTotpCodeCleanupTask>();
 
+// RAG backup: Weekly full snapshot on Sunday 03:00 UTC with retention pruning
+builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.RagBackupSchedulerService>();
+
 // Issue #1449: FluentValidation for CQRS pipeline
 builder.Services.AddFluentValidation();
 

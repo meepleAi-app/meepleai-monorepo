@@ -49,14 +49,15 @@ import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
-
-const AVAILABLE_ROLES = ['User', 'Editor', 'Admin'];
+import { ASSIGNABLE_ROLES, normalizeRole, displayRole } from '@/lib/utils/roles';
 
 function getRoleBadgeClass(role: string) {
-  switch (role) {
-    case 'Admin':
+  switch (normalizeRole(role)) {
+    case 'admin':
+    case 'superadmin':
       return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-    case 'Contributor':
+    case 'editor':
+    case 'creator':
       return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
     default:
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
@@ -105,7 +106,7 @@ function UserHeader({
             {user.displayName}
           </h1>
           <Badge variant="default" className={getRoleBadgeClass(user.role)}>
-            {user.role}
+            {displayRole(user.role)}
           </Badge>
           {getStatusBadge(user.isSuspended ?? false)}
         </div>
@@ -258,10 +259,17 @@ function OverviewTab({
 
 // ========== Change Role Card ==========
 
-function ChangeRoleCard({ userId, currentRole }: { userId: string; currentRole: string }) {
+function ChangeRoleCard({
+  userId,
+  currentRole: rawCurrentRole,
+}: {
+  userId: string;
+  currentRole: string;
+}) {
   const queryClient = useQueryClient();
   const [newRole, setNewRole] = useState('');
   const [reason, setReason] = useState('');
+  const currentRole = normalizeRole(rawCurrentRole);
 
   const changeRoleMutation = useMutation({
     mutationFn: ({ role, reasonText }: { role: string; reasonText?: string }) =>
@@ -292,9 +300,9 @@ function ChangeRoleCard({ userId, currentRole }: { userId: string; currentRole: 
               <SelectValue placeholder="Select a role..." />
             </SelectTrigger>
             <SelectContent>
-              {AVAILABLE_ROLES.map(role => (
+              {ASSIGNABLE_ROLES.map(role => (
                 <SelectItem key={role} value={role} disabled={role === currentRole}>
-                  {role} {role === currentRole ? '(current)' : ''}
+                  {displayRole(role)} {role === currentRole ? '(current)' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -323,7 +331,8 @@ function ChangeRoleCard({ userId, currentRole }: { userId: string; currentRole: 
             <AlertDialogHeader>
               <AlertDialogTitle>Confirm Role Change</AlertDialogTitle>
               <AlertDialogDescription>
-                Change user role from <strong>{currentRole}</strong> to <strong>{newRole}</strong>?
+                Change user role from <strong>{displayRole(currentRole)}</strong> to{' '}
+                <strong>{displayRole(newRole)}</strong>?
                 {reason && (
                   <>
                     <br />
@@ -405,12 +414,12 @@ function RoleHistoryTable({ userId }: { userId: string }) {
               >
                 <td className="p-3">
                   <Badge variant="outline" className={getRoleBadgeClass(entry.oldRole)}>
-                    {entry.oldRole}
+                    {displayRole(entry.oldRole)}
                   </Badge>
                 </td>
                 <td className="p-3">
                   <Badge variant="outline" className={getRoleBadgeClass(entry.newRole)}>
-                    {entry.newRole}
+                    {displayRole(entry.newRole)}
                   </Badge>
                 </td>
                 <td className="p-3 text-muted-foreground">{entry.changedByDisplayName}</td>

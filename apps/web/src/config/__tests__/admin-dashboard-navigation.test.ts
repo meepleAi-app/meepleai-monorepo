@@ -95,10 +95,10 @@ describe('admin-dashboard-navigation', () => {
       expect(auditItem).toBeDefined();
     });
 
-    it('ai section should have All Agents sidebar item', () => {
+    it('ai section should have Mission Control sidebar item', () => {
       const section = getSection('ai');
       expect(section).toBeDefined();
-      const agentsItem = section!.sidebarItems.find(i => i.label === 'All Agents');
+      const agentsItem = section!.sidebarItems.find(i => i.label === 'Mission Control');
       expect(agentsItem).toBeDefined();
     });
 

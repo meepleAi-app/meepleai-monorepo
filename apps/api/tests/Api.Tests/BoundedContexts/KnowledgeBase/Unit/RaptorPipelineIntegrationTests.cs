@@ -247,7 +247,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
             _blobStorageServiceMock.Object,
             _timeProvider,
             _logger,
-            Mock.Of<ILanguageDetector>(),
+            Mock.Of<ILanguageDetector>(d => d.Detect(It.IsAny<string>()) == new LanguageDetectionResult("en", true, 0.95, null)),
             Mock.Of<IChunkTranslationService>(),
             raptorIndexer: withRaptor ? _raptorIndexerMock.Object : null,
             entityExtractor: null,

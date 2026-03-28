@@ -6,6 +6,7 @@ using Polly;
 using Polly.Extensions.Http;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
+using Api.Infrastructure.Http;
 using Api.Services;
 using Api.Configuration;
 using Api.Models;
@@ -241,6 +242,7 @@ internal static class InfrastructureServiceExtensions
             var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
+        .AddServiceCallLogging("Ollama")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(2), // Recycle connections every 2 min
@@ -270,6 +272,7 @@ internal static class InfrastructureServiceExtensions
             policy.CircuitBreakerAsync(
                 handledEventsAllowedBeforeBreaking: 5,
                 durationOfBreak: TimeSpan.FromSeconds(30)))
+        .AddServiceCallLogging("OpenRouter")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -287,6 +290,7 @@ internal static class InfrastructureServiceExtensions
             var timeoutSeconds = configuration.GetValue<int>("Embedding:TimeoutSeconds", 60);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
+        .AddServiceCallLogging("HuggingFace")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -306,6 +310,7 @@ internal static class InfrastructureServiceExtensions
             client.BaseAddress = new Uri(serviceUrl);
             client.Timeout = TimeSpan.FromSeconds(300);
         })
+        .AddServiceCallLogging("EmbeddingService")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -345,6 +350,7 @@ internal static class InfrastructureServiceExtensions
             policy.CircuitBreakerAsync(
                 handledEventsAllowedBeforeBreaking: 5,
                 durationOfBreak: TimeSpan.FromSeconds(30)))
+        .AddServiceCallLogging("BggApi")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -368,6 +374,7 @@ internal static class InfrastructureServiceExtensions
                 client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bggTokenForClient}");
             }
         })
+        .AddServiceCallLogging("BggApi")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -380,6 +387,15 @@ internal static class InfrastructureServiceExtensions
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
 
         return services;
+    }
+
+    private static IHttpClientBuilder AddServiceCallLogging(this IHttpClientBuilder builder, string serviceName)
+    {
+        return builder.AddHttpMessageHandler(sp =>
+            new ServiceCallLoggingHandler(
+                sp,
+                serviceName,
+                sp.GetRequiredService<ILogger<ServiceCallLoggingHandler>>()));
     }
 
     private static IServiceCollection AddTimeProvider(this IServiceCollection services)
@@ -416,7 +432,8 @@ internal static class InfrastructureServiceExtensions
         })
         .AddTransientHttpErrorPolicy(policy =>
             policy.WaitAndRetryAsync(2, retryAttempt =>
-                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
+                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
+        .AddServiceCallLogging("Infisical");
 
         // ISSUE-3499: Orchestration service client for Tutor agent
         services.AddHttpClient("OrchestrationService", client =>
@@ -426,6 +443,7 @@ internal static class InfrastructureServiceExtensions
 #pragma warning restore S1075
             client.Timeout = TimeSpan.FromSeconds(10);
         })
+        .AddServiceCallLogging("OrchestrationService")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),

@@ -53,6 +53,9 @@ internal static class AdministrationServiceExtensions
         // Issue #5512: GDPR AI consent tracking
         services.AddScoped<IUserAiConsentRepository, UserAiConsentRepository>();
 
+        // Service call logging repository
+        services.AddScoped<IServiceCallLogRepository, ServiceCallLogRepository>();
+
         // Issue #3692: Token Management repositories + OpenRouter API
         services.AddScoped<ITokenTierRepository, TokenTierRepository>();
         services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
@@ -194,6 +197,17 @@ internal static class AdministrationServiceExtensions
                 .WithIdentity("batch-job-processor-trigger", "background")
                 .WithSimpleSchedule(x => x.WithIntervalInSeconds(30).RepeatForever())
                 .WithDescription("Processes queued batch jobs every 30 seconds"));
+
+            // Service call log retention: daily at 4 AM UTC, keeps 7 days
+            q.AddJob<ServiceCallLogRetentionJob>(opts => opts
+                .WithIdentity("service-call-log-retention-job", "maintenance")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("service-call-log-retention-job", "maintenance")
+                .WithIdentity("service-call-log-retention-trigger", "maintenance")
+                .WithCronSchedule("0 0 4 * * ?")
+                .WithDescription("Runs daily to clean up service call logs older than 7 days"));
         });
 
         services.AddQuartzHostedService(options =>

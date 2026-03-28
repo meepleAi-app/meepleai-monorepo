@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 import { Play, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 
@@ -41,8 +41,16 @@ export function AutoTestRunner({ onComplete, disabled }: AutoTestRunnerProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentResults, setCurrentResults] = useState<AutoTestResult[]>([]);
+  const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      cancelledRef.current = true;
+    };
+  }, []);
 
   const runTests = useCallback(async () => {
+    cancelledRef.current = false;
     setIsRunning(true);
     setProgress(0);
     setCurrentResults([]);
@@ -51,6 +59,7 @@ export function AutoTestRunner({ onComplete, disabled }: AutoTestRunnerProps) {
 
     for (let i = 0; i < AUTO_TEST_QUESTIONS.length; i++) {
       await new Promise(resolve => setTimeout(resolve, 300));
+      if (cancelledRef.current) return;
 
       const confidence = Math.round((0.3 + Math.random() * 0.6) * 100) / 100;
       const latencyMs = Math.round(400 + Math.random() * 800);

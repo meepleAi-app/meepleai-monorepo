@@ -18,7 +18,7 @@
  * Note: BGG search was removed from user pages (restricted to admin only due to licensing).
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { BookOpen, PenLine } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -81,13 +81,20 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
   const router = useRouter();
   const [step, setStep] = useState<DrawerStep>('choice');
   const [catalogSelection, setCatalogSelection] = useState<CatalogSelection | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
 
   // Reset to choice step after close animation finishes
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
       if (!isOpen) {
         onClose();
-        setTimeout(() => {
+        closeTimerRef.current = setTimeout(() => {
           setStep('choice');
           setCatalogSelection(null);
         }, 300);

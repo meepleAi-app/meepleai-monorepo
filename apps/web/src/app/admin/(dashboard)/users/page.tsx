@@ -37,9 +37,10 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { useDebounce } from '@/hooks/useDebounce';
 import { api } from '@/lib/api';
+import { displayRole } from '@/lib/utils/roles';
 
 const PAGE_SIZE = 20;
-const ROLE_OPTIONS = ['all', 'User', 'Editor', 'Admin', 'SuperAdmin'] as const;
+const ROLE_OPTIONS = ['all', 'user', 'editor', 'admin', 'superadmin'] as const;
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
@@ -151,7 +152,7 @@ export default function AdminUsersPage() {
           <SelectContent>
             {ROLE_OPTIONS.map(role => (
               <SelectItem key={role} value={role}>
-                {role === 'all' ? 'Tutti i ruoli' : role}
+                {role === 'all' ? 'Tutti i ruoli' : displayRole(role)}
               </SelectItem>
             ))}
           </SelectContent>

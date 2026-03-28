@@ -5,10 +5,13 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.Extensions;
 using Api.Infrastructure.BackgroundServices;
+using Api.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
@@ -234,7 +237,8 @@ internal static class DocumentProcessingServiceExtensions
                 client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
             })
             .AddPolicyHandler(GetRetryPolicy(
-                configuration.GetValue<int?>("PdfProcessing:Extractor:Unstructured:MaxRetries") ?? 3));
+                configuration.GetValue<int?>("PdfProcessing:Extractor:Unstructured:MaxRetries") ?? 3))
+            .AddServiceCallLogging("UnstructuredService");
 
         services.AddScoped<UnstructuredPdfTextExtractor>();
     }
@@ -256,7 +260,8 @@ internal static class DocumentProcessingServiceExtensions
                 client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
             })
             .AddPolicyHandler(GetRetryPolicy(
-                configuration.GetValue<int?>("PdfProcessing:Extractor:SmolDocling:MaxRetries") ?? 3));
+                configuration.GetValue<int?>("PdfProcessing:Extractor:SmolDocling:MaxRetries") ?? 3))
+            .AddServiceCallLogging("SmolDoclingService");
 
         services.AddScoped<SmolDoclingPdfTextExtractor>();
     }

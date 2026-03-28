@@ -102,6 +102,7 @@ public sealed class WizardEndpointsIntegrationTests : IAsyncLifetime
                     {
                         options.DefaultPolicy = allowAllPolicy;
                         options.AddPolicy("AdminOrEditorPolicy", allowAllPolicy);
+                        options.AddPolicy("AdminOnlyPolicy", allowAllPolicy);
                     });
                 });
             });

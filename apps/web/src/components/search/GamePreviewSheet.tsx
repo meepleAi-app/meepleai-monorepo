@@ -30,7 +30,7 @@ export function GamePreviewSheet({ open, game, onOpenChange, onAdded }: GamePrev
 
     setIsAdding(true);
     try {
-      const result = await api.gameNightBgg.importGame(game.bggId);
+      await api.gameNightBgg.importGame(game.bggId);
       setIsAdded(true);
       toast.success(`"${game.title}" aggiunto alla libreria!`);
       onAdded();

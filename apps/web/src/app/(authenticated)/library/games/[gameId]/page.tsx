@@ -26,7 +26,6 @@ import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-car
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useGameTableDrawer } from '@/lib/stores/gameTableDrawerStore';
 
 import GameDetailMobile from './game-detail-mobile';
@@ -73,17 +72,10 @@ export default function LibraryGameDetailPage() {
   const params = useParams();
   const router = useRouter();
   const gameId = params?.gameId as string;
-  const { isMobile } = useResponsive();
-
   const { data: gameDetail, isLoading, error } = useLibraryGameDetail(gameId);
   const drawer = useGameTableDrawer();
 
-  // Mobile layout
-  if (isMobile) {
-    return <GameDetailMobile gameId={gameId} />;
-  }
-
-  // --- Loading ---
+  // --- Loading (shared by both layouts) ---
   if (isLoading) return <GameTableSkeleton />;
 
   // --- Error ---
@@ -167,35 +159,45 @@ export default function LibraryGameDetailPage() {
   };
 
   return (
-    <GameTableLayout
-      card={
-        <MeepleCard
-          entity="game"
-          variant="hero"
-          flippable
-          entityId={gameId}
-          title={gameDetail.gameTitle}
-          subtitle={buildSubtitle(gameDetail.gamePublisher, gameDetail.gameYearPublished)}
-          imageUrl={gameDetail.gameImageUrl || undefined}
-          rating={gameDetail.averageRating ?? undefined}
-          ratingMax={10}
-          metadata={metadata}
-          subtypeIcons={subtypeIcons}
-          stateLabel={stateLabel}
-          flipData={flipData}
-          data-testid="game-hero-card"
+    <>
+      {/* Mobile layout */}
+      <div className="lg:hidden">
+        <GameDetailMobile gameId={gameId} />
+      </div>
+
+      {/* Desktop layout */}
+      <div className="hidden lg:block">
+        <GameTableLayout
+          card={
+            <MeepleCard
+              entity="game"
+              variant="hero"
+              flippable
+              entityId={gameId}
+              title={gameDetail.gameTitle}
+              subtitle={buildSubtitle(gameDetail.gamePublisher, gameDetail.gameYearPublished)}
+              imageUrl={gameDetail.gameImageUrl || undefined}
+              rating={gameDetail.averageRating ?? undefined}
+              ratingMax={10}
+              metadata={metadata}
+              subtypeIcons={subtypeIcons}
+              stateLabel={stateLabel}
+              flipData={flipData}
+              data-testid="game-hero-card"
+            />
+          }
+          toolsZone={<GameTableZoneTools gameDetail={gameDetail} gameId={gameId} />}
+          knowledgeZone={<GameTableZoneKnowledge gameId={gameId} />}
+          sessionsZone={<GameTableZoneSessions gameDetail={gameDetail} gameId={gameId} />}
+          drawer={
+            drawer.content ? (
+              <GameTableDrawer content={drawer.content} onClose={drawer.close} />
+            ) : undefined
+          }
+          drawerOpen={drawer.isOpen}
+          onDrawerClose={drawer.close}
         />
-      }
-      toolsZone={<GameTableZoneTools gameDetail={gameDetail} gameId={gameId} />}
-      knowledgeZone={<GameTableZoneKnowledge gameId={gameId} />}
-      sessionsZone={<GameTableZoneSessions gameDetail={gameDetail} gameId={gameId} />}
-      drawer={
-        drawer.content ? (
-          <GameTableDrawer content={drawer.content} onClose={drawer.close} />
-        ) : undefined
-      }
-      drawerOpen={drawer.isOpen}
-      onDrawerClose={drawer.close}
-    />
+      </div>
+    </>
   );
 }

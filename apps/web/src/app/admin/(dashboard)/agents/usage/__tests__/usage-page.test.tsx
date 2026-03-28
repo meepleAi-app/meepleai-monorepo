@@ -60,6 +60,12 @@ vi.mock('@/hooks/useSetNavConfig', () => ({
   useSetNavConfig: () => vi.fn(),
 }));
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/admin/agents/usage',
+}));
+
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const mockStatus = {
@@ -123,7 +129,7 @@ describe('UsagePage', () => {
     renderWithQuery(<UsagePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Usage & Costs')).toBeInTheDocument();
+      expect(screen.getByText('Utilizzo & Costi')).toBeInTheDocument();
     });
   });
 

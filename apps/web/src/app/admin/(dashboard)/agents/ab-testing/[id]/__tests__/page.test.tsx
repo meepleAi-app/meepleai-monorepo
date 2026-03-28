@@ -3,7 +3,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { AbTestEvaluationPageInner } from '../page';
+import { AbTestEvaluationPageInner } from '../AbTestEvaluationPageInner';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -11,7 +11,9 @@ import { AbTestEvaluationPageInner } from '../page';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
   usePathname: () => '/admin/agents/ab-testing/test-id',
+  redirect: vi.fn(),
 }));
 
 vi.mock('next/link', () => ({

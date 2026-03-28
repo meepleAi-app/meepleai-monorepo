@@ -73,6 +73,10 @@ internal static class AdministrationServiceExtensions
         // Issue #3693: Batch Job System repositories
         services.AddScoped<IBatchJobRepository, BatchJobRepository>();
 
+        // RAG Backup services (Task 10: export, import, snapshot storage)
+        services.AddScoped<IRagBackupStorageService, RagBackupStorageService>();
+        services.AddScoped<IRagExportService, RagExportService>();
+
         // MVP Stack Optimization: Vector re-embedding service (e5-large → mxbai-embed-large migration)
         services.AddScoped<VectorReembeddingService>();
 

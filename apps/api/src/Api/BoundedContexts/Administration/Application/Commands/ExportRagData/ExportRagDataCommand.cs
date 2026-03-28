@@ -9,11 +9,6 @@ namespace Api.BoundedContexts.Administration.Application.Commands.ExportRagData;
 internal sealed record ExportRagDataCommand : IRequest<ExportRagDataResult>
 {
     /// <summary>
-    /// When true, includes a copy of the source PDF binary in the snapshot bundle.
-    /// </summary>
-    public bool IncludeSourcePdf { get; init; }
-
-    /// <summary>
     /// When true, counts what would be exported without writing any files.
     /// </summary>
     public bool DryRun { get; init; }

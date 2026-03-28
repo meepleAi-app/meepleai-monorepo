@@ -24,6 +24,7 @@ internal sealed record RagExportManifestEntry(
     [property: JsonPropertyName("gameName")] string GameName,
     [property: JsonPropertyName("path")] string Path,
     [property: JsonPropertyName("chunks")] int Chunks,
+    [property: JsonPropertyName("embeddings")] int Embeddings,
     [property: JsonPropertyName("language")] string Language);
 
 /// <summary>

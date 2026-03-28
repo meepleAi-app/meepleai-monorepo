@@ -185,7 +185,11 @@ internal sealed class RagBackupStorageService : IRagBackupStorageService
             ? relativePath[Prefix.Length..]
             : relativePath;
 
-        return Path.Combine(_localBasePath, path);
+        var fullPath = Path.GetFullPath(Path.Combine(_localBasePath, path));
+        if (!fullPath.StartsWith(Path.GetFullPath(_localBasePath), StringComparison.Ordinal))
+            throw new ArgumentException("Path traversal detected", nameof(relativePath));
+
+        return fullPath;
     }
 
     private async Task TryWriteToS3Async(string key, byte[] content, CancellationToken ct)

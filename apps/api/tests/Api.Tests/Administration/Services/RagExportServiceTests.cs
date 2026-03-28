@@ -29,6 +29,7 @@ public sealed class RagExportServiceTests
             GameName: "Catan",
             Path: "snapshots/2026/catan/11111111/",
             Chunks: 42,
+            Embeddings: 42,
             Language: "en");
 
         var manifest = new RagExportManifest(

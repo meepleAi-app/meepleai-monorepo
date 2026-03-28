@@ -145,6 +145,7 @@ internal sealed class ExportRagDataCommandHandler : IRequestHandler<ExportRagDat
                     GameName: gameName,
                     Path: documentPath,
                     Chunks: chunks.Count,
+                    Embeddings: embeddings.Count,
                     Language: pdfDoc.Language));
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -162,7 +163,7 @@ internal sealed class ExportRagDataCommandHandler : IRequestHandler<ExportRagDat
             ExportedAt: DateTimeOffset.UtcNow,
             TotalDocuments: manifestEntries.Count,
             TotalChunks: totalChunks,
-            TotalEmbeddings: totalEmbeddings,
+            TotalEmbeddings: manifestEntries.Sum(d => d.Embeddings),
             EmbeddingModel: vectorDocs.Count > 0 ? vectorDocs[0].EmbeddingModel : "nomic-embed-text",
             Documents: manifestEntries);
 

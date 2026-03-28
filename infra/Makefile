@@ -74,11 +74,11 @@ seed-games: ## Seed test games on staging via API (requires SSH access)
 # === RAG Backup ===
 rag-export: ## Full RAG export (one-shot for production go-live)
 	@echo "📦 Running full RAG data export..."
-	curl -s -X POST "http://localhost:8080/admin/rag-backup/export?dryRun=false&includeSourcePdf=false" | python3 -m json.tool
+	curl -s -X POST "http://localhost:8080/admin/rag-backup/export?dryRun=false" | python3 -m json.tool
 
 rag-export-dry: ## Preview RAG export without executing
 	@echo "🔍 Previewing RAG data export (dry run)..."
-	curl -s -X POST "http://localhost:8080/admin/rag-backup/export?dryRun=true&includeSourcePdf=false" | python3 -m json.tool
+	curl -s -X POST "http://localhost:8080/admin/rag-backup/export?dryRun=true" | python3 -m json.tool
 
 rag-backup-status: ## Status of latest RAG backup
 	@echo "📊 Checking latest RAG backup status..."

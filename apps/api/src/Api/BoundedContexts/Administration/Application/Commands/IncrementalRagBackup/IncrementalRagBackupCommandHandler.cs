@@ -97,6 +97,7 @@ internal sealed class IncrementalRagBackupCommandHandler
                 GameName: gameName,
                 Path: documentPath,
                 Chunks: chunks.Count,
+                Embeddings: embeddings.Count,
                 Language: pdfDoc.Language);
 
             List<RagExportManifestEntry> updatedDocuments;
@@ -113,20 +114,12 @@ internal sealed class IncrementalRagBackupCommandHandler
                 updatedDocuments.Add(newEntry);
             }
 
-            // Recalculate total embeddings: keep existing manifest total, adjust for the replaced entry.
-            // For a new entry: add embeddings.Count; for a replaced entry: subtract old count (unknown),
-            // so we track only what we know. The manifest primarily serves as a document registry;
-            // exact embedding totals are tracked per bundle in metadata.json.
-            var previousEmbeddingCount = manifest?.TotalEmbeddings ?? 0;
-            var isReplacing = manifest?.Documents.Any(e => e.PdfDocumentId == pdfDoc.Id) ?? false;
-            var totalEmbeddings = isReplacing ? previousEmbeddingCount : previousEmbeddingCount + embeddings.Count;
-
             var updatedManifest = new RagExportManifest(
                 ExportVersion: "1.0",
                 ExportedAt: DateTimeOffset.UtcNow,
                 TotalDocuments: updatedDocuments.Count,
                 TotalChunks: updatedDocuments.Sum(e => e.Chunks),
-                TotalEmbeddings: totalEmbeddings,
+                TotalEmbeddings: updatedDocuments.Sum(d => d.Embeddings),
                 EmbeddingModel: vectorDoc.EmbeddingModel,
                 Documents: updatedDocuments);
 

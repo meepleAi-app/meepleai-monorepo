@@ -14,7 +14,7 @@ internal static class AdminRagBackupEndpoints
             .WithTags("Admin - RAG Backup")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 
-        // POST /admin/rag-backup/export?dryRun=false&gameId=&includeSourcePdf=false
+        // POST /admin/rag-backup/export?dryRun=false&gameId=
         group.MapPost("/export", ExportRagData)
             .WithName("ExportRagData")
             .WithSummary("Export all processed RAG data to backup storage");
@@ -38,7 +38,6 @@ internal static class AdminRagBackupEndpoints
     private static async Task<IResult> ExportRagData(
         bool dryRun = false,
         Guid? gameId = null,
-        bool includeSourcePdf = false,
         IMediator mediator = default!,
         CancellationToken cancellationToken = default)
     {
@@ -46,7 +45,6 @@ internal static class AdminRagBackupEndpoints
         {
             DryRun = dryRun,
             GameIdFilter = gameId?.ToString(),
-            IncludeSourcePdf = includeSourcePdf
         }, cancellationToken).ConfigureAwait(false);
 
         return Results.Ok(result);

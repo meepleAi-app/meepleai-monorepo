@@ -196,7 +196,9 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     GameId = game.Id,
                     PdfDocumentId = pdfDocumentId,
                     ChunkCount = chunks.Count,
-                    IndexingStatus = "completed",
+                    // When ReEmbed=true, mark as pending so the indexing pipeline picks it up;
+                    // otherwise mark as completed because we are importing the stored embeddings.
+                    IndexingStatus = request.ReEmbed ? "pending" : "completed",
                     IndexedAt = DateTime.UtcNow,
                     EmbeddingModel = metadata.EmbeddingModel,
                     EmbeddingDimensions = metadata.EmbeddingDimensions,
@@ -276,6 +278,8 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                 errors.Add($"Error importing document {entry.PdfDocumentId}: {ex.Message}");
                 failed++;
                 _logger.LogWarning(ex, "ImportRagData: failed to import document {PdfDocumentId}", entry.PdfDocumentId);
+                // Clear any partially-tracked entities so they do not corrupt the next iteration.
+                _db.ChangeTracker.Clear();
             }
 #pragma warning restore CA1031
         }

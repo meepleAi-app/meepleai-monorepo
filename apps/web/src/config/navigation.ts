@@ -224,7 +224,7 @@ const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
     priority: 12,
     testId: 'nav-admin',
     activePattern: /^\/admin/,
-    visibility: { authOnly: true, minRole: 'Admin' },
+    visibility: { authOnly: true, minRole: 'admin' },
     group: 'admin',
   },
 ];

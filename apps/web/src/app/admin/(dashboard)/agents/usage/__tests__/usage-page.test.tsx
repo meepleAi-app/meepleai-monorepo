@@ -52,6 +52,13 @@ vi.mock('@/lib/api/clients/adminClient', () => ({
   HttpClient: vi.fn(),
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/admin/agents/usage',
+  redirect: vi.fn(),
+}));
+
 vi.mock('@/lib/api/core/httpClient', () => ({
   HttpClient: vi.fn(() => ({})),
 }));
@@ -123,7 +130,7 @@ describe('UsagePage', () => {
     renderWithQuery(<UsagePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Usage & Costs')).toBeInTheDocument();
+      expect(screen.getByText('Utilizzo & Costi')).toBeInTheDocument();
     });
   });
 

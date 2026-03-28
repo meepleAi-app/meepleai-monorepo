@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
+using Api.Filters;
 
 namespace Api.Routing;
 
@@ -42,7 +43,8 @@ internal static class AdminSecretsEndpoints
     public static IEndpointRouteBuilder MapAdminSecretsEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/admin/secrets")
-            .WithTags("Admin", "Secrets");
+            .WithTags("Admin", "Secrets")
+            .AddEndpointFilter<RequireAdminSessionFilter>();
 
         group.MapGet("/", HandleGetSecrets).WithName("GetSecrets");
         group.MapPut("/", HandleUpdateSecrets).WithName("UpdateSecrets");

@@ -25,14 +25,16 @@
 }
 
 @layer components {
-  .glass {
+  /* Note: .glass already exists in globals.css with theme-aware tokens.
+     Use .gaming-glass for gaming-specific glass effect, or .glass-card for cards. */
+  .gaming-glass {
     background: var(--gaming-bg-glass);
     border: 1px solid var(--gaming-border-glass);
     backdrop-filter: blur(var(--gaming-blur));
     -webkit-backdrop-filter: blur(var(--gaming-blur));
   }
 
-  .glass:hover {
+  .gaming-glass:hover {
     border-color: var(--gaming-border-glass-hover);
   }
 

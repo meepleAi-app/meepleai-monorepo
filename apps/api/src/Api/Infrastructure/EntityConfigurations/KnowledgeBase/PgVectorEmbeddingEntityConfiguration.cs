@@ -66,5 +66,13 @@ internal class PgVectorEmbeddingEntityConfiguration : IEntityTypeConfiguration<P
         builder.HasIndex(e => e.VectorDocumentId);
         builder.HasIndex(e => e.GameId);
         builder.HasIndex(e => new { e.GameId, e.ChunkIndex });
+
+        // HNSW index for vector similarity search (cosine distance).
+        // m=16: connections per node. ef_construction=64: search width during build.
+        builder.HasIndex(e => e.Vector)
+            .HasMethod("hnsw")
+            .HasOperators("vector_cosine_ops")
+            .HasStorageParameter("m", 16)
+            .HasStorageParameter("ef_construction", 64);
     }
 }

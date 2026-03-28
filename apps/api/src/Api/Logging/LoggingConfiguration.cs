@@ -56,6 +56,17 @@ internal static class LoggingConfiguration
             outputTemplate: consoleTemplate,
             restrictedToMinimumLevel: GetConsoleLogLevel(environment.EnvironmentName));
 
+        // Add Seq sink when configured (monitoring profile or SEQ_URL env var set)
+        var seqUrl = configuration["Seq:ServerUrl"]
+                  ?? Environment.GetEnvironmentVariable("SEQ_URL");
+        if (!string.IsNullOrEmpty(seqUrl))
+        {
+            loggerConfig.WriteTo.Seq(
+                serverUrl: seqUrl,
+                apiKey: configuration["Seq:ApiKey"],
+                restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information);
+        }
+
         return loggerConfig;
     }
 

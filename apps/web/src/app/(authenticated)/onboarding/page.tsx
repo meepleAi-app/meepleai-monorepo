@@ -14,7 +14,7 @@ import { createApiClient } from '@/lib/api';
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const api = createApiClient();
 
   const [displayName, setDisplayName] = useState('');
@@ -23,6 +23,11 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Refresh user data on mount to pick up session changes (e.g. after invitation acceptance)
+  useEffect(() => {
+    void refreshUser();
+  }, [refreshUser]);
 
   // Redirect if already onboarded
   useEffect(() => {

@@ -23,8 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { api } from '@/lib/api';
-
-const ASSIGNABLE_ROLES = ['User', 'Editor', 'Admin'] as const;
+import { ASSIGNABLE_ROLES, normalizeRole, displayRole } from '@/lib/utils/roles';
 
 interface InlineRoleSelectProps {
   userId: string;
@@ -35,18 +34,19 @@ interface InlineRoleSelectProps {
 
 export function InlineRoleSelect({
   userId,
-  currentRole,
+  currentRole: rawCurrentRole,
   userName,
   onRoleChanged,
 }: InlineRoleSelectProps) {
   const queryClient = useQueryClient();
   const [pendingRole, setPendingRole] = useState<string | null>(null);
-  const isSuperAdmin = currentRole.toLowerCase() === 'superadmin';
+  const currentRole = normalizeRole(rawCurrentRole);
+  const isSuperAdmin = currentRole === 'superadmin';
 
   const mutation = useMutation({
     mutationFn: (newRole: string) => api.admin.changeUserRole(userId, newRole),
     onSuccess: (_data, newRole) => {
-      toast.success(`Role changed to ${newRole} for ${userName}`);
+      toast.success(`Role changed to ${displayRole(newRole)} for ${userName}`);
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       onRoleChanged?.();
     },
@@ -85,7 +85,7 @@ export function InlineRoleSelect({
         <SelectContent>
           {ASSIGNABLE_ROLES.map(role => (
             <SelectItem key={role} value={role}>
-              {role}
+              {displayRole(role)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -96,8 +96,9 @@ export function InlineRoleSelect({
           <AlertDialogHeader>
             <AlertDialogTitle>Change Role</AlertDialogTitle>
             <AlertDialogDescription>
-              Change the role of <strong>{userName}</strong> from <strong>{currentRole}</strong> to{' '}
-              <strong>{pendingRole}</strong>?
+              Change the role of <strong>{userName}</strong> from{' '}
+              <strong>{displayRole(currentRole)}</strong> to{' '}
+              <strong>{displayRole(pendingRole)}</strong>?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

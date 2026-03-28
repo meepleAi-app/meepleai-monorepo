@@ -722,6 +722,7 @@ if (!isAlphaMode)
     v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
     v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
     v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
+    v1Api.MapAdminRagBackupEndpoints();        // RAG data backup & import
     v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
     v1Api.MapAdminEmailTemplateEndpoints(); // Issue #52: Admin email template management
     v1Api.MapAdminNotificationQueueEndpoints(); // Admin notification queue monitoring

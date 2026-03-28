@@ -138,6 +138,9 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<IRAGRecommender, RAGRecommender>();
         services.AddScoped<IStreakAnalyzer, StreakAnalyzer>();
 
+        // Circuit breaker state tracker — singleton, holds in-memory state across requests
+        services.AddSingleton<ICircuitBreakerStateTracker, CircuitBreakerStateTracker>();
+
         // Issue #3324: SSE real-time dashboard streaming service
         // Singleton because it holds Channel-based subscriber state across requests
         services.AddSingleton<IDashboardStreamService, DashboardStreamService>();

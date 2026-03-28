@@ -15,8 +15,8 @@ export interface NavItemVisibility {
   authOnly?: boolean;
   /** Only show when NOT authenticated */
   anonOnly?: boolean;
-  /** Minimum role required (uses role hierarchy: SuperAdmin > Admin > Editor > User) */
-  minRole?: 'Editor' | 'Admin';
+  /** Minimum role required (uses role hierarchy: superadmin > admin > editor > user) */
+  minRole?: 'editor' | 'admin';
 }
 
 /**

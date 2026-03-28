@@ -73,7 +73,7 @@ const mockGames: SharedGame[] = [
 
 const mockPagedResponse = {
   items: mockGames,
-  totalCount: 3,
+  total: 3,
   pageSize: 50,
   page: 1,
   totalPages: 1,

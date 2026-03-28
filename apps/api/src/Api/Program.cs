@@ -762,6 +762,7 @@ if (!isAlphaMode)
     v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
     v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel
     v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)
+    v1Api.MapAdminLogEndpoints();          // Structured application log viewer (Seq)
     v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 
     // Workflows

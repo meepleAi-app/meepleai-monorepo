@@ -17,6 +17,7 @@ using Api.Infrastructure.Seeders.LivedIn;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Extensions.Http;
@@ -83,6 +84,17 @@ internal static class AdministrationServiceExtensions
             var port = Environment.GetEnvironmentVariable("DOCKER_PROXY_PORT") ?? "2375";
             client.BaseAddress = new Uri($"http://{host}:{port}");
             client.Timeout = TimeSpan.FromSeconds(10);
+        });
+
+        // Seq structured log query client
+        services.Configure<SeqOptions>(configuration.GetSection(SeqOptions.SectionName));
+        services.AddHttpClient<ISeqQueryClient, SeqQueryClient>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<SeqOptions>>().Value;
+            client.BaseAddress = new Uri(options.ServerUrl);
+            if (!string.IsNullOrEmpty(options.ApiKey))
+                client.DefaultRequestHeaders.Add("X-Seq-ApiKey", options.ApiKey);
+            client.Timeout = TimeSpan.FromSeconds(15);
         });
 
         // Issue #891: Infrastructure health monitoring service

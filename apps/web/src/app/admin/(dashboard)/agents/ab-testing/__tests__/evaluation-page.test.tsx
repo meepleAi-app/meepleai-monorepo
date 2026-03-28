@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
-import { AbTestEvaluationPageInner } from '../[id]/page';
+import { AbTestEvaluationPageInner } from '../[id]/AbTestEvaluationPageInner';
 
 const mockGetAbTest = vi.hoisted(() => vi.fn());
 const mockEvaluateAbTest = vi.hoisted(() => vi.fn());
@@ -24,6 +24,9 @@ vi.mock('@/hooks/useSetNavConfig', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/admin/agents/ab-testing',
+  redirect: vi.fn(),
 }));
 
 const SESSION_ID = '00000000-0000-0000-0000-000000000001';

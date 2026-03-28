@@ -13,6 +13,7 @@ import {
   type SessionSummaryDto,
   type UserGameDto,
   type GetUserGamesParams,
+  type TrendingGameDto,
 } from '@/lib/api/dashboard-client';
 
 // ============================================================================
@@ -33,22 +34,26 @@ interface DashboardState {
   recentSessions: SessionSummaryDto[];
   games: UserGameDto[];
   totalGamesCount: number;
+  trendingGames: TrendingGameDto[];
   filters: DashboardFilters;
 
   // Loading states
   isLoadingStats: boolean;
   isLoadingSessions: boolean;
   isLoadingGames: boolean;
+  isLoadingTrending: boolean;
 
   // Errors
   statsError: string | null;
   sessionsError: string | null;
   gamesError: string | null;
+  trendingError: string | null;
 
   // Actions
   fetchStats: () => Promise<void>;
   fetchRecentSessions: (limit?: number) => Promise<void>;
   fetchGames: () => Promise<void>;
+  fetchTrendingGames: (limit?: number) => Promise<void>;
   updateFilters: (filters: Partial<DashboardFilters>) => void;
   loadMore: () => Promise<void>;
   reset: () => void;
@@ -64,6 +69,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   recentSessions: [],
   games: [],
   totalGamesCount: 0,
+  trendingGames: [],
   filters: {
     search: '',
     category: 'all',
@@ -74,9 +80,11 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   isLoadingStats: false,
   isLoadingSessions: false,
   isLoadingGames: false,
+  isLoadingTrending: false,
   statsError: null,
   sessionsError: null,
   gamesError: null,
+  trendingError: null,
 
   // Actions
   fetchStats: async () => {
@@ -99,8 +107,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       set({ recentSessions: sessions, isLoadingSessions: false });
     } catch (error) {
       set({
-        sessionsError:
-          error instanceof Error ? error.message : 'Failed to load sessions',
+        sessionsError: error instanceof Error ? error.message : 'Failed to load sessions',
         isLoadingSessions: false,
       });
     }
@@ -132,8 +139,21 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     }
   },
 
-  updateFilters: (newFilters) => {
-    set((state) => ({
+  fetchTrendingGames: async (limit = 10) => {
+    set({ isLoadingTrending: true, trendingError: null });
+    try {
+      const trending = await dashboardClient.getTrendingGames(limit);
+      set({ trendingGames: trending, isLoadingTrending: false });
+    } catch (error) {
+      set({
+        trendingError: error instanceof Error ? error.message : 'Failed to load trending games',
+        isLoadingTrending: false,
+      });
+    }
+  },
+
+  updateFilters: newFilters => {
+    set(state => ({
       filters: { ...state.filters, ...newFilters, page: 1 }, // Reset page on filter change
     }));
     // Re-fetch with new filters
@@ -142,7 +162,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
   loadMore: async () => {
     const { filters: _filters } = get();
-    set((state) => ({
+    set(state => ({
       filters: { ...state.filters, page: state.filters.page + 1 },
     }));
     await get().fetchGames();
@@ -154,6 +174,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       recentSessions: [],
       games: [],
       totalGamesCount: 0,
+      trendingGames: [],
       filters: {
         search: '',
         category: 'all',
@@ -164,9 +185,11 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       isLoadingStats: false,
       isLoadingSessions: false,
       isLoadingGames: false,
+      isLoadingTrending: false,
       statsError: null,
       sessionsError: null,
       gamesError: null,
+      trendingError: null,
     });
   },
 }));

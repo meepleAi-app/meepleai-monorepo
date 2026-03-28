@@ -4,6 +4,7 @@
 
 /* Import design system tokens */
 @import "./design-tokens.css";
+@import "./premium-gaming.css";
 
 @custom-variant dark (&:is(.dark *));
 

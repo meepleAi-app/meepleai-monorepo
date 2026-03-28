@@ -32,6 +32,11 @@ import {
   type ContainerLogs,
 } from '../../schemas';
 import {
+  ApplicationLogsResponseSchema,
+  type ApplicationLogsResponse,
+  type ApplicationLogsFilters,
+} from '../../schemas/admin/admin-logs.schemas';
+import {
   OpenRouterStatusDtoSchema,
   type OpenRouterStatusDto,
 } from '../../schemas/admin-knowledge-base.schemas';
@@ -165,6 +170,30 @@ export function createAdminMonitorClient(http: HttpClient) {
         GetReportExecutionsResponseSchema
       );
       return result ?? [];
+    },
+
+    // ========== Application Logs (Seq) ==========
+
+    async getApplicationLogs(filters?: ApplicationLogsFilters): Promise<ApplicationLogsResponse> {
+      const params = new URLSearchParams();
+      if (filters?.search) params.set('search', filters.search);
+      if (filters?.level) params.set('level', filters.level);
+      if (filters?.source) params.set('source', filters.source);
+      if (filters?.correlationId) params.set('correlationId', filters.correlationId);
+      if (filters?.from) params.set('from', filters.from);
+      if (filters?.to) params.set('to', filters.to);
+      if (filters?.count !== undefined) params.set('count', String(filters.count));
+      if (filters?.afterId) params.set('afterId', filters.afterId);
+
+      const query = params.toString();
+      const result = await http.get(
+        `/api/v1/admin/logs${query ? `?${query}` : ''}`,
+        ApplicationLogsResponseSchema
+      );
+      if (!result) {
+        return { items: [], remainingCount: null, lastId: null };
+      }
+      return result;
     },
 
     // ========== OpenRouter Status ==========

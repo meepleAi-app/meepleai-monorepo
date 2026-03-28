@@ -318,7 +318,9 @@ function VersionHistoryContent() {
                     {new Date(version.createdAt).toLocaleString()}
                   </div>
                   <div className="text-xs text-gray-600 mb-2">{version.atomCount} regole</div>
-                  {authUser.role === 'Admin' || authUser.role === 'Editor' ? (
+                  {authUser.role.toLowerCase() === 'admin' ||
+                  authUser.role.toLowerCase() === 'superadmin' ||
+                  authUser.role.toLowerCase() === 'editor' ? (
                     <button
                       onClick={() => handleRestoreVersion(version.version)}
                       disabled={isRestoring || index === 0}

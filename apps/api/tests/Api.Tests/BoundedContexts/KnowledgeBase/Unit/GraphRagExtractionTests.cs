@@ -264,7 +264,7 @@ public sealed class GraphRagExtractionTests : IDisposable
             _blobStorageServiceMock.Object,
             _timeProvider,
             _logger,
-            Mock.Of<ILanguageDetector>(),
+            Mock.Of<ILanguageDetector>(d => d.Detect(It.IsAny<string>()) == new LanguageDetectionResult("en", true, 0.95, null)),
             Mock.Of<IChunkTranslationService>(),
             raptorIndexer: null,
             entityExtractor: withEntityExtractor ? _entityExtractorMock.Object : null,

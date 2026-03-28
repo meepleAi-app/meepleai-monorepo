@@ -14,7 +14,7 @@ import { EmptyState } from '@/components/layout/Layout';
 import { useLayout } from '@/components/layout/LayoutProvider';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
 import { MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card-parts';
-import type { UserGameDto } from '@/lib/api/dashboard-client';
+import type { TrendingGameDto, UserGameDto } from '@/lib/api/dashboard-client';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 
 export function DashboardClient() {
@@ -28,17 +28,21 @@ export function DashboardClient() {
     isLoadingStats: _isLoadingStats,
     fetchStats,
     recentSessions,
-    isLoadingSessions: _isLoadingSessions,
+    isLoadingSessions,
     fetchRecentSessions,
     updateFilters,
     games,
     isLoadingGames,
+    trendingGames,
+    isLoadingTrending,
+    fetchTrendingGames,
   } = useDashboardStore();
 
   useEffect(() => {
     fetchStats();
-    fetchRecentSessions(5);
-    updateFilters({ sort: 'playCount', pageSize: 8, page: 1 });
+    fetchRecentSessions(8);
+    fetchTrendingGames(6);
+    updateFilters({ sort: 'alphabetical', pageSize: 8, page: 1 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -92,17 +96,17 @@ export function DashboardClient() {
       {/* Quick Actions */}
       <QuickActionsRow actions={quickActions} />
 
-      {/* Recent Games -- horizontal scroll */}
+      {/* Recent Sessions -- horizontal scroll */}
       <section>
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-quicksand font-bold text-sm text-foreground flex items-center gap-1.5">
             <span className="text-primary">&#x1F550;</span> Giocati di recente
           </h2>
-          <Link href="/library" className="text-xs text-primary font-semibold">
-            Tutti &rarr;
+          <Link href="/sessions" className="text-xs text-primary font-semibold">
+            Tutte &rarr;
           </Link>
         </div>
-        {isLoadingGames ? (
+        {isLoadingSessions ? (
           <DashboardScrollRow>
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="w-[140px] sm:w-[160px] shrink-0 snap-start">
@@ -110,35 +114,33 @@ export function DashboardClient() {
               </div>
             ))}
           </DashboardScrollRow>
-        ) : games.length === 0 ? (
+        ) : recentSessions.length === 0 ? (
           <EmptyState
-            title="Nessun gioco ancora"
-            description="Aggiungi il tuo primo gioco alla libreria"
+            title="Nessuna partita ancora"
+            description="Inizia una sessione di gioco per vederla qui"
             action={
-              <Link href="/library" className="text-sm text-primary font-semibold">
-                Aggiungi gioco &rarr;
+              <Link href="/sessions/new" className="text-sm text-primary font-semibold">
+                Nuova partita &rarr;
               </Link>
             }
           />
         ) : (
           <DashboardScrollRow>
-            {games.slice(0, 8).map((game: UserGameDto) => (
-              <div key={game.id} className="w-[140px] sm:w-[160px] shrink-0 snap-start">
+            {recentSessions.map(session => (
+              <div key={session.id} className="w-[140px] sm:w-[160px] shrink-0 snap-start">
                 <MeepleCard
                   entity="game"
                   variant="grid"
-                  title={game.title}
-                  subtitle={game.publisher}
-                  imageUrl={game.imageUrl ?? game.thumbnailUrl}
-                  rating={game.averageRating}
-                  ratingMax={10}
+                  title={session.gameName}
+                  subtitle={session.winnerName ? `Vincitore: ${session.winnerName}` : undefined}
+                  imageUrl={session.gameImageUrl}
                   metadata={[
-                    ...(game.minPlayers && game.maxPlayers
-                      ? [{ label: `${game.minPlayers}-${game.maxPlayers}` }]
+                    { label: `${session.playerCount} giocatori` },
+                    ...(session.duration
+                      ? [{ label: session.duration.match(/(\d+:\d+)/)?.[1] ?? session.duration }]
                       : []),
-                    ...(game.playingTimeMinutes ? [{ label: `${game.playingTimeMinutes}'` }] : []),
                   ]}
-                  onClick={() => router.push(`/library/${game.id}`)}
+                  onClick={() => router.push(`/sessions/${session.id}`)}
                 />
               </div>
             ))}
@@ -205,11 +207,11 @@ export function DashboardClient() {
           <h2 className="font-quicksand font-bold text-sm text-foreground flex items-center gap-1.5">
             <span className="text-primary">🔥</span> Popolari questa settimana
           </h2>
-          <Link href="/library" className="text-xs text-primary font-semibold">
+          <Link href="/games" className="text-xs text-primary font-semibold">
             Scopri &rarr;
           </Link>
         </div>
-        {isLoadingGames ? (
+        {isLoadingTrending ? (
           <DashboardScrollRow>
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="w-[140px] sm:w-[160px] shrink-0 snap-start">
@@ -217,36 +219,41 @@ export function DashboardClient() {
               </div>
             ))}
           </DashboardScrollRow>
-        ) : games.length > 0 ? (
+        ) : trendingGames.length === 0 ? (
+          <EmptyState
+            title="Nessun trend ancora"
+            description="I giochi più popolari appariranno qui"
+            action={
+              <Link href="/games" className="text-sm text-primary font-semibold">
+                Esplora il catalogo &rarr;
+              </Link>
+            }
+          />
+        ) : (
           <DashboardScrollRow>
-            {games.slice(0, 6).map((game: UserGameDto, idx: number) => (
+            {trendingGames.map((game: TrendingGameDto) => (
               <div
-                key={`trending-${game.id}`}
+                key={`trending-${game.gameId}`}
                 className="w-[140px] sm:w-[160px] shrink-0 snap-start"
               >
                 <MeepleCard
                   entity="game"
                   variant="grid"
                   title={game.title}
-                  subtitle={game.publisher}
-                  imageUrl={game.imageUrl ?? game.thumbnailUrl}
-                  rating={game.averageRating}
-                  ratingMax={10}
-                  coverLabels={idx < 3 ? [{ text: `#${idx + 1}`, primary: true }] : undefined}
+                  imageUrl={game.thumbnailUrl}
+                  coverLabels={
+                    game.rank <= 3 ? [{ text: `#${game.rank}`, primary: true }] : undefined
+                  }
                   metadata={[
-                    ...(game.minPlayers && game.maxPlayers
-                      ? [{ label: `👥 ${game.minPlayers}-${game.maxPlayers}` }]
-                      : []),
-                    ...(game.playingTimeMinutes
-                      ? [{ label: `⏱ ${game.playingTimeMinutes}'` }]
-                      : []),
+                    ...(game.playCount > 0 ? [{ label: `🎲 ${game.playCount}` }] : []),
+                    ...(game.libraryAddCount > 0 ? [{ label: `📚 ${game.libraryAddCount}` }] : []),
                   ]}
-                  onClick={() => router.push(`/library/${game.id}`)}
+                  onClick={() => router.push(`/games/${game.gameId}`)}
                 />
               </div>
             ))}
           </DashboardScrollRow>
-        ) : null}
+        )}
       </section>
     </div>
   );

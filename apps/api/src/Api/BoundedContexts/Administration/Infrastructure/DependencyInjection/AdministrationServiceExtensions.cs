@@ -17,6 +17,7 @@ using Api.Infrastructure.Seeders.LivedIn;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Extensions.Http;
@@ -52,13 +53,17 @@ internal static class AdministrationServiceExtensions
         // Issue #5512: GDPR AI consent tracking
         services.AddScoped<IUserAiConsentRepository, UserAiConsentRepository>();
 
+        // Service call logging repository
+        services.AddScoped<IServiceCallLogRepository, ServiceCallLogRepository>();
+
         // Issue #3692: Token Management repositories + OpenRouter API
         services.AddScoped<ITokenTierRepository, TokenTierRepository>();
         services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
         services.AddScoped<ITokenTrackingService, TokenTrackingService>(); // Issue #3786: Token tracking service
         services.AddHttpClient<IOpenRouterService, OpenRouterService>()
             .AddPolicyHandler(GetRetryPolicy())
-            .AddPolicyHandler(GetCircuitBreakerPolicy());
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "OpenRouter", sp.GetService<ICircuitBreakerStateTracker>()));
 
         // Budget Display System: Credit-based budget services
         services.AddScoped<ICreditConversionService, CreditConversionService>();
@@ -85,6 +90,17 @@ internal static class AdministrationServiceExtensions
             client.Timeout = TimeSpan.FromSeconds(10);
         });
 
+        // Seq structured log query client
+        services.Configure<SeqOptions>(configuration.GetSection(SeqOptions.SectionName));
+        services.AddHttpClient<ISeqQueryClient, SeqQueryClient>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<SeqOptions>>().Value;
+            client.BaseAddress = new Uri(options.ServerUrl);
+            if (!string.IsNullOrEmpty(options.ApiKey))
+                client.DefaultRequestHeaders.Add("X-Seq-ApiKey", options.ApiKey);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
+
         // Issue #891: Infrastructure health monitoring service
         services.AddScoped<IInfrastructureHealthService, InfrastructureHealthService>();
 
@@ -95,7 +111,8 @@ internal static class AdministrationServiceExtensions
         // Issue #893: Prometheus HTTP client with Polly retry policy
         services.AddHttpClient<IPrometheusQueryService, PrometheusHttpClient>()
             .AddPolicyHandler(GetRetryPolicy())
-            .AddPolicyHandler(GetCircuitBreakerPolicy());
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "Prometheus", sp.GetService<ICircuitBreakerStateTracker>()));
 
         // Issue #894: Infrastructure details orchestration service
         services.AddScoped<IInfrastructureDetailsService, InfrastructureDetailsService>();
@@ -123,6 +140,10 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<IRAGRecommender, RAGRecommender>();
         services.AddScoped<IStreakAnalyzer, StreakAnalyzer>();
 
+        // Circuit breaker state tracker — singleton, holds in-memory state across requests
+        services.AddSingleton<ICircuitBreakerStateTracker, CircuitBreakerStateTracker>();
+        services.AddHostedService<CircuitBreakerRegistrationService>();
+
         // Issue #3324: SSE real-time dashboard streaming service
         // Singleton because it holds Channel-based subscriber state across requests
         services.AddSingleton<IDashboardStreamService, DashboardStreamService>();
@@ -130,7 +151,8 @@ internal static class AdministrationServiceExtensions
         // Issue #2139: HttpClient for Prometheus queries
         services.AddHttpClient<PrometheusClientService>()
             .AddPolicyHandler(GetRetryPolicy())
-            .AddPolicyHandler(GetCircuitBreakerPolicy());
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "PrometheusClient", sp.GetService<ICircuitBreakerStateTracker>()));
 
         // ISSUE-916: Report generation and scheduling services
         services.AddScoped<IReportGeneratorService, ReportGeneratorService>();
@@ -182,6 +204,17 @@ internal static class AdministrationServiceExtensions
                 .WithIdentity("batch-job-processor-trigger", "background")
                 .WithSimpleSchedule(x => x.WithIntervalInSeconds(30).RepeatForever())
                 .WithDescription("Processes queued batch jobs every 30 seconds"));
+
+            // Service call log retention: daily at 4 AM UTC, keeps 7 days
+            q.AddJob<ServiceCallLogRetentionJob>(opts => opts
+                .WithIdentity("service-call-log-retention-job", "maintenance")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("service-call-log-retention-job", "maintenance")
+                .WithIdentity("service-call-log-retention-trigger", "maintenance")
+                .WithCronSchedule("0 0 4 * * ?")
+                .WithDescription("Runs daily to clean up service call logs older than 7 days"));
         });
 
         services.AddQuartzHostedService(options =>
@@ -205,12 +238,20 @@ internal static class AdministrationServiceExtensions
                 });
     }
 
-    private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+    private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy(
+        string? serviceName = null, ICircuitBreakerStateTracker? tracker = null)
     {
         return HttpPolicyExtensions
             .HandleTransientHttpError()
             .CircuitBreakerAsync(
                 handledEventsAllowedBeforeBreaking: 5,
-                durationOfBreak: TimeSpan.FromSeconds(30));
+                durationOfBreak: TimeSpan.FromSeconds(30),
+                onBreak: (outcome, _) =>
+                {
+                    tracker?.RecordBreak(serviceName ?? "Unknown",
+                        outcome.Exception?.Message ?? outcome.Result?.ReasonPhrase);
+                },
+                onReset: () => tracker?.RecordReset(serviceName ?? "Unknown"),
+                onHalfOpen: () => tracker?.RecordHalfOpen(serviceName ?? "Unknown"));
     }
 }

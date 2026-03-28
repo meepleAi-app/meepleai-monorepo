@@ -1,0 +1,108 @@
+/**
+ * Premium Gaming Theme — CSS Custom Properties & Utilities
+ *
+ * Provides glassmorphism primitives and gradient utilities
+ * for the Premium Gaming design system.
+ */
+
+@layer tokens {
+  /* Gaming tokens are global because all redesigned user pages use the Premium Gaming theme.
+     Future: scope to [data-theme="gaming-dark"] if multiple themes are supported. */
+  :root {
+    /* Premium Gaming palette */
+    --gaming-bg-base: #0f0a1a;
+    --gaming-bg-elevated: #1a1333;
+    --gaming-bg-glass: rgba(255, 255, 255, 0.05);
+    --gaming-border-glass: rgba(255, 255, 255, 0.1);
+    --gaming-border-glass-hover: rgba(255, 255, 255, 0.18);
+    --gaming-accent-gradient: linear-gradient(90deg, #f59e0b, #ef4444);
+    --gaming-accent-ai: #8b5cf6;
+    --gaming-accent-success: #22c55e;
+    --gaming-accent-info: #3b82f6;
+    --gaming-text-primary: #f8fafc;
+    --gaming-text-secondary: #94a3b8;
+    --gaming-text-accent: #fbbf24;
+    --gaming-blur: 12px;
+  }
+}
+
+@layer components {
+  /* Note: .glass already exists in globals.css with theme-aware tokens.
+     Use .gaming-glass for gaming-specific glass effect, or .glass-card for cards. */
+  .gaming-glass {
+    background: var(--gaming-bg-glass);
+    border: 1px solid var(--gaming-border-glass);
+    backdrop-filter: blur(var(--gaming-blur));
+    -webkit-backdrop-filter: blur(var(--gaming-blur));
+  }
+
+  .gaming-glass:hover {
+    border-color: var(--gaming-border-glass-hover);
+  }
+
+  .glass-card {
+    background: var(--gaming-bg-glass);
+    border: 1px solid var(--gaming-border-glass);
+    backdrop-filter: blur(var(--gaming-blur));
+    -webkit-backdrop-filter: blur(var(--gaming-blur));
+    border-radius: 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .glass-card:hover {
+    border-color: var(--gaming-border-glass-hover);
+  }
+
+  .gradient-primary {
+    background: var(--gaming-accent-gradient);
+    color: white;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+  }
+
+  .gradient-primary:hover {
+    opacity: 0.9;
+  }
+
+  .gradient-primary:active {
+    transform: scale(0.98);
+  }
+
+  .gradient-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .sheet-surface {
+    background: var(--gaming-bg-elevated);
+    border-radius: 16px 16px 0 0;
+  }
+
+  .glass-glow-game {
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.25);
+  }
+
+  .glass-glow-player {
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.25);
+  }
+
+  .glass-glow-session {
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.25);
+  }
+
+  .glass-glow-collection {
+    box-shadow: 0 0 12px rgba(20, 184, 166, 0.15);
+    border-color: rgba(20, 184, 166, 0.25);
+  }
+
+  .glass-glow-event {
+    box-shadow: 0 0 12px rgba(244, 63, 94, 0.15);
+    border-color: rgba(244, 63, 94, 0.25);
+  }
+}

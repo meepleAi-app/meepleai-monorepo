@@ -4,6 +4,7 @@ import { Suspense, type ReactNode } from 'react';
 
 import { DashboardEngineProvider } from '@/components/dashboard';
 import { BackToSessionFAB } from '@/components/session/BackToSessionFAB';
+import { MobileBottomNav } from '@/components/ui/navigation/MobileBottomNav';
 
 import { ContextBar } from '../ContextBar';
 import { HybridSidebar } from './HybridSidebar';
@@ -29,6 +30,7 @@ export function UserShellClient({ children }: UserShellClientProps) {
         <UserTabBar />
       </Suspense>
       <BackToSessionFAB />
+      <MobileBottomNav />
     </div>
   );
 }

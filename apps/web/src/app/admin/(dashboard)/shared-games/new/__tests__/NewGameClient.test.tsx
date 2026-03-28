@@ -22,6 +22,7 @@ import type { BggFullGameData } from '@/types/bgg';
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
+  redirect: vi.fn(),
 }));
 
 // Capture the onSelect callback from BggSearchPanel so tests can trigger it

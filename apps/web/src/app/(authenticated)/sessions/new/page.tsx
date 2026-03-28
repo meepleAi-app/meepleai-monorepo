@@ -5,8 +5,10 @@
  *
  * Issue #5041 — Sessions Redesign Phase 1
  * Issue #123 — Game Night Quick Start Wizard entry point
+ * Phase 5: Game Night — Task 3 (SessionWizardMobile on mobile)
  *
  * Shows "Serata di Gioco" quick start option + existing 4-step wizard.
+ * On mobile (<640px), renders the simplified SessionWizardMobile instead.
  */
 
 import { useCallback, useState } from 'react';
@@ -17,10 +19,14 @@ import { useRouter } from 'next/navigation';
 import { GameNightWizard } from '@/components/game-night/GameNightWizard';
 import { SessionCreationWizard } from '@/components/session/SessionCreationWizard';
 import { Button } from '@/components/ui/primitives/button';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+
+import { SessionWizardMobile } from './session-wizard-mobile';
 
 export default function NewSessionPage() {
   const [showWizard, setShowWizard] = useState(false);
   const router = useRouter();
+  const isMobile = useMediaQuery('(max-width: 639px)');
 
   const handleWizardComplete = useCallback(
     (sessionId: string) => {
@@ -28,6 +34,15 @@ export default function NewSessionPage() {
     },
     [router]
   );
+
+  // Mobile: render simplified 3-step wizard
+  if (isMobile) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <SessionWizardMobile />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">

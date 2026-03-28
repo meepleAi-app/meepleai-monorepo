@@ -44,6 +44,10 @@ import {
   type ServiceCallFilters,
 } from '../../schemas/admin/admin-service-calls.schemas';
 import {
+  CircuitBreakerStateSchema,
+  type CircuitBreakerState,
+} from '../../schemas/admin/admin-circuit-breakers.schemas';
+import {
   OpenRouterStatusDtoSchema,
   type OpenRouterStatusDto,
 } from '../../schemas/admin-knowledge-base.schemas';
@@ -240,6 +244,13 @@ export function createAdminMonitorClient(http: HttpClient) {
     ): Promise<ServiceCallSummary[]> {
       const result = await http.get(`/api/v1/admin/service-calls/summary?period=${period}`);
       return ServiceCallSummarySchema.array().parse(result ?? []);
+    },
+
+    // ========== Circuit Breaker States (Issue #3.4) ==========
+
+    async getCircuitBreakerStates(): Promise<CircuitBreakerState[]> {
+      const res = await http.get('/api/v1/admin/circuit-breakers');
+      return z.array(CircuitBreakerStateSchema).parse(res);
     },
   };
 }

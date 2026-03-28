@@ -255,6 +255,11 @@ public sealed class GraphRagExtractionTests : IDisposable
 
     private PdfProcessingPipelineService CreatePipelineService(bool withEntityExtractor)
     {
+        var languageDetectorMock = new Mock<ILanguageDetector>();
+        languageDetectorMock
+            .Setup(l => l.Detect(It.IsAny<string>()))
+            .Returns(new LanguageDetectionResult("en", true, 0.99));
+
         return new PdfProcessingPipelineService(
             _db,
             _pdfTextExtractorMock.Object,
@@ -264,7 +269,7 @@ public sealed class GraphRagExtractionTests : IDisposable
             _blobStorageServiceMock.Object,
             _timeProvider,
             _logger,
-            Mock.Of<ILanguageDetector>(d => d.Detect(It.IsAny<string>()) == new LanguageDetectionResult("en", true, 0.95, null)),
+            languageDetectorMock.Object,
             Mock.Of<IChunkTranslationService>(),
             raptorIndexer: null,
             entityExtractor: withEntityExtractor ? _entityExtractorMock.Object : null,

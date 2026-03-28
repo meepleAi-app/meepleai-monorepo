@@ -37,6 +37,13 @@ import {
   type ApplicationLogsFilters,
 } from '../../schemas/admin/admin-logs.schemas';
 import {
+  ServiceCallsResponseSchema,
+  ServiceCallSummarySchema,
+  type ServiceCallsResponse,
+  type ServiceCallSummary,
+  type ServiceCallFilters,
+} from '../../schemas/admin/admin-service-calls.schemas';
+import {
   OpenRouterStatusDtoSchema,
   type OpenRouterStatusDto,
 } from '../../schemas/admin-knowledge-base.schemas';
@@ -201,6 +208,38 @@ export function createAdminMonitorClient(http: HttpClient) {
     async getOpenRouterStatus(): Promise<OpenRouterStatusDto | null> {
       const result = await http.get('/api/v1/admin/openrouter/status', OpenRouterStatusDtoSchema);
       return result ?? null;
+    },
+
+    // ========== Service Call History ==========
+
+    async getServiceCalls(filters?: ServiceCallFilters): Promise<ServiceCallsResponse> {
+      const params = new URLSearchParams();
+      if (filters?.service) params.set('service', filters.service);
+      if (filters?.success !== undefined) params.set('success', String(filters.success));
+      if (filters?.correlationId) params.set('correlationId', filters.correlationId);
+      if (filters?.from) params.set('from', filters.from);
+      if (filters?.to) params.set('to', filters.to);
+      if (filters?.minLatencyMs !== undefined)
+        params.set('minLatencyMs', String(filters.minLatencyMs));
+      if (filters?.page !== undefined) params.set('page', String(filters.page));
+      if (filters?.pageSize !== undefined) params.set('pageSize', String(filters.pageSize));
+
+      const query = params.toString();
+      const result = await http.get(
+        `/api/v1/admin/service-calls${query ? `?${query}` : ''}`,
+        ServiceCallsResponseSchema
+      );
+      if (!result) {
+        return { items: [], totalCount: 0, page: 1, pageSize: 50 };
+      }
+      return result;
+    },
+
+    async getServiceCallSummary(
+      period: '1h' | '6h' | '24h' | '7d' = '24h'
+    ): Promise<ServiceCallSummary[]> {
+      const result = await http.get(`/api/v1/admin/service-calls/summary?period=${period}`);
+      return ServiceCallSummarySchema.array().parse(result ?? []);
     },
   };
 }

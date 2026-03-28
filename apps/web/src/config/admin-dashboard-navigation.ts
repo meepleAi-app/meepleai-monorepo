@@ -457,6 +457,13 @@ const _ALL_DASHBOARD_SECTIONS: DashboardSection[] = [
         icon: BoxIcon,
         activePattern: /^\/admin\/monitor\/containers/,
       },
+      // Service Call History
+      {
+        href: '/admin/monitor/service-calls',
+        label: 'Service Calls',
+        icon: ActivityIcon,
+        activePattern: /^\/admin\/monitor\/service-calls/,
+      },
       // Admin Notifications
       {
         href: '/admin/notifications/compose',

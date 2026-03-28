@@ -62,7 +62,8 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ITokenTrackingService, TokenTrackingService>(); // Issue #3786: Token tracking service
         services.AddHttpClient<IOpenRouterService, OpenRouterService>()
             .AddPolicyHandler(GetRetryPolicy())
-            .AddPolicyHandler(GetCircuitBreakerPolicy());
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "OpenRouter", sp.GetService<ICircuitBreakerStateTracker>()));
 
         // Budget Display System: Credit-based budget services
         services.AddScoped<ICreditConversionService, CreditConversionService>();
@@ -110,7 +111,8 @@ internal static class AdministrationServiceExtensions
         // Issue #893: Prometheus HTTP client with Polly retry policy
         services.AddHttpClient<IPrometheusQueryService, PrometheusHttpClient>()
             .AddPolicyHandler(GetRetryPolicy())
-            .AddPolicyHandler(GetCircuitBreakerPolicy());
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "Prometheus", sp.GetService<ICircuitBreakerStateTracker>()));
 
         // Issue #894: Infrastructure details orchestration service
         services.AddScoped<IInfrastructureDetailsService, InfrastructureDetailsService>();
@@ -149,7 +151,8 @@ internal static class AdministrationServiceExtensions
         // Issue #2139: HttpClient for Prometheus queries
         services.AddHttpClient<PrometheusClientService>()
             .AddPolicyHandler(GetRetryPolicy())
-            .AddPolicyHandler(GetCircuitBreakerPolicy());
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "PrometheusClient", sp.GetService<ICircuitBreakerStateTracker>()));
 
         // ISSUE-916: Report generation and scheduling services
         services.AddScoped<IReportGeneratorService, ReportGeneratorService>();
@@ -235,12 +238,20 @@ internal static class AdministrationServiceExtensions
                 });
     }
 
-    private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+    private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy(
+        string? serviceName = null, ICircuitBreakerStateTracker? tracker = null)
     {
         return HttpPolicyExtensions
             .HandleTransientHttpError()
             .CircuitBreakerAsync(
                 handledEventsAllowedBeforeBreaking: 5,
-                durationOfBreak: TimeSpan.FromSeconds(30));
+                durationOfBreak: TimeSpan.FromSeconds(30),
+                onBreak: (outcome, _) =>
+                {
+                    tracker?.RecordBreak(serviceName ?? "Unknown",
+                        outcome.Exception?.Message ?? outcome.Result?.ReasonPhrase);
+                },
+                onReset: () => tracker?.RecordReset(serviceName ?? "Unknown"),
+                onHalfOpen: () => tracker?.RecordHalfOpen(serviceName ?? "Unknown"));
     }
 }

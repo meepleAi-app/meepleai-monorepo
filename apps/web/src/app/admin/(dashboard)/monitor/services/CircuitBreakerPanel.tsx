@@ -21,9 +21,7 @@ export function CircuitBreakerPanel() {
   });
 
   if (isLoading)
-    return (
-      <div className="text-sm text-muted-foreground">Loading circuit breaker states...</div>
-    );
+    return <div className="text-sm text-muted-foreground">Loading circuit breaker states...</div>;
   if (!states?.length)
     return <div className="text-sm text-muted-foreground">No circuit breakers registered.</div>;
 
@@ -52,7 +50,7 @@ export function CircuitBreakerPanel() {
             <div className="text-xs text-muted-foreground space-y-0.5">
               <div>Trips: {cb.tripCount}</div>
               {cb.lastTrippedAt && (
-                <div>Last trip: {new Date(cb.lastTrippedAt).toLocaleString('it-IT')}</div>
+                <div>Last trip: {new Date(cb.lastTrippedAt).toLocaleString()}</div>
               )}
               {cb.lastError && (
                 <div className="text-red-600 truncate" title={cb.lastError}>

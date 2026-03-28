@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.External;
 public interface ISeqQueryClient
 {
     Task<(IReadOnlyList<ApplicationLogDto> Items, int? RemainingCount)> QueryEventsAsync(
-        string? filter, string? level, DateTime? fromUtc, DateTime? toUtc,
+        string? rawFilter, string? search, string? level, DateTime? fromUtc, DateTime? toUtc,
         int count, string? afterId, CancellationToken ct);
 }
 
@@ -22,7 +22,7 @@ public sealed class SeqQueryClient : ISeqQueryClient
     }
 
     public async Task<(IReadOnlyList<ApplicationLogDto> Items, int? RemainingCount)> QueryEventsAsync(
-        string? filter, string? level, DateTime? fromUtc, DateTime? toUtc,
+        string? rawFilter, string? search, string? level, DateTime? fromUtc, DateTime? toUtc,
         int count, string? afterId, CancellationToken ct)
     {
         var queryParams = new List<string> { $"count={count}" };
@@ -30,8 +30,14 @@ public sealed class SeqQueryClient : ISeqQueryClient
         var filterParts = new List<string>();
         if (!string.IsNullOrWhiteSpace(level))
             filterParts.Add($"@Level = '{level}'");
-        if (!string.IsNullOrWhiteSpace(filter))
-            filterParts.Add($"@Message like '%{EscapeSeqFilter(filter)}%' or @Exception like '%{EscapeSeqFilter(filter)}%'");
+        if (!string.IsNullOrWhiteSpace(rawFilter))
+            filterParts.Add(rawFilter);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var sanitized = SanitizeSearchInput(search);
+            if (!string.IsNullOrWhiteSpace(sanitized))
+                filterParts.Add($"@Message like '%{EscapeSeqFilter(sanitized)}%' or @Exception like '%{EscapeSeqFilter(sanitized)}%'");
+        }
 
         if (filterParts.Count > 0)
             queryParams.Add($"filter={Uri.EscapeDataString(string.Join(" and ", filterParts))}");
@@ -97,4 +103,18 @@ public sealed class SeqQueryClient : ISeqQueryClient
     }
 
     private static string EscapeSeqFilter(string input) => input.Replace("'", "''");
+
+    /// <summary>
+    /// Strip characters that could break Seq filter syntax. Keep alphanumeric, spaces, and basic punctuation.
+    /// </summary>
+    private static string SanitizeSearchInput(string input)
+    {
+        var sb = new System.Text.StringBuilder(input.Length);
+        foreach (var c in input)
+        {
+            if (char.IsLetterOrDigit(c) || c == ' ' || c == '.' || c == '-' || c == '_' || c == ':' || c == '/' || c == ',' || c == '(' || c == ')')
+                sb.Append(c);
+        }
+        return sb.ToString().Trim();
+    }
 }

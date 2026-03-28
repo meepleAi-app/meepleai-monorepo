@@ -33,7 +33,7 @@ public sealed class GetApplicationLogsQueryHandlerTests
 
         _seqClientMock
             .Setup(c => c.QueryEventsAsync(
-                It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
                 It.IsAny<DateTime?>(), It.IsAny<DateTime?>(),
                 It.IsAny<int>(), It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
@@ -61,7 +61,7 @@ public sealed class GetApplicationLogsQueryHandlerTests
         // Arrange
         _seqClientMock
             .Setup(c => c.QueryEventsAsync(
-                It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
                 It.IsAny<DateTime?>(), It.IsAny<DateTime?>(),
                 It.IsAny<int>(), It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
@@ -76,7 +76,7 @@ public sealed class GetApplicationLogsQueryHandlerTests
 
         // Assert
         _seqClientMock.Verify(c => c.QueryEventsAsync(
-            It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
             It.IsAny<DateTime?>(), It.IsAny<DateTime?>(),
             200,
             It.IsAny<string?>(),
@@ -93,12 +93,12 @@ public sealed class GetApplicationLogsQueryHandlerTests
 
         _seqClientMock
             .Setup(c => c.QueryEventsAsync(
-                It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
                 It.IsAny<DateTime?>(), It.IsAny<DateTime?>(),
                 It.IsAny<int>(), It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string?, string?, DateTime?, DateTime?, int, string?, CancellationToken>(
-                (filter, _, _, _, _, _, _) => capturedFilter = filter)
+            .Callback<string?, string?, string?, DateTime?, DateTime?, int, string?, CancellationToken>(
+                (rawFilter, _, _, _, _, _, _, _) => capturedFilter = rawFilter)
             .ReturnsAsync(((IReadOnlyList<ApplicationLogDto>)new List<ApplicationLogDto>(), (int?)null));
 
         var query = new GetApplicationLogsQuery(
@@ -122,7 +122,7 @@ public sealed class GetApplicationLogsQueryHandlerTests
         // Arrange
         _seqClientMock
             .Setup(c => c.QueryEventsAsync(
-                It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
                 It.IsAny<DateTime?>(), It.IsAny<DateTime?>(),
                 It.IsAny<int>(), It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))

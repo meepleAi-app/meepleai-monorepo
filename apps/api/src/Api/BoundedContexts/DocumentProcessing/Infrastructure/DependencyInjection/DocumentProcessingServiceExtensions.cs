@@ -5,6 +5,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.Extensions;
 using Api.Infrastructure.BackgroundServices;
 using Api.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -237,9 +238,7 @@ internal static class DocumentProcessingServiceExtensions
             })
             .AddPolicyHandler(GetRetryPolicy(
                 configuration.GetValue<int?>("PdfProcessing:Extractor:Unstructured:MaxRetries") ?? 3))
-            .AddHttpMessageHandler(sp => new ServiceCallLoggingHandler(
-                sp, "UnstructuredService",
-                sp.GetRequiredService<ILogger<ServiceCallLoggingHandler>>()));
+            .AddServiceCallLogging("UnstructuredService");
 
         services.AddScoped<UnstructuredPdfTextExtractor>();
     }
@@ -262,9 +261,7 @@ internal static class DocumentProcessingServiceExtensions
             })
             .AddPolicyHandler(GetRetryPolicy(
                 configuration.GetValue<int?>("PdfProcessing:Extractor:SmolDocling:MaxRetries") ?? 3))
-            .AddHttpMessageHandler(sp => new ServiceCallLoggingHandler(
-                sp, "SmolDoclingService",
-                sp.GetRequiredService<ILogger<ServiceCallLoggingHandler>>()));
+            .AddServiceCallLogging("SmolDoclingService");
 
         services.AddScoped<SmolDoclingPdfTextExtractor>();
     }

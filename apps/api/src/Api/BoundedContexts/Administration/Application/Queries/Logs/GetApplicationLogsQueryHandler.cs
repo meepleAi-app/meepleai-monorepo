@@ -18,24 +18,19 @@ internal sealed class GetApplicationLogsQueryHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var filterParts = new List<string>();
+        // Build raw Seq property filters (passed directly, not wrapped)
+        var rawFilterParts = new List<string>();
         if (!string.IsNullOrWhiteSpace(query.Source))
-            filterParts.Add($"SourceContext like '%{query.Source}%'");
+            rawFilterParts.Add($"SourceContext like '%{query.Source}%'");
         if (!string.IsNullOrWhiteSpace(query.CorrelationId))
-            filterParts.Add($"CorrelationId = '{query.CorrelationId}'");
+            rawFilterParts.Add($"CorrelationId = '{query.CorrelationId}'");
 
-        var searchFilter = !string.IsNullOrWhiteSpace(query.Search) ? query.Search : null;
-
-        string? combinedFilter = null;
-        if (filterParts.Count > 0 && searchFilter != null)
-            combinedFilter = $"({string.Join(" and ", filterParts)}) and ({searchFilter})";
-        else if (filterParts.Count > 0)
-            combinedFilter = string.Join(" and ", filterParts);
-        else
-            combinedFilter = searchFilter;
+        var rawFilter = rawFilterParts.Count > 0 ? string.Join(" and ", rawFilterParts) : null;
 
         var (items, remaining) = await _seqClient.QueryEventsAsync(
-            filter: combinedFilter, level: query.Level,
+            rawFilter: rawFilter,
+            search: !string.IsNullOrWhiteSpace(query.Search) ? query.Search : null,
+            level: query.Level,
             fromUtc: query.From, toUtc: query.To,
             count: Math.Min(query.Count, 200),
             afterId: query.AfterId, ct: cancellationToken).ConfigureAwait(false);

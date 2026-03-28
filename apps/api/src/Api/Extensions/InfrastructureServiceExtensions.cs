@@ -3,7 +3,9 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Extensions.Http;
+using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
 using Api.Infrastructure.Http;
@@ -267,11 +269,9 @@ internal static class InfrastructureServiceExtensions
         .AddTransientHttpErrorPolicy(policy =>
             policy.WaitAndRetryAsync(3, retryAttempt =>
                 TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
-        // Issue #2520: Circuit breaker policy (5 failures → open for 30s)
-        .AddTransientHttpErrorPolicy(policy =>
-            policy.CircuitBreakerAsync(
-                handledEventsAllowedBeforeBreaking: 5,
-                durationOfBreak: TimeSpan.FromSeconds(30)))
+        // Issue #2520: Circuit breaker policy (5 failures → open for 30s), wired to tracker
+        .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+            "OpenRouter", sp.GetService<ICircuitBreakerStateTracker>()))
         .AddServiceCallLogging("OpenRouter")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
@@ -346,10 +346,8 @@ internal static class InfrastructureServiceExtensions
         .AddTransientHttpErrorPolicy(policy =>
             policy.WaitAndRetryAsync(3, retryAttempt =>
                 TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
-        .AddTransientHttpErrorPolicy(policy =>
-            policy.CircuitBreakerAsync(
-                handledEventsAllowedBeforeBreaking: 5,
-                durationOfBreak: TimeSpan.FromSeconds(30)))
+        .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+            "BggApi", sp.GetService<ICircuitBreakerStateTracker>()))
         .AddServiceCallLogging("BggApi")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
@@ -389,7 +387,24 @@ internal static class InfrastructureServiceExtensions
         return services;
     }
 
-    private static IHttpClientBuilder AddServiceCallLogging(this IHttpClientBuilder builder, string serviceName)
+    private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy(
+        string? serviceName = null, ICircuitBreakerStateTracker? tracker = null)
+    {
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: 5,
+                durationOfBreak: TimeSpan.FromSeconds(30),
+                onBreak: (outcome, _) =>
+                {
+                    tracker?.RecordBreak(serviceName ?? "Unknown",
+                        outcome.Exception?.Message ?? outcome.Result?.ReasonPhrase);
+                },
+                onReset: () => tracker?.RecordReset(serviceName ?? "Unknown"),
+                onHalfOpen: () => tracker?.RecordHalfOpen(serviceName ?? "Unknown"));
+    }
+
+    internal static IHttpClientBuilder AddServiceCallLogging(this IHttpClientBuilder builder, string serviceName)
     {
         return builder.AddHttpMessageHandler(sp =>
             new ServiceCallLoggingHandler(

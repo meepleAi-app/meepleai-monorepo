@@ -22,45 +22,48 @@ internal sealed class GetServiceCallSummaryQueryHandler
 
         var since = ParsePeriod(query.Period);
 
-        var entries = await _db.ServiceCallLogs
+        // Push aggregation to database — avoids loading all rows into memory
+        var groups = await _db.ServiceCallLogs
             .AsNoTracking()
             .Where(x => x.TimestampUtc >= since)
+            .GroupBy(x => x.ServiceName)
+            .Select(g => new
+            {
+                ServiceName = g.Key,
+                TotalCalls = g.Count(),
+                SuccessCount = g.Count(x => x.IsSuccess),
+                ErrorCount = g.Count(x => !x.IsSuccess),
+                AvgLatencyMs = g.Average(x => (double)x.LatencyMs),
+                MaxLatencyMs = g.Max(x => x.LatencyMs),
+                LastCallAt = g.Max(x => (DateTime?)x.TimestampUtc),
+                LastErrorAt = g.Where(x => !x.IsSuccess).Max(x => (DateTime?)x.TimestampUtc),
+            })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var grouped = entries
-            .GroupBy(x => x.ServiceName, StringComparer.Ordinal)
+        var result = groups
             .Select(g =>
             {
-                var all = g.ToList();
-                var successCount = all.Count(x => x.IsSuccess);
-                var errorCount = all.Count(x => !x.IsSuccess);
-                var totalCalls = all.Count;
-                var errorRate = totalCalls > 0 ? (double)errorCount / totalCalls : 0.0;
-                var avgLatency = totalCalls > 0 ? all.Average(x => x.LatencyMs) : 0.0;
-                var maxLatency = totalCalls > 0 ? all.Max(x => x.LatencyMs) : 0L;
-                var p95Latency = CalculateP95(all.Select(x => x.LatencyMs).ToList());
-                var lastCallAt = all.Count > 0 ? all.Max(x => (DateTime?)x.TimestampUtc) : null;
-                var lastErrorAt = all.Any(x => !x.IsSuccess)
-                    ? all.Where(x => !x.IsSuccess).Max(x => (DateTime?)x.TimestampUtc)
-                    : null;
+                var errorRate = g.TotalCalls > 0 ? (double)g.ErrorCount / g.TotalCalls : 0.0;
+                // P95 approximation: use MaxLatencyMs. Exact P95 requires raw SQL percentile_cont.
+                var p95Latency = (double)g.MaxLatencyMs;
 
                 return new ServiceCallSummaryDto(
-                    ServiceName: g.Key,
-                    TotalCalls: totalCalls,
-                    SuccessCount: successCount,
-                    ErrorCount: errorCount,
+                    ServiceName: g.ServiceName,
+                    TotalCalls: g.TotalCalls,
+                    SuccessCount: g.SuccessCount,
+                    ErrorCount: g.ErrorCount,
                     ErrorRate: errorRate,
-                    AvgLatencyMs: avgLatency,
+                    AvgLatencyMs: g.AvgLatencyMs,
                     P95LatencyMs: p95Latency,
-                    MaxLatencyMs: maxLatency,
-                    LastCallAt: lastCallAt,
-                    LastErrorAt: lastErrorAt);
+                    MaxLatencyMs: g.MaxLatencyMs,
+                    LastCallAt: g.LastCallAt,
+                    LastErrorAt: g.LastErrorAt);
             })
             .OrderByDescending(x => x.TotalCalls)
             .ToList();
 
-        return grouped;
+        return result;
     }
 
     private static DateTime ParsePeriod(string? period)
@@ -74,12 +77,4 @@ internal sealed class GetServiceCallSummaryQueryHandler
         };
     }
 
-    private static double CalculateP95(List<long> latencies)
-    {
-        if (latencies.Count == 0) return 0.0;
-        latencies.Sort();
-        var index = (int)Math.Ceiling(0.95 * latencies.Count) - 1;
-        index = Math.Max(0, Math.Min(index, latencies.Count - 1));
-        return latencies[index];
-    }
 }

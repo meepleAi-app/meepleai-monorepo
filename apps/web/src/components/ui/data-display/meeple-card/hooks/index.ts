@@ -8,6 +8,7 @@
 
 export { useMobileInteraction } from './useMobileInteraction';
 export { useCardAnimation } from './useCardAnimation';
+export { useCardTheme } from './useCardTheme';
 
 export type {
   UseMobileInteractionOptions,

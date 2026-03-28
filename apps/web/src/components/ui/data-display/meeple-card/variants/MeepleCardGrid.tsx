@@ -42,6 +42,7 @@ import {
   meepleCardVariants,
   contentVariants,
 } from '../../meeple-card-styles';
+import { useCardTheme } from '../hooks/useCardTheme';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
 import { CardActions, CardActionStrip } from '../parts/CardActions';
 import { CardBadges } from '../parts/CardBadges';
@@ -133,6 +134,8 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     subtypeIcons,
     showHolo = false,
   } = props;
+
+  const cardTheme = useCardTheme();
 
   const variant = 'grid' as const;
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
@@ -246,7 +249,8 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         '[&:hover]:[-webkit-transform:translateY(-6px)] [&:hover]:[transform:translateY(-6px)]',
         selected && 'ring-2 ring-offset-2 bg-accent/10',
         selected && `ring-[hsl(${color})]`,
-        className
+        className,
+        cardTheme === 'gaming' && 'glass-card'
       )}
       style={
         {

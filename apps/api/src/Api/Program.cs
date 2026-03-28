@@ -764,6 +764,7 @@ if (!isAlphaMode)
     v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)
     v1Api.MapAdminLogEndpoints();          // Structured application log viewer (Seq)
     v1Api.MapAdminServiceCallEndpoints();  // Service call history and statistics
+    v1Api.MapAdminCircuitBreakerEndpoints(); // Polly circuit breaker state visibility
     v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 
     // Workflows

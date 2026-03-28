@@ -140,6 +140,7 @@ internal static class AdministrationServiceExtensions
 
         // Circuit breaker state tracker — singleton, holds in-memory state across requests
         services.AddSingleton<ICircuitBreakerStateTracker, CircuitBreakerStateTracker>();
+        services.AddHostedService<CircuitBreakerRegistrationService>();
 
         // Issue #3324: SSE real-time dashboard streaming service
         // Singleton because it holds Channel-based subscriber state across requests

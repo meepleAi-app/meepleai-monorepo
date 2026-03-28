@@ -136,7 +136,9 @@ export function DashboardClient() {
                   imageUrl={session.gameImageUrl}
                   metadata={[
                     { label: `${session.playerCount} giocatori` },
-                    ...(session.duration ? [{ label: session.duration.substring(0, 5) }] : []),
+                    ...(session.duration
+                      ? [{ label: session.duration.match(/(\d+:\d+)/)?.[1] ?? session.duration }]
+                      : []),
                   ]}
                   onClick={() => router.push(`/sessions/${session.id}`)}
                 />
@@ -217,7 +219,17 @@ export function DashboardClient() {
               </div>
             ))}
           </DashboardScrollRow>
-        ) : trendingGames.length > 0 ? (
+        ) : trendingGames.length === 0 ? (
+          <EmptyState
+            title="Nessun trend ancora"
+            description="I giochi più popolari appariranno qui"
+            action={
+              <Link href="/games" className="text-sm text-primary font-semibold">
+                Esplora il catalogo &rarr;
+              </Link>
+            }
+          />
+        ) : (
           <DashboardScrollRow>
             {trendingGames.map((game: TrendingGameDto) => (
               <div
@@ -241,7 +253,7 @@ export function DashboardClient() {
               </div>
             ))}
           </DashboardScrollRow>
-        ) : null}
+        )}
       </section>
     </div>
   );

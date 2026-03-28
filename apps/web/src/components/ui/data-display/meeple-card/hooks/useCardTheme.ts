@@ -1,27 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 /**
  * Detects if the Premium Gaming theme is active.
  * Returns 'gaming' or 'default'.
+ *
+ * Uses ColorSchemeContext as the single source of truth
+ * instead of reading localStorage directly.
  */
 export function useCardTheme(): 'gaming' | 'default' {
-  const [theme, setTheme] = useState<'gaming' | 'default'>('default');
-
-  useEffect(() => {
-    const stored = localStorage.getItem('meepleai-theme');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed?.id?.startsWith('gaming')) {
-          setTheme('gaming');
-        }
-      } catch {
-        // ignore parse errors
-      }
-    }
-  }, []);
-
-  return theme;
+  try {
+    const { currentTheme } = useColorScheme();
+    return currentTheme.id.startsWith('gaming') ? 'gaming' : 'default';
+  } catch {
+    // Fallback if used outside ColorSchemeProvider
+    return 'default';
+  }
 }

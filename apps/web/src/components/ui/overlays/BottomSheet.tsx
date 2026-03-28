@@ -43,7 +43,9 @@ export function BottomSheet({
     }
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      if (open) {
+        document.body.style.overflow = '';
+      }
     };
   }, [open, handleKeyDown]);
 
@@ -64,7 +66,8 @@ export function BottomSheet({
             data-testid="bottom-sheet-content"
             role="dialog"
             aria-modal="true"
-            aria-label={title}
+            aria-labelledby={title ? 'bottom-sheet-title' : undefined}
+            aria-label={title ? undefined : 'Sheet'}
             className={cn(
               'sheet-surface fixed inset-x-0 bottom-0 z-50 flex flex-col overflow-hidden',
               heightClasses[height],
@@ -80,7 +83,12 @@ export function BottomSheet({
             </div>
             {title && (
               <div className="px-4 pb-3">
-                <h2 className="text-lg font-semibold text-[var(--gaming-text-primary)]">{title}</h2>
+                <h2
+                  id="bottom-sheet-title"
+                  className="text-lg font-semibold text-[var(--gaming-text-primary)]"
+                >
+                  {title}
+                </h2>
               </div>
             )}
             <div className="flex-1 overflow-y-auto px-4 pb-8">{children}</div>

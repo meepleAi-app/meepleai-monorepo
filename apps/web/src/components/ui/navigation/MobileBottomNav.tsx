@@ -24,9 +24,10 @@ const navItems: NavItem[] = [
 
 export interface MobileBottomNavProps {
   hidden?: boolean;
+  onQuickAction?: () => void;
 }
 
-export function MobileBottomNav({ hidden = false }: MobileBottomNavProps) {
+export function MobileBottomNav({ hidden = false, onQuickAction }: MobileBottomNavProps) {
   const pathname = usePathname();
 
   if (hidden) return null;
@@ -49,7 +50,9 @@ export function MobileBottomNav({ hidden = false }: MobileBottomNavProps) {
       ))}
 
       <button
+        type="button"
         aria-label="Azione rapida"
+        onClick={onQuickAction}
         className={cn(
           'flex items-center justify-center',
           'h-12 w-12 -mt-4 rounded-full',

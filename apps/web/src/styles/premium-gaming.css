@@ -6,6 +6,8 @@
  */
 
 @layer tokens {
+  /* Gaming tokens are global because all redesigned user pages use the Premium Gaming theme.
+     Future: scope to [data-theme="gaming-dark"] if multiple themes are supported. */
   :root {
     /* Premium Gaming palette */
     --gaming-bg-base: #0f0a1a;

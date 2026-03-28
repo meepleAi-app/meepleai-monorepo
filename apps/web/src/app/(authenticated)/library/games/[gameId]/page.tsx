@@ -1,9 +1,8 @@
 /**
- * Library Game Detail Page — Game Table Layout
+ * Library Game Detail Page — Responsive Layout
  *
- * Replaces the legacy tab-based detail page with a zone-based Game Table layout.
- * Three zones (Tools, Knowledge, Sessions) surround a central MeepleCard hero.
- * Modals (notes, remove) are handled inside GameTableZoneTools.
+ * Mobile: GameDetailMobile (vertical scroll, bottom sheets)
+ * Desktop: Game Table Layout (zone-based with MeepleCard hero)
  *
  * Issue #3513 — Game Table Detail
  */
@@ -27,7 +26,10 @@ import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-car
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useGameTableDrawer } from '@/lib/stores/gameTableDrawerStore';
+
+import GameDetailMobile from './game-detail-mobile';
 
 // ============================================================================
 // Helpers
@@ -71,9 +73,15 @@ export default function LibraryGameDetailPage() {
   const params = useParams();
   const router = useRouter();
   const gameId = params?.gameId as string;
+  const { isMobile } = useResponsive();
 
   const { data: gameDetail, isLoading, error } = useLibraryGameDetail(gameId);
   const drawer = useGameTableDrawer();
+
+  // Mobile layout
+  if (isMobile) {
+    return <GameDetailMobile gameId={gameId} />;
+  }
 
   // --- Loading ---
   if (isLoading) return <GameTableSkeleton />;

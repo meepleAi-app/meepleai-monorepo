@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -38,6 +39,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly ICopyrightTierResolver _copyrightTierResolver;
     private readonly IAgentMemoryContextBuilder _agentMemoryContextBuilder;
     private readonly ILlmService _llmService;
+    private readonly IUserBudgetService _userBudgetService;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChatWithSessionAgentCommandHandler> _logger;
 
@@ -56,6 +58,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ICopyrightTierResolver copyrightTierResolver,
         IAgentMemoryContextBuilder agentMemoryContextBuilder,
         ILlmService llmService,
+        IUserBudgetService userBudgetService,
         IServiceScopeFactory scopeFactory,
         ILogger<ChatWithSessionAgentCommandHandler> logger)
     {
@@ -69,6 +72,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _copyrightTierResolver = copyrightTierResolver ?? throw new ArgumentNullException(nameof(copyrightTierResolver));
         _agentMemoryContextBuilder = agentMemoryContextBuilder ?? throw new ArgumentNullException(nameof(agentMemoryContextBuilder));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _userBudgetService = userBudgetService ?? throw new ArgumentNullException(nameof(userBudgetService));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -212,6 +216,27 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             _logger.LogInformation(
                 "Injected agent memory context into system prompt for session {SessionId} ({ContextLength} chars)",
                 command.AgentSessionId, memoryContext.Length);
+        }
+
+        // Budget check before LLM calls (fail-open: if check fails, allow request)
+        {
+            var estimatedTokens = (decimal)((command.UserQuestion.Length * 2) / 4 + 200);
+            var hasBudget = true;
+            try
+            {
+                hasBudget = await _userBudgetService
+                    .HasBudgetForQueryAsync(command.UserId, estimatedTokens, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Budget check failed for user {UserId}, assuming budget available", command.UserId);
+            }
+
+            if (!hasBudget)
+            {
+                _logger.LogWarning("User {UserId} budget exhausted, using fallback model", command.UserId);
+            }
         }
 
         // Stream LLM response token by token

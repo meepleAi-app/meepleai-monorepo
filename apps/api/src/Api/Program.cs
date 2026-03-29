@@ -698,7 +698,8 @@ if (!isAlphaMode)
     v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
     v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
     v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
-    app.MapAdminSecretsEndpoints();          // Admin secrets management (staging/dev)
+    if (!app.Environment.IsProduction())
+        app.MapAdminSecretsEndpoints();      // Admin secrets management (non-prod only)
     app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
     v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
     app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard

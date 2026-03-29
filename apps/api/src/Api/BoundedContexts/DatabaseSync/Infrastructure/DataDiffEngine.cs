@@ -9,6 +9,34 @@ internal static class DataDiffEngine
         "bytea", "vector", "json", "jsonb", "xml"
     };
 
+    /// <summary>
+    /// Validates a PostgreSQL identifier (schema, table, or column name).
+    /// Only allows letters, digits, underscores, and dollar signs — the safe
+    /// subset of PostgreSQL unquoted identifiers. Prevents injection even when
+    /// identifiers are double-quoted in SQL strings.
+    /// </summary>
+    private static bool IsValidIdentifier(string identifier)
+    {
+        if (string.IsNullOrEmpty(identifier) || identifier.Length > 63)
+            return false;
+
+        foreach (var ch in identifier)
+        {
+            if (!char.IsLetterOrDigit(ch) && ch != '_' && ch != '$')
+                return false;
+        }
+
+        return true;
+    }
+
+    private static void ValidateIdentifier(string identifier, string paramName)
+    {
+        if (!IsValidIdentifier(identifier))
+            throw new ArgumentException(
+                $"Invalid PostgreSQL identifier '{identifier}'. Only letters, digits, underscores, and dollar signs are allowed.",
+                paramName);
+    }
+
     public static List<string> FilterSafeColumns(IReadOnlyList<(string name, string type)> columns)
     {
         return columns
@@ -20,6 +48,9 @@ internal static class DataDiffEngine
     public static async Task<List<(string name, string type)>> GetColumnsAsync(
         NpgsqlConnection conn, string schema, string table, CancellationToken ct = default)
     {
+        ValidateIdentifier(schema, nameof(schema));
+        ValidateIdentifier(table, nameof(table));
+
         var columns = new List<(string, string)>();
         var cmd = new NpgsqlCommand(
             "SELECT column_name, udt_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 ORDER BY ordinal_position",
@@ -41,6 +72,9 @@ internal static class DataDiffEngine
     public static async Task<List<string>> GetPrimaryKeyColumnsAsync(
         NpgsqlConnection conn, string schema, string table, CancellationToken ct = default)
     {
+        ValidateIdentifier(schema, nameof(schema));
+        ValidateIdentifier(table, nameof(table));
+
         var pkCols = new List<string>();
         var cmd = new NpgsqlCommand("""
             SELECT kcu.column_name
@@ -68,6 +102,11 @@ internal static class DataDiffEngine
         IReadOnlyList<string> pkColumns, IReadOnlyList<string> safeColumns,
         CancellationToken ct = default)
     {
+        ValidateIdentifier(schema, nameof(schema));
+        ValidateIdentifier(table, nameof(table));
+        foreach (var col in pkColumns) ValidateIdentifier(col, nameof(pkColumns));
+        foreach (var col in safeColumns) ValidateIdentifier(col, nameof(safeColumns));
+
         var pkExpr = string.Join(" || '::' || ", pkColumns.Select(c => $"\"{c}\"::text"));
         var colList = string.Join(", ", safeColumns.Select(c => $"\"{c}\""));
         var sql = $"SELECT {pkExpr} as pk, md5(ROW({colList})::text) as row_hash FROM \"{schema}\".\"{table}\"";
@@ -115,6 +154,9 @@ internal static class DataDiffEngine
     public static async Task<long> GetEstimatedRowCountAsync(
         NpgsqlConnection conn, string schema, string table, CancellationToken ct = default)
     {
+        ValidateIdentifier(schema, nameof(schema));
+        ValidateIdentifier(table, nameof(table));
+
         var cmd = new NpgsqlCommand(
             "SELECT COALESCE(n_live_tup, 0) FROM pg_stat_user_tables WHERE schemaname = $1 AND relname = $2",
             conn);

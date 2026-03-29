@@ -119,6 +119,13 @@ vi.mock('@/components/icons/mechanics/MechanicIcon', () => ({
   ),
 }));
 
+// Mock GameDetailMobile to avoid QueryClientProvider dependency
+vi.mock('@/app/(authenticated)/library/games/[gameId]/game-detail-mobile', () => ({
+  default: ({ gameId }: { gameId: string }) => (
+    <div data-testid="game-detail-mobile">Mobile:{gameId}</div>
+  ),
+}));
+
 // Mock framer-motion (some nested components may use it)
 vi.mock('framer-motion', () => ({
   motion: {

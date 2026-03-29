@@ -1,6 +1,7 @@
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Extensions;
 using Api.Models;
-using Api.Services;
 using MediatR;
 
 namespace Api.Routing;
@@ -32,7 +33,7 @@ internal static class AlertEndpoints
     }
 
     private static async Task<IResult> ProcessPrometheusWebhookAsync(
-        IAlertingService alertingService,
+        IMediator mediator,
         PrometheusAlertWebhook webhook,
         ILogger<Program> logger,
         CancellationToken ct)
@@ -57,17 +58,17 @@ internal static class AlertEndpoints
                         ["group_key"] = webhook.GroupKey
                     };
 
-                    await alertingService.SendAlertAsync(
-                        alertType: alert.Labels.GetValueOrDefault("alertname", "Unknown"),
-                        severity: alert.Labels.GetValueOrDefault("severity", "warning"),
-                        message: alert.Annotations.GetValueOrDefault("summary", "Alert triggered"),
-                        metadata: metadata,
-                        cancellationToken: ct).ConfigureAwait(false);
+                    await mediator.Send(new SendAlertCommand(
+                        AlertType: alert.Labels.GetValueOrDefault("alertname", "Unknown"),
+                        Severity: alert.Labels.GetValueOrDefault("severity", "warning"),
+                        Message: alert.Annotations.GetValueOrDefault("summary", "Alert triggered"),
+                        Metadata: metadata
+                    ), ct).ConfigureAwait(false);
                 }
                 else if (string.Equals(alert.Status, "resolved", StringComparison.Ordinal))
                 {
                     var alertType = alert.Labels.GetValueOrDefault("alertname", "Unknown");
-                    await alertingService.ResolveAlertAsync(alertType, ct).ConfigureAwait(false);
+                    await mediator.Send(new ResolveAlertCommand(alertType), ct).ConfigureAwait(false);
                 }
             }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -88,7 +89,7 @@ internal static class AlertEndpoints
         // Admin endpoint to get active alerts
         group.MapGet("/admin/alerts", async (
             HttpContext context,
-            IAlertingService alertingService,
+            IMediator mediator,
             bool? activeOnly = true,
             CancellationToken ct = default) =>
         {
@@ -96,11 +97,11 @@ internal static class AlertEndpoints
             if (!authorized) return error!;
 
             var alerts = activeOnly.GetValueOrDefault(true)
-                ? await alertingService.GetActiveAlertsAsync(ct).ConfigureAwait(false)
-                : await alertingService.GetAlertHistoryAsync(
+                ? await mediator.Send(new GetActiveAlertsQuery(), ct).ConfigureAwait(false)
+                : await mediator.Send(new GetAlertHistoryQuery(
                     DateTime.UtcNow.AddDays(-7),
-                    DateTime.UtcNow,
-                    ct).ConfigureAwait(false);
+                    DateTime.UtcNow
+                ), ct).ConfigureAwait(false);
 
             return Results.Ok(alerts);
         })
@@ -117,14 +118,14 @@ internal static class AlertEndpoints
         // Admin endpoint to manually resolve an alert
         group.MapPost("/admin/alerts/{alertType}/resolve", async (
             HttpContext context,
-            IAlertingService alertingService,
+            IMediator mediator,
             string alertType,
             CancellationToken ct = default) =>
         {
             var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var resolved = await alertingService.ResolveAlertAsync(alertType, ct).ConfigureAwait(false);
+            var resolved = await mediator.Send(new ResolveAlertCommand(alertType), ct).ConfigureAwait(false);
 
             if (!resolved)
             {

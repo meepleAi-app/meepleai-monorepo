@@ -205,15 +205,25 @@ export function GameCatalogGrid({
   };
 
   const apiStatus = statusFilter !== 'all' ? STATUS_MAP[statusFilter] : undefined;
+  const apiCategoryId = categoryFilter !== 'all' ? categoryFilter : undefined;
 
   const { data, isLoading } = useQuery({
-    queryKey: [...sharedGamesKeys.all, 'admin-list', page, PAGE_SIZE, searchQuery, apiStatus],
+    queryKey: [
+      ...sharedGamesKeys.all,
+      'admin-list',
+      page,
+      PAGE_SIZE,
+      searchQuery,
+      apiStatus,
+      apiCategoryId,
+    ],
     queryFn: () =>
       api.sharedGames.getAll({
         page,
         pageSize: PAGE_SIZE,
         status: apiStatus,
         search: searchQuery || undefined,
+        categoryId: apiCategoryId,
       }),
     staleTime: 2 * 60 * 1000,
   });

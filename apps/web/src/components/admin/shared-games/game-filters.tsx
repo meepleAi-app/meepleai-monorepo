@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/overlays/select';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { useGameCategories } from '@/hooks/queries/useSharedGames';
 
 export interface GameFiltersProps {
   onSearchChange?: (value: string) => void;
@@ -25,6 +26,8 @@ export function GameFilters({
   onStatusChange,
   onPlayersChange,
 }: GameFiltersProps) {
+  const { data: categories = [] } = useGameCategories();
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [status, setStatus] = useState('all');
@@ -79,10 +82,11 @@ export function GameFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutte</SelectItem>
-              <SelectItem value="strategy">Strategia</SelectItem>
-              <SelectItem value="party">Party</SelectItem>
-              <SelectItem value="cooperative">Cooperativo</SelectItem>
-              <SelectItem value="deck-building">Deck Building</SelectItem>
+              {categories.map(cat => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

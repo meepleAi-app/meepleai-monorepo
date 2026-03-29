@@ -52,3 +52,4 @@ export * from './accessRequestsClient'; // Invite-only registration
 export * from './adminNotificationsClient'; // Admin manual notifications
 export * from './contactClient'; // Public contact form
 export * from './agentMemoryClient'; // AgentMemory — groups, game memory, player stats
+export * from './agentDocumentsClient'; // User-scoped agent document selection

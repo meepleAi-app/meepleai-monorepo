@@ -1,5 +1,8 @@
 using Api.Infrastructure.Entities;
 using Api.BoundedContexts.Administration.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -38,6 +41,7 @@ public sealed class SendAgentMessageCommandHandlerTests
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<IUserBudgetService> _mockBudgetService;
     private readonly Mock<ILogger<SendAgentMessageCommandHandler>> _mockLogger;
+    private readonly Mock<IPdfDocumentRepository> _mockPdfDocumentRepository;
     private readonly MeepleAiDbContext _dbContext;
     private readonly SendAgentMessageCommandHandler _handler;
     private readonly Guid _userId = Guid.NewGuid();
@@ -51,6 +55,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         _mockEmbeddingService = new Mock<IEmbeddingService>();
         _mockBudgetService = new Mock<IUserBudgetService>();
         _mockLogger = new Mock<ILogger<SendAgentMessageCommandHandler>>();
+        _mockPdfDocumentRepository = new Mock<IPdfDocumentRepository>();
         var dbOptions = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase($"SendAgentTests_{Guid.NewGuid()}")
             .Options;
@@ -94,6 +99,7 @@ public sealed class SendAgentMessageCommandHandlerTests
             Mock.Of<IGameSessionOrchestratorService>(),
             Mock.Of<IHybridCacheService>(),
             CreatePermissiveRagAccessServiceMock(),
+            _mockPdfDocumentRepository.Object,
             _mockLogger.Object
         );
     }
@@ -486,6 +492,44 @@ public sealed class SendAgentMessageCommandHandlerTests
         _mockUnitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task Should_Return_Error_When_Documents_Not_Ready()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var agent = new Agent(agentId, "TestAgent", AgentType.RagAgent,
+            AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)),
+            true, gameId: gameId);
+        SeedAgentConfiguration(agentId);
+        var command = new SendAgentMessageCommand(agentId, "How do I play?", _userId);
+
+        _mockAgentRepository
+            .Setup(r => r.GetByIdAsync(agentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(agent);
+
+        var processingDoc = new PdfDocument(
+            Guid.NewGuid(), gameId, new FileName("rules.pdf"), "/path/rules.pdf",
+            new FileSize(5_000_000), _userId);
+
+        _mockPdfDocumentRepository
+            .Setup(r => r.FindByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PdfDocument> { processingDoc });
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var @event in _handler.Handle(command, CancellationToken.None))
+        {
+            events.Add(@event);
+        }
+
+        // Assert
+        events.Should().ContainSingle();
+        var error = events[0].Data.Should().BeOfType<StreamingError>().Which;
+        error.errorCode.Should().Be("DOCUMENTS_NOT_READY");
+        error.errorMessage.Should().Contain("processing");
     }
 
     private void SeedAgentConfiguration(Guid agentId)

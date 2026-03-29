@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
@@ -20,12 +21,14 @@ internal static class AdminKnowledgeBaseEndpoints
             .WithTags("Admin", "KnowledgeBase")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 
-        // GET /api/v1/admin/kb/vector-collections (#4655, #4785)
-        // Vector store (Qdrant) has been removed — returns empty collections.
-        kbGroup.MapGet("/vector-collections", () =>
+        // GET /api/v1/admin/kb/vector-stats — pgvector statistics grouped by game
+        kbGroup.MapGet("/vector-stats", async (IMediator mediator, CancellationToken ct) =>
         {
-            return Results.Ok(new { collections = Array.Empty<object>() });
-        });
+            var result = await mediator.Send(new GetVectorStatsQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetVectorStats")
+        .WithSummary("Get pgvector statistics grouped by game");
 
         // GET /api/v1/admin/kb/processing-queue (#4655, #4785)
         kbGroup.MapGet("/processing-queue", async (

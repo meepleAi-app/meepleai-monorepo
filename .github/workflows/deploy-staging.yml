@@ -587,7 +587,7 @@ jobs:
           mkdir -p reports/deploy
           k6 run \
             --env BASE_URL=https://meepleai.app \
-            --summary-export=reports/deploy/deploy-smoke-summary.json \
+            --env SUMMARY_EXPORT_PATH=reports/deploy/deploy-smoke-summary.json \
             tests/k6/scenarios/deploy-smoke.js
         continue-on-error: true
 

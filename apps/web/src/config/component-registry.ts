@@ -2980,14 +2980,14 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tags: ['upload', 'drag-drop', 'knowledge-base'],
   },
   {
-    id: 'vector-collection-card',
-    name: 'VectorCollectionCard',
-    importPath: '@/components/admin/knowledge-base/vector-collection-card',
+    id: 'vector-game-card',
+    name: 'VectorGameCard',
+    importPath: '@/components/admin/knowledge-base/vector-game-card',
     category: 'Data Display',
     areas: ['admin'],
-    tier: 'interactive',
-    description: 'Card showing a Qdrant vector collection with point count and actions.',
-    tags: ['vector', 'collection', 'qdrant'],
+    tier: 'static',
+    description: 'Card showing a game vector index health with count and health percentage.',
+    tags: ['vector', 'game', 'pgvector'],
   },
 
   // ─── Admin — Shared Games ─────────────────────────────────────────────────

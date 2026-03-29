@@ -95,12 +95,6 @@ vi.mock('@/lib/api/core/httpClient', () => ({
   HttpClient: vi.fn().mockImplementation(() => ({})),
 }));
 
-vi.mock('@/components/admin/knowledge-base/vector-collection-card', () => ({
-  VectorCollectionCard: ({ name }: { name: string }) => (
-    <div data-testid={`collection-card-${name}`}>{name}</div>
-  ),
-}));
-
 vi.mock('@/components/ui/primitives/button', () => ({
   Button: ({
     children,

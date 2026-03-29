@@ -1,5 +1,6 @@
 using Api.Infrastructure.Entities;
 using Api.BoundedContexts.Administration.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -549,6 +550,7 @@ public sealed class LlmFallbackTests : IDisposable
             Mock.Of<IGameSessionOrchestratorService>(),
             Mock.Of<IHybridCacheService>(),
             CreatePermissiveRagAccessServiceMock(),
+            Mock.Of<IPdfDocumentRepository>(),
             _mockLogger.Object);
     }
 

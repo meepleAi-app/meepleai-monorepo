@@ -1,4 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
@@ -52,6 +54,7 @@ internal sealed partial class SendAgentMessageCommandHandler : IStreamingQueryHa
     private readonly IGameSessionOrchestratorService _sessionOrchestrator;
     private readonly IHybridCacheService _hybridCache;
     private readonly IRagAccessService _ragAccessService;
+    private readonly IPdfDocumentRepository _pdfDocumentRepository;
     private readonly ILogger<SendAgentMessageCommandHandler> _logger;
 
     /// <summary>Cache TTL for GameSessionContext.</summary>
@@ -74,6 +77,7 @@ internal sealed partial class SendAgentMessageCommandHandler : IStreamingQueryHa
         IGameSessionOrchestratorService sessionOrchestrator,
         IHybridCacheService hybridCache,
         IRagAccessService ragAccessService,
+        IPdfDocumentRepository pdfDocumentRepository,
         ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -92,6 +96,7 @@ internal sealed partial class SendAgentMessageCommandHandler : IStreamingQueryHa
         _sessionOrchestrator = sessionOrchestrator ?? throw new ArgumentNullException(nameof(sessionOrchestrator));
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
+        _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -208,6 +213,38 @@ internal sealed partial class SendAgentMessageCommandHandler : IStreamingQueryHa
                     StreamingEventType.Error,
                     new StreamingError("Accesso RAG non autorizzato", "RAG_ACCESS_DENIED"));
                 yield break;
+            }
+        }
+
+        // Document readiness check — aligned with AskAgentQuestionCommandHandler
+        if (agent.GameId.HasValue && sessionContext == null)
+        {
+            var documents = await _pdfDocumentRepository
+                .FindByGameIdAsync(agent.GameId.Value, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (documents.Count > 0)
+            {
+                var notCompleted = documents.Count(d =>
+                    d.ProcessingState != PdfProcessingState.Ready);
+                if (notCompleted > 0)
+                {
+                    var stateBreakdown = documents
+                        .GroupBy(d => d.ProcessingState)
+                        .Select(g => $"{g.Key}={g.Count()}")
+                        .ToList();
+
+                    _logger.LogInformation(
+                        "Documents not ready for game {GameId}: {NotReady}/{Total}. States: {States}",
+                        agent.GameId, notCompleted, documents.Count, string.Join(", ", stateBreakdown));
+
+                    yield return CreateEvent(
+                        StreamingEventType.Error,
+                        new StreamingError(
+                            $"{notCompleted} di {documents.Count} documenti sono ancora in fase di processing. Attendi il completamento prima di chattare.",
+                            "DOCUMENTS_NOT_READY"));
+                    yield break;
+                }
             }
         }
 

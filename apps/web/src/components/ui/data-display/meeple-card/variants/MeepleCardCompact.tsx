@@ -22,6 +22,7 @@ import {
   meepleCardVariants,
   contentVariants,
 } from '../../meeple-card-styles';
+import { useCardTheme } from '../hooks/useCardTheme';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
 import { CardActions } from '../parts/CardActions';
 
@@ -71,6 +72,8 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
     stateLabel: _stateLabel,
   } = props;
 
+  const cardTheme = useCardTheme();
+
   const variant = 'compact' as const;
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = !!(quickActions && quickActions.length > 0);
@@ -118,7 +121,8 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
         meepleCardVariants({ variant }),
         selected && 'ring-2 ring-offset-2 bg-accent/10',
         selected && `ring-[hsl(${color})]`,
-        className
+        className,
+        cardTheme === 'gaming' && 'glass-card'
       )}
       style={
         {

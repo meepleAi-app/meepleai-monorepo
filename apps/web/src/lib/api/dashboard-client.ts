@@ -74,6 +74,18 @@ export interface GetUserGamesParams {
   pageSize?: number;
 }
 
+export interface TrendingGameDto {
+  rank: number;
+  gameId: string;
+  title: string;
+  thumbnailUrl?: string;
+  score: number;
+  searchCount: number;
+  viewCount: number;
+  libraryAddCount: number;
+  playCount: number;
+}
+
 // ============================================================================
 // API Client
 // ============================================================================
@@ -132,6 +144,19 @@ export const dashboardClient = {
 
     const response = await httpClient.get<PagedResult<UserGameDto>>(url);
     if (!response) throw new Error('Failed to fetch user games');
+    return response;
+  },
+
+  /**
+   * Get trending games across all users (last 7 days)
+   * Uses weighted analytics: play×10, libraryAdd×5, search×3, view×1
+   * @param limit Number of games to return (default: 10)
+   */
+  async getTrendingGames(limit = 10): Promise<TrendingGameDto[]> {
+    const response = await httpClient.get<TrendingGameDto[]>(
+      `/api/v1/catalog/trending?limit=${limit}`
+    );
+    if (!response) throw new Error('Failed to fetch trending games');
     return response;
   },
 

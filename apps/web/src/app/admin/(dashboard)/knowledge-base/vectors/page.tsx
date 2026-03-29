@@ -321,7 +321,7 @@ export default function VectorStorePage() {
             </div>
             {searchResults.map(item => (
               <div
-                key={item.documentId}
+                key={`${item.documentId}-${item.chunkIndex}`}
                 className="bg-slate-50/70 dark:bg-zinc-900/50 rounded-lg border border-slate-200/50 dark:border-zinc-700/50 overflow-hidden"
               >
                 <button

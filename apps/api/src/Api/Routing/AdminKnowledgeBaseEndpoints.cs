@@ -38,7 +38,7 @@ internal static class AdminKnowledgeBaseEndpoints
         {
             var query = new VectorSemanticSearchQuery(
                 request.Query,
-                request.Limit ?? 10,
+                Math.Clamp(request.Limit ?? 10, 1, 100),
                 request.GameId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);

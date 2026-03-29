@@ -32,9 +32,7 @@ internal sealed class GetVectorStatsQueryHandler : IQueryHandler<GetVectorStatsQ
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Retrieve all VectorDocuments that belong to a SharedGame, grouped by SharedGameId.
-        // VectorDocuments without a SharedGameId (private games) are excluded from the breakdown
-        // but still contribute to the total vector count.
+        // Total vector count and overall health: lightweight projection over all documents.
         var allDocs = await _dbContext.VectorDocuments
             .AsNoTracking()
             .Select(v => new
@@ -60,14 +58,24 @@ internal sealed class GetVectorStatsQueryHandler : IQueryHandler<GetVectorStatsQ
 
         var totalVectors = allDocs.Sum(v => (long)v.ChunkCount);
 
-        // Build per-game breakdown for documents with a SharedGameId.
-        var grouped = allDocs
+        // Build per-game breakdown using a database-side GroupBy to avoid
+        // materialising all rows for the aggregation.
+        var grouped = await _dbContext.VectorDocuments
+            .AsNoTracking()
             .Where(v => v.SharedGameId.HasValue)
             .GroupBy(v => v.SharedGameId!.Value)
-            .ToList();
+            .Select(g => new
+            {
+                SharedGameId = g.Key,
+                Total = (long)g.Sum(v => v.ChunkCount),
+                Completed = (long)g.Sum(v => v.IndexingStatus == "completed" ? v.ChunkCount : 0),
+                Failed = (long)g.Sum(v => v.IndexingStatus == "failed" ? v.ChunkCount : 0),
+            })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         // Fetch SharedGame titles for all relevant IDs in one round-trip.
-        var sharedGameIds = grouped.Select(g => g.Key).ToList();
+        var sharedGameIds = grouped.Select(g => g.SharedGameId).ToList();
         var gameTitles = await _dbContext.SharedGames
             .AsNoTracking()
             .Where(sg => sharedGameIds.Contains(sg.Id))
@@ -76,35 +84,22 @@ internal sealed class GetVectorStatsQueryHandler : IQueryHandler<GetVectorStatsQ
             .ConfigureAwait(false);
 
         var breakdown = new List<VectorGameBreakdownDto>(grouped.Count);
-        long totalCompleted = 0;
 
-        foreach (var group in grouped)
+        foreach (var g in grouped)
         {
-            var completed = group
-                .Where(v => string.Equals(v.IndexingStatus, "completed", StringComparison.OrdinalIgnoreCase))
-                .Sum(v => (long)v.ChunkCount);
-
-            var failed = group
-                .Where(v => string.Equals(v.IndexingStatus, "failed", StringComparison.OrdinalIgnoreCase))
-                .Sum(v => (long)v.ChunkCount);
-
-            var groupTotal = group.Sum(v => (long)v.ChunkCount);
-
-            var healthPercent = groupTotal > 0
-                ? (int)Math.Round(completed * 100.0 / groupTotal)
+            var healthPercent = g.Total > 0
+                ? (int)Math.Round(g.Completed * 100.0 / g.Total)
                 : 100;
 
-            gameTitles.TryGetValue(group.Key, out var title);
+            gameTitles.TryGetValue(g.SharedGameId, out var title);
 
             breakdown.Add(new VectorGameBreakdownDto(
-                GameId: group.Key,
-                GameName: title ?? group.Key.ToString(),
-                VectorCount: groupTotal,
-                CompletedCount: completed,
-                FailedCount: failed,
+                GameId: g.SharedGameId,
+                GameName: title ?? g.SharedGameId.ToString(),
+                VectorCount: g.Total,
+                CompletedCount: g.Completed,
+                FailedCount: g.Failed,
                 HealthPercent: healthPercent));
-
-            totalCompleted += completed;
         }
 
         // AvgHealthPercent based on all chunked vectors (including private-game docs).

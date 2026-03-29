@@ -88,7 +88,7 @@ internal sealed class VectorSemanticSearchQueryHandler
             // Collect all distinct GameIds that have at least one completed VectorDocument.
             var completedGameIds = await _dbContext.VectorDocuments
                 .AsNoTracking()
-                .Where(v => v.IndexingStatus == "completed" && v.GameId.HasValue)
+                .Where(v => v.IndexingStatus.Equals("completed", StringComparison.OrdinalIgnoreCase) && v.GameId.HasValue)
                 .Select(v => v.GameId!.Value)
                 .Distinct()
                 .ToListAsync(cancellationToken)

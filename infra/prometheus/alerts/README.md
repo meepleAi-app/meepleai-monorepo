@@ -7,7 +7,7 @@
 
 ## Scopo
 
-Queste regole forniscono la logica che trasforma i counter esposti da MeepleAI API, Qdrant, Redis, ecc. in alert e metriche pronte da visualizzare. Modifiche ai file vengono ricaricate automaticamente da Prometheus al riavvio per mantenere la sorveglianza aggiornata.
+Queste regole forniscono la logica che trasforma i counter esposti da MeepleAI API, pgvector (PostgreSQL), Redis, ecc. in alert e metriche pronte da visualizzare. Modifiche ai file vengono ricaricate automaticamente da Prometheus al riavvio per mantenere la sorveglianza aggiornata.
 
 ## Esempio di utilizzo dell’applicazione
 

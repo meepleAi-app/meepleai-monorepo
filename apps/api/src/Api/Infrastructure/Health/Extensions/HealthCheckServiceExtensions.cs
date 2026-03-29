@@ -37,6 +37,15 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
+        // Embedding dimension validation — catches provider/schema mismatch at startup.
+        // Uses Degraded + NonCritical to match other AI health checks and avoid
+        // blocking dev/CI startup when embedding service is not running.
+        builder.AddCheck<EmbeddingDimensionHealthCheck>(
+            "embedding-dimensions",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(1));
+
         builder.AddCheck<RerankerHealthCheck>(
             "reranker",
             HealthStatus.Degraded,

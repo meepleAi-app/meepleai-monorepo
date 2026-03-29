@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import { useGameNightStore } from '@/store/game-night';
+import { useGameNightStore } from '@/stores/game-night';
 import { GameNightPlanningLayout } from '../GameNightPlanningLayout';
 
 vi.mock('next/link', () => ({

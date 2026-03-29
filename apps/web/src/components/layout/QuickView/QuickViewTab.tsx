@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import type { QuickViewTab as TabType } from '@/store/quick-view';
+import type { QuickViewTab as TabType } from '@/stores/quick-view';
 
 interface QuickViewTabProps {
   tab: TabType;

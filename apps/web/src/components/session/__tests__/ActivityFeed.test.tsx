@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, beforeEach } from 'vitest';
-import { useSessionStore } from '@/store/session';
+import { useSessionStore } from '@/stores/session';
 import { ActivityFeed } from '../ActivityFeed';
 
 describe('ActivityFeed', () => {

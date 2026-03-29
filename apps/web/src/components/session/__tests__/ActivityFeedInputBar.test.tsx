@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useSessionStore } from '@/store/session';
+import { useSessionStore } from '@/stores/session';
 import { ActivityFeedInputBar } from '../ActivityFeedInputBar';
 
 describe('ActivityFeedInputBar', () => {

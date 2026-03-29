@@ -1,4 +1,4 @@
-using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
+using Api.SharedKernel.Domain.Enums;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 

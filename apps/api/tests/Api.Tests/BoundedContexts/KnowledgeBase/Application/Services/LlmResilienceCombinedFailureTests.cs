@@ -1,6 +1,6 @@
-using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using LlmUserContext = Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.LlmUserContext;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -126,7 +126,7 @@ public sealed class LlmResilienceCombinedFailureTests
     {
         // Routing strategy nominates OpenRouter
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         // RPD quota is exhausted for the OpenRouter model
@@ -175,7 +175,7 @@ public sealed class LlmResilienceCombinedFailureTests
     {
         // Routing strategy selects OpenRouter
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         // OpenRouter throws 429
@@ -252,7 +252,7 @@ public sealed class LlmResilienceCombinedFailureTests
     {
         // Routing strategy nominates OpenRouter
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         // Circuit breaker is open for OpenRouter — requests not allowed

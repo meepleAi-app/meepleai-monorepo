@@ -87,7 +87,20 @@ export const DeckStack = memo(function DeckStack({
   const content = (
     <>
       {/* Backdrop */}
-      <div data-testid="deck-stack-backdrop" className="fixed inset-0 z-40" onClick={onClose} />
+      <div
+        data-testid="deck-stack-backdrop"
+        className="fixed inset-0 z-40"
+        role="button"
+        tabIndex={0}
+        aria-label="Close"
+        onClick={onClose}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClose();
+          }
+        }}
+      />
       {/* Fan container */}
       <div
         className={cn(

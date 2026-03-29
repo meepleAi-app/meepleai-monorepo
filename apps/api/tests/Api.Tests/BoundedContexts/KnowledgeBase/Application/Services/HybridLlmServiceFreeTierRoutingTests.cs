@@ -1,6 +1,6 @@
-using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using LlmUserContext = Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.LlmUserContext;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -139,7 +139,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
 
         // Routing strategy must NOT be consulted for AutomatedTest requests
         _routingStrategyMock.Verify(
-            s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()),
+            s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()),
             Times.Never);
 
         // OpenRouter must never receive a request
@@ -182,7 +182,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
     public async Task GenerateCompletionAsync_RpdExhausted_ProactivelyRoutesToOllama()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "free tier selected"));
 
         _quotaTrackerMock
@@ -219,7 +219,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
     public async Task GenerateCompletionAsync_RpdNotExhausted_UsesOpenRouter()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "free tier selected"));
 
         // IsRpdExhausted returns false (default) — OpenRouter should proceed normally
@@ -253,7 +253,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
     public async Task GenerateCompletionAsync_OpenRouterRpdFailure_RecordsRpdToQuotaTracker()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "free tier selected"));
 
         var rateLimitMetadata = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -295,7 +295,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
     public async Task GenerateCompletionAsync_OpenRouterRpmFailure_RecordsRpmToQuotaTracker()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "free tier selected"));
 
         var rateLimitMetadata = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -336,7 +336,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
     public async Task GenerateCompletionAsync_OpenRouterFailureWithoutRateLimitMetadata_DoesNotRecordToQuotaTracker()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "free tier selected"));
 
         // Plain failure with no rate limit metadata
@@ -367,7 +367,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
     public async Task GenerateCompletionAsync_OllamaFailure_DoesNotRecordToQuotaTracker()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.Ollama(OllamaModel, "local routing"));
 
         _ollamaMock

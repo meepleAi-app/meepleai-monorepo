@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 
-import { useQuickViewStore } from '@/store/quick-view';
+import { useQuickViewStore } from '@/stores/quick-view';
 import { QuickView } from '../QuickView';
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/games' }));

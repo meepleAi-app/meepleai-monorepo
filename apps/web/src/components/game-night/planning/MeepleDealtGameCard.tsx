@@ -3,7 +3,7 @@
 import { X } from 'lucide-react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import type { GameNightGame } from '@/store/game-night';
+import type { GameNightGame } from '@/stores/game-night';
 
 interface MeepleDealtGameCardProps {
   game: GameNightGame;

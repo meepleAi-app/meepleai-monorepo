@@ -1,6 +1,6 @@
-using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using LlmUserContext = Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.LlmUserContext;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -174,7 +174,7 @@ public sealed class LlmResilienceChaosTests
     public async Task OpenRouter429Burst_FallsBackToOllama()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         // OpenRouter throws (simulating 429)
@@ -208,7 +208,7 @@ public sealed class LlmResilienceChaosTests
     public async Task AllProvidersDown_ReturnsMeaningfulError()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         // Both providers throw
@@ -381,7 +381,7 @@ public sealed class LlmResilienceChaosTests
     {
         // Routing strategy selects OpenRouter by default
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         var emergencyMock = new Mock<IEmergencyOverrideService>();
@@ -417,7 +417,7 @@ public sealed class LlmResilienceChaosTests
     public async Task RpdExhausted_OpenRouter_ProactivelyFallsBackToOllama()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<LlmUserContext>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "free tier"));
 
         _quotaTrackerMock

@@ -1,4 +1,4 @@
-using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
+using Api.SharedKernel.Domain.Enums;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
@@ -12,7 +12,7 @@ public sealed record TierStrategyAccess
     /// <summary>
     /// The user tier this access configuration applies to.
     /// </summary>
-    public UserTier Tier { get; }
+    public LlmUserTier Tier { get; }
 
     /// <summary>
     /// The list of RAG strategies available to this tier.
@@ -31,7 +31,7 @@ public sealed record TierStrategyAccess
     public bool HasAnyAccess => AvailableStrategies.Count > 0;
 
     private TierStrategyAccess(
-        UserTier tier,
+        LlmUserTier tier,
         IReadOnlyList<RagStrategy> availableStrategies,
         bool canAccessCustom)
     {
@@ -44,7 +44,7 @@ public sealed record TierStrategyAccess
     /// Creates a TierStrategyAccess for a user tier with the specified strategies.
     /// </summary>
     public static TierStrategyAccess Create(
-        UserTier tier,
+        LlmUserTier tier,
         IEnumerable<RagStrategy> strategies,
         bool canAccessCustom = false)
     {
@@ -61,7 +61,7 @@ public sealed record TierStrategyAccess
     /// <summary>
     /// Creates a TierStrategyAccess with no access (for anonymous users).
     /// </summary>
-    public static TierStrategyAccess NoAccess(UserTier tier) =>
+    public static TierStrategyAccess NoAccess(LlmUserTier tier) =>
         new(tier, Array.Empty<RagStrategy>(), canAccessCustom: false);
 
     /// <summary>
@@ -91,27 +91,27 @@ public sealed record TierStrategyAccess
 /// <param name="Message">Validation message.</param>
 public record TierStrategyValidationResult(
     bool IsValid,
-    UserTier Tier,
+    LlmUserTier Tier,
     RagStrategy RequestedStrategy,
     string Message)
 {
     /// <summary>
     /// Creates a successful validation result.
     /// </summary>
-    public static TierStrategyValidationResult Success(UserTier tier, RagStrategy strategy) =>
+    public static TierStrategyValidationResult Success(LlmUserTier tier, RagStrategy strategy) =>
         new(true, tier, strategy, $"Access granted to {strategy.GetDisplayName()} strategy");
 
     /// <summary>
     /// Creates a failed validation result for insufficient tier.
     /// </summary>
-    public static TierStrategyValidationResult AccessDenied(UserTier tier, RagStrategy strategy) =>
+    public static TierStrategyValidationResult AccessDenied(LlmUserTier tier, RagStrategy strategy) =>
         new(false, tier, strategy,
             $"Access denied: {tier} tier cannot access {strategy.GetDisplayName()} strategy");
 
     /// <summary>
     /// Creates a failed validation result for no access at all.
     /// </summary>
-    public static TierStrategyValidationResult NoAccess(UserTier tier) =>
+    public static TierStrategyValidationResult NoAccess(LlmUserTier tier) =>
         new(false, tier, RagStrategy.None,
             $"Access denied: {tier} tier has no RAG strategy access");
 }

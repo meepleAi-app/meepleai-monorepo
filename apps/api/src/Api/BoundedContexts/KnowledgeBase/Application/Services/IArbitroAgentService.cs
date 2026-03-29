@@ -2,7 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
-namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
 /// Interface for Arbitro Agent service - AI-powered move validation.

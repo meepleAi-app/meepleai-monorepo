@@ -8,7 +8,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
-using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
+using Api.SharedKernel.Domain.Enums;
+using LlmUserContext = Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.LlmUserContext;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Services;
@@ -342,7 +343,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         _mockCostService.Verify(
             s => s.LogSuccessAsync(
                 It.Is<LlmCompletionResult>(r => r.Cost.TotalCost == 0m),
-                It.Is<User?>(u => u != null && u.Id == user.Id),
+                It.Is<LlmUserContext>(u => u != null && u.UserId == user.Id),
                 It.IsAny<long>(),
                 It.IsAny<RequestSource>(),
                 It.IsAny<CancellationToken>()),
@@ -380,7 +381,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         _mockCostService.Verify(
             s => s.LogSuccessAsync(
                 It.Is<LlmCompletionResult>(r => r.Cost.TotalCost > 0m),
-                It.Is<User?>(u => u != null && u.Id == user.Id),
+                It.Is<LlmUserContext>(u => u != null && u.UserId == user.Id),
                 It.IsAny<long>(),
                 It.IsAny<RequestSource>(),
                 It.IsAny<CancellationToken>()),
@@ -421,7 +422,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         _mockCostService.Verify(
             s => s.LogSuccessAsync(
                 It.IsAny<LlmCompletionResult>(),
-                It.IsAny<User?>(),
+                It.IsAny<LlmUserContext>(),
                 It.Is<long>(ms => ms > 0),
                 It.IsAny<RequestSource>(),
                 It.IsAny<CancellationToken>()),

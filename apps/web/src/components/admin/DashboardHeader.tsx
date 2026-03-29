@@ -19,10 +19,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { useAuthUser } from '@/hooks/useAuthUser';
-import {
-  useNotificationStore,
-  selectUnreadCount,
-} from '@/store/notification/store';
+import { useNotificationStore, selectUnreadCount } from '@/stores/notification/store';
 
 // ============================================================================
 // Types
@@ -57,7 +54,10 @@ function MeepleDecoration({ className }: { className?: string }) {
  */
 function DicePattern({ className }: { className?: string }) {
   return (
-    <div className={`absolute opacity-[0.03] pointer-events-none ${className ?? ''}`} aria-hidden="true">
+    <div
+      className={`absolute opacity-[0.03] pointer-events-none ${className ?? ''}`}
+      aria-hidden="true"
+    >
       <svg width="60" height="60" viewBox="0 0 60 60" fill="currentColor">
         <circle cx="10" cy="10" r="3" />
         <circle cx="30" cy="10" r="3" />

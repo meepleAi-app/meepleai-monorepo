@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import type { TimelineSlot } from '@/store/game-night';
+import type { TimelineSlot } from '@/stores/game-night';
 
 import { GameNightTimeline } from '../GameNightTimeline';
 

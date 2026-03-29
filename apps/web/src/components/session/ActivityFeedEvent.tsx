@@ -3,7 +3,7 @@
 import { Dice5, Bot, Trophy, Camera, FileText, Mic, RefreshCw, Pause, Play } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import type { ActivityEvent, ActivityEventType } from '@/store/session';
+import type { ActivityEvent, ActivityEventType } from '@/stores/session';
 
 import type { LucideIcon } from 'lucide-react';
 

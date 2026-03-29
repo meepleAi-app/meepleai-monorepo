@@ -1,7 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
-using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
+using Api.SharedKernel.Domain.Enums;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;

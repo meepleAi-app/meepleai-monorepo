@@ -6,8 +6,10 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Services;
+using Api.SharedKernel.Domain.Enums;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using MediatR;
@@ -92,7 +94,7 @@ public sealed class LlmCostServiceTests
         var sut = CreateSut();
         var result = CreateSuccessResult();
 
-        await sut.LogSuccessAsync(result, user: null, latencyMs: 150, RequestSource.Manual);
+        await sut.LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 150, RequestSource.Manual);
 
         _costLogRepoMock.Verify(r => r.LogCostAsync(
             It.IsAny<Guid?>(),
@@ -113,8 +115,9 @@ public sealed class LlmCostServiceTests
         var sut = CreateSut();
         var result = CreateSuccessResult();
         var user = CreateUser();
+        var userContext = new LlmUserContext(user.Id, user.Role.Value, LlmUserTier.User);
 
-        await sut.LogSuccessAsync(result, user, latencyMs: 100, RequestSource.Manual);
+        await sut.LogSuccessAsync(result, userContext, latencyMs: 100, RequestSource.Manual);
 
         _budgetServiceMock.Verify(b => b.RecordUsageAsync(
             user.Id,
@@ -129,7 +132,7 @@ public sealed class LlmCostServiceTests
         var sut = CreateSut();
         var result = CreateSuccessResult();
 
-        await sut.LogSuccessAsync(result, user: null, latencyMs: 100, RequestSource.Manual);
+        await sut.LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 100, RequestSource.Manual);
 
         _budgetServiceMock.Verify(b => b.RecordUsageAsync(
             It.IsAny<Guid>(),
@@ -144,8 +147,9 @@ public sealed class LlmCostServiceTests
         var sut = CreateSut();
         var result = CreateSuccessResult(inputCost: 0.01m, outputCost: 0.02m);
         var user = CreateUser();
+        var userContext = new LlmUserContext(user.Id, user.Role.Value, LlmUserTier.User);
 
-        await sut.LogSuccessAsync(result, user, latencyMs: 100, RequestSource.Manual);
+        await sut.LogSuccessAsync(result, userContext, latencyMs: 100, RequestSource.Manual);
 
         _publisherMock.Verify(p => p.Publish(
             It.IsAny<TokenUsageLedgerEvent>(),
@@ -158,8 +162,9 @@ public sealed class LlmCostServiceTests
         var sut = CreateSut();
         var result = CreateSuccessResult(inputCost: 0m, outputCost: 0m);
         var user = CreateUser();
+        var userContext = new LlmUserContext(user.Id, user.Role.Value, LlmUserTier.User);
 
-        await sut.LogSuccessAsync(result, user, latencyMs: 100, RequestSource.Manual);
+        await sut.LogSuccessAsync(result, userContext, latencyMs: 100, RequestSource.Manual);
 
         _publisherMock.Verify(p => p.Publish(
             It.IsAny<TokenUsageLedgerEvent>(),
@@ -172,7 +177,7 @@ public sealed class LlmCostServiceTests
         var sut = CreateSut();
         var result = CreateSuccessResult();
 
-        await sut.LogSuccessAsync(result, user: null, latencyMs: 200, RequestSource.Manual);
+        await sut.LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 200, RequestSource.Manual);
 
         _fileLoggerMock.Verify(f => f.LogRequest(
             It.IsAny<string>(),
@@ -195,7 +200,7 @@ public sealed class LlmCostServiceTests
         var sut = CreateSut();
         var result = CreateSuccessResult(inputCost: 0.01m, outputCost: 0.02m);
 
-        await sut.LogSuccessAsync(result, user: null, latencyMs: 100, RequestSource.Manual);
+        await sut.LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 100, RequestSource.Manual);
 
         _usageServiceMock.Verify(u => u.RecordRequestCostAsync(
             result.Cost.TotalCost,
@@ -208,7 +213,7 @@ public sealed class LlmCostServiceTests
         var sut = CreateSut();
         var result = CreateSuccessResult(inputCost: 0m, outputCost: 0m);
 
-        await sut.LogSuccessAsync(result, user: null, latencyMs: 100, RequestSource.Manual);
+        await sut.LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 100, RequestSource.Manual);
 
         _usageServiceMock.Verify(u => u.RecordRequestCostAsync(
             It.IsAny<decimal>(),
@@ -230,7 +235,7 @@ public sealed class LlmCostServiceTests
         var result = CreateSuccessResult();
 
         // Should not throw — error is caught and logged as warning
-        await sut.LogSuccessAsync(result, user: null, latencyMs: 100, RequestSource.Manual);
+        await sut.LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 100, RequestSource.Manual);
     }
 
     // --- LogFailureAsync tests ---
@@ -240,7 +245,7 @@ public sealed class LlmCostServiceTests
     {
         var sut = CreateSut();
 
-        await sut.LogFailureAsync("Provider timeout", user: null, latencyMs: 5000, RequestSource.Manual);
+        await sut.LogFailureAsync("Provider timeout", LlmUserContext.Anonymous, latencyMs: 5000, RequestSource.Manual);
 
         _costLogRepoMock.Verify(r => r.LogCostAsync(
             It.IsAny<Guid?>(),
@@ -260,7 +265,7 @@ public sealed class LlmCostServiceTests
     {
         var sut = CreateSut();
 
-        await sut.LogFailureAsync("Some error", user: null, latencyMs: 1000, RequestSource.AgentTask);
+        await sut.LogFailureAsync("Some error", LlmUserContext.Anonymous, latencyMs: 1000, RequestSource.AgentTask);
 
         _fileLoggerMock.Verify(f => f.LogRequest(
             It.IsAny<string>(),
@@ -287,6 +292,6 @@ public sealed class LlmCostServiceTests
         var sut = CreateSut();
 
         // Should not throw
-        await sut.LogFailureAsync("error", user: null, latencyMs: 100, RequestSource.Manual);
+        await sut.LogFailureAsync("error", LlmUserContext.Anonymous, latencyMs: 100, RequestSource.Manual);
     }
 }

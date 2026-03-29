@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
@@ -34,6 +35,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
     private readonly IGameSessionOrchestratorService _sessionOrchestrator;
     private readonly IHybridCacheService _hybridCache;
     private readonly IRagAccessService _ragAccessService;
+    private readonly IUserBudgetService _userBudgetService;
     private readonly IMediator _mediator;
     private readonly ILogger<AskAgentQuestionCommandHandler> _logger;
 
@@ -48,6 +50,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         IGameSessionOrchestratorService sessionOrchestrator,
         IHybridCacheService hybridCache,
         IRagAccessService ragAccessService,
+        IUserBudgetService userBudgetService,
         IMediator mediator,
         ILogger<AskAgentQuestionCommandHandler> logger)
     {
@@ -58,6 +61,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         _sessionOrchestrator = sessionOrchestrator ?? throw new ArgumentNullException(nameof(sessionOrchestrator));
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
+        _userBudgetService = userBudgetService ?? throw new ArgumentNullException(nameof(userBudgetService));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -224,6 +228,28 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
             BoundedContext = gameId,
             ChunkIndex = chunk.ChunkIndex
         }).ToList();
+
+        // Budget check before LLM calls (fail-open: if check fails, allow request)
+        if (request.UserId.HasValue)
+        {
+            var estimatedTokens = (decimal)((request.Question.Length * 2) / 4 + 200);
+            var hasBudget = true;
+            try
+            {
+                hasBudget = await _userBudgetService
+                    .HasBudgetForQueryAsync(request.UserId.Value, estimatedTokens, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Budget check failed for user {UserId}, assuming budget available", request.UserId.Value);
+            }
+
+            if (!hasBudget)
+            {
+                _logger.LogWarning("User {UserId} budget exhausted, using fallback model", request.UserId.Value);
+            }
+        }
 
         // Step 3: Strategy-based generation
         string? answer = null;

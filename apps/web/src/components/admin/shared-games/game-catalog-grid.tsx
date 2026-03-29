@@ -196,53 +196,50 @@ export function GameCatalogGrid({
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
+  // Map filter values to backend enum names
+  const STATUS_MAP: Record<string, string> = {
+    published: 'Published',
+    pending: 'PendingApproval',
+    draft: 'Draft',
+    archived: 'Archived',
+  };
+
+  const apiStatus = statusFilter !== 'all' ? STATUS_MAP[statusFilter] : undefined;
+
   const { data, isLoading } = useQuery({
-    queryKey: [...sharedGamesKeys.all, 'admin-list', page, PAGE_SIZE],
-    queryFn: () => api.sharedGames.getAll({ page, pageSize: PAGE_SIZE }),
+    queryKey: [...sharedGamesKeys.all, 'admin-list', page, PAGE_SIZE, searchQuery, apiStatus],
+    queryFn: () =>
+      api.sharedGames.getAll({
+        page,
+        pageSize: PAGE_SIZE,
+        status: apiStatus,
+        search: searchQuery || undefined,
+      }),
     staleTime: 2 * 60 * 1000,
   });
   const allGames = data?.items ?? [];
   const total = data?.total ?? 0;
 
-  // Client-side filtering
-  const games = allGames.filter(game => {
-    // Search filter (title, description)
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const titleMatch = game.title?.toLowerCase().includes(q);
-      const descMatch = game.description?.toLowerCase().includes(q);
-      if (!titleMatch && !descMatch) return false;
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      const statusMap: Record<string, string> = {
-        published: 'Published',
-        pending: 'PendingApproval',
-        draft: 'Draft',
-        archived: 'Archived',
-      };
-      if (game.status !== statusMap[statusFilter]) return false;
-    }
-
-    // Players filter
-    if (playersFilter !== 'all') {
-      const min = game.minPlayers ?? 0;
-      const max = game.maxPlayers ?? 99;
-      if (playersFilter === '1-2' && min > 2) return false;
-      if (playersFilter === '3-4' && (max < 3 || min > 4)) return false;
-      if (playersFilter === '5+' && max < 5) return false;
-    }
-
-    return true;
-  });
+  // Client-side filtering only for players (not supported server-side)
+  const games =
+    playersFilter === 'all'
+      ? allGames
+      : allGames.filter(game => {
+          const min = game.minPlayers ?? 0;
+          const max = game.maxPlayers ?? 99;
+          if (playersFilter === '1-2' && min > 2) return false;
+          if (playersFilter === '3-4' && (max < 3 || min > 4)) return false;
+          if (playersFilter === '5+' && max < 5) return false;
+          return true;
+        });
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   // Selection state for bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Clear selection when filters change to avoid bulk actions on hidden games
+  // Reset page and selection when filters change
   useEffect(() => {
+    setPage(1);
     setSelectedIds(new Set());
   }, [searchQuery, categoryFilter, statusFilter, playersFilter]);
 

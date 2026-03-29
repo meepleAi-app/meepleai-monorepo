@@ -2,15 +2,15 @@
 
 /**
  * Vector Store Page (pgvector)
+ * Issue #4861: Qdrant → pgvector migration — Task 7
  *
- * NOTE: This page is being rewritten as part of the Qdrant → pgvector migration.
- * The implementation below is a transitional stub that typechecks against the new
- * pgvector API. A full redesign will be completed in Task 7.
+ * Displays vector store statistics, a semantic search panel with optional
+ * game filter and limit selector, and a grid of VectorGameCard components.
  */
 
 import { useCallback, useState } from 'react';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertCircleIcon,
   RefreshCwIcon,
@@ -18,8 +18,21 @@ import {
   XCircleIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  DatabaseIcon,
+  LayersIcon,
+  ActivityIcon,
+  GridIcon,
 } from 'lucide-react';
 
+import { VectorGameCard } from '@/components/admin/knowledge-base/vector-game-card';
+import { Card, CardContent } from '@/components/ui/data-display/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
@@ -29,25 +42,29 @@ import type { VectorSearchResultItem } from '@/lib/api/schemas/admin-knowledge-b
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
 
+const LIMIT_OPTIONS = [5, 10, 20, 50] as const;
+
 function StatSkeleton() {
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-white/40 dark:border-zinc-700/40">
-      <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded animate-pulse mb-2" />
-      <div className="h-8 w-16 bg-slate-200 dark:bg-zinc-700 rounded animate-pulse" />
-    </div>
+    <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-slate-200 dark:bg-zinc-700 animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-3 w-24 bg-slate-200 dark:bg-zinc-700 rounded animate-pulse" />
+            <div className="h-6 w-16 bg-slate-200 dark:bg-zinc-700 rounded animate-pulse" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
-export default function VectorCollectionsPage() {
-  const queryClient = useQueryClient();
-  const [actionMessage, setActionMessage] = useState<{
-    type: 'success' | 'error';
-    text: string;
-  } | null>(null);
-
+export default function VectorStorePage() {
   // ── Semantic Search state ──
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchLimit, setSearchLimit] = useState('10');
+  const [searchLimit, setSearchLimit] = useState<string>('10');
+  const [searchGameId, setSearchGameId] = useState<string>('all');
   const [searchResults, setSearchResults] = useState<VectorSearchResultItem[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -59,20 +76,6 @@ export default function VectorCollectionsPage() {
     staleTime: 60_000,
   });
 
-  const reindexMutation = useMutation({
-    mutationFn: () => adminClient.getVectorStats(),
-    onSuccess: () => {
-      setActionMessage({ type: 'success', text: 'Vector index refreshed.' });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'vector-stats'] });
-    },
-    onError: err => {
-      setActionMessage({
-        type: 'error',
-        text: `Failed to refresh: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      });
-    },
-  });
-
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return;
     setSearchLoading(true);
@@ -80,7 +83,12 @@ export default function VectorCollectionsPage() {
     setSearchResults(null);
     setExpandedResult(null);
     try {
-      const result = await adminClient.searchVectors(searchQuery.trim(), Number(searchLimit));
+      const gameIdParam = searchGameId !== 'all' ? searchGameId : undefined;
+      const result = await adminClient.searchVectors(
+        searchQuery.trim(),
+        Number(searchLimit),
+        gameIdParam
+      );
       setSearchResults(result.results);
       if (result.errorMessage) {
         setSearchError(result.errorMessage);
@@ -90,12 +98,20 @@ export default function VectorCollectionsPage() {
     } finally {
       setSearchLoading(false);
     }
-  }, [searchQuery, searchLimit]);
+  }, [searchQuery, searchLimit, searchGameId]);
 
   const gameBreakdown = data?.gameBreakdown ?? [];
   const totalVectors = data?.totalVectors ?? 0;
+  const gamesIndexed = data?.gamesIndexed ?? 0;
   const dimensions = data?.dimensions ?? 0;
   const avgHealth = data?.avgHealthPercent ?? 0;
+
+  const healthColor =
+    avgHealth >= 90
+      ? 'text-green-600 dark:text-green-400'
+      : avgHealth >= 70
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-red-600 dark:text-red-400';
 
   return (
     <div className="space-y-6">
@@ -105,7 +121,9 @@ export default function VectorCollectionsPage() {
           <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
             Vector Store
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your pgvector knowledge base</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            pgvector knowledge base — embeddings health and semantic search
+          </p>
         </div>
         <Button
           variant="outline"
@@ -118,25 +136,6 @@ export default function VectorCollectionsPage() {
           Refresh
         </Button>
       </div>
-
-      {/* Action Messages */}
-      {actionMessage && (
-        <div
-          className={`rounded-lg p-3 flex items-center gap-3 text-sm ${
-            actionMessage.type === 'success'
-              ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 text-green-800 dark:text-green-200'
-              : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 text-red-800 dark:text-red-200'
-          }`}
-        >
-          <span className="flex-1">{actionMessage.text}</span>
-          <button
-            onClick={() => setActionMessage(null)}
-            className="text-current opacity-60 hover:opacity-100"
-          >
-            &times;
-          </button>
-        </div>
-      )}
 
       {/* Error State */}
       {error && (
@@ -156,7 +155,7 @@ export default function VectorCollectionsPage() {
         </div>
       )}
 
-      {/* Stats */}
+      {/* Stats Row */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -165,62 +164,133 @@ export default function VectorCollectionsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-white/40 dark:border-zinc-700/40">
-            <div className="text-sm text-gray-600 dark:text-zinc-400">Games Indexed</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-              {data?.gamesIndexed ?? 0}
-            </div>
-          </div>
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-white/40 dark:border-zinc-700/40">
-            <div className="text-sm text-gray-600 dark:text-zinc-400">Total Vectors</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-              {totalVectors.toLocaleString()}
-            </div>
-          </div>
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-white/40 dark:border-zinc-700/40">
-            <div className="text-sm text-gray-600 dark:text-zinc-400">Dimensions</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-zinc-100">
-              {dimensions > 0 ? dimensions : '\u2014'}
-            </div>
-          </div>
-          <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-white/40 dark:border-zinc-700/40">
-            <div className="text-sm text-gray-600 dark:text-zinc-400">Avg Health</div>
-            <div
-              className={`text-2xl font-bold ${avgHealth >= 90 ? 'text-green-600 dark:text-green-400' : avgHealth >= 70 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}
-            >
-              {data ? `${Math.round(avgHealth)}%` : '\u2014'}
-            </div>
-          </div>
+          {/* Total Vectors */}
+          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <DatabaseIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Vectors</p>
+                  <p className="text-xl font-bold text-foreground">
+                    {totalVectors.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Games Indexed */}
+          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <GridIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Games Indexed</p>
+                  <p className="text-xl font-bold text-foreground">{gamesIndexed}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dimensions */}
+          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center">
+                  <LayersIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Dimensions</p>
+                  <p className="text-xl font-bold text-foreground">
+                    {dimensions > 0 ? dimensions : '\u2014'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Avg Health */}
+          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <ActivityIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Avg Health</p>
+                  <p className={`text-xl font-bold ${healthColor}`}>
+                    {data ? `${Math.round(avgHealth)}%` : '\u2014'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* ── Semantic Search Panel ── */}
+      {/* Semantic Search Panel */}
       <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 p-6 space-y-4">
-        <h2 className="font-quicksand font-semibold text-lg text-foreground flex items-center gap-2">
-          <SearchIcon className="h-5 w-5 text-blue-500" />
-          Semantic Search
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Run a semantic similarity search against the pgvector knowledge base.
-        </p>
+        <div>
+          <h2 className="font-quicksand font-semibold text-lg text-foreground flex items-center gap-2">
+            <SearchIcon className="h-5 w-5 text-blue-500" />
+            Semantic Search
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Run a similarity search against the pgvector knowledge base.
+          </p>
+        </div>
 
+        {/* Search Controls */}
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Query input */}
           <div className="relative flex-1">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Enter a query to search vectors..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter') handleSearch();
+                if (e.key === 'Enter') void handleSearch();
               }}
               className="pl-9 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md"
             />
           </div>
 
+          {/* Game filter */}
+          <Select value={searchGameId} onValueChange={setSearchGameId}>
+            <SelectTrigger className="w-full sm:w-48 bg-white/70 dark:bg-zinc-800/70">
+              <SelectValue placeholder="All games" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All games</SelectItem>
+              {gameBreakdown.map(game => (
+                <SelectItem key={game.gameId} value={game.gameId}>
+                  {game.gameName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Limit selector */}
+          <Select value={searchLimit} onValueChange={setSearchLimit}>
+            <SelectTrigger className="w-full sm:w-28 bg-white/70 dark:bg-zinc-800/70">
+              <SelectValue placeholder="Limit" />
+            </SelectTrigger>
+            <SelectContent>
+              {LIMIT_OPTIONS.map(n => (
+                <SelectItem key={n} value={String(n)}>
+                  {n} results
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button
-            onClick={handleSearch}
+            onClick={() => void handleSearch()}
             disabled={searchLoading || !searchQuery.trim()}
             className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
           >
@@ -267,7 +337,7 @@ export default function VectorCollectionsPage() {
                     </span>
                     <span className="text-sm text-foreground truncate">{item.text}</span>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <div className="shrink-0 ml-2">
                     {expandedResult === item.documentId ? (
                       <ChevronUpIcon className="h-4 w-4 text-muted-foreground" />
                     ) : (
@@ -309,28 +379,24 @@ export default function VectorCollectionsPage() {
         )}
       </div>
 
-      {/* Game Breakdown */}
+      {/* Game Cards Grid */}
+      {isLoading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-40 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse"
+            />
+          ))}
+        </div>
+      )}
+
       {!isLoading && gameBreakdown.length > 0 && (
-        <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 p-6 space-y-4">
+        <div className="space-y-3">
           <h2 className="font-quicksand font-semibold text-lg text-foreground">Game Breakdown</h2>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {gameBreakdown.map(game => (
-              <div
-                key={game.gameId}
-                className="flex items-center justify-between p-3 bg-slate-50/60 dark:bg-zinc-900/40 rounded-lg border border-slate-200/40 dark:border-zinc-700/30"
-              >
-                <div>
-                  <div className="text-sm font-medium text-foreground">{game.gameName}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {game.vectorCount.toLocaleString()} vectors
-                  </div>
-                </div>
-                <div
-                  className={`text-sm font-semibold ${game.healthPercent >= 90 ? 'text-green-600 dark:text-green-400' : game.healthPercent >= 70 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}
-                >
-                  {Math.round(game.healthPercent)}%
-                </div>
-              </div>
+              <VectorGameCard key={game.gameId} game={game} />
             ))}
           </div>
         </div>
@@ -339,26 +405,13 @@ export default function VectorCollectionsPage() {
       {/* Empty State */}
       {!isLoading && !error && gameBreakdown.length === 0 && (
         <div className="text-center py-12 bg-white/50 dark:bg-zinc-800/50 backdrop-blur-sm rounded-xl border border-slate-200/40 dark:border-zinc-700/30">
-          <p className="text-muted-foreground">No vectors indexed yet</p>
+          <DatabaseIcon className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium">No vectors indexed yet</p>
           <p className="text-xs text-muted-foreground mt-1">
             Vectors will appear here once documents are processed
           </p>
         </div>
       )}
-
-      {/* Reindex action */}
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => reindexMutation.mutate()}
-          disabled={reindexMutation.isPending}
-          className="gap-2"
-        >
-          <RefreshCwIcon className={`h-4 w-4 ${reindexMutation.isPending ? 'animate-spin' : ''}`} />
-          Refresh Index
-        </Button>
-      </div>
     </div>
   );
 }

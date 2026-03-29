@@ -23,6 +23,12 @@ function healthLabel(healthPercent: number): string {
   return 'Error';
 }
 
+function healthVariant(healthPercent: number): 'success' | 'warning' | 'error' {
+  if (healthPercent >= 90) return 'success';
+  if (healthPercent >= 70) return 'warning';
+  return 'error';
+}
+
 export function VectorGameCard({ game }: VectorGameCardProps) {
   const metadata: MeepleCardMetadata[] = [
     { icon: Database, label: `${game.vectorCount.toLocaleString()} vectors` },
@@ -35,7 +41,10 @@ export function VectorGameCard({ game }: VectorGameCardProps) {
       variant="grid"
       title={game.gameName}
       subtitle={`${game.vectorCount.toLocaleString()} vectors · ${game.healthPercent.toFixed(0)}% health`}
-      badge={healthLabel(game.healthPercent)}
+      stateLabel={{
+        text: healthLabel(game.healthPercent),
+        variant: healthVariant(game.healthPercent),
+      }}
       metadata={metadata}
       data-testid={`vector-game-card-${game.gameId}`}
     />

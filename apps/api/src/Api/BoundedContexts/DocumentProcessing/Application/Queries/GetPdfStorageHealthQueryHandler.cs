@@ -6,8 +6,8 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
 /// <summary>
 /// Handler for GetPdfStorageHealthQuery.
-/// PDF Storage Management Hub: Composes PG + file storage metrics.
-/// Vector store (Qdrant) has been removed — returns zeroed Qdrant metrics.
+/// PDF Storage Management Hub: Composes PG + pgvector + file storage metrics.
+/// Vector store uses pgvector (PostgreSQL) — queries real vector document count.
 /// </summary>
 internal sealed class GetPdfStorageHealthQueryHandler
     : IQueryHandler<GetPdfStorageHealthQuery, PdfStorageHealthDto>
@@ -41,8 +41,10 @@ internal sealed class GetPdfStorageHealthQueryHandler
 
         var postgres = new PostgresInfoDto(totalDocuments, totalChunks, Math.Round(estimatedChunksSizeMB, 1));
 
-        // Vector store (Qdrant) has been removed — return zeroed metrics
-        var qdrant = new QdrantInfoDto(0, 0, "0 B", false);
+        // Vector store: pgvector (PostgreSQL) — query real vector document count
+        var vectorCount = await _dbContext.VectorDocuments
+            .LongCountAsync(cancellationToken).ConfigureAwait(false);
+        var vectorStoreInfo = new VectorStoreInfoDto(vectorCount, true);
 
         // File storage metrics
         var totalSizeBytes = await _dbContext.PdfDocuments
@@ -61,7 +63,7 @@ internal sealed class GetPdfStorageHealthQueryHandler
             SizeByState: sizeByState
         );
 
-        // Overall health determination (Qdrant unavailable is no longer critical)
+        // Overall health determination
         var overallHealth = "healthy";
         if (totalDocuments > 0)
         {
@@ -75,7 +77,7 @@ internal sealed class GetPdfStorageHealthQueryHandler
 
         return new PdfStorageHealthDto(
             Postgres: postgres,
-            Qdrant: qdrant,
+            VectorStore: vectorStoreInfo,
             FileStorage: fileStorage,
             OverallHealth: overallHealth,
             MeasuredAt: _timeProvider.GetUtcNow().DateTime

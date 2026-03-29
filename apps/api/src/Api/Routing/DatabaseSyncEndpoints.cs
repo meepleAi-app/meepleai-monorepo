@@ -1,8 +1,8 @@
 using Api.BoundedContexts.DatabaseSync.Application.Commands;
 using Api.BoundedContexts.DatabaseSync.Application.Queries;
 using Api.BoundedContexts.DatabaseSync.Domain.Enums;
+using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Extensions;
-using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,13 +25,12 @@ internal static class DatabaseSyncEndpoints
         syncGroup.MapGet("/tunnel/status", async (
             HttpContext context,
             IMediator mediator,
-            IFeatureFlagService featureFlags,
             CancellationToken ct) =>
         {
             var (authorized, _, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            if (!await featureFlags.IsEnabledAsync("Features.DatabaseSync").ConfigureAwait(false))
+            if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
             var result = await mediator.Send(new GetTunnelStatusQuery(), ct).ConfigureAwait(false);
@@ -43,13 +42,12 @@ internal static class DatabaseSyncEndpoints
         syncGroup.MapPost("/tunnel/open", async (
             HttpContext context,
             IMediator mediator,
-            IFeatureFlagService featureFlags,
             CancellationToken ct) =>
         {
             var (authorized, _, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            if (!await featureFlags.IsEnabledAsync("Features.DatabaseSync").ConfigureAwait(false))
+            if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
             var result = await mediator.Send(new OpenTunnelCommand(), ct).ConfigureAwait(false);
@@ -61,13 +59,12 @@ internal static class DatabaseSyncEndpoints
         syncGroup.MapDelete("/tunnel/close", async (
             HttpContext context,
             IMediator mediator,
-            IFeatureFlagService featureFlags,
             CancellationToken ct) =>
         {
             var (authorized, _, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            if (!await featureFlags.IsEnabledAsync("Features.DatabaseSync").ConfigureAwait(false))
+            if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
             var result = await mediator.Send(new CloseTunnelCommand(), ct).ConfigureAwait(false);
@@ -81,13 +78,12 @@ internal static class DatabaseSyncEndpoints
         syncGroup.MapGet("/schema/compare", async (
             HttpContext context,
             IMediator mediator,
-            IFeatureFlagService featureFlags,
             CancellationToken ct) =>
         {
             var (authorized, _, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            if (!await featureFlags.IsEnabledAsync("Features.DatabaseSync").ConfigureAwait(false))
+            if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
             var result = await mediator.Send(new CompareSchemaQuery(), ct).ConfigureAwait(false);
@@ -99,13 +95,12 @@ internal static class DatabaseSyncEndpoints
         syncGroup.MapPost("/schema/preview-sql", async (
             HttpContext context,
             IMediator mediator,
-            IFeatureFlagService featureFlags,
             CancellationToken ct) =>
         {
             var (authorized, _, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            if (!await featureFlags.IsEnabledAsync("Features.DatabaseSync").ConfigureAwait(false))
+            if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
             var result = await mediator.Send(new PreviewMigrationSqlCommand(), ct).ConfigureAwait(false);
@@ -117,14 +112,13 @@ internal static class DatabaseSyncEndpoints
         syncGroup.MapPost("/schema/apply", async (
             HttpContext context,
             IMediator mediator,
-            IFeatureFlagService featureFlags,
             [FromBody] ApplyMigrationsRequest request,
             CancellationToken ct) =>
         {
             var (authorized, session, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            if (!await featureFlags.IsEnabledAsync("Features.DatabaseSync").ConfigureAwait(false))
+            if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
             var command = new ApplyMigrationsCommand(request.Direction, request.Confirmation, session!.User!.Id);
@@ -139,13 +133,12 @@ internal static class DatabaseSyncEndpoints
         syncGroup.MapGet("/tables", async (
             HttpContext context,
             IMediator mediator,
-            IFeatureFlagService featureFlags,
             CancellationToken ct) =>
         {
             var (authorized, _, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            if (!await featureFlags.IsEnabledAsync("Features.DatabaseSync").ConfigureAwait(false))
+            if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
             var result = await mediator.Send(new ListTablesQuery(), ct).ConfigureAwait(false);
@@ -157,14 +150,13 @@ internal static class DatabaseSyncEndpoints
         syncGroup.MapGet("/tables/{name}/compare", async (
             HttpContext context,
             IMediator mediator,
-            IFeatureFlagService featureFlags,
             [FromRoute] string name,
             CancellationToken ct) =>
         {
             var (authorized, _, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            if (!await featureFlags.IsEnabledAsync("Features.DatabaseSync").ConfigureAwait(false))
+            if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
             var result = await mediator.Send(new CompareTableDataQuery(name), ct).ConfigureAwait(false);
@@ -176,7 +168,6 @@ internal static class DatabaseSyncEndpoints
         syncGroup.MapPost("/tables/{name}/sync", async (
             HttpContext context,
             IMediator mediator,
-            IFeatureFlagService featureFlags,
             [FromRoute] string name,
             [FromBody] SyncTableDataRequest request,
             CancellationToken ct) =>
@@ -184,7 +175,7 @@ internal static class DatabaseSyncEndpoints
             var (authorized, session, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            if (!await featureFlags.IsEnabledAsync("Features.DatabaseSync").ConfigureAwait(false))
+            if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
             var command = new SyncTableDataCommand(name, request.Direction, request.Confirmation, session!.User!.Id);
@@ -199,14 +190,13 @@ internal static class DatabaseSyncEndpoints
         syncGroup.MapGet("/operations/history", async (
             HttpContext context,
             IMediator mediator,
-            IFeatureFlagService featureFlags,
             [FromQuery] int limit = 50,
             CancellationToken ct = default) =>
         {
             var (authorized, _, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            if (!await featureFlags.IsEnabledAsync("Features.DatabaseSync").ConfigureAwait(false))
+            if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
             var result = await mediator.Send(new GetSyncOperationsHistoryQuery(limit), ct).ConfigureAwait(false);

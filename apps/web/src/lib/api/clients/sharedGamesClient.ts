@@ -250,12 +250,19 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      * @returns Paginated list of shared games (all statuses)
      */
     async getAll(
-      params: { status?: string; search?: string; page?: number; pageSize?: number } = {}
+      params: {
+        status?: string;
+        search?: string;
+        page?: number;
+        pageSize?: number;
+        categoryId?: string;
+      } = {}
     ): Promise<PagedSharedGames> {
       const queryParams = new URLSearchParams();
 
       if (params.status !== undefined) queryParams.set('status', params.status);
       if (params.search) queryParams.set('search', params.search);
+      if (params.categoryId) queryParams.set('categoryId', params.categoryId);
       if (params.page !== undefined) queryParams.set('pageNumber', params.page.toString());
       if (params.pageSize !== undefined) queryParams.set('pageSize', params.pageSize.toString());
 

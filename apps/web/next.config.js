@@ -521,6 +521,7 @@ const nextConfig = {
 
   // SEC-09: Security headers for Next.js responses (static assets bypass API middleware)
   async headers() {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
     return [
       {
         source: '/(.*)',
@@ -540,7 +541,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' data:",
-              "connect-src 'self' http://localhost:8080",
+              `connect-src 'self' ${apiBaseUrl}`,
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

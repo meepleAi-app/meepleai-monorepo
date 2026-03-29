@@ -572,11 +572,15 @@ jobs:
 
       - name: Install K6
         run: |
-          # Install K6 (supports ARM64 and x86_64)
-          ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
-          curl -fsSL "https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-${ARCH}.tar.gz" \
-            | tar xzf - --strip-components=1 -C /usr/local/bin k6-v0.54.0-linux-${ARCH}/k6
-          k6 version
+          # Install K6 (supports ARM64 and x86_64) — skip if already present (self-hosted runner)
+          if command -v k6 &>/dev/null; then
+            echo "K6 already installed: $(k6 version)"
+          else
+            ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
+            curl -fsSL "https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-${ARCH}.tar.gz" \
+              | tar xzf - --strip-components=1 -C /usr/local/bin k6-v0.54.0-linux-${ARCH}/k6
+            echo "K6 installed: $(k6 version)"
+          fi
 
       - name: Run K6 Deploy Smoke
         run: |

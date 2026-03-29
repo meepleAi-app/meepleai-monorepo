@@ -9,7 +9,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { createAdminClient, ADMIN_PDF_ROUTES, ADMIN_KB_ROUTES } from '@/lib/api/clients/adminClient';
+import {
+  createAdminClient,
+  ADMIN_PDF_ROUTES,
+  ADMIN_KB_ROUTES,
+} from '@/lib/api/clients/adminClient';
 import type { HttpClient } from '@/lib/api/core/httpClient';
 import { ERROR_MESSAGES } from '@/lib/errors/messages';
 
@@ -141,8 +145,13 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
     it('should GET storage health', async () => {
       const mockResult = {
         postgres: { totalDocuments: 100, totalChunks: 5000, estimatedChunksSizeMB: 250 },
-        qdrant: { vectorCount: 5000, memoryBytes: 1073741824, memoryFormatted: '1 GB', isAvailable: true },
-        fileStorage: { totalFiles: 100, totalSizeBytes: 524288000, totalSizeFormatted: '500 MB', sizeByState: {} },
+        vectorStore: { vectorCount: 5000, isAvailable: true },
+        fileStorage: {
+          totalFiles: 100,
+          totalSizeBytes: 524288000,
+          totalSizeFormatted: '500 MB',
+          sizeByState: {},
+        },
         overallHealth: 'Healthy',
         measuredAt: '2026-02-19T00:00:00Z',
       };
@@ -160,7 +169,9 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
     it('should throw when API returns null', async () => {
       vi.mocked(mockHttpClient.get).mockResolvedValue(null);
 
-      await expect(client.getPdfStorageHealth()).rejects.toThrow(ERROR_MESSAGES.pdfStorage.fetchFailed);
+      await expect(client.getPdfStorageHealth()).rejects.toThrow(
+        ERROR_MESSAGES.pdfStorage.fetchFailed
+      );
     });
   });
 
@@ -189,7 +200,13 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
     it('should GET vector collections', async () => {
       const mockResult = {
         collections: [
-          { name: 'Game Rules', vectorCount: 42500, dimensions: 384, storage: '3.2 GB', health: 98 },
+          {
+            name: 'Game Rules',
+            vectorCount: 42500,
+            dimensions: 384,
+            storage: '3.2 GB',
+            health: 98,
+          },
         ],
       };
       vi.mocked(mockHttpClient.get).mockResolvedValue(mockResult);
@@ -227,7 +244,13 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
     });
 
     it('should append query params when provided', async () => {
-      vi.mocked(mockHttpClient.get).mockResolvedValue({ jobs: [], total: 0, page: 2, pageSize: 10, totalPages: 0 });
+      vi.mocked(mockHttpClient.get).mockResolvedValue({
+        jobs: [],
+        total: 0,
+        page: 2,
+        pageSize: 10,
+        totalPages: 0,
+      });
 
       await client.getProcessingQueueAdmin({
         statusFilter: 'Processing',
@@ -262,14 +285,16 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
       const result = await client.getAllPdfs();
 
       expect(result).toEqual(mockResult);
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        ADMIN_PDF_ROUTES.base,
-        expect.any(Object)
-      );
+      expect(mockHttpClient.get).toHaveBeenCalledWith(ADMIN_PDF_ROUTES.base, expect.any(Object));
     });
 
     it('should append filter params when provided', async () => {
-      vi.mocked(mockHttpClient.get).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+      vi.mocked(mockHttpClient.get).mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+      });
 
       await client.getAllPdfs({
         state: 'Completed',

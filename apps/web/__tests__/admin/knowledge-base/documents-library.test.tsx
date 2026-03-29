@@ -62,9 +62,7 @@ function createTestQueryClient() {
 
 function renderWithQuery(ui: React.ReactElement) {
   const client = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
 const MOCK_PDFS = {
@@ -117,8 +115,13 @@ const MOCK_DISTRIBUTION = {
 
 const MOCK_STORAGE_HEALTH = {
   postgres: { totalDocuments: 14, totalChunks: 2000, estimatedChunksSizeMB: 100 },
-  qdrant: { vectorCount: 2000, memoryBytes: 536870912, memoryFormatted: '512 MB', isAvailable: true },
-  fileStorage: { totalFiles: 14, totalSizeBytes: 50000000, totalSizeFormatted: '47.7 MB', sizeByState: {} },
+  vectorStore: { vectorCount: 2000, isAvailable: true },
+  fileStorage: {
+    totalFiles: 14,
+    totalSizeBytes: 50000000,
+    totalSizeFormatted: '47.7 MB',
+    sizeByState: {},
+  },
   overallHealth: 'Healthy',
   measuredAt: '2026-02-19T00:00:00Z',
 };
@@ -130,7 +133,12 @@ describe('DocumentsLibraryPage', () => {
     mockGetPdfStatusDistribution.mockResolvedValue(MOCK_DISTRIBUTION);
     mockGetPdfStorageHealth.mockResolvedValue(MOCK_STORAGE_HEALTH);
     mockReindexPdf.mockResolvedValue({ success: true, message: 'Reindex queued' });
-    mockBulkDeletePdfs.mockResolvedValue({ totalRequested: 1, successCount: 1, failedCount: 0, items: [] });
+    mockBulkDeletePdfs.mockResolvedValue({
+      totalRequested: 1,
+      successCount: 1,
+      failedCount: 0,
+      items: [],
+    });
     mockPurgeStaleDocuments.mockResolvedValue({ affected: 0, message: 'No stale documents' });
     mockCleanupOrphans.mockResolvedValue({ affected: 0, message: 'No orphans found' });
   });
@@ -139,7 +147,9 @@ describe('DocumentsLibraryPage', () => {
     renderWithQuery(<DocumentsLibraryPage />);
 
     expect(screen.getByText('Documents Library')).toBeInTheDocument();
-    expect(screen.getByText('Browse uploaded documents, manage processing, and monitor storage')).toBeInTheDocument();
+    expect(
+      screen.getByText('Browse uploaded documents, manage processing, and monitor storage')
+    ).toBeInTheDocument();
   });
 
   it('should render analytics cards with data', async () => {

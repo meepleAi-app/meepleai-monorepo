@@ -134,7 +134,7 @@ describe('PipelineStepCard', () => {
     const step: PipelineStepInfo = {
       step: 'embedding',
       status: 'failed',
-      error: 'Qdrant service unavailable',
+      error: 'Vector store service unavailable',
     };
     const details: StepDetails = { vectorCount: 0 };
     const user = userEvent.setup();
@@ -147,7 +147,7 @@ describe('PipelineStepCard', () => {
 
     // Expand to see error
     await user.click(screen.getByRole('button', { name: /dettagli step embedding/i }));
-    expect(screen.getByTestId('step-error')).toHaveTextContent('Qdrant service unavailable');
+    expect(screen.getByTestId('step-error')).toHaveTextContent('Vector store service unavailable');
   });
 
   it('expandable shows details when clicked', async () => {

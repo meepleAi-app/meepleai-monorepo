@@ -136,6 +136,12 @@ const nextConfig = {
         hostname: '**.boardgamegeek.com',
         pathname: '/**',
       },
+      // Wildcard catch-all for user-provided / admin-provided image URLs
+      // (badge iconUrl, game cover images from arbitrary CDNs, etc.)
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
   },
 

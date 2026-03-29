@@ -12,8 +12,6 @@ export const infrastructurei18n = {
       postgres: 'PostgreSQL',
       redis: 'Redis',
       pgvector: 'pgvector',
-      qdrant: 'pgvector', // legacy key — maps to pgvector after migration
-      'qdrant-collection': 'Vector Store', // legacy key
       n8n: 'n8n',
       prometheus: 'Prometheus',
       grafana: 'Grafana',
@@ -101,8 +99,6 @@ export const infrastructurei18n = {
       postgres: 'PostgreSQL',
       redis: 'Redis',
       pgvector: 'pgvector',
-      qdrant: 'pgvector', // legacy key — maps to pgvector after migration
-      'qdrant-collection': 'Vector Store', // legacy key
       n8n: 'n8n',
       prometheus: 'Prometheus',
       grafana: 'Grafana',

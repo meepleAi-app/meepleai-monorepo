@@ -19,9 +19,6 @@ export interface VectorStats {
   collectionStatus: 'green' | 'yellow' | 'red';
 }
 
-/** @deprecated Use VectorStats instead */
-export type QdrantStats = VectorStats;
-
 /** Quality indicator values */
 export interface QualityIndicators {
   pageCoveragePercent: number;
@@ -32,7 +29,6 @@ export interface QualityIndicators {
 export interface DeepMetricsData {
   chunkSizeDistribution?: ChunkSizeBucket[];
   vectorStats?: VectorStats;
-  /** @deprecated Use vectorStats instead */
   qdrantStats?: VectorStats;
   qualityIndicators?: QualityIndicators;
 }
@@ -125,7 +121,7 @@ function VectorStatsCard({ stats }: { stats: VectorStats }) {
     <div className="space-y-2">
       <h4 className="font-quicksand text-sm font-semibold">Statistiche pgvector</h4>
       <div
-        data-testid="qdrant-stats"
+        data-testid="vector-stats"
         className="grid grid-cols-3 gap-3 rounded-lg border bg-white/50 p-3"
       >
         <div className="text-center">

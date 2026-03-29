@@ -308,6 +308,87 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("batch_jobs", "administration");
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.Administration.Domain.Entities.ServiceCallLogEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("HttpMethod")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("http_method");
+
+                    b.Property<bool>("IsSuccess")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_success");
+
+                    b.Property<long>("LatencyMs")
+                        .HasColumnType("bigint")
+                        .HasColumnName("latency_ms");
+
+                    b.Property<string>("RequestSummary")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("request_summary");
+
+                    b.Property<string>("RequestUrl")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("request_url");
+
+                    b.Property<string>("ResponseSummary")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("response_summary");
+
+                    b.Property<string>("ServiceName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("service_name");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("integer")
+                        .HasColumnName("status_code");
+
+                    b.Property<DateTime>("TimestampUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("timestamp_utc");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("ix_service_call_logs_correlation_id");
+
+                    b.HasIndex("IsSuccess")
+                        .HasDatabaseName("ix_service_call_logs_is_success");
+
+                    b.HasIndex("ServiceName")
+                        .HasDatabaseName("ix_service_call_logs_service_name");
+
+                    b.HasIndex("TimestampUtc")
+                        .IsDescending()
+                        .HasDatabaseName("ix_service_call_logs_timestamp");
+
+                    b.HasIndex("ServiceName", "TimestampUtc")
+                        .HasDatabaseName("ix_service_call_logs_service_timestamp");
+
+                    b.ToTable("service_call_logs", "administration");
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.Administration.Domain.Entities.TokenTier", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6526,6 +6607,85 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("Provider");
 
                     b.ToTable("model_compatibility_entries", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.PgVectorEmbeddingEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("ChunkIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("chunk_index");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<bool>("IsTranslation")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_translation");
+
+                    b.Property<string>("Lang")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasDefaultValue("en")
+                        .HasColumnName("lang");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("model");
+
+                    b.Property<int>("PageNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("page_number");
+
+                    b.Property<Guid?>("SourceChunkId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_chunk_id");
+
+                    b.Property<string>("TextContent")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("text_content");
+
+                    b.Property<Vector>("Vector")
+                        .IsRequired()
+                        .HasColumnType("vector(768)")
+                        .HasColumnName("vector");
+
+                    b.Property<Guid>("VectorDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vector_document_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId");
+
+                    // NOTE: Npgsql snapshot code generator emits HNSW index as separate HasIndex() chains.
+                    // This is a known codegen quirk — EF Core merges them by column at runtime. Functionally correct.
+                    b.HasIndex("Vector")
+                        .HasAnnotation("Npgsql:StorageParameter:ef_construction", 64)
+                        .HasAnnotation("Npgsql:StorageParameter:m", 16);
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Vector"), "hnsw");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Vector"), new[] { "vector_cosine_ops" });
+
+                    b.HasIndex("VectorDocumentId");
+
+                    b.HasIndex("GameId", "ChunkIndex");
+
+                    b.ToTable("pgvector_embeddings", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.RagUserConfigEntity", b =>

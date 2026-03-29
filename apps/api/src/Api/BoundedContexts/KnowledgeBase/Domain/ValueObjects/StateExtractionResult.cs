@@ -1,5 +1,4 @@
 #pragma warning disable MA0002 // Dictionary without StringComparer
-using Api.BoundedContexts.GameManagement.Domain.Entities;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 

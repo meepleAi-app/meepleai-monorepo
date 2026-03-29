@@ -71,6 +71,25 @@ restore-local: ## Restore local dev DB from latest snapshot (requires make dev r
 seed-games: ## Seed test games on staging via API (requires SSH access)
 	bash scripts/seed-all-games-staging.sh
 
+# === RAG Backup ===
+rag-export: ## Full RAG export (one-shot for production go-live)
+	@echo "📦 Running full RAG data export..."
+	curl -s -X POST "http://localhost:8080/admin/rag-backup/export?dryRun=false" | python3 -m json.tool
+
+rag-export-dry: ## Preview RAG export without executing
+	@echo "🔍 Previewing RAG data export (dry run)..."
+	curl -s -X POST "http://localhost:8080/admin/rag-backup/export?dryRun=true" | python3 -m json.tool
+
+rag-backup-status: ## Status of latest RAG backup
+	@echo "📊 Checking latest RAG backup status..."
+	curl -s "http://localhost:8080/admin/rag-backup/snapshots/latest" | python3 -m json.tool
+
+rag-snapshots: ## List all available RAG backup snapshots
+	@echo "📋 Available RAG backup snapshots:"
+	curl -s "http://localhost:8080/admin/rag-backup/snapshots" | python3 -m json.tool
+
+.PHONY: rag-export rag-export-dry rag-backup-status rag-snapshots
+
 # === Alpha Zero ===
 
 alpha: ## Start Alpha Zero with AI services

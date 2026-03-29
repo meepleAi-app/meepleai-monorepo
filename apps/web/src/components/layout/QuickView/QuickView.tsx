@@ -3,7 +3,7 @@
 import { BookOpen, HelpCircle, Bot, X, PanelRightClose } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { useQuickViewStore, type QuickViewTab as TabType } from '@/store/quick-view';
+import { useQuickViewStore, type QuickViewTab as TabType } from '@/stores/quick-view';
 
 import { AIQuickViewContent } from './AIQuickViewContent';
 import { FaqContent } from './FaqContent';

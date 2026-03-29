@@ -30,7 +30,7 @@ import { useRouter } from 'next/navigation';
 import { PdfStatusBadge } from '@/components/pdf';
 import type { NotificationDto } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { useNotificationStore } from '@/store/notification/store';
+import { useNotificationStore } from '@/stores/notification/store';
 
 export interface NotificationItemProps {
   notification: NotificationDto;

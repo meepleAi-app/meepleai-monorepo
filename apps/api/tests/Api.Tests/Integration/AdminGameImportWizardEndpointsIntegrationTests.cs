@@ -155,7 +155,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         // Arrange
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (userId, sessionToken) = await TestSessionHelper.CreateEditorSessionAsync(dbContext); // Editor role no longer allowed (AdminOnlyPolicy)
+        var (userId, sessionToken) = await TestSessionHelper.CreateEditorSessionAsync(dbContext); // Editor role NOT allowed — AdminOnlyPolicy requires SuperAdmin/Admin
 
         var content = CreateMultipartFormDataContent("test-game.pdf", "application/pdf", 1024);
         var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/admin/games/wizard/upload-pdf", sessionToken);
@@ -164,7 +164,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         // Act
         var response = await _client.SendAsync(request);
 
-        // Assert — Editor should now be rejected (AdminOnlyPolicy)
+        // Assert — AdminOnlyPolicy rejects Editor role
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 

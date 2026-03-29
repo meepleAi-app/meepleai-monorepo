@@ -9,13 +9,16 @@ public class UnstructuredHealthCheck : IHealthCheck
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<UnstructuredHealthCheck> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public UnstructuredHealthCheck(
         IConfiguration configuration,
-        ILogger<UnstructuredHealthCheck> logger)
+        ILogger<UnstructuredHealthCheck> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -30,7 +33,8 @@ public class UnstructuredHealthCheck : IHealthCheck
 
         try
         {
-            using var client = new HttpClient { BaseAddress = new Uri(unstructuredUrl) };
+            using var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(unstructuredUrl);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 

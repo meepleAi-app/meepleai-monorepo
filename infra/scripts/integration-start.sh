@@ -90,7 +90,7 @@ start_api() {
     export Embedding__FallbackEnabled=false
 
     # Build connection string with SSL Mode=Disable (tunnel already encrypts)
-    export ConnectionStrings__Postgres="Host=localhost;Port=15432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};SSL Mode=Disable"
+    export ConnectionStrings__Postgres="Host=localhost;Port=15432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};SSL Mode=Disable;GssEncryptionMode=Disable"
 
     cd "$API_DIR"
     dotnet run &

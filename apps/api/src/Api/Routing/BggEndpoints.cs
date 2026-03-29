@@ -1,6 +1,7 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Extensions;
 using Api.Models;
-using Api.Services;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -22,7 +23,7 @@ internal static class BggEndpoints
             [FromQuery(Name = "query")] string? query,
             [FromQuery(Name = "page")] int page,
             [FromQuery(Name = "pageSize")] int pageSize,
-            IBggApiService bggService,
+            IMediator mediator,
             CancellationToken cancellationToken) =>
         {
             var searchTerm = q ?? query;
@@ -32,7 +33,7 @@ internal static class BggEndpoints
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 20;
 
-            var results = await bggService.SearchGamesAsync(searchTerm, ct: cancellationToken).ConfigureAwait(false);
+            var results = await mediator.Send(new SearchBggGamesQuery(searchTerm), cancellationToken).ConfigureAwait(false);
             var total = results.Count;
             var paged = results.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
@@ -58,13 +59,13 @@ internal static class BggEndpoints
         // GET /api/v1/bgg/games/{bggId}
         group.MapGet("/bgg/games/{bggId:int}", async (
             int bggId,
-            IBggApiService bggService,
+            IMediator mediator,
             CancellationToken cancellationToken) =>
         {
             if (bggId <= 0)
                 return Results.BadRequest(new { error = "Invalid BGG ID" });
 
-            var details = await bggService.GetGameDetailsAsync(bggId, cancellationToken).ConfigureAwait(false);
+            var details = await mediator.Send(new GetBggGameDetailsQuery(bggId), cancellationToken).ConfigureAwait(false);
 
             if (details == null)
                 return Results.NotFound(new { error = $"BGG game {bggId} not found" });

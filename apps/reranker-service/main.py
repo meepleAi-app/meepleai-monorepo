@@ -12,10 +12,12 @@ Features:
 - Configurable batch size and timeouts
 """
 
+import asyncio
 import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from functools import partial
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -203,8 +205,15 @@ async def rerank(request: Request, rerank_request: RerankRequest):
         # Prepare query-chunk pairs for cross-encoder
         pairs = [(rerank_request.query, chunk.content) for chunk in rerank_request.chunks]
 
-        # Compute reranking scores in batches
-        scores = model.predict(pairs, batch_size=BATCH_SIZE, show_progress_bar=False)
+        # Compute reranking scores in batches (offloaded to thread pool to avoid blocking the event loop)
+        loop = asyncio.get_running_loop()
+        predict_fn = partial(
+            model.predict,
+            pairs,
+            batch_size=BATCH_SIZE,
+            show_progress_bar=False
+        )
+        scores = await loop.run_in_executor(None, predict_fn)
 
         # Combine results with scores
         results = []

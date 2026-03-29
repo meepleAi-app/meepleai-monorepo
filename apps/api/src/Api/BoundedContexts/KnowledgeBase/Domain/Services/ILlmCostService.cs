@@ -1,5 +1,5 @@
-using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -16,7 +16,7 @@ internal interface ILlmCostService
     /// </summary>
     Task LogSuccessAsync(
         LlmCompletionResult result,
-        User? user,
+        LlmUserContext userContext,
         long latencyMs,
         RequestSource source,
         CancellationToken ct = default);
@@ -26,7 +26,7 @@ internal interface ILlmCostService
     /// </summary>
     Task LogFailureAsync(
         string? errorMessage,
-        User? user,
+        LlmUserContext userContext,
         long latencyMs,
         RequestSource source,
         CancellationToken ct = default);

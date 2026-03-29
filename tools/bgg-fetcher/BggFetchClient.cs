@@ -21,13 +21,13 @@ public sealed class BggFetchClient : IDisposable
 
     private static string? LoadTokenFromSecrets()
     {
-        // Walk up to repo root, look for infra/secrets/dev/bgg.secret
+        // Walk up to repo root, look for infra/secrets/bgg.secret
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, ".git")))
             dir = dir.Parent;
         if (dir == null) return null;
 
-        var secretFile = Path.Combine(dir.FullName, "infra", "secrets", "dev", "bgg.secret");
+        var secretFile = Path.Combine(dir.FullName, "infra", "secrets", "bgg.secret");
         if (!File.Exists(secretFile)) return null;
 
         foreach (var line in File.ReadAllLines(secretFile))

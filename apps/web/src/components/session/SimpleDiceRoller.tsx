@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Dice5 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { useSessionStore } from '@/store/session';
+import { useSessionStore } from '@/stores/session';
 
 type DiceConfig = { label: string; count: number; sides: number };
 

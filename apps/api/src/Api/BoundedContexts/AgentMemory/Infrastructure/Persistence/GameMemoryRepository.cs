@@ -88,9 +88,7 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
 
                 foreach (var rule in houseRules)
                 {
-                    memory.AddHouseRule(rule.Description, (HouseRuleSource)rule.Source);
-                    // Fix AddedAt on the last added rule
-                    rules[^1].AddedAt = rule.AddedAt;
+                    rules.Add(HouseRule.Restore(rule.Description, rule.AddedAt, (HouseRuleSource)rule.Source));
                 }
             }
         }
@@ -119,9 +117,7 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
 
                 foreach (var note in notes)
                 {
-                    memory.AddNote(note.Content, note.AddedByUserId);
-                    // Fix AddedAt on the last added note
-                    notesList[^1].AddedAt = note.AddedAt;
+                    notesList.Add(MemoryNote.Restore(note.Content, note.AddedAt, note.AddedByUserId));
                 }
             }
         }

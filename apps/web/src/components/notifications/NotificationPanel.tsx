@@ -25,7 +25,7 @@ import {
   useNotificationStore,
   selectNotifications,
   selectIsLoading,
-} from '@/store/notification/store';
+} from '@/stores/notification/store';
 
 import { NotificationItem } from './NotificationItem';
 

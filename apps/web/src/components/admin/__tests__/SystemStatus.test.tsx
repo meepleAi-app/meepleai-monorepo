@@ -31,7 +31,9 @@ describe('SystemStatus', () => {
   describe('Overall status', () => {
     it('displays healthy status correctly', () => {
       render(<SystemStatus overallStatus="healthy" />);
-      expect(screen.getByTestId('system-status-label')).toHaveTextContent('All Systems Operational');
+      expect(screen.getByTestId('system-status-label')).toHaveTextContent(
+        'All Systems Operational'
+      );
     });
 
     it('displays degraded status correctly', () => {
@@ -75,7 +77,7 @@ describe('SystemStatus', () => {
     const customServices: ServiceStatus[] = [
       { name: 'PostgreSQL', status: 'healthy', latency: 12 },
       { name: 'Redis', status: 'degraded', latency: 85, message: 'High latency' },
-      { name: 'Qdrant', status: 'unhealthy', message: 'Connection failed' },
+      { name: 'pgvector', status: 'unhealthy', message: 'Connection failed' },
       { name: 'OpenRouter', status: 'unknown' },
     ];
 
@@ -83,7 +85,7 @@ describe('SystemStatus', () => {
       render(<SystemStatus services={customServices} />);
       expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
       expect(screen.getByText('Redis')).toBeInTheDocument();
-      expect(screen.getByText('Qdrant')).toBeInTheDocument();
+      expect(screen.getByText('pgvector')).toBeInTheDocument();
       expect(screen.getByText('OpenRouter')).toBeInTheDocument();
     });
 

@@ -64,9 +64,9 @@ const serviceDescriptions: Record<string, { it: string; en: string }> = {
     it: 'Database principale per dati applicativi',
     en: 'Primary database for application data',
   },
-  qdrant: {
-    it: 'Vector database per ricerca semantica',
-    en: 'Vector database for semantic search',
+  pgvector: {
+    it: 'Estensione pgvector per ricerca semantica',
+    en: 'pgvector extension for semantic search',
   },
   redis: {
     it: 'Cache distribuita e gestione sessioni',

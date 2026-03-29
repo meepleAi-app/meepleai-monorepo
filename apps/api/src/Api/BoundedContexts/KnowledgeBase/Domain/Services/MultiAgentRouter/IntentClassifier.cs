@@ -19,50 +19,67 @@ internal sealed class IntentClassifier
     [
         new(AgentIntent.MoveValidation, new WeightedKeyword[]
         {
-            // Primary - strong move validation signals
+            // Primary - strong move validation signals - EN
             new("validate move", 1.0), new("is this move legal", 1.0), new("is this move valid", 1.0),
             new("can i move", 0.9), new("allowed to move", 0.9), new("legal move", 0.9),
             new("is it legal", 0.85), new("validate", 0.8), new("check move", 0.85),
-            // Secondary - supporting context
+            // Secondary - supporting context - EN
             new("move my", 0.5), new("place my", 0.5), new("play this", 0.4),
+            // Primary - IT
+            new("posso muovere", 0.9), new("mossa legale", 0.9), new("mossa valida", 0.9),
+            new("è legale", 0.85), new("è valida questa mossa", 1.0), new("questa mossa è legale", 1.0),
+            new("verificare la mossa", 0.85), new("controllare la mossa", 0.8),
         },
         // Negative keywords - these suggest it's NOT move validation
         ["suggest", "best", "strategy", "teach", "learn", "explain"]),
 
         new(AgentIntent.StrategicAnalysis, new WeightedKeyword[]
         {
-            // Primary
+            // Primary - EN
             new("suggest move", 1.0), new("best move", 1.0), new("what should i do", 0.95),
             new("analyze position", 0.95), new("recommend", 0.9), new("optimal", 0.9),
             new("evaluate position", 0.9), new("which move", 0.85),
-            // Secondary
+            // Secondary - EN
             new("strategy", 0.7), new("advantage", 0.6), new("winning", 0.5),
             new("tactics", 0.6), new("better move", 0.8), new("improve position", 0.8),
+            // Primary - IT
+            new("mossa migliore", 1.0), new("cosa mi conviene", 0.95), new("suggeriscimi", 0.9),
+            new("consigliami", 0.9), new("strategia migliore", 0.9), new("cosa dovrei fare", 0.95),
+            new("analizza posizione", 0.9), new("posizione ottimale", 0.85),
         },
         ["validate", "legal", "rule", "learn", "tutorial", "teach"]),
 
         new(AgentIntent.RulesQuestion, new WeightedKeyword[]
         {
-            // Primary
+            // Primary - EN
             new("what is the rule", 1.0), new("rules for", 0.95), new("game rules", 0.95),
             new("how does this work", 0.85), new("how do i", 0.8), new("turn order", 0.9),
             new("allowed to", 0.75), new("can i", 0.6),
-            // Secondary
+            // Secondary - EN
             new("rule", 0.7), new("setup", 0.65), new("phase", 0.6),
             new("scoring", 0.6), new("endgame", 0.5), new("component", 0.5),
             new("mechanism", 0.5), new("when can", 0.6),
+            // Primary - IT
+            new("qual è la regola", 1.0), new("regola per", 0.95), new("regole del gioco", 0.95),
+            new("come funziona", 0.85), new("ordine dei turni", 0.9), new("come si calcola", 0.8),
+            // Secondary - IT
+            new("punteggio", 0.6), new("fine partita", 0.5), new("turno", 0.5),
         },
         ["suggest", "best", "optimal", "strategy", "validate move"]),
 
         new(AgentIntent.Tutorial, new WeightedKeyword[]
         {
-            // Primary
+            // Primary - EN
             new("how to play", 1.0), new("teach me", 1.0), new("tutorial", 0.95),
             new("learn to play", 0.95), new("explain how", 0.9), new("beginner guide", 0.95),
             new("getting started", 0.9), new("introduction to", 0.85),
-            // Secondary
+            // Secondary - EN
             new("learn", 0.7), new("explain", 0.6), new("understand", 0.55),
             new("new to", 0.7), new("first time", 0.7), new("walkthrough", 0.8),
+            // Primary - IT
+            new("come si gioca", 1.0), new("insegnami", 1.0), new("spiegami", 0.9),
+            new("guida per principianti", 0.95), new("introduzione al gioco", 0.85),
+            new("imparare a giocare", 0.95), new("prima volta", 0.7), new("regole base", 0.7),
         },
         ["validate", "legal move", "best move", "analyze position"]),
 
@@ -75,6 +92,7 @@ internal sealed class IntentClassifier
             // Primary - IT
             new("racconta", 1.0), new("ambientazione", 0.95), new("storia del gioco", 0.95),
             new("personaggi", 0.85), new("mondo di", 0.9), new("narrazione", 0.9),
+            new("narratore", 0.85),
         },
         ["rule", "legal", "validate", "best move", "strategy", "setup", "how to play"]),
     ];

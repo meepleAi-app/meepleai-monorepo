@@ -62,7 +62,7 @@ function createMockDashboard(
         lastIncidentAt: null,
       },
       {
-        serviceName: 'Qdrant',
+        serviceName: 'pgvector',
         state: 'Healthy',
         checkedAt: new Date().toISOString(),
         responseTimeMs: 25,
@@ -168,7 +168,7 @@ describe('ServicesDashboard', () => {
     });
 
     expect(screen.getByText('Redis')).toBeInTheDocument();
-    expect(screen.getByText('Qdrant')).toBeInTheDocument();
+    expect(screen.getByText('pgvector')).toBeInTheDocument();
     expect(screen.getByText('Embedding Service')).toBeInTheDocument();
     expect(screen.getByText('OpenRouter')).toBeInTheDocument();
     expect(screen.getByText('Prometheus')).toBeInTheDocument();
@@ -186,8 +186,8 @@ describe('ServicesDashboard', () => {
     });
 
     // PostgreSQL 99.95 rounds to 100.0, Redis 100.0 — both show 100.0%
-    // Qdrant 99.8 shows as 99.8%
-    expect(screen.getByText('99.8%')).toBeInTheDocument(); // Qdrant
+    // pgvector 99.8 shows as 99.8%
+    expect(screen.getByText('99.8%')).toBeInTheDocument(); // pgvector
   });
 
   it('shows yellow uptime badge for 95-99% uptime', async () => {

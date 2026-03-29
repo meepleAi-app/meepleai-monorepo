@@ -12,8 +12,8 @@ export interface ChunkSizeBucket {
   count: number;
 }
 
-/** Qdrant collection statistics */
-export interface QdrantStats {
+/** Vector store statistics */
+export interface VectorStats {
   vectorsCount: number;
   memoryUsageBytes: number;
   collectionStatus: 'green' | 'yellow' | 'red';
@@ -28,7 +28,7 @@ export interface QualityIndicators {
 
 export interface DeepMetricsData {
   chunkSizeDistribution?: ChunkSizeBucket[];
-  qdrantStats?: QdrantStats;
+  vectorStats?: VectorStats;
   qualityIndicators?: QualityIndicators;
 }
 
@@ -70,8 +70,8 @@ export function PipelineDeepMetrics({ metrics }: PipelineDeepMetricsProps) {
         <ChunkDistributionChart buckets={metrics.chunkSizeDistribution} />
       )}
 
-      {/* Qdrant stats */}
-      {metrics.qdrantStats && <QdrantStatsCard stats={metrics.qdrantStats} />}
+      {/* Vector store stats */}
+      {metrics.vectorStats && <VectorStatsCard stats={metrics.vectorStats} />}
 
       {/* Quality indicators */}
       {metrics.qualityIndicators && (
@@ -113,12 +113,12 @@ function ChunkDistributionChart({ buckets }: { buckets: ChunkSizeBucket[] }) {
   );
 }
 
-function QdrantStatsCard({ stats }: { stats: QdrantStats }) {
+function VectorStatsCard({ stats }: { stats: VectorStats }) {
   return (
     <div className="space-y-2">
-      <h4 className="font-quicksand text-sm font-semibold">Statistiche Qdrant</h4>
+      <h4 className="font-quicksand text-sm font-semibold">Statistiche pgvector</h4>
       <div
-        data-testid="qdrant-stats"
+        data-testid="vector-stats"
         className="grid grid-cols-3 gap-3 rounded-lg border bg-white/50 p-3"
       >
         <div className="text-center">

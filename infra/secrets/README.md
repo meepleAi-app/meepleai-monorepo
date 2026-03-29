@@ -12,7 +12,7 @@
 | **database.secret** | 🔴 CRITICAL | `POSTGRES_USER`<br>`POSTGRES_PASSWORD`<br>`POSTGRES_DB` | `meepleai`<br>`change_me_strong_password...`<br>`meepleai_db` | `infra/secrets/database.secret` |
 | **embedding-service.secret** | 🔴 CRITICAL | `EMBEDDING_SERVICE_API_KEY` | `change_me_embedding_service...` | `infra/secrets/embedding-service.secret` |
 | **jwt.secret** | 🔴 CRITICAL | `JWT_SECRET_KEY`<br>`JWT_ISSUER`<br>`JWT_AUDIENCE` | `change_me_use_openssl...`<br>`meepleai-api`<br>`meepleai-web` | `infra/secrets/jwt.secret` |
-| **qdrant.secret** | 🔴 CRITICAL | `QDRANT_API_KEY` | `change_me_qdrant_api_key...` | `infra/secrets/qdrant.secret` |
+| ~~**qdrant.secret**~~ | ~~🔴 CRITICAL~~ | ~~`QDRANT_API_KEY`~~ | Removed — pgvector uses PostgreSQL | — |
 | **redis.secret** | 🔴 CRITICAL | `REDIS_PASSWORD` | `change_me_strong_redis...` | `infra/secrets/redis.secret` |
 | **bgg.secret** | 🟡 IMPORTANT | `BGG_USERNAME`<br>`BGG_PASSWORD` | `your_bgg_username`<br>`your_bgg_password` | `infra/secrets/bgg.secret` |
 | **openrouter.secret** | 🟡 IMPORTANT | `OPENROUTER_API_KEY`<br>`OPENROUTER_DEFAULT_MODEL` | `sk-or-v1-change_me...`<br>`meta-llama/llama-3.3-70b-instruct:free` | `infra/secrets/openrouter.secret` |
@@ -658,7 +658,7 @@ The `setup-secrets.ps1` script **automatically generates** secure values for the
 | Variable | File | Type | Strength |
 |----------|------|------|----------|
 | `JWT_SECRET_KEY` | jwt.secret | Base64 (64 bytes) | 512 bits |
-| `QDRANT_API_KEY` | qdrant.secret | Base64 (32 bytes) | 256 bits |
+| ~~`QDRANT_API_KEY`~~ | ~~qdrant.secret~~ | Removed — pgvector uses PostgreSQL | — |
 | `EMBEDDING_SERVICE_API_KEY` | embedding-service.secret | Base64 (32 bytes) | 256 bits |
 | `RERANKER_API_KEY` | reranker-service.secret | Base64 (32 bytes) | 256 bits |
 | `SMOLDOCLING_API_KEY` | smoldocling-service.secret | Base64 (32 bytes) | 256 bits |
@@ -692,7 +692,7 @@ These values **cannot be auto-generated** (require external accounts):
 ## Validation Levels
 
 ### 🔴 CRITICAL - Startup Blocked
-**Files**: `admin.secret`, `database.secret`, `embedding-service.secret`, `jwt.secret`, `qdrant.secret`, `redis.secret`
+**Files**: `admin.secret`, `database.secret`, `embedding-service.secret`, `jwt.secret`, `redis.secret`
 
 **Behavior**:
 - Application **WILL NOT START** if any critical secret is missing
@@ -803,17 +803,6 @@ openssl rand -base64 64
 # PowerShell (Windows)
 [Convert]::ToBase64String((1..64 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
 ```
-
-#### qdrant.secret
-**Purpose**: Vector database authentication
-
-**Variables**:
-```bash
-QDRANT_API_KEY=your_qdrant_api_key_here   # Qdrant API key
-```
-
-**Validation**:
-- API key: Non-empty string
 
 #### redis.secret
 **Purpose**: Redis cache authentication
@@ -1254,7 +1243,7 @@ for file in *.secret.example; do cp "$file" "${file%.example}"; done
 **PowerShell**:
 ```powershell
 cd infra/secrets
-$required = @('admin','database','jwt','qdrant','redis','embedding-service')
+$required = @('admin','database','jwt','redis','embedding-service')
 $required | ForEach-Object {
     if (!(Test-Path "$_.secret")) {
         Write-Host "❌ Missing: $_.secret" -ForegroundColor Red
@@ -1267,7 +1256,7 @@ $required | ForEach-Object {
 **Bash**:
 ```bash
 cd infra/secrets
-for secret in admin database jwt qdrant redis embedding-service; do
+for secret in admin database jwt redis embedding-service; do
     if [ ! -f "${secret}.secret" ]; then
         echo "❌ Missing: ${secret}.secret"
     else

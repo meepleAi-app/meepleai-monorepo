@@ -76,9 +76,9 @@ export const COMPOSITIONS: ComponentComposition[] = [
   {
     id: 'kb-cards',
     name: 'Knowledge Base',
-    description: 'UploadZone, VectorCollectionCard, ProcessingQueue',
+    description: 'UploadZone, VectorGameCard, ProcessingQueue',
     area: 'admin',
-    componentIds: ['upload-zone', 'vector-collection-card', 'processing-queue'],
+    componentIds: ['upload-zone', 'vector-game-card', 'processing-queue'],
     render: () =>
       import('@/components/admin/ui-library/scenes/KbCardsScene') as Promise<{
         default: React.ComponentType;

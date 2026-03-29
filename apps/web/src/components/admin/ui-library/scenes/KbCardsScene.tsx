@@ -1,10 +1,10 @@
 'use client';
 
-import { VectorCollectionCard } from '@/components/admin/knowledge-base/vector-collection-card';
+import { VectorGameCard } from '@/components/admin/knowledge-base/vector-game-card';
 
 // UploadZone requires game search hook (useApiClient) and queue-api imports.
 // ProcessingQueue requires similar API context.
-// We render VectorCollectionCard directly and show placeholders for the rest.
+// We render VectorGameCard directly and show placeholders for the rest.
 
 function PlaceholderCard({ title, description }: { title: string; description: string }) {
   return (
@@ -18,50 +18,44 @@ function PlaceholderCard({ title, description }: { title: string; description: s
   );
 }
 
-const MOCK_COLLECTIONS = [
+const MOCK_GAMES = [
   {
-    name: 'game_rules_en',
+    gameId: 'game-001',
+    gameName: 'Catan',
     vectorCount: 12_480,
-    dimensions: 1536,
-    storage: '48.2 MB',
-    health: 98,
+    completedCount: 12_480,
+    failedCount: 0,
+    healthPercent: 98,
   },
   {
-    name: 'game_rules_it',
+    gameId: 'game-002',
+    gameName: 'Pandemic',
     vectorCount: 8_320,
-    dimensions: 1536,
-    storage: '31.6 MB',
-    health: 95,
+    completedCount: 8_100,
+    failedCount: 220,
+    healthPercent: 75,
   },
   {
-    name: 'faq_chunks',
+    gameId: 'game-003',
+    gameName: 'Ticket to Ride',
     vectorCount: 2_104,
-    dimensions: 1536,
-    storage: '8.1 MB',
-    health: 72,
+    completedCount: 1_200,
+    failedCount: 904,
+    healthPercent: 57,
   },
 ];
 
 export default function KbCardsScene() {
   return (
     <div className="space-y-8">
-      {/* Vector collection cards */}
+      {/* Vector game cards */}
       <div className="space-y-3">
         <h3 className="font-quicksand text-base font-semibold text-foreground">
-          Vector Collection Cards
+          Vector Game Cards
         </h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {MOCK_COLLECTIONS.map(col => (
-            <VectorCollectionCard
-              key={col.name}
-              name={col.name}
-              vectorCount={col.vectorCount}
-              dimensions={col.dimensions}
-              storage={col.storage}
-              health={col.health}
-              onReindex={() => undefined}
-              onDelete={() => undefined}
-            />
+          {MOCK_GAMES.map(game => (
+            <VectorGameCard key={game.gameId} game={game} />
           ))}
         </div>
       </div>

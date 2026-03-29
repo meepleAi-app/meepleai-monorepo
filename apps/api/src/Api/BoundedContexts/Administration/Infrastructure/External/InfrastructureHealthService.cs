@@ -12,8 +12,8 @@ internal class InfrastructureHealthService : IInfrastructureHealthService
     private readonly HealthCheckService _healthCheckService;
     private readonly ILogger<InfrastructureHealthService> _logger;
 
-    // Issue #892: Monitored services including n8n
-    private static readonly string[] MonitoredServices = { "postgres", "redis", "qdrant", "qdrant-collection", "embedding", "n8n" };
+    // Issue #892: Monitored services including n8n (qdrant removed — pgvector is the sole vector store)
+    private static readonly string[] MonitoredServices = { "postgres", "redis", "embedding", "n8n" };
 
     public InfrastructureHealthService(
         HealthCheckService healthCheckService,

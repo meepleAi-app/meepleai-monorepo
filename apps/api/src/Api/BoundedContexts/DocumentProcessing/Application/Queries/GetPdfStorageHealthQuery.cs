@@ -3,14 +3,14 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
 /// <summary>
-/// Query to get PDF storage health across PostgreSQL, Qdrant, and file storage.
+/// Query to get PDF storage health across PostgreSQL (pgvector) and file storage.
 /// PDF Storage Management Hub: Composes existing resource metrics.
 /// </summary>
 internal record GetPdfStorageHealthQuery() : IQuery<PdfStorageHealthDto>;
 
 internal record PdfStorageHealthDto(
     PostgresInfoDto Postgres,
-    QdrantInfoDto Qdrant,
+    VectorStoreInfoDto VectorStore,
     FileStorageInfoDto FileStorage,
     string OverallHealth,
     DateTime MeasuredAt
@@ -22,10 +22,8 @@ internal record PostgresInfoDto(
     double EstimatedChunksSizeMB
 );
 
-internal record QdrantInfoDto(
+internal record VectorStoreInfoDto(
     long VectorCount,
-    long MemoryBytes,
-    string MemoryFormatted,
     bool IsAvailable
 );
 

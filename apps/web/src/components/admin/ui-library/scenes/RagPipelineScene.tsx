@@ -22,7 +22,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
 const WATERFALL_CALLS: WaterfallCall[] = [
   { label: 'Query processing', durationMs: 8, type: 'search', startOffsetMs: 0 },
   { label: 'text-embedding-3-small', durationMs: 45, type: 'embedding', startOffsetMs: 10 },
-  { label: 'Qdrant hybrid search', durationMs: 32, type: 'search', startOffsetMs: 55 },
+  { label: 'pgvector hybrid search', durationMs: 32, type: 'search', startOffsetMs: 55 },
   { label: 'cross-encoder rerank', durationMs: 28, type: 'rerank', startOffsetMs: 88 },
   { label: 'openrouter/gpt-4o', durationMs: 312, type: 'llm', startOffsetMs: 116 },
 ];

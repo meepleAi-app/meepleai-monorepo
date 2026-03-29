@@ -45,11 +45,6 @@ export type {
 export type {
   AgentTypology,
   AgentTypologyListResponse,
-  QdrantCollectionDetails,
-  QdrantSearchResultItem,
-  QdrantSearchResult,
-  QdrantBrowsePoint,
-  QdrantBrowseResult,
   EmbeddingServiceInfo,
   EmbeddingServiceMetrics,
   RagExecutionListItem,

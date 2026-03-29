@@ -6,18 +6,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-const mockSetNavConfig = vi.hoisted(() => vi.fn());
+// Mock child components that use React Query internally
+vi.mock('../AppLogViewer', () => ({
+  AppLogViewer: () => <div data-testid="app-log-viewer">App Log Viewer</div>,
+}));
 
-vi.mock('@/lib/api', () => ({
-  api: {
-    admin: {
-      getDockerContainers: vi.fn().mockResolvedValue([]),
-    },
-  },
+vi.mock('../LogViewer', () => ({
+  LogViewer: () => <div data-testid="container-log-viewer">Container Log Viewer</div>,
 }));
 
 vi.mock('@/hooks/useSetNavConfig', () => ({
-  useSetNavConfig: () => mockSetNavConfig,
+  useSetNavConfig: () => vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -35,6 +34,6 @@ describe('LogViewerPage', () => {
 
   it('renders page description', () => {
     render(<LogViewerPage />);
-    expect(screen.getByText(/Container logs and application monitoring/)).toBeInTheDocument();
+    expect(screen.getByText(/Application and container log monitoring/)).toBeInTheDocument();
   });
 });

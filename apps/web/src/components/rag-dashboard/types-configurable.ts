@@ -289,7 +289,12 @@ export const DEFAULT_CONFIGURABLE_STRATEGIES: Record<RagStrategy, ConfigurableSt
     name: 'CONSENSUS',
     displayName: 'CONSENSUS',
     description: 'Multi-LLM voting (3 voters + aggregator)',
-    requiredPhases: ['consensusVoter1', 'consensusVoter2', 'consensusVoter3', 'consensusAggregator'],
+    requiredPhases: [
+      'consensusVoter1',
+      'consensusVoter2',
+      'consensusVoter3',
+      'consensusAggregator',
+    ],
     tokens: { estimated: 18000 },
     cost: { estimated: 0.09 },
     latency: {
@@ -403,7 +408,7 @@ export const DEFAULT_CONFIGURABLE_LAYERS: ConfigurableLayerConfig[] = [
       minMs: { estimated: 50 },
       maxMs: { estimated: 500 },
     },
-    dependencies: ['Qdrant', 'PostgreSQL FTS'],
+    dependencies: ['pgvector', 'PostgreSQL FTS'],
   },
   {
     id: 'crag',
@@ -582,7 +587,10 @@ export function calculateMonthlyCost(
   let totalCost = 0;
   let savingsFromCache = 0;
 
-  for (const [strategy, percentage] of Object.entries(strategyDistribution) as [RagStrategy, number][]) {
+  for (const [strategy, percentage] of Object.entries(strategyDistribution) as [
+    RagStrategy,
+    number,
+  ][]) {
     const strategyConfig = config.strategies[strategy];
     const queries = queriesPerMonth * percentage;
     const costPerQuery = getEffectiveValue(strategyConfig.cost);

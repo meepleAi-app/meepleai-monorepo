@@ -24,7 +24,7 @@ public sealed class RagParquetSerializerTests
         };
 
         // Act
-        var bytes        = await RagParquetSerializer.SerializeChunksAsync(chunks);
+        var bytes = await RagParquetSerializer.SerializeChunksAsync(chunks);
         var deserialized = await RagParquetSerializer.DeserializeChunksAsync(bytes);
 
         // Assert
@@ -52,7 +52,7 @@ public sealed class RagParquetSerializerTests
         };
 
         // Act
-        var bytes        = await RagParquetSerializer.SerializeEmbeddingsAsync(embeddings);
+        var bytes = await RagParquetSerializer.SerializeEmbeddingsAsync(embeddings);
         var deserialized = await RagParquetSerializer.DeserializeEmbeddingsAsync(bytes);
 
         // Assert

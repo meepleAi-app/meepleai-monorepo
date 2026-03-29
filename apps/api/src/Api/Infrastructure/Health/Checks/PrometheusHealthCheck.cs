@@ -9,13 +9,16 @@ public class PrometheusHealthCheck : IHealthCheck
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<PrometheusHealthCheck> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public PrometheusHealthCheck(
         IConfiguration configuration,
-        ILogger<PrometheusHealthCheck> logger)
+        ILogger<PrometheusHealthCheck> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -29,7 +32,8 @@ public class PrometheusHealthCheck : IHealthCheck
 
         try
         {
-            using var client = new HttpClient { BaseAddress = new Uri(prometheusUrl) };
+            using var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(prometheusUrl);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 

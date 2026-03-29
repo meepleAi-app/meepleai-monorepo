@@ -596,6 +596,9 @@ jobs:
           PERF_REGRESSION_MODE: ${{ inputs.perf_regression_mode || 'warn' }}
           REGRESSION_THRESHOLD_PCT: '20'
         run: |
+          # Ensure jq is available (required for JSON metric extraction)
+          command -v jq &>/dev/null || sudo apt-get install -y jq
+
           # Write previous baseline to temp file if available
           PREV_BASELINE=""
           BASELINE_JSON='${{ needs.snapshot-baseline.outputs.previous_baseline }}'

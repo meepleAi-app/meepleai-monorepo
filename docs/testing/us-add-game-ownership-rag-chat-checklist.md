@@ -11,7 +11,7 @@
 - [ ] `make dev` running from `infra/` (all services healthy)
 - [ ] Seed script eseguito: `bash infra/scripts/seed-test-game.sh <path-to-catan-rules.pdf>`
 - [ ] Annotare Game ID e PDF status dall'output del seed
-- [ ] OpenRouter API key configurata in `infra/secrets/dev/openrouter.secret`
+- [ ] OpenRouter API key configurata in `infra/secrets/openrouter.secret`
 
 ---
 
@@ -100,7 +100,7 @@
 | Gioco non trovato in /discover | `curl http://localhost:8080/api/v1/shared-games?searchTerm=Catan` |
 | PDF non Completed | `curl http://localhost:8080/api/v1/pdfs/{pdfId}/progress -b cookies.txt` (check `currentStep`=`Completed`) |
 | Nessuna risposta RAG | `pwsh -c "docker logs meepleai-embedding-service --tail=20"` |
-| Chat timeout | Verificare OpenRouter key: `cat infra/secrets/dev/openrouter.secret` |
+| Chat timeout | Verificare OpenRouter key: `cat infra/secrets/openrouter.secret` |
 | Agent creation fails | Possibile limite slot agente — verificare tier utente |
 | Bottone ownership mancante | Gioco potrebbe essere gia in stato "Owned" |
 | Features.PdfUpload disabled | Verificare: `SELECT * FROM system_configurations WHERE key='Features.PdfUpload'` |

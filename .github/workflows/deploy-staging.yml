@@ -536,7 +536,7 @@ jobs:
           smoke_test "API Health" "https://meepleai.app/health" "200"
           smoke_test "Web Root" "https://meepleai.app" "200"
           smoke_test "API Game Catalog" "https://meepleai.app/api/v1/shared-game-catalog/games?limit=1" "200 401"
-          smoke_test "Swagger Docs" "https://meepleai.app/swagger/index.html" "200"
+          smoke_test "API Direct Health" "https://api.meepleai.app/health" "200"
 
           # Health endpoint JSON validation
           echo "  Validating health response structure..."

@@ -46,9 +46,9 @@ internal sealed class RagExportService : IRagExportService
         // ── 2. Map chunks and write chunks.jsonl + chunks.parquet ─────────────
         var chunkLines = chunks
             .Select(c => new RagExportChunkLine(
-                ChunkIndex:     c.ChunkIndex,
-                PageNumber:     c.PageNumber,
-                Content:        c.Content,
+                ChunkIndex: c.ChunkIndex,
+                PageNumber: c.PageNumber,
+                Content: c.Content,
                 CharacterCount: c.CharacterCount))
             .ToList();
 
@@ -61,11 +61,11 @@ internal sealed class RagExportService : IRagExportService
         // ── 3. Map embeddings and write embeddings.jsonl + embeddings.parquet ──
         var embeddingLines = embeddings
             .Select(e => new RagExportEmbeddingLine(
-                ChunkIndex:  e.ChunkIndex,
-                PageNumber:  e.PageNumber,
+                ChunkIndex: e.ChunkIndex,
+                PageNumber: e.PageNumber,
                 TextContent: e.TextContent,
-                Vector:      e.Vector.ToArray(),
-                Model:       e.Model))
+                Vector: e.Vector.ToArray(),
+                Model: e.Model))
             .ToList();
 
         var embeddingsJsonlBytes = RagExportSerializer.ToJsonlBytes(embeddingLines);
@@ -125,32 +125,32 @@ internal sealed class RagExportService : IRagExportService
         var avgChunkSize = chunks.Count > 0 ? totalChars / chunks.Count : 0;
 
         var docInfo = new RagExportDocumentInfo(
-            PdfDocumentId:      pdfDoc.Id,
-            GameId:             pdfDoc.GameId,
-            GameSlug:           gameSlug,
-            GameName:           gameName,
-            FileName:           pdfDoc.FileName,
-            Language:           pdfDoc.Language,
+            PdfDocumentId: pdfDoc.Id,
+            GameId: pdfDoc.GameId,
+            GameSlug: gameSlug,
+            GameName: gameName,
+            FileName: pdfDoc.FileName,
+            Language: pdfDoc.Language,
             LanguageConfidence: pdfDoc.LanguageConfidence,
-            DocumentCategory:   pdfDoc.DocumentCategory,
-            VersionLabel:       pdfDoc.VersionLabel,
-            LicenseType:        pdfDoc.LicenseType,
-            PageCount:          pdfDoc.PageCount,
-            CharacterCount:     pdfDoc.CharacterCount,
-            ContentHash:        pdfDoc.ContentHash,
-            FileSizeBytes:      pdfDoc.FileSizeBytes);
+            DocumentCategory: pdfDoc.DocumentCategory,
+            VersionLabel: pdfDoc.VersionLabel,
+            LicenseType: pdfDoc.LicenseType,
+            PageCount: pdfDoc.PageCount,
+            CharacterCount: pdfDoc.CharacterCount,
+            ContentHash: pdfDoc.ContentHash,
+            FileSizeBytes: pdfDoc.FileSizeBytes);
 
         var stats = new RagExportDocumentStats(
-            TotalChunks:      chunks.Count,
-            TotalEmbeddings:  embeddings.Count,
-            ChunkSizeAvg:     avgChunkSize);
+            TotalChunks: chunks.Count,
+            TotalEmbeddings: embeddings.Count,
+            ChunkSizeAvg: avgChunkSize);
 
         return new RagExportDocumentMetadata(
-            ExportVersion:      ExportVersion,
-            ExportedAt:         DateTimeOffset.UtcNow,
-            EmbeddingModel:     vectorDoc.EmbeddingModel,
+            ExportVersion: ExportVersion,
+            ExportedAt: DateTimeOffset.UtcNow,
+            EmbeddingModel: vectorDoc.EmbeddingModel,
             EmbeddingDimensions: vectorDoc.EmbeddingDimensions,
-            Document:           docInfo,
-            Stats:              stats);
+            Document: docInfo,
+            Stats: stats);
     }
 }

@@ -68,6 +68,7 @@ import {
   createAdminNotificationsClient,
   createContactClient,
   createAgentMemoryClient,
+  createAgentDocumentsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -116,6 +117,7 @@ import {
   type AdminNotificationsClient,
   type ContactClient,
   type AgentMemoryClient,
+  type AgentDocumentsClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -348,6 +350,9 @@ export interface ApiClient {
   /** Agent Memory — groups, game memory, player stats */
   agentMemory: AgentMemoryClient;
 
+  /** User-scoped agent document selection */
+  agentDocuments: AgentDocumentsClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -446,6 +451,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     adminNotifications: createAdminNotificationsClient({ httpClient }), // Admin manual notifications
     contact: createContactClient({ httpClient }), // Public contact form
     agentMemory: createAgentMemoryClient({ httpClient }), // AgentMemory
+    agentDocuments: createAgentDocumentsClient({ httpClient }), // User agent document selection
     delete: (path: string) => httpClient.delete(path),
   };
 

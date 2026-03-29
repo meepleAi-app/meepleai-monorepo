@@ -310,7 +310,12 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
       return (
         result ?? {
           postgres: { totalDocuments: 0, totalChunks: 0, estimatedChunksSizeMB: 0 },
-          qdrant: { vectorCount: 0, memoryBytes: 0, memoryFormatted: '0 B', isAvailable: false },
+          vectorStore: {
+            vectorCount: 0,
+            memoryBytes: 0,
+            memoryFormatted: '0 B',
+            isAvailable: false,
+          },
           fileStorage: {
             totalFiles: 0,
             totalSizeBytes: 0,
@@ -404,7 +409,7 @@ export interface PdfStorageHealth {
     totalChunks: number;
     estimatedChunksSizeMB: number;
   };
-  qdrant: {
+  vectorStore: {
     vectorCount: number;
     memoryBytes: number;
     memoryFormatted: string;

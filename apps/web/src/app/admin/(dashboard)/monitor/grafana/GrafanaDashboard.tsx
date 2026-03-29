@@ -52,10 +52,10 @@ const DASHBOARDS = [
     description: 'Memory, hit rate, commands',
   },
   {
-    id: 'qdrant-vectors',
-    name: 'Qdrant Vectors',
+    id: 'pgvector-stats',
+    name: 'pgvector Stats',
     category: 'Infrastructure',
-    description: 'Collections, search latency',
+    description: 'Vector store health, search latency',
   },
   {
     id: 'llm-usage',

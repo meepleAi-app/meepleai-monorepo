@@ -34,7 +34,7 @@ interface KBSettingsData {
   vectorDatabase: {
     type: string;
     url: string;
-    grpcPort: string;
+    grpcPort?: string;
   };
   chunking: {
     defaultChunkSize: number;
@@ -209,7 +209,9 @@ export function KBSettings() {
         <SettingsCard title="Vector Database" icon={DatabaseIcon}>
           <SettingRow label="Type" value={settings.vectorDatabase.type} />
           <SettingRow label="URL" value={settings.vectorDatabase.url} />
-          <SettingRow label="gRPC Port" value={settings.vectorDatabase.grpcPort} />
+          {settings.vectorDatabase.grpcPort && (
+            <SettingRow label="gRPC Port" value={settings.vectorDatabase.grpcPort} />
+          )}
         </SettingsCard>
 
         {/* Chunking Settings */}
@@ -290,7 +292,7 @@ export function KBSettings() {
                   Rebuild Vector Index
                 </p>
                 <p className="text-xs text-red-600 dark:text-red-400">
-                  Triggers reindexing of all Qdrant collections. May temporarily affect search.
+                  Triggers reindexing of all pgvector embeddings. May temporarily affect search.
                 </p>
               </div>
               <Button

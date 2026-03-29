@@ -2769,7 +2769,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
           { rangeLabel: '500-1000', count: 31 },
           { rangeLabel: '1000+', count: 9 },
         ],
-        qdrantStats: {
+        vectorStats: {
           vectorsCount: 2840,
           memoryUsageBytes: 45088768,
           collectionStatus: 'green',
@@ -3754,7 +3754,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
       services: [
         { name: 'PostgreSQL', status: 'healthy', latencyMs: 4 },
         { name: 'Redis', status: 'healthy', latencyMs: 1 },
-        { name: 'Qdrant', status: 'healthy', latencyMs: 8 },
+        { name: 'pgvector', status: 'healthy', latencyMs: 8 },
         { name: 'Embedding Service', status: 'healthy', latencyMs: 42 },
         { name: 'Reranker Service', status: 'degraded', latencyMs: 340 },
         { name: 'OpenRouter', status: 'healthy', latencyMs: 120 },

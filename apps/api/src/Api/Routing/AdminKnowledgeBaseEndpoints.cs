@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
@@ -20,12 +21,30 @@ internal static class AdminKnowledgeBaseEndpoints
             .WithTags("Admin", "KnowledgeBase")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 
-        // GET /api/v1/admin/kb/vector-collections (#4655, #4785)
-        // Vector store (Qdrant) has been removed — returns empty collections.
-        kbGroup.MapGet("/vector-collections", () =>
+        // GET /api/v1/admin/kb/vector-stats — pgvector statistics grouped by game
+        kbGroup.MapGet("/vector-stats", async (IMediator mediator, CancellationToken ct) =>
         {
-            return Results.Ok(new { collections = Array.Empty<object>() });
-        });
+            var result = await mediator.Send(new GetVectorStatsQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetVectorStats")
+        .WithSummary("Get pgvector statistics grouped by game");
+
+        // POST /api/v1/admin/kb/vector-search — semantic search over pgvector embeddings
+        kbGroup.MapPost("/vector-search", async (
+            [FromBody] VectorSearchRequest request,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new VectorSemanticSearchQuery(
+                request.Query,
+                Math.Clamp(request.Limit ?? 10, 1, 100),
+                request.GameId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("VectorSearch")
+        .WithSummary("Semantic search over pgvector embeddings");
 
         // GET /api/v1/admin/kb/processing-queue (#4655, #4785)
         kbGroup.MapGet("/processing-queue", async (
@@ -89,6 +108,15 @@ internal static class AdminKnowledgeBaseEndpoints
     }
 
 }
+
+/// <summary>
+/// Request model for semantic vector search.
+/// </summary>
+internal record VectorSearchRequest(
+    string Query,
+    int? Limit,
+    Guid? GameId
+);
 
 /// <summary>
 /// Request model for pre-chat agent cost estimation by document selection.

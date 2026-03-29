@@ -4,7 +4,7 @@
  * RestartAllPanel — Dependency-ordered sequential restart of all services.
  * Issue #145 — Restart All with dependency order.
  *
- * Restart order: infrastructure first (postgres, redis, qdrant) → services (embedding, reranker,
+ * Restart order: infrastructure first (postgres + pgvector, redis) → services (embedding, reranker,
  * unstructured, smoldocling) → application (api).
  */
 
@@ -30,7 +30,7 @@ interface ServiceDef {
 
 /**
  * Dependency-ordered service tiers (restartable services only).
- * Infrastructure containers (postgres, redis, qdrant) are excluded — they are
+ * Infrastructure containers (postgres, redis) are excluded — they are
  * managed by docker compose and the Docker API is read-only.
  *
  * Tier 1: AI/processing services (independent, restart first)

@@ -3,7 +3,7 @@
 -- EF Core migrations handle schema/tables — this script only sets up
 -- extensions and roles that need superuser privileges.
 
--- pgvector extension for vector similarity search (used by Qdrant adapter fallback & raw queries)
+-- pgvector extension for vector similarity search (primary vector store — replaces Qdrant)
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- pg_trgm extension for trigram-based fuzzy text search

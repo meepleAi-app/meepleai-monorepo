@@ -22,7 +22,6 @@ BACKUP_DIR="/backups"
 # Volumes to DELETE (user data)
 DATA_VOLUMES=(
   "meepleai-pgdata-staging"
-  "meepleai-qdrantdata-staging"
   "meepleai-redisdata-staging"
   "meepleai-grafana-staging"
   "meepleai-prometheus-staging"
@@ -127,14 +126,15 @@ docker pull ghcr.io/meepleai-app/meepleai-monorepo/api:staging-latest 2>/dev/nul
 docker pull ghcr.io/meepleai-app/meepleai-monorepo/web:staging-latest 2>/dev/null && \
   log "  Pulled: Web staging-latest" || warn "  Web image pull failed (will use cached)"
 
-# Start core services first (DB, cache, vector)
-log "Starting core services (postgres, redis, qdrant)..."
-docker compose $COMPOSE_FILES up -d postgres redis qdrant
+# Start core services first (DB, cache)
+# Note: vector search uses pgvector (PostgreSQL extension) — no separate Qdrant service
+log "Starting core services (postgres, redis)..."
+docker compose $COMPOSE_FILES up -d postgres redis
 log "Waiting 15s for databases to initialize..."
 sleep 15
 
 # Verify core services
-for svc in postgres redis qdrant; do
+for svc in postgres redis; do
   if docker ps --filter "name=meepleai-$svc" --filter "status=running" -q | grep -q .; then
     log "  $svc: running"
   else

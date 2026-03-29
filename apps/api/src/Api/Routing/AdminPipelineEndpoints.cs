@@ -122,7 +122,7 @@ internal static class AdminPipelineEndpoints
         {
             totalDocuments = storageHealth.Postgres.TotalDocuments,
             totalChunks = storageHealth.Postgres.TotalChunks,
-            vectorCount = storageHealth.Qdrant.VectorCount,
+            vectorCount = storageHealth.VectorStore.VectorCount,
             totalFiles = storageHealth.FileStorage.TotalFiles,
             storageSizeFormatted = storageHealth.FileStorage.TotalSizeFormatted,
         };
@@ -232,29 +232,28 @@ internal static class AdminPipelineEndpoints
 
     private static object BuildIndexStage(PdfStorageHealthDto storageHealth)
     {
-        var status = storageHealth.Qdrant.IsAvailable ? "healthy" : "error";
+        var status = storageHealth.VectorStore.IsAvailable ? "healthy" : "error";
         return new
         {
             name = "Index",
             status,
             metrics = new
             {
-                vectorCount = storageHealth.Qdrant.VectorCount,
-                memoryFormatted = storageHealth.Qdrant.MemoryFormatted,
-                isAvailable = storageHealth.Qdrant.IsAvailable,
+                vectorCount = storageHealth.VectorStore.VectorCount,
+                isAvailable = storageHealth.VectorStore.IsAvailable,
             },
         };
     }
 
     private static object BuildRetrieveStage(Dictionary<string, ServiceHealthStatus> healthByName)
     {
-        var qdrantHealth = healthByName.GetValueOrDefault("qdrant");
+        var postgresHealth = healthByName.GetValueOrDefault("postgres");
         string status;
-        if (qdrantHealth is null || qdrantHealth.State == HealthState.Unhealthy)
+        if (postgresHealth is null || postgresHealth.State == HealthState.Unhealthy)
         {
             status = "error";
         }
-        else if (qdrantHealth.State == HealthState.Degraded)
+        else if (postgresHealth.State == HealthState.Degraded)
         {
             status = "warning";
         }
@@ -269,7 +268,7 @@ internal static class AdminPipelineEndpoints
             status,
             metrics = new
             {
-                qdrantHealth = qdrantHealth?.State.ToString() ?? "unknown",
+                vectorStoreHealth = postgresHealth?.State.ToString() ?? "unknown",
             },
         };
     }

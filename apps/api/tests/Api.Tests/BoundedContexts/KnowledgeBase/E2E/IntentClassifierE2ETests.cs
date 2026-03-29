@@ -194,7 +194,7 @@ public class IntentClassifierE2ETests
         var result = _classifier.ClassifyQuery("What is the best move here?");
 
         result.AllScores.Should().NotBeNull();
-        result.AllScores.Should().HaveCount(4, "All 4 intent types should be scored");
+        result.AllScores.Should().HaveCount(5, "All 5 intent types should be scored");
 
         // All scores should be non-negative
         result.AllScores.Should().AllSatisfy(s =>

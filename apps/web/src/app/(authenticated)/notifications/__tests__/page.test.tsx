@@ -42,7 +42,7 @@ vi.mock('@/components/pdf', () => ({
 // Store state container
 let storeState: Record<string, unknown> = {};
 
-vi.mock('@/store/notification/store', () => ({
+vi.mock('@/stores/notification/store', () => ({
   useNotificationStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) => {
     return typeof selector === 'function' ? selector(storeState) : storeState;
   }),
@@ -75,7 +75,10 @@ function createNotification(overrides: Partial<NotificationDto> = {}): Notificat
   };
 }
 
-function createNotifications(count: number, overrides: Partial<NotificationDto> = {}): NotificationDto[] {
+function createNotifications(
+  count: number,
+  overrides: Partial<NotificationDto> = {}
+): NotificationDto[] {
   return Array.from({ length: count }, (_, i) =>
     createNotification({
       id: `00000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`,
@@ -200,9 +203,7 @@ describe('NotificationsPage', () => {
 
   it('should call markAllAsRead() when "Segna tutte come lette" button is clicked', async () => {
     const user = userEvent.setup();
-    const notifications = [
-      createNotification({ isRead: false }),
-    ];
+    const notifications = [createNotification({ isRead: false })];
     setupStore({ notifications, unreadCount: 1 });
 
     render(<NotificationsPage />);
@@ -214,14 +215,14 @@ describe('NotificationsPage', () => {
   });
 
   it('should not show "Segna tutte come lette" when all notifications are read', () => {
-    const notifications = [
-      createNotification({ isRead: true }),
-    ];
+    const notifications = [createNotification({ isRead: true })];
     setupStore({ notifications, unreadCount: 0 });
 
     render(<NotificationsPage />);
 
-    expect(screen.queryByRole('button', { name: /segna tutte come lette/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /segna tutte come lette/i })
+    ).not.toBeInTheDocument();
   });
 
   it('should show empty state when no notifications', () => {
@@ -234,9 +235,7 @@ describe('NotificationsPage', () => {
 
   it('should show empty state with unread tab message', async () => {
     const user = userEvent.setup();
-    const notifications = [
-      createNotification({ isRead: true }),
-    ];
+    const notifications = [createNotification({ isRead: true })];
     setupStore({ notifications, unreadCount: 0 });
 
     render(<NotificationsPage />);
@@ -294,9 +293,7 @@ describe('NotificationsPage', () => {
 
   it('should show type-specific empty state when filter has no results', async () => {
     const user = userEvent.setup();
-    const notifications = [
-      createNotification({ type: 'pdf_upload_completed' }),
-    ];
+    const notifications = [createNotification({ type: 'pdf_upload_completed' })];
     setupStore({ notifications, unreadCount: 1 });
 
     render(<NotificationsPage />);
@@ -321,9 +318,7 @@ describe('NotificationsPage', () => {
   });
 
   it('should show "Nessuna notifica non letta" when all are read', () => {
-    const notifications = [
-      createNotification({ isRead: true }),
-    ];
+    const notifications = [createNotification({ isRead: true })];
     setupStore({ notifications, unreadCount: 0 });
 
     render(<NotificationsPage />);

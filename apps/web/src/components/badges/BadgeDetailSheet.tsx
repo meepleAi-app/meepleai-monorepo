@@ -9,6 +9,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 import { Switch } from '@/components/ui/forms/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
@@ -121,8 +122,13 @@ export function BadgeDetailSheet({
             <div className="relative h-24 w-24 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 p-2">
               <div className="flex h-full w-full items-center justify-center rounded-full bg-background">
                 {badge.iconUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
-                  <img src={badge.iconUrl} alt={badge.name} className="h-16 w-16 object-contain" />
+                  <Image
+                    src={badge.iconUrl}
+                    alt={badge.name}
+                    width={64}
+                    height={64}
+                    className="h-16 w-16 object-contain"
+                  />
                 ) : (
                   <span className="text-5xl">{getTierIcon(badge.tier)}</span>
                 )}

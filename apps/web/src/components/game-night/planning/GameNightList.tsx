@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 
-import type { GameNightSummary } from '@/store/game-night';
+import type { GameNightSummary } from '@/stores/game-night';
 
 import { GameNightListSkeleton } from './GameNightListSkeleton';
 import { MeepleGameNightCard } from './MeepleGameNightCard';

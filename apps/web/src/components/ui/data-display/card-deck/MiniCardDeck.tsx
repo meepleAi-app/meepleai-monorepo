@@ -2,6 +2,8 @@
 
 import type { MouseEvent } from 'react';
 
+import Image from 'next/image';
+
 import { cn } from '@/lib/utils';
 
 interface MiniCardDeckProps {
@@ -30,10 +32,10 @@ export function MiniCardDeck({ covers, count, onClick, className }: MiniCardDeck
       {displayCovers.map((src, i) => (
         <div
           key={i}
-          className="w-10 h-14 rounded-md overflow-hidden border-2 border-background shadow-sm flex-shrink-0"
+          className="relative w-10 h-14 rounded-md overflow-hidden border-2 border-background shadow-sm flex-shrink-0"
           style={{ marginLeft: i > 0 ? '-8px' : 0, zIndex: displayCovers.length - i }}
         >
-          <img src={src} alt="" className="w-full h-full object-cover" />
+          <Image src={src} alt="" fill className="object-cover" />
         </div>
       ))}
       {total > displayCovers.length && (

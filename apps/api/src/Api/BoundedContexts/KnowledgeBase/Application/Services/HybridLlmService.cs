@@ -2,13 +2,14 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 using Api.Services.LlmClients;
 using System.Globalization;
+using RagStrategy = Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagStrategy;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -105,8 +106,11 @@ internal class HybridLlmService : ILlmService
             return LlmCompletionResult.CreateFailure("No user prompt provided");
         }
 
+        // Map User entity to KB Domain value object (Application layer ACL)
+        var userContext = LlmUserContextMapper.FromUser(user);
+
         // Step 1: Select provider (routing + emergency override + RPD check + circuit breaker)
-        var selection = await _providerSelector.SelectProviderAsync(user, strategy, source, cancellationToken)
+        var selection = await _providerSelector.SelectProviderAsync(userContext, strategy, source, cancellationToken)
             .ConfigureAwait(false);
 
         var client = selection.Client;
@@ -158,7 +162,7 @@ internal class HybridLlmService : ILlmService
                     // Step 3: Record success + log cost (Issue #5492: delegated to selector)
                     _providerSelector.RecordSuccess(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds, result);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
-                    await _costService.LogSuccessAsync(result, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                    await _costService.LogSuccessAsync(result, userContext, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
 
                     return result;
                 }
@@ -166,7 +170,7 @@ internal class HybridLlmService : ILlmService
                 // Issue #5492: Record failure (circuit breaker + rate limit tracking delegated to selector)
                 _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds, result);
 
-                await _costService.LogFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                await _costService.LogFailureAsync(result.ErrorMessage, userContext, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }
             catch (Exception ex)
@@ -179,7 +183,7 @@ internal class HybridLlmService : ILlmService
                     client.ProviderName, decision.ModelId,
                     _circuitBreakerRegistry.GetCircuitStateDescription(client.ProviderName));
 
-                await _costService.LogFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                await _costService.LogFailureAsync(ex.Message, userContext, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
@@ -243,7 +247,10 @@ internal class HybridLlmService : ILlmService
             yield break;
         }
 
-        var selection = await _providerSelector.SelectProviderAsync(user, strategy, source, cancellationToken)
+        // Map User entity to KB Domain value object (Application layer ACL)
+        var userContext = LlmUserContextMapper.FromUser(user);
+
+        var selection = await _providerSelector.SelectProviderAsync(userContext, strategy, source, cancellationToken)
             .ConfigureAwait(false);
 
         var client = selection.Client;
@@ -402,7 +409,7 @@ internal class HybridLlmService : ILlmService
             _providerSelector.RecordSuccess(providerName, explicitModel, stopwatch.ElapsedMilliseconds, result);
 
             // Log cost asynchronously (fire-and-forget — use CancellationToken.None to survive request cancellation)
-            _ = _costService.LogSuccessAsync(result, user: null, stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
+            _ = _costService.LogSuccessAsync(result, LlmUserContext.Anonymous, stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
 
             _logger.LogInformation(
                 "Explicit model {Model} completion successful (tokens: {Tokens}, cost: ${Cost:F6}, latency: {Latency}ms)",

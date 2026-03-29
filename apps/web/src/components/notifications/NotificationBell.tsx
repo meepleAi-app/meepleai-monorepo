@@ -22,7 +22,7 @@ import { Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { useNotificationSSE } from '@/hooks/useNotificationSSE';
-import { useNotificationStore, selectUnreadCount } from '@/store/notification/store';
+import { useNotificationStore, selectUnreadCount } from '@/stores/notification/store';
 
 import { NotificationCenter } from './NotificationCenter';
 

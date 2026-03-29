@@ -1,7 +1,7 @@
 #pragma warning disable MA0002 // Dictionary without StringComparer
 using System.Text.Json;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 using Microsoft.Extensions.Logging;
@@ -15,12 +15,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 /// </summary>
 internal sealed class PlayerModeHandler : IAgentModeHandler
 {
-    private readonly IGameSessionStateRepository _sessionStateRepository;
+    private readonly IGameSessionStateReader _sessionStateRepository;
     private readonly ILlmService _llmService;
     private readonly ILogger<PlayerModeHandler> _logger;
 
     public PlayerModeHandler(
-        IGameSessionStateRepository sessionStateRepository,
+        IGameSessionStateReader sessionStateRepository,
         ILlmService llmService,
         ILogger<PlayerModeHandler> logger)
     {
@@ -63,7 +63,7 @@ internal sealed class PlayerModeHandler : IAgentModeHandler
                 _logger.LogDebug(
                     "Retrieved game state for session {SessionId}: {StateLength} chars",
                     context.GameId.Value,
-                    gameStateJson.Length);
+                    gameStateJson?.Length ?? 0);
             }
         }
 

@@ -4,7 +4,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockPush = vi.hoisted(() => vi.fn());
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+  redirect: vi.fn(),
+}));
 vi.mock('@/components/admin/invitations/InviteUserDialog', () => ({
   InviteUserDialog: () => null,
 }));

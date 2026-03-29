@@ -75,6 +75,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Scoped - uses ITierStrategyAccessRepository which depends on DbContext
         services.AddScoped<ITierStrategyAccessService, TierStrategyAccessService>();
 
+        // KB Domain abstraction over GM game session state (anti-corruption layer)
+        services.AddScoped<IGameSessionStateReader, GameSessionStateReaderAdapter>();
+
         // Issue #2404: Agent Mode Handlers (Scoped - use repositories and LLM services)
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.PlayerModeHandler>();
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.ChatModeHandler>();

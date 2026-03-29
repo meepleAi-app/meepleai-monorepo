@@ -20,8 +20,8 @@ Poi sul server:
 
     sleep 10 && curl -sf http://localhost:8080/health | head -5
 
-Se dà errore su secret mancanti tipo oauth.secret, email.secret etc nella cartella secrets/staging/, creali vuoti:
+Se dà errore su secret mancanti tipo oauth.secret, email.secret etc nella cartella secrets/, creali vuoti:
 
-    touch secrets/staging/{oauth,email,n8n,storage,smoldocling,reranker-service,unstructured-service,bgg,slack}.secret
+    touch secrets/{oauth,email,n8n,storage,smoldocling,reranker-service,unstructured-service,bgg,slack}.secret
 
 E poi rilancia il docker compose up sopra.

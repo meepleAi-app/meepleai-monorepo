@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { cn } from '@/lib/utils';
-import type { GameNightSummary, GameNightStatus } from '@/store/game-night';
+import type { GameNightSummary, GameNightStatus } from '@/stores/game-night';
 
 const STATUS_BADGE: Record<GameNightStatus, string> = {
   upcoming: 'Prossima',

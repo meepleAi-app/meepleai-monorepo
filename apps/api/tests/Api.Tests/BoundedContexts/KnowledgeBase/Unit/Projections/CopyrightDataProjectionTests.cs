@@ -1,4 +1,4 @@
-using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.SharedKernel.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Projections;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Projections;
 using Api.Infrastructure;

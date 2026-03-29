@@ -148,14 +148,7 @@ internal sealed class PlayerMemoryRepository : RepositoryBase, IPlayerMemoryRepo
 
                 foreach (var stat in stats)
                 {
-                    gameStatsList.Add(new PlayerGameStats
-                    {
-                        GameId = stat.GameId,
-                        Wins = stat.Wins,
-                        Losses = stat.Losses,
-                        TotalPlayed = stat.TotalPlayed,
-                        BestScore = stat.BestScore,
-                    });
+                    gameStatsList.Add(PlayerGameStats.Restore(stat.GameId, stat.Wins, stat.Losses, stat.TotalPlayed, stat.BestScore));
                 }
             }
         }

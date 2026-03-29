@@ -1,6 +1,7 @@
 'use client';
 
 import { Timer, Users, Trophy } from 'lucide-react';
+import Image from 'next/image';
 
 interface LiveSessionContextBarProps {
   gameName?: string;
@@ -35,7 +36,13 @@ export function LiveSessionContextBar({
         className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity"
       >
         {gameImageUrl && (
-          <img src={gameImageUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+          <Image
+            src={gameImageUrl}
+            alt=""
+            width={28}
+            height={28}
+            className="w-7 h-7 rounded-full object-cover"
+          />
         )}
         <span className="font-medium text-foreground truncate max-w-[120px]">{gameName}</span>
       </button>

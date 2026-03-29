@@ -30,7 +30,7 @@ internal abstract class IntegrationEventBase : IIntegrationEvent
     protected IntegrationEventBase(string sourceContext)
     {
         EventId = Guid.NewGuid();
-        OccurredAt = DateTime.UtcNow;
+        OccurredAt = TimeProvider.System.GetUtcNow().UtcDateTime;
         ArgumentNullException.ThrowIfNull(sourceContext);
         SourceContext = sourceContext;
     }

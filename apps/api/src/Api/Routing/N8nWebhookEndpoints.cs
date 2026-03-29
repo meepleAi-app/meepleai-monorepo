@@ -1,9 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
-using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
+using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.Middleware;
 using MediatR;
 using Microsoft.Extensions.Options;
@@ -35,7 +33,6 @@ internal static class N8nWebhookEndpoints
     private static async Task<IResult> HandleN8nWebhook(
         HttpContext context,
         IMediator mediator,
-        INotificationRepository notificationRepo,
         IOptions<N8nWebhookClientOptions> options,
         ILogger<Program> logger,
         CancellationToken cancellationToken)
@@ -45,25 +42,30 @@ internal static class N8nWebhookEndpoints
         using var reader = new StreamReader(context.Request.Body, Encoding.UTF8, leaveOpen: true);
         var body = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-        // Validate HMAC signature
+        // Validate HMAC signature — fail closed: reject all requests when secret is not configured
         var secret = options.Value.WebhookSecret;
-        if (!string.IsNullOrEmpty(secret))
+        if (string.IsNullOrEmpty(secret))
         {
-            var signature = context.Request.Headers["X-Webhook-Signature"].FirstOrDefault();
-            if (string.IsNullOrEmpty(signature))
-            {
-                logger.LogWarning("n8n webhook missing X-Webhook-Signature header");
-                return Results.Unauthorized();
-            }
+            logger.LogError("N8n webhook received but WebhookSecret is not configured — rejecting. Set N8N_WEBHOOK_SECRET in n8n.secret");
+            return Results.Problem(
+                detail: "Webhook endpoint is not configured",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
 
-            var expectedSignature = ComputeHmacSha256(body, secret);
-            if (!CryptographicOperations.FixedTimeEquals(
-                    Encoding.UTF8.GetBytes(signature),
-                    Encoding.UTF8.GetBytes(expectedSignature)))
-            {
-                logger.LogWarning("n8n webhook signature mismatch");
-                return Results.Unauthorized();
-            }
+        var signature = context.Request.Headers["X-Webhook-Signature"].FirstOrDefault();
+        if (string.IsNullOrEmpty(signature))
+        {
+            logger.LogWarning("N8n webhook missing X-Webhook-Signature header");
+            return Results.Unauthorized();
+        }
+
+        var expectedSignature = ComputeHmacSha256(body, secret);
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(signature),
+                Encoding.UTF8.GetBytes(expectedSignature)))
+        {
+            logger.LogWarning("N8n webhook HMAC signature mismatch");
+            return Results.Unauthorized();
         }
 
         // Check idempotency key
@@ -97,7 +99,7 @@ internal static class N8nWebhookEndpoints
         {
             return request.Action switch
             {
-                "send_notification" => await HandleSendNotification(request.Payload, notificationRepo, logger, cancellationToken).ConfigureAwait(false),
+                "send_notification" => await HandleSendNotification(request.Payload, mediator, logger, cancellationToken).ConfigureAwait(false),
                 "send_email" => HandleSendEmail(request.Payload, logger),
                 "update_game_night_status" => HandleUpdateGameNightStatus(request.Payload, logger),
                 "send_reminder" => HandleSendReminder(request.Payload, logger),
@@ -112,7 +114,7 @@ internal static class N8nWebhookEndpoints
     }
 
     private static async Task<IResult> HandleSendNotification(
-        JsonElement? payload, INotificationRepository notificationRepo, ILogger logger, CancellationToken ct)
+        JsonElement? payload, IMediator mediator, ILogger logger, CancellationToken ct)
     {
         if (payload is null)
             return Results.BadRequest(new { error = "missing_payload", message = "Payload required for send_notification" });
@@ -133,16 +135,13 @@ internal static class N8nWebhookEndpoints
             return Results.BadRequest(new { error = "invalid_user_id", message = "userId must be a valid GUID" });
         }
 
-        var notification = new Notification(
-            id: Guid.NewGuid(),
-            userId: userGuid,
-            type: NotificationType.FromString(type!),
-            severity: NotificationSeverity.Info,
-            title: title!,
-            message: message!,
-            link: link
-        );
-        await notificationRepo.AddAsync(notification, ct).ConfigureAwait(false);
+        await mediator.Send(new CreateN8nNotificationCommand(
+            UserId: userGuid,
+            Title: title!,
+            Message: message!,
+            Type: type!,
+            Link: link
+        ), ct).ConfigureAwait(false);
 
         logger.LogInformation("n8n webhook: notification sent to user {UserId}", LogSanitizer.Sanitize(userId));
         return Results.Ok(new { success = true, action = "send_notification" });

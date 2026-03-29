@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import { useSessionStore } from '@/store/session';
+import { useSessionStore } from '@/stores/session';
 
 import { ActivityFeedEvent } from './ActivityFeedEvent';
 

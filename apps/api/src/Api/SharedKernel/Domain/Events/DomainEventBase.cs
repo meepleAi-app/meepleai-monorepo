@@ -24,6 +24,6 @@ internal abstract class DomainEventBase : IDomainEvent
     protected DomainEventBase()
     {
         EventId = Guid.NewGuid();
-        OccurredAt = DateTime.UtcNow;
+        OccurredAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 }

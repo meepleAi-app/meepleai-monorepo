@@ -288,6 +288,9 @@ builder.Services.AddHttpContextAccessor();
 // SEC-07: Issue #1787 - TOTP Replay Attack Prevention Background Cleanup
 builder.Services.AddHostedService<Api.Infrastructure.BackgroundTasks.UsedTotpCodeCleanupTask>();
 
+// RAG backup: Weekly full snapshot on Sunday 03:00 UTC with retention pruning
+builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.RagBackupSchedulerService>();
+
 // Issue #1449: FluentValidation for CQRS pipeline
 builder.Services.AddFluentValidation();
 
@@ -695,7 +698,8 @@ if (!isAlphaMode)
     v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
     v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
     v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
-    app.MapAdminSecretsEndpoints();          // Admin secrets management (staging/dev)
+    if (!app.Environment.IsProduction())
+        app.MapAdminSecretsEndpoints();      // Admin secrets management (non-prod only)
     app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
     v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
     app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
@@ -719,6 +723,7 @@ if (!isAlphaMode)
     v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
     v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
     v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
+    v1Api.MapAdminRagBackupEndpoints();        // RAG data backup & import
     v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
     v1Api.MapAdminEmailTemplateEndpoints(); // Issue #52: Admin email template management
     v1Api.MapAdminNotificationQueueEndpoints(); // Admin notification queue monitoring
@@ -762,6 +767,9 @@ if (!isAlphaMode)
     v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
     v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel
     v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)
+    v1Api.MapAdminLogEndpoints();          // Structured application log viewer (Seq)
+    v1Api.MapAdminServiceCallEndpoints();  // Service call history and statistics
+    v1Api.MapAdminCircuitBreakerEndpoints(); // Polly circuit breaker state visibility
     v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 
     // Workflows

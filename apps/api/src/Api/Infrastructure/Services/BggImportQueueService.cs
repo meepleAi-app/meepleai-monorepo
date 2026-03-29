@@ -152,6 +152,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         // Issue #3543 - Fix #3: Get all statuses for SSE streaming
         return await _dbContext.BggImportQueue
             .OrderByDescending(q => q.CreatedAt)
+            .Take(500)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }

@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 
-import { useSessionStore } from '@/store/session';
+import { useSessionStore } from '@/stores/session';
 import { LiveSessionLayout } from '../LiveSessionLayout';
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/sessions/s1' }));

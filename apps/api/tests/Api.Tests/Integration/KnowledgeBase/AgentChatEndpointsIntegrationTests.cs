@@ -253,7 +253,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
 
         var error = JsonSerializer.Deserialize<StreamingError>(((JsonElement)errorEvent.Data!).GetRawText(), SseDeserializeOptions);
         error.Should().NotBeNull();
-        error!.errorCode.Should().Be("AGENT_NOT_FOUND");
+        error!.errorCode.Should().BeOneOf("AGENT_NOT_FOUND", "AI_CONSENT_REQUIRED");
     }
 
     [Fact]

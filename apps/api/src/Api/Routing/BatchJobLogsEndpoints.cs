@@ -1,6 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Queries;
-using Api.BoundedContexts.Administration.Domain.Enums;
-using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.BoundedContexts.Administration.Application.Queries.BatchJobs;
 using Api.Extensions;
 using MediatR;
 using System.Text.Json;
@@ -12,6 +11,11 @@ namespace Api.Routing;
 /// </summary>
 internal static class BatchJobLogsEndpoints
 {
+    private static readonly HashSet<string> TerminalStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Completed", "Failed", "Cancelled"
+    };
+
     public static RouteGroupBuilder MapBatchJobLogsEndpoints(this RouteGroupBuilder group)
     {
         var logsGroup = group.MapGroup("/admin/operations/batch-jobs")
@@ -30,7 +34,6 @@ internal static class BatchJobLogsEndpoints
         Guid id,
         HttpContext context,
         IMediator mediator,
-        IBatchJobRepository repository,
         CancellationToken ct)
     {
         var (authorized, _, _) = context.RequireAdminSession();
@@ -54,10 +57,10 @@ internal static class BatchJobLogsEndpoints
 
         await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
 
-        // Stream logs while job is running (repository for polling loop is acceptable)
+        // Stream logs while job is running (polling loop via CQRS)
         while (!ct.IsCancellationRequested)
         {
-            var job = await repository.GetByIdAsync(id, ct).ConfigureAwait(false);
+            var job = await mediator.Send(new GetBatchJobQuery(id), ct).ConfigureAwait(false);
 
             if (job == null)
             {
@@ -68,7 +71,7 @@ internal static class BatchJobLogsEndpoints
             // Send progress update
             var progressData = new
             {
-                status = job.Status.ToString(),
+                status = job.Status,
                 progress = job.Progress,
                 timestamp = DateTime.UtcNow
             };
@@ -76,7 +79,7 @@ internal static class BatchJobLogsEndpoints
             await SendEventAsync(context, "progress", JsonSerializer.Serialize(progressData), ct).ConfigureAwait(false);
 
             // Stop streaming if job finished
-            if (job.Status is JobStatus.Completed or JobStatus.Failed or JobStatus.Cancelled)
+            if (TerminalStatuses.Contains(job.Status))
             {
                 await SendEventAsync(context, "complete", $"Job {job.Status}", ct).ConfigureAwait(false);
                 break;

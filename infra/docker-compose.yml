@@ -69,6 +69,8 @@ services:
       - ./secrets:/app/infra/secrets:ro
     entrypoint: ["/scripts/load-secrets-env.sh"]
     command: ["dotnet", "Api.dll"]
+    environment:
+      SEQ_URL: "http://seq:5341"
     depends_on:
       postgres:
         condition: service_healthy
@@ -408,6 +410,32 @@ services:
           cpus: '0.25'
           memory: 256M
 
+  seq:
+    image: datalust/seq:2024.3
+    container_name: meepleai-seq
+    restart: unless-stopped
+    profiles: [monitoring]
+    environment:
+      ACCEPT_EULA: "Y"
+    volumes:
+      - seq_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/api"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
   node-exporter:
     image: prom/node-exporter:v1.8.2
     container_name: meepleai-node-exporter
@@ -580,6 +608,7 @@ volumes:
   prometheus_data:
   grafana_data:
   alertmanager_data:
+  seq_data:
   mailpit_data:
 
 # =============================================================================

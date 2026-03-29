@@ -2,8 +2,8 @@ name: Self-Hosted Runner Maintenance
 
 on:
   schedule:
-    # Weekly Sunday 3 AM UTC - low-traffic window
-    - cron: '0 3 * * 0'
+    # Daily 3 AM UTC - prevent disk from filling up mid-week
+    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       prune_age:

@@ -57,6 +57,11 @@
     --size-content-max: 56rem;    /* 896px - 900px from upload.tsx */
     --size-container-max: 80rem;  /* 1280px */
 
+    /* Mobile navigation */
+    --size-bottom-nav: 4rem;          /* 64px */
+    --size-mobile-header: 3.5rem;     /* 56px */
+    --size-session-bottom-nav: 3.5rem; /* 56px */
+
     /* Touch targets (WCAG 2.1 AA) */
     --size-touch-min: 2.75rem;    /* 44px minimum touch target */
     --size-icon-sm: 1rem;         /* 16px */

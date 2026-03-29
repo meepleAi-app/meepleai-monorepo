@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import { ArrowRightLeft } from 'lucide-react';
 
@@ -72,37 +72,48 @@ export function CompareTab() {
   const [idA, setIdA] = useState('');
   const [idB, setIdB] = useState('');
 
-  // TODO: Wire to real API — GET /api/v1/admin/rag-executions/{id}
-  // Placeholder: in a real implementation, these would fetch from the API
-  const handleLoadA = () => {
-    if (!idA.trim()) return;
-    setExecutionA({
-      id: idA,
-      query: 'Sample query A',
-      answer: 'Sample answer A',
-      strategy: 'HybridRAG',
-      latencyMs: 1200,
-      tokens: 450,
-      cost: 0.0045,
-      confidence: 0.87,
-      timestamp: new Date().toISOString(),
-    });
-  };
+  const [loadingA, setLoadingA] = useState(false);
+  const [loadingB, setLoadingB] = useState(false);
+  const [errorA, setErrorA] = useState<string | null>(null);
+  const [errorB, setErrorB] = useState<string | null>(null);
 
-  const handleLoadB = () => {
-    if (!idB.trim()) return;
-    setExecutionB({
-      id: idB,
-      query: 'Sample query B',
-      answer: 'Sample answer B',
-      strategy: 'SingleModel',
-      latencyMs: 800,
-      tokens: 320,
-      cost: 0.0032,
-      confidence: 0.92,
-      timestamp: new Date().toISOString(),
-    });
-  };
+  const loadExecution = useCallback(
+    async (
+      id: string,
+      setExecution: (e: ExecutionSummary | null) => void,
+      setLoading: (l: boolean) => void,
+      setError: (e: string | null) => void
+    ) => {
+      if (!id.trim()) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/v1/admin/rag-executions/${encodeURIComponent(id.trim())}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const exec = await res.json();
+        setExecution({
+          id: exec.id,
+          query: exec.query ?? '',
+          answer: exec.executionTrace ? '[Vedi trace]' : '[N/A]',
+          strategy: exec.strategy ?? 'Unknown',
+          latencyMs: exec.totalLatencyMs ?? 0,
+          tokens: exec.totalTokens ?? 0,
+          cost: exec.totalCost ?? 0,
+          confidence: exec.confidence ?? 0,
+          timestamp: exec.createdAt ?? new Date().toISOString(),
+        });
+      } catch {
+        setError('Esecuzione non trovata');
+        setExecution(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const handleLoadA = () => loadExecution(idA, setExecutionA, setLoadingA, setErrorA);
+  const handleLoadB = () => loadExecution(idB, setExecutionB, setLoadingB, setErrorB);
 
   return (
     <div className="space-y-6">

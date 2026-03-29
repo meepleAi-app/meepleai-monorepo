@@ -17,6 +17,7 @@
 import { useState, useCallback } from 'react';
 
 import { Gamepad2 } from 'lucide-react';
+import Image from 'next/image';
 
 import {
   Dialog,
@@ -164,7 +165,13 @@ export function AddToLibraryModal({ game, isOpen, onClose, onSuccess }: AddToLib
             <div className="flex items-center gap-4 rounded-lg border border-border/50 p-3">
               <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-muted">
                 {game.imageUrl ? (
-                  <img src={game.imageUrl} alt={game.name} className="h-full w-full object-cover" />
+                  <Image
+                    src={game.imageUrl}
+                    alt={game.name}
+                    width={64}
+                    height={64}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div
                     className="flex h-full w-full items-center justify-center"

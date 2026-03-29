@@ -153,7 +153,6 @@ internal static class MonitoringEndpoints
         // Issue #892: Individual service health endpoints
         MapGenericServiceHealthEndpoint(group, "/health/postgresql", "postgres", "GetPostgreSqlHealth", "PostgreSQL");
         MapGenericServiceHealthEndpoint(group, "/health/redis", "redis", "GetRedisHealth", "Redis");
-        MapGenericServiceHealthEndpoint(group, "/health/qdrant", "qdrant", "GetQdrantHealth", "Qdrant");
         MapGenericServiceHealthEndpoint(group, "/health/n8n", "n8n", "GetN8NHealth", "n8n");
     }
 

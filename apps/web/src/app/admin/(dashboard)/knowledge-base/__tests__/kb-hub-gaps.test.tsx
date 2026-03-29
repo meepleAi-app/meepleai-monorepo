@@ -1,6 +1,6 @@
 /**
  * KB Admin Hub — Gap fixes tests
- * Verifies: Embedding Service card, Usage & Costs quick link, Qdrant search panel,
+ * Verifies: Embedding Service card, Usage & Costs quick link, vector search panel,
  * RAGPipelineFlow stage drill-down.
  */
 
@@ -67,23 +67,41 @@ const mockPipelineData = {
 
 // ── Admin client mock (single, shared across all suites) ──────────────────────
 
+const mockVectorStats = {
+  totalVectors: 1500,
+  dimensions: 768,
+  gamesIndexed: 2,
+  avgHealthPercent: 95,
+  sizeEstimateBytes: 15728640,
+  gameBreakdown: [
+    {
+      gameId: 'abc',
+      gameName: 'Catan',
+      vectorCount: 1000,
+      completedCount: 950,
+      failedCount: 50,
+      healthPercent: 95.0,
+    },
+    {
+      gameId: 'xyz',
+      gameName: 'Ticket to Ride',
+      vectorCount: 500,
+      completedCount: 480,
+      failedCount: 20,
+      healthPercent: 96.0,
+    },
+  ],
+};
+
 const mockAdminClient = {
-  getVectorCollections: vi.fn().mockResolvedValue({
-    collections: [
-      { name: 'game_rules', vectorCount: 1000, dimensions: 384, storage: '10 MB', health: 95 },
-      { name: 'faq_docs', vectorCount: 500, dimensions: 384, storage: '5 MB', health: 80 },
-    ],
-  }),
-  searchQdrantCollection: vi.fn().mockResolvedValue({
-    query: 'test query',
+  getVectorStats: vi.fn().mockResolvedValue(mockVectorStats),
+  searchVectors: vi.fn().mockResolvedValue({
     results: [
-      { id: 1, score: 0.92, payload: { text: 'This is the first result', gameId: 'abc' } },
-      { id: 2, score: 0.65, payload: { text: 'Second result content', gameId: 'xyz' } },
+      { documentId: 'doc1', text: 'This is the first result', chunkIndex: 0, pageNumber: 1 },
+      { documentId: 'doc2', text: 'Second result content', chunkIndex: 1, pageNumber: 2 },
     ],
-    total: 2,
+    errorMessage: null,
   }),
-  deleteQdrantCollection: vi.fn(),
-  rebuildQdrantIndex: vi.fn(),
   getPipelineHealth: vi.fn().mockResolvedValue(mockPipelineData),
 };
 
@@ -93,12 +111,6 @@ vi.mock('@/lib/api/clients/adminClient', () => ({
 
 vi.mock('@/lib/api/core/httpClient', () => ({
   HttpClient: vi.fn().mockImplementation(() => ({})),
-}));
-
-vi.mock('@/components/admin/knowledge-base/vector-collection-card', () => ({
-  VectorCollectionCard: ({ name }: { name: string }) => (
-    <div data-testid={`collection-card-${name}`}>{name}</div>
-  ),
 }));
 
 vi.mock('@/components/ui/primitives/button', () => ({
@@ -240,37 +252,26 @@ describe('KnowledgeBasePage — Hub Gap Fixes', () => {
   });
 });
 
-// ── Qdrant Search Panel tests ─────────────────────────────────────────────────
+// ── Vector Search Panel tests ─────────────────────────────────────────────────
 
-describe('VectorCollectionsPage — Semantic Search Panel', () => {
+describe('VectorStorePage — Semantic Search Panel', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
     // Reset admin client mocks to defaults
-    mockAdminClient.getVectorCollections.mockResolvedValue({
-      collections: [
-        { name: 'game_rules', vectorCount: 1000, dimensions: 384, storage: '10 MB', health: 95 },
-        { name: 'faq_docs', vectorCount: 500, dimensions: 384, storage: '5 MB', health: 80 },
-      ],
-    });
-    mockAdminClient.searchQdrantCollection.mockResolvedValue({
-      query: 'test query',
+    mockAdminClient.getVectorStats.mockResolvedValue(mockVectorStats);
+    mockAdminClient.searchVectors.mockResolvedValue({
       results: [
-        { id: 1, score: 0.92, payload: { text: 'First result', gameId: 'abc' } },
-        { id: 2, score: 0.65, payload: { text: 'Second result', gameId: 'xyz' } },
+        { documentId: 'doc1', text: 'First result', chunkIndex: 0, pageNumber: 1 },
+        { documentId: 'doc2', text: 'Second result', chunkIndex: 1, pageNumber: 2 },
       ],
-      total: 2,
+      errorMessage: null,
     });
 
-    // Make useQuery return collections so the collection <select> has real <option> elements
+    // Make useQuery return vector stats
     const rq = await import('@tanstack/react-query');
     vi.mocked(rq.useQuery).mockReturnValue({
-      data: {
-        collections: [
-          { name: 'game_rules', vectorCount: 1000, dimensions: 384, storage: '10 MB', health: 95 },
-          { name: 'faq_docs', vectorCount: 500, dimensions: 384, storage: '5 MB', health: 80 },
-        ],
-      },
+      data: mockVectorStats,
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -279,15 +280,15 @@ describe('VectorCollectionsPage — Semantic Search Panel', () => {
   });
 
   it('renders the Semantic Search section heading', async () => {
-    const { default: VectorCollectionsPage } = await import('../vectors/page');
-    render(<VectorCollectionsPage />);
+    const { default: VectorStorePage } = await import('../vectors/page');
+    render(<VectorStorePage />);
 
     expect(screen.getByText('Semantic Search')).toBeDefined();
   });
 
   it('renders search input and Search button', async () => {
-    const { default: VectorCollectionsPage } = await import('../vectors/page');
-    render(<VectorCollectionsPage />);
+    const { default: VectorStorePage } = await import('../vectors/page');
+    render(<VectorStorePage />);
 
     const searchInput = screen.getByPlaceholderText('Enter a query to search vectors...');
     expect(searchInput).toBeDefined();
@@ -297,44 +298,36 @@ describe('VectorCollectionsPage — Semantic Search Panel', () => {
   });
 
   it('disables Search button when query is empty', async () => {
-    const { default: VectorCollectionsPage } = await import('../vectors/page');
-    render(<VectorCollectionsPage />);
+    const { default: VectorStorePage } = await import('../vectors/page');
+    render(<VectorStorePage />);
 
     const searchBtn = screen.getByRole('button', { name: /^search$/i });
     expect(searchBtn).toHaveProperty('disabled', true);
   });
 
-  it('enables Search button when query and collection are provided', async () => {
-    const { default: VectorCollectionsPage } = await import('../vectors/page');
-    render(<VectorCollectionsPage />);
+  it('enables Search button when query is provided', async () => {
+    const { default: VectorStorePage } = await import('../vectors/page');
+    render(<VectorStorePage />);
 
-    // Type in query
+    // Type in query — that is enough to enable the button (no collection required)
     const searchInput = screen.getByPlaceholderText('Enter a query to search vectors...');
     fireEvent.change(searchInput, { target: { value: 'board game rules' } });
-
-    // Select collection — selects[0] is collection, selects[1] is limit
-    const selects = screen.getAllByTestId('select');
-    fireEvent.change(selects[0], { target: { value: 'game_rules' } });
 
     const searchBtn = screen.getByRole('button', { name: /^search$/i });
     expect(searchBtn).toHaveProperty('disabled', false);
   });
 
   it('shows "No results found" message when results are empty', async () => {
-    mockAdminClient.searchQdrantCollection.mockResolvedValueOnce({
-      query: 'no match',
+    mockAdminClient.searchVectors.mockResolvedValueOnce({
       results: [],
-      total: 0,
+      errorMessage: null,
     });
 
-    const { default: VectorCollectionsPage } = await import('../vectors/page');
-    render(<VectorCollectionsPage />);
+    const { default: VectorStorePage } = await import('../vectors/page');
+    render(<VectorStorePage />);
 
     const searchInput = screen.getByPlaceholderText('Enter a query to search vectors...');
     fireEvent.change(searchInput, { target: { value: 'no match' } });
-
-    const selects = screen.getAllByTestId('select');
-    fireEvent.change(selects[0], { target: { value: 'game_rules' } });
 
     const searchBtn = screen.getByRole('button', { name: /^search$/i });
     fireEvent.click(searchBtn);

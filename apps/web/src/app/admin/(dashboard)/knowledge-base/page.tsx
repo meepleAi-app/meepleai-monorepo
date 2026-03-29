@@ -32,7 +32,7 @@ const sections = [
   {
     title: 'Vector Collections',
     description:
-      'Manage Qdrant vector collections, view embeddings health, and run similarity searches',
+      'Manage pgvector embeddings, view vector store health, and run similarity searches',
     icon: DatabaseIcon,
     href: '/admin/knowledge-base/vectors',
     color: 'from-blue-500 to-indigo-600',

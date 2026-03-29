@@ -48,7 +48,7 @@ export function RagTab() {
           href="/admin/knowledge-base/vectors"
           icon={<Layers />}
           label="Vector Collections"
-          description="Qdrant collections, point counts, and collection health"
+          description="pgvector embeddings, vector counts, and collection health"
           accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
         />
         <AdminHubQuickLink

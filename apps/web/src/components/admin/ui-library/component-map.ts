@@ -59,7 +59,7 @@ import { ProcessingQueue } from '@/components/admin/knowledge-base/processing-qu
 import { RAGPipelineFlow } from '@/components/admin/knowledge-base/rag-pipeline-flow';
 import { UploadSettings } from '@/components/admin/knowledge-base/upload-settings';
 import { UploadZone } from '@/components/admin/knowledge-base/upload-zone';
-import { VectorCollectionCard } from '@/components/admin/knowledge-base/vector-collection-card';
+import { VectorGameCard } from '@/components/admin/knowledge-base/vector-game-card';
 import { KPICard } from '@/components/admin/KPICard';
 import { KPICardsGrid } from '@/components/admin/KPICardsGrid';
 import { AdminErrorBoundary } from '@/components/admin/layout/AdminErrorBoundary';
@@ -546,7 +546,7 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'rag-pipeline-flow': RAGPipelineFlow,
   'upload-settings': UploadSettings,
   'upload-zone': UploadZone,
-  'vector-collection-card': VectorCollectionCard,
+  'vector-game-card': VectorGameCard,
 
   // Admin — Shared Games
   'admin-shared-game-card-container': AdminSharedGameCardContainer,

@@ -110,7 +110,12 @@ export const STRATEGIES: Record<string, StrategyData> = {
     usage: { min: 1, max: 3, display: '1-3%' },
     phases: ['L1-Routing', 'Voter1-Sonnet', 'Voter2-GPT4o', 'Voter3-DeepSeek', 'Aggregator'],
     models: ['claude-sonnet-4.5', 'gpt-4o', 'deepseek-chat'],
-    useCases: ['Decisioni alto rischio', 'Arbitraggio regole', 'Contestazioni', 'Validazione critica'],
+    useCases: [
+      'Decisioni alto rischio',
+      'Arbitraggio regole',
+      'Contestazioni',
+      'Validazione critica',
+    ],
     color: 'hsl(0 72% 51%)', // Red
     icon: '🗳️',
   },
@@ -191,7 +196,7 @@ export const LAYERS: LayerData[] = [
     latencyRange: { min: 50, max: 500 },
     color: 'hsl(142 76% 36%)',
     icon: '📚',
-    dependencies: ['Qdrant', 'PostgreSQL FTS'],
+    dependencies: ['pgvector', 'PostgreSQL FTS'],
     docPath: '04-layer3-retrieval.md',
   },
   {
@@ -255,17 +260,86 @@ export interface ModelPricingData {
 
 export const MODEL_PRICING: ModelPricingData[] = [
   // Anthropic Claude
-  { id: 'claude-opus-4.5', name: 'Claude Opus 4.5', provider: 'Anthropic', inputCost: 5.0, outputCost: 25.0, cacheCost: 0.5, isFree: false, lastUpdated: '2026-02-02' },
-  { id: 'claude-sonnet-4.5', name: 'Claude Sonnet 4.5', provider: 'Anthropic', inputCost: 3.0, outputCost: 15.0, cacheCost: 0.3, isFree: false, lastUpdated: '2026-02-02' },
-  { id: 'claude-haiku-4.5', name: 'Claude Haiku 4.5', provider: 'Anthropic', inputCost: 1.0, outputCost: 5.0, cacheCost: 0.1, isFree: false, lastUpdated: '2026-02-02' },
+  {
+    id: 'claude-opus-4.5',
+    name: 'Claude Opus 4.5',
+    provider: 'Anthropic',
+    inputCost: 5.0,
+    outputCost: 25.0,
+    cacheCost: 0.5,
+    isFree: false,
+    lastUpdated: '2026-02-02',
+  },
+  {
+    id: 'claude-sonnet-4.5',
+    name: 'Claude Sonnet 4.5',
+    provider: 'Anthropic',
+    inputCost: 3.0,
+    outputCost: 15.0,
+    cacheCost: 0.3,
+    isFree: false,
+    lastUpdated: '2026-02-02',
+  },
+  {
+    id: 'claude-haiku-4.5',
+    name: 'Claude Haiku 4.5',
+    provider: 'Anthropic',
+    inputCost: 1.0,
+    outputCost: 5.0,
+    cacheCost: 0.1,
+    isFree: false,
+    lastUpdated: '2026-02-02',
+  },
   // OpenAI
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', inputCost: 2.5, outputCost: 10.0, isFree: false, lastUpdated: '2026-02-02' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o-mini', provider: 'OpenAI', inputCost: 0.15, outputCost: 0.6, cacheCost: 0.08, isFree: false, lastUpdated: '2026-02-02' },
+  {
+    id: 'gpt-4o',
+    name: 'GPT-4o',
+    provider: 'OpenAI',
+    inputCost: 2.5,
+    outputCost: 10.0,
+    isFree: false,
+    lastUpdated: '2026-02-02',
+  },
+  {
+    id: 'gpt-4o-mini',
+    name: 'GPT-4o-mini',
+    provider: 'OpenAI',
+    inputCost: 0.15,
+    outputCost: 0.6,
+    cacheCost: 0.08,
+    isFree: false,
+    lastUpdated: '2026-02-02',
+  },
   // DeepSeek
-  { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'DeepSeek', inputCost: 0.28, outputCost: 0.42, cacheCost: 0.028, isFree: false, lastUpdated: '2026-02-02' },
+  {
+    id: 'deepseek-chat',
+    name: 'DeepSeek Chat',
+    provider: 'DeepSeek',
+    inputCost: 0.28,
+    outputCost: 0.42,
+    cacheCost: 0.028,
+    isFree: false,
+    lastUpdated: '2026-02-02',
+  },
   // Free Models (OpenRouter)
-  { id: 'llama-3.3-70b', name: 'Llama 3.3 70B', provider: 'OpenRouter', inputCost: 0, outputCost: 0, isFree: true, lastUpdated: '2026-02-02' },
-  { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', provider: 'OpenRouter', inputCost: 0, outputCost: 0, isFree: true, lastUpdated: '2026-02-02' },
+  {
+    id: 'llama-3.3-70b',
+    name: 'Llama 3.3 70B',
+    provider: 'OpenRouter',
+    inputCost: 0,
+    outputCost: 0,
+    isFree: true,
+    lastUpdated: '2026-02-02',
+  },
+  {
+    id: 'gemini-2.0-flash-exp',
+    name: 'Gemini 2.0 Flash',
+    provider: 'OpenRouter',
+    inputCost: 0,
+    outputCost: 0,
+    isFree: true,
+    lastUpdated: '2026-02-02',
+  },
 ];
 
 // =============================================================================
@@ -282,11 +356,46 @@ export interface UserTierData {
 }
 
 export const USER_TIERS: UserTierData[] = [
-  { id: 'anonymous', name: 'Anonymous', hasAccess: false, maxStrategy: 'NONE', cacheTtlHours: 0, description: 'NO ACCESS - Authentication required' },
-  { id: 'user', name: 'User', hasAccess: true, maxStrategy: 'BALANCED', cacheTtlHours: 48, description: 'Standard authenticated user' },
-  { id: 'editor', name: 'Editor', hasAccess: true, maxStrategy: 'PRECISE', cacheTtlHours: 72, description: 'Content editor with elevated access' },
-  { id: 'admin', name: 'Admin', hasAccess: true, maxStrategy: 'CONSENSUS', cacheTtlHours: 168, description: 'Full system access' },
-  { id: 'premium', name: 'Premium', hasAccess: true, maxStrategy: 'CONSENSUS', cacheTtlHours: 336, description: 'Premium subscriber with priority' },
+  {
+    id: 'anonymous',
+    name: 'Anonymous',
+    hasAccess: false,
+    maxStrategy: 'NONE',
+    cacheTtlHours: 0,
+    description: 'NO ACCESS - Authentication required',
+  },
+  {
+    id: 'user',
+    name: 'User',
+    hasAccess: true,
+    maxStrategy: 'BALANCED',
+    cacheTtlHours: 48,
+    description: 'Standard authenticated user',
+  },
+  {
+    id: 'editor',
+    name: 'Editor',
+    hasAccess: true,
+    maxStrategy: 'PRECISE',
+    cacheTtlHours: 72,
+    description: 'Content editor with elevated access',
+  },
+  {
+    id: 'admin',
+    name: 'Admin',
+    hasAccess: true,
+    maxStrategy: 'CONSENSUS',
+    cacheTtlHours: 168,
+    description: 'Full system access',
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    hasAccess: true,
+    maxStrategy: 'CONSENSUS',
+    cacheTtlHours: 336,
+    description: 'Premium subscriber with priority',
+  },
 ];
 
 // =============================================================================
@@ -522,35 +631,95 @@ export const METRICS = {
 
 export const DOC_STRUCTURE = {
   core: [
-    { path: '00-overview.md', title: 'Overview', description: 'Executive summary with performance targets' },
-    { path: 'HOW-IT-WORKS.md', title: 'How It Works', description: 'Complete step-by-step explanation' },
+    {
+      path: '00-overview.md',
+      title: 'Overview',
+      description: 'Executive summary with performance targets',
+    },
+    {
+      path: 'HOW-IT-WORKS.md',
+      title: 'How It Works',
+      description: 'Complete step-by-step explanation',
+    },
   ],
   layers: [
     { path: '02-layer1-routing.md', title: 'L1: Routing', description: '3D routing logic' },
-    { path: '03-layer2-caching.md', title: 'L2: Cache', description: 'Semantic cache implementation' },
-    { path: '04-layer3-retrieval.md', title: 'L3: Retrieval', description: 'Modular retrieval strategies' },
+    {
+      path: '03-layer2-caching.md',
+      title: 'L2: Cache',
+      description: 'Semantic cache implementation',
+    },
+    {
+      path: '04-layer3-retrieval.md',
+      title: 'L3: Retrieval',
+      description: 'Modular retrieval strategies',
+    },
     { path: '05-layer4-crag-evaluation.md', title: 'L4: CRAG', description: 'Quality evaluation' },
-    { path: '06-layer5-generation.md', title: 'L5: Generation', description: 'Adaptive generation' },
+    {
+      path: '06-layer5-generation.md',
+      title: 'L5: Generation',
+      description: 'Adaptive generation',
+    },
     { path: '07-layer6-validation.md', title: 'L6: Validation', description: 'Self-validation' },
   ],
   advanced: [
-    { path: '08-token-optimization.md', title: 'Token Optimization', description: '10 optimization techniques' },
-    { path: '09-multi-agent-orchestration.md', title: 'Multi-Agent', description: 'LangGraph 3-agent system' },
+    {
+      path: '08-token-optimization.md',
+      title: 'Token Optimization',
+      description: '10 optimization techniques',
+    },
+    {
+      path: '09-multi-agent-orchestration.md',
+      title: 'Multi-Agent',
+      description: 'LangGraph 3-agent system',
+    },
   ],
   implementation: [
-    { path: '10-implementation-guide.md', title: 'Implementation', description: 'Code examples and setup' },
+    {
+      path: '10-implementation-guide.md',
+      title: 'Implementation',
+      description: 'Code examples and setup',
+    },
     { path: '11-testing-strategy.md', title: 'Testing', description: 'Test specifications' },
     { path: '12-monitoring-metrics.md', title: 'Monitoring', description: 'Prometheus + Grafana' },
     { path: '13-deployment-rollout.md', title: 'Deployment', description: '12-week roadmap' },
   ],
   appendices: [
-    { path: 'appendix/A-research-sources.md', title: 'Research Sources', description: '53 citations' },
-    { path: 'appendix/B-variant-comparison.md', title: 'Variant Comparison', description: '31 variants matrix' },
-    { path: 'appendix/C-token-cost-breakdown.md', title: 'Token Breakdown', description: 'Detailed analysis' },
-    { path: 'appendix/D-data-consistency-audit.md', title: 'Data Audit', description: 'Consistency validation' },
-    { path: 'appendix/E-model-pricing-2026.md', title: 'Model Pricing', description: 'Current pricing' },
-    { path: 'appendix/F-calculation-formulas.md', title: 'Formulas', description: 'Calculation documentation' },
-    { path: 'appendix/G-admin-configuration-system.md', title: 'Admin Config', description: 'Configuration system' },
+    {
+      path: 'appendix/A-research-sources.md',
+      title: 'Research Sources',
+      description: '53 citations',
+    },
+    {
+      path: 'appendix/B-variant-comparison.md',
+      title: 'Variant Comparison',
+      description: '31 variants matrix',
+    },
+    {
+      path: 'appendix/C-token-cost-breakdown.md',
+      title: 'Token Breakdown',
+      description: 'Detailed analysis',
+    },
+    {
+      path: 'appendix/D-data-consistency-audit.md',
+      title: 'Data Audit',
+      description: 'Consistency validation',
+    },
+    {
+      path: 'appendix/E-model-pricing-2026.md',
+      title: 'Model Pricing',
+      description: 'Current pricing',
+    },
+    {
+      path: 'appendix/F-calculation-formulas.md',
+      title: 'Formulas',
+      description: 'Calculation documentation',
+    },
+    {
+      path: 'appendix/G-admin-configuration-system.md',
+      title: 'Admin Config',
+      description: 'Configuration system',
+    },
   ],
 };
 
@@ -566,13 +735,15 @@ export function calculateQueryCost(
   modelId: string,
   inputRatio: number = 0.7
 ): number {
-  const model = MODEL_PRICING.find((m) => m.id === modelId);
+  const model = MODEL_PRICING.find(m => m.id === modelId);
   if (!model || model.isFree) return 0;
 
   const inputTokens = tokens * inputRatio;
   const outputTokens = tokens * (1 - inputRatio);
 
-  return (inputTokens / 1_000_000) * model.inputCost + (outputTokens / 1_000_000) * model.outputCost;
+  return (
+    (inputTokens / 1_000_000) * model.inputCost + (outputTokens / 1_000_000) * model.outputCost
+  );
 }
 
 /**
@@ -586,7 +757,7 @@ export function getStrategy(id: string): StrategyData | undefined {
  * Get layer by ID
  */
 export function getLayer(id: string): LayerData | undefined {
-  return LAYERS.find((l) => l.id === id);
+  return LAYERS.find(l => l.id === id);
 }
 
 /**

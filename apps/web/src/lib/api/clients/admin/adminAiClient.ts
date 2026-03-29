@@ -36,7 +36,8 @@ import {
   PdfStatusDistributionSchema,
   PdfStorageHealthSchema,
   ProcessingMetricsSchema,
-  VectorCollectionsResponseSchema,
+  VectorStatsSchema,
+  VectorSemanticSearchResultSchema,
   ProcessingQueueResponseSchema,
   PdfListResultSchema,
   type BulkDeleteResult,
@@ -45,7 +46,8 @@ import {
   type PdfStatusDistribution,
   type PdfStorageHealth,
   type ProcessingMetrics,
-  type VectorCollectionsResponse,
+  type VectorStats,
+  type VectorSemanticSearchResult,
   type ProcessingQueueResponse,
   type PdfListResult,
 } from '../../schemas/admin-knowledge-base.schemas';
@@ -72,8 +74,9 @@ export const ADMIN_PDF_ROUTES = {
 } as const;
 
 export const ADMIN_KB_ROUTES = {
-  vectorCollections: '/api/v1/admin/kb/vector-collections',
   processingQueue: '/api/v1/admin/kb/processing-queue',
+  vectorStats: '/api/v1/admin/kb/vector-stats',
+  vectorSearch: '/api/v1/admin/kb/vector-search',
 } as const;
 
 // ========== Agent Typology Types (Issue #3179) ==========
@@ -96,43 +99,6 @@ export type AgentTypologyListResponse = {
   page: number;
   pageSize: number;
 };
-
-// ========== Qdrant Admin Types (Issue #4877) ==========
-
-export interface QdrantCollectionDetails {
-  name: string;
-  pointsCount: number;
-  indexedVectorsCount: number;
-  status: string;
-  config: {
-    vectorSize?: number;
-    distance?: string;
-  };
-  exactCount: number;
-  health: number;
-}
-
-export interface QdrantSearchResultItem {
-  id: number;
-  score: number;
-  payload?: Record<string, string>;
-}
-
-export interface QdrantSearchResult {
-  query: string;
-  results: QdrantSearchResultItem[];
-  total: number;
-}
-
-export interface QdrantBrowsePoint {
-  id: number;
-  payload?: Record<string, string>;
-}
-
-export interface QdrantBrowseResult {
-  points: QdrantBrowsePoint[];
-  count: number;
-}
 
 // ========== Embedding Service Types (Issue #4878) ==========
 
@@ -631,65 +597,23 @@ export function createAdminAiClient(http: HttpClient) {
       return result ?? { jobs: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
     },
 
-    async getVectorCollections(): Promise<VectorCollectionsResponse> {
-      const result = await http.get(
-        '/api/v1/admin/kb/vector-collections',
-        VectorCollectionsResponseSchema
-      );
-      return result ?? { collections: [] };
+    async getVectorStats(): Promise<VectorStats> {
+      const result = await http.get(ADMIN_KB_ROUTES.vectorStats, VectorStatsSchema);
+      if (!result) throw new Error('Failed to fetch vector stats');
+      return result;
     },
 
-    async getQdrantCollectionDetails(name: string): Promise<QdrantCollectionDetails | null> {
-      return http.get<QdrantCollectionDetails>(
-        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}`
-      );
-    },
-
-    async deleteQdrantCollection(name: string): Promise<void> {
-      await http.delete(
-        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}?confirmed=true`
-      );
-    },
-
-    async searchQdrantCollection(
-      name: string,
+    async searchVectors(
       query: string,
-      limit?: number,
+      limit: number = 10,
       gameId?: string
-    ): Promise<QdrantSearchResult> {
-      const result = await http.post<QdrantSearchResult>(
-        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/search`,
-        { query, limit: limit ?? 10, gameId: gameId ?? null }
+    ): Promise<VectorSemanticSearchResult> {
+      const result = await http.post(
+        ADMIN_KB_ROUTES.vectorSearch,
+        { query, limit, gameId },
+        VectorSemanticSearchResultSchema
       );
-      return result ?? { query, results: [], total: 0 };
-    },
-
-    async browseQdrantPoints(name: string, limit?: number): Promise<QdrantBrowseResult> {
-      const params = limit ? `?limit=${limit}` : '';
-      const result = await http.get<QdrantBrowseResult>(
-        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/points${params}`
-      );
-      return result ?? { points: [], count: 0 };
-    },
-
-    async deleteQdrantPoints(
-      name: string,
-      opts: { gameId?: string; pdfId?: string }
-    ): Promise<void> {
-      const params = new URLSearchParams({ confirmed: 'true' });
-      if (opts.gameId) params.set('gameId', opts.gameId);
-      if (opts.pdfId) params.set('pdfId', opts.pdfId);
-      await http.delete(
-        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/points?${params.toString()}`
-      );
-    },
-
-    async rebuildQdrantIndex(name: string): Promise<{ rebuilding: boolean; collection: string }> {
-      const result = await http.post<{ rebuilding: boolean; collection: string }>(
-        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/rebuild?confirmed=true`,
-        {}
-      );
-      return result ?? { rebuilding: false, collection: name };
+      return result ?? { results: [], errorMessage: null };
     },
 
     async getEmbeddingInfo(): Promise<EmbeddingServiceInfo | null> {

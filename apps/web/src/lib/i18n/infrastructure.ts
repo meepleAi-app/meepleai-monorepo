@@ -11,8 +11,7 @@ export const infrastructurei18n = {
     services: {
       postgres: 'PostgreSQL',
       redis: 'Redis',
-      qdrant: 'Qdrant',
-      'qdrant-collection': 'Qdrant Collection',
+      pgvector: 'pgvector',
       n8n: 'n8n',
       prometheus: 'Prometheus',
       grafana: 'Grafana',
@@ -99,8 +98,7 @@ export const infrastructurei18n = {
     services: {
       postgres: 'PostgreSQL',
       redis: 'Redis',
-      qdrant: 'Qdrant',
-      'qdrant-collection': 'Qdrant Collection',
+      pgvector: 'pgvector',
       n8n: 'n8n',
       prometheus: 'Prometheus',
       grafana: 'Grafana',

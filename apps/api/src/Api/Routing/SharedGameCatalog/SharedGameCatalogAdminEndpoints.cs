@@ -433,6 +433,7 @@ internal static class SharedGameCatalogAdminEndpoints
         [FromQuery] string? search = null,
         [FromQuery] string? sortBy = null,
         [FromQuery] Guid? submittedBy = null,
+        [FromQuery] Guid? categoryId = null,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
@@ -444,7 +445,7 @@ internal static class SharedGameCatalogAdminEndpoints
             statusEnum = parsedStatus;
         }
 
-        var query = new GetFilteredSharedGamesQuery(statusEnum, search, pageNumber, pageSize, sortBy, submittedBy);
+        var query = new GetFilteredSharedGamesQuery(statusEnum, search, pageNumber, pageSize, sortBy, submittedBy, categoryId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }

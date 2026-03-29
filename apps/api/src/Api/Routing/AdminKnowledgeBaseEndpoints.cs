@@ -30,6 +30,22 @@ internal static class AdminKnowledgeBaseEndpoints
         .WithName("GetVectorStats")
         .WithSummary("Get pgvector statistics grouped by game");
 
+        // POST /api/v1/admin/kb/vector-search — semantic search over pgvector embeddings
+        kbGroup.MapPost("/vector-search", async (
+            [FromBody] VectorSearchRequest request,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new VectorSemanticSearchQuery(
+                request.Query,
+                request.Limit ?? 10,
+                request.GameId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("VectorSearch")
+        .WithSummary("Semantic search over pgvector embeddings");
+
         // GET /api/v1/admin/kb/processing-queue (#4655, #4785)
         kbGroup.MapGet("/processing-queue", async (
             IMediator mediator,
@@ -92,6 +108,15 @@ internal static class AdminKnowledgeBaseEndpoints
     }
 
 }
+
+/// <summary>
+/// Request model for semantic vector search.
+/// </summary>
+internal record VectorSearchRequest(
+    string Query,
+    int? Limit,
+    Guid? GameId
+);
 
 /// <summary>
 /// Request model for pre-chat agent cost estimation by document selection.

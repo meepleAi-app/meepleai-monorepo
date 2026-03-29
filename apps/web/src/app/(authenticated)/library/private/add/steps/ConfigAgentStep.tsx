@@ -11,6 +11,7 @@ import { useMemo, useState } from 'react';
 
 import { TypologySelector, StrategySelector } from '@/components/agent/config';
 import { toast } from '@/components/layout';
+import { DocumentSelectionPanel } from '@/components/library/DocumentSelectionPanel';
 import { Spinner } from '@/components/loading';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
@@ -36,6 +37,7 @@ export function ConfigAgentStep({
   const [typologyId, setTypologyId] = useState<string>();
   const [strategyName, setStrategyName] = useState<string>('Balanced');
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([_pdfId]);
 
   const { data: currentUser } = useCurrentUser();
 
@@ -97,6 +99,19 @@ export function ConfigAgentStep({
 
       {/* Strategy Selection */}
       <StrategySelector value={strategyName} onChange={setStrategyName} userTier={userTier} />
+
+      {/* Document Selection */}
+      <div className="mt-6">
+        <h3 className="text-sm font-medium text-gray-300 mb-2">Documenti per la Knowledge Base</h3>
+        <div className="bg-[#21262d] rounded-lg border border-[#30363d] p-3">
+          <DocumentSelectionPanel
+            gameId={gameId}
+            wizardMode={true}
+            initialSelection={[_pdfId]}
+            onSelectionChange={setSelectedDocIds}
+          />
+        </div>
+      </div>
 
       {/* Info Card */}
       <Card className="p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">

@@ -140,3 +140,6 @@ export * from './session-invite.schemas';
 
 // Ownership & RAG Access schemas
 export * from './ownership.schemas';
+
+// Agent Documents schemas (user-scoped document selection)
+export * from './agent-documents.schemas';

@@ -69,23 +69,11 @@ internal sealed class PlayerMemory : AggregateRoot<Guid>
         var existing = _gameStats.Find(s => s.GameId == gameId);
         if (existing != null)
         {
-            existing.TotalPlayed++;
-            if (won) existing.Wins++;
-            else existing.Losses++;
-
-            if (score.HasValue && (existing.BestScore == null || score.Value > existing.BestScore.Value))
-                existing.BestScore = score.Value;
+            existing.RecordPlay(won, score);
         }
         else
         {
-            _gameStats.Add(new PlayerGameStats
-            {
-                GameId = gameId,
-                TotalPlayed = 1,
-                Wins = won ? 1 : 0,
-                Losses = won ? 0 : 1,
-                BestScore = score
-            });
+            _gameStats.Add(PlayerGameStats.Create(gameId, won, score));
         }
     }
 }

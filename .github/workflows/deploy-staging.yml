@@ -535,7 +535,7 @@ jobs:
           # Critical smoke tests (failure = deployment issue)
           smoke_test "API Health" "https://meepleai.app/health" "200"
           smoke_test "Web Root" "https://meepleai.app" "200"
-          smoke_test "API Game Catalog" "https://meepleai.app/api/v1/shared-game-catalog/games?limit=1" "200 401"
+          smoke_test "API Game Catalog" "https://meepleai.app/api/v1/shared-games?pageNumber=1&pageSize=1" "200"
           smoke_test "API Direct Health" "https://api.meepleai.app/health" "200"
 
           # Health endpoint JSON validation

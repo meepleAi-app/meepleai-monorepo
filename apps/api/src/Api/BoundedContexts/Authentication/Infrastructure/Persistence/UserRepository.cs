@@ -64,6 +64,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             .Include(u => u.BackupCodes)
             .Include(u => u.OAuthAccounts)
             .AsNoTracking()
+            .Take(5000)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return userEntities.Select(MapToDomain).ToList();

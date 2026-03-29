@@ -25,7 +25,7 @@ internal sealed class ShareLinkRepository : RepositoryBase, IShareLinkRepository
 
     public async Task<IReadOnlyList<ShareLink>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await DbContext.ShareLinks.ToListAsync(cancellationToken).ConfigureAwait(false);
+        var entities = await DbContext.ShareLinks.Take(10000).ToListAsync(cancellationToken).ConfigureAwait(false);
         return entities.Select(MapToDomain).ToList();
     }
 

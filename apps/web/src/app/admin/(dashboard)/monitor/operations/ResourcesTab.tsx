@@ -247,7 +247,7 @@ export function ResourcesTab() {
         </MetricCard>
 
         <MetricCard
-          title="Vector Store (Qdrant)"
+          title="Vector Store (pgvector)"
           icon={<Layers className="h-4 w-4 text-purple-600" />}
           loading={loading}
         >

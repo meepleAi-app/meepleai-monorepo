@@ -65,7 +65,7 @@ route:
       group_wait: 30s
       repeat_interval: 1h
 
-    # Dependency health alerts (Postgres, Redis, Qdrant)
+    # Dependency health alerts (Postgres, Redis, pgvector)
     - match:
         category: dependency
       receiver: 'dependency-alerts'

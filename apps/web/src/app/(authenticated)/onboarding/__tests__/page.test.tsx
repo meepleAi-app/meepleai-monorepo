@@ -68,10 +68,13 @@ const defaultUser = {
   onboardingCompleted: false,
 };
 
+const mockRefreshUser = vi.fn().mockResolvedValue(undefined);
+
 function setupAuth(overrides: Partial<typeof defaultUser> = {}, loading = false) {
   mockUseAuth.mockReturnValue({
     user: { ...defaultUser, ...overrides },
     loading,
+    refreshUser: mockRefreshUser,
   });
 }
 
@@ -174,7 +177,7 @@ describe('OnboardingPage', () => {
   });
 
   it('shows loading spinner while auth is loading', () => {
-    mockUseAuth.mockReturnValue({ user: null, loading: true });
+    mockUseAuth.mockReturnValue({ user: null, loading: true, refreshUser: mockRefreshUser });
     render(<OnboardingPage />);
 
     // Should render spinner, not form
@@ -185,7 +188,7 @@ describe('OnboardingPage', () => {
   });
 
   it('returns null when user is null and not loading', () => {
-    mockUseAuth.mockReturnValue({ user: null, loading: false });
+    mockUseAuth.mockReturnValue({ user: null, loading: false, refreshUser: mockRefreshUser });
     const { container } = render(<OnboardingPage />);
     expect(container.firstChild).toBeNull();
   });

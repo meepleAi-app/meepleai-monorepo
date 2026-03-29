@@ -68,12 +68,12 @@ export const PostgresInfoSchema = z.object({
   estimatedChunksSizeMB: z.number(),
 });
 
-export const QdrantInfoSchema = z.object({
+export const VectorStoreInfoSchema = z.object({
   vectorCount: z.number(),
-  memoryBytes: z.number(),
-  memoryFormatted: z.string(),
   isAvailable: z.boolean(),
 });
+
+export type VectorStoreInfo = z.infer<typeof VectorStoreInfoSchema>;
 
 export const FileStorageInfoSchema = z.object({
   totalFiles: z.number(),
@@ -84,7 +84,7 @@ export const FileStorageInfoSchema = z.object({
 
 export const PdfStorageHealthSchema = z.object({
   postgres: PostgresInfoSchema,
-  qdrant: QdrantInfoSchema,
+  vectorStore: VectorStoreInfoSchema,
   fileStorage: FileStorageInfoSchema,
   overallHealth: z.string(),
   measuredAt: z.string(),
@@ -114,22 +114,42 @@ export const ProcessingMetricsSchema = z.object({
 
 export type ProcessingMetrics = z.infer<typeof ProcessingMetricsSchema>;
 
-// ========== Vector Collections ==========
+// ========== Vector Stats (pgvector) ==========
 
-export const VectorCollectionSchema = z.object({
-  name: z.string(),
+export const VectorGameBreakdownSchema = z.object({
+  gameId: z.string(),
+  gameName: z.string(),
   vectorCount: z.number(),
+  completedCount: z.number(),
+  failedCount: z.number(),
+  healthPercent: z.number(),
+});
+
+export const VectorStatsSchema = z.object({
+  totalVectors: z.number(),
   dimensions: z.number(),
-  storage: z.string(),
-  health: z.number(),
+  gamesIndexed: z.number(),
+  avgHealthPercent: z.number(),
+  sizeEstimateBytes: z.number(),
+  gameBreakdown: z.array(VectorGameBreakdownSchema),
 });
 
-export const VectorCollectionsResponseSchema = z.object({
-  collections: z.array(VectorCollectionSchema),
+export const VectorSearchResultItemSchema = z.object({
+  documentId: z.string(),
+  text: z.string(),
+  chunkIndex: z.number(),
+  pageNumber: z.number(),
 });
 
-export type VectorCollection = z.infer<typeof VectorCollectionSchema>;
-export type VectorCollectionsResponse = z.infer<typeof VectorCollectionsResponseSchema>;
+export const VectorSemanticSearchResultSchema = z.object({
+  results: z.array(VectorSearchResultItemSchema),
+  errorMessage: z.string().nullable(),
+});
+
+export type VectorGameBreakdown = z.infer<typeof VectorGameBreakdownSchema>;
+export type VectorStats = z.infer<typeof VectorStatsSchema>;
+export type VectorSearchResultItem = z.infer<typeof VectorSearchResultItemSchema>;
+export type VectorSemanticSearchResult = z.infer<typeof VectorSemanticSearchResultSchema>;
 
 // ========== PDF List (Admin) ==========
 

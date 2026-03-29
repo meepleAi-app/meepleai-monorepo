@@ -2,9 +2,9 @@ using System.Globalization;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
-using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -118,12 +118,11 @@ internal static class PdfUploadEndpoints
     private static async Task<IResult> HandleStandardUpload(
         HttpContext context,
                 IMediator mediator,
-        IFeatureFlagService featureFlags,
         ILogger<Program> logger,
         CancellationToken ct)
     {
         // CONFIG-05: Check if PDF upload feature is enabled
-        if (!await featureFlags.IsEnabledAsync("Features.PdfUpload").ConfigureAwait(false))
+        if (!await mediator.Send(new IsFeatureEnabledQuery("Features.PdfUpload"), ct).ConfigureAwait(false))
         {
             return Results.Json(
                 new { error = "feature_disabled", message = "PDF uploads are currently disabled", featureName = "Features.PdfUpload" },
@@ -207,11 +206,10 @@ internal static class PdfUploadEndpoints
         HttpContext context,
         [FromBody] InitChunkedUploadRequest request,
         IMediator mediator,
-        IFeatureFlagService featureFlags,
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        if (!await featureFlags.IsEnabledAsync("Features.PdfUpload").ConfigureAwait(false))
+        if (!await mediator.Send(new IsFeatureEnabledQuery("Features.PdfUpload"), ct).ConfigureAwait(false))
         {
             return Results.Json(
                 new { error = "feature_disabled", message = "PDF uploads are currently disabled" },
@@ -368,12 +366,11 @@ internal static class PdfUploadEndpoints
         Guid entryId,
         HttpContext context,
         IMediator mediator,
-        IFeatureFlagService featureFlags,
         ILogger<Program> logger,
         CancellationToken ct)
     {
         // Check feature flag
-        if (!await featureFlags.IsEnabledAsync("Features.PdfUpload").ConfigureAwait(false))
+        if (!await mediator.Send(new IsFeatureEnabledQuery("Features.PdfUpload"), ct).ConfigureAwait(false))
         {
             return Results.Json(
                 new { error = "feature_disabled", message = "PDF uploads are currently disabled" },

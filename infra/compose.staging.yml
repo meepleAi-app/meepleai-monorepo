@@ -68,6 +68,7 @@ services:
       - "traefik.http.routers.api.rule=Host(`meepleai.app`) && PathPrefix(`/api`)"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api.middlewares=security-headers@file,rate-limit-api@file,compress@file"
       - "traefik.http.services.api.loadbalancer.server.port=8080"
     logging:
       driver: "json-file"
@@ -89,6 +90,7 @@ services:
       - "traefik.http.routers.web.rule=Host(`meepleai.app`)"
       - "traefik.http.routers.web.entrypoints=websecure"
       - "traefik.http.routers.web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.web.middlewares=security-headers@file,compress@file"
       - "traefik.http.services.web.loadbalancer.server.port=3000"
     logging:
       driver: "json-file"

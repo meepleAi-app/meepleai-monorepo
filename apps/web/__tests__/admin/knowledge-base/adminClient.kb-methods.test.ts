@@ -196,36 +196,40 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
   // ========== Knowledge Base ==========
 
-  describe('getVectorCollections', () => {
-    it('should GET vector collections', async () => {
+  describe('getVectorStats', () => {
+    it('should GET vector stats', async () => {
       const mockResult = {
-        collections: [
+        totalVectors: 42500,
+        dimensions: 768,
+        gamesIndexed: 15,
+        avgHealthPercent: 98.5,
+        sizeEstimateBytes: 3221225472,
+        gameBreakdown: [
           {
-            name: 'Game Rules',
+            gameId: 'game-1',
+            gameName: 'Game Rules',
             vectorCount: 42500,
-            dimensions: 384,
-            storage: '3.2 GB',
-            health: 98,
+            completedCount: 42000,
+            failedCount: 500,
+            healthPercent: 98.8,
           },
         ],
       };
       vi.mocked(mockHttpClient.get).mockResolvedValue(mockResult);
 
-      const result = await client.getVectorCollections();
+      const result = await client.getVectorStats();
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        ADMIN_KB_ROUTES.vectorCollections,
+        ADMIN_KB_ROUTES.vectorStats,
         expect.any(Object)
       );
     });
 
-    it('should return empty collections when API returns null', async () => {
+    it('should throw when API returns null', async () => {
       vi.mocked(mockHttpClient.get).mockResolvedValue(null);
 
-      const result = await client.getVectorCollections();
-
-      expect(result).toEqual({ collections: [] });
+      await expect(client.getVectorStats()).rejects.toThrow('Failed to fetch vector stats');
     });
   });
 

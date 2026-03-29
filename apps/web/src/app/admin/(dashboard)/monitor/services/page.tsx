@@ -9,6 +9,7 @@
 
 import { SecretsPanel } from '@/components/admin/secrets/SecretsPanel';
 
+import { CircuitBreakerPanel } from './CircuitBreakerPanel';
 import { DbStatsPanel } from './DbStatsPanel';
 import { RestartServicePanel } from './RestartServicePanel';
 import { ServicesDashboard } from './ServicesDashboard';
@@ -35,6 +36,9 @@ export default function ServiceDashboardPage() {
 
       {/* Secrets Management (staging/dev) */}
       <SecretsPanel />
+
+      {/* Circuit Breaker States (Issue #3.4) */}
+      <CircuitBreakerPanel />
     </div>
   );
 }

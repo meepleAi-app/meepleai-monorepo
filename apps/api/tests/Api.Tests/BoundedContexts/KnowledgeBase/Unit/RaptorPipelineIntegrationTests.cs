@@ -258,6 +258,11 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
 
     private PdfProcessingPipelineService CreatePipelineService(bool withRaptor)
     {
+        var languageDetectorMock = new Mock<ILanguageDetector>();
+        languageDetectorMock
+            .Setup(l => l.Detect(It.IsAny<string>()))
+            .Returns(new LanguageDetectionResult("en", true, 0.99));
+
         return new PdfProcessingPipelineService(
             _db,
             _pdfTextExtractorMock.Object,
@@ -267,7 +272,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
             _blobStorageServiceMock.Object,
             _timeProvider,
             _logger,
-            Mock.Of<ILanguageDetector>(d => d.Detect(It.IsAny<string>()) == new LanguageDetectionResult("en", true, 0.95, null)),
+            languageDetectorMock.Object,
             Mock.Of<IChunkTranslationService>(),
             raptorIndexer: withRaptor ? _raptorIndexerMock.Object : null,
             entityExtractor: null,

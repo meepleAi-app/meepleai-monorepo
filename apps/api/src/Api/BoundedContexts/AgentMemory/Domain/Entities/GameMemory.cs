@@ -42,15 +42,7 @@ internal sealed class GameMemory : AggregateRoot<Guid>
 
     public void AddHouseRule(string description, HouseRuleSource source)
     {
-        if (string.IsNullOrWhiteSpace(description))
-            throw new ArgumentException("Description cannot be empty.", nameof(description));
-
-        _houseRules.Add(new HouseRule
-        {
-            Description = description,
-            AddedAt = DateTime.UtcNow,
-            Source = source
-        });
+        _houseRules.Add(HouseRule.Create(description, source));
     }
 
     public void SetCustomSetup(SetupChecklistData setup)
@@ -60,14 +52,6 @@ internal sealed class GameMemory : AggregateRoot<Guid>
 
     public void AddNote(string content, Guid? addedByUserId)
     {
-        if (string.IsNullOrWhiteSpace(content))
-            throw new ArgumentException("Content cannot be empty.", nameof(content));
-
-        _notes.Add(new MemoryNote
-        {
-            Content = content,
-            AddedAt = DateTime.UtcNow,
-            AddedByUserId = addedByUserId
-        });
+        _notes.Add(MemoryNote.Create(content, addedByUserId));
     }
 }

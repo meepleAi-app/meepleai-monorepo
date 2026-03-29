@@ -1,8 +1,8 @@
 #pragma warning disable MA0002 // Dictionary without StringComparer
 #pragma warning disable MA0011 // Use IFormatProvider
 using System.Text.Json;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
@@ -15,12 +15,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 /// </summary>
 internal sealed class LedgerModeHandler : IAgentModeHandler
 {
-    private readonly IGameSessionStateRepository _sessionStateRepository;
+    private readonly IGameSessionStateReader _sessionStateRepository;
     private readonly IStateParser _stateParser;
     private readonly ILogger<LedgerModeHandler> _logger;
 
     public LedgerModeHandler(
-        IGameSessionStateRepository sessionStateRepository,
+        IGameSessionStateReader sessionStateRepository,
         IStateParser stateParser,
         ILogger<LedgerModeHandler> logger)
     {

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, beforeEach } from 'vitest';
 
-import { useSessionStore } from '@/store/session';
+import { useSessionStore } from '@/stores/session';
 import { MobileSessionLayout } from '../MobileSessionLayout';
 
 const defaultProps = {

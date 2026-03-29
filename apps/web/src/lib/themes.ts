@@ -12,19 +12,14 @@
 
 export type ThemeMode = 'light' | 'dark';
 
-export type PresetThemeName =
-  | 'default'
-  | 'forest'
-  | 'sunset'
-  | 'ocean'
-  | 'midnight';
+export type PresetThemeName = 'default' | 'forest' | 'sunset' | 'ocean' | 'midnight' | 'gaming';
 
 export type AccessibilityMode =
   | 'none'
   | 'high-contrast'
-  | 'deuteranopia'  // Red-green color blindness (most common)
-  | 'protanopia'    // Red color blindness
-  | 'tritanopia';   // Blue-yellow color blindness
+  | 'deuteranopia' // Red-green color blindness (most common)
+  | 'protanopia' // Red color blindness
+  | 'tritanopia'; // Blue-yellow color blindness
 
 export interface ThemeColors {
   primary: string;
@@ -58,12 +53,12 @@ export interface Theme {
 
 // ========== DEFAULT (BLUE) ==========
 const defaultLight: ThemeColors = {
-  primary: '221 83% 53%',           // Blue #0070f3
+  primary: '221 83% 53%', // Blue #0070f3
   primaryForeground: '210 40% 98%',
-  secondary: '142 76% 29%',         // Darker Green for WCAG AA contrast (was 36%)
+  secondary: '142 76% 29%', // Darker Green for WCAG AA contrast (was 36%)
   secondaryForeground: '0 0% 100%', // Pure white for better contrast
 
-  accent: '36 100% 50%',            // Orange #ff9800
+  accent: '36 100% 50%', // Orange #ff9800
   accentForeground: '240 5.9% 10%',
   muted: '240 4.8% 95.9%',
   mutedForeground: '240 5% 40%',
@@ -72,7 +67,7 @@ const defaultLight: ThemeColors = {
 };
 
 const defaultDark: ThemeColors = {
-  primary: '221 83% 63%',           // Lighter for dark mode
+  primary: '221 83% 63%', // Lighter for dark mode
   primaryForeground: '240 5.9% 10%',
   secondary: '142 76% 46%',
   secondaryForeground: '240 5.9% 10%',
@@ -86,11 +81,11 @@ const defaultDark: ThemeColors = {
 
 // ========== FOREST (GREEN) ==========
 const forestLight: ThemeColors = {
-  primary: '142 71% 45%',           // Forest Green #2ecc71
+  primary: '142 71% 45%', // Forest Green #2ecc71
   primaryForeground: '0 0% 100%',
-  secondary: '120 61% 34%',         // Dark Green #27ae60
+  secondary: '120 61% 34%', // Dark Green #27ae60
   secondaryForeground: '0 0% 100%',
-  accent: '84 81% 44%',             // Lime #7cb342
+  accent: '84 81% 44%', // Lime #7cb342
   accentForeground: '120 10% 10%',
   muted: '120 20% 95%',
   mutedForeground: '120 10% 45%',
@@ -113,11 +108,11 @@ const forestDark: ThemeColors = {
 
 // ========== SUNSET (WARM ORANGE/RED) ==========
 const sunsetLight: ThemeColors = {
-  primary: '14 100% 57%',           // Coral #ff6347
+  primary: '14 100% 57%', // Coral #ff6347
   primaryForeground: '0 0% 100%',
-  secondary: '28 80% 52%',          // Orange #f39c12
+  secondary: '28 80% 52%', // Orange #f39c12
   secondaryForeground: '0 0% 100%',
-  accent: '45 100% 51%',            // Gold #ffd700
+  accent: '45 100% 51%', // Gold #ffd700
   accentForeground: '30 10% 10%',
   muted: '30 30% 95%',
   mutedForeground: '30 10% 45%',
@@ -140,11 +135,11 @@ const sunsetDark: ThemeColors = {
 
 // ========== OCEAN (COOL TEAL/BLUE) ==========
 const oceanLight: ThemeColors = {
-  primary: '187 71% 44%',           // Turquoise #1abc9c
+  primary: '187 71% 44%', // Turquoise #1abc9c
   primaryForeground: '0 0% 100%',
-  secondary: '199 89% 48%',         // Cyan #3498db
+  secondary: '199 89% 48%', // Cyan #3498db
   secondaryForeground: '0 0% 100%',
-  accent: '210 100% 56%',           // Sky Blue #2196f3
+  accent: '210 100% 56%', // Sky Blue #2196f3
   accentForeground: '210 10% 10%',
   muted: '200 30% 95%',
   mutedForeground: '200 10% 45%',
@@ -167,11 +162,11 @@ const oceanDark: ThemeColors = {
 
 // ========== MIDNIGHT (PURPLE) ==========
 const midnightLight: ThemeColors = {
-  primary: '262 52% 47%',           // Purple #6c5ce7
+  primary: '262 52% 47%', // Purple #6c5ce7
   primaryForeground: '0 0% 100%',
-  secondary: '242 67% 63%',         // Indigo #667eea
+  secondary: '242 67% 63%', // Indigo #667eea
   secondaryForeground: '0 0% 100%',
-  accent: '291 64% 42%',            // Magenta #9b59b6
+  accent: '291 64% 42%', // Magenta #9b59b6
   accentForeground: '270 10% 10%',
   muted: '270 30% 95%',
   mutedForeground: '270 10% 45%',
@@ -192,6 +187,20 @@ const midnightDark: ThemeColors = {
   destructiveForeground: '0 0% 98%',
 };
 
+// ========== GAMING (PREMIUM DARK) ==========
+const gamingDark: ThemeColors = {
+  primary: '36 96% 53%', // Amber #f59e0b
+  primaryForeground: '0 0% 100%', // White
+  secondary: '262 83% 58%', // Purple #8b5cf6 (AI accent)
+  secondaryForeground: '0 0% 100%',
+  accent: '0 84% 60%', // Red #ef4444 (gradient end)
+  accentForeground: '0 0% 100%',
+  muted: '260 20% 12%', // Dark purple-gray #1a1333
+  mutedForeground: '215 20% 65%', // #94a3b8
+  destructive: '0 84% 60%',
+  destructiveForeground: '0 0% 100%',
+};
+
 // ========== ACCESSIBILITY MODES ==========
 
 /**
@@ -199,11 +208,11 @@ const midnightDark: ThemeColors = {
  * For users with low vision
  */
 const highContrastLight: ThemeColors = {
-  primary: '220 100% 30%',          // Dark Blue (7.5:1 contrast)
+  primary: '220 100% 30%', // Dark Blue (7.5:1 contrast)
   primaryForeground: '0 0% 100%',
-  secondary: '140 100% 25%',        // Dark Green (7.2:1 contrast)
+  secondary: '140 100% 25%', // Dark Green (7.2:1 contrast)
   secondaryForeground: '0 0% 100%',
-  accent: '30 100% 35%',            // Dark Orange (7.0:1 contrast)
+  accent: '30 100% 35%', // Dark Orange (7.0:1 contrast)
   accentForeground: '0 0% 100%',
   muted: '0 0% 96%',
   mutedForeground: '0 0% 20%',
@@ -212,11 +221,11 @@ const highContrastLight: ThemeColors = {
 };
 
 const highContrastDark: ThemeColors = {
-  primary: '220 100% 75%',          // Bright Blue (10.5:1 contrast)
+  primary: '220 100% 75%', // Bright Blue (10.5:1 contrast)
   primaryForeground: '0 0% 0%',
-  secondary: '140 100% 70%',        // Bright Green (10.2:1 contrast)
+  secondary: '140 100% 70%', // Bright Green (10.2:1 contrast)
   secondaryForeground: '0 0% 0%',
-  accent: '30 100% 75%',            // Bright Orange (10.0:1 contrast)
+  accent: '30 100% 75%', // Bright Orange (10.0:1 contrast)
   accentForeground: '0 0% 0%',
   muted: '0 0% 10%',
   mutedForeground: '0 0% 90%',
@@ -229,15 +238,15 @@ const highContrastDark: ThemeColors = {
  * Replaces red/green with blue/yellow spectrum
  */
 const deuteranopiaLight: ThemeColors = {
-  primary: '210 100% 50%',          // Blue
+  primary: '210 100% 50%', // Blue
   primaryForeground: '0 0% 100%',
-  secondary: '45 100% 40%',         // Yellow-Orange
+  secondary: '45 100% 40%', // Yellow-Orange
   secondaryForeground: '0 0% 100%',
-  accent: '280 60% 50%',            // Purple
+  accent: '280 60% 50%', // Purple
   accentForeground: '0 0% 100%',
   muted: '210 20% 95%',
   mutedForeground: '210 10% 45%',
-  destructive: '30 100% 40%',       // Orange (instead of red)
+  destructive: '30 100% 40%', // Orange (instead of red)
   destructiveForeground: '0 0% 98%',
 };
 
@@ -259,15 +268,15 @@ const deuteranopiaDark: ThemeColors = {
  * Emphasizes blue/yellow spectrum
  */
 const protanopiaLight: ThemeColors = {
-  primary: '200 100% 45%',          // Cyan
+  primary: '200 100% 45%', // Cyan
   primaryForeground: '0 0% 100%',
-  secondary: '50 100% 45%',         // Yellow
+  secondary: '50 100% 45%', // Yellow
   secondaryForeground: '0 0% 0%',
-  accent: '260 70% 50%',            // Blue-Purple
+  accent: '260 70% 50%', // Blue-Purple
   accentForeground: '0 0% 100%',
   muted: '200 20% 95%',
   mutedForeground: '200 10% 45%',
-  destructive: '40 100% 40%',       // Dark Yellow (instead of red)
+  destructive: '40 100% 40%', // Dark Yellow (instead of red)
   destructiveForeground: '0 0% 98%',
 };
 
@@ -289,15 +298,15 @@ const protanopiaDark: ThemeColors = {
  * Emphasizes red/cyan spectrum
  */
 const tritanopiaLight: ThemeColors = {
-  primary: '340 90% 50%',           // Pink-Red
+  primary: '340 90% 50%', // Pink-Red
   primaryForeground: '0 0% 100%',
-  secondary: '180 70% 40%',         // Cyan
+  secondary: '180 70% 40%', // Cyan
   secondaryForeground: '0 0% 100%',
-  accent: '0 80% 50%',              // Red
+  accent: '0 80% 50%', // Red
   accentForeground: '0 0% 100%',
   muted: '0 10% 95%',
   mutedForeground: '0 5% 45%',
-  destructive: '160 100% 30%',      // Dark Cyan (instead of red)
+  destructive: '160 100% 30%', // Dark Cyan (instead of red)
   destructiveForeground: '0 0% 98%',
 };
 
@@ -392,6 +401,14 @@ export const THEMES: Theme[] = [
     mode: 'dark',
     colors: midnightDark,
   },
+  // Gaming theme - Dark only
+  {
+    id: 'gaming-dark',
+    name: 'Gaming',
+    description: 'Premium dark theme with amber accents and glassmorphism',
+    mode: 'dark' as ThemeMode,
+    colors: gamingDark,
+  },
   // Accessibility modes
   {
     id: 'high-contrast-light',
@@ -468,7 +485,7 @@ export const THEME_STORAGE_KEY = 'meepleai-theme';
  * Get theme by ID
  */
 export function getTheme(themeId: string): Theme | undefined {
-  return THEMES.find((t) => t.id === themeId);
+  return THEMES.find(t => t.id === themeId);
 }
 
 /**
@@ -524,11 +541,7 @@ export function applyTheme(theme: Theme): void {
 /**
  * Create custom theme
  */
-export function createCustomTheme(
-  name: string,
-  mode: ThemeMode,
-  colors: ThemeColors
-): Theme {
+export function createCustomTheme(name: string, mode: ThemeMode, colors: ThemeColors): Theme {
   return {
     id: `custom-${Date.now()}`,
     name,

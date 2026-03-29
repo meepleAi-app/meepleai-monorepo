@@ -1,12 +1,11 @@
-using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
-using Api.BoundedContexts.SystemConfiguration.Application.Services;
-using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Configuration;
+using Api.SharedKernel.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using RagStrategy = Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagStrategy;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 
@@ -44,10 +43,10 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
     }
 
     /// <inheritdoc/>
-    public LlmRoutingDecision SelectProvider(User? user, RagStrategy strategy, string? context = null, string? region = null)
+    public LlmRoutingDecision SelectProvider(LlmUserContext userContext, RagStrategy strategy, string? context = null, string? region = null)
     {
-        var userId = user?.Id.ToString() ?? "anonymous";
-        var tier = MapUserToLlmTier(user);
+        var userId = userContext.UserId?.ToString() ?? "anonymous";
+        var tier = userContext.Tier;
 
         var settings = _aiSettings.Value;
 
@@ -243,45 +242,6 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         // Both providers disabled
         throw new InvalidOperationException(
             $"Both AI providers are disabled. Cannot route strategy {strategy.GetDisplayName()}.");
-    }
-
-    /// <summary>
-    /// Map user to LlmUserTier based on role AND subscription tier.
-    /// E4-2: Tier-aware LLM routing — premium subscribers get Premium tier
-    /// regardless of their role. Admin role always wins.
-    /// When user is null (internal pipeline calls like ConversationQueryRewriter),
-    /// default to User tier so internal services aren't blocked by Anonymous tier
-    /// which has zero strategy access.
-    /// </summary>
-    internal static LlmUserTier MapUserToLlmTier(User? user)
-    {
-        if (user is null)
-        {
-            // Internal pipeline calls (e.g., query rewriting) pass user=null.
-            // Use User tier as default so they can access basic strategies.
-            return LlmUserTier.User;
-        }
-
-        // Admin role always gets Admin tier (highest access)
-        if (string.Equals(user.Role.Value, "admin", StringComparison.OrdinalIgnoreCase))
-        {
-            return LlmUserTier.Admin;
-        }
-
-        // Editor role gets Editor tier
-        if (string.Equals(user.Role.Value, "editor", StringComparison.OrdinalIgnoreCase))
-        {
-            return LlmUserTier.Editor;
-        }
-
-        // E4-2: Check subscription tier for premium/enterprise users
-        if (user.Tier.IsPremium() || user.Tier.IsEnterprise())
-        {
-            return LlmUserTier.Premium;
-        }
-
-        // Free/normal subscription tier → User LLM tier
-        return LlmUserTier.User;
     }
 
     /// <summary>

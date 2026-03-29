@@ -29,13 +29,13 @@ internal class AlertRuleRepository : RepositoryBase, IAlertRuleRepository
     }
 
     public async Task<List<AlertRule>> GetAllAsync(CancellationToken cancellationToken = default) =>
-        (await DbContext.AlertRules.ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
+        (await DbContext.AlertRules.Take(1000).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
 
     public async Task<List<AlertRule>> GetEnabledAsync(CancellationToken cancellationToken = default) =>
-        (await DbContext.AlertRules.Where(r => r.IsEnabled).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
+        (await DbContext.AlertRules.Where(r => r.IsEnabled).Take(1000).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
 
     public async Task<List<AlertRule>> GetByAlertTypeAsync(string alertType, CancellationToken cancellationToken = default) =>
-        (await DbContext.AlertRules.Where(r => r.AlertType == alertType).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
+        (await DbContext.AlertRules.Where(r => r.AlertType == alertType).Take(1000).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
 
     public async Task AddAsync(AlertRule alertRule, CancellationToken cancellationToken = default)
     {

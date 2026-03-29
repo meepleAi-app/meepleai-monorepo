@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { Gamepad2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import type { GameNightGame } from '@/store/game-night';
+import type { GameNightGame } from '@/stores/game-night';
 
 interface InlineGamePickerProps {
   games: GameNightGame[];

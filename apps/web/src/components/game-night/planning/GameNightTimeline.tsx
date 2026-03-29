@@ -3,7 +3,7 @@
 import { Clock, Coffee, Gamepad2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import type { TimelineSlot } from '@/store/game-night';
+import type { TimelineSlot } from '@/stores/game-night';
 
 const SLOT_CONFIG = {
   game: { icon: Gamepad2, bg: 'bg-primary/10 border-primary/20', label: 'Gioco' },

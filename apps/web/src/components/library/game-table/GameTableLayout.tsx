@@ -144,6 +144,15 @@ function DrawerOverlay({
             exit="hidden"
             transition={{ duration: 0.2 }}
             onClick={onClose}
+            role="button"
+            tabIndex={0}
+            aria-label="Chiudi"
+            onKeyDown={(e: React.KeyboardEvent) => {
+              if (onClose && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                onClose();
+              }
+            }}
           />
 
           {/* Panel */}
@@ -225,7 +234,19 @@ export function GameTableLayout({
           layout
           className={cn('shrink-0 transition-all', focusMode ? 'h-[85vh]' : 'h-[60vh]')}
         >
-          <div className="h-full" onClick={() => !focusMode && setFocusMode(true)}>
+          <div
+            className="h-full"
+            role={!focusMode ? 'button' : undefined}
+            tabIndex={!focusMode ? 0 : undefined}
+            onClick={() => !focusMode && setFocusMode(true)}
+            onKeyDown={e => {
+              if (!focusMode && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                setFocusMode(true);
+              }
+            }}
+            aria-label={!focusMode ? 'Espandi la carta' : undefined}
+          >
             {card}
           </div>
         </motion.div>

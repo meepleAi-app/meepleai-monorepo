@@ -1,5 +1,5 @@
-using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using RagStrategy = Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagStrategy;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -15,12 +15,12 @@ internal interface ILlmRoutingStrategy
     /// Issue #3435: Strategy-based routing (strategy determines model, tier validates access).
     /// Issue #28: Region-aware routing — region parameter accepted but currently ignored (no-op).
     /// </summary>
-    /// <param name="user">User making the request (null for anonymous)</param>
+    /// <param name="userContext">User routing context (use LlmUserContext.Anonymous for unauthenticated requests)</param>
     /// <param name="strategy">RAG strategy that determines model selection</param>
     /// <param name="context">Additional context for routing decision</param>
     /// <param name="region">Geographic region hint for future multi-region routing (currently ignored)</param>
     /// <returns>Routing decision with provider name and model ID</returns>
-    LlmRoutingDecision SelectProvider(User? user, RagStrategy strategy, string? context = null, string? region = null);
+    LlmRoutingDecision SelectProvider(LlmUserContext userContext, RagStrategy strategy, string? context = null, string? region = null);
 }
 
 /// <summary>

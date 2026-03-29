@@ -108,15 +108,16 @@ internal class HybridCacheService : IHybridCacheService
     }
 
     /// <summary>
-    /// Creates cache entry options with the specified expiration
+    /// Creates cache entry options with the specified expiration.
+    /// Compression is enabled by default (no flags set). Callers caching AI-generated content
+    /// that is already compressed by the LLM context should pass DisableCompression explicitly.
     /// </summary>
     private static HybridCacheEntryOptions CreateCacheEntryOptions(TimeSpan expiration)
     {
         return new HybridCacheEntryOptions
         {
             Expiration = expiration,
-            LocalCacheExpiration = expiration, // L1 cache expiration
-            Flags = HybridCacheEntryFlags.DisableCompression // AI responses already compressed by LLM
+            LocalCacheExpiration = expiration // L1 cache expiration
         };
     }
 

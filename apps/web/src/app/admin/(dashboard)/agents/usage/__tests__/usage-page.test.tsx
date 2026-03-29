@@ -22,33 +22,40 @@ vi.mock('recharts', () => ({
   PieChart: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="pie-chart">{children}</div>
   ),
-  Area:          () => <div data-testid="area" />,
-  Pie:           () => <div data-testid="pie" />,
-  Cell:          () => <div data-testid="cell" />,
-  XAxis:         () => <div data-testid="x-axis" />,
-  YAxis:         () => <div data-testid="y-axis" />,
+  Area: () => <div data-testid="area" />,
+  Pie: () => <div data-testid="pie" />,
+  Cell: () => <div data-testid="cell" />,
+  XAxis: () => <div data-testid="x-axis" />,
+  YAxis: () => <div data-testid="y-axis" />,
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
-  Tooltip:       () => <div data-testid="tooltip" />,
-  Legend:        () => <div data-testid="legend" />,
+  Tooltip: () => <div data-testid="tooltip" />,
+  Legend: () => <div data-testid="legend" />,
 }));
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
-const mockGetOpenRouterStatus  = vi.hoisted(() => vi.fn());
-const mockGetUsageTimeline     = vi.hoisted(() => vi.fn());
-const mockGetUsageCosts        = vi.hoisted(() => vi.fn());
-const mockGetUsageFreeQuota    = vi.hoisted(() => vi.fn());
-const mockGetRecentRequests    = vi.hoisted(() => vi.fn());
+const mockGetOpenRouterStatus = vi.hoisted(() => vi.fn());
+const mockGetUsageTimeline = vi.hoisted(() => vi.fn());
+const mockGetUsageCosts = vi.hoisted(() => vi.fn());
+const mockGetUsageFreeQuota = vi.hoisted(() => vi.fn());
+const mockGetRecentRequests = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api/clients/adminClient', () => ({
   createAdminClient: () => ({
     getOpenRouterStatus: mockGetOpenRouterStatus,
-    getUsageTimeline:    mockGetUsageTimeline,
-    getUsageCosts:       mockGetUsageCosts,
-    getUsageFreeQuota:   mockGetUsageFreeQuota,
-    getRecentRequests:   mockGetRecentRequests,
+    getUsageTimeline: mockGetUsageTimeline,
+    getUsageCosts: mockGetUsageCosts,
+    getUsageFreeQuota: mockGetUsageFreeQuota,
+    getRecentRequests: mockGetRecentRequests,
   }),
   HttpClient: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/admin/agents/usage',
+  redirect: vi.fn(),
 }));
 
 vi.mock('@/lib/api/core/httpClient', () => ({
@@ -68,46 +75,46 @@ vi.mock('next/navigation', () => ({
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const mockStatus = {
-  balanceUsd:         4.5,
-  dailySpendUsd:      0.0025,
-  todayRequestCount:  42,
-  currentRpm:         80,
-  limitRpm:           200,
+  balanceUsd: 4.5,
+  dailySpendUsd: 0.0025,
+  todayRequestCount: 42,
+  currentRpm: 80,
+  limitRpm: 200,
   utilizationPercent: 0.4,
-  isThrottled:        false,
-  isFreeTier:         false,
-  rateLimitInterval:  'minute',
-  lastUpdated:        '2026-02-22T10:00:00Z',
+  isThrottled: false,
+  isFreeTier: false,
+  rateLimitInterval: 'minute',
+  lastUpdated: '2026-02-22T10:00:00Z',
 };
 
 const mockTimeline = {
-  buckets:       [],
-  period:        '24h',
+  buckets: [],
+  period: '24h',
   groupedByHour: true,
   totalRequests: 0,
-  totalCostUsd:  0,
+  totalCostUsd: 0,
 };
 
 const mockCosts = {
-  byModel:       [],
-  bySource:      [],
-  byTier:        [],
-  totalCostUsd:  0,
+  byModel: [],
+  bySource: [],
+  byTier: [],
+  totalCostUsd: 0,
   totalRequests: 0,
-  period:        '7d',
+  period: '7d',
 };
 
 const mockFreeQuota = {
-  models:                 [],
+  models: [],
   totalFreeRequestsToday: 0,
-  generatedAt:            '2026-02-22T10:00:00Z',
+  generatedAt: '2026-02-22T10:00:00Z',
 };
 
 const mockRequests = {
-  items:      [],
-  total:      0,
-  page:       1,
-  pageSize:   20,
+  items: [],
+  total: 0,
+  page: 1,
+  pageSize: 20,
   totalPages: 0,
 };
 

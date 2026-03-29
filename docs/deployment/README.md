@@ -58,7 +58,7 @@ cd apps/api/src/Api && dotnet run --launch-profile Integration
 cd apps/web && pnpm dev
 ```
 
-**Prerequisiti**: chiave SSH `~/.ssh/meepleai-staging`, secrets in `infra/secrets/integration/`.
+**Prerequisiti**: chiave SSH `~/.ssh/meepleai-staging`, secrets in `infra/secrets/`.
 
 Tunnel ports: PG `:15432`, Redis `:16379`, Qdrant `:16333`, Embedding `:18000`, Reranker `:18003`, Unstructured `:18001`, SmolDocling `:18002`, Ollama `:21434`.
 
@@ -76,9 +76,9 @@ Tunnel ports: PG `:15432`, Redis `:16379`, Qdrant `:16333`, Embedding `:18000`, 
 
 Compose files:
 - `docker-compose.yml` — base (no ports, no secrets)
-- `compose.dev.yml` — dev override (ports, `secrets/dev/`)
-- `compose.staging.yml` — staging (Traefik labels, `secrets/staging/`)
-- `compose.integration.yml` — integration (SSH tunnel, `secrets/integration/`)
+- `compose.dev.yml` — dev override (ports, `secrets/`)
+- `compose.staging.yml` — staging (Traefik labels, `secrets/`)
+- `compose.integration.yml` — integration (SSH tunnel, `secrets/`)
 - `compose.traefik.yml` — reverse proxy
 
 Dev override auto-loaded via `infra/.env`:
@@ -390,7 +390,7 @@ sudo ufw allow 22/tcp 80/tcp 443/tcp && sudo ufw enable
 | PDF upload 403 | Feature flag | Insert `Features.PdfUpload = true` in DB |
 | SuperAdmin 403 | Auth policy | Verificare che le policy includano `"SuperAdmin"` |
 | Endpoint duplicato | API crash on startup | Check `WithName()` unico per ogni endpoint |
-| Redis crash | `requirepass` config error | Verificare `secrets/dev/redis.secret` esiste |
+| Redis crash | `requirepass` config error | Verificare `secrets/redis.secret` esiste |
 | CORS errors | `CORS__AllowedOrigins` | Aggiornare env, restart |
 
 ### Health Checks

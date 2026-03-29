@@ -52,7 +52,7 @@ public sealed class N8NConfiguration : AggregateRoot<Guid>
         ApiKeyEncrypted = apiKeyEncrypted;
         WebhookUrl = webhookUrl;
         IsActive = true;
-        CreatedAt = DateTime.UtcNow;
+        CreatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
         UpdatedAt = CreatedAt;
         CreatedByUserId = createdByUserId;
 
@@ -79,7 +79,7 @@ public sealed class N8NConfiguration : AggregateRoot<Guid>
         if (apiKeyEncrypted != null) ApiKeyEncrypted = apiKeyEncrypted;
         if (webhookUrl != null) WebhookUrl = webhookUrl;
 
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
 
         AddDomainEvent(new N8NConfigurationUpdatedEvent(
             Id,
@@ -95,7 +95,7 @@ public sealed class N8NConfiguration : AggregateRoot<Guid>
     public void Activate()
     {
         IsActive = true;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ public sealed class N8NConfiguration : AggregateRoot<Guid>
     public void Deactivate()
     {
         IsActive = false;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 
     /// <summary>
@@ -112,9 +112,9 @@ public sealed class N8NConfiguration : AggregateRoot<Guid>
     /// </summary>
     public void RecordTestResult(bool success, string result)
     {
-        LastTestedAt = DateTime.UtcNow;
+        LastTestedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
         LastTestResult = result;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
 
         AddDomainEvent(new N8NConfigurationTestedEvent(
             Id,

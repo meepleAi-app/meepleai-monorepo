@@ -1,5 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
-using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
+using Api.SharedKernel.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.SharedKernel.Application.Services;

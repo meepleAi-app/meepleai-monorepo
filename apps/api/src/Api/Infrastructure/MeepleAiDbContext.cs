@@ -80,6 +80,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ProcessingQueueConfigEntity> ProcessingQueueConfigs => Set<ProcessingQueueConfigEntity>(); // ISSUE-5455: Queue configuration
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
+    public DbSet<PgVectorEmbeddingEntity> PgVectorEmbeddings => Set<PgVectorEmbeddingEntity>(); // RAG data backup: typed access to pgvector_embeddings
     public DbSet<BoundedContexts.Administration.Domain.Entities.UserAiConsent> UserAiConsents => Set<BoundedContexts.Administration.Domain.Entities.UserAiConsent>(); // ISSUE-5512: GDPR AI consent
     public DbSet<BoundedContexts.Administration.Domain.Entities.UserProfile> UserProfiles => Set<BoundedContexts.Administration.Domain.Entities.UserProfile>(); // Phase 6: Admin user profile projection
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget> UserBudgets => Set<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget>(); // Phase 6: Budget/tier projection
@@ -183,6 +184,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition> TierDefinitions => Set<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition>(); // D3: Tier system definitions
     public DbSet<RaptorSummaryEntity> RaptorSummaries => Set<RaptorSummaryEntity>(); // RAG Enhancement: RAPTOR hierarchical summaries
     public DbSet<GameEntityRelationEntity> GameEntityRelations => Set<GameEntityRelationEntity>(); // RAG Enhancement: Graph RAG entity relations
+    public DbSet<BoundedContexts.Administration.Domain.Entities.ServiceCallLogEntry> ServiceCallLogs => Set<BoundedContexts.Administration.Domain.Entities.ServiceCallLogEntry>(); // Admin logging: external service call history
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
@@ -290,6 +292,7 @@ public class MeepleAiDbContext : DbContext
             modelBuilder.Entity<AgentGameStateSnapshotEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<ConversationMemoryEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<StrategyPatternEntity>().Ignore(e => e.Embedding);
+            modelBuilder.Entity<PgVectorEmbeddingEntity>().Ignore(e => e.Vector);
         }
 
         // Ignore domain aggregate roots - EF Core should only map persistence entities

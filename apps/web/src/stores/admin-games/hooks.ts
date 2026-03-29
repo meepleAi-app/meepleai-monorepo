@@ -79,10 +79,12 @@ export function useAdminGamesData() {
       if (filters.mechanicIds) params.mechanicIds = filters.mechanicIds;
 
       // Use admin endpoint to get all statuses
+      const statusNames = ['Draft', 'PendingApproval', 'Published', 'Archived'] as const;
+      const statusStr = filters.status !== null ? statusNames[filters.status] : undefined;
       const result = await sharedGames.getAll({
         page,
         pageSize,
-        status: filters.status ?? undefined,
+        status: statusStr,
       });
 
       setGames(result);

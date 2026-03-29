@@ -1,7 +1,7 @@
-using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Projections;
+using Api.SharedKernel.Domain.Enums;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 

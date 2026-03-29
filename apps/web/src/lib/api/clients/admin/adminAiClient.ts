@@ -776,6 +776,51 @@ export function createAdminAiClient(http: HttpClient) {
       return result;
     },
 
+    // ========== RAG Query Testing (Playground) ==========
+
+    async testRagQuery(params: {
+      query: string;
+      strategy?: string;
+      model?: string;
+      temperature?: number;
+      topK?: number;
+      gameScope?: string;
+    }): Promise<{
+      answer: string;
+      strategy: string;
+      metrics: { latencyMs: number; tokens: number; cost: number; confidence: number };
+      chunks: { id: string; text: string; score: number }[];
+    }> {
+      const response = await http.post('/api/v1/agents/chat/ask', {
+        Question: params.query,
+        Strategy: params.strategy,
+        TopK: params.topK ?? 5,
+        GameId: params.gameScope || undefined,
+        Language: 'auto',
+      });
+      const res = response as Record<string, unknown>;
+      const tokenUsage = res.tokenUsage as Record<string, number> | undefined;
+      const costBreakdown = res.costBreakdown as Record<string, number> | undefined;
+      const retrievedChunks = res.retrievedChunks as
+        | { id?: string; text?: string; score?: number }[]
+        | undefined;
+      return {
+        answer: (res.answer as string) ?? '[Nessuna risposta]',
+        strategy: (res.strategy as string) ?? params.strategy ?? 'HybridRAG',
+        metrics: {
+          latencyMs: (res.latencyMs as number) ?? 0,
+          tokens: tokenUsage?.totalTokens ?? 0,
+          cost: costBreakdown?.totalCost ?? 0,
+          confidence: (res.confidence as number) ?? 0,
+        },
+        chunks: (retrievedChunks ?? []).map((c, i) => ({
+          id: c.id ?? String(i),
+          text: c.text ?? '',
+          score: c.score ?? 0,
+        })),
+      };
+    },
+
     // ========== Caching ==========
 
     async clearCache(): Promise<void> {

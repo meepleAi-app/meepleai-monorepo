@@ -14,6 +14,37 @@ MeepleAI's multi-agent system consists of three specialized AI agents that work 
 
 All agents share a unified **Context Engineering framework** that assembles dynamic context from multiple sources (knowledge base, conversation memory, game state, tool metadata) for intelligent decision-making.
 
+## Current Implementation Status (2026-03-29)
+
+> **This document combines implemented features and aspirational architecture.**
+> The table below clarifies what is real vs planned.
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **RAG Chat (Tutor)** | ✅ Implemented | Hybrid search + LLM via OpenRouter, SSE streaming |
+| **Context Engineering** | ✅ Partial | KB + conversation memory. Game state + tool metadata: planned |
+| **Hybrid Search** | ✅ Implemented | pgvector (0.7 vector + 0.3 keyword) with RRF fusion |
+| **Cross-Encoder Reranking** | ⚠️ Configured, disabled | `ResilientRetrieval:EnableReranking = false` |
+| **Multi-Agent Router** | ✅ Implemented | Keyword-based IntentClassifier (not LLM-based) |
+| **Arbitro Agent** | ⚠️ Endpoint exists | Basic rules Q&A, no move validation engine |
+| **Decisore Agent** | ⚠️ Endpoint exists | Strategy suggestions via LLM, no MCTS engine |
+| **Narratore Agent** | ⚠️ Stub | Routing target only |
+| **LangGraph Orchestrator** | ❌ Not implemented | .NET handlers used instead |
+| **Qdrant Vector Store** | ❌ Not used | pgvector in PostgreSQL |
+| **MCTS Engine** | ❌ Not implemented | Future phase |
+| **Redis 3-tier Cache** | ❌ Not implemented | HybridCache (in-memory + DB) used |
+| **Python Agent Services** | ❌ Not implemented | All agents run in .NET |
+
+### Actual Tech Stack (vs Planned)
+
+| Planned | Actual |
+|---------|--------|
+| Qdrant | pgvector (PostgreSQL 16) |
+| LangGraph (Python) | .NET MediatR handlers |
+| Redis 3-tier | HybridCache (in-memory) |
+| MCTS + UCB1 | LLM-based strategy via OpenRouter |
+| GPT-4 / Claude | OpenRouter (default: llama-3.3-70b-instruct) |
+
 ## Architecture at a Glance
 
 ```
@@ -100,11 +131,11 @@ Result: Most relevant knight movement rules
 
 ### Phase 1: Foundation (Weeks 1-4)
 - ✅ Research completed (2026-02-02)
-- [ ] Enhance Qdrant with hybrid search
-- [ ] Integrate cross-encoder reranker
-- [ ] Extend PostgreSQL schema for memory
-- [ ] Implement Redis 3-tier caching
-- [ ] Create LangGraph orchestrator base
+- ✅ pgvector hybrid search (replaces Qdrant plan)
+- ⬜ Integrate cross-encoder reranker (configured, disabled)
+- ✅ PostgreSQL schema for memory (AgentMemory BC)
+- ⬜ Redis 3-tier caching (using HybridCache instead)
+- ⬜ Create LangGraph orchestrator base (using .NET handlers instead)
 
 ### Phase 2: Tutor Agent (Weeks 5-10)
 - [ ] Intent classification (setup/rules/general)

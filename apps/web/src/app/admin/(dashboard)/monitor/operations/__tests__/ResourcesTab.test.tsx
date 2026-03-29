@@ -137,7 +137,7 @@ describe('ResourcesTab', () => {
     // MetricCards show a spinner when loading
     expect(screen.getByText('Database')).toBeInTheDocument();
     expect(screen.getByText('Cache (Redis)')).toBeInTheDocument();
-    expect(screen.getByText('Vector Store (Qdrant)')).toBeInTheDocument();
+    expect(screen.getByText('Vector Store (pgvector)')).toBeInTheDocument();
   });
 
   it('renders database metric card with data', async () => {

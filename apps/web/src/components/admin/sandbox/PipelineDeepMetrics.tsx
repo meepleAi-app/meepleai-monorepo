@@ -29,7 +29,6 @@ export interface QualityIndicators {
 export interface DeepMetricsData {
   chunkSizeDistribution?: ChunkSizeBucket[];
   vectorStats?: VectorStats;
-  qdrantStats?: VectorStats;
   qualityIndicators?: QualityIndicators;
 }
 
@@ -72,9 +71,7 @@ export function PipelineDeepMetrics({ metrics }: PipelineDeepMetricsProps) {
       )}
 
       {/* Vector store stats */}
-      {(metrics.vectorStats ?? metrics.qdrantStats) && (
-        <VectorStatsCard stats={(metrics.vectorStats ?? metrics.qdrantStats)!} />
-      )}
+      {metrics.vectorStats && <VectorStatsCard stats={metrics.vectorStats} />}
 
       {/* Quality indicators */}
       {metrics.qualityIndicators && (

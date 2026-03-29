@@ -118,9 +118,12 @@ internal static class AdminSecretsEndpoints
         var updatedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var update in body.Updates)
         {
-            // Path traversal: canonicalize and verify stays inside secretsDir
+            // Path traversal: canonicalize and verify stays inside secretsDir.
+            // Append separator to prevent prefix-match bypass (e.g. /secrets matching /secrets-evil/).
             var filePath = Path.GetFullPath(Path.Combine(secretsDir, update.FileName));
-            if (!filePath.StartsWith(secretsDir, StringComparison.OrdinalIgnoreCase))
+            var normalizedDir = secretsDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            if (!filePath.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))
                 return Results.BadRequest(new { error = $"Invalid fileName: {update.FileName}" });
 
             if (!System.Text.RegularExpressions.Regex.IsMatch(update.Key, @"^[A-Za-z][A-Za-z0-9_]*$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))

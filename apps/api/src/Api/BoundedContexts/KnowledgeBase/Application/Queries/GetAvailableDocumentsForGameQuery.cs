@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -49,13 +50,22 @@ internal sealed class GetAvailableDocumentsForGameQueryHandler
     public async Task<AvailableDocumentsDto> Handle(
         GetAvailableDocumentsForGameQuery request, CancellationToken cancellationToken)
     {
-        // 1. Find agent for this game
+        // 1. Validate game is in user's library
+        var hasLibraryEntry = await _dbContext.UserLibraryEntries
+            .AsNoTracking()
+            .AnyAsync(e => e.SharedGameId == request.GameId && e.UserId == request.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!hasLibraryEntry)
+            throw new ForbiddenException("Gioco non presente nella tua libreria");
+
+        // 2. Find agent for this game
         var agent = await _dbContext.Agents
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.GameId == request.GameId, cancellationToken)
             .ConfigureAwait(false);
 
-        // 2. Get selected document IDs from agent config
+        // 3. Get selected document IDs from agent config
         var selectedDocIds = new HashSet<Guid>();
         if (agent != null)
         {
@@ -80,7 +90,7 @@ internal sealed class GetAvailableDocumentsForGameQueryHandler
             }
         }
 
-        // 3. Get all PDF documents for this game (shared + user's private)
+        // 4. Get all PDF documents for this game (shared + user's private)
         //    Privacy is determined by PrivateGameId != null (no IsPrivate column)
         var documents = await _dbContext.PdfDocuments
             .AsNoTracking()
@@ -91,7 +101,7 @@ internal sealed class GetAvailableDocumentsForGameQueryHandler
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // 4. Project to DTOs (done in-memory because selectedDocIds is local)
+        // 5. Project to DTOs (done in-memory because selectedDocIds is local)
         var documentDtos = documents
             .Select(d => new DocumentSelectionItemDto(
                 d.Id,
@@ -103,7 +113,7 @@ internal sealed class GetAvailableDocumentsForGameQueryHandler
                 d.PageCount))
             .ToList();
 
-        // 5. Split by type
+        // 6. Split by type
         var baseDocuments = documentDtos
             .Where(d => d.DocumentType.Equals("base", StringComparison.OrdinalIgnoreCase))
             .ToList();

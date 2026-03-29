@@ -37,7 +37,6 @@ export function ConfigAgentStep({
   const [typologyId, setTypologyId] = useState<string>();
   const [strategyName, setStrategyName] = useState<string>('Balanced');
   const [isCreating, setIsCreating] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([_pdfId]);
 
   const { data: currentUser } = useCurrentUser();

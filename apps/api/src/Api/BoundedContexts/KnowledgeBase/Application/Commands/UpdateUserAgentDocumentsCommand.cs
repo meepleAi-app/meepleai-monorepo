@@ -58,7 +58,9 @@ internal sealed class UpdateUserAgentDocumentsCommandHandler
         if (request.SelectedDocumentIds.Count > 0)
         {
             var validDocIds = await _dbContext.PdfDocuments
-                .Where(d => d.GameId == request.GameId && request.SelectedDocumentIds.Contains(d.Id))
+                .Where(d => d.GameId == request.GameId
+                    && request.SelectedDocumentIds.Contains(d.Id)
+                    && (d.PrivateGameId == null || d.UploadedByUserId == request.UserId))
                 .Select(d => new { d.Id, d.DocumentType })
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);

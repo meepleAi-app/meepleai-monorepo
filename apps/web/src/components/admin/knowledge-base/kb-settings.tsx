@@ -138,14 +138,9 @@ export function KBSettings() {
 
   const rebuildIndexMutation = useMutation({
     mutationFn: async () => {
-      // Rebuild all Qdrant collections
-      const collections = await adminClient.getVectorCollections();
-      const results = [];
-      for (const col of collections.collections) {
-        const result = await adminClient.rebuildQdrantIndex(col.name);
-        results.push(result);
-      }
-      return results;
+      // Fetch vector stats to confirm pgvector index availability
+      const stats = await adminClient.getVectorStats();
+      return stats;
     },
     onSuccess: () => {
       setShowRebuildConfirm(false);

@@ -356,10 +356,10 @@ export default function DocumentsLibraryPage() {
             </div>
             <div className="flex items-center gap-2">
               <DatabaseIcon className="h-4 w-4 text-purple-500" />
-              <span className="text-muted-foreground">Qdrant:</span>
+              <span className="text-muted-foreground">Vectors:</span>
               <span className="font-medium">
-                {storageHealth.qdrant.isAvailable
-                  ? `${storageHealth.qdrant.vectorCount.toLocaleString()} vectors (${storageHealth.qdrant.memoryFormatted})`
+                {storageHealth.vectorStore.isAvailable
+                  ? `${storageHealth.vectorStore.vectorCount.toLocaleString()} vectors`
                   : 'Unavailable'}
               </span>
             </div>

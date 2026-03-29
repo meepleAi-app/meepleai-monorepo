@@ -14,6 +14,7 @@ import React from 'react';
 import { FileText, MessageSquare, Activity, ChevronRight, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { DocumentSelectionPanel } from '@/components/library/DocumentSelectionPanel';
 import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
 import type { AgentStatus } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
 import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
@@ -201,6 +202,16 @@ export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps):
           </div>
         </div>
       )}
+
+      {/* Agent Document Selection */}
+      <details className="mt-3">
+        <summary className="text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-300 select-none">
+          Gestisci documenti agente
+        </summary>
+        <div className="mt-2 bg-[#21262d] rounded-lg border border-[#30363d] p-3">
+          <DocumentSelectionPanel gameId={gameId} />
+        </div>
+      </details>
     </div>
   );
 }

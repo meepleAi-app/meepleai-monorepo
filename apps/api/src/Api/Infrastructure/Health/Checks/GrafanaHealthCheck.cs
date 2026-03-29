@@ -9,13 +9,16 @@ public class GrafanaHealthCheck : IHealthCheck
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<GrafanaHealthCheck> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public GrafanaHealthCheck(
         IConfiguration configuration,
-        ILogger<GrafanaHealthCheck> logger)
+        ILogger<GrafanaHealthCheck> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -29,7 +32,8 @@ public class GrafanaHealthCheck : IHealthCheck
 
         try
         {
-            using var client = new HttpClient { BaseAddress = new Uri(grafanaUrl) };
+            using var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(grafanaUrl);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 

@@ -4,12 +4,12 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries;
+using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Configuration;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
 using Api.Models;
-using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -123,7 +123,6 @@ internal static class AiEndpoints
         HttpContext context,
         IMediator mediator,
         IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
-        IFeatureFlagService featureFlags, // CONFIG-05
         ILogger<Program> logger,
         bool generateFollowUps = true, // CHAT-02: opt-in parameter (Issue #1188)
         CancellationToken ct = default)
@@ -132,7 +131,7 @@ internal static class AiEndpoints
         if (!authenticated) return error!;
 
         // CONFIG-05: Check if streaming responses feature is enabled
-        if (!await featureFlags.IsEnabledAsync("Features.StreamingResponses").ConfigureAwait(false))
+        if (!await mediator.Send(new IsFeatureEnabledQuery("Features.StreamingResponses"), ct).ConfigureAwait(false))
         {
             return Results.Json(
                 new { error = "feature_disabled", message = "Streaming responses are currently disabled", featureName = "Features.StreamingResponses" },
@@ -490,7 +489,6 @@ internal static class AiEndpoints
         SetupGuideRequest req,
         HttpContext context,
         IMediator mediator,
-        IFeatureFlagService featureFlags,
         ILogger<Program> logger,
         CancellationToken ct)
     {
@@ -498,7 +496,7 @@ internal static class AiEndpoints
         if (!authenticated) return error!;
 
         // CONFIG-05: Check if setup guide generation feature is enabled
-        if (!await featureFlags.IsEnabledAsync("Features.SetupGuideGeneration").ConfigureAwait(false))
+        if (!await mediator.Send(new IsFeatureEnabledQuery("Features.SetupGuideGeneration"), ct).ConfigureAwait(false))
         {
             return Results.Json(
                 new { error = "feature_disabled", message = "Setup guide generation is currently unavailable", featureName = "Features.SetupGuideGeneration" },

@@ -44,25 +44,30 @@ internal static class N8nWebhookEndpoints
         using var reader = new StreamReader(context.Request.Body, Encoding.UTF8, leaveOpen: true);
         var body = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-        // Validate HMAC signature
+        // Validate HMAC signature — fail closed: reject all requests when secret is not configured
         var secret = options.Value.WebhookSecret;
-        if (!string.IsNullOrEmpty(secret))
+        if (string.IsNullOrEmpty(secret))
         {
-            var signature = context.Request.Headers["X-Webhook-Signature"].FirstOrDefault();
-            if (string.IsNullOrEmpty(signature))
-            {
-                logger.LogWarning("n8n webhook missing X-Webhook-Signature header");
-                return Results.Unauthorized();
-            }
+            logger.LogError("N8n webhook received but WebhookSecret is not configured — rejecting. Set N8N_WEBHOOK_SECRET in n8n.secret");
+            return Results.Problem(
+                detail: "Webhook endpoint is not configured",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
 
-            var expectedSignature = ComputeHmacSha256(body, secret);
-            if (!CryptographicOperations.FixedTimeEquals(
-                    Encoding.UTF8.GetBytes(signature),
-                    Encoding.UTF8.GetBytes(expectedSignature)))
-            {
-                logger.LogWarning("n8n webhook signature mismatch");
-                return Results.Unauthorized();
-            }
+        var signature = context.Request.Headers["X-Webhook-Signature"].FirstOrDefault();
+        if (string.IsNullOrEmpty(signature))
+        {
+            logger.LogWarning("N8n webhook missing X-Webhook-Signature header");
+            return Results.Unauthorized();
+        }
+
+        var expectedSignature = ComputeHmacSha256(body, secret);
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(signature),
+                Encoding.UTF8.GetBytes(expectedSignature)))
+        {
+            logger.LogWarning("N8n webhook HMAC signature mismatch");
+            return Results.Unauthorized();
         }
 
         // Check idempotency key

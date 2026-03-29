@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260328200710_AddHnswIndexPgvectorEmbeddings")]
+    partial class AddHnswIndexPgvectorEmbeddings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -6672,8 +6675,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("GameId");
 
-                    // NOTE: Npgsql snapshot code generator emits HNSW index as separate HasIndex() chains.
-                    // This is a known codegen quirk — EF Core merges them by column at runtime. Functionally correct.
                     b.HasIndex("Vector")
                         .HasAnnotation("Npgsql:StorageParameter:ef_construction", 64)
                         .HasAnnotation("Npgsql:StorageParameter:m", 16);

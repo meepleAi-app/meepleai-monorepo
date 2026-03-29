@@ -7,9 +7,11 @@ Uses intfloat/multilingual-e5-large model for 5 languages: EN, IT, DE, FR, ES.
 AI-09: Multi-language embeddings support (LOCAL implementation)
 """
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
+from functools import partial
 from typing import List
 
 import torch
@@ -178,12 +180,15 @@ async def generate_embeddings(request: EmbeddingRequest):
         # We'll use "passage:" prefix as we're embedding PDF chunks
         prefixed_texts = [f"passage: {text}" for text in request.texts]
 
-        embeddings = model.encode(
+        loop = asyncio.get_running_loop()
+        encode_fn = partial(
+            model.encode,
             prefixed_texts,
             convert_to_numpy=True,
             show_progress_bar=False,
             normalize_embeddings=True  # L2 normalization for better similarity search
         )
+        embeddings = await loop.run_in_executor(None, encode_fn)
 
         # Convert to list of lists for JSON serialization
         embeddings_list = embeddings.tolist()

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Bot, Camera, Dice5, Send } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { useSessionStore } from '@/store/session';
+import { useSessionStore } from '@/stores/session';
 
 interface ActivityFeedInputBarProps {
   sessionId: string;

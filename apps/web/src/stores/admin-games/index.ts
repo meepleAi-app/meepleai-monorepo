@@ -4,7 +4,7 @@
  * Centralized exports for Zustand-based admin games state management.
  *
  * Usage:
- *   import { useAdminGamesStore, useAdminGames, useAdminGamesInit } from '@/store/admin-games';
+ *   import { useAdminGamesStore, useAdminGames, useAdminGamesInit } from '@/stores/admin-games';
  *
  * Features:
  * - Games list with pagination and filters

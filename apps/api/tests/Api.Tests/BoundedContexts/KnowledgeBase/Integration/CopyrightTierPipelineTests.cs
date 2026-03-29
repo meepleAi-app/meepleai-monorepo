@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.SharedKernel.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;

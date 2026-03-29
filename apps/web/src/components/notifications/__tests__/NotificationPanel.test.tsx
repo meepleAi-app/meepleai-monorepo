@@ -26,8 +26,18 @@ const mockMarkAllAsRead = vi.fn();
 
 // Mock next/link
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -46,7 +56,7 @@ vi.mock('@/components/pdf', () => ({
 // Store state container
 let storeState: Record<string, unknown> = {};
 
-vi.mock('@/store/notification/store', () => ({
+vi.mock('@/stores/notification/store', () => ({
   useNotificationStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) => {
     return typeof selector === 'function' ? selector(storeState) : storeState;
   }),

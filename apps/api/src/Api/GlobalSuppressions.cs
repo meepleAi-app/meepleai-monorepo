@@ -9,19 +9,27 @@ using System.Diagnostics.CodeAnalysis;
 // CA1848: Use the LoggerMessage delegates
 [assembly: SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "High volume, low impact. Requires pervasive refactoring.")]
 
-
-
 // CA1031: Do not catch general exception types
-[assembly: SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Legacy error handling pattern.")]
+// Kept as a global suppression because catch(Exception) is used across ~425 files at legitimate
+// service/infrastructure boundaries: health checks, background tasks, middleware, and event handlers
+// where the caller must receive a result or the process must continue regardless of exception type.
+// Files that are clearly boundary points already carry local #pragma warning disable CA1031 comments
+// (244 files as of this writing). The remaining sites are tracked for incremental improvement.
+// Do NOT use this global as license to swallow exceptions silently — every catch site must log or re-throw.
+[assembly: SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Intentional at service/infrastructure/middleware boundaries. ~244 sites have local pragmas; remainder tracked for incremental improvement. See GlobalSuppressions.cs comment.")]
 
 // CA1305: Specify IFormatProvider
-[assembly: SuppressMessage("Globalization", "CA1305:Specify IFormatProvider", Justification = "Local application context.")]
+[assembly: SuppressMessage("Globalization", "CA1305:Specify IFormatProvider", Justification = "Local application context — all string formatting is user-facing UI text or internal logging, not culture-sensitive data exchange.")]
 
 // CA2016: Forward the 'CancellationToken' parameter to methods
-[assembly: SuppressMessage("Reliability", "CA2016:Forward the 'CancellationToken' parameter to methods", Justification = "To be addressed in async reliability pass.")]
+// Kept as global suppression because CancellationToken propagation gaps exist across hundreds of
+// async call sites in services, repositories, and event handlers. Fixing all sites requires a
+// dedicated async-reliability pass to avoid unintentional behavioral changes in long-running tasks.
+// New code should always forward CancellationToken where available.
+[assembly: SuppressMessage("Reliability", "CA2016:Forward the 'CancellationToken' parameter to methods", Justification = "Hundreds of sites require a dedicated async-reliability pass. New code should always forward CancellationToken. See GlobalSuppressions.cs comment.")]
 
 // CA1711: Identifiers should not have incorrect suffix
-[assembly: SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "Legacy naming conventions.")]
+[assembly: SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "Domain-driven naming uses suffixes like 'Exception', 'Collection', 'Repository' that match DDD conventions but trigger this rule.")]
 
 // CA1861: Prefer 'static readonly' fields over constant array arguments
 [assembly: SuppressMessage("Performance", "CA1861:Prefer 'static readonly' fields over constant array arguments", Justification = "Migrations are executed once and do not require this optimization", Scope = "namespaceanddescendants", Target = "~N:Api.Migrations")]

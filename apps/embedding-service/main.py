@@ -93,6 +93,12 @@ async def lifespan(app: FastAPI):
     try:
         model = SentenceTransformer(MODEL_NAME, device=DEVICE)
         logger.info(f"Model loaded successfully. Embedding dimension: {model.get_sentence_embedding_dimension()}")
+
+        logger.info("Warming up embedding model...")
+        warmup_texts = ["warmup"]
+        with torch.no_grad():
+            model.encode(warmup_texts, convert_to_numpy=True, normalize_embeddings=True)
+        logger.info("Embedding model warm-up complete")
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
         raise
@@ -181,14 +187,17 @@ async def generate_embeddings(request: EmbeddingRequest):
         prefixed_texts = [f"passage: {text}" for text in request.texts]
 
         loop = asyncio.get_running_loop()
-        encode_fn = partial(
-            model.encode,
-            prefixed_texts,
-            convert_to_numpy=True,
-            show_progress_bar=False,
-            normalize_embeddings=True  # L2 normalization for better similarity search
-        )
-        embeddings = await loop.run_in_executor(None, encode_fn)
+
+        def encode_with_no_grad():
+            with torch.no_grad():
+                return model.encode(
+                    prefixed_texts,
+                    convert_to_numpy=True,
+                    show_progress_bar=False,
+                    normalize_embeddings=True  # L2 normalization for better similarity search
+                )
+
+        embeddings = await loop.run_in_executor(None, encode_with_no_grad)
 
         # Convert to list of lists for JSON serialization
         embeddings_list = embeddings.tolist()

@@ -1,7 +1,6 @@
 using System.Text.Json;
-using Api.BoundedContexts.GameManagement.Domain.Entities;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -20,7 +19,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 [Trait("Category", TestCategories.Unit)]
 public class LedgerModeHandlerTests
 {
-    private readonly Mock<IGameSessionStateRepository> _mockSessionStateRepo;
+    private readonly Mock<IGameSessionStateReader> _mockSessionStateRepo;
     private readonly Mock<IStateParser> _mockParser;
     private readonly Mock<ILogger<LedgerModeHandler>> _mockLogger;
     private readonly LedgerModeHandler _handler;
@@ -28,7 +27,7 @@ public class LedgerModeHandlerTests
 
     public LedgerModeHandlerTests()
     {
-        _mockSessionStateRepo = new Mock<IGameSessionStateRepository>();
+        _mockSessionStateRepo = new Mock<IGameSessionStateReader>();
         _mockParser = new Mock<IStateParser>();
         _mockLogger = new Mock<ILogger<LedgerModeHandler>>();
 
@@ -494,7 +493,7 @@ public class LedgerModeHandlerTests
             new Dictionary<string, object> { { "score", 5 } });
 
         _mockSessionStateRepo.Setup(r => r.GetBySessionIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((GameSessionState?)null);
+            .ReturnsAsync((GameSessionStateSnapshot?)null);
         _mockParser.Setup(p => p.ParseAsync(
                 It.IsAny<string>(), It.IsAny<JsonDocument?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(extraction);
@@ -593,15 +592,14 @@ public class LedgerModeHandlerTests
             Guid.NewGuid());
     }
 
-    private static GameSessionState CreateTestSessionState(Guid sessionId, string stateJson)
+    private static GameSessionStateSnapshot CreateTestSessionState(Guid sessionId, string stateJson)
     {
-        var initialState = JsonDocument.Parse(stateJson);
-        return GameSessionState.Create(
-            id: Guid.NewGuid(),
-            gameSessionId: sessionId,
-            templateId: Guid.NewGuid(),
-            initialState: initialState,
-            createdBy: "test-user");
+        var state = JsonDocument.Parse(stateJson);
+        return new GameSessionStateSnapshot(
+            Id: Guid.NewGuid(),
+            GameSessionId: sessionId,
+            CurrentState: state,
+            LastUpdatedAt: DateTime.UtcNow);
     }
 
     #endregion

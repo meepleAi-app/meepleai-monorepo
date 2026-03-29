@@ -36,7 +36,9 @@ import {
 } from '../store';
 
 // Test data factories
-const createMockSharedGame = (overrides?: Partial<{ id: string; title: string; status: number }>) => ({
+const createMockSharedGame = (
+  overrides?: Partial<{ id: string; title: string; status: number }>
+) => ({
   id: overrides?.id ?? 'game-1',
   title: overrides?.title ?? 'Test Game',
   status: overrides?.status ?? 1,

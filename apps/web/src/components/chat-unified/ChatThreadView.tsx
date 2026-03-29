@@ -27,7 +27,7 @@ import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { useVoicePreferencesStore } from '@/store/voice/store';
+import { useVoicePreferencesStore } from '@/stores/voice/store';
 import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
 
 import { AgentSwitchDialog } from './AgentSwitchDialog';

@@ -382,7 +382,7 @@ describe('useNotificationStore', () => {
       const readNotification = createMockNotification({
         id: 'notif-read',
         isRead: true,
-        readAt: new Date().toISOString()
+        readAt: new Date().toISOString(),
       });
 
       act(() => {
@@ -503,9 +503,7 @@ describe('Notification Store Selectors', () => {
 
   describe('selectError', () => {
     it('should return error string when error exists', async () => {
-      vi.mocked(api.notifications.getNotifications).mockRejectedValue(
-        new Error('Test error')
-      );
+      vi.mocked(api.notifications.getNotifications).mockRejectedValue(new Error('Test error'));
 
       const { result } = renderHook(() => useNotificationStore());
 

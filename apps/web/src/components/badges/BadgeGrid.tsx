@@ -9,6 +9,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
 import { BadgeTier, getTierIcon, type UserBadgeDto } from '@/types/badges';
@@ -159,8 +160,13 @@ function BadgeItem({ badge, onClick }: BadgeItemProps) {
       >
         <div className="flex h-full w-full items-center justify-center rounded-full bg-background">
           {badge.iconUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
-            <img src={badge.iconUrl} alt={badge.name} className="h-12 w-12 object-contain" />
+            <Image
+              src={badge.iconUrl}
+              alt={badge.name}
+              width={48}
+              height={48}
+              className="h-12 w-12 object-contain"
+            />
           ) : (
             <span className="text-2xl">{getTierIcon(badge.tier)}</span>
           )}

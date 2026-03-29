@@ -1,8 +1,8 @@
-using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 using Api.Services.LlmClients;
+using RagStrategy = Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagStrategy;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -17,7 +17,7 @@ internal interface ILlmProviderSelector
     /// Handles: routing strategy → emergency override → RPD quota check → circuit breaker → fallback chain.
     /// </summary>
     Task<ProviderSelectionResult> SelectProviderAsync(
-        User? user,
+        LlmUserContext userContext,
         RagStrategy strategy,
         RequestSource source,
         CancellationToken ct = default);

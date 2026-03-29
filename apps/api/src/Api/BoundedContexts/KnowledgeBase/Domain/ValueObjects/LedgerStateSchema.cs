@@ -1,7 +1,6 @@
 #pragma warning disable MA0002 // Dictionary without StringComparer
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
@@ -26,7 +25,7 @@ internal sealed record LedgerStateSchema
     /// Current game phase.
     /// </summary>
     [JsonPropertyName("currentPhase")]
-    public string CurrentPhase { get; init; } = GamePhase.Setup.ToString();
+    public string CurrentPhase { get; init; } = "Setup";
 
     /// <summary>
     /// Current round number (1-based).

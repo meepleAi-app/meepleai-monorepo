@@ -1,15 +1,15 @@
 using System.Globalization;
-using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain;
-using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
 using Microsoft.Extensions.Options;
+using RagStrategy = Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagStrategy;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -71,7 +71,7 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
 
     /// <inheritdoc/>
     public async Task<ProviderSelectionResult> SelectProviderAsync(
-        User? user,
+        LlmUserContext userContext,
         RagStrategy strategy,
         RequestSource source,
         CancellationToken ct = default)
@@ -89,7 +89,7 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
         else
         {
             // Issue #3435: Strategy-based routing
-            decision = _routingStrategy.SelectProvider(user, strategy);
+            decision = _routingStrategy.SelectProvider(userContext, strategy);
 
             // Issue #5476: Emergency override — force all traffic to Ollama
             if (_emergencyOverrideService != null

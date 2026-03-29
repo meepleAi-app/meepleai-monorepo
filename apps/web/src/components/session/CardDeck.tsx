@@ -102,6 +102,16 @@ function PlayingCard({ card, isSelected, isFaceDown, onClick, className }: Playi
       whileHover={{ y: -8, transition: { duration: 0.2 } }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
+      role="button"
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={e => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      aria-pressed={isSelected}
+      aria-label={card.name || `${displayValue} ${card.suit ?? ''}`.trim() || 'Card'}
       className={cn(
         'relative w-16 h-24 sm:w-20 sm:h-28 rounded-lg cursor-pointer',
         'shadow-md hover:shadow-lg transition-shadow',
@@ -183,7 +193,19 @@ function DeckStack({ cardCount, onClick, label }: DeckStackProps) {
 
   return (
     <div className="relative">
-      <div className="relative w-16 h-24 sm:w-20 sm:h-28 cursor-pointer" onClick={onClick}>
+      <div
+        className="relative w-16 h-24 sm:w-20 sm:h-28 cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={e => {
+          if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        aria-label={label ?? 'Card deck'}
+      >
         {Array.from({ length: visibleCards }).map((_, index) => (
           <div
             key={index}

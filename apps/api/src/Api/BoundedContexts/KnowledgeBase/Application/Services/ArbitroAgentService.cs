@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
@@ -12,7 +11,7 @@ using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
 /// Arbitro Agent: AI-powered move validation with game state awareness and conflict resolution.

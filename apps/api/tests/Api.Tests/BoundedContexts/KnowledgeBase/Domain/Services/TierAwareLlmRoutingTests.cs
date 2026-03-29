@@ -1,11 +1,13 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
-using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
 using Api.Configuration;
+using Api.SharedKernel.Domain.Enums;
+using RagStrategy = Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagStrategy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -98,104 +100,104 @@ public sealed class TierAwareLlmRoutingTests
             _mockOverrideService.Object);
     }
 
-    // ─── MapUserToLlmTier direct tests ──────────────────────────────────────
+    // ─── LlmUserContextMapper tier mapping tests ────────────────────────────
 
     [Fact]
-    public void MapUserToLlmTier_FreeTierUser_ReturnsUserTier()
+    public void FromUser_FreeTierUser_ReturnsUserTier()
     {
         // Arrange
         var user = CreateUser(Role.User, UserTier.Free);
 
         // Act
-        var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
+        var result = LlmUserContextMapper.FromUser(user).Tier;
 
         // Assert
         result.Should().Be(LlmUserTier.User);
     }
 
     [Fact]
-    public void MapUserToLlmTier_PremiumTierUser_ReturnsPremiumTier()
+    public void FromUser_PremiumTierUser_ReturnsPremiumTier()
     {
         // Arrange
         var user = CreateUser(Role.User, UserTier.Premium);
 
         // Act
-        var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
+        var result = LlmUserContextMapper.FromUser(user).Tier;
 
         // Assert
         result.Should().Be(LlmUserTier.Premium);
     }
 
     [Fact]
-    public void MapUserToLlmTier_ProTierUser_ReturnsPremiumTier()
+    public void FromUser_ProTierUser_ReturnsPremiumTier()
     {
         // Arrange — "pro" is an alias for "premium"
         var user = CreateUser(Role.User, UserTier.Pro);
 
         // Act
-        var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
+        var result = LlmUserContextMapper.FromUser(user).Tier;
 
         // Assert
         result.Should().Be(LlmUserTier.Premium);
     }
 
     [Fact]
-    public void MapUserToLlmTier_EnterpriseTierUser_ReturnsPremiumTier()
+    public void FromUser_EnterpriseTierUser_ReturnsPremiumTier()
     {
         // Arrange
         var user = CreateUser(Role.User, UserTier.Enterprise);
 
         // Act
-        var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
+        var result = LlmUserContextMapper.FromUser(user).Tier;
 
         // Assert
         result.Should().Be(LlmUserTier.Premium);
     }
 
     [Fact]
-    public void MapUserToLlmTier_AdminRole_AlwaysReturnsAdminTier()
+    public void FromUser_AdminRole_AlwaysReturnsAdminTier()
     {
         // Arrange — admin role always wins, regardless of subscription tier
         var user = CreateUser(Role.Admin, UserTier.Free);
 
         // Act
-        var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
+        var result = LlmUserContextMapper.FromUser(user).Tier;
 
         // Assert
         result.Should().Be(LlmUserTier.Admin);
     }
 
     [Fact]
-    public void MapUserToLlmTier_EditorRole_ReturnsEditorTier()
+    public void FromUser_EditorRole_ReturnsEditorTier()
     {
         // Arrange
         var user = CreateUser(Role.Editor, UserTier.Free);
 
         // Act
-        var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
+        var result = LlmUserContextMapper.FromUser(user).Tier;
 
         // Assert
         result.Should().Be(LlmUserTier.Editor);
     }
 
     [Fact]
-    public void MapUserToLlmTier_NullUser_DefaultsToUserTier()
+    public void FromUser_NullUser_DefaultsToUserTier()
     {
         // Arrange & Act — null user is internal pipeline call
-        var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(null);
+        var result = LlmUserContextMapper.FromUser(null).Tier;
 
         // Assert
         result.Should().Be(LlmUserTier.User);
     }
 
     [Fact]
-    public void MapUserToLlmTier_NormalTierUser_ReturnsUserTier()
+    public void FromUser_NormalTierUser_ReturnsUserTier()
     {
         // Arrange — "normal" tier maps to User LLM tier (not Premium)
         var user = CreateUser(Role.User, UserTier.Normal);
 
         // Act
-        var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
+        var result = LlmUserContextMapper.FromUser(user).Tier;
 
         // Assert
         result.Should().Be(LlmUserTier.User);
@@ -211,7 +213,7 @@ public sealed class TierAwareLlmRoutingTests
         var user = CreateUser(Role.User, UserTier.Free);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Balanced);
+        var decision = sut.SelectProvider(LlmUserContextMapper.FromUser(user), RagStrategy.Balanced);
 
         // Assert
         decision.Reason.Should().Contain("Tier: User");
@@ -225,7 +227,7 @@ public sealed class TierAwareLlmRoutingTests
         var user = CreateUser(Role.User, UserTier.Premium);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Balanced);
+        var decision = sut.SelectProvider(LlmUserContextMapper.FromUser(user), RagStrategy.Balanced);
 
         // Assert
         decision.Reason.Should().Contain("Tier: Premium");
@@ -239,7 +241,7 @@ public sealed class TierAwareLlmRoutingTests
         var admin = CreateUser(Role.Admin, UserTier.Free);
 
         // Act
-        var decision = sut.SelectProvider(admin, RagStrategy.Expert);
+        var decision = sut.SelectProvider(LlmUserContextMapper.FromUser(admin), RagStrategy.Expert);
 
         // Assert
         decision.Reason.Should().Contain("Tier: Admin");
@@ -261,7 +263,7 @@ public sealed class TierAwareLlmRoutingTests
         var user = CreateUser(Role.User, UserTier.Premium);
 
         // Act & Assert
-        Action act = () => sut.SelectProvider(user, RagStrategy.Expert);
+        Action act = () => sut.SelectProvider(LlmUserContextMapper.FromUser(user), RagStrategy.Expert);
         var exception = act.Should().Throw<UnauthorizedAccessException>().Which;
 
         exception.Message.Should().Contain("Premium");

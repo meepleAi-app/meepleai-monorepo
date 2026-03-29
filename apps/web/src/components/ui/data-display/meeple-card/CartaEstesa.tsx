@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { cn } from '@/lib/utils';
 
 interface CartaEstesaStat {
@@ -47,7 +49,7 @@ export function CartaEstesa({
       {/* Cover Hero */}
       <div className="relative h-[200px] w-full overflow-hidden lg:h-[180px]">
         {imageUrl ? (
-          <img src={imageUrl} alt={title} className="h-full w-full object-cover" />
+          <Image src={imageUrl} alt={title} fill className="object-cover" />
         ) : (
           <div
             className="flex h-full w-full items-center justify-center"

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Plus, Users } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { useGameNightStore } from '@/store/game-night';
+import { useGameNightStore } from '@/stores/game-night';
 
 import { GameNightTimeline } from './GameNightTimeline';
 import { InlineGamePicker } from './InlineGamePicker';

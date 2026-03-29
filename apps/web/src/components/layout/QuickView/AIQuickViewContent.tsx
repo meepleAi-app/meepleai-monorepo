@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Bot, Gamepad2, Send } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import type { QuickViewMode } from '@/store/quick-view';
+import type { QuickViewMode } from '@/stores/quick-view';
 
 const GAME_PROMPTS = [
   'Spiega le regole base',

@@ -1,6 +1,6 @@
-using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Projections;
 using Api.Infrastructure;
+using Api.SharedKernel.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Projections;

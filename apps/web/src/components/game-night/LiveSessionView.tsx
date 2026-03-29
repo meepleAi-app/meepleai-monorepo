@@ -43,7 +43,7 @@ import { api } from '@/lib/api';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/sessionStore';
-import { useQuickViewStore } from '@/store/quick-view';
+import { useQuickViewStore } from '@/stores/quick-view';
 
 import { ActivityFeed, type ActivityEvent } from './ActivityFeed';
 import { LiveScoreboard, type LiveScoreboardPlayer } from './LiveScoreboard';

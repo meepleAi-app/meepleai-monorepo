@@ -1,9 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
-using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
+using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.Middleware;
 using MediatR;
 using Microsoft.Extensions.Options;
@@ -34,7 +32,6 @@ internal static class N8nWebhookEndpoints
     private static async Task<IResult> HandleN8nWebhook(
         HttpContext context,
         IMediator mediator,
-        INotificationRepository notificationRepo,
         IOptions<N8nWebhookClientOptions> options,
         ILogger<Program> logger,
         CancellationToken cancellationToken)
@@ -101,7 +98,7 @@ internal static class N8nWebhookEndpoints
         {
             return request.Action switch
             {
-                "send_notification" => await HandleSendNotification(request.Payload, notificationRepo, logger, cancellationToken).ConfigureAwait(false),
+                "send_notification" => await HandleSendNotification(request.Payload, mediator, logger, cancellationToken).ConfigureAwait(false),
                 "send_email" => HandleSendEmail(request.Payload, logger),
                 "update_game_night_status" => HandleUpdateGameNightStatus(request.Payload, logger),
                 "send_reminder" => HandleSendReminder(request.Payload, logger),
@@ -116,7 +113,7 @@ internal static class N8nWebhookEndpoints
     }
 
     private static async Task<IResult> HandleSendNotification(
-        JsonElement? payload, INotificationRepository notificationRepo, ILogger logger, CancellationToken ct)
+        JsonElement? payload, IMediator mediator, ILogger logger, CancellationToken ct)
     {
         if (payload is null)
             return Results.BadRequest(new { error = "missing_payload", message = "Payload required for send_notification" });
@@ -137,16 +134,13 @@ internal static class N8nWebhookEndpoints
             return Results.BadRequest(new { error = "invalid_user_id", message = "userId must be a valid GUID" });
         }
 
-        var notification = new Notification(
-            id: Guid.NewGuid(),
-            userId: userGuid,
-            type: NotificationType.FromString(type!),
-            severity: NotificationSeverity.Info,
-            title: title!,
-            message: message!,
-            link: link
-        );
-        await notificationRepo.AddAsync(notification, ct).ConfigureAwait(false);
+        await mediator.Send(new CreateN8nNotificationCommand(
+            UserId: userGuid,
+            Title: title!,
+            Message: message!,
+            Type: type!,
+            Link: link
+        ), ct).ConfigureAwait(false);
 
         logger.LogInformation("n8n webhook: notification sent to user {UserId}", userId);
         return Results.Ok(new { success = true, action = "send_notification" });

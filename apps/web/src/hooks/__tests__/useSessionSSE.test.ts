@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { useSessionStore } from '@/store/session';
+import { useSessionStore } from '@/stores/session';
 
 import { useSessionSSE } from '../useSessionSSE';
 

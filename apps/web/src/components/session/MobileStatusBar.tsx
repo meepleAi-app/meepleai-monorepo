@@ -3,7 +3,7 @@
 import { Pause, Play } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { useSessionStore } from '@/store/session';
+import { useSessionStore } from '@/stores/session';
 
 interface MobileStatusBarProps {
   gameName: string;

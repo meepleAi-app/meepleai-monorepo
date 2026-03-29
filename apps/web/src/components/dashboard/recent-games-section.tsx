@@ -10,6 +10,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { ArrowRight, Gamepad2 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -55,7 +56,13 @@ function GameListCard({ game }: { game: UserGameDto }) {
       {/* Thumbnail */}
       <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0 flex items-center justify-center">
         {game.thumbnailUrl ? (
-          <img src={game.thumbnailUrl} alt={game.title} className="w-full h-full object-cover" />
+          <Image
+            src={game.thumbnailUrl}
+            alt={game.title}
+            width={48}
+            height={48}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <Gamepad2 className="h-5 w-5 text-muted-foreground" />
         )}

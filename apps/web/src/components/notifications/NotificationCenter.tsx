@@ -44,7 +44,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { NotificationDto } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { useNotificationStore, selectNotifications } from '@/store/notification/store';
+import { useNotificationStore, selectNotifications } from '@/stores/notification/store';
 
 // ============================================================================
 // NotificationCenter Props

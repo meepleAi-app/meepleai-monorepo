@@ -16,7 +16,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 
 import type { NotificationDto } from '@/lib/api';
-import { useNotificationStore } from '@/store/notification/store';
+import { useNotificationStore } from '@/stores/notification/store';
 
 // ============================================================================
 // Constants
@@ -92,7 +92,7 @@ export function useNotificationSSE(options: UseNotificationSSEOptions = {}) {
         reconnectAttemptsRef.current = 0;
       };
 
-      eventSource.onmessage = (event) => {
+      eventSource.onmessage = event => {
         if (!isMountedRef.current) return;
 
         try {

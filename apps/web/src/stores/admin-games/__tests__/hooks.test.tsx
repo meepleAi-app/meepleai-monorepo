@@ -158,7 +158,10 @@ describe('Admin Games Selector Hooks', () => {
 
   describe('useGameMechanics', () => {
     it('returns mechanics from store', () => {
-      const mechanics = [createMockMechanic('m1', 'Dice Rolling'), createMockMechanic('m2', 'Area Control')];
+      const mechanics = [
+        createMockMechanic('m1', 'Dice Rolling'),
+        createMockMechanic('m2', 'Area Control'),
+      ];
 
       act(() => {
         useAdminGamesStore.getState().setMechanics(mechanics);

@@ -35,7 +35,7 @@ vi.mock('@/components/pdf', () => ({
   ),
 }));
 
-vi.mock('@/store/notification/store', () => ({
+vi.mock('@/stores/notification/store', () => ({
   useNotificationStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) => {
     const state = { markAsRead: mockMarkAsRead };
     return typeof selector === 'function' ? selector(state) : state;

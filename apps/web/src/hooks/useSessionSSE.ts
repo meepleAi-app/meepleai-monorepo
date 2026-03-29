@@ -17,8 +17,8 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 
-import type { ActivityEvent } from '@/store/session';
-import { useSessionStore } from '@/store/session';
+import type { ActivityEvent } from '@/stores/session';
+import { useSessionStore } from '@/stores/session';
 
 // ============================================================================
 // Constants

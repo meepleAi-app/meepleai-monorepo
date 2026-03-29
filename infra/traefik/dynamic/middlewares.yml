@@ -90,9 +90,14 @@ http:
         accessControlMaxAge: 7200  # Cache preflight for 2 hours
 
     # Compression
-    # Reduces bandwidth usage
+    # Reduces bandwidth usage for API and web responses.
+    # SSE streams are excluded to prevent ERR_CONTENT_DECODING_FAILED on streaming endpoints.
+    # minResponseBodyBytes avoids compressing tiny responses where overhead exceeds benefit.
     compress:
-      compress: {}
+      compress:
+        excludedContentTypes:
+          - text/event-stream
+        minResponseBodyBytes: 1024
 
     # Retry
     # Retries failed requests

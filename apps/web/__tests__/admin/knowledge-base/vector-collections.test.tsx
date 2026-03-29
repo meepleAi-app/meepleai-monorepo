@@ -1,12 +1,13 @@
 /**
- * Vector Collections Page Tests (Issue #4788)
+ * Vector Store Page Tests (pgvector migration)
+ * Issue #4861 — Replaces Qdrant vector-collections tests
  *
- * Tests for the Vector Collections page (/admin/knowledge-base/vectors):
- * - Renders with real API data via useQuery
+ * Tests for the Vector Store page (/admin/knowledge-base/vectors):
+ * - Renders with real API data via useQuery (getVectorStats)
  * - Loading skeletons while fetching
  * - Error state with retry
- * - Empty state when no collections
- * - Stats calculation (total vectors, avg health)
+ * - Empty state when no game breakdown
+ * - Stats display (total vectors, games indexed, dimensions, avg health)
  * - Refresh button
  */
 
@@ -14,15 +15,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { ADMIN_TEST_IDS } from '@/lib/test-ids';
-
-const { mockGetVectorCollections } = vi.hoisted(() => ({
-  mockGetVectorCollections: vi.fn(),
+const { mockGetVectorStats } = vi.hoisted(() => ({
+  mockGetVectorStats: vi.fn(),
 }));
 
 vi.mock('@/lib/api/clients/adminClient', () => ({
   createAdminClient: () => ({
-    getVectorCollections: mockGetVectorCollections,
+    getVectorStats: mockGetVectorStats,
+    searchVectors: vi.fn().mockResolvedValue({ results: [], errorMessage: null }),
   }),
 }));
 
@@ -30,18 +30,16 @@ vi.mock('@/lib/api/core/httpClient', () => ({
   HttpClient: vi.fn(),
 }));
 
-// Mock VectorCollectionCard since it's a separate component
-// Props match VectorCollectionCardProps (flat props, not a { collection } object)
-vi.mock('@/components/admin/knowledge-base/vector-collection-card', () => ({
-  VectorCollectionCard: ({ name, vectorCount }: { name: string; vectorCount: number }) => (
-    <div data-testid={ADMIN_TEST_IDS.collectionCard(name)}>
-      <span>{name}</span>
-      <span>{vectorCount.toLocaleString()}</span>
+// Mock VectorGameCard to avoid rendering complexity
+vi.mock('@/components/admin/knowledge-base/vector-game-card', () => ({
+  VectorGameCard: ({ game }: { game: { gameId: string; gameName: string } }) => (
+    <div data-testid={`vector-game-card-${game.gameId}`}>
+      <span>{game.gameName}</span>
     </div>
   ),
 }));
 
-import VectorCollectionsPage from '@/app/admin/(dashboard)/knowledge-base/vectors/page';
+import VectorStorePage from '@/app/admin/(dashboard)/knowledge-base/vectors/page';
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -54,65 +52,91 @@ function createTestQueryClient() {
 
 function renderWithQuery(ui: React.ReactElement) {
   const client = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
-const MOCK_COLLECTIONS = {
-  collections: [
-    { name: 'Game Rules', vectorCount: 42500, dimensions: 384, storage: '3.2 GB', health: 98 },
-    { name: 'Strategy Guides', vectorCount: 28300, dimensions: 384, storage: '2.1 GB', health: 95 },
-    { name: 'FAQ Database', vectorCount: 9200, dimensions: 384, storage: '1.5 GB', health: 92 },
+const MOCK_VECTOR_STATS = {
+  totalVectors: 80000,
+  dimensions: 768,
+  gamesIndexed: 3,
+  avgHealthPercent: 95.0,
+  sizeEstimateBytes: 6442450944,
+  gameBreakdown: [
+    {
+      gameId: 'game-1',
+      gameName: 'Game Rules',
+      vectorCount: 42500,
+      completedCount: 42000,
+      failedCount: 500,
+      healthPercent: 98.8,
+    },
+    {
+      gameId: 'game-2',
+      gameName: 'Strategy Guides',
+      vectorCount: 28300,
+      completedCount: 27000,
+      failedCount: 1300,
+      healthPercent: 95.4,
+    },
+    {
+      gameId: 'game-3',
+      gameName: 'FAQ Database',
+      vectorCount: 9200,
+      completedCount: 8700,
+      failedCount: 500,
+      healthPercent: 94.6,
+    },
   ],
 };
 
 describe('VectorCollectionsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetVectorCollections.mockResolvedValue(MOCK_COLLECTIONS);
+    mockGetVectorStats.mockResolvedValue(MOCK_VECTOR_STATS);
   });
 
   it('should render page header', async () => {
-    renderWithQuery(<VectorCollectionsPage />);
+    renderWithQuery(<VectorStorePage />);
 
-    expect(screen.getByText('Vector Collections')).toBeInTheDocument();
-    expect(screen.getByText('Manage your knowledge base vector stores')).toBeInTheDocument();
+    expect(screen.getByText('Vector Store')).toBeInTheDocument();
+    expect(
+      screen.getByText('pgvector knowledge base — embeddings health and semantic search')
+    ).toBeInTheDocument();
   });
 
   it('should render stats cards with calculated values', async () => {
-    renderWithQuery(<VectorCollectionsPage />);
+    renderWithQuery(<VectorStorePage />);
 
     await waitFor(() => {
-      // Total collections = 3
-      expect(screen.getByText('3')).toBeInTheDocument();
+      // Total vectors
+      expect(screen.getByText((80000).toLocaleString())).toBeInTheDocument();
     });
 
-    // Total vectors: 42500 + 28300 + 9200 = 80000 (locale-formatted)
-    expect(screen.getByText((80000).toLocaleString())).toBeInTheDocument();
-    // Avg health: (98 + 95 + 92) / 3 = 95
+    // Games indexed
+    expect(screen.getByText('3')).toBeInTheDocument();
+    // Dimensions
+    expect(screen.getByText('768')).toBeInTheDocument();
+    // Avg health (rounded)
     expect(screen.getByText('95%')).toBeInTheDocument();
-    // Dimensions from first collection
-    expect(screen.getByText('384')).toBeInTheDocument();
   });
 
   it('should render collection cards', async () => {
-    renderWithQuery(<VectorCollectionsPage />);
+    renderWithQuery(<VectorStorePage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId(ADMIN_TEST_IDS.collectionCard('Game Rules'))).toBeInTheDocument();
+      expect(screen.getByTestId('vector-game-card-game-1')).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId(ADMIN_TEST_IDS.collectionCard('Strategy Guides'))).toBeInTheDocument();
-    expect(screen.getByTestId(ADMIN_TEST_IDS.collectionCard('FAQ Database'))).toBeInTheDocument();
+    expect(screen.getByTestId('vector-game-card-game-2')).toBeInTheDocument();
+    expect(screen.getByTestId('vector-game-card-game-3')).toBeInTheDocument();
   });
 
   it('should show error state when fetch fails', async () => {
-    mockGetVectorCollections.mockRejectedValue(new Error('Connection refused'));
-    renderWithQuery(<VectorCollectionsPage />);
+    mockGetVectorStats.mockRejectedValue(new Error('Connection refused'));
+    renderWithQuery(<VectorStorePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load vector collections')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load vector stats')).toBeInTheDocument();
     });
 
     expect(screen.getByText('Connection refused')).toBeInTheDocument();
@@ -120,28 +144,27 @@ describe('VectorCollectionsPage', () => {
   });
 
   it('should show empty state when no collections', async () => {
-    mockGetVectorCollections.mockResolvedValue({ collections: [] });
-    renderWithQuery(<VectorCollectionsPage />);
+    mockGetVectorStats.mockResolvedValue({
+      ...MOCK_VECTOR_STATS,
+      gameBreakdown: [],
+      gamesIndexed: 0,
+      totalVectors: 0,
+    });
+    renderWithQuery(<VectorStorePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('No vector collections found')).toBeInTheDocument();
+      expect(screen.getByText('No vectors indexed yet')).toBeInTheDocument();
     });
-  });
-
-  it('should render refresh button', () => {
-    renderWithQuery(<VectorCollectionsPage />);
-
-    expect(screen.getByText('Refresh')).toBeInTheDocument();
   });
 
   it('should show stat labels', async () => {
-    renderWithQuery(<VectorCollectionsPage />);
+    renderWithQuery(<VectorStorePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Total Collections')).toBeInTheDocument();
+      expect(screen.getByText('Total Vectors')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Total Vectors')).toBeInTheDocument();
+    expect(screen.getByText('Games Indexed')).toBeInTheDocument();
     expect(screen.getByText('Dimensions')).toBeInTheDocument();
     expect(screen.getByText('Avg Health')).toBeInTheDocument();
   });

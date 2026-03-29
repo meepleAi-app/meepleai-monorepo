@@ -81,9 +81,7 @@ export function createMockDashboardMetrics(
 /**
  * Create mock DashboardStats (analytics data)
  */
-export function createMockDashboardStats(
-  overrides?: Partial<DashboardStats>
-): DashboardStats {
+export function createMockDashboardStats(overrides?: Partial<DashboardStats>): DashboardStats {
   return {
     metrics: createMockDashboardMetrics(overrides?.metrics),
     userTrend: overrides?.userTrend || createMockTrendData(7),
@@ -99,9 +97,7 @@ export function createMockDashboardStats(
 /**
  * Create mock ActivityEvent
  */
-export function createMockActivityEvent(
-  overrides?: Partial<ActivityEvent>
-): ActivityEvent {
+export function createMockActivityEvent(overrides?: Partial<ActivityEvent>): ActivityEvent {
   return {
     id: `event-${Math.random().toString(36).substring(7)}`,
     eventType: 'UserLogin',
@@ -196,7 +192,7 @@ export function createMockInfrastructureDetails(
         responseTimeMs: 2,
       },
       {
-        serviceName: 'Qdrant',
+        serviceName: 'pgvector',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date('2026-01-23T12:00:00Z').toISOString(),
@@ -256,5 +252,5 @@ export function createMockErrorResponse(
  * Create mock network timeout simulation
  */
 export function createNetworkDelay(ms: number = 100): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }

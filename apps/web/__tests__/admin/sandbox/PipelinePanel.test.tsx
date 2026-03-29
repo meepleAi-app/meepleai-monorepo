@@ -134,7 +134,7 @@ describe('PipelineStepCard', () => {
     const step: PipelineStepInfo = {
       step: 'embedding',
       status: 'failed',
-      error: 'Qdrant service unavailable',
+      error: 'Vector store service unavailable',
     };
     const details: StepDetails = { vectorCount: 0 };
     const user = userEvent.setup();
@@ -147,7 +147,7 @@ describe('PipelineStepCard', () => {
 
     // Expand to see error
     await user.click(screen.getByRole('button', { name: /dettagli step embedding/i }));
-    expect(screen.getByTestId('step-error')).toHaveTextContent('Qdrant service unavailable');
+    expect(screen.getByTestId('step-error')).toHaveTextContent('Vector store service unavailable');
   });
 
   it('expandable shows details when clicked', async () => {
@@ -208,9 +208,9 @@ describe('PipelineDeepMetrics', () => {
     expect(largestBar.style.width).toBe('100%');
   });
 
-  it('renders Qdrant stats', () => {
+  it('renders vector stats', () => {
     const metrics: DeepMetricsData = {
-      qdrantStats: {
+      vectorStats: {
         vectorsCount: 1234,
         memoryUsageBytes: 5 * 1024 * 1024,
         collectionStatus: 'green',
@@ -219,7 +219,7 @@ describe('PipelineDeepMetrics', () => {
 
     render(<PipelineDeepMetrics metrics={metrics} />);
 
-    expect(screen.getByTestId('qdrant-stats')).toBeInTheDocument();
+    expect(screen.getByTestId('vector-stats')).toBeInTheDocument();
     expect(screen.getByTestId('vectors-count')).toHaveTextContent((1234).toLocaleString());
     expect(screen.getByTestId('memory-usage')).toHaveTextContent('5.0 MB');
     expect(screen.getByTestId('collection-status')).toHaveTextContent('Operativa');

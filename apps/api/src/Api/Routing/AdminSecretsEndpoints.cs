@@ -13,7 +13,7 @@ internal static class AdminSecretsEndpoints
 {
     private static readonly HashSet<string> InfraFiles = new(StringComparer.OrdinalIgnoreCase)
     {
-        "database.secret", "redis.secret", "qdrant.secret", "jwt.secret", "admin.secret"
+        "database.secret", "redis.secret", "jwt.secret", "admin.secret"
     };
 
     private static readonly char[] TitleCaseSeparators = ['-', '_'];
@@ -23,7 +23,6 @@ internal static class AdminSecretsEndpoints
         ["openrouter.secret"] = "OpenRouter",
         ["database.secret"] = "Database",
         ["redis.secret"] = "Redis",
-        ["qdrant.secret"] = "Qdrant",
         ["jwt.secret"] = "JWT",
         ["admin.secret"] = "Admin",
         ["oauth.secret"] = "OAuth",

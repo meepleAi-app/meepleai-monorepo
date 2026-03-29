@@ -17,7 +17,7 @@ Orchestrazione startup ambiente sviluppo con validazione e monitoring.
 .\infra\scripts\start-dev.ps1 -WaitForHealthy:$false  # Senza attendere health
 ```
 
-Sequenza: port check → postgres/redis/qdrant (wait healthy) → api (wait healthy) → web → display URLs.
+Sequenza: port check → postgres/redis (wait healthy) → api (wait healthy) → web → display URLs.
 
 #### integration-tunnel.sh
 
@@ -29,7 +29,7 @@ bash infra/scripts/integration-tunnel.sh stop     # Chiudi tunnel
 bash infra/scripts/integration-tunnel.sh status   # Verifica stato
 ```
 
-Forwarda 12 servizi (PostgreSQL, Redis, Qdrant, Embedding, Reranker, Unstructured, SmolDocling, Ollama, n8n, Grafana, Prometheus, Orchestrator). Usa control socket SSH per gestione persistente.
+Forwarda 11 servizi (PostgreSQL, Redis, Embedding, Reranker, Unstructured, SmolDocling, Ollama, n8n, Grafana, Prometheus, Orchestrator). Usa control socket SSH per gestione persistente.
 
 Integrato nel Makefile: `make tunnel`, `make tunnel-stop`, `make tunnel-status`.
 

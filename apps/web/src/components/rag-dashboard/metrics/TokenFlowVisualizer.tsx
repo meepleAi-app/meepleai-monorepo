@@ -209,7 +209,7 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
       {
         id: 'similar',
         name: 'Similarity Search',
-        description: 'Cerca queries simili in Qdrant',
+        description: 'Cerca queries simili in pgvector',
         icon: <Search className="h-4 w-4" />,
         tokens: 0,
       },
@@ -239,7 +239,7 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
     fullDescription:
       'Il retrieval layer recupera i documenti rilevanti usando una strategia ibrida: vector search per similarità semantica + BM25 per keyword matching esatto. Supporta metadata filtering per game, section, version.',
     technicalDetails: [
-      'Hybrid search: Vector (Qdrant) + BM25 (keyword)',
+      'Hybrid search: Vector (pgvector) + BM25 (keyword)',
       'Reciprocal Rank Fusion per combinare risultati',
       'Metadata filtering: game_id, section, rule_type, version',
       'Chunk size: 512 tokens con 50 token overlap',
@@ -255,7 +255,7 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
       {
         id: 'vector',
         name: 'Vector Search',
-        description: 'Similarità semantica in Qdrant',
+        description: 'Similarità semantica in pgvector',
         icon: <Database className="h-4 w-4" />,
         tokens: 0,
       },

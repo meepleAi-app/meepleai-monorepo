@@ -116,9 +116,7 @@ if ($allSecrets.ContainsKey('REDIS_PASSWORD')) {
 $output += ""
 
 # Vector Database
-$output += "# Vector Database"
-$output += "QDRANT_URL=http://localhost:6333"
-if ($allSecrets.ContainsKey('QDRANT_API_KEY')) { $output += "QDRANT_API_KEY=$($allSecrets['QDRANT_API_KEY'])" }
+# pgvector runs inside PostgreSQL — no separate service URL needed
 $output += ""
 
 # LLM Services
@@ -185,6 +183,6 @@ Write-Host "=======================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Review generated file for accuracy" -ForegroundColor White
-Write-Host "  2. Start local services: docker compose up -d postgres redis qdrant" -ForegroundColor White
+Write-Host "  2. Start local services: docker compose up -d postgres redis" -ForegroundColor White
 Write-Host "  3. Run API locally: cd apps/api/src/Api && dotnet run" -ForegroundColor White
 Write-Host ""

@@ -15,5 +15,6 @@ internal record GetFilteredSharedGamesQuery(
     int PageNumber = 1,
     int PageSize = 20,
     string? SortBy = null,
-    Guid? SubmittedBy = null
+    Guid? SubmittedBy = null,
+    Guid? CategoryId = null
 ) : IQuery<PagedResult<SharedGameDto>>;

@@ -30,10 +30,8 @@ internal static class AgentEndpoints
         MapGetAllAgentsEndpoint(group);
         MapGetAgentStatusEndpoint(group); // Agent chat readiness validation
         MapConfigureAgentEndpoint(group);
-        MapInvokeAgentEndpoint(group);
         MapUpdateAgentDocumentsEndpoint(group);
         MapGetAgentDocumentsEndpoint(group);
-        MapAskAgentQuestionEndpoint(group); // POC: Agent search strategy testing
         MapTutorQueryEndpoint(group); // ISSUE-3499
         MapChatWithAgentEndpoint(group); // Issue #4126: SSE chat streaming
         MapGetRecentAgentsEndpoint(group); // Issue #4126: Dashboard widget
@@ -252,45 +250,6 @@ internal static class AgentEndpoints
         .Produces(500);
     }
 
-    private static void MapInvokeAgentEndpoint(RouteGroupBuilder group)
-    {
-        // Invoke agent - Issue #867: Game Master Agent Integration
-        group.MapPost("/agents/{id:guid}/invoke", async (
-            Guid id,
-            InvokeAgentRequest req,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-            var command = new InvokeAgentCommand(
-                AgentId: id,
-                Query: req.Query,
-                GameId: req.GameId,
-                ChatThreadId: req.ChatThreadId,
-                UserId: session!.User!.Id,
-                UserRole: session.User!.Role
-            );
-
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            logger.LogInformation(
-                "Agent {AgentId} invoked by user {UserId}: InvocationId={InvocationId}, Confidence={Confidence:F3}, Results={ResultCount}",
-                id, session.User!.Id, result.InvocationId, result.Confidence, result.ResultCount);
-
-            return Results.Ok(result);
-        })
-        .RequireSession() // Issue #1446: Automatic session validation
-        .WithName("InvokeAgent")
-        .Produces(200)
-        .Produces(400)
-        .Produces(404)
-        .Produces(500);
-    }
-
     private static void MapUpdateAgentDocumentsEndpoint(RouteGroupBuilder group)
     {
         // Update agent document selection - Issue #2399: Knowledge Base Document Selection
@@ -368,51 +327,6 @@ internal static class AgentEndpoints
         .WithName("GetAgentDocuments")
         .Produces(200)
         .Produces(404)
-        .Produces(500);
-    }
-
-    /// <summary>
-    /// POC: Ask agent a question with selectable search strategy and token tracking
-    /// </summary>
-    private static void MapAskAgentQuestionEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPost("/agents/chat/ask", async (
-            AskAgentQuestionRequest req,
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct = default) =>
-        {
-            // Session validated by RequireSessionFilter
-            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-            var command = new AskAgentQuestionCommand
-            {
-                Question = req.Question,
-                Strategy = req.Strategy,
-                SessionId = req.SessionId,
-                GameId = req.GameId,
-                Language = req.Language,
-                TopK = req.TopK ?? 5,
-                MinScore = req.MinScore ?? 0.6,
-                GameSessionId = req.GameSessionId,
-                UserId = session.User!.Id,
-                UserRole = session.User!.Role
-            };
-
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            logger.LogInformation(
-                "Agent question answered: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, latency={Latency}ms",
-                result.Strategy, result.TokenUsage.TotalTokens, result.CostBreakdown.TotalCost, result.LatencyMs);
-
-            return Results.Ok(result);
-        })
-        .RequireSession()
-        .WithName("AskAgentQuestion")
-        .WithTags("POC")
-        .Produces<AgentChatResponse>(200)
-        .Produces(400)
         .Produces(500);
     }
 
@@ -1058,12 +972,6 @@ internal record ConfigureAgentRequest(
     IDictionary<string, object>? StrategyParameters
 );
 
-internal record InvokeAgentRequest(
-    string Query,
-    Guid? GameId = null,
-    Guid? ChatThreadId = null
-);
-
 /// <summary>
 /// Request to update agent document selection.
 /// Issue #2399: Knowledge Base Document Selection.
@@ -1081,24 +989,6 @@ internal record UnifiedAgentQueryRequest(
     Guid? GameId = null,
     Guid? ChatThreadId = null,
     Guid? PreferredAgentId = null
-);
-
-/// <summary>
-/// POC: Request to ask agent a question with search strategy selection
-/// </summary>
-/// <summary>
-/// POC: Request to ask agent a question with search strategy selection.
-/// Issue #5580: GameSessionId for session-aware RAG filtering.
-/// </summary>
-internal record AskAgentQuestionRequest(
-    string Question,
-    Api.BoundedContexts.KnowledgeBase.Domain.Enums.AgentSearchStrategy Strategy,
-    string? SessionId = null,
-    Guid? GameId = null,
-    string? Language = null,
-    int? TopK = null,
-    double? MinScore = null,
-    Guid? GameSessionId = null
 );
 
 /// <summary>

@@ -1,4 +1,5 @@
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Api.Infrastructure.Entities;
 
@@ -53,6 +54,7 @@ public class GameEntity
     /// <summary>
     /// Indicates if game is published to SharedGameCatalog.
     /// </summary>
+    [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
     public bool IsPublished { get; set; }
 
     /// <summary>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
+import { useSafeColorScheme } from '@/contexts/ColorSchemeContext';
 
 /**
  * Detects if the Premium Gaming theme is active.
@@ -10,11 +10,7 @@ import { useColorScheme } from '@/contexts/ColorSchemeContext';
  * instead of reading localStorage directly.
  */
 export function useCardTheme(): 'gaming' | 'default' {
-  try {
-    const { currentTheme } = useColorScheme();
-    return currentTheme.id.startsWith('gaming') ? 'gaming' : 'default';
-  } catch {
-    // Fallback if used outside ColorSchemeProvider
-    return 'default';
-  }
+  const colorScheme = useSafeColorScheme();
+  if (colorScheme === undefined) return 'default';
+  return colorScheme.currentTheme.id.startsWith('gaming') ? 'gaming' : 'default';
 }

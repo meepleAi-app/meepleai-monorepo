@@ -94,27 +94,31 @@ vi.stubGlobal('matchMedia', (query: string) => ({
 }));
 
 // ============================================================================
-// Mocks
+// Mock Hooks and API
 // ============================================================================
-
-const mockGetAll = vi.fn();
-
-vi.mock('@/lib/api', () => ({
-  api: {
-    sharedGames: {
-      getAll: (...args: unknown[]) => mockGetAll(...args),
-      publish: vi.fn(),
-      archive: vi.fn(),
-      delete: vi.fn(),
-    },
-  },
-}));
 
 vi.mock('@/hooks/queries', () => ({
   sharedGamesKeys: {
     all: ['sharedGames'],
     lists: () => ['sharedGames', 'list'],
     list: () => ['sharedGames', 'list', {}],
+  },
+}));
+
+// Mock the api module so useQuery's queryFn resolves with mock data
+const mockGetAll = vi.fn();
+const mockPublish = vi.fn();
+const mockArchive = vi.fn();
+const mockDeleteGame = vi.fn();
+
+vi.mock('@/lib/api', () => ({
+  api: {
+    sharedGames: {
+      getAll: (...args: unknown[]) => mockGetAll(...args),
+      publish: (...args: unknown[]) => mockPublish(...args),
+      archive: (...args: unknown[]) => mockArchive(...args),
+      delete: (...args: unknown[]) => mockDeleteGame(...args),
+    },
   },
 }));
 
@@ -125,11 +129,6 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock sonner toast
-vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
-}));
-
 // ============================================================================
 // Test Utilities
 // ============================================================================
@@ -137,7 +136,7 @@ vi.mock('sonner', () => ({
 function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
+      queries: { retry: false, gcTime: 0, staleTime: 0 },
     },
   });
 }
@@ -160,15 +159,13 @@ describe('GameCatalogGrid', () => {
   it('renders stats summary with correct counts', async () => {
     renderWithProviders(<GameCatalogGrid />);
 
-    // Wait for data to load (game title appears)
-    expect(await screen.findByText('Catan')).toBeInTheDocument();
-
+    // Wait for data to load (counts appear after query resolves)
+    expect(await screen.findByText('3')).toBeInTheDocument();
     expect(screen.getByText('Totale')).toBeInTheDocument();
     expect(screen.getByText('Pubblicati')).toBeInTheDocument();
     expect(screen.getByText('Bozze')).toBeInTheDocument();
 
     // 3 total, 2 published, 1 draft
-    expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('1')).toBeInTheDocument();
   });
@@ -184,7 +181,6 @@ describe('GameCatalogGrid', () => {
   it('shows status badges on cards', async () => {
     renderWithProviders(<GameCatalogGrid />);
 
-    // Wait for data
     await screen.findByText('Catan');
 
     const publishedBadges = screen.getAllByText('Pubblicato');
@@ -193,15 +189,14 @@ describe('GameCatalogGrid', () => {
     expect(screen.getByText('Bozza')).toBeInTheDocument();
   });
 
-  it('shows loading state when query is loading', () => {
-    // Return a promise that never resolves to keep loading state
+  it('shows loading skeletons when isLoading', () => {
+    // Make the query never resolve so it stays in loading state
     mockGetAll.mockReturnValue(new Promise(() => {}));
 
     renderWithProviders(<GameCatalogGrid />);
 
-    // Stats show dash when loading
-    const dashes = screen.getAllByText('—');
-    expect(dashes.length).toBeGreaterThan(0);
+    const skeletons = screen.getAllByTestId('meeple-card-skeleton');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it('shows empty state when no games', async () => {

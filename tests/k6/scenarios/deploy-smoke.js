@@ -153,7 +153,7 @@ function checkFrontend() {
  * Verifies the shared game catalog is accessible and returns data.
  */
 function checkCatalog() {
-  const url = `${API_BASE_URL}/api/v1/shared-game-catalog/games?limit=1`;
+  const url = `${API_BASE_URL}/api/v1/shared-games?pageNumber=1&pageSize=1`;
 
   const res = http.get(url, {
     headers: { 'Accept': 'application/json' },
@@ -162,7 +162,7 @@ function checkCatalog() {
   });
 
   const passed = check(res, {
-    'catalog: status OK': (r) => r.status === 200 || r.status === 401,
+    'catalog: status OK': (r) => r.status === 200,
     'catalog: response time < 2s': (r) => r.timings.duration < 2000,
     'catalog: content-type json': (r) => {
       const ct = r.headers['Content-Type'] || '';
@@ -214,8 +214,11 @@ export function setup() {
 }
 
 export function handleSummary(data) {
-  // JSON output path controlled by --summary-export CLI flag in workflow
+  // K6 v0.54+ removed --summary-export; write JSON from handleSummary instead.
+  // Path is passed via --env SUMMARY_EXPORT_PATH in the CI workflow.
+  const summaryPath = __ENV.SUMMARY_EXPORT_PATH || 'reports/deploy/deploy-smoke-summary.json';
   return {
+    [summaryPath]: JSON.stringify(data),
     stdout: textSummary(data, { indent: ' ', enableColors: true }),
   };
 }

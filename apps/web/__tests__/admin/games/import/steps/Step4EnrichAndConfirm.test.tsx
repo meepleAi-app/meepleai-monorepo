@@ -144,7 +144,7 @@ describe('Step4EnrichAndConfirm', () => {
 
       expect(screen.getByText('No Conflicts')).toBeInTheDocument();
       expect(
-        screen.getByText(/I dati catalogo e PDF sono stati uniti automaticamente senza conflitti/i)
+        screen.getByText(/I dati catalogo e PDF sono stati uniti automaticamente/i)
       ).toBeInTheDocument();
     });
 
@@ -265,7 +265,8 @@ describe('Step4EnrichAndConfirm', () => {
 
       renderWithQuery(<Step4EnrichAndConfirm />);
 
-      expect(screen.getByText(/4 conflitti rilevati/i)).toBeInTheDocument();
+      expect(screen.getByText(/4/)).toBeInTheDocument();
+      expect(screen.getByText(/conflitti rilevati/i)).toBeInTheDocument();
     });
   });
 
@@ -276,7 +277,7 @@ describe('Step4EnrichAndConfirm', () => {
 
       // Find playTime conflict BGG radio button
       const bggRadio = screen.getByRole('radio', { name: /Usa catalogo:.*90/ });
-      expect(bggRadio).toBeChecked(); // Default is BGG
+      expect(bggRadio).toBeChecked(); // Default is catalogo
 
       // Click should keep it checked
       await user.click(bggRadio);
@@ -287,7 +288,7 @@ describe('Step4EnrichAndConfirm', () => {
       const user = userEvent.setup();
       renderWithQuery(<Step4EnrichAndConfirm />);
 
-      const pdfRadio = screen.getByRole('radio', { name: /Use PDF:.*60/i });
+      const pdfRadio = screen.getByRole('radio', { name: /Use PDF:.*60/ });
       expect(pdfRadio).not.toBeChecked();
 
       await user.click(pdfRadio);

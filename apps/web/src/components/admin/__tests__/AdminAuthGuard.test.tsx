@@ -76,6 +76,6 @@ describe('AdminAuthGuard', () => {
     );
 
     expect(screen.getByText('admin content')).toBeInTheDocument();
-    expect(screen.queryByText('Unauthorized Access')).not.toBeInTheDocument();
+    expect(screen.queryByText('Accesso Non Autorizzato')).not.toBeInTheDocument();
   });
 });

@@ -72,10 +72,10 @@ export function CompareTab() {
   const [idA, setIdA] = useState('');
   const [idB, setIdB] = useState('');
 
-  const [loadingA, setLoadingA] = useState(false);
-  const [loadingB, setLoadingB] = useState(false);
-  const [errorA, setErrorA] = useState<string | null>(null);
-  const [errorB, setErrorB] = useState<string | null>(null);
+  const [_loadingA, setLoadingA] = useState(false);
+  const [_loadingB, setLoadingB] = useState(false);
+  const [_errorA, setErrorA] = useState<string | null>(null);
+  const [_errorB, setErrorB] = useState<string | null>(null);
 
   const loadExecution = useCallback(
     async (

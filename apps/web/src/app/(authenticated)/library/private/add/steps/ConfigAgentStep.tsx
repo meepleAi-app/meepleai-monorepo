@@ -37,7 +37,7 @@ export function ConfigAgentStep({
   const [typologyId, setTypologyId] = useState<string>();
   const [strategyName, setStrategyName] = useState<string>('Balanced');
   const [isCreating, setIsCreating] = useState(false);
-  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([_pdfId]);
+  const [_selectedDocIds, setSelectedDocIds] = useState<string[]>([_pdfId]);
 
   const { data: currentUser } = useCurrentUser();
 

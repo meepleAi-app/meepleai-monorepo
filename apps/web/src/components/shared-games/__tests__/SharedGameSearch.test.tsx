@@ -346,11 +346,10 @@ describe('SharedGameSearch', () => {
   // ==========================================================================
 
   describe('No Results', () => {
-    beforeEach(() => {
+    it('hides results card when catalog returns empty', async () => {
+      // Use real timers for async operations
       vi.useRealTimers();
-    });
 
-    it('shows no results when catalog returns empty', async () => {
       // Override to return empty results
       mockSearchFn.mockResolvedValue({
         items: [],
@@ -364,7 +363,8 @@ describe('SharedGameSearch', () => {
 
       fireEvent.change(input, { target: { value: 'notfound' } });
 
-      // Wait for search to complete (debounce + API call)
+      // Wait for debounce + API call to complete
+      // When API returns empty, the results card is hidden (no loading, no results, no error)
       await waitFor(
         () => {
           expect(mockSearchFn).toHaveBeenCalled();
@@ -372,9 +372,12 @@ describe('SharedGameSearch', () => {
         { timeout: 1000 }
       );
 
-      // No game results should appear
+      // After search completes with empty results, no game titles should be visible
       expect(screen.queryByText('Catan')).not.toBeInTheDocument();
       expect(screen.queryByText('Ticket to Ride')).not.toBeInTheDocument();
+
+      // Restore fake timers for other tests
+      vi.useFakeTimers();
     });
   });
 

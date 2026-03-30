@@ -207,8 +207,13 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
         };
         _dbContext.Users.Add(user);
 
-        // AgentDefinitionId — use random Guid (FK to agent_definitions, seeded in migrations)
-        var agentDefinition = new { Id = Guid.NewGuid() };
+        // Create AgentDefinition (EF Core domain entity — FK required by agent_sessions)
+        var agentDefinition = AgentDefinition.Create(
+            name: $"Test Agent {Guid.NewGuid():N}",
+            description: "Seeded for integration test",
+            type: AgentType.RagAgent,
+            config: AgentDefinitionConfig.Create(model: "test-model", maxTokens: 1024, temperature: 0.7f));
+        _dbContext.AgentDefinitions.Add(agentDefinition);
 
         // Create GameSession (EF Core entity)
         var gameSession = new GameSessionEntity

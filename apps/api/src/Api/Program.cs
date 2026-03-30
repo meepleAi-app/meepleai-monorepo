@@ -780,8 +780,6 @@ if (!isAlphaMode)
     v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
     v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
     v1Api.MapArbitroAgentEndpoints(); // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
-    v1Api.MapGroup("/agent-typologies").MapAgentTypologyEndpoints(); // Issue #3177, #3178: Agent typology endpoints (AGT-003, AGT-004)
-    v1Api.MapGroup("/admin/agent-typologies").MapAdminAgentTypologyEndpoints(); // Admin-scoped agent typology management
     v1Api.MapAgentSessionEndpoints(); // Issue #3184 (AGT-010): Agent session lifecycle endpoints
     v1Api.MapGroup("/admin/ab-tests").MapAdminAbTestEndpoints(); // Issue #5497: A/B Test backend API endpoints
     v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints(); // Issue #3379: Agent test results history & persistence

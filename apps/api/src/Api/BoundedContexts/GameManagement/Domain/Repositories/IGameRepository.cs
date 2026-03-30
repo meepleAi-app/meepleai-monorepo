@@ -29,4 +29,13 @@ internal interface IGameRepository : IRepository<Game, Guid>
         int pageSize,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Gets all games linked to the specified SharedGameCatalog entry.
+    /// Used by the cross-BC handler for SharedGameDeleted events.
+    /// Spec-panel recommendation C-2.
+    /// </summary>
+    Task<IReadOnlyList<Game>> GetBySharedGameIdAsync(
+        Guid sharedGameId,
+        CancellationToken cancellationToken = default);
 }

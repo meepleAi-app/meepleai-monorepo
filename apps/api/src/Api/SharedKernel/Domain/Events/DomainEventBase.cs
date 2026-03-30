@@ -6,7 +6,7 @@ namespace Api.SharedKernel.Domain.Events;
 /// Base class for domain events providing common properties.
 /// All domain events should inherit from this class to ensure consistent behavior.
 /// </summary>
-internal abstract class DomainEventBase : IDomainEvent
+public abstract class DomainEventBase : IDomainEvent
 {
     /// <summary>
     /// Gets the date and time when this event occurred.

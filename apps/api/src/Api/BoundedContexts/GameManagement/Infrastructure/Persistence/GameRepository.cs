@@ -118,6 +118,19 @@ internal class GameRepository : RepositoryBase, IGameRepository
         return await DbContext.Games.AsNoTracking().AnyAsync(g => g.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<Game>> GetBySharedGameIdAsync(
+        Guid sharedGameId,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.Games
+            .AsNoTracking()
+            .Where(g => g.SharedGameId == sharedGameId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     /// <summary>
     /// Maps persistence entity to domain entity (reconstitution — no side effects).
     /// Restores all persisted properties including publication workflow fields (spec-panel C-1).

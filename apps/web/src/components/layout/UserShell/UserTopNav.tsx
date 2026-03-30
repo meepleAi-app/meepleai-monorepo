@@ -84,9 +84,11 @@ export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProp
 
       {/* Left: section emoji + title / breadcrumb */}
       <div className="flex items-center gap-1.5 text-sm truncate min-w-0 shrink-0">
-        <span className="text-base" role="img" aria-hidden="true">
-          {sectionEmoji}
-        </span>
+        {sectionEmoji && (
+          <span className="text-base" role="img" aria-hidden="true">
+            {sectionEmoji}
+          </span>
+        )}
         {showBreadcrumb ? (
           <nav aria-label="Breadcrumb" className="flex items-center gap-1 truncate">
             {breadcrumbs.map((crumb, i) => (

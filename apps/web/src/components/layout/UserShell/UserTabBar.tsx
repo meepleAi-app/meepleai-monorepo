@@ -107,8 +107,7 @@ function TabLink({ tab, isActive }: { tab: TabConfig; isActive: boolean }) {
   return (
     <Link
       href={tab.href}
-      aria-selected={isActive}
-      aria-label={tab.label}
+      aria-current={isActive ? 'page' : undefined}
       className={cn(
         'flex flex-col items-center justify-center gap-0.5',
         'min-w-[44px] min-h-[44px]',
@@ -121,8 +120,7 @@ function TabLink({ tab, isActive }: { tab: TabConfig; isActive: boolean }) {
           'transition-all duration-200 leading-none',
           isActive ? 'text-2xl scale-110 bg-primary/15 rounded-full p-1.5' : 'text-xl'
         )}
-        role="img"
-        aria-label={tab.label}
+        aria-hidden="true"
       >
         {tab.icon}
       </span>

@@ -171,7 +171,7 @@ internal class WeeklyEvaluationService : BackgroundService
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         // Calculate date range (last N days)
-        var endDate = _timeProvider.GetUtcNow().DateTime;
+        var endDate = _timeProvider.GetUtcNow().UtcDateTime;
         var startDate = endDate.AddDays(-_config.ReportWindowDays);
 
         _logger.LogInformation(

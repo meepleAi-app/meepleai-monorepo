@@ -35,6 +35,12 @@ public class SharedGameEntity
     public bool IsDeleted { get; set; }
     public bool IsRagPublic { get; set; }
 
+    /// <summary>
+    /// Optimistic concurrency token. Managed by the database.
+    /// Spec-panel recommendation C-3.
+    /// </summary>
+    public byte[]? RowVersion { get; set; }
+
     // Navigation properties (many-to-many)
     public ICollection<GameDesignerEntity> Designers { get; set; } = new List<GameDesignerEntity>();
     public ICollection<GamePublisherEntity> Publishers { get; set; } = new List<GamePublisherEntity>();

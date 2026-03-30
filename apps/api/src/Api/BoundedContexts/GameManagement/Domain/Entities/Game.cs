@@ -28,7 +28,8 @@ internal sealed class Game : AggregateRoot<Guid>
     public string? ImageUrl { get; private set; }
 
     // Publication Workflow (Issue #3481)
-    public bool IsPublished { get; private set; }
+    // IsPublished is derived — cannot diverge from ApprovalStatus (spec-panel C-1)
+    public bool IsPublished => ApprovalStatus == ApprovalStatus.Approved && PublishedAt.HasValue;
     public ApprovalStatus ApprovalStatus { get; private set; }
     public DateTime? PublishedAt { get; private set; }
 
@@ -118,6 +119,31 @@ internal sealed class Game : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Removes the link to SharedGameCatalog.
+    /// If the game was approved, it is reverted to Draft to maintain the invariant
+    /// that an approved game must reference a SharedGame.
+    /// Called when a SharedGame is deleted or when admin manually unlinks.
+    /// Idempotent — safe to call even if not linked.
+    /// Spec-panel recommendation M-3.
+    /// </summary>
+    public void UnlinkFromSharedGame()
+    {
+        if (SharedGameId is null) return; // already unlinked — no-op
+
+        var previousSharedGameId = SharedGameId.Value;
+        SharedGameId = null;
+
+        // Revoke approval — a game cannot remain published without a SharedGame reference
+        if (ApprovalStatus == ApprovalStatus.Approved)
+        {
+            ApprovalStatus = ApprovalStatus.Draft;
+            PublishedAt = null;
+        }
+
+        AddDomainEvent(new GameUnlinkedFromSharedCatalogEvent(Id, previousSharedGameId));
+    }
+
+    /// <summary>
     /// Publishes game to SharedGameCatalog with approval status.
     /// Issue #3481: Admin-controlled publication workflow.
     /// </summary>
@@ -129,7 +155,6 @@ internal sealed class Game : AggregateRoot<Guid>
         if (status == ApprovalStatus.Approved && SharedGameId == null)
             throw new InvalidOperationException("Cannot approve game without linking to SharedGameCatalog first");
 
-        IsPublished = status == ApprovalStatus.Approved;
         ApprovalStatus = status;
         PublishedAt = status == ApprovalStatus.Approved ? DateTime.UtcNow : null;
 

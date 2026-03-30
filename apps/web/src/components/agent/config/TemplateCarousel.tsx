@@ -20,7 +20,7 @@ interface Template {
 }
 
 export function TemplateCarousel() {
-  const { selectedTypologyId, setSelectedTypology } = useAgentStore();
+  const { selectedagentDefinitionId, setSelectedTypology } = useAgentStore();
   const [_showInfo, _setShowInfo] = useState<string | null>(null);
 
   const templates: Template[] = [
@@ -45,7 +45,7 @@ export function TemplateCarousel() {
               className={`
                 relative min-w-[120px] snap-center rounded-lg border-2 p-4 transition-all
                 ${
-                  selectedTypologyId === template.id
+                  selectedagentDefinitionId === template.id
                     ? 'border-cyan-400 bg-cyan-500/10 shadow-[0_0_20px_rgba(0,255,255,0.3)] agent-pulse-cyan'
                     : 'border-slate-700 bg-slate-900 hover:border-slate-600'
                 }

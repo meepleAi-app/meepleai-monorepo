@@ -31,7 +31,7 @@ export class AgentApiClient {
    */
   async launchSession(params: {
     gameSessionId: string;
-    typologyId: string;
+    agentDefinitionId: string;
     agentId: string;
     gameId: string;
     initialGameStateJson: string;
@@ -57,14 +57,18 @@ export class AgentApiClient {
    * Update agent typology during session
    * Issue #3252 (BACK-AGT-001)
    */
-  async updateTypology(gameSessionId: string, agentSessionId: string, newTypologyId: string): Promise<void> {
+  async updateTypology(
+    gameSessionId: string,
+    agentSessionId: string,
+    newagentDefinitionId: string
+  ): Promise<void> {
     const response = await fetch(
       `${API_BASE}/api/v1/game-sessions/${gameSessionId}/agent/typology`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ agentSessionId, newTypologyId }),
+        body: JSON.stringify({ agentSessionId, newagentDefinitionId }),
       }
     );
 
@@ -77,16 +81,17 @@ export class AgentApiClient {
    * Update agent runtime config
    * Issue #3253 (BACK-AGT-002)
    */
-  async updateConfig(gameSessionId: string, agentSessionId: string, config: AgentConfig): Promise<void> {
-    const response = await fetch(
-      `${API_BASE}/api/v1/game-sessions/${gameSessionId}/agent/config`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ agentSessionId, ...config }),
-      }
-    );
+  async updateConfig(
+    gameSessionId: string,
+    agentSessionId: string,
+    config: AgentConfig
+  ): Promise<void> {
+    const response = await fetch(`${API_BASE}/api/v1/game-sessions/${gameSessionId}/agent/config`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ agentSessionId, ...config }),
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to update config: ${response.statusText}`);
@@ -97,15 +102,12 @@ export class AgentApiClient {
    * End agent session
    */
   async endSession(gameSessionId: string, agentSessionId: string): Promise<void> {
-    const response = await fetch(
-      `${API_BASE}/api/v1/game-sessions/${gameSessionId}/agent`,
-      {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ agentSessionId }),
-      }
-    );
+    const response = await fetch(`${API_BASE}/api/v1/game-sessions/${gameSessionId}/agent`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ agentSessionId }),
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to end session: ${response.statusText}`);

@@ -16,7 +16,7 @@ export interface AgentSession {
   gameSessionId: string;
   userId: string;
   gameId: string;
-  typologyId: string;
+  agentDefinitionId: string;
   isActive: boolean;
   startedAt: Date;
   endedAt?: Date;

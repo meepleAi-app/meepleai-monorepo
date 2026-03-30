@@ -23,7 +23,7 @@ export interface CostEstimate {
  * Full API response wrapper
  */
 export interface CostEstimateResponse {
-  typologyId: string;
+  agentDefinitionId: string;
   typologyName: string;
   strategy: string;
   costEstimate: CostEstimate;
@@ -34,7 +34,7 @@ export interface CostEstimateResponse {
  */
 export const costEstimateKeys = {
   all: ['costEstimate'] as const,
-  byTypology: (typologyId: string) => [...costEstimateKeys.all, typologyId] as const,
+  byTypology: (agentDefinitionId: string) => [...costEstimateKeys.all, agentDefinitionId] as const,
 };
 
 /**
@@ -43,38 +43,41 @@ export const costEstimateKeys = {
  * Features:
  * - Real-time cost calculation based on backend pricing
  * - Automatic caching (stale after 30 seconds)
- * - Conditional execution (only when typologyId provided)
+ * - Conditional execution (only when agentDefinitionId provided)
  *
- * @param typologyId - Agent typology UUID
+ * @param agentDefinitionId - Agent typology UUID
  * @param enabled - Whether to run the query (default: true)
  * @returns UseQueryResult with cost estimate or null
  *
  * @example
  * ```tsx
- * const { data: estimate, isLoading } = useCostEstimate(typologyId);
+ * const { data: estimate, isLoading } = useCostEstimate(agentDefinitionId);
  * if (estimate) {
  *   console.log(`Per query: $${estimate.costEstimate.estimatedCostPerQuery}`);
  * }
  * ```
  */
 export function useCostEstimate(
-  typologyId: string | null | undefined,
+  agentDefinitionId: string | null | undefined,
   enabled: boolean = true
 ): UseQueryResult<CostEstimateResponse | null, Error> {
   return useQuery({
-    queryKey: costEstimateKeys.byTypology(typologyId || ''),
+    queryKey: costEstimateKeys.byTypology(agentDefinitionId || ''),
     queryFn: async (): Promise<CostEstimateResponse | null> => {
-      if (!typologyId) return null;
+      if (!agentDefinitionId) return null;
 
       // Call admin API endpoint: GET /api/v1/admin/agent-typologies/{id}/cost-estimate
       // Note: This endpoint requires admin role
-      const response = await fetch(`/api/v1/admin/agent-typologies/${typologyId}/cost-estimate`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await fetch(
+        `/api/v1/admin/agent-typologies/${agentDefinitionId}/cost-estimate`,
+        {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -88,10 +91,10 @@ export function useCostEstimate(
 
       const data = await response.json();
 
-      // Backend returns: { typologyId, typologyName, strategy, costEstimate }
+      // Backend returns: { agentDefinitionId, typologyName, strategy, costEstimate }
       // Transform to match our interface
       return {
-        typologyId: data.typologyId,
+        agentDefinitionId: data.agentDefinitionId,
         typologyName: data.typologyName,
         strategy: data.strategy,
         costEstimate: {
@@ -102,7 +105,7 @@ export function useCostEstimate(
         },
       };
     },
-    enabled: enabled && !!typologyId,
+    enabled: enabled && !!agentDefinitionId,
     // Cost estimates change infrequently (30 seconds)
     staleTime: 30 * 1000,
     // Keep in cache for 5 minutes

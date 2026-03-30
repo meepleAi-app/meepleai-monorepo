@@ -34,7 +34,7 @@ export function ConfigAgentStep({
   onSkip,
   onBack,
 }: ConfigAgentStepProps) {
-  const [typologyId, setTypologyId] = useState<string>();
+  const [agentDefinitionId, setagentDefinitionId] = useState<string>();
   const [strategyName, setStrategyName] = useState<string>('Balanced');
   const [isCreating, setIsCreating] = useState(false);
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([_pdfId]);
@@ -49,7 +49,7 @@ export function ConfigAgentStep({
   }, [currentUser?.role]);
 
   const handleCreate = async () => {
-    if (!typologyId) {
+    if (!agentDefinitionId) {
       toast.error('Seleziona un tipo di agente');
       return;
     }
@@ -62,7 +62,7 @@ export function ConfigAgentStep({
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          typologyId,
+          agentDefinitionId,
           strategyName,
           strategyParameters: null,
         }),
@@ -95,7 +95,7 @@ export function ConfigAgentStep({
       </div>
 
       {/* Agent Type Selection */}
-      <TypologySelector value={typologyId} onChange={setTypologyId} />
+      <TypologySelector value={agentDefinitionId} onChange={setagentDefinitionId} />
 
       {/* Strategy Selection */}
       <StrategySelector value={strategyName} onChange={setStrategyName} userTier={userTier} />
@@ -130,7 +130,11 @@ export function ConfigAgentStep({
           <Button variant="outline" onClick={onSkip} disabled={isCreating}>
             Salta Agente
           </Button>
-          <Button onClick={handleCreate} disabled={!typologyId || isCreating} className="min-w-32">
+          <Button
+            onClick={handleCreate}
+            disabled={!agentDefinitionId || isCreating}
+            className="min-w-32"
+          >
             {isCreating ? (
               <>
                 <Spinner size="sm" className="mr-2" />

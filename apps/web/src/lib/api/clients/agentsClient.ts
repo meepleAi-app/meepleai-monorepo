@@ -493,7 +493,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Issue #4962: Wire agent test console to real backend API
      */
     async testTypology(
-      typologyId: string,
+      agentDefinitionId: string,
       testQuery: string
     ): Promise<{
       success: boolean;
@@ -504,7 +504,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
         success: boolean;
         response: string;
         confidenceScore: number;
-      }>(`/api/v1/agent-typologies/${encodeURIComponent(typologyId)}/test`, { testQuery });
+      }>(`/api/v1/agent-typologies/${encodeURIComponent(agentDefinitionId)}/test`, { testQuery });
 
       if (!response) {
         throw new Error('Failed to test agent typology: no response from server');
@@ -519,7 +519,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Issue #4962: Wire agent test console to real backend API
      */
     async saveTestResult(result: {
-      typologyId: string;
+      agentDefinitionId: string;
       query: string;
       response: string;
       modelUsed: string;
@@ -533,7 +533,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       const saved = await httpClient.post<{ id: string }>(
         '/api/v1/admin/test-results',
         {
-          typologyId: result.typologyId,
+          agentDefinitionId: result.agentDefinitionId,
           query: result.query,
           response: result.response,
           modelUsed: result.modelUsed,

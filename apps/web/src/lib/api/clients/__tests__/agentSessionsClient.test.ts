@@ -34,7 +34,7 @@ describe('agentSessionsClient', () => {
       mockPost.mockResolvedValue(mockResponse);
 
       const request = {
-        typologyId: 'typology-abc',
+        agentDefinitionId: 'typology-abc',
         agentId: 'agent-def',
         gameId: 'game-ghi',
         initialGameStateJson: '{"turn": 1}',
@@ -54,7 +54,7 @@ describe('agentSessionsClient', () => {
       mockPost.mockResolvedValue(null);
 
       const request = {
-        typologyId: 'typology-abc',
+        agentDefinitionId: 'typology-abc',
         agentId: 'agent-def',
         gameId: 'game-ghi',
       };
@@ -68,7 +68,7 @@ describe('agentSessionsClient', () => {
       mockPost.mockResolvedValue({ agentSessionId: 'session-123' });
 
       const request = {
-        typologyId: 'typology-abc',
+        agentDefinitionId: 'typology-abc',
         agentId: 'agent-def',
         gameId: 'game-ghi',
       };

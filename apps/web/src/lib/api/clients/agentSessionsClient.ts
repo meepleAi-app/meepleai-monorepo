@@ -12,7 +12,7 @@ import type { HttpClient } from '../core/httpClient';
 // ========== Request/Response Schemas ==========
 
 export const LaunchSessionAgentRequestSchema = z.object({
-  typologyId: z.string().uuid(),
+  agentDefinitionId: z.string().uuid(),
   agentId: z.string().uuid(),
   gameId: z.string().uuid(),
   initialGameStateJson: z.string().optional().default('{}'),

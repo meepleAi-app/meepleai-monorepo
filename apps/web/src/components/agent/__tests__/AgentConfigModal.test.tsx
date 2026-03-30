@@ -48,11 +48,11 @@ describe('AgentConfigModal', () => {
       },
     });
     vi.clearAllMocks();
-    
+
     // Reset mock to default return value
     mockUseAgentConfigModal.mockReturnValue({
-      selectedTypologyId: null,
-      setSelectedTypologyId: vi.fn(),
+      selectedagentDefinitionId: null,
+      setSelectedagentDefinitionId: vi.fn(),
       selectedModelName: 'GPT-4o',
       setSelectedModelName: vi.fn(),
       typologies: [
@@ -107,7 +107,9 @@ describe('AgentConfigModal', () => {
       await waitFor(() => {
         expect(screen.getByText('Configurazione Agente AI')).toBeInTheDocument();
         expect(
-          screen.getByText('Seleziona la tipologia di agente e il modello AI da utilizzare per le sessioni di gioco.')
+          screen.getByText(
+            'Seleziona la tipologia di agente e il modello AI da utilizzare per le sessioni di gioco.'
+          )
         ).toBeInTheDocument();
       });
     });
@@ -396,7 +398,9 @@ describe('AgentConfigModal', () => {
       await user.click(screen.getByText('Configura AI'));
 
       await waitFor(() => {
-        expect(screen.getByText(/stai utilizzando oltre il 95% della tua quota/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/stai utilizzando oltre il 95% della tua quota/i)
+        ).toBeInTheDocument();
       });
     });
 

@@ -20,7 +20,13 @@ import { toast } from 'sonner';
 
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -39,7 +45,11 @@ interface TestMessage {
  * EditorAuthGuard placeholder
  * TODO: Extract to shared component
  */
-function EditorAuthGuard({ children, loading, user }: {
+function EditorAuthGuard({
+  children,
+  loading,
+  user,
+}: {
   children: React.ReactNode;
   loading: boolean;
   user: { role: string; id: string } | null;
@@ -68,7 +78,7 @@ function TestSandboxClient() {
   const router = useRouter();
   const params = useParams();
   const { user, loading: authLoading } = useAuthUser();
-  const typologyId = params?.id as string;
+  const agentDefinitionId = params?.id as string;
   const queryClient = useQueryClient();
 
   const [messages, setMessages] = useState<TestMessage[]>([]);
@@ -81,16 +91,20 @@ function TestSandboxClient() {
   }, [messages]);
 
   // Fetch typology
-  const { data: typology, isLoading, error } = useQuery({
-    queryKey: ['typology', typologyId],
-    queryFn: () => agentTypologiesApi.getById(typologyId),
-    enabled: !!typologyId,
+  const {
+    data: typology,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['typology', agentDefinitionId],
+    queryFn: () => agentTypologiesApi.getById(agentDefinitionId),
+    enabled: !!agentDefinitionId,
   });
 
   // Test typology mutation
   const testMutation = useMutation({
     mutationFn: async (query: string) => {
-      const result = await agentTypologiesApi.test(typologyId, query);
+      const result = await agentTypologiesApi.test(agentDefinitionId, query);
       return result;
     },
     onSuccess: (result, query) => {
@@ -114,7 +128,7 @@ function TestSandboxClient() {
       setMessages(prev => [...prev, userMessage, assistantMessage]);
       setInputValue('');
     },
-    onError: (error) => {
+    onError: error => {
       toast.error('Test failed', {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
@@ -129,15 +143,15 @@ function TestSandboxClient() {
       // Submit for approval (Draft → PendingReview)
       // Note: Backend domain has SubmitForApproval() method
       // Using update endpoint as workaround until dedicated /submit endpoint exists
-      await agentTypologiesApi.submitForApproval(typologyId, typology);
+      await agentTypologiesApi.submitForApproval(agentDefinitionId, typology);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['editor-proposals'] });
-      queryClient.invalidateQueries({ queryKey: ['typology', typologyId] });
+      queryClient.invalidateQueries({ queryKey: ['typology', agentDefinitionId] });
       toast.success('Submitted for approval');
       router.push('/editor/agent-proposals');
     },
-    onError: (error) => {
+    onError: error => {
       toast.error('Submission failed', {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
@@ -152,7 +166,11 @@ function TestSandboxClient() {
   };
 
   const handleSubmitForApproval = () => {
-    if (confirm(`Submit "${typology?.name}" for admin approval?\n\nOnce submitted, you won't be able to edit or test this proposal until it's reviewed.`)) {
+    if (
+      confirm(
+        `Submit "${typology?.name}" for admin approval?\n\nOnce submitted, you won't be able to edit or test this proposal until it's reviewed.`
+      )
+    ) {
       submitMutation.mutate();
     }
   };
@@ -162,7 +180,7 @@ function TestSandboxClient() {
   };
 
   const handleEdit = () => {
-    router.push(`/editor/agent-proposals/${typologyId}/edit`);
+    router.push(`/editor/agent-proposals/${agentDefinitionId}/edit`);
   };
 
   // Sample questions
@@ -193,40 +211,16 @@ function TestSandboxClient() {
         <div className="text-center p-12">
           <h2 className="text-2xl font-bold mb-4">Proposal Not Found</h2>
           <p className="text-muted-foreground">
-            {error instanceof Error ? error.message : 'The proposal you are looking for does not exist.'}
+            {error instanceof Error
+              ? error.message
+              : 'The proposal you are looking for does not exist.'}
           </p>
         </div>
       </div>
     );
   }
 
-  // Authorization check: only creator can test
-  if (user && typology.createdBy !== user.id) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="text-center p-12">
-          <h2 className="text-2xl font-bold mb-4">Not Authorized</h2>
-          <p className="text-muted-foreground">
-            You can only test your own proposals.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Status check: only Draft can be tested
-  if (typology.status !== 'Draft') {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="text-center p-12">
-          <h2 className="text-2xl font-bold mb-4">Cannot Test</h2>
-          <p className="text-muted-foreground">
-            Only Draft proposals can be tested. This proposal is currently: {typology.status}
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // No authorization check on createdBy (field removed in simplification)
 
   return (
     <EditorAuthGuard loading={authLoading} user={user}>
@@ -250,10 +244,7 @@ function TestSandboxClient() {
               <Edit className="h-4 w-4 mr-2" />
               Edit Proposal
             </Button>
-            <Button
-              onClick={handleSubmitForApproval}
-              disabled={submitMutation.isPending}
-            >
+            <Button onClick={handleSubmitForApproval} disabled={submitMutation.isPending}>
               <CheckCircle className="h-4 w-4 mr-2" />
               Submit for Approval
             </Button>
@@ -278,7 +269,7 @@ function TestSandboxClient() {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-muted-foreground mb-1">Strategy</p>
-                  <Badge variant="secondary">{typology.defaultStrategyName}</Badge>
+                  <Badge variant="secondary">{typology.strategyName}</Badge>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-muted-foreground mb-1">Status</p>
@@ -314,9 +305,7 @@ function TestSandboxClient() {
             <Card className="h-[600px] flex flex-col">
               <CardHeader>
                 <CardTitle>Test Chat</CardTitle>
-                <CardDescription>
-                  Ask questions to see how this typology responds
-                </CardDescription>
+                <CardDescription>Ask questions to see how this typology responds</CardDescription>
               </CardHeader>
               <Separator />
 
@@ -330,7 +319,7 @@ function TestSandboxClient() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {messages.map((message) => (
+                      {messages.map(message => (
                         <div
                           key={message.id}
                           className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -373,15 +362,12 @@ function TestSandboxClient() {
                 <form onSubmit={handleSendMessage} className="flex gap-2">
                   <Input
                     value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
+                    onChange={e => setInputValue(e.target.value)}
                     placeholder="Ask a test question..."
                     disabled={testMutation.isPending}
                     className="flex-1"
                   />
-                  <Button
-                    type="submit"
-                    disabled={!inputValue.trim() || testMutation.isPending}
-                  >
+                  <Button type="submit" disabled={!inputValue.trim() || testMutation.isPending}>
                     {testMutation.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (

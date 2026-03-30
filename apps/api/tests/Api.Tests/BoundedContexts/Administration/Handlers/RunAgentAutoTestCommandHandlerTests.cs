@@ -1,8 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands.GameWizard;
 using Api.BoundedContexts.Administration.Application.DTOs;
-using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
-using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -77,7 +76,7 @@ public class RunAgentAutoTestCommandHandlerTests
             .ReturnsAsync(game);
 
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePassingResponse());
 
         var command = new RunAgentAutoTestCommand(GameId: GameId, RequestedByUserId: UserId);
@@ -88,7 +87,7 @@ public class RunAgentAutoTestCommandHandlerTests
         // Assert
         result.TestCases.Should().HaveCount(8);
         _mockMediator.Verify(
-            m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()),
+            m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()),
             Times.Exactly(8));
     }
 
@@ -105,7 +104,7 @@ public class RunAgentAutoTestCommandHandlerTests
             .Setup(r => r.GetByIdAsync(GameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePassingResponse());
 
         var before = DateTime.UtcNow;
@@ -133,9 +132,8 @@ public class RunAgentAutoTestCommandHandlerTests
             .Setup(r => r.GetByIdAsync(GameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        // High-confidence passing response
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePassingResponse(confidence: 0.9));
 
         var command = new RunAgentAutoTestCommand(GameId: GameId, RequestedByUserId: UserId);
@@ -165,7 +163,7 @@ public class RunAgentAutoTestCommandHandlerTests
 
         // Passes (confidence 0.5 ≥ 0.3 threshold, latency ok) but avg confidence ≤0.7
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePassingResponse(confidence: 0.5));
 
         var command = new RunAgentAutoTestCommand(GameId: GameId, RequestedByUserId: UserId);
@@ -190,9 +188,8 @@ public class RunAgentAutoTestCommandHandlerTests
             .Setup(r => r.GetByIdAsync(GameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        // No answer → Passed = false
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateFailingResponse_NoAnswer());
 
         var command = new RunAgentAutoTestCommand(GameId: GameId, RequestedByUserId: UserId);
@@ -211,7 +208,7 @@ public class RunAgentAutoTestCommandHandlerTests
     // ────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Handle_WhenResponseHasNoChunks_TestCaseFails()
+    public async Task Handle_WhenResponseHasNoSources_TestCaseFails()
     {
         // Arrange
         var game = CreateFakeSharedGame(GameId, "7 Wonders", 68448);
@@ -220,8 +217,8 @@ public class RunAgentAutoTestCommandHandlerTests
             .ReturnsAsync(game);
 
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateFailingResponse_NoChunks());
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateFailingResponse_NoSources());
 
         var command = new RunAgentAutoTestCommand(GameId: GameId, RequestedByUserId: UserId);
 
@@ -252,7 +249,7 @@ public class RunAgentAutoTestCommandHandlerTests
 
         var callCount = 0;
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
                 callCount++;
@@ -283,7 +280,7 @@ public class RunAgentAutoTestCommandHandlerTests
             .Setup(r => r.GetByIdAsync(GameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePassingResponse());
 
         var command = new RunAgentAutoTestCommand(GameId: GameId, RequestedByUserId: UserId);
@@ -296,11 +293,11 @@ public class RunAgentAutoTestCommandHandlerTests
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // AskAgentQuestionCommand sent with correct parameters
+    // AskQuestionQuery sent with correct parameters
     // ────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Handle_SendsAskAgentQuestionCommandWithCorrectStrategy()
+    public async Task Handle_SendsAskQuestionQueryWithCorrectParameters()
     {
         // Arrange
         var game = CreateFakeSharedGame(GameId, "Gloomhaven", 174430);
@@ -308,7 +305,7 @@ public class RunAgentAutoTestCommandHandlerTests
             .Setup(r => r.GetByIdAsync(GameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePassingResponse());
 
         var command = new RunAgentAutoTestCommand(GameId: GameId, RequestedByUserId: UserId);
@@ -316,19 +313,18 @@ public class RunAgentAutoTestCommandHandlerTests
         // Act
         await _handler.Handle(command, CancellationToken.None);
 
-        // Assert: every call uses SingleModel strategy with correct GameId
+        // Assert: every call uses Hybrid search mode with correct GameId
         _mockMediator.Verify(
             m => m.Send(
-                It.Is<AskAgentQuestionCommand>(c =>
-                    c.Strategy == AgentSearchStrategy.SingleModel &&
-                    c.GameId == GameId &&
-                    c.TopK == 5),
+                It.Is<AskQuestionQuery>(q =>
+                    q.SearchMode == "Hybrid" &&
+                    q.GameId == GameId),
                 It.IsAny<CancellationToken>()),
             Times.Exactly(8));
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Exception from AskAgentQuestionCommand → test case marked as failed (no throw)
+    // Exception from AskQuestionQuery → test case marked as failed (no throw)
     // ────────────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -342,7 +338,7 @@ public class RunAgentAutoTestCommandHandlerTests
 
         var callCount = 0;
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
                 callCount++;
@@ -376,7 +372,7 @@ public class RunAgentAutoTestCommandHandlerTests
             .Setup(r => r.GetByIdAsync(GameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<AskAgentQuestionCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<AskQuestionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePassingResponse());
 
         var command = new RunAgentAutoTestCommand(GameId: GameId, RequestedByUserId: UserId);
@@ -419,69 +415,51 @@ public class RunAgentAutoTestCommandHandlerTests
             isDeleted: false,
             bggId: bggId);
 
-    private static AgentChatResponse CreatePassingResponse(double confidence = 0.85) =>
-        new()
-        {
-            Strategy = AgentSearchStrategy.SingleModel,
-            StrategyDescription = "Single model",
-            Answer = "The setup involves placing tiles and tokens on the board.",
-            RetrievedChunks =
+    private static QaResponseDto CreatePassingResponse(double confidence = 0.85) =>
+        new(
+            Answer: "The setup involves placing tiles and tokens on the board.",
+            Sources:
             [
-                new CodeChunkDto
-                {
-                    FilePath = "rulebook.pdf",
-                    StartLine = 1,
-                    EndLine = 10,
-                    CodePreview = "Setup: place the board in the center of the table.",
-                    RelevanceScore = confidence,
-                    BoundedContext = "rules",
-                    ChunkIndex = 0
-                }
+                new SearchResultDto(
+                    VectorDocumentId: Guid.NewGuid().ToString(),
+                    TextContent: "Setup: place the board in the center of the table.",
+                    PageNumber: 1,
+                    RelevanceScore: confidence,
+                    Rank: 1,
+                    SearchMethod: "Hybrid")
             ],
-            TokenUsage = TokenUsageDto.Empty,
-            CostBreakdown = CostBreakdownDto.Zero(),
-            LatencyMs = 500,
-            SessionId = Guid.NewGuid().ToString(),
-            Timestamp = DateTime.UtcNow
-        };
+            SearchConfidence: confidence,
+            LlmConfidence: confidence,
+            OverallConfidence: confidence,
+            IsLowQuality: false,
+            Citations: []);
 
-    private static AgentChatResponse CreateFailingResponse_NoAnswer() =>
-        new()
-        {
-            Strategy = AgentSearchStrategy.SingleModel,
-            StrategyDescription = "Single model",
-            Answer = null,
-            RetrievedChunks =
+    private static QaResponseDto CreateFailingResponse_NoAnswer() =>
+        new(
+            Answer: string.Empty,
+            Sources:
             [
-                new CodeChunkDto
-                {
-                    FilePath = "rulebook.pdf",
-                    StartLine = 1,
-                    EndLine = 5,
-                    CodePreview = "Some content.",
-                    RelevanceScore = 0.8,
-                    BoundedContext = "rules",
-                    ChunkIndex = 0
-                }
+                new SearchResultDto(
+                    VectorDocumentId: Guid.NewGuid().ToString(),
+                    TextContent: "Some content.",
+                    PageNumber: 1,
+                    RelevanceScore: 0.8,
+                    Rank: 1,
+                    SearchMethod: "Hybrid")
             ],
-            TokenUsage = TokenUsageDto.Empty,
-            CostBreakdown = CostBreakdownDto.Zero(),
-            LatencyMs = 200,
-            SessionId = Guid.NewGuid().ToString(),
-            Timestamp = DateTime.UtcNow
-        };
+            SearchConfidence: 0.8,
+            LlmConfidence: 0.0,
+            OverallConfidence: 0.4,
+            IsLowQuality: true,
+            Citations: []);
 
-    private static AgentChatResponse CreateFailingResponse_NoChunks() =>
-        new()
-        {
-            Strategy = AgentSearchStrategy.SingleModel,
-            StrategyDescription = "Single model",
-            Answer = "I found some information.",
-            RetrievedChunks = [],
-            TokenUsage = TokenUsageDto.Empty,
-            CostBreakdown = CostBreakdownDto.Zero(),
-            LatencyMs = 150,
-            SessionId = Guid.NewGuid().ToString(),
-            Timestamp = DateTime.UtcNow
-        };
+    private static QaResponseDto CreateFailingResponse_NoSources() =>
+        new(
+            Answer: "I found some information.",
+            Sources: [],
+            SearchConfidence: 0.0,
+            LlmConfidence: 0.0,
+            OverallConfidence: 0.0,
+            IsLowQuality: true,
+            Citations: []);
 }

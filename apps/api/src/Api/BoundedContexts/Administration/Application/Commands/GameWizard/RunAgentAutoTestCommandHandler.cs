@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using Api.BoundedContexts.Administration.Application.DTOs;
-using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
-using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -93,24 +91,21 @@ internal sealed class RunAgentAutoTestCommandHandler : ICommandHandler<RunAgentA
         {
             var sw = Stopwatch.StartNew();
 
-            var command = new AskAgentQuestionCommand
-            {
-                Question = question,
-                Strategy = AgentSearchStrategy.SingleModel,
-                GameId = gameId,
-                TopK = 5,
-                MinScore = 0.5
-            };
+            var query = new AskQuestionQuery(
+                GameId: gameId,
+                Question: question,
+                SearchMode: "Hybrid"
+            );
 
-            var response = await _mediator.Send(command, cancellationToken).ConfigureAwait(false);
+            var response = await _mediator.Send(query, cancellationToken).ConfigureAwait(false);
             sw.Stop();
 
             var hasAnswer = !string.IsNullOrWhiteSpace(response.Answer);
-            var hasChunks = response.RetrievedChunks.Count > 0;
-            var avgConfidence = hasChunks
-                ? response.RetrievedChunks.Average(c => c.RelevanceScore)
+            var hasSources = response.Sources.Count > 0;
+            var avgConfidence = hasSources
+                ? response.Sources.Average(s => s.RelevanceScore)
                 : 0.0;
-            var latency = response.LatencyMs > 0 ? response.LatencyMs : (int)sw.ElapsedMilliseconds;
+            var latency = (int)sw.ElapsedMilliseconds;
 
             // Determine pass/fail
             string? failureReason = null;
@@ -121,7 +116,7 @@ internal sealed class RunAgentAutoTestCommandHandler : ICommandHandler<RunAgentA
                 passed = false;
                 failureReason = "No answer generated";
             }
-            else if (!hasChunks)
+            else if (!hasSources)
             {
                 passed = false;
                 failureReason = "No relevant chunks retrieved from vector search";
@@ -144,7 +139,7 @@ internal sealed class RunAgentAutoTestCommandHandler : ICommandHandler<RunAgentA
                 Answer = response.Answer,
                 ConfidenceScore = avgConfidence,
                 LatencyMs = latency,
-                ChunksRetrieved = response.RetrievedChunks.Count,
+                ChunksRetrieved = response.Sources.Count,
                 Passed = passed,
                 FailureReason = failureReason
             };

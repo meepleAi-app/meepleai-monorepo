@@ -86,3 +86,13 @@ public record ArbitroRuleAtomDto(
     string? Page,
     string? Line
 );
+
+public record TokenUsageDto(int PromptTokens, int CompletionTokens, int TotalTokens)
+{
+    public static TokenUsageDto Empty => new(0, 0, 0);
+}
+
+public record CostBreakdownDto(double PromptCost, double CompletionCost, double TotalCost)
+{
+    public static CostBreakdownDto Zero(string model) => new(0, 0, 0);
+}

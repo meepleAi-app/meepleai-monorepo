@@ -101,6 +101,10 @@ vi.mock('@/hooks/queries/useGameMemory', () => ({
   useAddHouseRule: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+vi.mock('@/components/library/DocumentSelectionPanel', () => ({
+  DocumentSelectionPanel: () => <div data-testid="document-selection-panel" />,
+}));
+
 // ============================================================================
 // Tests
 // ============================================================================

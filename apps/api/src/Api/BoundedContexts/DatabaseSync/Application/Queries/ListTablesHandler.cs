@@ -47,7 +47,6 @@ internal class ListTablesHandler : IQueryHandler<ListTablesQuery, IReadOnlyList<
         ["agent_feedbacks"] = "KnowledgeBase",
         ["agent_configurations"] = "KnowledgeBase",
         ["agent_typologies"] = "KnowledgeBase",
-        ["typology_prompt_templates"] = "KnowledgeBase",
         ["agent_sessions"] = "KnowledgeBase",
         ["pdf_documents"] = "DocumentProcessing",
         ["processing_metrics"] = "DocumentProcessing",

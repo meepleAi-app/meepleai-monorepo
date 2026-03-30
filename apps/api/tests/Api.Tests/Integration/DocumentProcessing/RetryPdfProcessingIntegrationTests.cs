@@ -69,9 +69,6 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var mockEmailTemplateService = new Moq.Mock<Api.BoundedContexts.UserNotifications.Application.Services.IEmailTemplateService>();
         services.AddSingleton(_ => mockEmailTemplateService.Object);
 
-        // Register KnowledgeBase dependencies (required by AutoCreateAgentOnPdfReadyHandler picked up by MediatR assembly scan)
-        var mockTypologyRepo = new Moq.Mock<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentTypologyRepository>();
-        services.AddScoped(_ => mockTypologyRepo.Object);
 
         // Register handler explicitly
         services.AddScoped<RetryPdfProcessingCommandHandler>();

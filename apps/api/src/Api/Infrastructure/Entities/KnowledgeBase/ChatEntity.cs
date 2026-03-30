@@ -14,6 +14,5 @@ public class ChatEntity
 
     public UserEntity User { get; set; } = default!;
     public GameEntity Game { get; set; } = default!;
-    public AgentEntity Agent { get; set; } = default!;
     public ICollection<ChatLogEntity> Logs { get; set; } = new List<ChatLogEntity>();
 }

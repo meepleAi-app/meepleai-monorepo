@@ -45,7 +45,7 @@ internal class ConfigureAgentCommandHandler : IRequestHandler<ConfigureAgentComm
             }
 
             // Create new strategy
-            var strategy = AgentStrategy.Custom(request.StrategyName, request.StrategyParameters);
+            var strategy = AgentStrategy.HybridSearch();
 
             // Apply domain logic (Configure method on aggregate)
             agent.Configure(strategy);

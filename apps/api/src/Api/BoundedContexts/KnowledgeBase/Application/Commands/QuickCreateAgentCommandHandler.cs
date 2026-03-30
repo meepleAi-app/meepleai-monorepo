@@ -90,7 +90,7 @@ internal sealed class QuickCreateAgentCommandHandler
         try
         {
             var agentType = AgentType.RagAgent;
-            var strategy = AgentStrategy.SingleModel();
+            var strategy = AgentStrategy.HybridSearch();
             var agentName = await ResolveUniqueName(request.UserId, $"Tutor {gameName}", cancellationToken)
                 .ConfigureAwait(false);
 

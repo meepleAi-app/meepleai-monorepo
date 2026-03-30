@@ -46,9 +46,7 @@ internal sealed class UpdateAgentTypologyCommandHandler : IRequestHandler<Update
             }
 
             // Create updated strategy value object
-            var updatedStrategy = AgentStrategy.Custom(
-                request.DefaultStrategyName,
-                request.DefaultStrategyParameters);
+            var updatedStrategy = AgentStrategy.HybridSearch();
 
             // Apply domain logic (Update method validates state)
             typology.Update(

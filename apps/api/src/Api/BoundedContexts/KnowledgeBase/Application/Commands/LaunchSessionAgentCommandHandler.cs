@@ -37,9 +37,9 @@ internal sealed class LaunchSessionAgentCommandHandler : IRequestHandler<LaunchS
         ArgumentNullException.ThrowIfNull(request);
 
         _logger.LogInformation(
-            "Launching agent session for GameSession {GameSessionId}, Typology {TypologyId}",
+            "Launching agent session for GameSession {GameSessionId}, AgentDefinition {AgentDefinitionId}",
             request.GameSessionId,
-            request.TypologyId);
+            request.AgentDefinitionId);
 
         // Check if an active session already exists
         var hasActiveSession = await _sessionRepository
@@ -58,11 +58,10 @@ internal sealed class LaunchSessionAgentCommandHandler : IRequestHandler<LaunchS
         // Create agent session
         var agentSession = new AgentSession(
             id: Guid.NewGuid(),
-            agentId: request.AgentId,
+            agentDefinitionId: request.AgentDefinitionId,
             gameSessionId: request.GameSessionId,
             userId: request.UserId,
             gameId: request.GameId,
-            typologyId: request.TypologyId,
             initialState: initialGameState
         );
 

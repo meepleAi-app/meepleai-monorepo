@@ -70,11 +70,7 @@ internal sealed class UpdateUserAgentCommandHandler : IRequestHandler<UpdateUser
             if (!isAdmin && tierLevel < 2 && request.StrategyParameters is { Count: > 0 })
                 throw new ForbiddenException("Strategy parameters require Premium tier or higher.");
 
-            var parameters = (isAdmin || tierLevel >= 2)
-                ? request.StrategyParameters ?? new Dictionary<string, object>(StringComparer.Ordinal)
-                : new Dictionary<string, object>(StringComparer.Ordinal);
-
-            var strategy = AgentStrategy.Custom(request.StrategyName, parameters);
+            var strategy = AgentStrategy.HybridSearch();
             agent.Configure(strategy);
         }
 

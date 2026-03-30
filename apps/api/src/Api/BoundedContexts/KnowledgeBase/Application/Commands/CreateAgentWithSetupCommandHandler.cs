@@ -257,16 +257,15 @@ internal sealed class CreateAgentWithSetupCommandHandler
 
         if ((isAdmin || tierLevel >= 2) && !string.IsNullOrWhiteSpace(request.StrategyName))
         {
-            var parameters = request.StrategyParameters ?? new Dictionary<string, object>(StringComparer.Ordinal);
-            return AgentStrategy.Custom(request.StrategyName, parameters);
+            return AgentStrategy.HybridSearch();
         }
 
         if (tierLevel >= 1 && !string.IsNullOrWhiteSpace(request.StrategyName))
         {
-            return AgentStrategy.Custom(request.StrategyName, new Dictionary<string, object>(StringComparer.Ordinal));
+            return AgentStrategy.HybridSearch();
         }
 
-        return AgentStrategy.SingleModel();
+        return AgentStrategy.HybridSearch();
     }
 
     private static int GetTierLevel(string tier)

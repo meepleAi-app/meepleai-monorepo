@@ -48,7 +48,7 @@ internal class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, A
         var agentType = AgentType.Parse(request.AgentType);
 
         // Create strategy
-        var strategy = AgentStrategy.Custom(request.StrategyName, request.StrategyParameters);
+        var strategy = AgentStrategy.HybridSearch();
 
         // Create agent aggregate
         var agent = new Agent(

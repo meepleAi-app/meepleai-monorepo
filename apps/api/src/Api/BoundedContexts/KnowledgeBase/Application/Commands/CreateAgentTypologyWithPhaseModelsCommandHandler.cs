@@ -280,16 +280,7 @@ internal sealed class CreateAgentTypologyWithPhaseModelsCommandHandler
             };
         }
 
-        // Create strategy with explicit phase configuration
-        var parameters = new Dictionary<string, object>(StringComparer.Ordinal)
-        {
-            ["Models"] = models.ToArray(),
-            ["AgentRoles"] = agentRoles,
-            ["ConsensusThreshold"] = 0.8,
-            ["StrategyType"] = strategyName.ToUpperInvariant()
-        };
-
-        return AgentStrategy.Custom($"PhaseConfigured_{strategyName}", parameters);
+        return AgentStrategy.HybridSearch();
     }
 
     private CostEstimateDto CalculateCostEstimate(StrategyPhaseModelsDto phaseModels, string strategy)

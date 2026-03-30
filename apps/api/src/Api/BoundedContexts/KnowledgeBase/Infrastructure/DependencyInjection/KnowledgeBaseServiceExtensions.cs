@@ -97,19 +97,6 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<IContextRetrievalStrategy, PositionSimilarityStrategy>();
         services.AddSingleton<IContextRetrievalStrategy, HybridSearchStrategy>();
 
-        // Issue #3772: Game State Parser for Decisore Agent
-        services.AddSingleton<IGameStateParserService, GameStateParserFactory>();
-
-        // Issue #3770: Move Generator for Decisore Agent
-        services.AddScoped<IMoveGeneratorService, ChessMoveGenerator>();
-        services.AddScoped<ILegalMoveValidator, LegalMoveValidator>();
-        services.AddScoped<IMoveScorer, HeuristicMoveScorer>();
-
-        // Issue #3769: Decisore Agent Strategic Analysis
-        services.AddScoped<IDecisoreAgentService, DecisoreAgentService>();
-
-        // Issue #3771: Multi-Model Ensemble Evaluation
-        services.AddScoped<IMultiModelEvaluator, MultiModelEvaluator>();
         services.AddSingleton<IContextRetrievalStrategy, CapabilityMatchingStrategy>();
         services.AddScoped<IContextSource, ConversationMemorySource>();
         services.AddScoped<GameStateSource>();
@@ -330,7 +317,6 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<GetLlmCostReportQueryHandler>(); // ISSUE-960: Cost reporting
         services.AddScoped<GetQueryEfficiencyReportQueryHandler>(); // ISSUE-1725: Efficiency reporting
         services.AddScoped<GetMonthlyOptimizationReportQueryHandler>(); // ISSUE-1725: Monthly optimization
-        services.AddScoped<InvokeAgentCommandHandler>(); // Issue #867: Agent invocation
 
         services.AddScoped<RunEvaluationCommandHandler>();
         services.AddScoped<LoadDatasetCommandHandler>();

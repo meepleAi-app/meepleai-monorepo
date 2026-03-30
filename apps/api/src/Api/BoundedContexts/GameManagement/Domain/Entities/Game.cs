@@ -28,7 +28,8 @@ internal sealed class Game : AggregateRoot<Guid>
     public string? ImageUrl { get; private set; }
 
     // Publication Workflow (Issue #3481)
-    public bool IsPublished { get; private set; }
+    // IsPublished is derived — cannot diverge from ApprovalStatus (spec-panel C-1)
+    public bool IsPublished => ApprovalStatus == ApprovalStatus.Approved && PublishedAt.HasValue;
     public ApprovalStatus ApprovalStatus { get; private set; }
     public DateTime? PublishedAt { get; private set; }
 
@@ -129,7 +130,6 @@ internal sealed class Game : AggregateRoot<Guid>
         if (status == ApprovalStatus.Approved && SharedGameId == null)
             throw new InvalidOperationException("Cannot approve game without linking to SharedGameCatalog first");
 
-        IsPublished = status == ApprovalStatus.Approved;
         ApprovalStatus = status;
         PublishedAt = status == ApprovalStatus.Approved ? DateTime.UtcNow : null;
 

@@ -413,6 +413,67 @@ public sealed class GameTests
 
     #endregion
 
+    #region IsPublished Invariant Tests (Spec-panel C-1)
+
+    [Fact]
+    public void IsPublished_WhenApprovalStatusApprovedAndPublishedAtSet_ReturnsTrue()
+    {
+        // Arrange
+        var game = new Game(Guid.NewGuid(), new GameTitle("Catan"));
+        game.LinkToSharedGame(Guid.NewGuid());
+
+        // Act
+        game.Publish(ApprovalStatus.Approved);
+
+        // Assert
+        game.IsPublished.Should().BeTrue("game approved with PublishedAt set must be published");
+        game.ApprovalStatus.Should().Be(ApprovalStatus.Approved);
+        game.PublishedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void IsPublished_WhenApprovalStatusRejected_ReturnsFalse()
+    {
+        // Arrange
+        var game = new Game(Guid.NewGuid(), new GameTitle("Catan"));
+        game.LinkToSharedGame(Guid.NewGuid());
+        game.Publish(ApprovalStatus.Approved);
+
+        // Act
+        game.Publish(ApprovalStatus.Rejected);
+
+        // Assert
+        game.IsPublished.Should().BeFalse("rejected game must not be published");
+        game.PublishedAt.Should().BeNull("PublishedAt is cleared on rejection");
+    }
+
+    [Fact]
+    public void IsPublished_WhenDraft_ReturnsFalse()
+    {
+        // Arrange & Act
+        var game = new Game(Guid.NewGuid(), new GameTitle("Catan"));
+
+        // Assert
+        game.IsPublished.Should().BeFalse("new game defaults to Draft and is not published");
+        game.ApprovalStatus.Should().Be(ApprovalStatus.Draft);
+    }
+
+    [Fact]
+    public void IsPublished_CannotBeTrueWithoutSharedGameLink()
+    {
+        // Arrange
+        var game = new Game(Guid.NewGuid(), new GameTitle("Catan"));
+
+        // Act
+        var action = () => game.Publish(ApprovalStatus.Approved);
+
+        // Assert
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*SharedGameCatalog*");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static Game CreateValidGame()

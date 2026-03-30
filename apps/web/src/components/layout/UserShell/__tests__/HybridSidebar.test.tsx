@@ -14,12 +14,29 @@ describe('HybridSidebar', () => {
     expect(screen.getByRole('navigation', { name: /navigazione principale/i })).toBeInTheDocument();
   });
 
-  it('renders icon buttons for main nav items', () => {
+  it('renders all navigation section items', () => {
     render(<HybridSidebar />);
     expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /libreria/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /sessioni/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /chat/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /giocatori/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /storico partite/i })).toBeInTheDocument();
+  });
+
+  it('renders AI section items', () => {
+    render(<HybridSidebar />);
+    expect(screen.getByRole('link', { name: /chat rag/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /agenti/i })).toBeInTheDocument();
+  });
+
+  it('does not render wishlist as a nav item', () => {
+    render(<HybridSidebar />);
+    expect(screen.queryByRole('link', { name: /wishlist/i })).not.toBeInTheDocument();
+  });
+
+  it('does not render documenti as a nav item', () => {
+    render(<HybridSidebar />);
+    expect(screen.queryByRole('link', { name: /documenti/i })).not.toBeInTheDocument();
   });
 
   it('marks active item based on pathname', () => {
@@ -44,7 +61,7 @@ describe('HybridSidebar', () => {
   it('renders section labels', () => {
     render(<HybridSidebar />);
     expect(screen.getByText('Navigazione')).toBeInTheDocument();
-    expect(screen.getByText('AI Assistant')).toBeInTheDocument();
+    expect(screen.getByText('AI')).toBeInTheDocument();
   });
 
   it('renders settings at the bottom', () => {

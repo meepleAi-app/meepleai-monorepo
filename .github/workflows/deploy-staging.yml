@@ -535,8 +535,8 @@ jobs:
           # Critical smoke tests (failure = deployment issue)
           smoke_test "API Health" "https://meepleai.app/health" "200"
           smoke_test "Web Root" "https://meepleai.app" "200"
-          smoke_test "API Game Catalog" "https://meepleai.app/api/v1/shared-game-catalog/games?limit=1" "200 401"
-          smoke_test "Swagger Docs" "https://meepleai.app/swagger/index.html" "200"
+          smoke_test "API Game Catalog" "https://meepleai.app/api/v1/shared-games?pageNumber=1&pageSize=1" "200"
+          smoke_test "API Direct Health" "https://api.meepleai.app/health" "200"
 
           # Health endpoint JSON validation
           echo "  Validating health response structure..."
@@ -572,18 +572,22 @@ jobs:
 
       - name: Install K6
         run: |
-          # Install K6 (supports ARM64 and x86_64)
-          ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
-          curl -fsSL "https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-${ARCH}.tar.gz" \
-            | tar xzf - --strip-components=1 -C /usr/local/bin k6-v0.54.0-linux-${ARCH}/k6
-          k6 version
+          # Install K6 (supports ARM64 and x86_64) — skip if already present (self-hosted runner)
+          if command -v k6 &>/dev/null; then
+            echo "K6 already installed: $(k6 version)"
+          else
+            ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
+            curl -fsSL "https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-${ARCH}.tar.gz" \
+              | tar xzf - --strip-components=1 -C /usr/local/bin k6-v0.54.0-linux-${ARCH}/k6
+            echo "K6 installed: $(k6 version)"
+          fi
 
       - name: Run K6 Deploy Smoke
         run: |
           mkdir -p reports/deploy
           k6 run \
             --env BASE_URL=https://meepleai.app \
-            --summary-export=reports/deploy/deploy-smoke-summary.json \
+            --env SUMMARY_EXPORT_PATH=reports/deploy/deploy-smoke-summary.json \
             tests/k6/scenarios/deploy-smoke.js
         continue-on-error: true
 
@@ -592,6 +596,9 @@ jobs:
           PERF_REGRESSION_MODE: ${{ inputs.perf_regression_mode || 'warn' }}
           REGRESSION_THRESHOLD_PCT: '20'
         run: |
+          # Ensure jq is available (required for JSON metric extraction)
+          command -v jq &>/dev/null || sudo apt-get install -y jq
+
           # Write previous baseline to temp file if available
           PREV_BASELINE=""
           BASELINE_JSON='${{ needs.snapshot-baseline.outputs.previous_baseline }}'

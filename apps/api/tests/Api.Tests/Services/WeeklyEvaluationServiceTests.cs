@@ -149,8 +149,11 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             AverageCitationQuality = 0.90
         };
 
+        var mediatorCalled = new TaskCompletionSource<GenerateQualityReportQuery>();
         _mediatorMock
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<QualityReport>, CancellationToken>((q, _) =>
+                mediatorCalled.TrySetResult((GenerateQualityReportQuery)q))
             .ReturnsAsync(expectedReport);
 
         var service = new WeeklyEvaluationService(
@@ -165,21 +168,16 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         // Advance fake clock past initial delay
         _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
 
-        // Wait for execution to complete in real time
-        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
+        // Wait until mediator is actually called (deterministic, no arbitrary sleep)
+        var calledQuery = await mediatorCalled.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         await _cts.CancelAsync();
         await service.StopAsync(_cts.Token);
 
         // Assert
-        _mediatorMock.Verify(
-            x => x.Send(
-                It.Is<GenerateQualityReportQuery>(q =>
-                    q.StartDate.Date == new DateTime(2025, 1, 8, 0, 0, 0, DateTimeKind.Utc).Date &&
-                    q.EndDate.Date == new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc).Date &&
-                    q.Days == 7),
-                It.IsAny<CancellationToken>()),
-            Times.AtLeastOnce);
+        calledQuery.StartDate.Date.Should().Be(new DateTime(2025, 1, 8, 0, 0, 0, DateTimeKind.Utc).Date);
+        calledQuery.EndDate.Date.Should().Be(new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc).Date);
+        calledQuery.Days.Should().Be(7);
     }
 
     [Fact]

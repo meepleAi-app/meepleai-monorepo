@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Helpers;
 using Api.Infrastructure.Security;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
@@ -307,7 +308,7 @@ internal class OllamaLlmClient : ILlmClient
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogWarning(ex, "Failed to parse Ollama streaming chunk: {Data}", line);
+                    _logger.LogWarning(ex, "Failed to parse Ollama streaming chunk: {Data}", LogSanitizer.Sanitize(line));
                     continue;
                 }
 

@@ -451,23 +451,13 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
         }).ToList();
         await _dbContext.PdfDocuments.AddRangeAsync(pdfs);
 
-        // Seed 15 chat messages (need AgentEntity and ChatEntity first)
-        var agent = new AgentEntity
-        {
-            Id = Guid.NewGuid(),
-            Name = "Test Agent",
-            Type = "qa",
-            StrategyName = "hybrid",
-            IsActive = true
-        };
-        await _dbContext.Agents.AddAsync(agent);
-
+        // Seed 15 chat messages (agent system removed — use random Guid for AgentId, FK dropped in migration)
         var chat = new ChatEntity
         {
             Id = Guid.NewGuid(),
             UserId = users[0].Id,
             GameId = games[0].Id,
-            AgentId = agent.Id,
+            AgentId = Guid.NewGuid(),
             StartedAt = now.AddDays(-1)
         };
         await _dbContext.Chats.AddAsync(chat);

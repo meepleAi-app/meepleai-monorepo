@@ -68,6 +68,5 @@ public class GameEntity
     public DateTime? PublishedAt { get; set; }
 
     public ICollection<RuleSpecEntity> RuleSpecs { get; set; } = new List<RuleSpecEntity>();
-    public ICollection<AgentEntity> Agents { get; set; } = new List<AgentEntity>();
     public ICollection<ChatEntity> Chats { get; set; } = new List<ChatEntity>();
 }

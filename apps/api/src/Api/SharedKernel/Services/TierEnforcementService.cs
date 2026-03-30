@@ -116,9 +116,8 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             .CountAsync(g => g.OwnerId == userId, ct)
             .ConfigureAwait(false);
 
-        var agents = await _dbContext.Agents
-            .CountAsync(a => a.CreatedByUserId == userId, ct)
-            .ConfigureAwait(false);
+        // Agent system removed (Task 10: Agent cleanup)
+        var agents = 0;
 
         return new UsageSnapshot(
             PrivateGames: privateGames,

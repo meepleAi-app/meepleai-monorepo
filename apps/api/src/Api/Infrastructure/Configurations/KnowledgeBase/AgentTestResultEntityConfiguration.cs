@@ -95,11 +95,6 @@ internal sealed class AgentTestResultEntityConfiguration : IEntityTypeConfigurat
         builder.HasIndex(r => new { r.TypologyId, r.ExecutedAt })
             .HasDatabaseName("ix_agent_test_results_typology_executed_at");
 
-        // Foreign key to Typology
-        builder.HasOne(r => r.Typology)
-            .WithMany()
-            .HasForeignKey(r => r.TypologyId)
-            .OnDelete(DeleteBehavior.Cascade);
 
         // Foreign key to User
         builder.HasOne(r => r.User)

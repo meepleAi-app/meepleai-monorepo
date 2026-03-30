@@ -24,10 +24,7 @@ internal class ChatEntityConfiguration : IEntityTypeConfiguration<ChatEntity>
             .WithMany(g => g.Chats)
             .HasForeignKey(e => e.GameId)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.HasOne(e => e.Agent)
-            .WithMany()  // AgentEntity doesn't have Chats navigation property
-            .HasForeignKey(e => e.AgentId)
-            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasIndex(e => new { e.UserId, e.LastMessageAt });
         builder.HasIndex(e => new { e.GameId, e.StartedAt });
     }

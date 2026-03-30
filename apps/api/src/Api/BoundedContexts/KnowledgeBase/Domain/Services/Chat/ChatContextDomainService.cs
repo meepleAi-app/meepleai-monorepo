@@ -188,8 +188,8 @@ internal class ChatContextDomainService
     }
 
     /// <summary>
-    /// Builds system prompt using typology-specific template.
-    /// Issue #5278: Typology-aware system prompts.
+    /// Builds system prompt (typology-aware overload — typology removed, delegates to base).
+    /// Issue #5278: Typology-aware system prompts (AgentTypology removed in Task 10).
     /// </summary>
     public virtual string BuildSystemPrompt(
         string agentName,
@@ -197,11 +197,7 @@ internal class ChatContextDomainService
         string? gameName,
         bool hasConversationHistory)
     {
-        if (string.IsNullOrWhiteSpace(agentName))
-            throw new ArgumentException("Agent name cannot be empty", nameof(agentName));
-
-        var profile = TypologyProfile.FromName(typologyName);
-        return profile.BuildSystemPrompt(agentName, gameName, hasConversationHistory);
+        return BuildSystemPrompt(agentName, hasConversationHistory);
     }
 
     /// <summary>

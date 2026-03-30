@@ -38,9 +38,7 @@ internal sealed class CreateAgentTypologyCommandHandler : IRequestHandler<Create
         try
         {
             // Create default strategy value object
-            var defaultStrategy = AgentStrategy.Custom(
-                request.DefaultStrategyName,
-                request.DefaultStrategyParameters);
+            var defaultStrategy = AgentStrategy.HybridSearch();
 
             // Create domain entity (starts as Draft)
             var typology = new AgentTypology(

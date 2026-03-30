@@ -196,19 +196,18 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
         {
             if (!string.IsNullOrWhiteSpace(request.StrategyName))
             {
-                var parameters = request.StrategyParameters ?? new Dictionary<string, object>(StringComparer.Ordinal);
-                return AgentStrategy.Custom(request.StrategyName, parameters);
+                return AgentStrategy.HybridSearch();
             }
         }
 
         // Normal: Strategy name allowed, defaults for parameters
         if (tierLevel >= 1 && !string.IsNullOrWhiteSpace(request.StrategyName))
         {
-            return AgentStrategy.Custom(request.StrategyName, new Dictionary<string, object>(StringComparer.Ordinal));
+            return AgentStrategy.HybridSearch();
         }
 
-        // Default: SingleModel
-        return AgentStrategy.SingleModel();
+        // Default: HybridSearch
+        return AgentStrategy.HybridSearch();
     }
 
     private static int GetTierLevel(string tier)

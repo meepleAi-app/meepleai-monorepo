@@ -17,19 +17,17 @@ internal class AgentSessionEntityConfiguration : IEntityTypeConfiguration<AgentS
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).IsRequired();
 
-        // Foreign key to Agent
-        builder.Property(e => e.AgentId).IsRequired();
-        builder.HasOne(e => e.Agent)
-            .WithMany()
-            .HasForeignKey(e => e.AgentId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // FK to AgentDefinition — enforced at DB level via migration
+        builder.Property(e => e.AgentDefinitionId)
+            .HasColumnName("agent_definition_id")
+            .IsRequired();
 
         // Foreign key to GameSession (GST dependency)
         builder.Property(e => e.GameSessionId).IsRequired();
         builder.HasOne(e => e.GameSession)
             .WithMany()
             .HasForeignKey(e => e.GameSessionId)
-            .OnDelete(DeleteBehavior.Cascade); // Cascade delete when game_session is deleted
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Foreign key to User
         builder.Property(e => e.UserId).IsRequired();
@@ -45,49 +43,24 @@ internal class AgentSessionEntityConfiguration : IEntityTypeConfiguration<AgentS
             .HasForeignKey(e => e.GameId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Foreign key to AgentTypology
-        builder.Property(e => e.TypologyId).IsRequired();
-        builder.HasOne(e => e.Typology)
-            .WithMany()
-            .HasForeignKey(e => e.TypologyId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         // Game state stored as JSONB
         builder.Property(e => e.CurrentGameStateJson)
             .IsRequired()
             .HasColumnType("jsonb")
             .HasDefaultValue("{}");
 
-        // Session tracking
-        builder.Property(e => e.StartedAt)
-            .IsRequired();
-
-        builder.Property(e => e.EndedAt)
-            .IsRequired(false);
-
-        builder.Property(e => e.IsActive)
-            .IsRequired()
-            .HasDefaultValue(true);
+        builder.Property(e => e.StartedAt).IsRequired();
+        builder.Property(e => e.EndedAt).IsRequired(false);
+        builder.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
 
         // Unique constraint: one agent session per user+game_session combination
         builder.HasIndex(e => new { e.GameSessionId, e.UserId })
             .IsUnique()
             .HasDatabaseName("IX_AgentSessions_GameSessionId_UserId_Unique");
 
-        // Index on GameSessionId for FK performance
-        builder.HasIndex(e => e.GameSessionId)
-            .HasDatabaseName("IX_AgentSessions_GameSessionId");
-
-        // Index on UserId for user-specific queries
-        builder.HasIndex(e => e.UserId)
-            .HasDatabaseName("IX_AgentSessions_UserId");
-
-        // Index on IsActive for filtering active sessions
-        builder.HasIndex(e => e.IsActive)
-            .HasDatabaseName("IX_AgentSessions_IsActive");
-
-        // Composite index for active sessions by user
-        builder.HasIndex(e => new { e.UserId, e.IsActive })
-            .HasDatabaseName("IX_AgentSessions_UserId_IsActive");
+        builder.HasIndex(e => e.GameSessionId).HasDatabaseName("IX_AgentSessions_GameSessionId");
+        builder.HasIndex(e => e.UserId).HasDatabaseName("IX_AgentSessions_UserId");
+        builder.HasIndex(e => e.IsActive).HasDatabaseName("IX_AgentSessions_IsActive");
+        builder.HasIndex(e => new { e.UserId, e.IsActive }).HasDatabaseName("IX_AgentSessions_UserId_IsActive");
     }
 }

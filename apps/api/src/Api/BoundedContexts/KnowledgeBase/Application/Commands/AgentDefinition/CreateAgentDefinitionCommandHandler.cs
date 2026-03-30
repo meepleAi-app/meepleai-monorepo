@@ -43,10 +43,8 @@ internal sealed class CreateAgentDefinitionCommandHandler
         // Create config value object
         var config = AgentDefinitionConfig.Create(request.Model, request.MaxTokens, request.Temperature);
 
-        // Create strategy (default to HybridSearch if not provided)
-        var strategy = !string.IsNullOrWhiteSpace(request.StrategyName)
-            ? AgentStrategy.Custom(request.StrategyName, request.StrategyParameters ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase))
-            : AgentStrategy.HybridSearch();
+        // Create strategy (default to HybridSearch if not provided or unrecognized)
+        var strategy = ResolveStrategy(request.StrategyName);
 
         // Create prompts
         var prompts = request.Prompts?
@@ -82,6 +80,14 @@ internal sealed class CreateAgentDefinitionCommandHandler
 
         return MapToDto(agentDefinition);
     }
+
+    private static AgentStrategy ResolveStrategy(string? name) => name switch
+    {
+        "RetrievalOnly" => AgentStrategy.RetrievalOnly(),
+        "SentenceWindowRAG" => AgentStrategy.SentenceWindowRAG(),
+        "ColBERTReranking" => AgentStrategy.ColBERTReranking(),
+        _ => AgentStrategy.HybridSearch()
+    };
 
     private static AgentDefinitionDto MapToDto(Domain.Entities.AgentDefinition agent)
     {

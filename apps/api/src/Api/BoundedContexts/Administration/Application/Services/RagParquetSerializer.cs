@@ -19,9 +19,9 @@ internal static class RagParquetSerializer
     {
         var rows = chunks.Select(c => new ChunkRow
         {
-            ChunkIndex     = c.ChunkIndex,
-            PageNumber     = c.PageNumber,
-            Content        = c.Content,
+            ChunkIndex = c.ChunkIndex,
+            PageNumber = c.PageNumber,
+            Content = c.Content,
             CharacterCount = c.CharacterCount
         }).ToList();
 
@@ -39,9 +39,9 @@ internal static class RagParquetSerializer
             rows.Add(row);
 
         return rows.Select(r => new RagExportChunkLine(
-            ChunkIndex:     r.ChunkIndex,
-            PageNumber:     r.PageNumber,
-            Content:        r.Content,
+            ChunkIndex: r.ChunkIndex,
+            PageNumber: r.PageNumber,
+            Content: r.Content,
             CharacterCount: r.CharacterCount)).ToList();
     }
 
@@ -51,11 +51,11 @@ internal static class RagParquetSerializer
     {
         var rows = embeddings.Select(e => new EmbeddingRow
         {
-            ChunkIndex  = e.ChunkIndex,
-            PageNumber  = e.PageNumber,
+            ChunkIndex = e.ChunkIndex,
+            PageNumber = e.PageNumber,
             TextContent = e.TextContent,
-            Vector      = VectorToBytes(e.Vector),
-            Model       = e.Model
+            Vector = VectorToBytes(e.Vector),
+            Model = e.Model
         }).ToList();
 
         using var ms = new MemoryStream();
@@ -73,11 +73,11 @@ internal static class RagParquetSerializer
             rows.Add(row);
 
         return rows.Select(r => new RagExportEmbeddingLine(
-            ChunkIndex:  r.ChunkIndex,
-            PageNumber:  r.PageNumber,
+            ChunkIndex: r.ChunkIndex,
+            PageNumber: r.PageNumber,
             TextContent: r.TextContent,
-            Vector:      BytesToVector(r.Vector),
-            Model:       r.Model)).ToList();
+            Vector: BytesToVector(r.Vector),
+            Model: r.Model)).ToList();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -106,18 +106,18 @@ internal static class RagParquetSerializer
 
     private sealed class ChunkRow
     {
-        public int  ChunkIndex     { get; set; }
-        public int? PageNumber     { get; set; }
-        public string Content      { get; set; } = string.Empty;
-        public int  CharacterCount { get; set; }
+        public int ChunkIndex { get; set; }
+        public int? PageNumber { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public int CharacterCount { get; set; }
     }
 
     private sealed class EmbeddingRow
     {
-        public int    ChunkIndex  { get; set; }
-        public int?   PageNumber  { get; set; }
+        public int ChunkIndex { get; set; }
+        public int? PageNumber { get; set; }
         public string TextContent { get; set; } = string.Empty;
-        public byte[] Vector      { get; set; } = [];
-        public string Model       { get; set; } = string.Empty;
+        public byte[] Vector { get; set; } = [];
+        public string Model { get; set; } = string.Empty;
     }
 }

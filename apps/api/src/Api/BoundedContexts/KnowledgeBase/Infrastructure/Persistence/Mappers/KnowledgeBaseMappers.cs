@@ -225,8 +225,16 @@ internal static class KnowledgeBaseMappers
             }
         }
 
-        return AgentStrategy.Custom(name, typedParams);
+        return ResolveStrategy(name);
     }
+
+    private static AgentStrategy ResolveStrategy(string name) => name switch
+    {
+        "RetrievalOnly" => AgentStrategy.RetrievalOnly(),
+        "SentenceWindowRAG" => AgentStrategy.SentenceWindowRAG(),
+        "ColBERTReranking" => AgentStrategy.ColBERTReranking(),
+        _ => AgentStrategy.HybridSearch()
+    };
 
     /// <summary>
     /// Serializes AgentStrategy to name and JSON parameters.
@@ -333,7 +341,7 @@ internal static class KnowledgeBaseMappers
             }
         }
 
-        return AgentStrategy.Custom(name, parameters);
+        return ResolveStrategy(name);
     }
 
     /// <summary>
@@ -359,11 +367,10 @@ internal static class KnowledgeBaseMappers
 
         var session = new AgentSession(
             id: entity.Id,
-            agentId: entity.AgentId,
+            agentDefinitionId: entity.AgentDefinitionId,
             gameSessionId: entity.GameSessionId,
             userId: entity.UserId,
             gameId: entity.GameId,
-            typologyId: entity.TypologyId,
             initialState: gameState
         );
 
@@ -392,11 +399,10 @@ internal static class KnowledgeBaseMappers
         return new AgentSessionEntity
         {
             Id = session.Id,
-            AgentId = session.AgentId,
+            AgentDefinitionId = session.AgentDefinitionId,
             GameSessionId = session.GameSessionId,
             UserId = session.UserId,
             GameId = session.GameId,
-            TypologyId = session.TypologyId,
             CurrentGameStateJson = session.CurrentGameState.ToJson(),
             StartedAt = session.StartedAt,
             EndedAt = session.EndedAt,

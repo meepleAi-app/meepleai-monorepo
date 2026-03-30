@@ -29,7 +29,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandler<ChatWithSessionAgentCommand, RagStreamingEvent>
 {
     private readonly IAgentSessionRepository _sessionRepository;
-    private readonly IAgentTypologyRepository _typologyRepository;
+    private readonly IAgentDefinitionRepository _definitionRepository;
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IGameRepository _gameRepository;
     private readonly ILiveSessionRepository _liveSessionRepository;
@@ -47,7 +47,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
 
     public ChatWithSessionAgentCommandHandler(
         IAgentSessionRepository sessionRepository,
-        IAgentTypologyRepository typologyRepository,
+        IAgentDefinitionRepository definitionRepository,
         IChatThreadRepository chatThreadRepository,
         IGameRepository gameRepository,
         ILiveSessionRepository liveSessionRepository,
@@ -60,7 +60,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ILogger<ChatWithSessionAgentCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
-        _typologyRepository = typologyRepository ?? throw new ArgumentNullException(nameof(typologyRepository));
+        _definitionRepository = definitionRepository ?? throw new ArgumentNullException(nameof(definitionRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
         _liveSessionRepository = liveSessionRepository ?? throw new ArgumentNullException(nameof(liveSessionRepository));
@@ -116,16 +116,16 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             yield break;
         }
 
-        // Load typology for prompt context
-        var typology = await _typologyRepository
-            .GetByIdAsync(agentSession.TypologyId, cancellationToken)
+        // Load definition for prompt context
+        var definition = await _definitionRepository
+            .GetByIdAsync(agentSession.AgentDefinitionId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (typology == null)
+        if (definition == null)
         {
             yield return CreateEvent(
                 StreamingEventType.Error,
-                new StreamingError($"AgentTypology {agentSession.TypologyId} not found", "TYPOLOGY_NOT_FOUND"));
+                new StreamingError($"AgentDefinition {agentSession.AgentDefinitionId} not found", "DEFINITION_NOT_FOUND"));
             yield break;
         }
 
@@ -155,7 +155,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             thread = new ChatThread(
                 id: Guid.NewGuid(),
                 userId: command.UserId,
-                agentType: typology.Name,
+                agentType: definition.Name,
                 title: command.UserQuestion.Length > 100
                     ? string.Concat(command.UserQuestion.AsSpan(0, 97), "...")
                     : command.UserQuestion);
@@ -176,7 +176,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
 
         // Assemble prompt with RAG context + chat history
         var assembled = await _ragPromptService.AssemblePromptAsync(
-            typology.Name,
+            definition.Name,
             gameTitle,
             agentSession.CurrentGameState,
             command.UserQuestion,
@@ -289,7 +289,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         var citationsJson = JsonSerializer.Serialize(finalCitations);
         thread.AddAssistantMessageWithMetadata(
             content: responseText,
-            agentType: typology.Name,
+            agentType: definition.Name,
             citationsJson: citationsJson,
             tokenCount: totalTokens);
 

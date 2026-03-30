@@ -1,9 +1,12 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +21,7 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IGameLabelRepository _labelRepository;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly HybridCache _cache;
     private readonly ILogger<GetGameDetailQueryHandler> _logger;
 
@@ -31,12 +35,14 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
         IUserLibraryRepository libraryRepository,
         ISharedGameRepository sharedGameRepository,
         IGameLabelRepository labelRepository,
+        MeepleAiDbContext dbContext,
         HybridCache cache,
         ILogger<GetGameDetailQueryHandler> logger)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _labelRepository = labelRepository ?? throw new ArgumentNullException(nameof(labelRepository));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -127,6 +133,54 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     );
                 }
 
+                // Compute HasRagAccess and KB stats (same logic as GetUserLibraryQueryHandler).
+                // pdf_documents.GameId references games.Id (not shared_games.id), so resolve first.
+                var gameRecordId = await _dbContext.Games
+                    .AsNoTracking()
+                    .Where(g => g.SharedGameId == query.GameId)
+                    .Select(g => (Guid?)g.Id)
+                    .FirstOrDefaultAsync(cancel)
+                    .ConfigureAwait(false);
+
+                int kbCardCount = 0, kbIndexedCount = 0, kbProcessingCount = 0;
+                if (gameRecordId.HasValue)
+                {
+                    var pdfDocs = await _dbContext.PdfDocuments
+                        .AsNoTracking()
+                        .Where(p => p.GameId == gameRecordId.Value && !p.PrivateGameId.HasValue)
+                        .Select(p => p.ProcessingState)
+                        .ToListAsync(cancel)
+                        .ConfigureAwait(false);
+
+                    static bool IsCompleted(string? s) =>
+                        string.Equals(s, nameof(PdfProcessingState.Ready), StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(s, "Indexed", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(s, "completed", StringComparison.OrdinalIgnoreCase);
+
+                    kbCardCount = pdfDocs.Count;
+                    kbIndexedCount = pdfDocs.Count(IsCompleted);
+                    kbProcessingCount = pdfDocs.Count(s => !IsCompleted(s) && !string.Equals(s, nameof(PdfProcessingState.Failed), StringComparison.OrdinalIgnoreCase));
+                }
+
+                var userRoleStr = await _dbContext.Users
+                    .AsNoTracking()
+                    .Where(u => u.Id == query.UserId)
+                    .Select(u => u.Role)
+                    .FirstOrDefaultAsync(cancel)
+                    .ConfigureAwait(false);
+
+                var isAdmin = string.Equals(userRoleStr, "admin", StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(userRoleStr, "superadmin", StringComparison.OrdinalIgnoreCase);
+
+                var isRagPublic = await _dbContext.SharedGames
+                    .AsNoTracking()
+                    .Where(sg => sg.Id == query.GameId && !sg.IsDeleted)
+                    .Select(sg => sg.IsRagPublic)
+                    .FirstOrDefaultAsync(cancel)
+                    .ConfigureAwait(false);
+
+                var hasRagAccess = isAdmin || isRagPublic || entry.OwnershipDeclaredAt != null;
+
                 // Get labels for this entry
                 var labels = await _labelRepository.GetLabelsForEntryAsync(entry.Id, cancel).ConfigureAwait(false);
                 var labelsDto = labels.Select(l => new LabelDto(
@@ -179,7 +233,15 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     Checklist: checklist,
                     CustomAgentConfig: customAgentConfig,
                     CustomPdf: customPdf,
-                    Labels: labelsDto
+                    Labels: labelsDto,
+
+                    // RAG / KB access
+                    HasRagAccess: hasRagAccess,
+                    HasKb: kbIndexedCount > 0,
+                    KbCardCount: kbCardCount,
+                    KbIndexedCount: kbIndexedCount,
+                    KbProcessingCount: kbProcessingCount,
+                    OwnershipDeclaredAt: entry.OwnershipDeclaredAt
                 );
             },
             options: CacheOptions,

@@ -33,11 +33,22 @@ internal sealed class GetGameDocumentsHandler : IQueryHandler<GetGameDocumentsQu
             "Fetching KB documents for game {GameId} by user {UserId}",
             query.GameId, query.UserId);
 
+        // Resolve the effective game ID: the caller may pass either games.Id directly
+        // or shared_games.id (the library-facing ID). We look up the games.Id that
+        // has SharedGameId = query.GameId; if none exists we fall back to treating
+        // query.GameId as games.Id directly.
+        var resolvedGameId = await _dbContext.Games
+            .AsNoTracking()
+            .Where(g => g.SharedGameId == query.GameId)
+            .Select(g => (Guid?)g.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false) ?? query.GameId;
+
         var documents = await (
             from vd in _dbContext.VectorDocuments.AsNoTracking()
             join pdf in _dbContext.PdfDocuments.AsNoTracking()
                 on vd.PdfDocumentId equals pdf.Id
-            where vd.GameId == query.GameId
+            where vd.GameId == resolvedGameId
             orderby vd.IndexedAt descending
             select new GameDocumentDto(
                 vd.Id,

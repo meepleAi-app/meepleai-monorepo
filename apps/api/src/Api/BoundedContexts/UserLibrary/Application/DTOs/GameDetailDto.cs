@@ -49,7 +49,15 @@ internal record GameDetailDto(
     CustomPdfDto? CustomPdf = null,
 
     // Labels
-    LabelDto[]? Labels = null
+    LabelDto[]? Labels = null,
+
+    // RAG / KB access (mirrored from UserLibraryEntryDto for consistency)
+    bool HasRagAccess = false,       // computed: admin || IsRagPublic || OwnershipDeclaredAt != null
+    bool HasKb = false,              // true if >= 1 PDF fully indexed in RAG
+    int KbCardCount = 0,             // total PDF documents linked to this game
+    int KbIndexedCount = 0,          // PDF documents with ProcessingState.Ready
+    int KbProcessingCount = 0,       // PDF documents currently in pipeline
+    DateTime? OwnershipDeclaredAt = null
 );
 
 /// <summary>

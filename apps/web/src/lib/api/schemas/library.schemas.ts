@@ -315,8 +315,13 @@ export const GameDetailDtoSchema = z.object({
   winRate: z.string().nullable(),
   avgDuration: z.string().nullable(),
 
-  // RAG access
+  // RAG / KB access
   hasRagAccess: z.boolean().optional().default(false),
+  hasKb: z.boolean().optional().default(false),
+  kbCardCount: z.number().int().nonnegative().optional().default(0),
+  kbIndexedCount: z.number().int().nonnegative().optional().default(0),
+  kbProcessingCount: z.number().int().nonnegative().optional().default(0),
+  ownershipDeclaredAt: z.string().datetime().nullable().optional(),
 
   // Optional extended data
   recentSessions: z.array(LibraryGameSessionSchema).nullable().optional(),

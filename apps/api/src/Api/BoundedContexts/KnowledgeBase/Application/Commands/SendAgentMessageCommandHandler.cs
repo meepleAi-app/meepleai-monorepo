@@ -55,6 +55,7 @@ internal sealed partial class SendAgentMessageCommandHandler : IStreamingQueryHa
     private readonly IHybridCacheService _hybridCache;
     private readonly IRagAccessService _ragAccessService;
     private readonly IPdfDocumentRepository _pdfDocumentRepository;
+    private readonly IHybridSearchService _hybridSearchService;
     private readonly ILogger<SendAgentMessageCommandHandler> _logger;
 
     /// <summary>Cache TTL for GameSessionContext.</summary>
@@ -78,6 +79,7 @@ internal sealed partial class SendAgentMessageCommandHandler : IStreamingQueryHa
         IHybridCacheService hybridCache,
         IRagAccessService ragAccessService,
         IPdfDocumentRepository pdfDocumentRepository,
+        IHybridSearchService hybridSearchService,
         ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -97,6 +99,7 @@ internal sealed partial class SendAgentMessageCommandHandler : IStreamingQueryHa
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
+        _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -531,13 +534,56 @@ internal sealed partial class SendAgentMessageCommandHandler : IStreamingQueryHa
                 typology = profile.Name
             });
 
-        // Vector search (Qdrant dependency removed — returns empty results)
-        var searchResult = Api.Services.SearchResult.CreateSuccess(new List<SearchResultItem>());
+        // Hybrid search: pgvector semantic + PostgreSQL keyword RRF fusion
+        List<SearchResultItem> searchItems;
+        if (gameIdForSearch.HasValue)
+        {
+            var pdfDocGuids = pdfDocumentIds.Count > 0
+                ? pdfDocumentIds.Select(id => Guid.Parse(id)).ToList()
+                : null;
+            try
+            {
+                var hybridResults = await _hybridSearchService.SearchAsync(
+                    command.UserQuestion,
+                    gameIdForSearch.Value,
+                    SearchMode.Hybrid,
+                    limit: profile.TopK,
+                    documentIds: pdfDocGuids,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                searchItems = hybridResults.Select(r => new SearchResultItem
+                {
+                    Score = r.HybridScore,
+                    Text = r.Content,
+                    PdfId = r.PdfDocumentId,
+                    Page = r.PageNumber ?? 0,
+                    ChunkIndex = r.ChunkIndex
+                }).ToList();
+            }
+#pragma warning disable CA1031 // RAG search failure must not abort the whole stream
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Hybrid search failed for agent {AgentId}", command.AgentId);
+                searchItems = new List<SearchResultItem>();
+            }
+#pragma warning restore CA1031
+        }
+        else
+        {
+            _logger.LogWarning("No gameId for agent {AgentId}, skipping vector search", command.AgentId);
+            searchItems = new List<SearchResultItem>();
+        }
+
+        var searchResult = Api.Services.SearchResult.CreateSuccess(searchItems);
 
         // Step 3: Filter results by minimum score, deduplicate, and build context
         // Issue #5254: Duplicate Qdrant points cause identical chunks in results.
         // Deduplicate by (PdfId normalized, ChunkIndex), keeping highest score.
-        var minScore = profile.MinScore;
+        // For HybridSearch, RRF scores max ~0.016 — profile.MinScore is calibrated for cosine
+        // similarity (0-1) so bypass score filtering; topK already limits result count.
+        var minScore = string.Equals(profile.SearchStrategy, "HybridSearch", StringComparison.OrdinalIgnoreCase)
+            ? 0.0
+            : profile.MinScore;
         var relevantChunks = searchResult.Results
             .Where(r => r.Score >= minScore)
             .OrderByDescending(r => r.Score)

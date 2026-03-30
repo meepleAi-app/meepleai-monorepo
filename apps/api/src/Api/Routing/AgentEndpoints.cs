@@ -901,7 +901,7 @@ internal static class AgentEndpoints
 
             var command = new AskArbiterCommand
             {
-                AgentId = id,
+                AgentDefinitionId = id,
                 SessionId = request.SessionId,
                 Situation = request.Situation,
                 PositionA = request.PositionA,

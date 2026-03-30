@@ -104,7 +104,7 @@ export interface LibraryClient {
   updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
   saveAgentConfig(
     gameId: string,
-    request: { typologyId: string; modelName: string; costEstimate: number }
+    request: { agentDefinitionId: string; modelName: string; costEstimate: number }
   ): Promise<{ success: boolean; configId: string; message: string }>;
   // Library Sharing (Issue #2614)
   getShareLink(): Promise<LibraryShareLink | null>;
@@ -402,7 +402,7 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      */
     async saveAgentConfig(
       gameId: string,
-      request: { typologyId: string; modelName: string; costEstimate: number }
+      request: { agentDefinitionId: string; modelName: string; costEstimate: number }
     ): Promise<{ success: boolean; configId: string; message: string }> {
       const data = await httpClient.post<{
         success: boolean;

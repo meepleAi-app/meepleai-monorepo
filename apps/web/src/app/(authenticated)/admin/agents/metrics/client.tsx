@@ -11,13 +11,7 @@ import { useState, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
-import {
-  Activity,
-  Target,
-  BarChart3,
-  TrendingUp,
-  RefreshCw,
-} from 'lucide-react';
+import { Activity, Target, BarChart3, TrendingUp, RefreshCw } from 'lucide-react';
 
 import { CostBreakdownChart } from '@/components/admin/agents/CostBreakdownChart';
 import { MetricsKpiCards } from '@/components/admin/agents/MetricsKpiCards';
@@ -52,7 +46,7 @@ export interface AgentMetrics {
 }
 
 export interface TopAgent {
-  typologyId: string;
+  agentDefinitionId: string;
   typologyName: string;
   invocations: number;
   cost: number;
@@ -156,9 +150,7 @@ export function MetricsClient() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Agent Metrics</h1>
-          <p className="text-muted-foreground">
-            Monitor agent usage, costs, and performance
-          </p>
+          <p className="text-muted-foreground">Monitor agent usage, costs, and performance</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -184,18 +176,13 @@ export function MetricsClient() {
       {(metricsError || topAgentsError) && (
         <Card className="border-destructive">
           <CardContent className="py-4">
-            <p className="text-destructive">
-              Failed to load metrics. Please try again.
-            </p>
+            <p className="text-destructive">Failed to load metrics. Please try again.</p>
           </CardContent>
         </Card>
       )}
 
       {/* KPI Cards */}
-      <MetricsKpiCards
-        metrics={metrics}
-        isLoading={metricsLoading}
-      />
+      <MetricsKpiCards metrics={metrics} isLoading={metricsLoading} />
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -263,7 +250,7 @@ export function MetricsClient() {
         <CardContent>
           {topAgentsLoading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3].map(i => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
@@ -289,10 +276,7 @@ export function MetricsClient() {
           <CardContent>
             <div className="space-y-2">
               {metrics.topQueries.map((query, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
+                <div key={idx} className="flex items-center justify-between rounded-lg border p-3">
                   <span className="truncate text-sm">{query.query}</span>
                   <Badge variant="secondary">{query.count}</Badge>
                 </div>

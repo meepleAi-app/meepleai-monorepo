@@ -23,7 +23,7 @@ vi.mock('@/hooks/useCostEstimate', async () => {
 // Mock agent store
 vi.mock('@/stores/agentStore', () => ({
   useAgentStore: vi.fn(() => ({
-    selectedTypologyId: null,
+    selectedagentDefinitionId: null,
   })),
 }));
 
@@ -71,7 +71,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      render(<CostPreview typologyId="123e4567-e89b-12d3-a456-426614174000" />, {
+      render(<CostPreview agentDefinitionId="123e4567-e89b-12d3-a456-426614174000" />, {
         wrapper: createWrapper(),
       });
 
@@ -86,7 +86,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      render(<CostPreview typologyId="123e4567-e89b-12d3-a456-426614174000" />, {
+      render(<CostPreview agentDefinitionId="123e4567-e89b-12d3-a456-426614174000" />, {
         wrapper: createWrapper(),
       });
 
@@ -98,7 +98,7 @@ describe('CostPreview', () => {
     it('displays per-query cost correctly', () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test Tutor',
           strategy: 'BALANCED',
           costEstimate: {
@@ -113,7 +113,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+      render(<CostPreview agentDefinitionId="123" />, { wrapper: createWrapper() });
 
       expect(screen.getByText('$0.0430')).toBeInTheDocument(); // Per query
     });
@@ -121,7 +121,7 @@ describe('CostPreview', () => {
     it('displays per-session cost with default queries', () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test Tutor',
           strategy: 'BALANCED',
           costEstimate: {
@@ -136,7 +136,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+      render(<CostPreview agentDefinitionId="123" />, { wrapper: createWrapper() });
 
       // Session cost = 0.05 * 5 (default) = 0.25
       expect(screen.getByText(/Per session.*5 queries/i)).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe('CostPreview', () => {
     it('displays per-session cost with custom queries', () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test Tutor',
           strategy: 'FAST',
           costEstimate: {
@@ -161,7 +161,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      render(<CostPreview typologyId="123" estimatedQueriesPerSession={10} />, {
+      render(<CostPreview agentDefinitionId="123" estimatedQueriesPerSession={10} />, {
         wrapper: createWrapper(),
       });
 
@@ -173,7 +173,7 @@ describe('CostPreview', () => {
     it('displays monthly cost', () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test Tutor',
           strategy: 'EXPERT',
           costEstimate: {
@@ -188,7 +188,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+      render(<CostPreview agentDefinitionId="123" />, { wrapper: createWrapper() });
 
       expect(screen.getByText('$1000.00')).toBeInTheDocument();
     });
@@ -198,7 +198,7 @@ describe('CostPreview', () => {
     it('displays low warning (green) for cost under $0.20/session', () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test Tutor',
           strategy: 'FAST',
           costEstimate: {
@@ -213,7 +213,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+      render(<CostPreview agentDefinitionId="123" />, { wrapper: createWrapper() });
 
       expect(screen.getByText('✓ Cost-effective configuration')).toBeInTheDocument();
     });
@@ -221,7 +221,7 @@ describe('CostPreview', () => {
     it('displays medium warning (yellow) for cost $0.20-$0.49/session', () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test Tutor',
           strategy: 'BALANCED',
           costEstimate: {
@@ -236,7 +236,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+      render(<CostPreview agentDefinitionId="123" />, { wrapper: createWrapper() });
 
       expect(screen.getByText(/Moderate cost.*Monitor usage/i)).toBeInTheDocument();
     });
@@ -244,7 +244,7 @@ describe('CostPreview', () => {
     it('displays high warning (red) for cost $0.50+/session', () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test Tutor',
           strategy: 'CONSENSUS',
           costEstimate: {
@@ -259,7 +259,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+      render(<CostPreview agentDefinitionId="123" />, { wrapper: createWrapper() });
 
       expect(screen.getByText(/High cost detected/i)).toBeInTheDocument();
       expect(screen.getByText(/\$0\.75.*exceeds.*\$0\.50/i)).toBeInTheDocument();
@@ -268,7 +268,7 @@ describe('CostPreview', () => {
     it('applies correct border color based on warning level - low', () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test',
           strategy: 'FAST',
           costEstimate: {
@@ -283,7 +283,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      const { container } = render(<CostPreview typologyId="123" />, {
+      const { container } = render(<CostPreview agentDefinitionId="123" />, {
         wrapper: createWrapper(),
       });
 
@@ -294,7 +294,7 @@ describe('CostPreview', () => {
     it('applies correct border color based on warning level - high', () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test',
           strategy: 'EXPERT',
           costEstimate: {
@@ -309,7 +309,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      const { container } = render(<CostPreview typologyId="123" />, {
+      const { container } = render(<CostPreview agentDefinitionId="123" />, {
         wrapper: createWrapper(),
       });
 
@@ -322,7 +322,7 @@ describe('CostPreview', () => {
     it('displays token breakdown in tooltip', async () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test Tutor',
           strategy: 'BALANCED',
           costEstimate: {
@@ -340,7 +340,9 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      const { container } = render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+      const { container } = render(<CostPreview agentDefinitionId="123" />, {
+        wrapper: createWrapper(),
+      });
 
       // Find the TooltipTrigger wrapper by looking for the Info icon
       const tooltipTrigger = container.querySelector('[class*="cursor-help"]');
@@ -356,7 +358,7 @@ describe('CostPreview', () => {
 
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test Tutor',
           strategy: 'FAST',
           costEstimate: {
@@ -371,7 +373,7 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+      render(<CostPreview agentDefinitionId="123" />, { wrapper: createWrapper() });
 
       const infoIcons = screen.getByText('Per query').parentElement?.querySelectorAll('svg');
       const infoIcon = infoIcons?.[1]; // Second icon is the Info icon
@@ -394,7 +396,7 @@ describe('CostPreview', () => {
     it('applies custom className', () => {
       mockUseCostEstimate.mockReturnValue({
         data: {
-          typologyId: '123',
+          agentDefinitionId: '123',
           typologyName: 'Test',
           strategy: 'FAST',
           costEstimate: {
@@ -409,9 +411,12 @@ describe('CostPreview', () => {
         error: null,
       } as any);
 
-      const { container } = render(<CostPreview typologyId="123" className="custom-class" />, {
-        wrapper: createWrapper(),
-      });
+      const { container } = render(
+        <CostPreview agentDefinitionId="123" className="custom-class" />,
+        {
+          wrapper: createWrapper(),
+        }
+      );
 
       // The custom class should be on the Card component (outermost div with rounded-2xl)
       const card = container.querySelector('.custom-class');

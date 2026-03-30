@@ -106,6 +106,118 @@ Kept because the frontend requires a structured `ArbiterVerdictDto` (Verdict, Co
 
 ---
 
+## AgentTypology — Full Removal
+
+`AgentTypology` is not only absorbed into `AgentDefinition` — the entire typology subsystem is deleted, including its proposal/approval workflow and phase-model configuration feature.
+
+### Application layer — delete entirely
+
+**Lifecycle commands** (Propose/Approve/Reject/Create/Update/Delete):
+- `ProposeAgentTypologyCommand` + Handler + Validator
+- `ApproveAgentTypologyCommand` + Handler + Validator
+- `RejectAgentTypologyCommand` + Handler + Validator
+- `CreateAgentTypologyCommand` + Handler + Validator
+- `UpdateAgentTypologyCommand` + Handler + Validator
+- `DeleteAgentTypologyCommand` + Handler + Validator
+- `CreateAgentTypologyWithPhaseModelsCommand` + Handler + Validator
+
+**Phase-model infrastructure** (tied exclusively to multi-phase strategies being deleted):
+- `StrategyPhaseModelsDto`, `PhaseModelConfigurationDto`, `AgentTypologyWithCostDto`
+- Cost estimation logic in `CreateAgentTypologyWithPhaseModelsCommandHandler`
+
+**Testing command**:
+- `TestAgentTypologyCommand` + Handler + Validator — absorbed by PlaygroundChat
+
+**Queries and DTOs**:
+- `GetTypologyByIdQuery` + Handler
+- All `GetAll*AgentTypologies*` queries + handlers
+- `AgentTypologyDto`
+
+**Domain events**:
+- `TypologyApprovedEvent`, `TypologyRejectedEvent`, `AgentSessionTypologyChangedEvent`
+
+### Domain layer — delete entirely
+- `AgentTypology` aggregate root
+- `TypologyPromptTemplate` entity
+- `TypologyStatus` value object, `TypologyProfile` value object
+- `IAgentTypologyRepository`
+
+### Infrastructure layer — delete entirely
+- `AgentTypologyRepository`
+- `AgentTypologyEntity` + `AgentTypologyEntityConfiguration`
+- `TypologyPromptTemplateEntity` + `TypologyPromptTemplateEntityConfiguration`
+- `MeepleAiDbContext.AgentTypologies` and `MeepleAiDbContext.TypologyPromptTemplates` DbSets
+
+### Routing — delete entirely
+- `AdminAgentTypologyEndpoints.cs`
+- `AgentTypologyEndpoints.cs`
+
+---
+
+## Files to Update (Cross-BC and Session Dependencies)
+
+These files are **not deleted** but require targeted changes because they reference `AgentTypology` or `Agent`.
+
+### 1. `AgentSession` domain entity
+
+`AgentSession.TypologyId` → `AgentDefinitionId`. The field rename follows the FK migration.
+
+```csharp
+// Before
+public Guid TypologyId { get; private set; }
+public void UpdateTypology(Guid newTypologyId) { ... }
+
+// After
+public Guid AgentDefinitionId { get; private set; }
+public void UpdateAgentDefinition(Guid newAgentDefinitionId) { ... }
+```
+
+Domain event `AgentSessionTypologyChangedEvent` → rename to `AgentSessionDefinitionChangedEvent`.
+
+### 2. `UpdateAgentSessionTypologyCommand` + Handler
+
+Rename to `UpdateAgentSessionDefinitionCommand`. Replace `IAgentTypologyRepository` with `IAgentDefinitionRepository`. Check `agentDefinition.IsActive` instead of `typology.Status == Approved`.
+
+### 3. `UserLibrary/SaveAgentConfigCommandHandler`
+
+Cross-BC dependency on `IAgentTypologyRepository` (imported from KnowledgeBase). Replace with `IAgentDefinitionRepository`. Change validation from `TypologyStatus.Approved` to `definition.IsActive && definition.Status == AgentDefinitionStatus.Published`.
+
+The `SaveAgentConfigCommand.TypologyId` parameter → rename to `AgentDefinitionId`.
+
+### 4. `AutoCreateAgentOnPdfReadyHandler`
+
+Replace `IAgentTypologyRepository` with `IAgentDefinitionRepository`. Change lookup from "first approved typology" to "first system-defined, active AgentDefinition":
+
+```csharp
+// Before
+var defaultTypology = typologies.FirstOrDefault(t => t.Status == TypologyStatus.Approved);
+
+// After
+var defaultDefinition = definitions.FirstOrDefault(d => d.IsSystemDefined && d.IsActive);
+```
+
+Pass `AgentDefinitionId` to `CreateGameAgentCommand` instead of `TypologyId`.
+
+### 5. `CreateGameAgentCommand` + Handler
+
+`TypologyId` parameter → `AgentDefinitionId`. Handler uses `IAgentDefinitionRepository` instead of `IAgentTypologyRepository`.
+
+### 6. `AgentSeeder` (`Infrastructure/Seeders/Catalog/AgentSeeder.cs`)
+
+The seeder currently creates `AgentTypologyEntity` + `AgentEntity` + `AgentConfigurationEntity`. After simplification:
+
+- Remove: `EnsureAgentTypologyAsync`, all `AgentTypologyEntity` and `TypologyPromptTemplateEntity` creation
+- Remove: `AgentEntity` / `AgentConfigurationEntity` creation (those tables are dropped)
+- Replace with: ensure a system-defined `AgentDefinitionEntity` with `TypologySlug = "game-master"` exists, seeded once idempotently
+
+System-defined agent definitions are better seeded in the EF migration or a dedicated `AgentDefinitionSeeder`; the `AgentSeeder` reduces to a no-op or is removed.
+
+### 7. `DatabaseSync/ListTablesHandler`
+
+Remove `"typology_prompt_templates"` from the table-to-BC mapping dictionary.
+
+---
+
 ## Chess Agent — Full Removal
 
 All chess-specific code is deleted:
@@ -160,7 +272,8 @@ END $$;
 
 ALTER TABLE agent_sessions DROP COLUMN typology_id;
 
--- 4. Drop legacy tables
+-- 4. Drop legacy tables (order matters: child tables first)
+DROP TABLE typology_prompt_templates;   -- FK child of agent_typologies
 DROP TABLE agents;
 DROP TABLE agent_configurations;
 DROP TABLE agent_game_state_snapshots;
@@ -181,27 +294,31 @@ DROP TABLE agent_typologies;
 - Admin agent management pages: point to `agent_definitions` instead of `agent_typologies`
 - `AgentSession` types: replace `typologyId` with `agentDefinitionId`
 - API client types: remove deleted endpoints, update arbiter endpoint signature
+- `SaveAgentConfig` API call: `typologyId` → `agentDefinitionId`
+- `UpdateAgentSessionTypology` API call: `newTypologyId` → `newAgentDefinitionId`
 
 ---
 
 ## API Surface Changes
 
 ```
-REMOVE  POST /api/v1/agents/chat/ask              ← AskAgentQuestion
-REMOVE  POST /api/v1/agents/{id}/invoke           ← InvokeAgent
-REMOVE  POST /api/v1/chess/ask                    ← Chess agent
-REMOVE  GET|POST /api/v1/agent-typologies/*       ← AgentTypology CRUD
+REMOVE  POST /api/v1/agents/chat/ask                        ← AskAgentQuestion
+REMOVE  POST /api/v1/agents/{id}/invoke                     ← InvokeAgent
+REMOVE  POST /api/v1/chess/ask                              ← Chess agent
+REMOVE  GET|POST /api/v1/agent-typologies/*                 ← AgentTypology CRUD (user-facing)
+REMOVE  GET|POST /api/v1/admin/agent-typologies/*           ← AgentTypology CRUD (admin) + Propose/Approve/Reject
 
-KEEP    POST /api/v1/agents/sessions/{id}/chat    ← ChatWithSession (wired to AgentDefinition)
-KEEP    POST /api/v1/agents/definitions/{id}/playground  ← Playground
-FIX     POST /api/v1/agents/{id}/arbiter          ← input: AgentDefinitionId, fix retrieval
+KEEP    POST /api/v1/agents/sessions/{id}/chat              ← ChatWithSession (wired to AgentDefinition)
+KEEP    POST /api/v1/agents/definitions/{id}/playground     ← Playground
+FIX     POST /api/v1/agents/{id}/arbiter                    ← input: AgentDefinitionId, fix retrieval
+RENAME  PATCH /api/v1/agents/sessions/{id}/typology         ← becomes .../definition (UpdateAgentSessionDefinition)
 ```
 
 ---
 
 ## What Does Not Change
 
-- `AgentSession` lifecycle (launch, end, state update, config update)
+- `AgentSession` lifecycle logic (launch, end, state update) — only the FK field and the update-typology command are renamed
 - `RagPromptAssemblyService` logic
 - `AgentMemoryContextBuilder`
 - `ConversationSummarizer`
@@ -216,4 +333,8 @@ FIX     POST /api/v1/agents/{id}/arbiter          ← input: AgentDefinitionId, 
 
 **Medium**: `AgentSession` is the most used table in production. The FK migration (`typology_id` → `agent_definition_id`) must run before the old tables are dropped, and must be verified with a row-count check.
 
+**Medium**: `SaveAgentConfigCommandHandler` (UserLibrary BC) and `AutoCreateAgentOnPdfReadyHandler` have cross-BC dependencies on `IAgentTypologyRepository`. Both must be updated before `AgentTypology` is removed or the build will fail. These are internal-only features (not user-visible in production UI), so functional risk is low.
+
 **Low**: removing chess and the dead command paths has no production user impact — these paths were either broken (empty retrieval) or not surfaced in the production UI.
+
+**Low**: `AgentSeeder` rewrite affects dev and staging seed data only. Production does not depend on the seeder.

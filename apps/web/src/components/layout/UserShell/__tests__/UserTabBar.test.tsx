@@ -61,12 +61,12 @@ describe('UserTabBar', () => {
   it('marks home tab active on /dashboard', () => {
     vi.mocked(usePathname).mockReturnValue('/dashboard');
     render(<UserTabBar />);
-    expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('aria-current', 'page');
   });
 
   it('marks chat tab active on /chat', () => {
     vi.mocked(usePathname).mockReturnValue('/chat');
     render(<UserTabBar />);
-    expect(screen.getByRole('link', { name: /chat/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('link', { name: /chat/i })).toHaveAttribute('aria-current', 'page');
   });
 });

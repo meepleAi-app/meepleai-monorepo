@@ -186,9 +186,8 @@ internal static class AdminGameWizardEndpoints
                 var isComplete = string.Equals(pdfState, "Ready", StringComparison.Ordinal);
                 var isFailed = string.Equals(pdfState, "Failed", StringComparison.Ordinal);
 
-                var agentExists = await dbContext.Agents
-                    .AnyAsync(a => a.GameId == resolvedGameId, cancellationToken)
-                    .ConfigureAwait(false);
+                // Agent system removed (Task 10: Agent cleanup)
+                var agentExists = false;
 
                 var progressEvent = new WizardProgressEvent
                 {

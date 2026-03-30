@@ -103,21 +103,13 @@ internal sealed class GetDocumentOverviewQueryHandler
             );
         }).ToList();
 
-        // Step 6: Get linked agent
-        var agent = await _db.Agents
-            .AsNoTracking()
-            .Where(a => a.SharedGameId == query.SharedGameId
-                || _db.Games.Any(g => g.SharedGameId == query.SharedGameId && g.Id == a.GameId))
-            .Select(a => new { a.Id, a.Name, a.IsActive, a.LastInvokedAt })
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
+        // Step 6: Agent system removed — no linked agents (Task 10: Agent cleanup)
         var agentStatus = new AgentStatusDto(
-            HasLinkedAgent: agent is not null,
-            AgentId: agent?.Id,
-            AgentName: agent?.Name,
-            IsActive: agent?.IsActive ?? false,
-            LastInvokedAt: agent?.LastInvokedAt
+            HasLinkedAgent: false,
+            AgentId: null,
+            AgentName: null,
+            IsActive: false,
+            LastInvokedAt: null
         );
 
         // Step 7: Calculate RAG readiness
@@ -130,11 +122,10 @@ internal sealed class GetDocumentOverviewQueryHandler
             blockers.Add($"{processing} document(s) still processing");
         if (failed > 0)
             blockers.Add($"{failed} document(s) failed");
-        if (agent is null)
-            blockers.Add("No AI agent linked");
+        // Agent system removed (Task 10: Agent cleanup) — agents no longer block RAG readiness
 
         var ragReadiness = new RagReadinessDto(
-            IsReady: ready > 0 && failed == 0 && processing == 0 && agent is not null,
+            IsReady: ready > 0 && failed == 0 && processing == 0,
             ReadyDocumentCount: ready,
             TotalChunks: totalChunks,
             Blockers: blockers

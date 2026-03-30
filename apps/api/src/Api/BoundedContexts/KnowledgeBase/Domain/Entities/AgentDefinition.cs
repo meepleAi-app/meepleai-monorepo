@@ -235,6 +235,45 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Creates a system-defined agent definition (not editable by users).
+    /// Uses the internal constructor to set IsSystemDefined and TypologySlug.
+    /// </summary>
+    public static AgentDefinition CreateSystem(
+        string name,
+        string description,
+        AgentType type,
+        AgentDefinitionConfig config,
+        string typologySlug,
+        AgentStrategy? strategy = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Agent name cannot be empty", nameof(name));
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentNullException.ThrowIfNull(config);
+
+        var agentStrategy = strategy ?? AgentStrategy.HybridSearch();
+        var definition = new AgentDefinition(
+            id: Guid.NewGuid(),
+            name: name.Trim(),
+            description: description?.Trim() ?? string.Empty,
+            typeValue: type.Value,
+            typeDescription: type.Description,
+            config: config,
+            strategyJson: System.Text.Json.JsonSerializer.Serialize(agentStrategy),
+            promptsJson: "[]",
+            toolsJson: "[]",
+            isActive: false,
+            status: AgentDefinitionStatus.Draft,
+            createdAt: DateTime.UtcNow,
+            updatedAt: null,
+            isSystemDefined: true,
+            typologySlug: typologySlug);
+
+        definition.AddDomainEvent(new AgentDefinitionCreatedEvent(definition.Id, name));
+        return definition;
+    }
+
+    /// <summary>
     /// Creates a new agent definition with validation.
     /// </summary>
     /// <remarks>

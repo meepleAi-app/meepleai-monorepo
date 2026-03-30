@@ -9,9 +9,6 @@ internal sealed class AgentSessionCreatedEvent : DomainEventBase
     public Guid GameSessionId { get; }
     public Guid UserId { get; }
 
-    // Compatibility property — will be removed in Task 12
-    public Guid AgentId => Guid.Empty;
-
     public AgentSessionCreatedEvent(Guid agentSessionId, Guid agentDefinitionId, Guid gameSessionId, Guid userId)
     {
         AgentSessionId = agentSessionId;

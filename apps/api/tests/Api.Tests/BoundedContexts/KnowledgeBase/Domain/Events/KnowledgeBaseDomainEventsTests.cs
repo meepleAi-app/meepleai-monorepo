@@ -359,16 +359,16 @@ public sealed class KnowledgeBaseDomainEventsTests
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        var agentId = Guid.NewGuid();
+        var agentDefinitionId = Guid.NewGuid();
         var gameSessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
         // Act
-        var evt = new AgentSessionCreatedEvent(sessionId, agentId, gameSessionId, userId);
+        var evt = new AgentSessionCreatedEvent(sessionId, agentDefinitionId, gameSessionId, userId);
 
         // Assert
         evt.AgentSessionId.Should().Be(sessionId);
-        evt.AgentId.Should().Be(agentId);
+        evt.AgentDefinitionId.Should().Be(agentDefinitionId);
         evt.GameSessionId.Should().Be(gameSessionId);
         evt.UserId.Should().Be(userId);
     }
@@ -378,24 +378,24 @@ public sealed class KnowledgeBaseDomainEventsTests
     {
         // Arrange
         var sessionId1 = Guid.NewGuid();
-        var agentId1 = Guid.NewGuid();
+        var agentDefinitionId1 = Guid.NewGuid();
         var gameSessionId1 = Guid.NewGuid();
         var userId1 = Guid.NewGuid();
 
         var sessionId2 = Guid.NewGuid();
-        var agentId2 = Guid.NewGuid();
+        var agentDefinitionId2 = Guid.NewGuid();
         var gameSessionId2 = Guid.NewGuid();
         var userId2 = Guid.NewGuid();
 
         // Act
-        var evt1 = new AgentSessionCreatedEvent(sessionId1, agentId1, gameSessionId1, userId1);
-        var evt2 = new AgentSessionCreatedEvent(sessionId2, agentId2, gameSessionId2, userId2);
+        var evt1 = new AgentSessionCreatedEvent(sessionId1, agentDefinitionId1, gameSessionId1, userId1);
+        var evt2 = new AgentSessionCreatedEvent(sessionId2, agentDefinitionId2, gameSessionId2, userId2);
 
         // Assert
         evt1.AgentSessionId.Should().Be(sessionId1);
-        evt1.AgentId.Should().Be(agentId1);
+        evt1.AgentDefinitionId.Should().Be(agentDefinitionId1);
         evt2.AgentSessionId.Should().Be(sessionId2);
-        evt2.AgentId.Should().Be(agentId2);
+        evt2.AgentDefinitionId.Should().Be(agentDefinitionId2);
     }
 
     #endregion

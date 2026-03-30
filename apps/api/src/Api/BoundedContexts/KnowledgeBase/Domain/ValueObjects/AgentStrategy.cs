@@ -89,20 +89,15 @@ public sealed record AgentStrategy
             }
         );
 
-    // Compatibility stubs for test files — will be removed in Task 12 (test cleanup)
-    public static AgentStrategy Custom(string name, IDictionary<string, object>? parameters = null) => HybridSearch();
-    public static AgentStrategy SingleModel(int topK = 5, double minScore = 0.55) => HybridSearch();
-    public static AgentStrategy VectorOnly(int topK = 10, double minScore = 0.55) => HybridSearch();
-    public static AgentStrategy MultiModelConsensus(IEnumerable<string>? models = null, double consensusThreshold = 0.7) => HybridSearch();
-    public static AgentStrategy ChainOfThoughtRAG(int chainDepth = 3) => HybridSearch();
-    public static AgentStrategy CitationValidation(double minConfidence = 0.7, bool requireExactMatch = false, int maxDistanceWords = 50) => HybridSearch();
-    public static AgentStrategy ConfidenceScoring(double minConfidence = 0.6) => HybridSearch();
-    public static AgentStrategy IterativeRAG(int maxIterations = 3, int topK = 10, double minScore = 0.55, int topKPerIteration = 5, double refinementThreshold = 0.7) => HybridSearch();
-    public static AgentStrategy MultiAgentRAG(int agentCount = 3) => HybridSearch();
-    public static AgentStrategy QueryDecomposition(int maxSubQueries = 3) => HybridSearch();
-    public static AgentStrategy QueryExpansion(int expansionCount = 3) => HybridSearch();
-    public static AgentStrategy RAGFusion(int fusionK = 60) => HybridSearch();
-    public static AgentStrategy StepBackPrompting(int stepBackCount = 1) => HybridSearch();
+    /// <summary>
+    /// Custom strategy: stores an arbitrary name and parameter set. Used for ad-hoc configurations.
+    /// </summary>
+    public static AgentStrategy Custom(string name, IDictionary<string, object>? parameters = null)
+        => new(
+            name: name,
+            parameters: parameters is null
+                ? new Dictionary<string, object>(StringComparer.Ordinal)
+                : new Dictionary<string, object>(parameters, StringComparer.Ordinal));
 
     /// <summary>
     /// Gets a parameter value with type conversion.

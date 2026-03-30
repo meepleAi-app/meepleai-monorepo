@@ -20,7 +20,7 @@ public sealed class AskArbiterCommandValidatorTests
 
     private static AskArbiterCommand CreateValidCommand() => new()
     {
-        AgentId = Guid.NewGuid(),
+        AgentDefinitionId = Guid.NewGuid(),
         SessionId = Guid.NewGuid(),
         Situation = "Two players disagree on resource placement rules",
         PositionA = "Resources can be placed on any empty space",
@@ -37,11 +37,11 @@ public sealed class AskArbiterCommandValidatorTests
     }
 
     [Fact]
-    public void EmptyAgentId_FailsValidation()
+    public void EmptyAgentDefinitionId_FailsValidation()
     {
-        var command = CreateValidCommand() with { AgentId = Guid.Empty };
+        var command = CreateValidCommand() with { AgentDefinitionId = Guid.Empty };
         var result = _validator.TestValidate(command);
-        result.ShouldHaveValidationErrorFor(x => x.AgentId);
+        result.ShouldHaveValidationErrorFor(x => x.AgentDefinitionId);
     }
 
     [Fact]

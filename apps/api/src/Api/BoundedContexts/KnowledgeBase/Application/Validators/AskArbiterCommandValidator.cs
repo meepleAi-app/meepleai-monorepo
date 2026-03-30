@@ -11,9 +11,9 @@ internal sealed class AskArbiterCommandValidator : AbstractValidator<AskArbiterC
 {
     public AskArbiterCommandValidator()
     {
-        RuleFor(x => x.AgentId)
+        RuleFor(x => x.AgentDefinitionId)
             .NotEmpty()
-            .WithMessage("Agent ID is required");
+            .WithMessage("Agent Definition ID is required");
 
         RuleFor(x => x.SessionId)
             .NotEmpty()

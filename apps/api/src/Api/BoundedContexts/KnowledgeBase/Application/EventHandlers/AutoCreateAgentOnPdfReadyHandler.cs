@@ -11,23 +11,23 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 /// <summary>
 /// Automatically creates an AI agent when a PDF finishes processing (state == Ready).
 /// Only triggers for admin-priority PDFs to avoid auto-creating agents for all user uploads.
-/// Uses the first approved typology with "Balanced" strategy as defaults.
+/// Uses the first active system definition with "Balanced" strategy as defaults.
 /// </summary>
 internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<PdfStateChangedEvent>
 {
     private readonly MeepleAiDbContext _dbContext;
-    private readonly IAgentTypologyRepository _typologyRepo;
+    private readonly IAgentDefinitionRepository _definitionRepo;
     private readonly IMediator _mediator;
     private readonly ILogger<AutoCreateAgentOnPdfReadyHandler> _logger;
 
     public AutoCreateAgentOnPdfReadyHandler(
         MeepleAiDbContext dbContext,
-        IAgentTypologyRepository typologyRepo,
+        IAgentDefinitionRepository definitionRepo,
         IMediator mediator,
         ILogger<AutoCreateAgentOnPdfReadyHandler> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _typologyRepo = typologyRepo ?? throw new ArgumentNullException(nameof(typologyRepo));
+        _definitionRepo = definitionRepo ?? throw new ArgumentNullException(nameof(definitionRepo));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -64,14 +64,14 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
                 return;
             }
 
-            // Get first approved typology
-            var typologies = await _typologyRepo.GetAllAsync(cancellationToken).ConfigureAwait(false);
-            var defaultTypology = typologies.FirstOrDefault(t => t.Status == KnowledgeBase.Domain.ValueObjects.TypologyStatus.Approved);
+            // Get first active system definition
+            var definitions = await _definitionRepo.GetAllAsync(cancellationToken).ConfigureAwait(false);
+            var defaultDefinition = definitions.FirstOrDefault(d => d.IsSystemDefined && d.IsActive);
 
-            if (defaultTypology == null)
+            if (defaultDefinition == null)
             {
                 _logger.LogWarning(
-                    "AutoCreateAgent: No approved typology found. Cannot auto-create agent for game {GameId}",
+                    "AutoCreateAgent: No active system definition found. Cannot auto-create agent for game {GameId}",
                     pdfEntity.GameId);
                 return;
             }
@@ -96,7 +96,7 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
             // Create agent with defaults
             var command = new CreateGameAgentCommand(
                 GameId: pdfEntity.GameId ?? Guid.Empty,
-                TypologyId: defaultTypology.Id,
+                AgentDefinitionId: defaultDefinition.Id,
                 StrategyName: "Balanced",
                 StrategyParameters: null,
                 UserId: notification.UploadedByUserId,

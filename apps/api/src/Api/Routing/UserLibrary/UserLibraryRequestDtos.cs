@@ -74,16 +74,16 @@ public record SendLoanReminderRequest(
 /// Simplified version of AgentConfigDto for frontend modal.
 /// </summary>
 public record SaveAgentConfigRequest(
-    Guid TypologyId,
+    Guid AgentDefinitionId,
     string ModelName,
     double CostEstimate
 );
 
 /// <summary>
-/// Request body for creating game agent with custom typology and strategy (Issue #5).
+/// Request body for creating game agent with custom definition and strategy (Issue #5).
 /// </summary>
 public record CreateGameAgentRequest(
-    Guid TypologyId,
+    Guid AgentDefinitionId,
     string StrategyName,
     string? StrategyParameters = null
 );

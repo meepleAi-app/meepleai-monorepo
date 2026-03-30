@@ -16,9 +16,9 @@ internal class CreateGameAgentCommandValidator : AbstractValidator<CreateGameAge
             .NotEmpty()
             .WithMessage("Game ID is required");
 
-        RuleFor(x => x.TypologyId)
+        RuleFor(x => x.AgentDefinitionId)
             .NotEmpty()
-            .WithMessage("Typology ID is required");
+            .WithMessage("Agent Definition ID is required");
 
         RuleFor(x => x.StrategyName)
             .NotEmpty()

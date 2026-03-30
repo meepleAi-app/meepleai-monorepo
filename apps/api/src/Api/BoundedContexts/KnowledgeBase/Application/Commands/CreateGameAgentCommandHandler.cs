@@ -2,7 +2,6 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
-using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -26,7 +25,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCommand, CreateGameAgentResult>
 {
     private readonly ISharedGameRepository _gameRepository;
-    private readonly IAgentTypologyRepository _typologyRepository;
+    private readonly IAgentDefinitionRepository _definitionRepository;
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly IVectorDocumentRepository _vectorDocumentRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -34,14 +33,14 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
 
     public CreateGameAgentCommandHandler(
         ISharedGameRepository gameRepository,
-        IAgentTypologyRepository typologyRepository,
+        IAgentDefinitionRepository definitionRepository,
         IUserLibraryRepository libraryRepository,
         IVectorDocumentRepository vectorDocumentRepository,
         IUnitOfWork unitOfWork,
         ILogger<CreateGameAgentCommandHandler> logger)
     {
         _gameRepository = gameRepository;
-        _typologyRepository = typologyRepository;
+        _definitionRepository = definitionRepository;
         _libraryRepository = libraryRepository;
         _vectorDocumentRepository = vectorDocumentRepository;
         _unitOfWork = unitOfWork;
@@ -70,13 +69,13 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
                 $"Cannot create agent for game '{game.Title}': {statusMessage}. Upload and process a PDF first.");
         }
 
-        // 2. Verify typology exists and is approved
-        var typology = await _typologyRepository.GetByIdAsync(request.TypologyId, cancellationToken).ConfigureAwait(false)
-                       ?? throw new NotFoundException($"Agent typology with ID {request.TypologyId} not found");
+        // 2. Verify definition exists and is active
+        var definition = await _definitionRepository.GetByIdAsync(request.AgentDefinitionId, cancellationToken).ConfigureAwait(false)
+                         ?? throw new NotFoundException($"Agent definition with ID {request.AgentDefinitionId} not found");
 
-        if (typology.Status != TypologyStatus.Approved)
+        if (!definition.IsActive)
         {
-            throw new ConflictException($"Typology '{typology.Name}' is not approved (status: {typology.Status})");
+            throw new ConflictException($"Agent definition '{definition.Name}' is not active");
         }
 
         // 3. Parse and validate RAG strategy
@@ -116,12 +115,12 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
             await _libraryRepository.AddAsync(entry, cancellationToken).ConfigureAwait(false);
         }
 
-        // 6. Create agent configuration (using typology defaults + strategy)
+        // 6. Create agent configuration (using definition config + strategy)
         var agentConfig = AgentConfiguration.Create(
-            llmModel: typology.DefaultStrategy.GetParameter<string>("Model", "gpt-4"),
-            temperature: typology.DefaultStrategy.GetParameter<double>("Temperature", 0.7),
-            maxTokens: typology.DefaultStrategy.GetParameter<int>("MaxTokens", 2000),
-            personality: $"{typology.Name}: {typology.Description}",
+            llmModel: definition.Config.Model,
+            temperature: (double)definition.Config.Temperature,
+            maxTokens: definition.Config.MaxTokens,
+            personality: $"{definition.Name}: {definition.Description}",
             detailLevel: strategy.ToString(),
             personalNotes: request.StrategyParameters
         );
@@ -133,10 +132,10 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Agent configuration created for game {GameId} by user {UserId}, typology: {TypologyName}, strategy: {Strategy}",
+            "Agent configuration created for game {GameId} by user {UserId}, definition: {DefinitionName}, strategy: {Strategy}",
             game.Id,
             request.UserId,
-            typology.Name,
+            definition.Name,
             strategy.GetDisplayName()
         );
 
@@ -146,10 +145,10 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
             LibraryEntryId = entry.Id,
             GameId = game.Id,
             Status = "ready",  // Config is immediately ready for use
-            Typology = new AgentTypologyInfo
+            Definition = new AgentDefinitionInfo
             {
-                Id = typology.Id,
-                Name = typology.Name
+                Id = definition.Id,
+                Name = definition.Name
             },
             Strategy = new AgentStrategyInfo
             {

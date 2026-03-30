@@ -225,3 +225,11 @@ export function useColorScheme(): ColorSchemeContextValue {
   }
   return context;
 }
+
+/**
+ * Safe variant that returns null instead of throwing when used outside ColorSchemeProvider.
+ * Use this when the component may render outside the provider.
+ */
+export function useSafeColorScheme(): ColorSchemeContextValue | undefined {
+  return useContext(ColorSchemeContext);
+}

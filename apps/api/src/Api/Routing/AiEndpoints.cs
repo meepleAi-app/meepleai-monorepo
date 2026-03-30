@@ -21,7 +21,7 @@ namespace Api.Routing;
 
 /// <summary>
 /// AI and Agent endpoints.
-/// Handles RAG QA, explain, setup guide, chess agent, BGG API, and chess knowledge indexing.
+/// Handles RAG QA, explain, setup guide, and AI agent endpoints.
 /// </summary>
 internal static class AiEndpoints
 {
@@ -40,8 +40,6 @@ internal static class AiEndpoints
         MapSetupGuideEndpoint(group);
 
         MapAgentFeedbackEndpoint(group);
-
-        MapChessAgentEndpoint(group);
 
         MapPlayerModeSuggestionEndpoint(group);
 
@@ -79,14 +77,6 @@ internal static class AiEndpoints
     {
         // Migrated to CQRS: Uses ProvideAgentFeedbackCommand via MediatR (Issue #1188)
         group.MapPost("/agents/feedback", HandleAgentFeedback)
-        .RequireSession(); // Issue #1446: Automatic session validation
-    }
-
-    private static void MapChessAgentEndpoint(RouteGroupBuilder group)
-    {
-        // CHESS-04: Chess conversational agent endpoint
-        // Migrated to CQRS: Uses InvokeChessAgentCommand via MediatR (Issue #1188)
-        group.MapPost("/agents/chess", HandleChessAgent)
         .RequireSession(); // Issue #1446: Automatic session validation
     }
 
@@ -607,43 +597,6 @@ internal static class AiEndpoints
         return Results.Json(new { ok = true });
     }
 
-    private static async Task<IResult> HandleChessAgent(ChessAgentRequest req, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
-    {
-        // Session validated by RequireSessionFilter
-        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-        // Issue #1445: Use centralized query validation
-        var queryError = QueryValidator.ValidateQuery(req.question);
-        if (queryError != null)
-        {
-            return Results.BadRequest(new { error = queryError });
-        }
-
-        var startTime = DateTime.UtcNow;
-        logger.LogInformation("Chess agent request from user {UserId}: {Question}, FEN: {FEN}",
-            session.User!.Id, req.question, req.fenPosition ?? "none");
-
-        // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
-        var resp = await mediator.Send(new InvokeChessAgentCommand
-        {
-            Question = req.question,
-            FenPosition = req.fenPosition,
-            ChatId = req.chatId
-        }, ct).ConfigureAwait(false);
-        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-        logger.LogInformation("Chess agent response delivered: {MoveCount} moves suggested",
-            resp.suggestedMoves.Count);
-
-        // ADM-01: Log AI request using CQRS
-        await LogChessAgentRequestAsync(session.User!.Id.ToString(), req.question, resp, latencyMs,
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            context.Request.Headers.UserAgent.ToString(),
-            mediator, ct).ConfigureAwait(false);
-
-        return Results.Json(resp);
-    }
-
     private static async Task<IResult> HandlePlayerModeSuggestion(
         PlayerModeSuggestionRequest req,
         HttpContext context,
@@ -1032,45 +985,6 @@ internal static class AiEndpoints
         );
         await mediator.Send(logCommand, CancellationToken.None).ConfigureAwait(false);
     }
-    private static async Task LogChessAgentRequestAsync(
-        string userId,
-        string query,
-        ChessAgentResponse resp,
-        int latencyMs,
-        string ipAddress,
-        string userAgent,
-        IMediator mediator,
-        CancellationToken ct)
-    {
-        string? model = null;
-        string? finishReason = null;
-        if (resp.metadata != null)
-        {
-            resp.metadata.TryGetValue("model", out model);
-            resp.metadata.TryGetValue("finish_reason", out finishReason);
-        }
-
-        var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
-            UserId: userId,
-            GameId: "chess",
-            Endpoint: "chess",
-            Query: query,
-            ResponseSnippet: resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
-            LatencyMs: latencyMs,
-            TokenCount: resp.totalTokens,
-            Confidence: resp.confidence,
-            Status: "Success",
-            ErrorMessage: null,
-            IpAddress: ipAddress,
-            UserAgent: userAgent,
-            PromptTokens: resp.promptTokens,
-            CompletionTokens: resp.completionTokens,
-            Model: model,
-            FinishReason: finishReason
-        );
-        await mediator.Send(logCommand, ct).ConfigureAwait(false);
-    }
-
     private static async Task ExecuteExplainStreamingAsync(
         StreamExplainQuery query,
         HttpContext context,

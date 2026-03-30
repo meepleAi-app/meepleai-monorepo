@@ -120,6 +120,8 @@ internal sealed class Game : AggregateRoot<Guid>
 
     /// <summary>
     /// Removes the link to SharedGameCatalog.
+    /// If the game was approved, it is reverted to Draft to maintain the invariant
+    /// that an approved game must reference a SharedGame.
     /// Called when a SharedGame is deleted or when admin manually unlinks.
     /// Idempotent — safe to call even if not linked.
     /// Spec-panel recommendation M-3.
@@ -130,6 +132,13 @@ internal sealed class Game : AggregateRoot<Guid>
 
         var previousSharedGameId = SharedGameId.Value;
         SharedGameId = null;
+
+        // Revoke approval — a game cannot remain published without a SharedGame reference
+        if (ApprovalStatus == ApprovalStatus.Approved)
+        {
+            ApprovalStatus = ApprovalStatus.Draft;
+            PublishedAt = null;
+        }
 
         AddDomainEvent(new GameUnlinkedFromSharedCatalogEvent(Id, previousSharedGameId));
     }

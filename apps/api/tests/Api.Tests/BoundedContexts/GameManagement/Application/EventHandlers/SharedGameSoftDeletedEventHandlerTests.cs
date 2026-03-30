@@ -104,4 +104,33 @@ public sealed class SharedGameSoftDeletedEventHandlerTests
         _gameRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Handle_WhenLinkedGameIsApproved_RevokeApprovalOnUnlink()
+    {
+        // Arrange
+        var sharedGameId = Guid.NewGuid();
+
+        // Simulate an approved game linked to the deleted SharedGame
+        var approvedGame = new Game(Guid.NewGuid(), new GameTitle("Catan"));
+        approvedGame.LinkToSharedGame(sharedGameId);
+        approvedGame.Publish(ApprovalStatus.Approved);
+
+        approvedGame.IsPublished.Should().BeTrue("precondition: game is published before handler runs");
+
+        _gameRepositoryMock
+            .Setup(r => r.GetBySharedGameIdAsync(sharedGameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Game> { approvedGame });
+
+        var domainEvent = new SharedGameDeletedEvent(sharedGameId, Guid.NewGuid());
+
+        // Act
+        await _handler.Handle(domainEvent, CancellationToken.None);
+
+        // Assert
+        approvedGame.SharedGameId.Should().BeNull();
+        approvedGame.IsPublished.Should().BeFalse(
+            "approval is revoked when the linked SharedGame is deleted");
+        approvedGame.ApprovalStatus.Should().Be(ApprovalStatus.Draft);
+    }
 }

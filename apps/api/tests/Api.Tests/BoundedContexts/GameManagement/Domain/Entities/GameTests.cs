@@ -527,6 +527,48 @@ public sealed class GameTests
         game.SharedGameId.Should().BeNull();
     }
 
+    [Fact]
+    public void UnlinkFromSharedGame_WhenApprovedGame_RevertsTodraft()
+    {
+        // Arrange — simulate an approved, published game
+        var sharedGameId = Guid.NewGuid();
+        var game = new Game(Guid.NewGuid(), new GameTitle("Catan"));
+        game.LinkToSharedGame(sharedGameId);
+        game.Publish(ApprovalStatus.Approved); // sets ApprovalStatus=Approved, PublishedAt=now
+
+        game.ApprovalStatus.Should().Be(ApprovalStatus.Approved);
+        game.IsPublished.Should().BeTrue();
+
+        // Act
+        game.UnlinkFromSharedGame();
+
+        // Assert
+        game.SharedGameId.Should().BeNull();
+        game.ApprovalStatus.Should().Be(ApprovalStatus.Draft,
+            "approving requires a SharedGame link — unlinking must revoke approval");
+        game.PublishedAt.Should().BeNull("PublishedAt is cleared when depublished");
+        game.IsPublished.Should().BeFalse();
+    }
+
+    [Fact]
+    public void UnlinkFromSharedGame_WhenDraftGame_DoesNotChangeApprovalStatus()
+    {
+        // Arrange — a linked but not-yet-approved game
+        var sharedGameId = Guid.NewGuid();
+        var game = new Game(Guid.NewGuid(), new GameTitle("Catan"));
+        game.LinkToSharedGame(sharedGameId);
+        // NOT calling Publish() — game remains Draft
+
+        // Act
+        game.UnlinkFromSharedGame();
+
+        // Assert
+        game.SharedGameId.Should().BeNull();
+        game.ApprovalStatus.Should().Be(ApprovalStatus.Draft,
+            "draft game stays draft after unlinking");
+        game.IsPublished.Should().BeFalse();
+    }
+
     #endregion
 
     #region Helper Methods

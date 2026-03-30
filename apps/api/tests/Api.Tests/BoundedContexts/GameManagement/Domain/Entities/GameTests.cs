@@ -474,6 +474,61 @@ public sealed class GameTests
 
     #endregion
 
+    #region UnlinkFromSharedGame Tests (Spec-panel M-3)
+
+    [Fact]
+    public void UnlinkFromSharedGame_WhenLinked_RemovesSharedGameId()
+    {
+        // Arrange
+        var sharedGameId = Guid.NewGuid();
+        var game = new Game(Guid.NewGuid(), new GameTitle("Catan"));
+        game.LinkToSharedGame(sharedGameId);
+        game.SharedGameId.Should().Be(sharedGameId);
+
+        // Act
+        game.UnlinkFromSharedGame();
+
+        // Assert
+        game.SharedGameId.Should().BeNull("unlinking clears the SharedGameId");
+    }
+
+    [Fact]
+    public void UnlinkFromSharedGame_WhenLinked_RaisesGameUnlinkedEvent()
+    {
+        // Arrange
+        var sharedGameId = Guid.NewGuid();
+        var game = new Game(Guid.NewGuid(), new GameTitle("Catan"));
+        game.LinkToSharedGame(sharedGameId);
+        game.ClearDomainEvents();
+
+        // Act
+        game.UnlinkFromSharedGame();
+
+        // Assert
+        game.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<Api.BoundedContexts.GameManagement.Domain.Events.GameUnlinkedFromSharedCatalogEvent>();
+
+        var evt = (Api.BoundedContexts.GameManagement.Domain.Events.GameUnlinkedFromSharedCatalogEvent)game.DomainEvents.Single();
+        evt.GameId.Should().Be(game.Id);
+        evt.PreviousSharedGameId.Should().Be(sharedGameId);
+    }
+
+    [Fact]
+    public void UnlinkFromSharedGame_WhenAlreadyUnlinked_IsIdempotent()
+    {
+        // Arrange
+        var game = new Game(Guid.NewGuid(), new GameTitle("Catan"));
+
+        // Act
+        var action = () => game.UnlinkFromSharedGame();
+
+        // Assert
+        action.Should().NotThrow("unlinking a non-linked game is a safe no-op");
+        game.SharedGameId.Should().BeNull();
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static Game CreateValidGame()

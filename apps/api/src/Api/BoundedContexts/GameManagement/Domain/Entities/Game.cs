@@ -119,6 +119,22 @@ internal sealed class Game : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Removes the link to SharedGameCatalog.
+    /// Called when a SharedGame is deleted or when admin manually unlinks.
+    /// Idempotent — safe to call even if not linked.
+    /// Spec-panel recommendation M-3.
+    /// </summary>
+    public void UnlinkFromSharedGame()
+    {
+        if (SharedGameId is null) return; // already unlinked — no-op
+
+        var previousSharedGameId = SharedGameId.Value;
+        SharedGameId = null;
+
+        AddDomainEvent(new GameUnlinkedFromSharedCatalogEvent(Id, previousSharedGameId));
+    }
+
+    /// <summary>
     /// Publishes game to SharedGameCatalog with approval status.
     /// Issue #3481: Admin-controlled publication workflow.
     /// </summary>

@@ -24,7 +24,7 @@ internal sealed class SharedGameSoftDeletedEventHandler : INotificationHandler<S
     public SharedGameSoftDeletedEventHandler(
         IGameRepository gameRepository,
         IUnitOfWork unitOfWork,
-        ILogger<SharedGameSoftDeletedEventHandler> logger = null!)
+        ILogger<SharedGameSoftDeletedEventHandler> logger)
     {
         _gameRepository = gameRepository;
         _unitOfWork = unitOfWork;
@@ -39,7 +39,7 @@ internal sealed class SharedGameSoftDeletedEventHandler : INotificationHandler<S
 
         if (linkedGames.Count == 0) return;
 
-        _logger?.LogInformation(
+        _logger.LogInformation(
             "SharedGame {SharedGameId} was deleted. Unlinking {Count} linked game(s).",
             notification.GameId,
             linkedGames.Count);

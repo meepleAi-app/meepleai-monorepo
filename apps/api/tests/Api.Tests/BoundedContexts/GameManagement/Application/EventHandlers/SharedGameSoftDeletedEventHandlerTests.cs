@@ -6,6 +6,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -29,7 +30,8 @@ public sealed class SharedGameSoftDeletedEventHandlerTests
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _handler = new SharedGameSoftDeletedEventHandler(
             _gameRepositoryMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            new Mock<ILogger<SharedGameSoftDeletedEventHandler>>().Object);
     }
 
     [Fact]

@@ -31,7 +31,9 @@ internal static class AgentDefaults
 
     /// <summary>
     /// Local Ollama fallback model (zero cost).
+    /// Reads from OLLAMA_DEFAULT_MODEL env var. Defaults to qwen2.5:1.5b.
     /// Used when free-tier OpenRouter models are rate-limited or unavailable.
     /// </summary>
-    public const string OllamaFallbackModel = "llama3:8b";
+    public static readonly string OllamaFallbackModel =
+        Environment.GetEnvironmentVariable("OLLAMA_DEFAULT_MODEL") ?? "qwen2.5:1.5b";
 }

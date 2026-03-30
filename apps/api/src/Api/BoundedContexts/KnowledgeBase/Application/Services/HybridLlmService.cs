@@ -87,6 +87,83 @@ internal class HybridLlmService : ILlmService
             ct).ConfigureAwait(false);
     }
 
+    /// <inheritdoc/>
+    public async Task<LlmCompletionResult> GenerateCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        LlmUserContext userContext,
+        RequestSource source = RequestSource.Manual,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(systemPrompt);
+        ArgumentNullException.ThrowIfNull(userPrompt);
+        if (string.IsNullOrWhiteSpace(userPrompt))
+            return LlmCompletionResult.CreateFailure("No user prompt provided");
+
+        var selection = await _providerSelector.SelectProviderAsync(userContext, RagStrategy.Balanced, source, ct)
+            .ConfigureAwait(false);
+
+        var client = selection.Client;
+        var decision = selection.Decision;
+
+        if (client == null)
+            return LlmCompletionResult.CreateFailure("Provider error: No providers available");
+
+        var attemptedProviders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        LlmCompletionResult? lastFailure = null;
+
+        while (client != null && attemptedProviders.Add(client.ProviderName))
+        {
+            _logger.LogInformation(
+                "Generating completion via {Provider} ({Model}) - Reason: {Reason}",
+                client.ProviderName, decision.ModelId, decision.Reason);
+
+            var effectiveSystemPrompt = systemPrompt;
+            var effectiveUserPrompt = userPrompt;
+            if (_piiDetector != null && string.Equals(client.ProviderName, "OpenRouter", StringComparison.Ordinal))
+            {
+                effectiveSystemPrompt = _piiDetector.ScanAndRedact(systemPrompt);
+                effectiveUserPrompt = _piiDetector.ScanAndRedact(userPrompt);
+            }
+
+            var attemptStopwatch = Stopwatch.StartNew();
+            try
+            {
+                var result = await client.GenerateCompletionAsync(
+                    decision.ModelId, effectiveSystemPrompt, effectiveUserPrompt,
+                    DefaultTemperature, DefaultMaxTokens, ct).ConfigureAwait(false);
+                attemptStopwatch.Stop();
+
+                if (result.Success)
+                {
+                    _providerSelector.RecordSuccess(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds, result);
+                    AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
+                    await _costService.LogSuccessAsync(result, userContext, attemptStopwatch.ElapsedMilliseconds, source, ct).ConfigureAwait(false);
+                    return result;
+                }
+
+                _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds, result);
+                await _costService.LogFailureAsync(result.ErrorMessage, userContext, attemptStopwatch.ElapsedMilliseconds, source, ct).ConfigureAwait(false);
+                lastFailure = NormalizeFailureResult(result, client.ProviderName);
+            }
+            catch (Exception ex)
+            {
+                attemptStopwatch.Stop();
+                _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds);
+                _logger.LogError(ex, "Error generating completion with {Provider} ({Model})", client.ProviderName, decision.ModelId);
+                await _costService.LogFailureAsync(ex.Message, userContext, attemptStopwatch.ElapsedMilliseconds, source, ct).ConfigureAwait(false);
+                lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
+            }
+
+            var nextSelection = await _providerSelector.GetNextFallbackAsync(client.ProviderName, attemptedProviders, ct).ConfigureAwait(false);
+            client = nextSelection.Client;
+            if (client != null)
+                decision = nextSelection.Decision;
+        }
+
+        return lastFailure ?? LlmCompletionResult.CreateFailure("Provider error: No providers available");
+    }
+
     /// <summary>
     /// Generate completion with user context for adaptive routing.
     /// Issue #5487: Delegates provider selection to ILlmProviderSelector.

@@ -64,6 +64,7 @@ services:
       SMOLDOCLING_API_URL: http://smoldocling-service:8002
     volumes:
       - ./secrets:/app/infra/secrets:ro
+      - ../data/rulebook:/app/data/rulebook:ro
 
   web:
     env_file: [./env/web.env.dev]

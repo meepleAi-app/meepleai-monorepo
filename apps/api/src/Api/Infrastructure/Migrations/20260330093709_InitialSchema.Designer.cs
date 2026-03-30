@@ -14,8 +14,8 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260328200710_AddHnswIndexPgvectorEmbeddings")]
-    partial class AddHnswIndexPgvectorEmbeddings
+    [Migration("20260330093709_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

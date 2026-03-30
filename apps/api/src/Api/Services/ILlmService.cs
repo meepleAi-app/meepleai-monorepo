@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
@@ -27,6 +28,16 @@ internal interface ILlmService
     Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Generate a chat completion response with explicit user context for tier-aware routing.
+    /// </summary>
+    Task<LlmCompletionResult> GenerateCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        LlmUserContext userContext,
         RequestSource source = RequestSource.Manual,
         CancellationToken ct = default);
 

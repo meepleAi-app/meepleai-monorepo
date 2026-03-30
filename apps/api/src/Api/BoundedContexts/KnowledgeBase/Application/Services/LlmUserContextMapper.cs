@@ -12,6 +12,32 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 internal static class LlmUserContextMapper
 {
     /// <summary>
+    /// Map from UserId and role name string to LlmUserContext.
+    /// Used when the full User entity is not available (e.g., from query parameters).
+    /// Determines tier from role name only (not subscription tier).
+    /// </summary>
+    public static LlmUserContext FromRoleString(Guid? userId, string? roleName)
+    {
+        if (userId == null || string.IsNullOrEmpty(roleName))
+            return LlmUserContext.Internal;
+
+        var tier = MapTierFromRoleName(roleName);
+        return new LlmUserContext(userId, roleName, tier);
+    }
+
+    private static LlmUserTier MapTierFromRoleName(string roleName)
+    {
+        if (string.Equals(roleName, "admin", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(roleName, "superadmin", StringComparison.OrdinalIgnoreCase))
+            return LlmUserTier.Admin;
+
+        if (string.Equals(roleName, "editor", StringComparison.OrdinalIgnoreCase))
+            return LlmUserTier.Editor;
+
+        return LlmUserTier.User;
+    }
+
+    /// <summary>
     /// Map a User entity to an LlmUserContext value object.
     /// Null user (internal pipeline calls like query rewriting) defaults to User tier.
     /// </summary>
@@ -37,8 +63,9 @@ internal static class LlmUserContextMapper
     /// </summary>
     private static LlmUserTier MapTier(User user)
     {
-        // Admin role always gets Admin tier (highest access)
-        if (string.Equals(user.Role.Value, "admin", StringComparison.OrdinalIgnoreCase))
+        // Admin and superadmin roles always get Admin tier (highest access)
+        if (string.Equals(user.Role.Value, "admin", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(user.Role.Value, "superadmin", StringComparison.OrdinalIgnoreCase))
         {
             return LlmUserTier.Admin;
         }

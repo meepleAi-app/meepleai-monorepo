@@ -137,8 +137,9 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         // Step 4: Generate answer with LLM and record metrics
         _logger.LogDebug("[AskQuestionHandler] Step 4: Generating LLM answer...");
         var sw4 = System.Diagnostics.Stopwatch.StartNew();
+        var userContext = LlmUserContextMapper.FromRoleString(query.UserId, query.UserRole);
         var (llmResponse, _) = await GenerateLlmAnswerAndRecordMetricsAsync(
-            systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+            systemPrompt, userPrompt, userContext, cancellationToken).ConfigureAwait(false);
         sw4.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 4 DONE: LLM generation completed in {ElapsedMs}ms - Response: {ResponseLength} chars",
             sw4.ElapsedMilliseconds, llmResponse?.Length ?? 0);
@@ -238,11 +239,13 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private async Task<(string llmResponse, LlmCompletionResult llmResult)> GenerateLlmAnswerAndRecordMetricsAsync(
         string systemPrompt,
         string userPrompt,
+        LlmUserContext userContext,
         CancellationToken cancellationToken)
     {
         var llmResult = await _llmService.GenerateCompletionAsync(
             systemPrompt,
             userPrompt,
+            userContext,
             RequestSource.RagPipeline,
             cancellationToken).ConfigureAwait(false);
 

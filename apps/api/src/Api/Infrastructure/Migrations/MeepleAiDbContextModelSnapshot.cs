@@ -6672,8 +6672,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("GameId");
 
-                    // NOTE: Npgsql snapshot code generator emits HNSW index as separate HasIndex() chains.
-                    // This is a known codegen quirk — EF Core merges them by column at runtime. Functionally correct.
                     b.HasIndex("Vector")
                         .HasAnnotation("Npgsql:StorageParameter:ef_construction", 64)
                         .HasAnnotation("Npgsql:StorageParameter:m", 16);

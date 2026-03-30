@@ -9,6 +9,7 @@ using System.Diagnostics.CodeAnalysis;
 // CA1848: Use the LoggerMessage delegates
 [assembly: SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "High volume, low impact. Requires pervasive refactoring.")]
 
+#pragma warning disable S125
 // CA1031: Do not catch general exception types
 // Kept as a global suppression because catch(Exception) is used across ~425 files at legitimate
 // service/infrastructure boundaries: health checks, background tasks, middleware, and event handlers
@@ -16,6 +17,7 @@ using System.Diagnostics.CodeAnalysis;
 // Files that are clearly boundary points already carry local #pragma warning disable CA1031 comments
 // (244 files as of this writing). The remaining sites are tracked for incremental improvement.
 // Do NOT use this global as license to swallow exceptions silently — every catch site must log or re-throw.
+#pragma warning restore S125
 [assembly: SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Intentional at service/infrastructure/middleware boundaries. ~244 sites have local pragmas; remainder tracked for incremental improvement. See GlobalSuppressions.cs comment.")]
 
 // CA1305: Specify IFormatProvider

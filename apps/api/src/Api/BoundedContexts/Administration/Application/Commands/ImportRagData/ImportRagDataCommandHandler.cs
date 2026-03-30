@@ -196,8 +196,10 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     GameId = game.Id,
                     PdfDocumentId = pdfDocumentId,
                     ChunkCount = chunks.Count,
+#pragma warning disable S125
                     // When ReEmbed=true, mark as pending so the indexing pipeline picks it up;
                     // otherwise mark as completed because we are importing the stored embeddings.
+#pragma warning restore S125
                     IndexingStatus = request.ReEmbed ? "pending" : "completed",
                     IndexedAt = DateTime.UtcNow,
                     EmbeddingModel = metadata.EmbeddingModel,

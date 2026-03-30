@@ -41,10 +41,11 @@ internal class MultiModelValidationService : IMultiModelValidationService
     private const string Gpt4Model = "meta-llama/llama-3.3-70b-instruct:free";
 
     /// <summary>
-    /// Claude model identifier (Issue #3231: Use free models)
-    /// Free alternative: Gemini 2.0 Flash (1M context, fast reasoning)
+    /// Second model for consensus validation.
+    /// google/gemini-2.0-flash-exp:free was removed from OpenRouter (2026-03).
+    /// Using google/gemma-3-27b-it:free as replacement.
     /// </summary>
-    private const string ClaudeModel = "google/gemini-2.0-flash-exp:free";
+    private const string ClaudeModel = "google/gemma-3-27b-it:free";
 
     public MultiModelValidationService(
         IEnumerable<ILlmClient> llmClients,

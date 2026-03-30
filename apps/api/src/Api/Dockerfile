@@ -1,5 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
+COPY .editorconfig ./
 COPY src/Api/Api.csproj ./src/Api/
 RUN dotnet restore ./src/Api/Api.csproj
 COPY src/Api ./src/Api

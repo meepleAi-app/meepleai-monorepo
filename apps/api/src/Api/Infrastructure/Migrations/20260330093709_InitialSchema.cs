@@ -9,7 +9,7 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialSchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -483,6 +483,22 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "database_metrics_snapshots",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    recorded_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    total_size_bytes = table.Column<long>(type: "bigint", nullable: false),
+                    table_count = table.Column<int>(type: "integer", nullable: false),
+                    index_size_bytes = table.Column<long>(type: "bigint", nullable: false),
+                    active_connections = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_database_metrics_snapshots", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "email_queue_items",
                 columns: table => new
                 {
@@ -879,9 +895,9 @@ namespace Api.Infrastructure.Migrations
                     ModelId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     DisplayName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Provider = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Alternatives = table.Column<string[]>(type: "jsonb", nullable: false),
+                    Alternatives = table.Column<string>(type: "jsonb", nullable: false),
                     ContextWindow = table.Column<int>(type: "integer", nullable: false),
-                    Strengths = table.Column<string[]>(type: "jsonb", nullable: false),
+                    Strengths = table.Column<string>(type: "jsonb", nullable: false),
                     IsCurrentlyAvailable = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     IsDeprecated = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     LastVerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -977,6 +993,40 @@ namespace Api.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_notifications", x => x.id);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "pgvector_embeddings",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    vector_document_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    text_content = table.Column<string>(type: "text", nullable: false),
+                    vector = table.Column<Vector>(type: "vector(768)", nullable: false),
+                    model = table.Column<string>(type: "text", nullable: false),
+                    chunk_index = table.Column<int>(type: "integer", nullable: false),
+                    page_number = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    lang = table.Column<string>(type: "character varying(5)", maxLength: 5, nullable: false, defaultValue: "en"),
+                    source_chunk_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    is_translation = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_pgvector_embeddings", x => x.id);
+                });
+
+            // search_vector is a generated stored column — EF Core cannot declare it via Fluent API.
+            // PgVectorStoreAdapter.EnsureCollectionExistsAsync also adds it at runtime, but adding it
+            // here ensures the column exists immediately after migration so the GIN index can be created.
+            migrationBuilder.Sql("""
+                ALTER TABLE pgvector_embeddings
+                ADD COLUMN IF NOT EXISTS search_vector tsvector
+                GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED;
+
+                CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_search_vector
+                ON pgvector_embeddings USING gin (search_vector);
+                """);
 
             migrationBuilder.CreateTable(
                 name: "player_memories",
@@ -1179,6 +1229,29 @@ namespace Api.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_resource_forecasts", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "service_call_logs",
+                schema: "administration",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    service_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    http_method = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    request_url = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    status_code = table.Column<int>(type: "integer", nullable: true),
+                    latency_ms = table.Column<long>(type: "bigint", nullable: false),
+                    is_success = table.Column<bool>(type: "boolean", nullable: false),
+                    error_message = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    correlation_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    timestamp_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    request_summary = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    response_summary = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_service_call_logs", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -4647,6 +4720,26 @@ namespace Api.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // search_vector generated stored columns for hybrid (FTS + vector) search.
+            // EF Core cannot declare generated stored columns via Fluent API, so they are added here.
+            // KeywordSearchService queries these columns; PdfDocumentEntity.SearchVector is trigger-managed
+            // on pdf_documents but the generated-column approach is used here for consistency.
+            migrationBuilder.Sql("""
+                ALTER TABLE text_chunks
+                ADD COLUMN IF NOT EXISTS search_vector tsvector
+                GENERATED ALWAYS AS (to_tsvector('english', "Content")) STORED;
+
+                CREATE INDEX IF NOT EXISTS idx_text_chunks_search_vector
+                ON text_chunks USING gin (search_vector);
+
+                ALTER TABLE pdf_documents
+                ADD COLUMN IF NOT EXISTS search_vector tsvector
+                GENERATED ALWAYS AS (to_tsvector('english', COALESCE("FileName", ''))) STORED;
+
+                CREATE INDEX IF NOT EXISTS idx_pdf_documents_search_vector
+                ON pdf_documents USING gin (search_vector);
+                """);
+
             migrationBuilder.CreateTable(
                 name: "user_library_entries",
                 columns: table => new
@@ -6019,6 +6112,11 @@ namespace Api.Infrastructure.Migrations
                 .Annotation("Npgsql:IndexMethod", "gin");
 
             migrationBuilder.CreateIndex(
+                name: "IX_database_metrics_snapshots_recorded_at",
+                table: "database_metrics_snapshots",
+                column: "recorded_at");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_decisore_move_feedback_analysis_depth",
                 schema: "knowledge_base",
                 table: "decisore_move_feedback",
@@ -6951,6 +7049,30 @@ namespace Api.Infrastructure.Migrations
                 descending: new[] { false, true });
 
             migrationBuilder.CreateIndex(
+                name: "IX_pgvector_embeddings_game_id",
+                table: "pgvector_embeddings",
+                column: "game_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_pgvector_embeddings_game_id_chunk_index",
+                table: "pgvector_embeddings",
+                columns: new[] { "game_id", "chunk_index" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_pgvector_embeddings_vector",
+                table: "pgvector_embeddings",
+                column: "vector")
+                .Annotation("Npgsql:IndexMethod", "hnsw")
+                .Annotation("Npgsql:IndexOperators", new[] { "vector_cosine_ops" })
+                .Annotation("Npgsql:StorageParameter:ef_construction", 64)
+                .Annotation("Npgsql:StorageParameter:m", 16);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_pgvector_embeddings_vector_document_id",
+                table: "pgvector_embeddings",
+                column: "vector_document_id");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PlayRecords_CreatedByUserId",
                 table: "play_records",
                 column: "CreatedByUserId");
@@ -7421,6 +7543,37 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_rulespec_comments_ResolvedByUserId",
                 table: "rulespec_comments",
                 column: "ResolvedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_service_call_logs_correlation_id",
+                schema: "administration",
+                table: "service_call_logs",
+                column: "correlation_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_service_call_logs_is_success",
+                schema: "administration",
+                table: "service_call_logs",
+                column: "is_success");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_service_call_logs_service_name",
+                schema: "administration",
+                table: "service_call_logs",
+                column: "service_name");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_service_call_logs_service_timestamp",
+                schema: "administration",
+                table: "service_call_logs",
+                columns: new[] { "service_name", "timestamp_utc" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_service_call_logs_timestamp",
+                schema: "administration",
+                table: "service_call_logs",
+                column: "timestamp_utc",
+                descending: new bool[0]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_service_health_states_service_name",
@@ -8518,6 +8671,35 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_workflow_error_logs_workflow_id",
                 table: "workflow_error_logs",
                 column: "workflow_id");
+
+            // Seed default system_configurations (models, strategies, rerankers, rate-limits).
+            // Uses a PL/pgSQL block so it gracefully skips when no admin user exists yet
+            // (fresh DB at migration time). The app seeder re-runs this idempotently at startup.
+            migrationBuilder.Sql(@"
+DO $$
+DECLARE
+    v_user_id uuid;
+    v_now timestamptz := NOW();
+BEGIN
+    SELECT ""Id"" INTO v_user_id FROM users WHERE ""Role"" IN ('SuperAdmin', 'Admin') ORDER BY ""CreatedAt"" LIMIT 1;
+    IF v_user_id IS NULL THEN SELECT ""Id"" INTO v_user_id FROM users ORDER BY ""CreatedAt"" LIMIT 1; END IF;
+    IF v_user_id IS NULL THEN RAISE NOTICE 'No users found — skipping system configuration seed.'; RETURN; END IF;
+
+    INSERT INTO system_configurations (""Id"", ""Key"", ""Value"", ""ValueType"", ""Description"", ""Category"", ""IsActive"", ""RequiresRestart"", ""Environment"", ""Version"", ""CreatedAt"", ""UpdatedAt"", ""CreatedByUserId"")
+    VALUES
+    ('a0000001-0001-0001-0001-000000000001','models:openrouter','[{""value"":""anthropic/claude-3.5-sonnet"",""label"":""Claude 3.5 Sonnet""},{""value"":""openai/gpt-4o"",""label"":""GPT-4o""},{""value"":""meta-llama/llama-3.3-70b-instruct:free"",""label"":""Llama 3.3 70B Free""}]','json','OpenRouter provider models','models',true,false,'All',1,v_now,v_now,v_user_id),
+    ('a0000001-0001-0001-0001-000000000002','models:ollama','[{""value"":""llama3.1:8b"",""label"":""Llama 3.1 8B""},{""value"":""mistral:7b"",""label"":""Mistral 7B""}]','json','Ollama local provider models','models',true,false,'All',1,v_now,v_now,v_user_id),
+    ('a0000001-0001-0001-0001-000000000003','models:anthropic','[{""value"":""claude-3-5-sonnet-20241022"",""label"":""Claude 3.5 Sonnet""}]','json','Anthropic direct API models','models',true,false,'All',1,v_now,v_now,v_user_id),
+    ('a0000001-0001-0001-0001-000000000004','models:openai','[{""value"":""gpt-4o"",""label"":""GPT-4o""},{""value"":""gpt-4o-mini"",""label"":""GPT-4o Mini""}]','json','OpenAI direct API models','models',true,false,'All',1,v_now,v_now,v_user_id),
+    ('a0000001-0001-0001-0002-000000000001','strategies:rag','[{""value"":""SingleModel"",""label"":""SingleModel (POC)""},{""value"":""RetrievalOnly"",""label"":""RetrievalOnly""}]','json','RAG strategy options','strategies',true,false,'All',1,v_now,v_now,v_user_id),
+    ('a0000001-0001-0001-0002-000000000002','strategies:cache-ttl','[{""value"":15,""label"":""15 minutes""},{""value"":60,""label"":""1 hour""},{""value"":1440,""label"":""24 hours""}]','json','Cache TTL options','strategies',true,false,'All',1,v_now,v_now,v_user_id),
+    ('a0000001-0001-0001-0003-000000000001','rerankers:default','[{""value"":""cross-encoder/ms-marco-MiniLM-L-6-v2"",""label"":""MS MARCO MiniLM L-6 v2""}]','json','Available reranker models','rerankers',true,false,'All',1,v_now,v_now,v_user_id),
+    ('a0000001-0001-0001-0004-000000000001','rate-limits:api','[{""label"":""Global"",""value"":""1000 req/min""},{""label"":""Per User"",""value"":""100 req/min""}]','json','API rate limit configuration','rate-limits',true,false,'All',1,v_now,v_now,v_user_id),
+    ('a0000001-0001-0001-0004-000000000002','rate-limits:chat','[{""label"":""Free Tier"",""value"":""10 msg/hour""},{""label"":""Premium Tier"",""value"":""200 msg/hour""}]','json','AI chat rate limits','rate-limits',true,false,'All',1,v_now,v_now,v_user_id),
+    ('a0000001-0001-0001-0004-000000000003','rate-limits:upload','[{""label"":""Free Tier"",""value"":""5 uploads/day""},{""label"":""Premium Tier"",""value"":""100 uploads/day""}]','json','File upload rate limits','rate-limits',true,false,'All',1,v_now,v_now,v_user_id)
+    ON CONFLICT (""Key"", ""Environment"") DO NOTHING;
+END $$;
+");
         }
 
         /// <inheritdoc />
@@ -8615,6 +8797,9 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "custom_rag_pipelines");
+
+            migrationBuilder.DropTable(
+                name: "database_metrics_snapshots");
 
             migrationBuilder.DropTable(
                 name: "decisore_move_feedback",
@@ -8747,6 +8932,9 @@ namespace Api.Infrastructure.Migrations
                 name: "pdf_processing_metrics");
 
             migrationBuilder.DropTable(
+                name: "pgvector_embeddings");
+
+            migrationBuilder.DropTable(
                 name: "player_memories");
 
             migrationBuilder.DropTable(
@@ -8804,6 +8992,10 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "rulespec_comments");
+
+            migrationBuilder.DropTable(
+                name: "service_call_logs",
+                schema: "administration");
 
             migrationBuilder.DropTable(
                 name: "service_health_states");

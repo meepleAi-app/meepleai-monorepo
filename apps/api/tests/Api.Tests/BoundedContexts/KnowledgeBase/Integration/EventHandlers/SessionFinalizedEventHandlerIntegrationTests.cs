@@ -79,11 +79,11 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
     {
         // Arrange - Seed FK parent entities (Issue #3258)
         var gameSessionId = Guid.NewGuid();
-        var (agentId, userId1, gameId, typologyId) = await SeedParentEntitiesAsync(gameSessionId);
+        var (agentDefinitionId, userId1, gameId) = await SeedParentEntitiesAsync(gameSessionId);
         var userId2 = await SeedAdditionalUserAsync();
 
-        var session1 = CreateTestAgentSession(gameSessionId, agentId, userId1, gameId, typologyId);
-        var session2 = CreateTestAgentSession(gameSessionId, agentId, userId2, gameId, typologyId);
+        var session1 = CreateTestAgentSession(gameSessionId, agentDefinitionId, userId1, gameId);
+        var session2 = CreateTestAgentSession(gameSessionId, agentDefinitionId, userId2, gameId);
 
         await _repository.AddAsync(session1, CancellationToken.None);
         await _repository.AddAsync(session2, CancellationToken.None);
@@ -143,11 +143,11 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
     {
         // Arrange - Seed FK parent entities (Issue #3258)
         var gameSessionId = Guid.NewGuid();
-        var (agentId, userId1, gameId, typologyId) = await SeedParentEntitiesAsync(gameSessionId);
+        var (agentDefinitionId, userId1, gameId) = await SeedParentEntitiesAsync(gameSessionId);
         var userId2 = await SeedAdditionalUserAsync();
 
-        var activeSession = CreateTestAgentSession(gameSessionId, agentId, userId1, gameId, typologyId);
-        var endedSession = CreateTestAgentSession(gameSessionId, agentId, userId2, gameId, typologyId);
+        var activeSession = CreateTestAgentSession(gameSessionId, agentDefinitionId, userId1, gameId);
+        var endedSession = CreateTestAgentSession(gameSessionId, agentDefinitionId, userId2, gameId);
         endedSession.End(); // Already ended
 
         await _repository.AddAsync(activeSession, CancellationToken.None);
@@ -184,7 +184,7 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
     /// Creates: Game, User, Agent, GameSession, Typology (all as EF Core entities).
     /// Returns: Tuple of IDs for use in CreateTestAgentSession.
     /// </summary>
-    private async Task<(Guid agentId, Guid userId, Guid gameId, Guid typologyId)> SeedParentEntitiesAsync(Guid gameSessionId)
+    private async Task<(Guid agentDefinitionId, Guid userId, Guid gameId)> SeedParentEntitiesAsync(Guid gameSessionId)
     {
         // Create Game (EF Core entity)
         var game = new GameEntity
@@ -207,9 +207,8 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
         };
         _dbContext.Users.Add(user);
 
-        // Agent system removed (Task 10) — use random Guid for agentId (FK will be dropped in migration)
-        var agent = new { Id = Guid.NewGuid() };
-        var typology = new { Id = Guid.NewGuid() };
+        // AgentDefinitionId — use random Guid (FK to agent_definitions, seeded in migrations)
+        var agentDefinition = new { Id = Guid.NewGuid() };
 
         // Create GameSession (EF Core entity)
         var gameSession = new GameSessionEntity
@@ -223,7 +222,7 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
-        return (agent.Id, user.Id, game.Id, typology.Id);
+        return (agentDefinition.Id, user.Id, game.Id);
     }
 
     /// <summary>
@@ -250,10 +249,9 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
 
     private AgentSession CreateTestAgentSession(
         Guid gameSessionId,
-        Guid agentId,
+        Guid agentDefinitionId,
         Guid userId,
-        Guid gameId,
-        Guid typologyId)
+        Guid gameId)
     {
         var initialState = GameState.Create(
             currentTurn: 1,
@@ -264,11 +262,10 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
 
         return new AgentSession(
             id: Guid.NewGuid(),
-            agentId: agentId,
+            agentDefinitionId: agentDefinitionId,
             gameSessionId: gameSessionId,
             userId: userId,
             gameId: gameId,
-            typologyId: typologyId,
             initialState: initialState);
     }
 

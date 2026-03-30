@@ -314,23 +314,23 @@ public class ChatContextDomainServiceTests
 
     // ========================================================================
     // BuildSystemPrompt (typology-aware overload) — Issue #5278
+    // Typology was removed in AgentSystemSimplification — overload delegates to base.
     // ========================================================================
 
     [Fact]
-    public void BuildSystemPrompt_WithTypology_UsesTypologyTemplate()
+    public void BuildSystemPrompt_WithTypology_DelegatesToBasePrompt()
     {
         var prompt = _service.BuildSystemPrompt("TestAgent", "Tutor", "Catan", hasConversationHistory: false);
-        prompt.Should().Contain("Tutor");
         prompt.Should().Contain("TestAgent");
-        prompt.Should().Contain("Catan");
+        prompt.Should().Contain("board game AI assistant");
     }
 
     [Fact]
-    public void BuildSystemPrompt_WithNullTypology_FallsBackToCustom()
+    public void BuildSystemPrompt_WithNullTypology_DelegatesToBasePrompt()
     {
         var prompt = _service.BuildSystemPrompt("TestAgent", null, "Catan", hasConversationHistory: false);
         prompt.Should().Contain("TestAgent");
-        prompt.Should().Contain("Catan");
+        prompt.Should().Contain("board game AI assistant");
     }
 
     [Fact]
@@ -340,15 +340,12 @@ public class ChatContextDomainServiceTests
         prompt.Should().Contain("TestAgent");
     }
 
-    [Theory]
-    [InlineData("Tutor", "spiega")]
-    [InlineData("Arbitro", "verdetto")]
-    [InlineData("Stratega", "tattico")]
-    [InlineData("Narratore", "evocativo")]
-    public void BuildSystemPrompt_EachTypology_HasDistinctKeywords(string typology, string keyword)
+    [Fact]
+    public void BuildSystemPrompt_TypologyOverload_WithHistory_IncludesGuidelines()
     {
-        var prompt = _service.BuildSystemPrompt("Agent", typology, "TestGame", false);
-        prompt.ToLowerInvariant().Should().Contain(keyword);
+        var prompt = _service.BuildSystemPrompt("Agent", "Tutor", "TestGame", hasConversationHistory: true);
+        prompt.Should().Contain("Conversation Guidelines");
+        prompt.Should().Contain("follow-up");
     }
 }
 

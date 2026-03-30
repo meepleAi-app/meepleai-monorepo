@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -43,6 +44,7 @@ public sealed class GetAvailableDocumentsForGameQueryHandlerTests : IDisposable
         var expansionDocId = Guid.NewGuid();
         var agentId = Guid.NewGuid();
 
+        _dbContext.UserLibraryEntries.Add(CreateLibraryEntry(UserId, GameId));
         _dbContext.PdfDocuments.AddRange(
             CreatePdfDocument(baseDocId, GameId, "rulebook.pdf", "base", "Ready"),
             CreatePdfDocument(expansionDocId, GameId, "expansion.pdf", "expansion", "Ready"));
@@ -97,6 +99,7 @@ public sealed class GetAvailableDocumentsForGameQueryHandlerTests : IDisposable
     public async Task Should_Return_Null_AgentId_When_No_Agent()
     {
         // Arrange
+        _dbContext.UserLibraryEntries.Add(CreateLibraryEntry(UserId, GameId));
         _dbContext.PdfDocuments.Add(
             CreatePdfDocument(Guid.NewGuid(), GameId, "rulebook.pdf", "base", "Ready"));
         await _dbContext.SaveChangesAsync();
@@ -119,6 +122,7 @@ public sealed class GetAvailableDocumentsForGameQueryHandlerTests : IDisposable
         var doc = CreatePdfDocument(privateDocId, GameId, "house-rules.pdf", "homerule", "Extracting");
         doc.PrivateGameId = Guid.NewGuid(); // marks it as private
 
+        _dbContext.UserLibraryEntries.Add(CreateLibraryEntry(UserId, GameId));
         _dbContext.PdfDocuments.Add(doc);
         await _dbContext.SaveChangesAsync();
 
@@ -134,6 +138,9 @@ public sealed class GetAvailableDocumentsForGameQueryHandlerTests : IDisposable
         privateDoc.ProcessingState.Should().Be("Extracting");
         privateDoc.DocumentId.Should().Be(privateDocId);
     }
+
+    private static UserLibraryEntryEntity CreateLibraryEntry(Guid userId, Guid gameId) =>
+        new() { UserId = userId, SharedGameId = gameId, AddedAt = DateTime.UtcNow };
 
     private static PdfDocumentEntity CreatePdfDocument(
         Guid id, Guid gameId, string fileName, string documentType, string processingState,

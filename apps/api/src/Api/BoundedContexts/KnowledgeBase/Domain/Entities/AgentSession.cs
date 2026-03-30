@@ -58,22 +58,6 @@ internal sealed class AgentSession : AggregateRoot<Guid>
         AddDomainEvent(new AgentSessionCreatedEvent(id, agentDefinitionId, gameSessionId, userId));
     }
 
-    // Compatibility ctor for test files (old signature) — will be removed in Task 12
-    internal AgentSession(
-        Guid id,
-        Guid agentId,
-        Guid gameSessionId,
-        Guid userId,
-        Guid gameId,
-        Guid typologyId,
-        GameState initialState,
-        AgentConfig? config = null)
-        : this(id, agentDefinitionId: typologyId, gameSessionId, userId, gameId, initialState, config) { }
-
-    // Compatibility property — will be removed in Task 12
-    public Guid AgentId => Guid.Empty;
-    // Compatibility property — will be removed in Task 12
-    public Guid TypologyId => AgentDefinitionId;
 
     public void UpdateGameState(GameState newState)
     {

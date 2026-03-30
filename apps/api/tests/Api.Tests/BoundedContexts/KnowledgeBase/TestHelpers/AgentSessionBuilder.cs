@@ -9,12 +9,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.TestHelpers;
 /// <remarks>
 /// <para><strong>FK Dependencies:</strong></para>
 /// <para>
-/// AgentSession requires 5 parent entities (all with valid Guid FK):
-/// - Agent (AgentId)
+/// AgentSession requires 4 parent entities (all with valid Guid FK):
+/// - AgentDefinition (AgentDefinitionId)
 /// - User (UserId)
 /// - Game (GameId)
 /// - GameSession (GameSessionId)
-/// - Typology (TypologyId)
 /// </para>
 ///
 /// <para><strong>Usage:</strong></para>
@@ -24,11 +23,10 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.TestHelpers;
 ///
 /// // With specific dependencies
 /// var session = new AgentSessionBuilder()
-///     .WithAgentId(agentId)
+///     .WithAgentDefinitionId(agentDefinitionId)
 ///     .WithUserId(userId)
 ///     .WithGameId(gameId)
 ///     .WithGameSessionId(gameSessionId)
-///     .WithTypologyId(typologyId)
 ///     .Build();
 ///
 /// // With initial game state
@@ -40,11 +38,10 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.TestHelpers;
 internal class AgentSessionBuilder
 {
     private Guid _id = Guid.NewGuid();
-    private Guid _agentId = Guid.NewGuid();
+    private Guid _agentDefinitionId = Guid.NewGuid();
     private Guid _gameSessionId = Guid.NewGuid();
     private Guid _userId = Guid.NewGuid();
     private Guid _gameId = Guid.NewGuid();
-    private Guid _typologyId = Guid.NewGuid();
     private GameState? _initialState;
     private bool _shouldEnd;
 
@@ -58,11 +55,11 @@ internal class AgentSessionBuilder
     }
 
     /// <summary>
-    /// Sets the agent ID (FK to agents table).
+    /// Sets the agent definition ID (FK to agent_definitions table).
     /// </summary>
-    public AgentSessionBuilder WithAgentId(Guid agentId)
+    public AgentSessionBuilder WithAgentDefinitionId(Guid agentDefinitionId)
     {
-        _agentId = agentId;
+        _agentDefinitionId = agentDefinitionId;
         return this;
     }
 
@@ -90,15 +87,6 @@ internal class AgentSessionBuilder
     public AgentSessionBuilder WithGameId(Guid gameId)
     {
         _gameId = gameId;
-        return this;
-    }
-
-    /// <summary>
-    /// Sets the typology ID (FK to typologies table).
-    /// </summary>
-    public AgentSessionBuilder WithTypologyId(Guid typologyId)
-    {
-        _typologyId = typologyId;
         return this;
     }
 
@@ -196,11 +184,10 @@ internal class AgentSessionBuilder
 
         var session = new AgentSession(
             _id,
-            _agentId,
+            _agentDefinitionId,
             _gameSessionId,
             _userId,
             _gameId,
-            _typologyId,
             state);
 
         if (_shouldEnd)

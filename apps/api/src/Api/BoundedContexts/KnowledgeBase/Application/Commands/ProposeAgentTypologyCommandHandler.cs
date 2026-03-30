@@ -38,9 +38,7 @@ internal sealed class ProposeAgentTypologyCommandHandler : IRequestHandler<Propo
         try
         {
             // Create default strategy value object
-            var defaultStrategy = AgentStrategy.Custom(
-                request.DefaultStrategyName,
-                request.DefaultStrategyParameters);
+            var defaultStrategy = AgentStrategy.HybridSearch();
 
             // Create domain entity (Editor proposals always start as Draft)
             var typology = new AgentTypology(

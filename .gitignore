@@ -6,6 +6,9 @@ node_modules/
 # Benchmark results (auto-generated)
 infra/scripts/benchmark-results/*.json
 
+# DB snapshots (binary dumps, too large for git)
+data/snapshots/
+
 # Build outputs
 **/bin/
 **/obj/

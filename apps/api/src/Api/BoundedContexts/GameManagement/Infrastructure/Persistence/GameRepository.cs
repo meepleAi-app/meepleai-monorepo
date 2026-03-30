@@ -155,17 +155,25 @@ internal class GameRepository : RepositoryBase, IGameRepository
         );
 
         // Restore properties via reflection (reconstitution — no domain events should fire for these)
-        typeof(Game).GetProperty("CreatedAt")!.SetValue(game, entity.CreatedAt);
-        typeof(Game).GetProperty("ApprovalStatus")!.SetValue(game, (Domain.ValueObjects.ApprovalStatus)entity.ApprovalStatus);
-        typeof(Game).GetProperty("PublishedAt")!.SetValue(game, entity.PublishedAt);
-        typeof(Game).GetProperty("SharedGameId")!.SetValue(game, entity.SharedGameId);
-        typeof(Game).GetProperty("IconUrl")!.SetValue(game, entity.IconUrl);
-        typeof(Game).GetProperty("ImageUrl")!.SetValue(game, entity.ImageUrl);
+        (typeof(Game).GetProperty("CreatedAt") ?? throw new InvalidOperationException("Property 'CreatedAt' not found on Game. Was it renamed?"))
+            .SetValue(game, entity.CreatedAt);
+        (typeof(Game).GetProperty("ApprovalStatus") ?? throw new InvalidOperationException("Property 'ApprovalStatus' not found on Game. Was it renamed?"))
+            .SetValue(game, (Domain.ValueObjects.ApprovalStatus)entity.ApprovalStatus);
+        (typeof(Game).GetProperty("PublishedAt") ?? throw new InvalidOperationException("Property 'PublishedAt' not found on Game. Was it renamed?"))
+            .SetValue(game, entity.PublishedAt);
+        (typeof(Game).GetProperty("SharedGameId") ?? throw new InvalidOperationException("Property 'SharedGameId' not found on Game. Was it renamed?"))
+            .SetValue(game, entity.SharedGameId);
+        (typeof(Game).GetProperty("IconUrl") ?? throw new InvalidOperationException("Property 'IconUrl' not found on Game. Was it renamed?"))
+            .SetValue(game, entity.IconUrl);
+        (typeof(Game).GetProperty("ImageUrl") ?? throw new InvalidOperationException("Property 'ImageUrl' not found on Game. Was it renamed?"))
+            .SetValue(game, entity.ImageUrl);
 
         if (entity.BggId.HasValue)
         {
-            typeof(Game).GetProperty("BggId")!.SetValue(game, entity.BggId);
-            typeof(Game).GetProperty("BggMetadata")!.SetValue(game, entity.BggMetadata);
+            (typeof(Game).GetProperty("BggId") ?? throw new InvalidOperationException("Property 'BggId' not found on Game. Was it renamed?"))
+                .SetValue(game, entity.BggId);
+            (typeof(Game).GetProperty("BggMetadata") ?? throw new InvalidOperationException("Property 'BggMetadata' not found on Game. Was it renamed?"))
+                .SetValue(game, entity.BggMetadata);
         }
 
         // Clear domain events raised by the constructor during reconstitution

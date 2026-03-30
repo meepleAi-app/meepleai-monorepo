@@ -500,27 +500,16 @@ public class ChatExportServiceTests
         };
         context.Games.Add(game);
 
-        var agent = new AgentEntity
-        {
-            Id = Guid.NewGuid(),
-            Name = "Test Agent",
-            Type = "test",
-            StrategyName = "default",
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-        context.Agents.Add(agent);
-
+        // Agent system removed (Task 10) — use random Guid, FK dropped in migration
         var chat = new ChatEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
             GameId = game.Id,
-            AgentId = agent.Id,
+            AgentId = Guid.NewGuid(),
             StartedAt = DateTime.UtcNow,
             User = user,
-            Game = game,
-            Agent = agent
+            Game = game
         };
         context.Chats.Add(chat);
 

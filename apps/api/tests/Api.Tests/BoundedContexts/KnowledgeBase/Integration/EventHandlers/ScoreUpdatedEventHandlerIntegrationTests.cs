@@ -283,33 +283,9 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         };
         _dbContext.Users.Add(user);
 
-        // Create AgentTypology (EF Core entity) - Issue #3258 FK fix
-        var typology = new AgentTypologyEntity
-        {
-            Id = Guid.NewGuid(),
-            Name = "Test Typology",
-            Description = "Test typology for integration tests",
-            BasePrompt = "You are a test agent",
-            DefaultStrategyJson = "{}",
-            Status = 2, // Approved
-            CreatedBy = user.Id,
-            CreatedAt = DateTime.UtcNow,
-            IsDeleted = false
-        };
-        _dbContext.AgentTypologies.Add(typology);
-
-        // Create Agent (EF Core entity)
-        var agent = new AgentEntity
-        {
-            Id = Guid.NewGuid(),
-            Name = "Test Agent",
-            Type = "RagAgent",
-            StrategyName = "HybridSearch",
-            StrategyParametersJson = "{}",
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-        _dbContext.Agents.Add(agent);
+        // Agent system removed (Task 10) — use random Guid for agentId (FK will be dropped in migration)
+        var agent = new { Id = Guid.NewGuid() };
+        var typology = new { Id = Guid.NewGuid() };
 
         // Create GameSession (EF Core entity)
         var gameSession = new GameSessionEntity

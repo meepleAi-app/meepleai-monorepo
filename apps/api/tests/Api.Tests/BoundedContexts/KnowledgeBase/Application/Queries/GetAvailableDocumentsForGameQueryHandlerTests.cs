@@ -139,6 +139,97 @@ public sealed class GetAvailableDocumentsForGameQueryHandlerTests : IDisposable
         privateDoc.DocumentId.Should().Be(privateDocId);
     }
 
+    [Fact]
+    public async Task Should_Throw_ForbiddenException_When_Game_Not_In_Library()
+    {
+        // Arrange — no library entry seeded
+        _dbContext.PdfDocuments.Add(
+            CreatePdfDocument(Guid.NewGuid(), GameId, "rulebook.pdf", "base", "Ready"));
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var act = () => _handler.Handle(
+            new GetAvailableDocumentsForGameQuery(GameId, UserId),
+            CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task Should_Return_IsSelected_False_When_Agent_Has_No_Config()
+    {
+        // Arrange
+        var docId = Guid.NewGuid();
+        var agentId = Guid.NewGuid();
+
+        _dbContext.UserLibraryEntries.Add(CreateLibraryEntry(UserId, GameId));
+        _dbContext.PdfDocuments.Add(
+            CreatePdfDocument(docId, GameId, "rulebook.pdf", "base", "Ready"));
+        _dbContext.Agents.Add(new AgentEntity
+        {
+            Id = agentId,
+            Name = "TestAgent",
+            Type = "RagAgent",
+            StrategyName = "default",
+            StrategyParametersJson = "{}",
+            GameId = GameId,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        });
+        // No AgentConfiguration seeded
+
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.Handle(
+            new GetAvailableDocumentsForGameQuery(GameId, UserId),
+            CancellationToken.None);
+
+        // Assert
+        result.AgentId.Should().Be(agentId);
+        result.BaseDocuments.Should().HaveCount(1);
+        result.BaseDocuments[0].IsSelected.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Should_Exclude_Documents_Not_Active_For_Rag()
+    {
+        // Arrange
+        var activeDocId = Guid.NewGuid();
+        var inactiveDocId = Guid.NewGuid();
+
+        _dbContext.UserLibraryEntries.Add(CreateLibraryEntry(UserId, GameId));
+        _dbContext.PdfDocuments.AddRange(
+            CreatePdfDocument(activeDocId, GameId, "rules.pdf", "base", "Ready"),
+            new PdfDocumentEntity
+            {
+                Id = inactiveDocId,
+                GameId = GameId,
+                FileName = "draft.pdf",
+                FilePath = "/uploads/draft.pdf",
+                FileSizeBytes = 512,
+                ContentType = "application/pdf",
+                UploadedByUserId = UserId,
+                UploadedAt = DateTime.UtcNow,
+                ProcessingState = "Ready",
+                DocumentType = "base",
+                DocumentCategory = "Rulebook",
+                Language = "it",
+                IsActiveForRag = false // excluded
+            });
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.Handle(
+            new GetAvailableDocumentsForGameQuery(GameId, UserId),
+            CancellationToken.None);
+
+        // Assert
+        result.BaseDocuments.Should().HaveCount(1);
+        result.BaseDocuments[0].DocumentId.Should().Be(activeDocId);
+    }
+
     private static UserLibraryEntryEntity CreateLibraryEntry(Guid userId, Guid gameId) =>
         new() { UserId = userId, SharedGameId = gameId, AddedAt = DateTime.UtcNow };
 

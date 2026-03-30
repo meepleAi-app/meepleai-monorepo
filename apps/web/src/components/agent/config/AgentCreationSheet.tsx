@@ -95,7 +95,7 @@ export function AgentCreationSheet({
   const [selectedGameId, setSelectedGameId] = useState<string | undefined>(initialGameId);
   const [selectedGame, setSelectedGame] = useState<UserLibraryEntry | null>(null);
   const [agentName, setAgentName] = useState('');
-  const [selectedTypologyId, setSelectedTypologyId] = useState<string | undefined>();
+  const [selectedagentDefinitionId, setSelectedagentDefinitionId] = useState<string | undefined>();
   const [selectedStrategy, setSelectedStrategy] = useState<string | undefined>();
   const [selectedModelId, setSelectedModelId] = useState<string | undefined>();
   const [addToCollection, setAddToCollection] = useState(false);
@@ -144,7 +144,7 @@ export function AgentCreationSheet({
     setSelectedGameId(initialGameId);
     setSelectedGame(null);
     setAgentName('');
-    setSelectedTypologyId(undefined);
+    setSelectedagentDefinitionId(undefined);
     setSelectedStrategy(undefined);
     setSelectedModelId(undefined);
     setAddToCollection(false);
@@ -165,7 +165,7 @@ export function AgentCreationSheet({
     createAgentFlow.mutate({
       gameId: selectedGameId,
       addToCollection: addToCollection || !isGameInCollection,
-      agentType: selectedTypologyId ?? 'default',
+      agentType: selectedagentDefinitionId ?? 'default',
       agentName: effectiveAgentName || undefined,
       strategyName: selectedStrategy,
       documentIds: initialDocumentIds,
@@ -176,7 +176,7 @@ export function AgentCreationSheet({
     createAgentFlow,
     addToCollection,
     isGameInCollection,
-    selectedTypologyId,
+    selectedagentDefinitionId,
     effectiveAgentName,
     selectedStrategy,
     initialDocumentIds,
@@ -505,8 +505,8 @@ export function AgentCreationSheet({
 
                 {/* Typology */}
                 <TypologySelector
-                  value={selectedTypologyId}
-                  onChange={setSelectedTypologyId}
+                  value={selectedagentDefinitionId}
+                  onChange={setSelectedagentDefinitionId}
                   disabled={isCreating}
                 />
 
@@ -573,7 +573,7 @@ export function AgentCreationSheet({
                 )}
 
                 {/* Cost Preview */}
-                <CostPreview typologyId={selectedTypologyId} />
+                <CostPreview agentDefinitionId={selectedagentDefinitionId} />
               </div>
             )}
           </div>

@@ -39,16 +39,19 @@ describe('useCostEstimate', () => {
 
   describe('Query Key Factory', () => {
     it('generates correct query keys', () => {
-      const typologyId = '123e4567-e89b-12d3-a456-426614174000';
+      const agentDefinitionId = '123e4567-e89b-12d3-a456-426614174000';
 
       expect(costEstimateKeys.all).toEqual(['costEstimate']);
-      expect(costEstimateKeys.byTypology(typologyId)).toEqual(['costEstimate', typologyId]);
+      expect(costEstimateKeys.byTypology(agentDefinitionId)).toEqual([
+        'costEstimate',
+        agentDefinitionId,
+      ]);
     });
   });
 
   describe('Hook Behavior', () => {
-    it('calls useQuery with correct parameters when typologyId provided', () => {
-      const typologyId = '123e4567-e89b-12d3-a456-426614174000';
+    it('calls useQuery with correct parameters when agentDefinitionId provided', () => {
+      const agentDefinitionId = '123e4567-e89b-12d3-a456-426614174000';
       const mockUseQuery = useQuery as ReturnType<typeof vi.fn>;
 
       mockUseQuery.mockReturnValue({
@@ -58,11 +61,11 @@ describe('useCostEstimate', () => {
         error: null,
       } as any);
 
-      renderHook(() => useCostEstimate(typologyId));
+      renderHook(() => useCostEstimate(agentDefinitionId));
 
       expect(mockUseQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['costEstimate', typologyId],
+          queryKey: ['costEstimate', agentDefinitionId],
           enabled: true,
           staleTime: 30000,
           gcTime: 300000,
@@ -70,7 +73,7 @@ describe('useCostEstimate', () => {
       );
     });
 
-    it('disables query when typologyId is null', () => {
+    it('disables query when agentDefinitionId is null', () => {
       const mockUseQuery = useQuery as ReturnType<typeof vi.fn>;
 
       mockUseQuery.mockReturnValue({
@@ -90,7 +93,7 @@ describe('useCostEstimate', () => {
     });
 
     it('disables query when enabled is false', () => {
-      const typologyId = '123e4567-e89b-12d3-a456-426614174000';
+      const agentDefinitionId = '123e4567-e89b-12d3-a456-426614174000';
       const mockUseQuery = useQuery as ReturnType<typeof vi.fn>;
 
       mockUseQuery.mockReturnValue({
@@ -100,7 +103,7 @@ describe('useCostEstimate', () => {
         error: null,
       } as any);
 
-      renderHook(() => useCostEstimate(typologyId, false));
+      renderHook(() => useCostEstimate(agentDefinitionId, false));
 
       expect(mockUseQuery).toHaveBeenCalledWith(
         expect.objectContaining({

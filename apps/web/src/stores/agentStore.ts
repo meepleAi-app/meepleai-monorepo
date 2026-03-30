@@ -13,33 +13,33 @@ interface AgentConfigState {
   openConfig: () => void;
   closeConfig: () => void;
   selectedGameId: string | null;
-  selectedTypologyId: string | null;
+  selectedagentDefinitionId: string | null;
   selectedModelId: string | null;
   selectedTierId: string | null;
   setSelectedGame: (gameId: string | null) => void;
-  setSelectedTypology: (typologyId: string | null) => void;
+  setSelectedTypology: (agentDefinitionId: string | null) => void;
   setSelectedModel: (modelId: string | null) => void;
   setSelectedTier: (tierId: string | null) => void;
   reset: () => void;
 }
 
-export const useAgentStore = create<AgentConfigState>()((set) => ({
+export const useAgentStore = create<AgentConfigState>()(set => ({
   isConfigOpen: false,
   openConfig: () => set({ isConfigOpen: true }),
   closeConfig: () => set({ isConfigOpen: false }),
   selectedGameId: null,
-  selectedTypologyId: null,
+  selectedagentDefinitionId: null,
   selectedModelId: null,
   selectedTierId: null,
-  setSelectedGame: (gameId) => set({ selectedGameId: gameId }),
-  setSelectedTypology: (typologyId) => set({ selectedTypologyId: typologyId }),
-  setSelectedModel: (modelId) => set({ selectedModelId: modelId }),
-  setSelectedTier: (tierId) => set({ selectedTierId: tierId }),
+  setSelectedGame: gameId => set({ selectedGameId: gameId }),
+  setSelectedTypology: agentDefinitionId => set({ selectedagentDefinitionId: agentDefinitionId }),
+  setSelectedModel: modelId => set({ selectedModelId: modelId }),
+  setSelectedTier: tierId => set({ selectedTierId: tierId }),
   reset: () =>
     set({
       isConfigOpen: false,
       selectedGameId: null,
-      selectedTypologyId: null,
+      selectedagentDefinitionId: null,
       selectedModelId: null,
       selectedTierId: null,
     }),

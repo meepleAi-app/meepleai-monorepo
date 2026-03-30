@@ -7,7 +7,7 @@ import { z } from 'zod';
 // Single test result entity
 export const testResultSchema = z.object({
   id: z.string().uuid(),
-  typologyId: z.string().uuid(),
+  agentDefinitionId: z.string().uuid(),
   strategyOverride: z.string().optional().nullable(),
   modelUsed: z.string(),
   query: z.string(),
@@ -33,7 +33,7 @@ export const testResultListSchema = z.object({
 
 // Request to save a test result
 export const saveTestResultRequestSchema = z.object({
-  typologyId: z.string().uuid(),
+  agentDefinitionId: z.string().uuid(),
   query: z.string().min(1),
   response: z.string().min(1),
   modelUsed: z.string().min(1),
@@ -47,7 +47,7 @@ export const saveTestResultRequestSchema = z.object({
 
 // Query parameters for filtering test results
 export const testResultsQuerySchema = z.object({
-  typologyId: z.string().uuid().optional(),
+  agentDefinitionId: z.string().uuid().optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   savedOnly: z.boolean().optional(),

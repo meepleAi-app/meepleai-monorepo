@@ -19,8 +19,6 @@ import { AgentBuilderForm } from '@/components/admin/agent-definitions/AgentBuil
 import { BuilderFilters } from '@/components/admin/agent-definitions/BuilderFilters';
 import { BuilderTable } from '@/components/admin/agent-definitions/BuilderTable';
 import { PhaseModelConfiguration } from '@/components/admin/agent-typologies/PhaseModelConfiguration';
-import { TypologyForm } from '@/components/admin/agent-typologies/TypologyForm';
-import { TypologyPromptEditor } from '@/components/admin/agent-typologies/TypologyPromptEditor';
 import { AgentConfigPanel } from '@/components/admin/agents/AgentConfigPanel';
 import { AgentModeSelector } from '@/components/admin/agents/AgentModeSelector';
 import { ComparisonPanel } from '@/components/admin/agents/ComparisonPanel';
@@ -518,8 +516,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'top-agents-table': TopAgentsTable,
   'comparison-panel': ComparisonPanel,
   'phase-model-configuration': PhaseModelConfiguration,
-  'typology-form': TypologyForm,
-  'typology-prompt-editor': TypologyPromptEditor,
 
   // Admin — Sandbox
   'sandbox-chat': SandboxChat,

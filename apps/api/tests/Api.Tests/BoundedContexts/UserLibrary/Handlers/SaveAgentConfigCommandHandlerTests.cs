@@ -1,17 +1,15 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
-using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
-using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using AgentDef = Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -27,7 +25,7 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Handlers;
 public sealed class SaveAgentConfigCommandHandlerTests
 {
     private readonly Mock<IUserLibraryRepository> _mockLibraryRepo;
-    private readonly Mock<IAgentTypologyRepository> _mockTypologyRepo;
+    private readonly Mock<IAgentDefinitionRepository> _mockDefinitionRepo;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILogger<SaveAgentConfigCommandHandler>> _mockLogger;
     private readonly SaveAgentConfigCommandHandler _handler;
@@ -35,16 +33,27 @@ public sealed class SaveAgentConfigCommandHandlerTests
     public SaveAgentConfigCommandHandlerTests()
     {
         _mockLibraryRepo = new Mock<IUserLibraryRepository>();
-        _mockTypologyRepo = new Mock<IAgentTypologyRepository>();
+        _mockDefinitionRepo = new Mock<IAgentDefinitionRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockLogger = new Mock<ILogger<SaveAgentConfigCommandHandler>>();
 
         _handler = new SaveAgentConfigCommandHandler(
             _mockLibraryRepo.Object,
-            _mockTypologyRepo.Object,
+            _mockDefinitionRepo.Object,
             _mockUnitOfWork.Object,
             _mockLogger.Object
         );
+    }
+
+    private static AgentDef CreateActiveDefinition(Guid id, string name)
+    {
+        var def = AgentDef.Create(
+            name,
+            "Test description",
+            AgentType.RulesInterpreter,
+            AgentDefinitionConfig.Default());
+        def.Activate();
+        return def;
     }
 
     [Fact]
@@ -53,23 +62,14 @@ public sealed class SaveAgentConfigCommandHandlerTests
         // Arrange
         var userId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
-        var typologyId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
 
-        var typology = new AgentTypology(
-            typologyId,
-            "Rules Expert",
-            "Expert in rules",
-            "You are a rules expert",
-            AgentStrategy.HybridSearch(),
-            userId,
-            TypologyStatus.Approved
-        );
-
+        var definition = CreateActiveDefinition(definitionId, "Rules Expert");
         var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);
 
-        _mockTypologyRepo
-            .Setup(r => r.GetByIdAsync(typologyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(typology);
+        _mockDefinitionRepo
+            .Setup(r => r.GetByIdAsync(definitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(definition);
 
         _mockLibraryRepo
             .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
@@ -82,7 +82,7 @@ public sealed class SaveAgentConfigCommandHandlerTests
         var command = new SaveAgentConfigCommand(
             userId,
             gameId,
-            typologyId,
+            definitionId,
             "GPT-4o-mini",
             0.001
         );
@@ -103,7 +103,7 @@ public sealed class SaveAgentConfigCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TypologyNotFound_ThrowsDomainException()
+    public async Task Handle_DefinitionNotFound_ThrowsNotFoundException()
     {
         // Arrange
         var command = new SaveAgentConfigCommand(
@@ -114,9 +114,9 @@ public sealed class SaveAgentConfigCommandHandlerTests
             0.005
         );
 
-        _mockTypologyRepo
+        _mockDefinitionRepo
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((AgentTypology?)null);
+            .ReturnsAsync((AgentDef?)null);
 
         // Act & Assert
         var act = () =>
@@ -125,28 +125,25 @@ public sealed class SaveAgentConfigCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TypologyNotApproved_ThrowsConflictException()
+    public async Task Handle_DefinitionNotActive_ThrowsConflictException()
     {
         // Arrange
-        var typologyId = Guid.NewGuid();
-        var typology = new AgentTypology(
-            typologyId,
-            "Draft Typology",
-            "Not approved yet",
-            "Draft prompt",
-            AgentStrategy.HybridSearch(),
-            Guid.NewGuid(),
-            TypologyStatus.Draft
-        );
+        var definitionId = Guid.NewGuid();
+        var inactiveDef = AgentDef.Create(
+            "Inactive Definition",
+            "Not active",
+            AgentType.RulesInterpreter,
+            AgentDefinitionConfig.Default());
+        // not Activate() → IsActive=false
 
-        _mockTypologyRepo
-            .Setup(r => r.GetByIdAsync(typologyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(typology);
+        _mockDefinitionRepo
+            .Setup(r => r.GetByIdAsync(definitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(inactiveDef);
 
         var command = new SaveAgentConfigCommand(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            typologyId,
+            definitionId,
             "GPT-4o",
             0.005
         );
@@ -156,7 +153,7 @@ public sealed class SaveAgentConfigCommandHandlerTests
             _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act2.Should().ThrowAsync<ConflictException>()).Which;
 
-        exception.Message.Should().Contain("not approved");
+        exception.Message.Should().Contain("not active");
     }
 
     [Fact]
@@ -165,21 +162,13 @@ public sealed class SaveAgentConfigCommandHandlerTests
         // Arrange
         var userId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
-        var typologyId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
 
-        var typology = new AgentTypology(
-            typologyId,
-            "Quick Start",
-            "Setup help",
-            "Help with setup",
-            AgentStrategy.HybridSearch(),
-            userId,
-            TypologyStatus.Approved
-        );
+        var definition = CreateActiveDefinition(definitionId, "Quick Start");
 
-        _mockTypologyRepo
-            .Setup(r => r.GetByIdAsync(typologyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(typology);
+        _mockDefinitionRepo
+            .Setup(r => r.GetByIdAsync(definitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(definition);
 
         _mockLibraryRepo
             .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
@@ -196,7 +185,7 @@ public sealed class SaveAgentConfigCommandHandlerTests
         var command = new SaveAgentConfigCommand(
             userId,
             gameId,
-            typologyId,
+            definitionId,
             "Claude-3.5-Haiku",
             0.003
         );
@@ -219,23 +208,14 @@ public sealed class SaveAgentConfigCommandHandlerTests
         // Arrange
         var userId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
-        var typologyId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
 
-        var typology = new AgentTypology(
-            typologyId,
-            "Test Typology",
-            "Test",
-            "Test prompt",
-            AgentStrategy.HybridSearch(),
-            userId,
-            TypologyStatus.Approved
-        );
-
+        var definition = CreateActiveDefinition(definitionId, "Test Definition");
         var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);
 
-        _mockTypologyRepo
-            .Setup(r => r.GetByIdAsync(typologyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(typology);
+        _mockDefinitionRepo
+            .Setup(r => r.GetByIdAsync(definitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(definition);
 
         _mockLibraryRepo
             .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
@@ -258,7 +238,7 @@ public sealed class SaveAgentConfigCommandHandlerTests
             var command = new SaveAgentConfigCommand(
                 userId,
                 gameId,
-                typologyId,
+                definitionId,
                 modelName,
                 cost
             );

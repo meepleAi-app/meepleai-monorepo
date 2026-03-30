@@ -16,7 +16,7 @@ namespace Api.Tests.Administration.AutoConfiguration;
 [Trait("Category", TestCategories.Unit)]
 public sealed class SeedTestUserCommandHandlerTests
 {
-    private const string TestPassword = "TestSeed2026!xK";
+    private const string TestPassword = "TestSeed2026!xK"; // gitguardian:ignore
 
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;

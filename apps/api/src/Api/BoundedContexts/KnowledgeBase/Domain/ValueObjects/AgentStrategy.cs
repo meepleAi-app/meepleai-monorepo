@@ -8,24 +8,12 @@ using System.Text.Json.Serialization;
 /// Value object representing the execution strategy for an AI agent.
 /// </summary>
 /// <remarks>
-/// AgentStrategy defines HOW the agent performs its task, including algorithm parameters.
-/// Uses the Strategy pattern for flexible agent behavior configuration.
-/// Issue #3708: Made public for use in AgentDefinition (AI Lab templates).
+/// Four supported strategies: HybridSearch (default), RetrievalOnly, SentenceWindowRAG, ColBERTReranking.
 /// </remarks>
 public sealed record AgentStrategy
 {
     public string Name { get; init; } = string.Empty;
     public IReadOnlyDictionary<string, object> Parameters { get; init; } = new Dictionary<string, object>(StringComparer.Ordinal);
-
-    private static readonly string[] DefaultModels = { "gpt-4", "claude-3-opus" };
-    private static readonly string[] ValidationLayers =
-    {
-        "RetrievalScore",
-        "LLMConfidence",
-        "CitationVerification",
-        "ForbiddenKeywords",
-        "ConsensusCheck"
-    };
 
     // Public parameterless constructor for JSON deserialization
     public AgentStrategy() { }
@@ -41,7 +29,7 @@ public sealed record AgentStrategy
     }
 
     /// <summary>
-    /// Retrieval-only strategy: Skip LLM, return RAG chunks only (zero cost).
+    /// Retrieval-only strategy: Skip LLM, return RAG chunks only (zero cost). For debug/inspection.
     /// </summary>
     public static AgentStrategy RetrievalOnly(int topK = 10, double minScore = 0.55)
         => new(
@@ -54,16 +42,7 @@ public sealed record AgentStrategy
         );
 
     /// <summary>
-    /// Single model strategy (POC default): RAG + single LLM call via configured provider.
-    /// </summary>
-    public static AgentStrategy SingleModel()
-        => new(
-            name: "SingleModel",
-            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
-        );
-
-    /// <summary>
-    /// Hybrid search strategy: Vector (70%) + Keyword (30%) with RRF fusion.
+    /// Hybrid search strategy: Vector (70%) + Keyword (30%) with RRF fusion. Default for all agents.
     /// </summary>
     public static AgentStrategy HybridSearch(
         double vectorWeight = 0.7,
@@ -71,8 +50,7 @@ public sealed record AgentStrategy
         double minScore = 0.55)
         => new(
             name: "HybridSearch",
-            parameters: new Dictionary<string, object>
-(StringComparer.Ordinal)
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 ["VectorWeight"] = vectorWeight,
                 ["KeywordWeight"] = 1.0 - vectorWeight,
@@ -82,98 +60,8 @@ public sealed record AgentStrategy
         );
 
     /// <summary>
-    /// Vector-only search strategy: Pure similarity search.
-    /// </summary>
-    public static AgentStrategy VectorOnly(
-        int topK = 10,
-        double minScore = 0.80)
-        => new(
-            name: "VectorOnly",
-            parameters: new Dictionary<string, object>
-(StringComparer.Ordinal)
-            {
-                ["TopK"] = topK,
-                ["MinScore"] = minScore
-            }
-        );
-
-    /// <summary>
-    /// Multi-model consensus strategy: GPT-4 + Claude agreement.
-    /// </summary>
-    public static AgentStrategy MultiModelConsensus(
-        string[] models = null!,
-        double consensusThreshold = 0.8)
-        => new(
-            name: "MultiModelConsensus",
-            parameters: new Dictionary<string, object>
-(StringComparer.Ordinal)
-            {
-                ["Models"] = models ?? DefaultModels,
-                ["ConsensusThreshold"] = consensusThreshold
-            }
-        );
-
-    /// <summary>
-    /// Citation validation strategy: Multi-layer source checking.
-    /// </summary>
-    public static AgentStrategy CitationValidation(
-        bool requireExactMatch = true,
-        int maxDistanceWords = 50)
-        => new(
-            name: "CitationValidation",
-            parameters: new Dictionary<string, object>
-(StringComparer.Ordinal)
-            {
-                ["RequireExactMatch"] = requireExactMatch,
-                ["MaxDistanceWords"] = maxDistanceWords
-            }
-        );
-
-    /// <summary>
-    /// Confidence scoring strategy: 5-layer validation (ADR-001).
-    /// </summary>
-    public static AgentStrategy ConfidenceScoring(
-        double minConfidence = 0.70,
-        bool enableMultiLayer = true)
-        => new(
-            name: "ConfidenceScoring",
-            parameters: new Dictionary<string, object>
-(StringComparer.Ordinal)
-            {
-                ["MinConfidence"] = minConfidence,
-                ["EnableMultiLayer"] = enableMultiLayer,
-                ["Layers"] = ValidationLayers
-            }
-        );
-
-    /// <summary>
-    /// Iterative RAG strategy: Multi-round retrieval with query refinement for +14% accuracy.
-    /// Uses retrieval-iterative-v1 plugin with progressive context building.
-    /// Issue #3358: Advanced RAG - Iterative Strategy
-    /// </summary>
-    public static AgentStrategy IterativeRAG(
-        int maxIterations = 3,
-        int topK = 5,
-        int topKPerIteration = 3,
-        double minScore = 0.6,
-        double refinementThreshold = 0.7)
-        => new(
-            name: "IterativeRAG",
-            parameters: new Dictionary<string, object>
-(StringComparer.Ordinal)
-            {
-                ["MaxIterations"] = maxIterations,
-                ["TopK"] = topK,
-                ["TopKPerIteration"] = topKPerIteration,
-                ["MinScore"] = minScore,
-                ["RefinementThreshold"] = refinementThreshold,
-                ["Collection"] = "game-rules"
-            }
-        );
-
-    /// <summary>
-    /// Sentence Window RAG: Context window expansion around matched sentences (+7% accuracy, 3,250 tokens).
-    /// Issue #4553: Epic #3356 - Advanced RAG Strategies
+    /// Sentence Window RAG: Context window expansion around matched sentences.
+    /// Use when adjacent sentences add context (exceptions, clarifications).
     /// </summary>
     public static AgentStrategy SentenceWindowRAG(int windowSize = 3, int topK = 5, double minScore = 0.6)
         => new(
@@ -187,8 +75,8 @@ public sealed record AgentStrategy
         );
 
     /// <summary>
-    /// ColBERT Reranking: Late interaction reranking for better relevance (+12% accuracy, 3,250 tokens).
-    /// Issue #4554: Epic #3356 - Advanced RAG Strategies
+    /// ColBERT Reranking: Late interaction reranking for better relevance.
+    /// Use when retrieval precision matters; uses CrossEncoderRerankerClient.
     /// </summary>
     public static AgentStrategy ColBERTReranking(int topK = 5, int rerankTopN = 20, double minScore = 0.6)
         => new(
@@ -200,100 +88,6 @@ public sealed record AgentStrategy
                 ["MinScore"] = minScore
             }
         );
-
-    /// <summary>
-    /// Chain-of-Thought RAG: CoT prompting in RAG pipeline (+18% accuracy, 3,650 tokens).
-    /// Issue #4555: Epic #3356 - Advanced RAG Strategies
-    /// </summary>
-    public static AgentStrategy ChainOfThoughtRAG(bool enableReasoning = true, int topK = 5)
-        => new(
-            name: "ChainOfThoughtRAG",
-            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["EnableReasoning"] = enableReasoning,
-                ["TopK"] = topK
-            }
-        );
-
-    /// <summary>
-    /// Query Decomposition: Break complex queries into sub-queries (+12% accuracy, 6,550 tokens).
-    /// Issue #4556: Epic #3356 - Advanced RAG Strategies
-    /// </summary>
-    public static AgentStrategy QueryDecomposition(int maxSubQueries = 3, int topK = 5)
-        => new(
-            name: "QueryDecomposition",
-            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["MaxSubQueries"] = maxSubQueries,
-                ["TopK"] = topK,
-                ["MergeStrategy"] = "weighted"
-            }
-        );
-
-    /// <summary>
-    /// Multi-Agent RAG: Multi-agent consensus for highest accuracy (+20%, 12,900 tokens, PRECISE tier).
-    /// Issue #4557: Epic #3356 - Advanced RAG Strategies
-    /// </summary>
-    public static AgentStrategy MultiAgentRAG(int agentCount = 3, double consensusThreshold = 0.8)
-        => new(
-            name: "MultiAgentRAG",
-            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["AgentCount"] = agentCount,
-                ["ConsensusThreshold"] = consensusThreshold,
-                ["Tier"] = "PRECISE"
-            }
-        );
-
-    /// <summary>
-    /// RAG-Fusion: Query generation variants with reciprocal rank fusion (+11%, 11,550 tokens).
-    /// Issue #4558: Epic #3356 - Advanced RAG Strategies
-    /// </summary>
-    public static AgentStrategy RAGFusion(int queryVariants = 3, int topK = 5)
-        => new(
-            name: "RAGFusion",
-            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["QueryVariants"] = queryVariants,
-                ["TopK"] = topK,
-                ["FusionMethod"] = "RRF"
-            }
-        );
-
-    /// <summary>
-    /// Step-Back Prompting: Abstract reasoning before retrieval (+10%, 5,740 tokens).
-    /// Issue #4559: Epic #3356 - Advanced RAG Strategies
-    /// </summary>
-    public static AgentStrategy StepBackPrompting(bool enableAbstraction = true, int topK = 5)
-        => new(
-            name: "StepBackPrompting",
-            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["EnableAbstraction"] = enableAbstraction,
-                ["TopK"] = topK
-            }
-        );
-
-    /// <summary>
-    /// Query Expansion: Expand with synonyms and related terms (+7%, 4,110 tokens).
-    /// Issue #4560: Epic #3356 - Advanced RAG Strategies
-    /// </summary>
-    public static AgentStrategy QueryExpansion(int expansionTerms = 3, int topK = 5)
-        => new(
-            name: "QueryExpansion",
-            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["ExpansionTerms"] = expansionTerms,
-                ["TopK"] = topK,
-                ["ExpansionMethod"] = "semantic"
-            }
-        );
-
-    /// <summary>
-    /// Custom strategy for extensibility.
-    /// </summary>
-    public static AgentStrategy Custom(string name, IDictionary<string, object> parameters)
-        => new(name, parameters is Dictionary<string, object> dict ? dict : new Dictionary<string, object>(parameters, StringComparer.Ordinal));
 
     /// <summary>
     /// Gets a parameter value with type conversion.

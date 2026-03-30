@@ -102,5 +102,28 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
         builder.HasIndex(a => a.IsActive);
         builder.HasIndex(a => a.CreatedAt);
         builder.HasIndex("_typeValue").HasDatabaseName("ix_agent_definitions_type_value");
+
+        // New columns from agent system simplification
+        builder.Property<bool>("_isSystemDefined")
+            .HasColumnName("is_system_defined")
+            .HasDefaultValue(false)
+            .IsRequired();
+
+        builder.Property<string?>("_typologySlug")
+            .HasColumnName("typology_slug")
+            .HasMaxLength(50);
+
+        builder.Property<Guid?>("_gameId")
+            .HasColumnName("game_id");
+
+        builder.Property<int>("_invocationCount")
+            .HasColumnName("invocation_count")
+            .HasDefaultValue(0)
+            .IsRequired();
+
+        builder.Property<DateTime?>("_lastInvokedAt")
+            .HasColumnName("last_invoked_at");
+
+        builder.HasIndex("_typologySlug").HasDatabaseName("ix_agent_definitions_typology_slug");
     }
 }

@@ -114,6 +114,11 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .IsRequired()
             .HasDefaultValue(false);
 
+        // Optimistic concurrency (spec-panel C-3)
+        builder.Property(e => e.RowVersion)
+            .HasColumnName("row_version")
+            .IsRowVersion();
+
         // Global query filter for soft deletes
         builder.HasQueryFilter(e => !e.IsDeleted);
 

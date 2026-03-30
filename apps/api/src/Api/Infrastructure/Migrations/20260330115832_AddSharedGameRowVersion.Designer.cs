@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260330115832_AddSharedGameRowVersion")]
+    partial class AddSharedGameRowVersion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3855,10 +3858,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<int>("ApprovalStatus")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("approval_status");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("BggId")
                         .HasColumnType("integer");
@@ -3870,20 +3870,13 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("IconUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("icon_url");
+                        .HasColumnType("text");
 
                     b.Property<string>("ImageUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("image_url");
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsPublished")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_published")
-                        .HasComputedColumnSql("(approval_status = 2 AND published_at IS NOT NULL)", true);
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Language")
                         .HasColumnType("text");
@@ -3906,8 +3899,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(128)");
 
                     b.Property<DateTime?>("PublishedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("published_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Publisher")
                         .HasColumnType("text");

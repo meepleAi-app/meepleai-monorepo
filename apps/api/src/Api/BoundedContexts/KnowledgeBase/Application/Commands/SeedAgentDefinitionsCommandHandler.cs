@@ -48,7 +48,7 @@ internal sealed class SeedAgentDefinitionsCommandHandler : ICommandHandler<SeedA
                     model: "meta-llama/llama-3.3-70b-instruct:free",
                     maxTokens: 4096,
                     temperature: 0.7f),
-                strategy: AgentStrategy.SingleModel(),
+                strategy: AgentStrategy.HybridSearch(),
                 prompts: new List<AgentPromptTemplate>
                 {
                     AgentPromptTemplate.Create(
@@ -71,7 +71,7 @@ internal sealed class SeedAgentDefinitionsCommandHandler : ICommandHandler<SeedA
                     model: "llama3.3:70b",
                     maxTokens: 4096,
                     temperature: 0.7f),
-                strategy: AgentStrategy.SingleModel(),
+                strategy: AgentStrategy.HybridSearch(),
                 prompts: new List<AgentPromptTemplate>
                 {
                     AgentPromptTemplate.Create(

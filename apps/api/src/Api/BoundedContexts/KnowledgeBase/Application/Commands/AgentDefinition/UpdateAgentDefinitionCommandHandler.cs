@@ -44,7 +44,7 @@ internal sealed class UpdateAgentDefinitionCommandHandler
         // Update strategy if provided
         if (!string.IsNullOrWhiteSpace(request.StrategyName))
         {
-            var strategy = AgentStrategy.Custom(request.StrategyName, request.StrategyParameters ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase));
+            var strategy = ResolveStrategy(request.StrategyName);
             agentDefinition.UpdateStrategy(strategy);
         }
 
@@ -86,6 +86,14 @@ internal sealed class UpdateAgentDefinitionCommandHandler
 
         return MapToDto(agentDefinition);
     }
+
+    private static AgentStrategy ResolveStrategy(string? name) => name switch
+    {
+        "RetrievalOnly" => AgentStrategy.RetrievalOnly(),
+        "SentenceWindowRAG" => AgentStrategy.SentenceWindowRAG(),
+        "ColBERTReranking" => AgentStrategy.ColBERTReranking(),
+        _ => AgentStrategy.HybridSearch()
+    };
 
     private static AgentDefinitionDto MapToDto(Domain.Entities.AgentDefinition agent)
     {

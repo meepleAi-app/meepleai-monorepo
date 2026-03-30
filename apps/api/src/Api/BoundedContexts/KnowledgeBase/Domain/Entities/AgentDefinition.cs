@@ -32,6 +32,11 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     private DateTime? _updatedAt;
     private string _kbCardIdsJson = "[]";
     private string _chatLanguage = "auto";
+    private readonly bool _isSystemDefined;
+    private readonly string? _typologySlug;
+    private Guid? _gameId;
+    private int _invocationCount;
+    private DateTime? _lastInvokedAt;
 
     /// <summary>
     /// Gets the agent name.
@@ -120,6 +125,21 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         }
     }
 
+    /// <summary>Seeded by the system; not editable by users.</summary>
+    public bool IsSystemDefined => _isSystemDefined;
+
+    /// <summary>"arbitro" | "game-master" | "chat" — fast lookup for system agents.</summary>
+    public string? TypologySlug => _typologySlug;
+
+    /// <summary>Optional game association.</summary>
+    public Guid? GameId => _gameId;
+
+    /// <summary>Total number of times this agent was invoked.</summary>
+    public int InvocationCount => _invocationCount;
+
+    /// <summary>Timestamp of last invocation.</summary>
+    public DateTime? LastInvokedAt => _lastInvokedAt;
+
     /// <summary>
     /// Gets the chat language preference for this agent.
     /// "auto" means detect from user input; otherwise an ISO 639-1 code (e.g. "it", "en").
@@ -188,7 +208,12 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         bool isActive,
         AgentDefinitionStatus status,
         DateTime createdAt,
-        DateTime? updatedAt) : base(id)
+        DateTime? updatedAt,
+        bool isSystemDefined = false,
+        string? typologySlug = null,
+        Guid? gameId = null,
+        int invocationCount = 0,
+        DateTime? lastInvokedAt = null) : base(id)
     {
         _name = name;
         _description = description;
@@ -202,6 +227,11 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _status = status;
         _createdAt = createdAt;
         _updatedAt = updatedAt;
+        _isSystemDefined = isSystemDefined;
+        _typologySlug = typologySlug;
+        _gameId = gameId;
+        _invocationCount = invocationCount;
+        _lastInvokedAt = lastInvokedAt;
     }
 
     /// <summary>
@@ -437,5 +467,13 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _updatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Status changed to Draft"));
+    }
+
+    /// <summary>Records a new invocation, incrementing count and updating timestamp.</summary>
+    public void RecordInvocation()
+    {
+        _invocationCount++;
+        _lastInvokedAt = DateTime.UtcNow;
+        _updatedAt = DateTime.UtcNow;
     }
 }

@@ -1,20 +1,18 @@
-using Api.Infrastructure.Entities;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
-using Api.BoundedContexts.KnowledgeBase.Application.Queries;
-using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using AgentDef = Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
-using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Text.Json;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -28,22 +26,21 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 [Trait("Issue", "5585")]
 public sealed class AskArbiterCommandHandlerTests : IDisposable
 {
-    private readonly Mock<IAgentRepository> _mockAgentRepository;
+    private readonly Mock<IAgentDefinitionRepository> _mockDefinitionRepository;
     private readonly Mock<ILlmService> _mockLlmService;
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
+    private readonly Mock<IHybridSearchService> _mockHybridSearchService;
     private readonly Mock<ILogger<AskArbiterCommandHandler>> _mockLogger;
     private readonly MeepleAiDbContext _dbContext;
     private readonly AskArbiterCommandHandler _handler;
-    private readonly Guid _agentId = Guid.NewGuid();
+    private readonly Guid _agentDefinitionId = Guid.NewGuid();
     private readonly Guid _userId = Guid.NewGuid();
     private readonly Guid _sessionId = Guid.NewGuid();
-    private readonly Guid _gameId = Guid.NewGuid();
 
     public AskArbiterCommandHandlerTests()
     {
-        _mockAgentRepository = new Mock<IAgentRepository>();
+        _mockDefinitionRepository = new Mock<IAgentDefinitionRepository>();
         _mockLlmService = new Mock<ILlmService>();
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
+        _mockHybridSearchService = new Mock<IHybridSearchService>();
         _mockLogger = new Mock<ILogger<AskArbiterCommandHandler>>();
 
         var dbOptions = new DbContextOptionsBuilder<MeepleAiDbContext>()
@@ -54,11 +51,6 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
             Mock.Of<MediatR.IMediator>(),
             Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>());
 
-        // Default mocks for RAG pipeline
-        _mockEmbeddingService
-            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[384] }));
-
         _mockLlmService
             .Setup(s => s.GenerateCompletionAsync(
                 It.IsAny<string>(),
@@ -67,10 +59,22 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Verdetto: Posizione A ha ragione."));
 
+        _mockHybridSearchService
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<Guid>(),
+                It.IsAny<SearchMode>(),
+                It.IsAny<int>(),
+                It.IsAny<List<Guid>?>(),
+                It.IsAny<float>(),
+                It.IsAny<float>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+
         _handler = new AskArbiterCommandHandler(
-            _mockAgentRepository.Object,
+            _mockDefinitionRepository.Object,
             _mockLlmService.Object,
-            _mockEmbeddingService.Object,
+            _mockHybridSearchService.Object,
             _dbContext,
             CreatePermissiveRagAccessServiceMock(),
             _mockLogger.Object);
@@ -82,14 +86,14 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     }
 
     private AskArbiterCommand CreateCommand(
-        Guid? agentId = null,
+        Guid? agentDefinitionId = null,
         string situation = "Player disagrees on resource placement",
         string positionA = "Resources can be placed on any empty space",
         string positionB = "Resources must be placed adjacent to existing ones")
     {
         return new AskArbiterCommand
         {
-            AgentId = agentId ?? _agentId,
+            AgentDefinitionId = agentDefinitionId ?? _agentDefinitionId,
             SessionId = _sessionId,
             Situation = situation,
             PositionA = positionA,
@@ -98,43 +102,21 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
         };
     }
 
-    private Agent CreateTestAgent(Guid? gameId = null)
+    private AgentDef CreateTestDefinition()
     {
-        return new Agent(
-            _agentId,
+        return AgentDef.Create(
             "TestArbitro",
+            "Test arbiter definition",
             AgentType.RulesInterpreter,
-            AgentStrategy.VectorOnly(),
-            isActive: true,
-            gameId: gameId ?? _gameId);
+            AgentDefinitionConfig.Default());
     }
 
-    private void SetupAgentWithConfig(Agent? agent = null, List<Guid>? documentIds = null)
+    private void SetupDefinitionInRepo(AgentDef? definition = null)
     {
-        var testAgent = agent ?? CreateTestAgent();
-        _mockAgentRepository
-            .Setup(r => r.GetByIdAsync(_agentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(testAgent);
-
-        if (documentIds != null && documentIds.Count > 0)
-        {
-            var config = new AgentConfigurationEntity
-            {
-                Id = Guid.NewGuid(),
-                AgentId = _agentId,
-                LlmProvider = 0,
-                LlmModel = "test-model",
-                AgentMode = 0,
-                SelectedDocumentIdsJson = JsonSerializer.Serialize(documentIds),
-                Temperature = 0.3m,
-                MaxTokens = 1024,
-                IsCurrent = true,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = _userId
-            };
-            _dbContext.AgentConfigurations.Add(config);
-            _dbContext.SaveChanges();
-        }
+        var testDefinition = definition ?? CreateTestDefinition();
+        _mockDefinitionRepository
+            .Setup(r => r.GetByIdAsync(_agentDefinitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(testDefinition);
     }
 
     #region Confidence Calculation Tests
@@ -143,10 +125,10 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     public void CalculateConfidence_WithChunksAndCitations_ReturnsAvgScore()
     {
         // Arrange
-        var chunks = new List<SearchResultItem>
+        var chunks = new List<HybridSearchResult>
         {
-            new() { Score = 0.9f, Text = "Rule text 1", PdfId = "abc", Page = 1 },
-            new() { Score = 0.8f, Text = "Rule text 2", PdfId = "abc", Page = 2 }
+            new() { ChunkId = "1", Content = "Rule text 1", PdfDocumentId = "abc", ChunkIndex = 1, PageNumber = 1, HybridScore = 0.9f, GameId = Guid.NewGuid(), Mode = SearchMode.Hybrid },
+            new() { ChunkId = "2", Content = "Rule text 2", PdfDocumentId = "abc", ChunkIndex = 2, PageNumber = 2, HybridScore = 0.8f, GameId = Guid.NewGuid(), Mode = SearchMode.Hybrid }
         };
         var citations = new List<ArbiterCitationDto>
         {
@@ -164,10 +146,10 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     public void CalculateConfidence_WithChunksNoCitations_ReturnsHalvedAvg()
     {
         // Arrange
-        var chunks = new List<SearchResultItem>
+        var chunks = new List<HybridSearchResult>
         {
-            new() { Score = 0.9f, Text = "Rule text 1", PdfId = "abc", Page = 1 },
-            new() { Score = 0.8f, Text = "Rule text 2", PdfId = "abc", Page = 2 }
+            new() { ChunkId = "1", Content = "Rule text 1", PdfDocumentId = "abc", ChunkIndex = 1, PageNumber = 1, HybridScore = 0.9f, GameId = Guid.NewGuid(), Mode = SearchMode.Hybrid },
+            new() { ChunkId = "2", Content = "Rule text 2", PdfDocumentId = "abc", ChunkIndex = 2, PageNumber = 2, HybridScore = 0.8f, GameId = Guid.NewGuid(), Mode = SearchMode.Hybrid }
         };
         var citations = new List<ArbiterCitationDto>();
 
@@ -182,7 +164,7 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     public void CalculateConfidence_NoChunks_ReturnsZero()
     {
         // Arrange
-        var chunks = new List<SearchResultItem>();
+        var chunks = new List<HybridSearchResult>();
         var citations = new List<ArbiterCitationDto>();
 
         // Act
@@ -196,10 +178,11 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     public void CalculateConfidence_HighScoresWithCitations_IsConclusive()
     {
         // Arrange
-        var chunks = new List<SearchResultItem>
+        var gid = Guid.NewGuid();
+        var chunks = new List<HybridSearchResult>
         {
-            new() { Score = 0.95f, Text = "text", PdfId = "a", Page = 1 },
-            new() { Score = 0.90f, Text = "text", PdfId = "a", Page = 2 }
+            new() { ChunkId = "1", Content = "text", PdfDocumentId = "a", ChunkIndex = 1, PageNumber = 1, HybridScore = 0.95f, GameId = gid, Mode = SearchMode.Hybrid },
+            new() { ChunkId = "2", Content = "text", PdfDocumentId = "a", ChunkIndex = 2, PageNumber = 2, HybridScore = 0.90f, GameId = gid, Mode = SearchMode.Hybrid }
         };
         var citations = new List<ArbiterCitationDto>
         {
@@ -261,9 +244,9 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     public void BuildArbiterUserPrompt_WithChunks_IncludesRegolamento()
     {
         // Arrange
-        var chunks = new List<SearchResultItem>
+        var chunks = new List<HybridSearchResult>
         {
-            new() { Score = 0.9f, Text = "Rule: adjacent placement required", PdfId = "abc", Page = 5 }
+            new() { ChunkId = "1", Content = "Rule: adjacent placement required", PdfDocumentId = "abc", ChunkIndex = 1, PageNumber = 5, HybridScore = 0.9f, GameId = Guid.NewGuid(), Mode = SearchMode.Hybrid }
         };
 
         // Act
@@ -282,7 +265,7 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     public void BuildArbiterUserPrompt_NoChunks_IncludesWarning()
     {
         // Arrange
-        var chunks = new List<SearchResultItem>();
+        var chunks = new List<HybridSearchResult>();
 
         // Act
         var prompt = AskArbiterCommandHandler.BuildArbiterUserPrompt(
@@ -315,12 +298,12 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     #region Handler Integration Tests
 
     [Fact]
-    public async Task Handle_AgentNotFound_ThrowsNotFoundException()
+    public async Task Handle_DefinitionNotFound_ThrowsNotFoundException()
     {
         // Arrange
-        _mockAgentRepository
+        _mockDefinitionRepository
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Agent?)null);
+            .ReturnsAsync((AgentDef?)null);
 
         var command = CreateCommand();
 
@@ -330,13 +313,10 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_EmbeddingFails_ReturnsNoContextVerdict()
+    public async Task Handle_DefinitionWithNoGameId_ReturnsVerdictWithoutSearch()
     {
-        // Arrange
-        SetupAgentWithConfig();
-        _mockEmbeddingService
-            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(EmbeddingResult.CreateFailure("Embedding service down"));
+        // Arrange — definition has no GameId, so search is skipped
+        SetupDefinitionInRepo();
 
         var command = CreateCommand();
 
@@ -347,13 +327,18 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
         result.Confidence.Should().Be(0);
         result.IsConclusive.Should().BeFalse();
         result.ExpansionWarning.Should().NotBeNullOrEmpty();
+        _mockHybridSearchService.Verify(
+            s => s.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(),
+                It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
     public async Task Handle_NoRelevantChunks_ReturnsLowConfidenceVerdict()
     {
         // Arrange
-        SetupAgentWithConfig();
+        SetupDefinitionInRepo();
 
         var command = CreateCommand();
 
@@ -372,8 +357,8 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     [Fact]
     public async Task Handle_WithNoVectorSearch_ReturnsVerdictWithNoCitations()
     {
-        // Arrange — Qdrant removed; handler always returns empty search results
-        SetupAgentWithConfig();
+        // Arrange — hybrid search returns empty results
+        SetupDefinitionInRepo();
 
         var command = CreateCommand();
 
@@ -391,7 +376,7 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     public async Task Handle_LlmFails_ReturnsUnavailableVerdict()
     {
         // Arrange
-        SetupAgentWithConfig();
+        SetupDefinitionInRepo();
 
         _mockLlmService
             .Setup(s => s.GenerateCompletionAsync(
@@ -415,8 +400,8 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     [Fact]
     public async Task Handle_NoVectorResults_MarksNotConclusive()
     {
-        // Arrange — Qdrant removed; handler always returns empty search results
-        SetupAgentWithConfig();
+        // Arrange — hybrid search returns empty results
+        SetupDefinitionInRepo();
 
         var command = CreateCommand();
 
@@ -437,7 +422,7 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     public async Task Handle_ReturnsProperlyStructuredDto()
     {
         // Arrange
-        SetupAgentWithConfig();
+        SetupDefinitionInRepo();
 
         var command = CreateCommand();
 

@@ -2,13 +2,13 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
-using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
+using AgentDef = Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition;
 using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -25,7 +25,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 /// - Non-Ready state → early return, no mediator call
 /// - PDF not found in DB → early return
 /// - PDF not admin priority → early return
-/// - No approved typology → early return
+/// - No active system definition → early return
 /// - User not found in DB → early return
 /// - All conditions met → CreateGameAgentCommand dispatched
 /// - Exception in CreateGameAgent → caught, not propagated
@@ -35,23 +35,23 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<IAgentTypologyRepository> _mockTypologyRepo;
+    private readonly Mock<IAgentDefinitionRepository> _mockDefinitionRepo;
     private readonly Mock<IMediator> _mockMediator;
     private readonly AutoCreateAgentOnPdfReadyHandler _handler;
 
     private static readonly Guid UserId = Guid.NewGuid();
     private static readonly Guid GameId = Guid.NewGuid();
-    private static readonly Guid TypologyId = Guid.NewGuid();
+    private AgentDef? _activeDefinition;
 
     public AutoCreateAgentOnPdfReadyHandlerTests()
     {
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        _mockTypologyRepo = new Mock<IAgentTypologyRepository>();
+        _mockDefinitionRepo = new Mock<IAgentDefinitionRepository>();
         _mockMediator = new Mock<IMediator>();
 
         _handler = new AutoCreateAgentOnPdfReadyHandler(
             _dbContext,
-            _mockTypologyRepo.Object,
+            _mockDefinitionRepo.Object,
             _mockMediator.Object,
             NullLogger<AutoCreateAgentOnPdfReadyHandler>.Instance);
     }
@@ -68,16 +68,31 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
     private static PdfStateChangedEvent CreateNonReadyEvent(Guid pdfId) =>
         new(pdfId, PdfProcessingState.Pending, PdfProcessingState.Extracting, UserId);
 
-    private AgentTypology CreateApprovedTypology() =>
-        new(TypologyId, "Default Agent", "A general-purpose agent", "System prompt", AgentStrategy.SingleModel(), Guid.NewGuid(), TypologyStatus.Approved);
+    private AgentDef CreateActiveSystemDefinition()
+    {
+        var def = AgentDef.Create(
+            "Default Agent",
+            "A general-purpose agent",
+            AgentType.RulesInterpreter,
+            AgentDefinitionConfig.Default());
+        def.Activate();
+        // Mark as system-defined via reflection (readonly backing field)
+        var field = typeof(AgentDef).GetField("_isSystemDefined",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        field.SetValue(def, true);
+        return def;
+    }
 
-    private void SetupApprovedTypology() =>
-        _mockTypologyRepo
+    private void SetupActiveDefinition()
+    {
+        _activeDefinition = CreateActiveSystemDefinition();
+        _mockDefinitionRepo
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CreateApprovedTypology()]);
+            .ReturnsAsync([_activeDefinition]);
+    }
 
-    private void SetupNoApprovedTypology() =>
-        _mockTypologyRepo
+    private void SetupNoActiveDefinition() =>
+        _mockDefinitionRepo
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
@@ -125,13 +140,13 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         await _dbContext.SaveChangesAsync();
     }
 
-    private static CreateGameAgentResult CreateFakeAgentResult() =>
+    private CreateGameAgentResult CreateFakeAgentResult() =>
         new()
         {
             LibraryEntryId = Guid.NewGuid(),
             GameId = GameId,
             Status = "active",
-            Typology = new AgentTypologyInfo { Id = TypologyId, Name = "Default Agent" },
+            Definition = new AgentDefinitionInfo { Id = _activeDefinition?.Id ?? Guid.NewGuid(), Name = "Default Agent" },
             Strategy = new AgentStrategyInfo { Name = "Balanced", Parameters = null },
         };
 
@@ -150,7 +165,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         await _handler.Handle(evt, CancellationToken.None);
 
         // Assert — no DB access, no mediator call
-        _mockTypologyRepo.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockDefinitionRepo.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -186,7 +201,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         await _handler.Handle(evt, CancellationToken.None);
 
         // Assert
-        _mockTypologyRepo.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockDefinitionRepo.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -204,21 +219,21 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         // Act
         await _handler.Handle(evt, CancellationToken.None);
 
-        // Assert — typology lookup never reached
-        _mockTypologyRepo.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // Assert — definition lookup never reached
+        _mockDefinitionRepo.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);
         _mockMediator.Verify(m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Guard: no approved typology exists
+    // Guard: no active system definition exists
     // ────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Handle_WhenNoApprovedTypologyExists_SkipsAutoAgentCreation()
+    public async Task Handle_WhenNoActiveSystemDefinitionExists_SkipsAutoAgentCreation()
     {
         // Arrange
         var pdfId = await AddAdminPdfAsync();
-        SetupNoApprovedTypology();
+        SetupNoActiveDefinition();
         var evt = CreateReadyEvent(pdfId);
 
         // Act
@@ -229,14 +244,19 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WhenOnlyDraftTypologiesExist_SkipsAutoAgentCreation()
+    public async Task Handle_WhenNoSystemDefinitionIsActive_SkipsAutoAgentCreation()
     {
-        // Arrange
+        // Arrange — definition exists but is not active and not system-defined
         var pdfId = await AddAdminPdfAsync();
-        var draftTypology = new AgentTypology(Guid.NewGuid(), "Draft", "Desc", "Prompt", AgentStrategy.SingleModel(), Guid.NewGuid(), TypologyStatus.Draft);
-        _mockTypologyRepo
+        var inactiveDef = AgentDef.Create(
+            "Inactive",
+            "Not active",
+            AgentType.RulesInterpreter,
+            AgentDefinitionConfig.Default());
+        // not Activate() → IsActive=false, IsSystemDefined=false
+        _mockDefinitionRepo
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([draftTypology]);
+            .ReturnsAsync([inactiveDef]);
 
         var evt = CreateReadyEvent(pdfId);
 
@@ -256,7 +276,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
     {
         // Arrange
         var pdfId = await AddAdminPdfAsync();
-        SetupApprovedTypology();
+        SetupActiveDefinition();
         // User NOT added to DB
         var evt = CreateReadyEvent(pdfId);
 
@@ -277,7 +297,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         // Arrange
         var pdfId = await AddAdminPdfAsync();
         await AddUserAsync();
-        SetupApprovedTypology();
+        SetupActiveDefinition();
 
         _mockMediator
             .Setup(m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()))
@@ -293,7 +313,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
             m => m.Send(
                 It.Is<CreateGameAgentCommand>(c =>
                     c.GameId == GameId &&
-                    c.TypologyId == TypologyId &&
+                    c.AgentDefinitionId == _activeDefinition!.Id &&
                     c.StrategyName == "Balanced" &&
                     c.UserId == UserId),
                 It.IsAny<CancellationToken>()),
@@ -306,7 +326,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         // Arrange
         var pdfId = await AddAdminPdfAsync();
         await AddUserAsync(); // Tier="premium", Role="admin"
-        SetupApprovedTypology();
+        SetupActiveDefinition();
 
         CreateGameAgentCommand? capturedCommand = null;
         _mockMediator
@@ -336,7 +356,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         // Arrange
         var pdfId = await AddAdminPdfAsync();
         await AddUserAsync();
-        SetupApprovedTypology();
+        SetupActiveDefinition();
 
         _mockMediator
             .Setup(m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()))
@@ -355,7 +375,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         // Arrange
         var pdfId = await AddAdminPdfAsync();
         await AddUserAsync();
-        SetupApprovedTypology();
+        SetupActiveDefinition();
 
         _mockMediator
             .Setup(m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()))

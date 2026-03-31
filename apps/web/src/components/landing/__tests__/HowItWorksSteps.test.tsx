@@ -36,7 +36,7 @@ describe('HowItWorksSteps', () => {
 
   it('mostra il pain point delle regole', () => {
     render(<HowItWorksSteps />);
-    expect(screen.getByText(/regola subita/i)).toBeInTheDocument();
+    expect(screen.getByText(/regola subito/i)).toBeInTheDocument();
   });
 
   it('mostra il pain point delle dispute', () => {

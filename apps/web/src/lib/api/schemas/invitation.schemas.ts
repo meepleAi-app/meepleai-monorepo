@@ -11,6 +11,11 @@ import { z } from 'zod';
 // Enums
 // ──────────────────────────────────────────────
 
+export const InvitationRoleSchema = z.enum(['User', 'Editor', 'Admin']);
+export type InvitationRole = z.infer<typeof InvitationRoleSchema>;
+/** Readonly tuple of valid invitation roles, derived from schema. */
+export const INVITATION_ROLES = InvitationRoleSchema.options;
+
 export const InvitationStatusSchema = z.enum(['Pending', 'Accepted', 'Expired', 'Revoked']);
 
 // ──────────────────────────────────────────────

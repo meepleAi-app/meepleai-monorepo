@@ -3800,7 +3800,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<int>("ApprovalStatus")
-                        .HasColumnType("integer");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("approval_status");
 
                     b.Property<int?>("BggId")
                         .HasColumnType("integer");
@@ -3812,13 +3815,20 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("IconUrl")
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("icon_url");
 
                     b.Property<string>("ImageUrl")
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("image_url");
 
                     b.Property<bool>("IsPublished")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_published")
+                        .HasComputedColumnSql("(approval_status = 2 AND published_at IS NOT NULL)", true);
 
                     b.Property<string>("Language")
                         .HasColumnType("text");
@@ -3841,7 +3851,8 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(128)");
 
                     b.Property<DateTime?>("PublishedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
 
                     b.Property<string>("Publisher")
                         .HasColumnType("text");
@@ -9872,6 +9883,12 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int>("PlayingTimeMinutes")
                         .HasColumnType("integer")
                         .HasColumnName("playing_time_minutes");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
 
                     b.Property<string>("RulesContent")
                         .HasColumnType("text")

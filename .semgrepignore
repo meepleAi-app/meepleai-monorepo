@@ -1,0 +1,2 @@
+# Ignore binary PDF files in data directory (false positives from PDF content)
+data/

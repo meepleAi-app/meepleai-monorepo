@@ -20,7 +20,7 @@ describe('WelcomeCTA', () => {
     expect(cta).toHaveAttribute('href', '/register');
   });
 
-  it('renders secondary CTA linking to /games', () => {
+  it('renders secondary CTA linking to /register', () => {
     render(<WelcomeCTA />);
     const cta = screen.getByRole('link', { name: /esplora il catalogo/i });
     expect(cta).toHaveAttribute('href', '/register');

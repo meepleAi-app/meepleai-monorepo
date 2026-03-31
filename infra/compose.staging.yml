@@ -65,11 +65,17 @@ services:
       - ./secrets:/app/infra/secrets:ro
     labels:
       - "traefik.enable=true"
+      # Primary route: meepleai.app/api/* → API (production path)
       - "traefik.http.routers.api.rule=Host(`meepleai.app`) && PathPrefix(`/api`)"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls.certresolver=letsencrypt"
       - "traefik.http.routers.api.middlewares=security-headers@file,rate-limit-api@file,compress@file"
       - "traefik.http.services.api.loadbalancer.server.port=8080"
+      # Direct subdomain route: api.meepleai.app/* → API (health checks, staging tools)
+      - "traefik.http.routers.api-direct.rule=Host(`api.meepleai.app`)"
+      - "traefik.http.routers.api-direct.entrypoints=websecure"
+      - "traefik.http.routers.api-direct.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-direct.service=api"
     logging:
       driver: "json-file"
       options: { max-size: "10m", max-file: "3" }

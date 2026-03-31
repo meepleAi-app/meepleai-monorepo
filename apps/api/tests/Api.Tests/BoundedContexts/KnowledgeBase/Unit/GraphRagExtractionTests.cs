@@ -251,8 +251,6 @@ public sealed class GraphRagExtractionTests : IDisposable
             Times.Once);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
     private PdfProcessingPipelineService CreatePipelineService(bool withEntityExtractor)
     {
         var languageDetectorMock = new Mock<ILanguageDetector>();

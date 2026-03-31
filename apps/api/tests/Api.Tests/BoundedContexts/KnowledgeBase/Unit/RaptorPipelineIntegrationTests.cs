@@ -234,8 +234,6 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
             Times.Once);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
     private PdfProcessingPipelineService CreatePipelineService(bool withRaptor)
     {
         var languageDetectorMock = new Mock<ILanguageDetector>();

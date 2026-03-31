@@ -17,9 +17,11 @@ import {
   Activity,
   BookOpen,
   ChevronRight,
+  FileText,
   Gamepad2,
   Heart,
   LayoutDashboard,
+  Package,
   Trophy,
   User,
 } from 'lucide-react';
@@ -30,6 +32,7 @@ import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useRecentSessions } from '@/hooks/useRecentSessions';
 import { api } from '@/lib/api';
 import type { UserLibraryStats } from '@/lib/api/schemas/library.schemas';
 import { useCardHand } from '@/stores/use-card-hand';
@@ -101,12 +104,37 @@ function QuickActionLink({
   );
 }
 
+// ─── StatTile ─────────────────────────────────────────────────────────────────
+
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number;
+  color: string;
+}): React.ReactElement {
+  return (
+    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30">
+      <Icon className={`h-4 w-4 shrink-0 ${color}`} />
+      <div>
+        <p className="text-xs text-muted-foreground font-nunito">{label}</p>
+        <p className="text-lg font-bold font-quicksand">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
 
 function OverviewTab() {
   const [stats, setStats] = useState<UserLibraryStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { sessions, isLoading: sessionsLoading } = useRecentSessions(3);
 
   useEffect(() => {
     api.library
@@ -125,8 +153,8 @@ function OverviewTab() {
         </CardHeader>
         <CardContent>
           {isLoading && (
-            <div className="grid grid-cols-2 gap-4">
-              {[...Array(2)].map((_, i) => (
+            <div className="grid grid-cols-3 gap-3">
+              {[...Array(6)].map((_, i) => (
                 <Skeleton key={i} className="h-14 w-full rounded-lg" />
               ))}
             </div>
@@ -137,23 +165,89 @@ function OverviewTab() {
             </Alert>
           )}
           {!isLoading && !error && stats && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-                <Gamepad2 className="h-5 w-5 text-primary shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground font-nunito">Total Games</p>
-                  <p className="text-xl font-bold font-quicksand">{stats.totalGames}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-                <Heart className="h-5 w-5 text-red-400 shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground font-nunito">Favorites</p>
-                  <p className="text-xl font-bold font-quicksand">{stats.favoriteGames}</p>
-                </div>
-              </div>
+            <div className="grid grid-cols-3 gap-3">
+              <StatTile
+                icon={Gamepad2}
+                label="Giochi"
+                value={stats.totalGames}
+                color="text-primary"
+              />
+              <StatTile
+                icon={Heart}
+                label="Preferiti"
+                value={stats.favoriteGames}
+                color="text-red-400"
+              />
+              <StatTile
+                icon={BookOpen}
+                label="Posseduti"
+                value={stats.ownedCount ?? 0}
+                color="text-green-500"
+              />
+              <StatTile
+                icon={Trophy}
+                label="Wishlist"
+                value={stats.wishlistCount ?? 0}
+                color="text-amber-500"
+              />
+              <StatTile
+                icon={FileText}
+                label="PDF caricati"
+                value={stats.privatePdfs ?? 0}
+                color="text-blue-500"
+              />
+              <StatTile
+                icon={Package}
+                label="In prestito"
+                value={stats.inPrestitoCount ?? 0}
+                color="text-orange-400"
+              />
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Ultime partite */}
+      <Card className="border-l-4 border-l-green-400 shadow-sm">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="font-quicksand text-lg">Ultime partite</CardTitle>
+          <Button asChild variant="ghost" size="sm" className="font-nunito gap-1">
+            <Link href="/play-records">
+              Tutte <ChevronRight className="h-3 w-3" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {sessionsLoading && (
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full rounded-lg" />
+              ))}
+            </div>
+          )}
+          {!sessionsLoading && sessions.length === 0 && (
+            <p className="text-sm text-muted-foreground font-nunito">
+              Nessuna partita ancora.{' '}
+              <Link href="/sessions" className="underline">
+                Inizia una sessione
+              </Link>
+            </p>
+          )}
+          {!sessionsLoading &&
+            sessions.map(s => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between py-2 border-b border-border/30 last:border-0"
+              >
+                <span className="font-nunito text-sm font-medium">{s.gameName}</span>
+                <span className="text-xs text-muted-foreground font-nunito">
+                  {new Date(s.sessionDate).toLocaleDateString('it-IT', {
+                    day: '2-digit',
+                    month: 'short',
+                  })}
+                </span>
+              </div>
+            ))}
         </CardContent>
       </Card>
 
@@ -177,10 +271,10 @@ function OverviewTab() {
               description="Browse and manage your game collection"
             />
             <QuickActionLink
-              href="/sessions"
+              href="/play-records"
               icon={Gamepad2}
-              label="Game Sessions"
-              description="View your play history"
+              label="Storia di gioco"
+              description="Tutte le partite giocate"
             />
           </div>
         </CardContent>

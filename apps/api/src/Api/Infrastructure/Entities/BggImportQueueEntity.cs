@@ -78,6 +78,12 @@ public sealed class BggImportQueueEntity
     public Guid? RequestedByUserId { get; set; }
 
     /// <summary>
+    /// When true, the imported game is immediately quick-published (Draft → Published)
+    /// after creation. Used for seeding scenarios where all games should be visible.
+    /// </summary>
+    public bool AutoPublish { get; set; }
+
+    /// <summary>
     /// When the queue entry was created
     /// </summary>
     public DateTime CreatedAt { get; set; }

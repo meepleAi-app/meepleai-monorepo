@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { trackRulesChatStarted } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
@@ -67,6 +68,7 @@ interface CustomAgent {
 interface QuickStartSuggestion {
   label: string;
   message: string;
+  promptType?: 'rule_dispute' | 'setup' | 'general' | 'suggestion';
 }
 
 // ============================================================================
@@ -111,16 +113,27 @@ const DEFAULT_AGENTS: AgentOption[] = [
   },
 ];
 
+const RULE_SUGGESTIONS: QuickStartSuggestion[] = [
+  {
+    label: 'Ho una domanda sulle regole',
+    message: 'Ho una domanda sulle regole di un gioco',
+    promptType: 'general',
+  },
+  {
+    label: 'Setup della partita',
+    message: 'Come funziona il setup di questa partita?',
+    promptType: 'setup',
+  },
+  {
+    label: 'Risolvi una disputa',
+    message: "C'è una disputa al tavolo — aiutami a risolverla",
+    promptType: 'rule_dispute',
+  },
+];
+
 function getQuickStartSuggestions(gameName?: string): QuickStartSuggestion[] {
   if (!gameName) {
-    return [
-      { label: 'Consiglia un gioco', message: 'Consigliami un gioco da tavolo per la serata' },
-      { label: 'Regole base', message: 'Spiegami le regole di base' },
-      {
-        label: 'Migliori per 2 giocatori',
-        message: 'Quali sono i migliori giochi per 2 giocatori?',
-      },
-    ];
+    return RULE_SUGGESTIONS;
   }
   return [
     { label: `Come si gioca a ${gameName}`, message: `Come si gioca a ${gameName}?` },
@@ -357,7 +370,10 @@ function QuickStartSection({
   disabled,
 }: {
   suggestions: QuickStartSuggestion[];
-  onSuggestionClick: (message: string) => void;
+  onSuggestionClick: (
+    message: string,
+    promptType?: 'rule_dispute' | 'setup' | 'general' | 'suggestion'
+  ) => void;
   disabled: boolean;
 }) {
   return (
@@ -367,7 +383,7 @@ function QuickStartSection({
         {suggestions.map(s => (
           <button
             key={s.label}
-            onClick={() => onSuggestionClick(s.message)}
+            onClick={() => onSuggestionClick(s.message, s.promptType)}
             disabled={disabled}
             className={cn(
               'px-4 py-2 rounded-full text-sm font-nunito transition-all duration-200',
@@ -592,7 +608,10 @@ export function NewChatView() {
 
   // Create thread and redirect
   const handleStartChat = useCallback(
-    async (initialMessage?: string) => {
+    async (
+      initialMessage?: string,
+      promptType: 'rule_dispute' | 'setup' | 'general' | 'suggestion' = 'general'
+    ) => {
       setIsCreating(true);
       setError(null);
 
@@ -609,6 +628,11 @@ export function NewChatView() {
         });
 
         if (thread?.id) {
+          // Track flywheel event: rules chat successfully started
+          trackRulesChatStarted({
+            gameId: gameId,
+            promptType,
+          });
           router.push(`/chat/${thread.id}`);
         }
       } catch {
@@ -621,8 +645,8 @@ export function NewChatView() {
   );
 
   const handleQuickStart = useCallback(
-    (message: string) => {
-      void handleStartChat(message);
+    (message: string, promptType?: 'rule_dispute' | 'setup' | 'general' | 'suggestion') => {
+      void handleStartChat(message, promptType);
     },
     [handleStartChat]
   );

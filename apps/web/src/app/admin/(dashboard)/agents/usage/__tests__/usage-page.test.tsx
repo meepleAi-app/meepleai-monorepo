@@ -4,7 +4,6 @@
  */
 
 import { screen, waitFor } from '@testing-library/react';
-import { QueryClient } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
@@ -234,23 +233,9 @@ describe('UsagePage', () => {
   it('shows error banner on failure', async () => {
     mockGetOpenRouterStatus.mockRejectedValue(new Error('Redis unavailable'));
 
-    // Component-level retry overrides test client defaults;
-    // use a custom QueryClient with retryDelay: 0 to speed up retries.
-    const fastClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-          staleTime: 0,
-          refetchOnMount: false,
-          refetchOnWindowFocus: false,
-          refetchOnReconnect: false,
-          retryDelay: 0,
-        },
-      },
-    });
+    renderWithQuery(<UsagePage />);
 
-    renderWithQuery(<UsagePage />, { queryClient: fastClient });
-
+    // Component has its own retry logic (up to 3 retries), so wait longer
     await waitFor(
       () => {
         expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -258,7 +243,7 @@ describe('UsagePage', () => {
       { timeout: 10000 }
     );
 
-    expect(screen.getByText(/Redis unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/Failed to load usage data.*Redis unavailable/i)).toBeInTheDocument();
   });
 
   it('shows charts section component headings', async () => {

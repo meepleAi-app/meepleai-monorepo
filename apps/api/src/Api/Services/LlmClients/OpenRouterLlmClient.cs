@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Security;
 using Api.Models;
@@ -389,7 +390,7 @@ internal class OpenRouterLlmClient : ILlmClient
                     }
                     catch (JsonException ex)
                     {
-                        _logger.LogWarning(ex, "Failed to parse OpenRouter streaming chunk: {Data}", data);
+                        _logger.LogWarning(ex, "Failed to parse OpenRouter streaming chunk: {Data}", LogSanitizer.Sanitize(data));
                         continue;
                     }
 

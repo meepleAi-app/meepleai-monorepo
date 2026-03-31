@@ -4,9 +4,7 @@ import { Suspense, type ReactNode } from 'react';
 
 import { DashboardEngineProvider } from '@/components/dashboard';
 import { BackToSessionFAB } from '@/components/session/BackToSessionFAB';
-import { MobileBottomNav } from '@/components/ui/navigation/MobileBottomNav';
 
-import { ContextBar } from '../ContextBar';
 import { HybridSidebar } from './HybridSidebar';
 import { UserTabBar } from './UserTabBar';
 import { UserTopNav } from './UserTopNav';
@@ -19,7 +17,6 @@ export function UserShellClient({ children }: UserShellClientProps) {
   return (
     <div className="flex flex-col h-dvh bg-background">
       <UserTopNav />
-      <ContextBar />
       <Suspense>
         <HybridSidebar />
       </Suspense>
@@ -30,7 +27,6 @@ export function UserShellClient({ children }: UserShellClientProps) {
         <UserTabBar />
       </Suspense>
       <BackToSessionFAB />
-      <MobileBottomNav />
     </div>
   );
 }

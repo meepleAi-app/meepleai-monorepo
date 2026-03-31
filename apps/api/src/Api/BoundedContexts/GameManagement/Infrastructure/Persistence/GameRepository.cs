@@ -118,8 +118,22 @@ internal class GameRepository : RepositoryBase, IGameRepository
         return await DbContext.Games.AsNoTracking().AnyAsync(g => g.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<Game>> GetBySharedGameIdAsync(
+        Guid sharedGameId,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.Games
+            .AsNoTracking()
+            .Where(g => g.SharedGameId == sharedGameId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     /// <summary>
-    /// Maps persistence entity to domain entity.
+    /// Maps persistence entity to domain entity (reconstitution — no side effects).
+    /// Restores all persisted properties including publication workflow fields (spec-panel C-1).
     /// </summary>
     private static Game MapToDomain(Api.Infrastructure.Entities.GameEntity entity)
     {
@@ -153,21 +167,37 @@ internal class GameRepository : RepositoryBase, IGameRepository
             playTime: playTime
         );
 
-        // Link BGG data if present
+        // Restore properties via reflection (reconstitution — no domain events should fire for these)
+        (typeof(Game).GetProperty("CreatedAt") ?? throw new InvalidOperationException("Property 'CreatedAt' not found on Game. Was it renamed?"))
+            .SetValue(game, entity.CreatedAt);
+        (typeof(Game).GetProperty("ApprovalStatus") ?? throw new InvalidOperationException("Property 'ApprovalStatus' not found on Game. Was it renamed?"))
+            .SetValue(game, (Domain.ValueObjects.ApprovalStatus)entity.ApprovalStatus);
+        (typeof(Game).GetProperty("PublishedAt") ?? throw new InvalidOperationException("Property 'PublishedAt' not found on Game. Was it renamed?"))
+            .SetValue(game, entity.PublishedAt);
+        (typeof(Game).GetProperty("SharedGameId") ?? throw new InvalidOperationException("Property 'SharedGameId' not found on Game. Was it renamed?"))
+            .SetValue(game, entity.SharedGameId);
+        (typeof(Game).GetProperty("IconUrl") ?? throw new InvalidOperationException("Property 'IconUrl' not found on Game. Was it renamed?"))
+            .SetValue(game, entity.IconUrl);
+        (typeof(Game).GetProperty("ImageUrl") ?? throw new InvalidOperationException("Property 'ImageUrl' not found on Game. Was it renamed?"))
+            .SetValue(game, entity.ImageUrl);
+
         if (entity.BggId.HasValue)
         {
-            game.LinkToBgg(entity.BggId.Value, entity.BggMetadata);
+            (typeof(Game).GetProperty("BggId") ?? throw new InvalidOperationException("Property 'BggId' not found on Game. Was it renamed?"))
+                .SetValue(game, entity.BggId);
+            (typeof(Game).GetProperty("BggMetadata") ?? throw new InvalidOperationException("Property 'BggMetadata' not found on Game. Was it renamed?"))
+                .SetValue(game, entity.BggMetadata);
         }
 
-        // Override CreatedAt from DB
-        var createdAtProp = typeof(Game).GetProperty("CreatedAt");
-        createdAtProp?.SetValue(game, entity.CreatedAt);
+        // Clear domain events raised by the constructor during reconstitution
+        game.ClearDomainEvents();
 
         return game;
     }
 
     /// <summary>
     /// Maps domain entity to persistence entity.
+    /// Note: IsPublished is a DB computed column — do not set it here (spec-panel C-1).
     /// </summary>
     private static Api.Infrastructure.Entities.GameEntity MapToPersistence(Game domainEntity)
     {
@@ -184,7 +214,13 @@ internal class GameRepository : RepositoryBase, IGameRepository
             MinPlayTimeMinutes = domainEntity.PlayTime?.MinMinutes,
             MaxPlayTimeMinutes = domainEntity.PlayTime?.MaxMinutes,
             BggId = domainEntity.BggId,
-            BggMetadata = domainEntity.BggMetadata
+            BggMetadata = domainEntity.BggMetadata,
+            SharedGameId = domainEntity.SharedGameId,
+            IconUrl = domainEntity.IconUrl,
+            ImageUrl = domainEntity.ImageUrl,
+            ApprovalStatus = (int)domainEntity.ApprovalStatus,
+            // IsPublished is a DB computed column — do not set it here
+            PublishedAt = domainEntity.PublishedAt,
         };
     }
 }

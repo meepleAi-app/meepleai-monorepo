@@ -61,6 +61,7 @@ services:
     build:
       context: ../apps/api
       dockerfile: ./src/Api/Dockerfile
+    image: ${API_IMAGE:-meepleai-api}
     container_name: meepleai-api
     restart: unless-stopped
     volumes:
@@ -97,6 +98,7 @@ services:
     build:
       context: ../apps/web
       dockerfile: ./Dockerfile
+    image: ${WEB_IMAGE:-meepleai-web}
     container_name: meepleai-web
     restart: unless-stopped
     depends_on:

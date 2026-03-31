@@ -83,7 +83,7 @@
 | ID | User Story | Status | BC | Backend | Plan |
 |----|-----------|--------|-----|---------|------|
 | US-41 | Come utente, voglio ricevere notifiche (email, push, in-app) | 🔵 Planned | UserNotifications | ✅ 24 cmd + 18 query | [Plan](../superpowers/plans/2026-03-26-us41-notifications.md) |
-| US-33 | Come utente, voglio esplorare e personalizzare agenti AI | 🔵 Planned | KnowledgeBase | ✅ AgentDefinition CRUD | [Plan](../superpowers/plans/2026-03-26-us33-agent-browser.md) |
+| US-33 | Come utente, voglio esplorare e personalizzare agenti AI | 🟡 Ready (needs manual verification) | KnowledgeBase | ✅ All infrastructure exists (routes, API, hooks, nav) | [Plan](../superpowers/plans/2026-03-26-us33-agent-browser.md) |
 
 ---
 

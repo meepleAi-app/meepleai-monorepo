@@ -6,6 +6,7 @@ using Api.Middleware;
 using MediatR;
 using Microsoft.Extensions.Options;
 using Api.BoundedContexts.WorkflowIntegration.Application.Services;
+using Api.Helpers;
 
 namespace Api.Routing;
 
@@ -91,7 +92,7 @@ internal static class N8nWebhookEndpoints
             return Results.BadRequest(new { error = "missing_action", message = "The 'action' field is required" });
         }
 
-        logger.LogInformation("n8n webhook action: {Action}", request.Action);
+        logger.LogInformation("n8n webhook action: {Action}", LogSanitizer.Sanitize(request.Action));
 
         // Route action
         try
@@ -107,7 +108,7 @@ internal static class N8nWebhookEndpoints
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "n8n webhook action {Action} failed", request.Action);
+            logger.LogError(ex, "n8n webhook action {Action} failed", LogSanitizer.Sanitize(request.Action));
             return Results.Problem("Internal error processing webhook action", statusCode: 500);
         }
     }
@@ -142,7 +143,7 @@ internal static class N8nWebhookEndpoints
             Link: link
         ), ct).ConfigureAwait(false);
 
-        logger.LogInformation("n8n webhook: notification sent to user {UserId}", userId);
+        logger.LogInformation("n8n webhook: notification sent to user {UserId}", LogSanitizer.Sanitize(userId));
         return Results.Ok(new { success = true, action = "send_notification" });
     }
 
@@ -160,7 +161,7 @@ internal static class N8nWebhookEndpoints
             return Results.BadRequest(new { error = "invalid_payload", message = "to, subject, and body are required" });
         }
 
-        logger.LogInformation("n8n webhook: email enqueued to {To}, subject: {Subject}", to, subject);
+        logger.LogInformation("n8n webhook: email enqueued to {To}, subject: {Subject}", LogSanitizer.Sanitize(to), LogSanitizer.Sanitize(subject));
         return Results.Ok(new { success = true, action = "send_email" });
     }
 
@@ -177,7 +178,7 @@ internal static class N8nWebhookEndpoints
             return Results.BadRequest(new { error = "invalid_payload", message = "eventId and status are required" });
         }
 
-        logger.LogInformation("n8n webhook: game night {EventId} status update to {Status}", eventId, status);
+        logger.LogInformation("n8n webhook: game night {EventId} status update to {Status}", LogSanitizer.Sanitize(eventId), LogSanitizer.Sanitize(status));
         return Results.Ok(new { success = true, action = "update_game_night_status" });
     }
 
@@ -194,7 +195,7 @@ internal static class N8nWebhookEndpoints
             return Results.BadRequest(new { error = "invalid_payload", message = "eventId must be a valid GUID" });
         }
 
-        logger.LogInformation("n8n webhook: sending {ReminderType} reminder for event {EventId}", reminderType, eventId);
+        logger.LogInformation("n8n webhook: sending {ReminderType} reminder for event {EventId}", LogSanitizer.Sanitize(reminderType), LogSanitizer.Sanitize(eventId));
         return Results.Ok(new { success = true, action = "send_reminder" });
     }
 

@@ -8,4 +8,5 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// </summary>
 /// <param name="BggId">BoardGameGeek game ID to import</param>
 /// <param name="UserId">ID of the user performing the import (will be set as CreatedBy)</param>
-public record ImportGameFromBggCommand(int BggId, Guid UserId) : ICommand<Guid>;
+/// <param name="AutoPublish">When true, immediately quick-publishes the game after creation</param>
+public record ImportGameFromBggCommand(int BggId, Guid UserId, bool AutoPublish = false) : ICommand<Guid>;

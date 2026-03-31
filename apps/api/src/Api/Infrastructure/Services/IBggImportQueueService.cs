@@ -14,6 +14,7 @@ public interface IBggImportQueueService
     /// <param name="bggId">BGG game ID to import</param>
     /// <param name="gameName">Optional game name for UI display</param>
     /// <param name="requestedByUserId">Optional user ID who requested the import (for audit trail)</param>
+    /// <param name="autoPublish">When true, immediately quick-publishes the game after creation</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created queue entity</returns>
     /// <exception cref="InvalidOperationException">If BGG ID is already queued or imported</exception>
@@ -21,6 +22,7 @@ public interface IBggImportQueueService
         int bggId,
         string? gameName = null,
         Guid? requestedByUserId = null,
+        bool autoPublish = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -21,6 +21,7 @@ import {
   RefreshCwIcon,
   ArrowLeftIcon,
   RocketIcon,
+  LayersIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -283,13 +284,22 @@ export function ProcessingMonitor({ gameId, gameTitle }: ProcessingMonitorProps)
               The PDF has been fully processed and indexed. The AI agent can now answer questions
               about this game.
             </p>
-            <Link
-              href={`/admin/games/${gameId}/agent/test?title=${encodeURIComponent(gameTitle ?? '')}`}
-              className="inline-flex items-center gap-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 transition-colors"
-            >
-              <RocketIcon className="h-4 w-4" />
-              Test Agent
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/admin/games/${gameId}/agent/test?title=${encodeURIComponent(gameTitle ?? '')}`}
+                className="inline-flex items-center gap-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 transition-colors"
+              >
+                <RocketIcon className="h-4 w-4" />
+                Test Agent
+              </Link>
+              <Link
+                href={`/admin/games/${gameId}/phases`}
+                className="inline-flex items-center gap-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 transition-colors"
+              >
+                <LayersIcon className="h-4 w-4" />
+                Configura Fasi
+              </Link>
+            </div>
           </CardContent>
         </Card>
       )}

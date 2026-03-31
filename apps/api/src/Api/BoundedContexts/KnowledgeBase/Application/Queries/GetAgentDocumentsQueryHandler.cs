@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -9,8 +10,11 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Handler for GetAgentDocumentsQuery.
-/// Returns the selected documents for an agent's current configuration.
+/// Returns the indexed documents selected for an agent's current configuration.
 /// Issue #2399: Knowledge Base Document Selection.
+///
+/// SelectedDocumentIdsJson contains VectorDocument.Id values. This handler joins
+/// VectorDocuments with PdfDocuments to return document metadata.
 /// </summary>
 internal sealed class GetAgentDocumentsQueryHandler
     : IRequestHandler<GetAgentDocumentsQuery, AgentDocumentsDto?>
@@ -32,12 +36,15 @@ internal sealed class GetAgentDocumentsQueryHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // Verify agent exists
-        var agentExists = await _db.Agents
-            .AnyAsync(a => a.Id == request.AgentId, cancellationToken)
+        // Verify agent exists and retrieve GameId for context
+        var agent = await _db.Agents
+            .AsNoTracking()
+            .Where(a => a.Id == request.AgentId)
+            .Select(a => new { a.Id, a.GameId })
+            .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (!agentExists)
+        if (agent == null)
         {
             _logger.LogWarning("Agent not found: {AgentId}", request.AgentId);
             return null;
@@ -58,43 +65,46 @@ internal sealed class GetAgentDocumentsQueryHandler
             return new AgentDocumentsDto(request.AgentId, Array.Empty<SelectedDocumentDto>());
         }
 
-        // Parse document IDs from JSON
-        var documentIds = new List<Guid>();
+        // Parse VectorDocument IDs from JSON
+        var vectorDocumentIds = new List<Guid>();
         if (!string.IsNullOrEmpty(currentConfig.SelectedDocumentIdsJson))
         {
             try
             {
-                documentIds = JsonSerializer.Deserialize<List<Guid>>(currentConfig.SelectedDocumentIdsJson)
+                vectorDocumentIds = JsonSerializer.Deserialize<List<Guid>>(currentConfig.SelectedDocumentIdsJson)
                     ?? new List<Guid>();
             }
             catch (JsonException ex)
             {
                 _logger.LogError(ex, "Failed to parse document IDs JSON for agent {AgentId}", request.AgentId);
-                documentIds = new List<Guid>();
+                vectorDocumentIds = new List<Guid>();
             }
         }
 
-        if (documentIds.Count == 0)
+        if (vectorDocumentIds.Count == 0)
         {
             return new AgentDocumentsDto(request.AgentId, Array.Empty<SelectedDocumentDto>());
         }
 
-        // Fetch documents with game names
-        var documentEntities = await _db.SharedGameDocuments
-            .Where(d => documentIds.Contains(d.Id))
-            .Include(d => d.SharedGame)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        // Join VectorDocuments with PdfDocuments using the stored VectorDocument.Id values.
+        // SelectedDocumentIdsJson stores VectorDocument.Id — never PdfDocument.Id.
+        var agentGameId = agent.GameId ?? Guid.Empty;
 
-        var documents = documentEntities.Select(doc => new SelectedDocumentDto(
-            doc.Id,
-            doc.SharedGameId,
-            doc.PdfDocumentId,
-            (SharedGameCatalog.Domain.Entities.SharedGameDocumentType)doc.DocumentType,
-            doc.Version,
-            doc.IsActive,
-            ParseTags(doc.TagsJson),
-            doc.SharedGame?.Title)).ToList();
+        var documents = await (
+            from vd in _db.VectorDocuments.AsNoTracking()
+            join pdf in _db.PdfDocuments.AsNoTracking()
+                on vd.PdfDocumentId equals pdf.Id
+            where vectorDocumentIds.Contains(vd.Id)
+            select new SelectedDocumentDto(
+                vd.Id,
+                agentGameId,
+                vd.PdfDocumentId,
+                MapDocumentType(pdf.DocumentType),
+                string.Empty,
+                pdf.IsActiveForRag,
+                Array.Empty<string>(),
+                null)
+        ).ToListAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Retrieved {DocumentCount} documents for agent {AgentId}",
@@ -103,18 +113,12 @@ internal sealed class GetAgentDocumentsQueryHandler
         return new AgentDocumentsDto(request.AgentId, documents);
     }
 
-    private static IReadOnlyList<string> ParseTags(string? tagsJson)
-    {
-        if (string.IsNullOrEmpty(tagsJson))
-            return Array.Empty<string>();
-
-        try
+    private static SharedGameDocumentType MapDocumentType(string? documentType) =>
+        documentType?.ToLowerInvariant() switch
         {
-            return JsonSerializer.Deserialize<List<string>>(tagsJson) ?? new List<string>();
-        }
-        catch (JsonException)
-        {
-            return Array.Empty<string>();
-        }
-    }
+            "base" => SharedGameDocumentType.Rulebook,
+            "errata" => SharedGameDocumentType.Errata,
+            "homerule" or "custom" => SharedGameDocumentType.Homerule,
+            _ => SharedGameDocumentType.Rulebook
+        };
 }

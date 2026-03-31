@@ -71,16 +71,21 @@ internal sealed class UpdateAgentDocumentsCommandHandler
                 );
             }
 
-            // Validate documents exist if any are provided
+            // DocumentIds from the UI are PdfDocument.Id values.
+            // SelectedDocumentIdsJson must store VectorDocument.Id values so that
+            // SendAgentMessageCommandHandler can query VectorDocuments directly.
+            // Resolve PdfDocument.Id → VectorDocument.Id here.
+            var vectorDocumentIds = new List<Guid>();
             if (request.DocumentIds.Count > 0)
             {
-                var existingDocIds = await _db.PdfDocuments
+                // Step 1: validate all PdfDocument IDs exist
+                var existingPdfIds = await _db.PdfDocuments
                     .Where(d => request.DocumentIds.Contains(d.Id))
                     .Select(d => d.Id)
                     .ToListAsync(cancellationToken)
                     .ConfigureAwait(false);
 
-                var missingIds = request.DocumentIds.Except(existingDocIds).ToList();
+                var missingIds = request.DocumentIds.Except(existingPdfIds).ToList();
                 if (missingIds.Count > 0)
                 {
                     _logger.LogWarning(
@@ -94,25 +99,49 @@ internal sealed class UpdateAgentDocumentsCommandHandler
                         ErrorCode: "DOCUMENTS_NOT_FOUND"
                     );
                 }
+
+                // Step 2: resolve PdfDocument.Id → VectorDocument.Id
+                // PDFs that have not yet been indexed will not have a matching VectorDocument;
+                // those are silently excluded (they cannot participate in RAG until indexed).
+                vectorDocumentIds = await _db.VectorDocuments
+                    .Where(vd => existingPdfIds.Contains(vd.PdfDocumentId))
+                    .Select(vd => vd.Id)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (vectorDocumentIds.Count < existingPdfIds.Count)
+                {
+                    var indexedPdfIds = await _db.VectorDocuments
+                        .Where(vd => existingPdfIds.Contains(vd.PdfDocumentId))
+                        .Select(vd => vd.PdfDocumentId)
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+
+                    var notYetIndexed = existingPdfIds.Except(indexedPdfIds).ToList();
+                    _logger.LogWarning(
+                        "Skipping {Count} PDF(s) not yet indexed (no VectorDocument): {PdfIds}",
+                        notYetIndexed.Count,
+                        string.Join(", ", notYetIndexed));
+                }
             }
 
             // Validate mode requirements (Player/Ledger need at least one document)
             // AgentMode: 0=Chat, 1=Player, 2=Ledger
             if ((currentConfig.AgentMode == 1 || currentConfig.AgentMode == 2) &&
-                request.DocumentIds.Count == 0)
+                vectorDocumentIds.Count == 0)
             {
                 var modeName = currentConfig.AgentMode == 1 ? "Player" : "Ledger";
                 return new UpdateAgentDocumentsResult(
                     Success: false,
-                    Message: $"{modeName} mode requires at least one document selected",
+                    Message: $"{modeName} mode requires at least one indexed document selected",
                     AgentId: request.AgentId,
                     DocumentCount: 0,
                     ErrorCode: "DOCUMENTS_REQUIRED"
                 );
             }
 
-            // Update the selected documents (stored as JSON)
-            currentConfig.SelectedDocumentIdsJson = JsonSerializer.Serialize(request.DocumentIds);
+            // Store VectorDocument.Id values — the canonical type for SelectedDocumentIdsJson
+            currentConfig.SelectedDocumentIdsJson = JsonSerializer.Serialize(vectorDocumentIds);
 
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -123,9 +152,9 @@ internal sealed class UpdateAgentDocumentsCommandHandler
 
             return new UpdateAgentDocumentsResult(
                 Success: true,
-                Message: $"Successfully updated {request.DocumentIds.Count} document(s) for agent",
+                Message: $"Successfully updated {vectorDocumentIds.Count} document(s) for agent",
                 AgentId: request.AgentId,
-                DocumentCount: request.DocumentIds.Count
+                DocumentCount: vectorDocumentIds.Count
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types

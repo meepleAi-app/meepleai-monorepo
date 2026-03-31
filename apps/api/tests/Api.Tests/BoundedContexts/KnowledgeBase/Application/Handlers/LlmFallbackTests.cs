@@ -551,6 +551,7 @@ public sealed class LlmFallbackTests : IDisposable
             Mock.Of<IHybridCacheService>(),
             CreatePermissiveRagAccessServiceMock(),
             Mock.Of<IPdfDocumentRepository>(),
+            Mock.Of<IHybridSearchService>(),
             _mockLogger.Object);
     }
 

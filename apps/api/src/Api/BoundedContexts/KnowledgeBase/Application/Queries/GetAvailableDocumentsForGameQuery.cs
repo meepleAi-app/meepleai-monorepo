@@ -101,7 +101,25 @@ internal sealed class GetAvailableDocumentsForGameQueryHandler
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // 5. Project to DTOs (done in-memory because selectedDocIds is local)
+        // 4b. SelectedDocumentIds stores VectorDocument.Id values, but the UI works with
+        // PdfDocument.Id. Resolve VectorDocument.Id → PdfDocument.Id to correctly mark IsSelected.
+        HashSet<Guid> selectedPdfDocIds;
+        if (selectedDocIds.Count > 0)
+        {
+            var resolvedPdfIds = await _dbContext.VectorDocuments
+                .AsNoTracking()
+                .Where(vd => selectedDocIds.Contains(vd.Id))
+                .Select(vd => vd.PdfDocumentId)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            selectedPdfDocIds = resolvedPdfIds.ToHashSet();
+        }
+        else
+        {
+            selectedPdfDocIds = new HashSet<Guid>();
+        }
+
+        // 5. Project to DTOs (done in-memory because selectedPdfDocIds is local)
         var documentDtos = documents
             .Select(d => new DocumentSelectionItemDto(
                 d.Id,
@@ -109,7 +127,7 @@ internal sealed class GetAvailableDocumentsForGameQueryHandler
                 d.DocumentType ?? "base",
                 d.ProcessingState ?? "Pending",
                 d.PrivateGameId != null,
-                selectedDocIds.Contains(d.Id),
+                selectedPdfDocIds.Contains(d.Id),
                 d.PageCount))
             .ToList();
 

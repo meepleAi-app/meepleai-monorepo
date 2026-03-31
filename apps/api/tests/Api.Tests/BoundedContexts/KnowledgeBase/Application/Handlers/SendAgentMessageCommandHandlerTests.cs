@@ -100,6 +100,7 @@ public sealed class SendAgentMessageCommandHandlerTests
             Mock.Of<IHybridCacheService>(),
             CreatePermissiveRagAccessServiceMock(),
             _mockPdfDocumentRepository.Object,
+            Mock.Of<IHybridSearchService>(),
             _mockLogger.Object
         );
     }

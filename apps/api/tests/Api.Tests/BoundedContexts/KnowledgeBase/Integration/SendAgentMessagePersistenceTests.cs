@@ -115,6 +115,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             Mock.Of<IHybridCacheService>(),
             CreatePermissiveRagAccessServiceMock(),
             Mock.Of<IPdfDocumentRepository>(),
+            Mock.Of<IHybridSearchService>(),
             Mock.Of<ILogger<SendAgentMessageCommandHandler>>());
 
         // Seed a test user (FK requirement)

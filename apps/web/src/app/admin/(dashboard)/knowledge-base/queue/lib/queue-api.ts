@@ -153,7 +153,7 @@ export interface PdfTextResult {
   processingError: string | null;
 }
 
-export async function bumpPriority(jobId: string, newPriority: ProcessingPriority): Promise<void> {
+export async function setPriority(jobId: string, newPriority: ProcessingPriority): Promise<void> {
   await apiClient.patch(`/api/v1/admin/queue/${jobId}/priority`, { newPriority });
 }
 

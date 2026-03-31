@@ -87,6 +87,18 @@ const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
     visibility: { anonOnly: true },
   },
   {
+    id: 'dashboard',
+    href: '/dashboard',
+    icon: LayoutDashboard,
+    iconName: 'layout-dashboard',
+    label: 'Dashboard',
+    ariaLabel: 'Navigate to dashboard',
+    priority: 1,
+    testId: 'nav-dashboard',
+    activePattern: /^\/dashboard$/,
+    visibility: { authOnly: true },
+  },
+  {
     id: 'library',
     href: '/library',
     icon: BookOpen,

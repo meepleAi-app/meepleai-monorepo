@@ -5,6 +5,7 @@ using Api.Extensions;
 using Api.Infrastructure.Security;
 using Api.Models;
 using Api.SharedKernel.Application.DTOs;
+using Api.Helpers;
 using MediatR;
 
 namespace Api.Routing;
@@ -87,7 +88,7 @@ internal static class AdminUserCrudEndpoints
         // Session validated by RequireSessionFilter
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-        logger.LogInformation("User {UserId} searching for users with query: {Query}", session!.User!.Id, query);
+        logger.LogInformation("User {UserId} searching for users with query: {Query}", session!.User!.Id, LogSanitizer.Sanitize(query));
 
         // Use CQRS Query for user search
         var searchQuery = new SearchUsersQuery(query, MaxResults: 10);
@@ -145,10 +146,10 @@ internal static class AdminUserCrudEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} updating user {UserId}", session!.User!.Id, id);
+        logger.LogInformation("Admin {AdminId} updating user {UserId}", session!.User!.Id, LogSanitizer.Sanitize(id));
         var command = new UpdateUserCommand(id, request.Email, request.DisplayName, request.Role);
         var user = await mediator.Send(command, ct).ConfigureAwait(false);
-        logger.LogInformation("User {UserId} updated successfully", id);
+        logger.LogInformation("User {UserId} updated successfully", LogSanitizer.Sanitize(id));
         return Results.Ok(user);
     }
 
@@ -162,10 +163,10 @@ internal static class AdminUserCrudEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} deleting user {UserId}", session!.User!.Id, id);
+        logger.LogInformation("Admin {AdminId} deleting user {UserId}", session!.User!.Id, LogSanitizer.Sanitize(id));
         var command = new DeleteUserCommand(id, session.User!.Id.ToString());
         await mediator.Send(command, ct).ConfigureAwait(false);
-        logger.LogInformation("User {UserId} deleted successfully", id);
+        logger.LogInformation("User {UserId} deleted successfully", LogSanitizer.Sanitize(id));
         return Results.NoContent();
     }
 

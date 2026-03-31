@@ -75,32 +75,45 @@ function QueryTesterTab() {
     setResult(null);
 
     try {
-      // TODO: Wire to real API — POST /api/v1/admin/rag-pipeline/test
-      // In a real implementation, this would call:
-      // const client = createAdminClient({ httpClient: new HttpClient() });
-      // const res = await client.testRagPipeline({ query, strategy, model, temperature, topK, gameScope, agent });
-      // For now, simulate a response after a short delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const res = await fetch('/api/v1/agents/chat/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          Question: query,
+          Strategy: strategy,
+          TopK: topK,
+          GameId: gameScope || undefined,
+          Language: 'auto',
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
       setResult({
-        answer: `[Simulazione] Risposta per: "${query}" con strategia ${strategy}`,
-        chunks: [
-          { id: '1', text: 'Chunk di esempio 1...', score: 0.95 },
-          { id: '2', text: 'Chunk di esempio 2...', score: 0.88 },
-          { id: '3', text: 'Chunk di esempio 3...', score: 0.72 },
-        ],
+        answer: data.answer ?? '[Nessuna risposta]',
+        chunks: (data.retrievedChunks ?? []).map(
+          (c: { id?: string; text?: string; score?: number }, i: number) => ({
+            id: c.id ?? String(i),
+            text: c.text ?? '',
+            score: c.score ?? 0,
+          })
+        ),
         metrics: {
-          latencyMs: Math.round(300 + Math.random() * 700),
-          tokens: Math.round(100 + Math.random() * 400),
-          cost: +(Math.random() * 0.01).toFixed(4),
-          confidence: +(0.7 + Math.random() * 0.25).toFixed(2),
+          latencyMs: data.latencyMs ?? 0,
+          tokens: data.tokenUsage?.totalTokens ?? 0,
+          cost: data.costBreakdown?.totalCost ?? 0,
+          confidence: data.confidence ?? 0,
         },
       });
-    } catch {
-      setResult(null);
+    } catch (err) {
+      setResult({
+        answer: `Errore: ${err instanceof Error ? err.message : 'Richiesta fallita'}`,
+        chunks: [],
+        metrics: { latencyMs: 0, tokens: 0, cost: 0, confidence: 0 },
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [query, strategy]);
+  }, [query, strategy, topK, gameScope]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

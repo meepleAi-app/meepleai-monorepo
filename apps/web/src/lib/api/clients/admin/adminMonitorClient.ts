@@ -32,6 +32,10 @@ import {
   type ContainerLogs,
 } from '../../schemas';
 import {
+  CircuitBreakerStateSchema,
+  type CircuitBreakerState,
+} from '../../schemas/admin/admin-circuit-breakers.schemas';
+import {
   ApplicationLogsResponseSchema,
   type ApplicationLogsResponse,
   type ApplicationLogsFilters,
@@ -43,10 +47,6 @@ import {
   type ServiceCallSummary,
   type ServiceCallFilters,
 } from '../../schemas/admin/admin-service-calls.schemas';
-import {
-  CircuitBreakerStateSchema,
-  type CircuitBreakerState,
-} from '../../schemas/admin/admin-circuit-breakers.schemas';
 import {
   OpenRouterStatusDtoSchema,
   type OpenRouterStatusDto,

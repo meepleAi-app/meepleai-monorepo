@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 /// <summary>
 /// Domain event raised when a shared game is deleted.
 /// </summary>
-internal sealed class SharedGameDeletedEvent : DomainEventBase
+public sealed class SharedGameDeletedEvent : DomainEventBase
 {
     /// <summary>
     /// Gets the ID of the deleted game.

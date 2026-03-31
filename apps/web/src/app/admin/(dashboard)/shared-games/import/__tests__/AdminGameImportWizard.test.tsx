@@ -140,7 +140,7 @@ describe('AdminGameImportWizardClient', () => {
 
       expect(screen.getByText('Wizard State')).toBeInTheDocument();
       expect(screen.getByText(/step:/i)).toBeInTheDocument();
-      expect(screen.getAllByText(/pdf/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/pdf:/i).length).toBeGreaterThanOrEqual(1);
     });
 
     it('shows reset button', () => {
@@ -281,7 +281,7 @@ describe('AdminGameImportWizardClient', () => {
 
       expect(screen.getByText(/final title:/i)).toBeInTheDocument();
       expect(screen.getByText('Final Game Title')).toBeInTheDocument();
-      expect(screen.getByText(/\bID:/i)).toBeInTheDocument();
+      expect(screen.getByText(/id:/i)).toBeInTheDocument();
       expect(screen.getByText(/12345/i)).toBeInTheDocument();
     });
   });

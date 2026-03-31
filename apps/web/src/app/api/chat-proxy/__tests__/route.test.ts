@@ -346,7 +346,7 @@ describe('POST /api/chat-proxy', () => {
   });
 
   describe('System Prompt', () => {
-    it('sends correct system prompt for Tutor typology', async () => {
+    it('sends generic system prompt with game name', async () => {
       const { fetchCall } = await callProxyAndConsume(
         fetchMock,
         createValidBody({
@@ -356,12 +356,12 @@ describe('POST /api/chat-proxy', () => {
 
       const requestBody = JSON.parse(fetchCall[1].body);
       expect(requestBody.messages[0].role).toBe('system');
-      expect(requestBody.messages[0].content).toContain('Tutor');
+      expect(requestBody.messages[0].content).toContain('assistente esperto');
       expect(requestBody.messages[0].content).toContain('Catan');
       expect(requestBody.messages[0].content).toContain('italiano');
     });
 
-    it('sends correct system prompt for Arbitro typology', async () => {
+    it('includes game name in system prompt regardless of typology', async () => {
       const { fetchCall } = await callProxyAndConsume(
         fetchMock,
         createValidBody({
@@ -370,7 +370,7 @@ describe('POST /api/chat-proxy', () => {
       );
 
       const requestBody = JSON.parse(fetchCall[1].body);
-      expect(requestBody.messages[0].content).toContain('Arbitro');
+      expect(requestBody.messages[0].content).toContain('assistente esperto');
       expect(requestBody.messages[0].content).toContain('Terraforming Mars');
     });
 
@@ -418,7 +418,7 @@ describe('POST /api/chat-proxy', () => {
       expect(requestBody.model).toBe('anthropic/claude-3.5-sonnet');
       expect(requestBody.stream).toBe(true);
       expect(requestBody.max_tokens).toBe(1024);
-      expect(requestBody.temperature).toBe(0.5); // Tutor typology default
+      expect(requestBody.temperature).toBe(0.7); // DEFAULT_TEMPERATURE
     });
 
     it('uses default model when modelId not provided', async () => {

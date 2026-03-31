@@ -32,6 +32,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         int bggId,
         string? gameName = null,
         Guid? requestedByUserId = null,
+        bool autoPublish = false,
         CancellationToken cancellationToken = default)
     {
         // Check if already queued or imported
@@ -62,6 +63,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
             Position = nextPosition,
             RetryCount = 0,
             RequestedByUserId = requestedByUserId,
+            AutoPublish = autoPublish,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
@@ -69,8 +71,8 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Enqueued BGG import: BggId={BggId}, Position={Position}",
-            bggId, nextPosition);
+            "Enqueued BGG import: BggId={BggId}, Position={Position}, AutoPublish={AutoPublish}",
+            bggId, nextPosition, autoPublish);
 
         return entity;
     }

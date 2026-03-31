@@ -31,6 +31,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
     private readonly ChatContextDomainService _chatContextService;
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IPdfDocumentRepository _pdfDocumentRepository;
+    private readonly IVectorDocumentRepository _vectorDocumentRepository;
     private readonly ILlmService _llmService;
     private readonly IAiResponseCacheService _cache;
     private readonly IPromptTemplateService _promptTemplateService;
@@ -45,6 +46,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         ChatContextDomainService chatContextService,
         IChatThreadRepository chatThreadRepository,
         IPdfDocumentRepository pdfDocumentRepository,
+        IVectorDocumentRepository vectorDocumentRepository,
         ILlmService llmService,
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
@@ -58,6 +60,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
+        _vectorDocumentRepository = vectorDocumentRepository ?? throw new ArgumentNullException(nameof(vectorDocumentRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
@@ -503,9 +506,23 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
     private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? documentIds, CancellationToken ct)
     {
-        var documents = documentIds?.Count > 0
-            ? await _pdfDocumentRepository.GetByIdsAsync(documentIds, ct).ConfigureAwait(false)
-            : await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false);
+        IReadOnlyList<DocumentProcessing.Domain.Entities.PdfDocument>? documents;
+
+        if (documentIds?.Count > 0)
+        {
+            // documentIds are VectorDocument.Ids (from GameDocumentDto returned by GetGameDocumentsQuery).
+            // Resolve to PdfDocument.Ids via the VectorDocument aggregate before querying the PDF repo.
+            var vectorDocs = await _vectorDocumentRepository.GetByGameIdAsync(gameId, ct).ConfigureAwait(false);
+            var pdfIds = vectorDocs
+                .Where(vd => documentIds.Contains(vd.Id))
+                .Select(vd => vd.PdfDocumentId)
+                .ToList();
+            documents = await _pdfDocumentRepository.GetByIdsAsync(pdfIds, ct).ConfigureAwait(false);
+        }
+        else
+        {
+            documents = await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false);
+        }
 
         if (documents is null or { Count: 0 }) return (true, 0, 0);
 

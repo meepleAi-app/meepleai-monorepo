@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260331120845_AddBggImportQueueAutoPublish")]
+    partial class AddBggImportQueueAutoPublish
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1610,32 +1613,12 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.Property<Guid?>("_gameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("game_id");
-
-                    b.Property<int>("_invocationCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("invocation_count");
-
-                    b.Property<bool>("_isSystemDefined")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_system_defined");
-
                     b.Property<string>("_kbCardIdsJson")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
                         .HasDefaultValue("[]")
                         .HasColumnName("kb_card_ids");
-
-                    b.Property<DateTime?>("_lastInvokedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_invoked_at");
 
                     b.Property<string>("_promptsJson")
                         .IsRequired()
@@ -1664,11 +1647,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("type_value");
 
-                    b.Property<string>("_typologySlug")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("typology_slug");
-
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
@@ -1683,9 +1661,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("_typeValue")
                         .HasDatabaseName("ix_agent_definitions_type_value");
-
-                    b.HasIndex("_typologySlug")
-                        .HasDatabaseName("ix_agent_definitions_typology_slug");
 
                     b.ToTable("agent_definitions", "knowledge_base");
                 });
@@ -2378,6 +2353,81 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("service_health_states");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.AgentEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("InvocationCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("LastInvokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("SharedGameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StrategyName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("StrategyParametersJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("LastInvokedAt");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("SharedGameId");
+
+                    b.HasIndex("Type");
+
+                    b.HasIndex("CreatedByUserId", "Name")
+                        .IsUnique()
+                        .HasFilter("\"CreatedByUserId\" IS NOT NULL");
+
+                    b.HasIndex("GameId", "CreatedByUserId");
+
+                    b.HasIndex("GameId", "Type");
+
+                    b.ToTable("agents", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentFeedbackEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2437,9 +2487,8 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("AgentDefinitionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("agent_definition_id");
+                    b.Property<Guid>("AgentId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CurrentGameStateJson")
                         .IsRequired()
@@ -2464,10 +2513,15 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("TypologyId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AgentId");
 
                     b.HasIndex("GameId");
 
@@ -2476,6 +2530,8 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("IsActive")
                         .HasDatabaseName("IX_AgentSessions_IsActive");
+
+                    b.HasIndex("TypologyId");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_AgentSessions_UserId");
@@ -3235,6 +3291,8 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AgentId");
 
                     b.HasIndex("GameId", "StartedAt");
 
@@ -4066,55 +4124,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("IX_game_night_rsvps_event_user");
 
                     b.ToTable("game_night_rsvps", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GamePhaseTemplateEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("description");
-
-                    b.Property<Guid>("GameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("game_id");
-
-                    b.Property<string>("PhaseName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("phase_name");
-
-                    b.Property<int>("PhaseOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("phase_order");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GameId", "PhaseOrder")
-                        .IsUnique()
-                        .HasDatabaseName("ix_game_phase_templates_game_id_order");
-
-                    b.ToTable("game_phase_templates", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameReviewEntity", b =>
@@ -5669,6 +5678,136 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("user_achievements", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentConfigurationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_id");
+
+                    b.Property<int>("AgentMode")
+                        .HasColumnType("integer")
+                        .HasColumnName("agent_mode");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<bool>("IsCurrent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_current");
+
+                    b.Property<string>("LlmModel")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("llm_model");
+
+                    b.Property<int>("LlmProvider")
+                        .HasColumnType("integer")
+                        .HasColumnName("llm_provider");
+
+                    b.Property<int>("MaxTokens")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(4096)
+                        .HasColumnName("max_tokens");
+
+                    b.Property<string>("SelectedDocumentIdsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("selected_document_ids_json");
+
+                    b.Property<string>("SystemPromptOverride")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)")
+                        .HasColumnName("system_prompt_override");
+
+                    b.Property<decimal>("Temperature")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3, 2)
+                        .HasColumnType("numeric(3,2)")
+                        .HasDefaultValue(0.7m)
+                        .HasColumnName("temperature");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId")
+                        .HasDatabaseName("ix_agent_configurations_agent_id");
+
+                    b.HasIndex("AgentId", "IsCurrent")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agent_configurations_current")
+                        .HasFilter("is_current = true");
+
+                    b.ToTable("agent_configurations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_agent_configurations_max_tokens", "max_tokens > 0 AND max_tokens <= 32000");
+
+                            t.HasCheckConstraint("ck_agent_configurations_temperature", "temperature >= 0.0 AND temperature <= 2.0");
+                        });
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentGameStateSnapshotEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActivePlayerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("active_player_id");
+
+                    b.Property<Guid>("AgentSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_session_id");
+
+                    b.Property<string>("BoardStateJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("board_state_json");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Vector>("Embedding")
+                        .HasColumnType("vector(1024)")
+                        .HasColumnName("embedding");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<int>("TurnNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("turn_number");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentSessionId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("GameId", "TurnNumber");
+
+                    b.ToTable("agent_game_state_snapshots", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTestResultEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5759,6 +5898,80 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_agent_test_results_typology_executed_at");
 
                     b.ToTable("agent_test_results", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("approved_at");
+
+                    b.Property<Guid?>("ApprovedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_by");
+
+                    b.Property<string>("BasePrompt")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)")
+                        .HasColumnName("base_prompt");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DefaultStrategyJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("default_strategy_json");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy")
+                        .HasDatabaseName("ix_agent_typologies_created_by");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agent_typologies_name")
+                        .HasFilter("is_deleted = false");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_agent_typologies_status");
+
+                    b.ToTable("agent_typologies", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AnalysisFeedbackEntity", b =>
@@ -6750,6 +6963,63 @@ namespace Api.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("tier_strategy_access", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.TypologyPromptTemplateEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<bool>("IsCurrent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_current");
+
+                    b.Property<Guid>("TypologyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("typology_id");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TypologyId")
+                        .HasDatabaseName("ix_typology_prompt_templates_typology_id");
+
+                    b.HasIndex("TypologyId", "IsCurrent")
+                        .IsUnique()
+                        .HasDatabaseName("ix_typology_prompt_templates_current")
+                        .HasFilter("is_current = true");
+
+                    b.HasIndex("TypologyId", "Version")
+                        .IsUnique()
+                        .HasDatabaseName("ix_typology_prompt_templates_typology_version");
+
+                    b.ToTable("typology_prompt_templates", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_typology_prompt_templates_version", "version >= 1");
+                        });
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.LlmCostLogEntity", b =>
@@ -12634,8 +12904,31 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.AgentEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                        .WithMany("Agents")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Game");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentSessionEntity", b =>
                 {
+                    b.HasOne("Api.Infrastructure.Entities.AgentEntity", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
@@ -12648,15 +12941,25 @@ namespace Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", "Typology")
+                        .WithMany()
+                        .HasForeignKey("TypologyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("Agent");
+
                     b.Navigation("Game");
 
                     b.Navigation("GameSession");
+
+                    b.Navigation("Typology");
 
                     b.Navigation("User");
                 });
@@ -12775,6 +13078,12 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatEntity", b =>
                 {
+                    b.HasOne("Api.Infrastructure.Entities.AgentEntity", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
                         .WithMany("Chats")
                         .HasForeignKey("GameId")
@@ -12786,6 +13095,8 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Agent");
 
                     b.Navigation("Game");
 
@@ -12972,17 +13283,6 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Event");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GamePhaseTemplateEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
-                        .WithMany()
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameSessionStateEntity", b =>
@@ -13249,6 +13549,28 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentConfigurationEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.AgentEntity", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Agent");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentGameStateSnapshotEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.AgentSessionEntity", "AgentSession")
+                        .WithMany()
+                        .HasForeignKey("AgentSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AgentSession");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTestResultEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
@@ -13256,6 +13578,14 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("ExecutedBy")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", "Typology")
+                        .WithMany()
+                        .HasForeignKey("TypologyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Typology");
 
                     b.Navigation("User");
                 });
@@ -13367,6 +13697,17 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Game");
 
                     b.Navigation("PdfDocument");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.TypologyPromptTemplateEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", "Typology")
+                        .WithMany("TypologyPromptTemplates")
+                        .HasForeignKey("TypologyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Typology");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.LlmCostLogEntity", b =>
@@ -14348,6 +14689,8 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameEntity", b =>
                 {
+                    b.Navigation("Agents");
+
                     b.Navigation("Chats");
 
                     b.Navigation("RuleSpecs");
@@ -14392,6 +14735,11 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.Infrastructure.Entities.Gamification.AchievementEntity", b =>
                 {
                     b.Navigation("UserAchievements");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", b =>
+                {
+                    b.Navigation("TypologyPromptTemplates");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptTemplateEntity", b =>

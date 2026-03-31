@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/overlays/alert-dialog-primitives';
 import { Button } from '@/components/ui/primitives/button';
 import type { InvitationDto } from '@/lib/api/schemas/invitation.schemas';
+import { formatShortDate } from '@/lib/utils/timeUtils';
 
 import { InvitationStatusBadge } from './InvitationStatusBadge';
 
@@ -34,18 +35,6 @@ export interface InvitationRowProps {
   isResending?: boolean;
   /** Disable the Revoke button while a revoke mutation is pending */
   isRevoking?: boolean;
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
 }
 
 export function InvitationRow({
@@ -67,10 +56,10 @@ export function InvitationRow({
         <InvitationStatusBadge status={invitation.status} />
       </td>
       <td className="p-3 align-middle text-sm text-muted-foreground">
-        {formatDate(invitation.createdAt)}
+        {formatShortDate(invitation.createdAt)}
       </td>
       <td className="p-3 align-middle text-sm text-muted-foreground">
-        {formatDate(invitation.expiresAt)}
+        {formatShortDate(invitation.expiresAt)}
       </td>
       <td className="p-3 align-middle">
         <div className="flex items-center gap-1">

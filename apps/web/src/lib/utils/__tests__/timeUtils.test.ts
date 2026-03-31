@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { formatRelativeTime, formatMessageTime } from '../timeUtils';
+import { formatRelativeTime, formatMessageTime, formatShortDate } from '../timeUtils';
 
 describe('TimeUtils - Issue #3026', () => {
   beforeEach(() => {
@@ -131,6 +131,23 @@ describe('TimeUtils - Issue #3026', () => {
       expect(result).toMatch(/^\d{2}:\d{2}$/);
       // Should not have AM/PM
       expect(result).not.toMatch(/[AP]M/i);
+    });
+  });
+
+  describe('formatShortDate', () => {
+    it('formats a valid ISO date as MMM d, yyyy', () => {
+      const result = formatShortDate('2026-03-01T00:00:00Z');
+      expect(result).toMatch(/Mar\s+1,\s+2026/);
+    });
+
+    it('formats another valid date', () => {
+      const result = formatShortDate('2026-02-15T00:00:00Z');
+      expect(result).toMatch(/Feb\s+15,\s+2026/);
+    });
+
+    it('returns the raw string when date is invalid', () => {
+      const result = formatShortDate('not-a-date');
+      expect(result).toBe('not-a-date');
     });
   });
 });

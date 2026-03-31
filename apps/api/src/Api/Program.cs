@@ -616,6 +616,7 @@ v1Api.MapUserAccountEndpoints(); // GDPR Art. 17: Self-service account deletion
 
 // Game Management (core only)
 v1Api.MapGameEndpoints();
+v1Api.MapGamePhaseTemplateEndpoints(); // Game phase templates for session setup
 v1Api.MapBggEndpoints(); // ISSUE-3120: BoardGameGeek integration
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)

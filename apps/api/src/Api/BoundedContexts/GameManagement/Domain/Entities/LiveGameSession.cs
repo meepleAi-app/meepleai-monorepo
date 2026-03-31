@@ -63,6 +63,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public string? Notes { get; private set; }
     public AgentSessionMode AgentMode { get; private set; }
     public Guid? ChatSessionId { get; private set; }
+    public TurnAdvancePolicy TurnAdvancePolicy { get; private set; }
     public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
 
     // === Read-only collections ===
@@ -96,7 +97,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         PlayRecordVisibility visibility = PlayRecordVisibility.Private,
         Guid? groupId = null,
         SessionScoringConfig? scoringConfig = null,
-        AgentSessionMode agentMode = AgentSessionMode.None)
+        AgentSessionMode agentMode = AgentSessionMode.None,
+        TurnAdvancePolicy turnAdvancePolicy = TurnAdvancePolicy.Manual)
     {
         if (id == Guid.Empty)
             throw new ValidationException("Session ID cannot be empty");
@@ -131,7 +133,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
             UpdatedAt = now,
             CurrentTurnIndex = 0,
             ScoringConfig = scoringConfig ?? SessionScoringConfig.CreateDefault(),
-            AgentMode = agentMode
+            AgentMode = agentMode,
+            TurnAdvancePolicy = turnAdvancePolicy
         };
 
         session.AddDomainEvent(new LiveSessionCreatedEvent(id, createdByUserId, trimmedName, gameId));
@@ -540,6 +543,19 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
             Id, CurrentTurnIndex, CurrentPhaseIndex,
             PhaseNames.Length > CurrentPhaseIndex ? PhaseNames[CurrentPhaseIndex] : null,
             PhaseNames.Length));
+    }
+
+    /// <summary>
+    /// Sets the policy that controls how turns advance.
+    /// </summary>
+    public void SetTurnAdvancePolicy(TurnAdvancePolicy policy, TimeProvider? timeProvider = null)
+    {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot change turn advance policy on a completed session");
+
+        TurnAdvancePolicy = policy;
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        UpdatedAt = now;
     }
 
     /// <summary>

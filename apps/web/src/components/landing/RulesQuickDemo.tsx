@@ -1,3 +1,5 @@
+import { type JSX } from 'react';
+
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/primitives/button';
@@ -9,7 +11,7 @@ const EXAMPLE_QUESTIONS = [
   '⚔️ "Si possono giocare più carte evento nello stesso turno?"',
 ];
 
-export function RulesQuickDemo() {
+export function RulesQuickDemo(): JSX.Element {
   return (
     <section aria-labelledby="rules-demo-heading" className="px-4 py-16 bg-background">
       <div className="mx-auto max-w-3xl text-center">

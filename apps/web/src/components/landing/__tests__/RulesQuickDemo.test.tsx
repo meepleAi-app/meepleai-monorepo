@@ -19,5 +19,6 @@ describe('RulesQuickDemo', () => {
     render(<RulesQuickDemo />);
     const cta = screen.getByRole('link', { name: /prova gratis|inizia|chiedi ora/i });
     expect(cta).toBeInTheDocument();
+    expect(cta).toHaveAttribute('href', '/register');
   });
 });

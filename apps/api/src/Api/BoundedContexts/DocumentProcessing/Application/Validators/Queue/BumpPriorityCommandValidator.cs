@@ -4,12 +4,12 @@ using FluentValidation;
 namespace Api.BoundedContexts.DocumentProcessing.Application.Validators.Queue;
 
 /// <summary>
-/// Validator for BumpPriorityCommand.
+/// Validator for SetPriorityCommand.
 /// Validates GUID properties are non-empty and enum is valid.
 /// </summary>
-internal sealed class BumpPriorityCommandValidator : AbstractValidator<BumpPriorityCommand>
+internal sealed class SetPriorityCommandValidator : AbstractValidator<SetPriorityCommand>
 {
-    public BumpPriorityCommandValidator()
+    public SetPriorityCommandValidator()
     {
         RuleFor(x => x.JobId)
             .NotEmpty()

@@ -35,6 +35,12 @@ internal sealed class BulkReindexFailedCommandHandler
         var failedJobs = await _jobRepository.GetAllByStatusAsync(
             JobStatus.Failed, cancellationToken).ConfigureAwait(false);
 
+        // Fix: check available capacity before re-enqueuing to avoid exceeding MaxQueueSize.
+        // ProcessingJob.Create() enforces the cap but Retry() does not, so we enforce it here.
+        var currentQueuedCount = await _jobRepository.CountByStatusAsync(
+            JobStatus.Queued, cancellationToken).ConfigureAwait(false);
+        var availableSlots = ProcessingJob.MaxQueueSize - currentQueuedCount;
+
         var enqueued = 0;
         var skipped = 0;
         var errors = new List<BulkReindexError>();
@@ -55,6 +61,14 @@ internal sealed class BulkReindexFailedCommandHandler
             if (hasActive)
             {
                 errors.Add(new BulkReindexError(job.Id, "Active job already exists for this PDF"));
+                skipped++;
+                continue;
+            }
+
+            // Enforce MaxQueueSize: stop if no slots remain
+            if (enqueued >= availableSlots)
+            {
+                errors.Add(new BulkReindexError(job.Id, "Queue is at maximum capacity"));
                 skipped++;
                 continue;
             }

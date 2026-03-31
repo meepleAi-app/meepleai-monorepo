@@ -4,10 +4,10 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 
 /// <summary>
-/// Bumps the priority of a queued processing job.
+/// Sets the priority of a queued processing job to an absolute value.
 /// Issue #5455: Admin priority management.
 /// </summary>
-internal record BumpPriorityCommand(
+internal record SetPriorityCommand(
     Guid JobId,
     ProcessingPriority NewPriority
 ) : ICommand;

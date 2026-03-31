@@ -32,7 +32,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/useToast';
 
 import { ExtractedTextPreviewModal } from './extracted-text-preview-modal';
-import { bumpPriority, cancelJob, retryJob } from '../lib/queue-api';
+import { setPriority, cancelJob, retryJob } from '../lib/queue-api';
 
 import type { ProcessingJobDto, ProcessingPriority } from '../lib/queue-api';
 
@@ -51,7 +51,7 @@ export function QueueItemActions({ job }: QueueItemActionsProps) {
   }, [queryClient]);
 
   const bumpMutation = useMutation({
-    mutationFn: (priority: ProcessingPriority) => bumpPriority(job.id, priority),
+    mutationFn: (priority: ProcessingPriority) => setPriority(job.id, priority),
     onSuccess: () => {
       invalidate();
       toast({ title: 'Priority updated' });

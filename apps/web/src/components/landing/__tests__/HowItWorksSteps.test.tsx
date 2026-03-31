@@ -12,14 +12,6 @@ describe('HowItWorksSteps', () => {
     expect(container.querySelector('#come-funziona')).toBeInTheDocument();
   });
 
-  it('renders all 4 step titles', () => {
-    render(<HowItWorksSteps />);
-    expect(screen.getByText('Trova il gioco')).toBeInTheDocument();
-    expect(screen.getByText('Carica le regole')).toBeInTheDocument();
-    expect(screen.getByText("Gioca con l'arbitro AI")).toBeInTheDocument();
-    expect(screen.getByText('Salva e riprendi')).toBeInTheDocument();
-  });
-
   it('renders section heading', () => {
     render(<HowItWorksSteps />);
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Come funziona');
@@ -35,6 +27,36 @@ describe('HowItWorksSteps', () => {
   it('renders 4 step headings as h3', () => {
     render(<HowItWorksSteps />);
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(4);
+  });
+
+  it('mostra 4 sezioni di valore', () => {
+    render(<HowItWorksSteps />);
+    expect(screen.getAllByRole('listitem').length).toBe(4);
+  });
+
+  it('mostra il pain point delle regole', () => {
+    render(<HowItWorksSteps />);
+    expect(screen.getByText(/regola subita/i)).toBeInTheDocument();
+  });
+
+  it('mostra il pain point delle dispute', () => {
+    render(<HowItWorksSteps />);
+    expect(screen.getByText(/niente più dispute/i)).toBeInTheDocument();
+  });
+
+  it('mostra il pain point della serata', () => {
+    render(<HowItWorksSteps />);
+    expect(screen.getByText(/serata salvata/i)).toBeInTheDocument();
+  });
+
+  it('mostra la storia di gioco', () => {
+    render(<HowItWorksSteps />);
+    expect(screen.getByText(/ricorda tutto/i)).toBeInTheDocument();
+  });
+
+  it('ha landmark section con id come-funziona', () => {
+    render(<HowItWorksSteps />);
+    expect(document.getElementById('come-funziona')).toBeInTheDocument();
   });
 
   it('has no accessibility violations', async () => {

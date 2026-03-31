@@ -19,7 +19,7 @@ internal static class AgentSessionEndpoints
         MapLaunchEndpoint(group);
         MapChatEndpoint(group);
         MapUpdateStateEndpoint(group);
-        MapUpdateTypologyEndpoint(group); // Issue #3252
+        MapUpdateDefinitionEndpoint(group); // Issue #3252
         MapUpdateConfigEndpoint(group); // Issue #3253
         MapEndSessionEndpoint(group);
 
@@ -53,13 +53,13 @@ internal static class AgentSessionEndpoints
             .WithDescription("Update current game state for agent session");
     }
 
-    private static void MapUpdateTypologyEndpoint(RouteGroupBuilder group)
+    private static void MapUpdateDefinitionEndpoint(RouteGroupBuilder group)
     {
-        group.MapPatch("/game-sessions/{gameSessionId:guid}/agent/typology", HandleUpdateTypology)
-            .WithName("UpdateAgentSessionTypology")
+        group.MapPatch("/game-sessions/{gameSessionId:guid}/agent/definition", HandleUpdateDefinition)
+            .WithName("UpdateAgentSessionDefinition")
             .RequireSession()
             .WithTags("AgentSessions")
-            .WithDescription("Update agent typology during active session");
+            .WithDescription("Update agent definition during active session");
     }
 
     private static void MapUpdateConfigEndpoint(RouteGroupBuilder group)
@@ -91,9 +91,8 @@ internal static class AgentSessionEndpoints
 
         var command = new LaunchSessionAgentCommand(
             GameSessionId: gameSessionId,
-            TypologyId: request.TypologyId,
+            AgentDefinitionId: request.AgentDefinitionId,
             UserId: userId,
-            AgentId: request.AgentId,
             GameId: request.GameId,
             InitialGameStateJson: request.InitialGameStateJson
         );
@@ -150,15 +149,15 @@ internal static class AgentSessionEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> HandleUpdateTypology(
+    private static async Task<IResult> HandleUpdateDefinition(
         [FromRoute] Guid gameSessionId,
-        [FromBody] UpdateAgentSessionTypologyRequest request,
+        [FromBody] UpdateAgentSessionDefinitionRequest request,
         [FromServices] IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var command = new UpdateAgentSessionTypologyCommand(
+        var command = new UpdateAgentSessionDefinitionCommand(
             AgentSessionId: request.AgentSessionId,
-            NewTypologyId: request.NewTypologyId
+            NewAgentDefinitionId: request.NewAgentDefinitionId
         );
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
@@ -204,8 +203,7 @@ internal static class AgentSessionEndpoints
 
 // Request/Response DTOs
 internal record LaunchSessionAgentRequest(
-    Guid TypologyId,
-    Guid AgentId,
+    Guid AgentDefinitionId,
     Guid GameId,
     string InitialGameStateJson);
 
@@ -220,9 +218,9 @@ internal record UpdateAgentSessionStateRequest(
     Guid AgentSessionId,
     string GameStateJson);
 
-internal record UpdateAgentSessionTypologyRequest(
+internal record UpdateAgentSessionDefinitionRequest(
     Guid AgentSessionId,
-    Guid NewTypologyId);
+    Guid NewAgentDefinitionId);
 
 internal record UpdateAgentSessionConfigRequest(
     Guid AgentSessionId,

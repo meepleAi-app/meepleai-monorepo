@@ -1,20 +1,21 @@
 /**
- * useAgentTypologies - TanStack Query hooks for Agent Typologies
+ * useAgentTypologies — compatibility shim for agent type selection
  *
- * Issue #3249: [FRONT-013] Agent Type Switcher & Dynamic Typology
- *
- * Provides caching and mutations for fetching approved typologies
- * and switching typology during active chat sessions.
+ * Typologies were collapsed into AgentDefinition. This hook now fetches
+ * from the admin agent-definitions endpoint.
  */
 
-import { useQuery, useMutation, useQueryClient, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  UseQueryResult,
+  UseMutationResult,
+} from '@tanstack/react-query';
 
-import { agentTypologiesApi } from '@/lib/api/agent-typologies.api';
-import type { Typology } from '@/lib/api/schemas/agent-typologies.schemas';
+import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
+import type { AgentDefinitionDto as Typology } from '@/lib/api/schemas/agent-definitions.schemas';
 
-/**
- * Query key factory for agent typologies queries
- */
 export const agentTypologiesKeys = {
   all: ['agentTypologies'] as const,
   approved: () => [...agentTypologiesKeys.all, 'approved'] as const,
@@ -22,39 +23,19 @@ export const agentTypologiesKeys = {
 };
 
 /**
- * Hook to fetch all approved typologies for the agent switcher
- *
- * Features:
- * - Filters to only Approved status typologies
- * - Caches for 5 minutes (typologies change infrequently)
- *
- * @param enabled - Whether to run the query (default: true)
- * @returns UseQueryResult with approved typologies array
+ * Fetch active agent definitions for the agent type selector.
  */
-export function useApprovedTypologies(
-  enabled: boolean = true
-): UseQueryResult<Typology[], Error> {
+export function useApprovedTypologies(enabled: boolean = true): UseQueryResult<Typology[], Error> {
   return useQuery({
     queryKey: agentTypologiesKeys.approved(),
-    queryFn: async (): Promise<Typology[]> => {
-      const allTypologies = await agentTypologiesApi.getAll();
-      // Filter to only approved, non-deleted typologies
-      return allTypologies.filter(
-        (t) => t.status === 'Approved' && !t.isDeleted
-      );
-    },
+    queryFn: () => agentDefinitionsApi.getAll({ activeOnly: true }),
     enabled,
-    // Typologies change infrequently (5 minutes)
     staleTime: 5 * 60 * 1000,
   });
 }
 
 /**
- * Hook to fetch a single typology by ID
- *
- * @param id - Typology UUID
- * @param enabled - Whether to run the query (default: true)
- * @returns UseQueryResult with typology or null
+ * Fetch a single agent definition by ID.
  */
 export function useTypology(
   id: string,
@@ -63,57 +44,42 @@ export function useTypology(
   return useQuery({
     queryKey: agentTypologiesKeys.byId(id),
     queryFn: async (): Promise<Typology | null> => {
-      return agentTypologiesApi.getById(id);
+      try {
+        return await agentDefinitionsApi.getById(id);
+      } catch {
+        return null;
+      }
     },
     enabled: enabled && !!id,
     staleTime: 5 * 60 * 1000,
   });
 }
 
-/**
- * Request type for switching typology
- */
 export interface SwitchTypologyRequest {
   sessionId: string;
-  typologyId: string;
+  agentDefinitionId: string;
 }
 
-/**
- * Response type for switch typology
- */
 export interface SwitchTypologyResponse {
   success: boolean;
-  newTypologyId: string;
+  newagentDefinitionId: string;
   newTypologyName: string;
 }
 
-/**
- * Hook to switch typology during active chat session
- *
- * Features:
- * - PATCH request to update session typology
- * - Does NOT invalidate chat history (preserves messages)
- * - Invalidates session data to reflect new typology
- *
- * @returns UseMutationResult for switching typology
- */
 export function useSwitchTypology(): UseMutationResult<
   SwitchTypologyResponse,
   Error,
   SwitchTypologyRequest,
-  { previousTypologyId: string | undefined }
+  { previousagentDefinitionId: string | undefined }
 > {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ sessionId, typologyId }): Promise<SwitchTypologyResponse> => {
-      // PATCH /api/v1/game-sessions/{sessionId}/agent/typology
+    mutationFn: async ({ sessionId, agentDefinitionId }): Promise<SwitchTypologyResponse> => {
       const response = await fetch(`/api/v1/game-sessions/${sessionId}/agent/typology`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ typologyId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentDefinitionId }),
       });
 
       if (!response.ok) {
@@ -124,9 +90,7 @@ export function useSwitchTypology(): UseMutationResult<
       return response.json();
     },
 
-    // Invalidate session queries to reflect new typology
     onSuccess: (_data, { sessionId }) => {
-      // Invalidate session-specific queries
       queryClient.invalidateQueries({ queryKey: ['agent-session', sessionId] });
       queryClient.invalidateQueries({ queryKey: ['sessions', sessionId] });
     },

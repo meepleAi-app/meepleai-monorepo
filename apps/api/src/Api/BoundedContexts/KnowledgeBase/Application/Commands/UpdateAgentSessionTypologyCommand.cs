@@ -3,10 +3,9 @@ using MediatR;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
-/// Command to update the agent typology of an active agent session.
-/// Issue #3252 (BACK-AGT-001): PATCH Endpoint - Update Agent Typology.
+/// Command to update the agent definition of an active agent session.
 /// </summary>
-internal record UpdateAgentSessionTypologyCommand(
+internal record UpdateAgentSessionDefinitionCommand(
     Guid AgentSessionId,
-    Guid NewTypologyId
+    Guid NewAgentDefinitionId
 ) : IRequest;

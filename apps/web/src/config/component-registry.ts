@@ -2437,7 +2437,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
         name: 'Catan Expert',
         description:
           'Risponde a domande sulle regole e strategie di Catan usando il manuale ufficiale.',
-        agentTypologyId: 'rag-assistant',
+        agentagentDefinitionId: 'rag-assistant',
         systemPrompt:
           'Sei un esperto di Catan. Rispondi sempre con precisione citando le pagine del manuale.',
         kbCardIds: ['kb-card-catan-rulebook', 'kb-card-catan-expansions'],
@@ -2582,7 +2582,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     mockProps: {
       agents: [
         {
-          typologyId: 'rag-catan',
+          agentDefinitionId: 'rag-catan',
           typologyName: 'Catan Expert',
           invocations: 4120,
           cost: 7.82,
@@ -2590,7 +2590,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
           avgLatencyMs: 1240,
         },
         {
-          typologyId: 'rag-wingspan',
+          agentDefinitionId: 'rag-wingspan',
           typologyName: 'Wingspan Guide',
           invocations: 2880,
           cost: 5.34,
@@ -2598,7 +2598,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
           avgLatencyMs: 1380,
         },
         {
-          typologyId: 'rag-pandemic',
+          agentDefinitionId: 'rag-pandemic',
           typologyName: 'Pandemic Advisor',
           invocations: 1650,
           cost: 3.19,
@@ -2606,7 +2606,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
           avgLatencyMs: 1560,
         },
         {
-          typologyId: 'rag-ticket',
+          agentDefinitionId: 'rag-ticket',
           typologyName: 'Ticket to Ride Helper',
           invocations: 1197,
           cost: 2.07,
@@ -2636,27 +2636,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     description: 'UI for mapping LLM models to agent pipeline phases.',
     tags: ['agent', 'model', 'phase', 'configuration'],
   },
-  {
-    id: 'typology-form',
-    name: 'TypologyForm',
-    importPath: '@/components/admin/agent-typologies/TypologyForm',
-    category: 'Agent',
-    areas: ['admin'],
-    tier: 'interactive',
-    description: 'Form for creating and editing agent typology definitions.',
-    tags: ['agent', 'typology', 'form'],
-  },
-  {
-    id: 'typology-prompt-editor',
-    name: 'TypologyPromptEditor',
-    importPath: '@/components/admin/agent-typologies/TypologyPromptEditor',
-    category: 'Agent',
-    areas: ['admin'],
-    tier: 'interactive',
-    description: 'Rich prompt editor for agent typology system prompts.',
-    tags: ['agent', 'prompt', 'typology'],
-  },
-
   // ─── Admin — Sandbox ──────────────────────────────────────────────────────
 
   {

@@ -2,13 +2,10 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
-using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
-using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
-using Api.Tests.BoundedContexts.KnowledgeBase.TestHelpers;
 
 namespace Api.Tests.TestHelpers;
 
@@ -238,35 +235,8 @@ internal static class TestDataFactory
             new Snippet("text", $"PDF:{pdfId}", page: -1, line: 0, score: 0.8f),
             new Snippet("text", $"PDF:{pdfId}", page: 999, line: 0, score: 0.7f),
         };
-    /// <summary>
-    /// Creates a RAG agent with hybrid search strategy.
-    /// </summary>
-    public static Agent CreateRagAgent(string? name = null) =>
-        new AgentBuilder()
-            .WithName(name ?? "Test RAG Agent")
-            .WithType(AgentType.RagAgent)
-            .WithStrategy(AgentStrategy.HybridSearch())
-            .Build();
 
-    /// <summary>
-    /// Creates a citation agent.
-    /// </summary>
-    public static Agent CreateCitationAgent(string? name = null) =>
-        new AgentBuilder()
-            .WithName(name ?? "Test Citation Agent")
-            .WithType(AgentType.RagAgent)
-            .WithStrategy(AgentStrategy.VectorOnly())
-            .Build();
 
-    /// <summary>
-    /// Creates a conversation agent.
-    /// </summary>
-    public static Agent CreateConversationAgent(string? name = null) =>
-        new AgentBuilder()
-            .WithName(name ?? "Test Conversation Agent")
-            .WithType(AgentType.ConversationAgent)
-            .WithStrategy(AgentStrategy.HybridSearch())
-            .Build();
     /// <summary>
     /// Creates a complete game setup with user, game, and PDFs.
     /// </summary>

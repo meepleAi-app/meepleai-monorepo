@@ -51,29 +51,22 @@ const tableColumns: TableColumnConfig[] = [
     id: 'invocations',
     header: 'Invocations',
     accessorKey: 'meta_0',
-    cell: (value) => (
-      <span className="font-mono text-sm">{String(value ?? '—')}</span>
-    ),
+    cell: value => <span className="font-mono text-sm">{String(value ?? '—')}</span>,
   },
   {
     id: 'cost',
     header: 'Cost',
     accessorKey: 'meta_1',
-    cell: (value) => (
-      <span className="font-mono text-sm">{String(value ?? '—')}</span>
-    ),
+    cell: value => <span className="font-mono text-sm">{String(value ?? '—')}</span>,
   },
   {
     id: 'confidence',
     header: 'Confidence',
     accessorKey: 'meta_2',
-    cell: (value) => {
+    cell: value => {
       const pct = String(value ?? '0%');
       return (
-        <Badge
-          variant="secondary"
-          className={cn('text-white text-xs', getConfidenceColor(pct))}
-        >
+        <Badge variant="secondary" className={cn('text-white text-xs', getConfidenceColor(pct))}>
           {pct}
         </Badge>
       );
@@ -83,10 +76,8 @@ const tableColumns: TableColumnConfig[] = [
     id: 'latency',
     header: 'Latency',
     accessorKey: 'meta_3',
-    cell: (value) => (
-      <span className="font-mono text-sm text-muted-foreground">
-        {String(value ?? '—')}
-      </span>
+    cell: value => (
+      <span className="font-mono text-sm text-muted-foreground">{String(value ?? '—')}</span>
     ),
   },
 ];
@@ -98,9 +89,9 @@ export function TopAgentsTable({ agents, className }: TopAgentsTableProps) {
         displayItems={agents}
         items={agents}
         entity="agent"
-        renderItem={(agent) => ({
+        renderItem={agent => ({
           title: agent.typologyName,
-          id: agent.typologyId,
+          id: agent.agentDefinitionId,
           metadata: [
             { value: agent.invocations.toLocaleString() },
             { value: formatCost(agent.cost) },

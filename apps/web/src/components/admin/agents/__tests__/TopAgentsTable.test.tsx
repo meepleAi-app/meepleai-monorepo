@@ -19,7 +19,7 @@ vi.mock('@/components/ui/data-display/entity-list-view', () => ({
 
 const mockAgents = [
   {
-    typologyId: 'agent-1',
+    agentDefinitionId: 'agent-1',
     typologyName: 'Rules Expert',
     invocations: 5000,
     cost: 25.5,
@@ -27,7 +27,7 @@ const mockAgents = [
     avgLatencyMs: 750,
   },
   {
-    typologyId: 'agent-2',
+    agentDefinitionId: 'agent-2',
     typologyName: 'Strategy Advisor',
     invocations: 3500,
     cost: 18.75,
@@ -35,7 +35,7 @@ const mockAgents = [
     avgLatencyMs: 850,
   },
   {
-    typologyId: 'agent-3',
+    agentDefinitionId: 'agent-3',
     typologyName: 'FAQ Assistant',
     invocations: 2000,
     cost: 0.005,
@@ -52,9 +52,7 @@ describe('TopAgentsTable', () => {
   it('renders with entity="agent"', () => {
     render(<TopAgentsTable agents={mockAgents} />);
 
-    expect(mockEntityTableView).toHaveBeenCalledWith(
-      expect.objectContaining({ entity: 'agent' })
-    );
+    expect(mockEntityTableView).toHaveBeenCalledWith(expect.objectContaining({ entity: 'agent' }));
   });
 
   it('passes agents as displayItems and items', () => {
@@ -75,7 +73,7 @@ describe('TopAgentsTable', () => {
     const columns = call?.tableColumns as Array<{ id: string; header: string }>;
 
     expect(columns).toHaveLength(5);
-    expect(columns.map((c) => c.header)).toEqual([
+    expect(columns.map(c => c.header)).toEqual([
       'Agent',
       'Invocations',
       'Cost',
@@ -159,8 +157,6 @@ describe('TopAgentsTable', () => {
   it('handles empty agents array', () => {
     render(<TopAgentsTable agents={[]} />);
 
-    expect(mockEntityTableView).toHaveBeenCalledWith(
-      expect.objectContaining({ displayItems: [] })
-    );
+    expect(mockEntityTableView).toHaveBeenCalledWith(expect.objectContaining({ displayItems: [] }));
   });
 });

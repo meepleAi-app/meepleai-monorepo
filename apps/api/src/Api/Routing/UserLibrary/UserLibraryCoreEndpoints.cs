@@ -515,7 +515,7 @@ internal static class UserLibraryCoreEndpoints
             var command = new SaveAgentConfigCommand(
                 userId,
                 gameId,
-                request.TypologyId,
+                request.AgentDefinitionId,
                 request.ModelName,
                 request.CostEstimate
             );
@@ -567,7 +567,7 @@ internal static class UserLibraryCoreEndpoints
 
             var command = new CreateGameAgentCommand(
                 GameId: gameId,
-                TypologyId: request.TypologyId,
+                AgentDefinitionId: request.AgentDefinitionId,
                 StrategyName: request.StrategyName,
                 StrategyParameters: request.StrategyParameters,
                 UserId: userId,

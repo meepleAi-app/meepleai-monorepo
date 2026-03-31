@@ -365,4 +365,35 @@ public class ApplyAiToolkitSuggestionHandlerTests
         Overrides: new(true, true, true),
         Reasoning: "Catan requires 2d6 dice, multiple resource counters, and point-based scoring."
     );
+
+    // ========================================================================
+    // Partial apply — frontend sends only the tool types it wants to keep
+    // ========================================================================
+
+    [Fact]
+    public async Task Handle_PartialSuggestion_OnlyDiceTools_AppliesOnlyDice()
+    {
+        // Frontend sends only DiceTools (partial apply — CounterTools/TimerTools stripped before sending)
+        var partialSuggestion = new AiToolkitSuggestionDto(
+            ToolkitName: "Catan Toolkit",
+            DiceTools: [new("Dadi", DiceType.D6, 2, null, false, null)],
+            CounterTools: [],
+            TimerTools: [],
+            ScoringTemplate: null,
+            TurnTemplate: null,
+            Overrides: new(false, false, false),
+            Reasoning: "Partial apply test");
+
+        _repoMock
+            .Setup(r => r.AddAsync(It.IsAny<Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var command = new ApplyAiToolkitSuggestionCommand(Guid.NewGuid(), Guid.NewGuid(), null, partialSuggestion);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result.DiceTools.Should().ContainSingle();
+        result.CounterTools.Should().BeEmpty();
+        result.TimerTools.Should().BeEmpty();
+    }
 }

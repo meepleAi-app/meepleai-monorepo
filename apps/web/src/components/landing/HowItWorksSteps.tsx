@@ -2,7 +2,7 @@ const steps = [
   {
     num: '1',
     icon: '⚡',
-    title: 'Regola subita',
+    title: 'Regola subito',
     desc: 'Chiedi in italiano, ricevi la risposta dalla pagina esatta del manuale. In 10 secondi.',
   },
   {

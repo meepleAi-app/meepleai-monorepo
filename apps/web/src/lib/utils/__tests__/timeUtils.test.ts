@@ -136,12 +136,13 @@ describe('TimeUtils - Issue #3026', () => {
 
   describe('formatShortDate', () => {
     it('formats a valid ISO date as MMM d, yyyy', () => {
-      const result = formatShortDate('2026-03-01T00:00:00Z');
-      expect(result).toMatch(/Mar\s+1,\s+2026/);
+      // Use midday UTC to avoid local-date drift on CI servers with negative UTC offsets
+      const result = formatShortDate('2026-03-15T12:00:00Z');
+      expect(result).toMatch(/Mar\s+15,\s+2026/);
     });
 
     it('formats another valid date', () => {
-      const result = formatShortDate('2026-02-15T00:00:00Z');
+      const result = formatShortDate('2026-02-15T12:00:00Z');
       expect(result).toMatch(/Feb\s+15,\s+2026/);
     });
 

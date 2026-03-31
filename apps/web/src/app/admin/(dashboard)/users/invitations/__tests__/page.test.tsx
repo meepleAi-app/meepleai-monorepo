@@ -97,8 +97,9 @@ describe('InvitationsPage', () => {
       expect(screen.getByText('Total')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Pending')).toBeInTheDocument();
-    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    // Use getAllByText: stats labels may co-exist with identical status badge text in loaded rows
+    expect(screen.getAllByText('Pending').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Accepted').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Expired')).toBeInTheDocument();
     expect(screen.getByText('Revoked')).toBeInTheDocument();
   });

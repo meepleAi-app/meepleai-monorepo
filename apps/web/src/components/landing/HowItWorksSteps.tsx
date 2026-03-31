@@ -1,27 +1,27 @@
 const steps = [
   {
     num: '1',
-    icon: '🎲',
-    title: 'Trova il gioco',
-    desc: "Cerca nel catalogo condiviso. Non c'è? Aggiungilo come gioco privato.",
+    icon: '⚡',
+    title: 'Regola subita',
+    desc: 'Chiedi in italiano, ricevi la risposta dalla pagina esatta del manuale. In 10 secondi.',
   },
   {
     num: '2',
-    icon: '📄',
-    title: 'Carica le regole',
-    desc: "Upload del PDF del regolamento. L'AI lo indicizza automaticamente.",
+    icon: '🤝',
+    title: 'Niente più dispute',
+    desc: "L'AI cita la pagina. La discussione finisce lì. Il gioco continua.",
   },
   {
     num: '3',
-    icon: '🤖',
-    title: "Gioca con l'arbitro AI",
-    desc: "Setup, regole, punteggi, dispute — l'agente vi assiste al tavolo.",
+    icon: '🎲',
+    title: 'Serata salvata',
+    desc: 'Punteggi, timer, setup guidato — tutto al tavolo senza interrompere la partita.',
   },
   {
     num: '4',
-    icon: '💾',
-    title: 'Salva e riprendi',
-    desc: "Non finite? L'agente ricorda lo stato della partita per la prossima volta.",
+    icon: '📖',
+    title: 'Ricorda tutto',
+    desc: 'La tua storia di gioco, le partite, lo stile. Il tuo profilo da gamer cresce con te.',
   },
 ];
 
@@ -39,9 +39,9 @@ export function HowItWorksSteps() {
         >
           Come funziona
         </h2>
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid list-none grid-cols-1 gap-8 p-0 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map(step => (
-            <div key={step.num} className="flex flex-col items-center text-center">
+            <li key={step.num} className="flex flex-col items-center text-center">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                 {step.num}
               </div>
@@ -50,9 +50,9 @@ export function HowItWorksSteps() {
               </span>
               <h3 className="mb-1 text-lg font-semibold text-foreground">{step.title}</h3>
               <p className="text-sm text-muted-foreground">{step.desc}</p>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );

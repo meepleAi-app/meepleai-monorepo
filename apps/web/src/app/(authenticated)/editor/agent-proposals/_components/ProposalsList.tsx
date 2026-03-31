@@ -26,14 +26,22 @@ export function ProposalsList() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch proposals
-  const { data: proposals = [], isLoading, error } = useQuery({
+  const {
+    data: proposals = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['editor-proposals'],
     queryFn: () => agentTypologiesApi.getMyProposals(),
   });
 
   // Filter proposals
-  const filteredProposals = proposals.filter((proposal) => {
-    const matchesStatus = statusFilter === 'all' || proposal.status === statusFilter;
+  const filteredProposals = proposals.filter(proposal => {
+    // status is now a number; 'all' passes everything, else filter by isActive
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'Approved' && proposal.isActive) ||
+      (statusFilter === 'Draft' && !proposal.isActive);
     const matchesSearch =
       !searchQuery ||
       proposal.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

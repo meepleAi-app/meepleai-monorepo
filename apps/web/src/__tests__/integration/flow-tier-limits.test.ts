@@ -147,7 +147,7 @@ describe('Flow: Tier Limits Enforcement', () => {
     const agentRes = await fetch(`${API_BASE}/api/v1/agents`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'New Agent', gameId: 'game-1', typologyId: 'qa' }),
+      body: JSON.stringify({ name: 'New Agent', gameId: 'game-1', agentDefinitionId: 'qa' }),
     });
     expect(agentRes.status).toBe(403);
     const error = await agentRes.json();

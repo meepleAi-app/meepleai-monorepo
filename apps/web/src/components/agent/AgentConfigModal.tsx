@@ -45,14 +45,10 @@ export interface AgentConfigModalProps {
   onConfigSaved?: () => void;
 }
 
-export function AgentConfigModal({
-  gameId,
-  trigger,
-  onConfigSaved,
-}: AgentConfigModalProps) {
+export function AgentConfigModal({ gameId, trigger, onConfigSaved }: AgentConfigModalProps) {
   const {
-    selectedTypologyId,
-    setSelectedTypologyId,
+    selectedagentDefinitionId,
+    setSelectedagentDefinitionId,
     selectedModelName,
     setSelectedModelName,
     typologies,
@@ -77,16 +73,13 @@ export function AgentConfigModal({
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        {trigger || <button>Configura AI</button>}
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger || <button>Configura AI</button>}</DialogTrigger>
 
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Configurazione Agente AI</DialogTitle>
           <DialogDescription>
-            Seleziona la tipologia di agente e il modello AI da utilizzare per le sessioni di
-            gioco.
+            Seleziona la tipologia di agente e il modello AI da utilizzare per le sessioni di gioco.
           </DialogDescription>
         </DialogHeader>
 
@@ -95,18 +88,18 @@ export function AgentConfigModal({
           <div className="space-y-2">
             <Label htmlFor="typology-select">Tipologia Agente</Label>
             <Select
-              value={selectedTypologyId ?? undefined}
-              onValueChange={setSelectedTypologyId}
+              value={selectedagentDefinitionId ?? undefined}
+              onValueChange={setSelectedagentDefinitionId}
               disabled={typologiesLoading}
             >
               <SelectTrigger id="typology-select">
                 <SelectValue placeholder="Seleziona tipologia">
-                  {selectedTypologyId &&
-                    typologies.find((t) => t.id === selectedTypologyId)?.name}
+                  {selectedagentDefinitionId &&
+                    typologies.find(t => t.id === selectedagentDefinitionId)?.name}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {typologies.map((typology) => (
+                {typologies.map(typology => (
                   <SelectItem key={typology.id} value={typology.id}>
                     <div className="flex items-start gap-2">
                       <div>
@@ -130,17 +123,12 @@ export function AgentConfigModal({
                 {userTier}
               </Badge>
             </div>
-            <Select
-              value={selectedModelName ?? undefined}
-              onValueChange={setSelectedModelName}
-            >
+            <Select value={selectedModelName ?? undefined} onValueChange={setSelectedModelName}>
               <SelectTrigger id="model-select">
-                <SelectValue placeholder="Seleziona modello">
-                  {selectedModelName}
-                </SelectValue>
+                <SelectValue placeholder="Seleziona modello">{selectedModelName}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {availableModels.map((model) => (
+                {availableModels.map(model => (
                   <SelectItem key={model.name} value={model.name}>
                     <div className="flex items-center justify-between gap-4 w-full">
                       <span>

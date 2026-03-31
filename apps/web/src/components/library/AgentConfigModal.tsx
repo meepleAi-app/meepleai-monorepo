@@ -68,7 +68,7 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
 
   // Create mode state
   const [mode, setMode] = useState<'create' | 'edit'>('edit');
-  const [typologyId, setTypologyId] = useState<string>();
+  const [agentDefinitionId, setagentDefinitionId] = useState<string>();
   const [strategyName, setStrategyName] = useState('Balanced');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -152,7 +152,7 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
   };
 
   const handleCreateAgent = async () => {
-    if (!typologyId) {
+    if (!agentDefinitionId) {
       toast.error('Seleziona un tipo di agente');
       return;
     }
@@ -164,7 +164,7 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          typologyId,
+          agentDefinitionId,
           strategyName,
           strategyParameters: null,
         }),
@@ -216,7 +216,11 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
           </div>
         ) : mode === 'create' ? (
           <div className="space-y-6">
-            <TypologySelector value={typologyId} onChange={setTypologyId} disabled={isCreating} />
+            <TypologySelector
+              value={agentDefinitionId}
+              onChange={setagentDefinitionId}
+              disabled={isCreating}
+            />
 
             <StrategySelector
               value={strategyName}
@@ -236,7 +240,7 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
               <Button variant="outline" onClick={handleCancel} disabled={isCreating}>
                 Annulla
               </Button>
-              <Button onClick={handleCreateAgent} disabled={!typologyId || isCreating}>
+              <Button onClick={handleCreateAgent} disabled={!agentDefinitionId || isCreating}>
                 {isCreating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

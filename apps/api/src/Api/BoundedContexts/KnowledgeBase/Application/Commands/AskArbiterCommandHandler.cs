@@ -3,7 +3,6 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
-using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
@@ -11,7 +10,6 @@ using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
@@ -22,9 +20,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// </summary>
 internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterCommand, ArbiterVerdictDto>
 {
-    private readonly IAgentRepository _agentRepository;
+    private readonly IAgentDefinitionRepository _definitionRepository;
     private readonly ILlmService _llmService;
-    private readonly IEmbeddingService _embeddingService;
+    private readonly IHybridSearchService _hybridSearchService;
     private readonly MeepleAiDbContext _dbContext;
     private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<AskArbiterCommandHandler> _logger;
@@ -34,17 +32,22 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
     /// </summary>
     internal const double ConclusiveThreshold = 0.85;
 
+    /// <summary>
+    /// Minimum hybrid score for a chunk to be included in arbiter context.
+    /// </summary>
+    private const double ArbiterMinScore = 0.70;
+
     public AskArbiterCommandHandler(
-        IAgentRepository agentRepository,
+        IAgentDefinitionRepository definitionRepository,
         ILlmService llmService,
-        IEmbeddingService embeddingService,
+        IHybridSearchService hybridSearchService,
         MeepleAiDbContext dbContext,
         IRagAccessService ragAccessService,
         ILogger<AskArbiterCommandHandler> logger)
     {
-        _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
+        _definitionRepository = definitionRepository ?? throw new ArgumentNullException(nameof(definitionRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
-        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -55,25 +58,25 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
         ArgumentNullException.ThrowIfNull(command);
 
         _logger.LogInformation(
-            "Starting arbiter verdict for Agent {AgentId}, Session {SessionId}",
-            command.AgentId, command.SessionId);
+            "Starting arbiter verdict for AgentDefinition {AgentDefinitionId}, Session {SessionId}",
+            command.AgentDefinitionId, command.SessionId);
 
-        // 1. Load agent and validate
-        var agent = await _agentRepository
-            .GetByIdAsync(command.AgentId, cancellationToken)
+        // 1. Load agent definition and validate
+        var definition = await _definitionRepository
+            .GetByIdAsync(command.AgentDefinitionId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (agent == null)
+        if (definition == null)
         {
-            throw new NotFoundException("Agent", command.AgentId.ToString());
+            throw new NotFoundException("AgentDefinition", command.AgentDefinitionId.ToString());
         }
 
-        // RAG access enforcement: resolve agent's game and check access
-        if (agent.GameId is not null && agent.GameId != Guid.Empty)
+        // RAG access enforcement: resolve definition's game and check access
+        if (definition.GameId is not null && definition.GameId != Guid.Empty)
         {
             var userRole = UserRole.User; // AskArbiterCommand doesn't carry UserRole; default to User
             var canAccess = await _ragAccessService.CanAccessRagAsync(
-                command.UserId, agent.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+                command.UserId, definition.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
             if (!canAccess)
                 throw new ForbiddenException("Accesso RAG non autorizzato");
         }
@@ -81,56 +84,52 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
         // 2. Build the combined search query from the dispute
         var searchQuery = BuildSearchQuery(command.Situation, command.PositionA, command.PositionB);
 
-        // 4. Generate embedding
-        var embeddingResult = await _embeddingService
-            .GenerateEmbeddingAsync(searchQuery, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+        // 3. Perform hybrid search
+        var hybridResults = new List<HybridSearchResult>();
+        if (definition.GameId is not null && definition.GameId != Guid.Empty)
         {
-            _logger.LogError("Embedding generation failed for arbiter query, Agent {AgentId}", command.AgentId);
-            return BuildNoContextVerdict();
+            hybridResults = await _hybridSearchService.SearchAsync(
+                searchQuery,
+                definition.GameId.Value,
+                SearchMode.Hybrid,
+                limit: 10,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
-        var profile = TypologyProfile.Arbitro();
-
-        // Vector search (Qdrant dependency removed — returns empty results)
-        var searchResult = SearchResult.CreateSuccess(new List<SearchResultItem>());
-
-        // 7. Filter by minimum score and deduplicate
-        var relevantChunks = searchResult.Results
-            .Where(r => r.Score >= profile.MinScore)
-            .OrderByDescending(r => r.Score)
-            .GroupBy(r => (PdfId: r.PdfId.Replace("-", "", StringComparison.Ordinal), r.ChunkIndex))
+        // 4. Filter by minimum score and deduplicate
+        var relevantChunks = hybridResults
+            .Where(r => r.HybridScore >= ArbiterMinScore)
+            .OrderByDescending(r => r.HybridScore)
+            .GroupBy(r => (PdfId: r.PdfDocumentId.Replace("-", "", StringComparison.Ordinal), r.ChunkIndex))
             .Select(g => g.First())
             .ToList();
 
         _logger.LogInformation(
-            "Arbiter retrieved {ChunkCount} relevant chunks for Agent {AgentId}",
-            relevantChunks.Count, command.AgentId);
+            "Arbiter retrieved {ChunkCount} relevant chunks for AgentDefinition {AgentDefinitionId}",
+            relevantChunks.Count, command.AgentDefinitionId);
 
-        // 8. Extract citations from retrieved chunks
+        // 5. Extract citations from retrieved chunks
         var citations = await BuildCitationsAsync(relevantChunks, cancellationToken).ConfigureAwait(false);
 
-        // 9. Calculate confidence: avg(chunk_scores) * (citations > 0 ? 1.0 : 0.5)
+        // 6. Calculate confidence: avg(chunk_scores) * (citations > 0 ? 1.0 : 0.5)
         var confidence = CalculateConfidence(relevantChunks, citations);
         var isConclusive = confidence >= ConclusiveThreshold;
 
-        // 10. Build arbiter system prompt
-        var gameName = await ResolveGameNameAsync(agent.GameId, cancellationToken).ConfigureAwait(false);
+        // 7. Build arbiter system prompt
+        var gameName = await ResolveGameNameAsync(definition.GameId, cancellationToken).ConfigureAwait(false);
         var systemPrompt = BuildArbiterSystemPrompt(gameName);
         var userPrompt = BuildArbiterUserPrompt(
             command.Situation, command.PositionA, command.PositionB, relevantChunks);
 
-        // 11. Call LLM for verdict
+        // 8. Call LLM for verdict
         var llmResult = await _llmService
             .GenerateCompletionAsync(systemPrompt, userPrompt, RequestSource.Manual, cancellationToken)
             .ConfigureAwait(false);
 
         if (!llmResult.Success)
         {
-            _logger.LogError("LLM call failed for arbiter verdict, Agent {AgentId}: {Error}",
-                command.AgentId, llmResult.ErrorMessage);
+            _logger.LogError("LLM call failed for arbiter verdict, AgentDefinition {AgentDefinitionId}: {Error}",
+                command.AgentDefinitionId, llmResult.ErrorMessage);
             return new ArbiterVerdictDto
             {
                 Verdict = "Impossibile generare il verdetto. Il servizio AI non e' al momento disponibile.",
@@ -142,8 +141,8 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
         }
 
         _logger.LogInformation(
-            "Arbiter verdict generated for Agent {AgentId}: confidence={Confidence:F2}, citations={CitationCount}, conclusive={IsConclusive}",
-            command.AgentId, confidence, citations.Count, isConclusive);
+            "Arbiter verdict generated for AgentDefinition {AgentDefinitionId}: confidence={Confidence:F2}, citations={CitationCount}, conclusive={IsConclusive}",
+            command.AgentDefinitionId, confidence, citations.Count, isConclusive);
 
         return new ArbiterVerdictDto
         {
@@ -170,13 +169,13 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
     /// Returns 0 if no chunks retrieved.
     /// </summary>
     internal static double CalculateConfidence(
-        IReadOnlyList<SearchResultItem> chunks,
+        IReadOnlyList<HybridSearchResult> chunks,
         IReadOnlyList<ArbiterCitationDto> citations)
     {
         if (chunks.Count == 0)
             return 0;
 
-        var avgScore = chunks.Average(c => (double)c.Score);
+        var avgScore = chunks.Average(c => (double)c.HybridScore);
         var citationMultiplier = citations.Count > 0 ? 1.0 : 0.5;
         return avgScore * citationMultiplier;
     }
@@ -185,15 +184,15 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
     /// Extracts structured citations from retrieved chunks, resolving document titles.
     /// </summary>
     private async Task<List<ArbiterCitationDto>> BuildCitationsAsync(
-        IReadOnlyList<SearchResultItem> chunks,
+        IReadOnlyList<HybridSearchResult> chunks,
         CancellationToken cancellationToken)
     {
         if (chunks.Count == 0)
             return new List<ArbiterCitationDto>();
 
-        // Resolve PDF document titles by PdfId
+        // Resolve PDF document titles by PdfDocumentId
         var pdfIds = chunks
-            .Select(c => c.PdfId.Replace("-", "", StringComparison.Ordinal))
+            .Select(c => c.PdfDocumentId.Replace("-", "", StringComparison.Ordinal))
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
@@ -219,17 +218,19 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
 
         return chunks.Select(chunk =>
         {
-            var normalizedPdfId = chunk.PdfId.Replace("-", "", StringComparison.Ordinal);
-            var documentTitle = pdfTitles.GetValueOrDefault(normalizedPdfId, chunk.PdfId);
+            var normalizedPdfId = chunk.PdfDocumentId.Replace("-", "", StringComparison.Ordinal);
+            var documentTitle = pdfTitles.GetValueOrDefault(normalizedPdfId, chunk.PdfDocumentId);
 
             return new ArbiterCitationDto
             {
                 DocumentTitle = documentTitle,
-                Section = chunk.Page > 0 ? $"Pagina {chunk.Page}" : "Sezione sconosciuta",
-                Text = chunk.Text.Length > 500
-                    ? string.Concat(chunk.Text.AsSpan(0, 497), "...")
-                    : chunk.Text,
-                RelevanceScore = chunk.Score
+                Section = chunk.PageNumber.HasValue && chunk.PageNumber > 0
+                    ? $"Pagina {chunk.PageNumber}"
+                    : "Sezione sconosciuta",
+                Text = chunk.Content.Length > 500
+                    ? string.Concat(chunk.Content.AsSpan(0, 497), "...")
+                    : chunk.Content,
+                RelevanceScore = chunk.HybridScore
             };
         }).ToList();
     }
@@ -266,7 +267,7 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
         string situation,
         string positionA,
         string positionB,
-        IReadOnlyList<SearchResultItem> chunks)
+        IReadOnlyList<HybridSearchResult> chunks)
     {
         var sections = new List<string>();
 
@@ -274,7 +275,7 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
         if (chunks.Count > 0)
         {
             var contextParts = chunks.Select((chunk, index) =>
-                $"[{index + 1}] (Score: {chunk.Score:F2}, Pagina: {chunk.Page})\n{chunk.Text}");
+                $"[{index + 1}] (Score: {chunk.HybridScore:F2}, Pagina: {chunk.PageNumber ?? 0})\n{chunk.Content}");
             sections.Add($"=== Regolamento ===\n{string.Join("\n\n---\n\n", contextParts)}");
         }
 
@@ -310,17 +311,5 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
             .Select(g => g.Name)
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
-    }
-
-    private static ArbiterVerdictDto BuildNoContextVerdict()
-    {
-        return new ArbiterVerdictDto
-        {
-            Verdict = "Impossibile emettere un verdetto: nessun contesto disponibile dalla Knowledge Base.",
-            Confidence = 0,
-            IsConclusive = false,
-            Citations = new List<ArbiterCitationDto>(),
-            ExpansionWarning = "Nessun documento analizzato trovato. Verifica che i PDF del regolamento siano stati caricati e indicizzati."
-        };
     }
 }

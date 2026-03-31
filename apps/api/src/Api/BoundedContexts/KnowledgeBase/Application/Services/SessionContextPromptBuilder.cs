@@ -20,8 +20,7 @@ internal class SessionContextPromptBuilder
     /// Includes game name, player roster, current turn/phase, score summary,
     /// rulebook citation reminder, and any previous dispute verdicts.
     /// Italian-language output to match the product's target locale.
-    /// Task 8b: Called from <see cref="Commands.AskAgentQuestionCommandHandler"/> when
-    /// <c>AskAgentQuestionCommand.GameSessionId</c> is provided alongside live session metadata.
+    /// Called from the chat query handler when a GameSessionId is provided alongside live session metadata.
     /// </summary>
     /// <param name="gameName">Name of the active board game.</param>
     /// <param name="playerNames">Ordered list of player names in the session.</param>

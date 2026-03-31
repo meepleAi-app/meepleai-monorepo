@@ -71,6 +71,5 @@ public class AgentTestResultEntity
     public bool IsSaved { get; set; }
 
     // Navigation properties
-    public AgentTypologyEntity? Typology { get; set; }
     public UserEntity? User { get; set; }
 }

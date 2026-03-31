@@ -4,17 +4,16 @@ using FluentValidation;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Validators;
 
 /// <summary>
-/// Validator for UpdateAgentSessionTypologyCommand.
-/// Issue #3252 (BACK-AGT-001): PATCH Endpoint - Update Agent Typology.
+/// Validator for UpdateAgentSessionDefinitionCommand.
 /// </summary>
-internal sealed class UpdateAgentSessionTypologyCommandValidator : AbstractValidator<UpdateAgentSessionTypologyCommand>
+internal sealed class UpdateAgentSessionDefinitionCommandValidator : AbstractValidator<UpdateAgentSessionDefinitionCommand>
 {
-    public UpdateAgentSessionTypologyCommandValidator()
+    public UpdateAgentSessionDefinitionCommandValidator()
     {
         RuleFor(x => x.AgentSessionId)
             .NotEqual(Guid.Empty).WithMessage("AgentSessionId is required");
 
-        RuleFor(x => x.NewTypologyId)
-            .NotEqual(Guid.Empty).WithMessage("NewTypologyId is required");
+        RuleFor(x => x.NewAgentDefinitionId)
+            .NotEqual(Guid.Empty).WithMessage("NewAgentDefinitionId is required");
     }
 }

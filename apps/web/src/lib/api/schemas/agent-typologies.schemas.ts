@@ -1,50 +1,18 @@
-import { z } from 'zod';
+/**
+ * Agent Typologies Schemas — compatibility shim
+ *
+ * Typologies were collapsed into AgentDefinition during the agent system
+ * simplification. These re-exports preserve existing call sites while
+ * routing to the canonical agent-definitions types.
+ */
 
-// Strategy enum - available RAG strategies
-export const strategyEnum = z.enum([
-  'HybridSearch',
-  'VectorOnly',
-  'KeywordOnly',
-  'MultiModel',
-  'Reranked',
-]);
+import { agentDefinitionDtoSchema, createAgentDefinitionSchema } from './agent-definitions.schemas';
 
-// Full typology entity (for GET responses) - Aligned with backend AgentTypologyDto
-export const typologySchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().min(3).max(100),
-  description: z.string(),
-  basePrompt: z.string().min(1).max(5000),
-  defaultStrategyName: z.string(), // Backend uses string, not enum
-  defaultStrategyParameters: z.record(z.string(), z.unknown()).optional().nullable(),
-  status: z.enum(['Draft', 'PendingReview', 'Approved', 'Rejected']),
-  createdBy: z.string().uuid(),
-  approvedBy: z.string().uuid().optional().nullable(),
-  createdAt: z.string().datetime(),
-  approvedAt: z.string().datetime().optional().nullable(),
-  isDeleted: z.boolean(),
-});
+export type { AgentDefinitionDto as Typology } from './agent-definitions.schemas';
+export type { CreateAgentDefinition as CreateTypology } from './agent-definitions.schemas';
+export type { UpdateAgentDefinition as UpdateTypology } from './agent-definitions.schemas';
 
-// Create typology schema with validation - For ProposeAgentTypologyCommand
-export const createTypologySchema = z.object({
-  name: z
-    .string()
-    .min(3, 'Il nome deve avere almeno 3 caratteri')
-    .max(100, 'Il nome non può superare 100 caratteri'),
-  description: z.string().max(500, 'La descrizione non può superare 500 caratteri'),
-  basePrompt: z
-    .string()
-    .min(1, 'Il prompt è obbligatorio')
-    .max(5000, 'Il prompt non può superare 5000 caratteri'),
-  defaultStrategyName: z.string().min(1, 'La strategia è obbligatoria'),
-  defaultStrategyParameters: z.record(z.string(), z.unknown()).optional(),
-});
-
-// Update typology schema (same as create)
-export const updateTypologySchema = createTypologySchema;
-
-// Type exports
-export type Typology = z.infer<typeof typologySchema>;
-export type CreateTypology = z.infer<typeof createTypologySchema>;
-export type UpdateTypology = z.infer<typeof updateTypologySchema>;
-export type Strategy = z.infer<typeof strategyEnum>;
+// Zod schema alias for call sites that pass the schema to a validator
+export const typologySchema = agentDefinitionDtoSchema;
+export const createTypologySchema = createAgentDefinitionSchema;
+export const updateTypologySchema = createAgentDefinitionSchema;

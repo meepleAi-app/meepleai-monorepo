@@ -330,14 +330,14 @@ public sealed class AgentDefinitionTests
         // Arrange
         var type = AgentType.RagAgent;
         var config = AgentDefinitionConfig.Default();
-        var strategy = AgentStrategy.VectorOnly(topK: 15, minScore: 0.85);
+        var strategy = AgentStrategy.SentenceWindowRAG(windowSize: 5, topK: 15, minScore: 0.85);
 
         // Act
         var agent = AgentDefinition.Create("TestAgent", "Desc", type, config, strategy);
 
         // Assert
         agent.Strategy.Should().NotBeNull();
-        agent.Strategy.Name.Should().Be("VectorOnly");
+        agent.Strategy.Name.Should().Be("SentenceWindowRAG");
         agent.Strategy.GetParameter<int>("TopK", 0).Should().Be(15);
         agent.Strategy.GetParameter<double>("MinScore", 0).Should().Be(0.85);
     }
@@ -363,7 +363,7 @@ public sealed class AgentDefinitionTests
     {
         // Arrange
         var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        var newStrategy = AgentStrategy.MultiModelConsensus(new[] { "gpt-4", "claude-3" }, 0.9);
+        var newStrategy = AgentStrategy.ColBERTReranking(topK: 5, rerankTopN: 20, minScore: 0.9);
 
         // Act
         var beforeUpdate = DateTime.UtcNow;
@@ -371,8 +371,8 @@ public sealed class AgentDefinitionTests
         agent.UpdateStrategy(newStrategy);
 
         // Assert
-        agent.Strategy.Name.Should().Be("MultiModelConsensus");
-        agent.Strategy.GetParameter<double>("ConsensusThreshold", 0).Should().Be(0.9);
+        agent.Strategy.Name.Should().Be("ColBERTReranking");
+        agent.Strategy.GetParameter<double>("MinScore", 0).Should().Be(0.9);
         agent.UpdatedAt.Should().NotBeNull().And.BeOnOrAfter(beforeUpdate);
     }
 

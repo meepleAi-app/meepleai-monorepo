@@ -456,31 +456,6 @@ internal record AgentDto(
     DateTime CreatedAt
 );
 
-// CHESS-04: Chess Agent models
-internal record ChessAgentRequest(
-    string question,
-    string? fenPosition = null,
-    Guid? chatId = null
-);
-
-internal record ChessAgentResponse(
-    string answer,
-    ChessAnalysis? analysis,
-    IReadOnlyList<string> suggestedMoves,
-    IReadOnlyList<Snippet> sources,
-    int promptTokens = 0,
-    int completionTokens = 0,
-    int totalTokens = 0,
-    double? confidence = null,
-    IReadOnlyDictionary<string, string>? metadata = null
-);
-
-internal record ChessAnalysis(
-    string? fenPosition,
-    string? evaluationSummary,
-    IReadOnlyList<string> keyConsiderations
-);
-
 // Issue #2421: Player Mode AI Suggestion models
 internal record PlayerModeSuggestionRequest(
     [Required] string gameId,

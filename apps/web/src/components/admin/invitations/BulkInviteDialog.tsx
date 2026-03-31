@@ -24,38 +24,8 @@ import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
 import type { BulkInviteResponse } from '@/lib/api/schemas/invitation.schemas';
-
-interface ParsedRow {
-  email: string;
-  role: string;
-  valid: boolean;
-  error?: string;
-}
-
-function parseCsvContent(text: string): ParsedRow[] {
-  const lines = text
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l.length > 0);
-
-  return lines.map(line => {
-    const parts = line.split(',').map(p => p.trim());
-    const email = parts[0] || '';
-    const role = parts[1] || 'User';
-
-    if (!email) {
-      return { email, role, valid: false, error: 'Email is empty' };
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return { email, role, valid: false, error: 'Invalid email format' };
-    }
-    if (!['User', 'Editor', 'Admin'].includes(role)) {
-      return { email, role, valid: false, error: `Invalid role: ${role}` };
-    }
-
-    return { email, role, valid: true };
-  });
-}
+import type { ParsedCsvRow } from '@/lib/utils/parseCsvInvitations';
+import { parseCsvInvitations } from '@/lib/utils/parseCsvInvitations';
 
 export interface BulkInviteDialogProps {
   open: boolean;
@@ -67,7 +37,7 @@ type Step = 'input' | 'preview' | 'results';
 
 export function BulkInviteDialog({ open, onOpenChange, onSuccess }: BulkInviteDialogProps) {
   const [csvText, setCsvText] = useState('');
-  const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+  const [parsedRows, setParsedRows] = useState<ParsedCsvRow[]>([]);
   const [step, setStep] = useState<Step>('input');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [results, setResults] = useState<BulkInviteResponse | null>(null);
@@ -87,7 +57,7 @@ export function BulkInviteDialog({ open, onOpenChange, onSuccess }: BulkInviteDi
   }
 
   function handlePreview() {
-    const rows = parseCsvContent(csvText);
+    const rows = parseCsvInvitations(csvText);
     setParsedRows(rows);
     setStep('preview');
   }

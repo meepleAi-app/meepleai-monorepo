@@ -30,6 +30,10 @@ export interface InvitationRowProps {
   invitation: InvitationDto;
   onResend?: (id: string) => void;
   onRevoke?: (id: string) => void;
+  /** Disable the Resend button while a resend mutation is pending */
+  isResending?: boolean;
+  /** Disable the Revoke button while a revoke mutation is pending */
+  isRevoking?: boolean;
 }
 
 function formatDate(iso: string): string {
@@ -44,7 +48,13 @@ function formatDate(iso: string): string {
   }
 }
 
-export function InvitationRow({ invitation, onResend, onRevoke }: InvitationRowProps) {
+export function InvitationRow({
+  invitation,
+  onResend,
+  onRevoke,
+  isResending = false,
+  isRevoking = false,
+}: InvitationRowProps) {
   const isPending = invitation.status === 'Pending';
 
   return (
@@ -71,8 +81,9 @@ export function InvitationRow({ invitation, onResend, onRevoke }: InvitationRowP
               onClick={() => onResend(invitation.id)}
               aria-label={`Resend invitation to ${invitation.email}`}
               className="gap-1"
+              disabled={isResending}
             >
-              <RefreshCwIcon className="h-3 w-3" />
+              <RefreshCwIcon className={`h-3 w-3 ${isResending ? 'animate-spin' : ''}`} />
               Resend
             </Button>
           )}
@@ -84,6 +95,7 @@ export function InvitationRow({ invitation, onResend, onRevoke }: InvitationRowP
                   size="sm"
                   className="gap-1 text-destructive hover:text-destructive"
                   aria-label={`Revoke invitation for ${invitation.email}`}
+                  disabled={isRevoking}
                 >
                   <XCircleIcon className="h-3 w-3" />
                   Revoke

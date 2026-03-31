@@ -227,6 +227,19 @@ export function GameCatalogGrid({
       }),
     staleTime: 2 * 60 * 1000,
   });
+
+  const { data: publishedCountData } = useQuery({
+    queryKey: [...sharedGamesKeys.all, 'count', 'Published'],
+    queryFn: () => api.sharedGames.getAll({ page: 1, pageSize: 1, status: 'Published' }),
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: draftCountData } = useQuery({
+    queryKey: [...sharedGamesKeys.all, 'count', 'Draft'],
+    queryFn: () => api.sharedGames.getAll({ page: 1, pageSize: 1, status: 'Draft' }),
+    staleTime: 2 * 60 * 1000,
+  });
+
   const allGames = data?.items ?? [];
   const total = data?.total ?? 0;
 
@@ -353,8 +366,8 @@ export function GameCatalogGrid({
     setConfirmAction(null);
   };
 
-  const published = allGames.filter(g => g.status === 'Published').length;
-  const draft = allGames.filter(g => g.status === 'Draft').length;
+  const published = publishedCountData?.total ?? 0;
+  const draft = draftCountData?.total ?? 0;
   const isFiltered =
     searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' || playersFilter !== 'all';
 

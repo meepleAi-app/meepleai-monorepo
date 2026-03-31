@@ -147,4 +147,126 @@ describe('InvitationsPage', () => {
       expect(screen.getByText('No invitations sent yet')).toBeInTheDocument();
     });
   });
+
+  it('shows generic error message (not raw error) when query fails', async () => {
+    mockGetInvitations.mockRejectedValueOnce(new Error('Internal Server Error: DB timeout'));
+
+    renderWithQuery(<InvitationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load invitations')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/DB timeout/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/unable to load invitations/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it('resets page to 1 when status filter changes', async () => {
+    renderWithQuery(<InvitationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+    });
+
+    const trigger = screen.getByRole('combobox');
+    await user.click(trigger);
+
+    const pendingOption = screen.getByRole('option', { name: 'Pending' });
+    await user.click(pendingOption);
+
+    await waitFor(() => {
+      expect(mockGetInvitations).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'Pending', page: 1 })
+      );
+    });
+  });
+
+  it('opens revoke confirmation dialog when Revoke is clicked', async () => {
+    renderWithQuery(<InvitationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+    });
+
+    const revokeButton = screen.getByRole('button', {
+      name: /revoke invitation for alice@example.com/i,
+    });
+    await user.click(revokeButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Revoke Invitation')).toBeInTheDocument();
+  });
+
+  it('calls revokeInvitation API when dialog confirm is clicked', async () => {
+    mockRevokeInvitation.mockResolvedValueOnce(undefined);
+
+    renderWithQuery(<InvitationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+    });
+
+    await user.click(
+      screen.getByRole('button', { name: /revoke invitation for alice@example.com/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    });
+
+    // Click the confirm "Revoke" button inside the AlertDialog
+    const allRevokeButtons = screen.getAllByRole('button', { name: /^revoke$/i });
+    const confirmButton = allRevokeButtons.find(btn => btn.closest('[role="alertdialog"]'));
+    await user.click(confirmButton!);
+
+    await waitFor(() => {
+      expect(mockRevokeInvitation).toHaveBeenCalledWith('inv-1');
+    });
+  });
+
+  it('does NOT call revokeInvitation when dialog is cancelled', async () => {
+    renderWithQuery(<InvitationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+    });
+
+    await user.click(
+      screen.getByRole('button', { name: /revoke invitation for alice@example.com/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(mockRevokeInvitation).not.toHaveBeenCalled();
+  });
+
+  it('shows filtered empty state when no results match filter', async () => {
+    mockGetInvitations.mockResolvedValue({
+      items: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: 20,
+    });
+
+    renderWithQuery(<InvitationsPage />);
+
+    const trigger = screen.getByRole('combobox');
+    await user.click(trigger);
+    const expiredOption = screen.getByRole('option', { name: 'Expired' });
+    await user.click(expiredOption);
+
+    await waitFor(() => {
+      expect(screen.getByText('No invitations match this filter')).toBeInTheDocument();
+    });
+  });
 });

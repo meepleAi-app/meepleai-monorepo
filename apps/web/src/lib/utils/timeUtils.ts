@@ -36,6 +36,27 @@ export function formatRelativeTime(date: Date, addSuffix = true): string {
  * formatMessageTime(new Date('2024-01-31T14:30:00')) // "14:30"
  * ```
  */
+/**
+ * Format an ISO date string as a short human-readable date (e.g., "Mar 1, 2026")
+ *
+ * @param iso - ISO 8601 date string
+ * @returns Formatted date string, or the raw input if parsing fails
+ *
+ * @example
+ * ```ts
+ * formatShortDate('2026-03-01T00:00:00Z') // "Mar 1, 2026"
+ * ```
+ */
+export function formatShortDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return iso;
+  }
+}
+
 export function formatMessageTime(date: Date): string {
   return new Intl.DateTimeFormat('it-IT', {
     hour: '2-digit',

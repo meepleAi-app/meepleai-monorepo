@@ -161,6 +161,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<DecisoreMoveFeedbackEntity> DecisoreMoveFeedbacks => Set<DecisoreMoveFeedbackEntity>(); // ISSUE-4335: Decisore beta testing feedback
     public DbSet<InsightFeedbackEntity> InsightFeedbacks => Set<InsightFeedbackEntity>(); // ISSUE-4124: AI Insights feedback for accuracy tracking
     public DbSet<ConversationMemoryEntity> ConversationMemories => Set<ConversationMemoryEntity>(); // ISSUE-3493: Temporal RAG
+    public DbSet<AgentGameStateSnapshotEntity> AgentGameStateSnapshots => Set<AgentGameStateSnapshotEntity>(); // ISSUE-3493: Game state snapshots for multi-agent system
     public DbSet<StrategyPatternEntity> StrategyPatterns => Set<StrategyPatternEntity>(); // ISSUE-3493: Cached evaluations
     public DbSet<BggImportQueueEntity> BggImportQueue => Set<BggImportQueueEntity>(); // ISSUE-3541: BGG import queue service
     public DbSet<PrivateGameEntity> PrivateGames => Set<PrivateGameEntity>(); // ISSUE-3662: Private games for user library

@@ -7,15 +7,15 @@ using Api.SharedKernel.Infrastructure.Persistence;
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 
 /// <summary>
-/// Handles bumping the priority of a queued processing job.
+/// Handles setting the priority of a queued processing job to an absolute value.
 /// Issue #5455: Admin priority management.
 /// </summary>
-internal class BumpPriorityCommandHandler : ICommandHandler<BumpPriorityCommand>
+internal class SetPriorityCommandHandler : ICommandHandler<SetPriorityCommand>
 {
     private readonly IProcessingJobRepository _jobRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public BumpPriorityCommandHandler(
+    public SetPriorityCommandHandler(
         IProcessingJobRepository jobRepository,
         IUnitOfWork unitOfWork)
     {
@@ -23,7 +23,7 @@ internal class BumpPriorityCommandHandler : ICommandHandler<BumpPriorityCommand>
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task Handle(BumpPriorityCommand command, CancellationToken cancellationToken)
+    public async Task Handle(SetPriorityCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 

@@ -282,6 +282,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<ICustomRagPipelineRepository, CustomRagPipelineRepository>(); // Issue #3120: Custom RAG pipeline management
         // Issue #3493: PostgreSQL Schema Extensions for Multi-Agent System
         services.AddScoped<IConversationMemoryRepository, ConversationMemoryRepository>();
+        services.AddScoped<IAgentGameStateSnapshotRepository, AgentGameStateSnapshotRepository>();
 
         services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios

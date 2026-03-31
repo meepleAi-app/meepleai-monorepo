@@ -4,6 +4,10 @@ import { vi } from 'vitest';
 
 import { MechanicFilter } from '../MechanicFilter';
 
+vi.mock('@/components/icons/mechanics', () => ({
+  MechanicIcon: ({ mechanic }: { mechanic: string }) => <span data-mechanic={mechanic} />,
+}));
+
 const MANY_MECHANICS = [
   'engine-building',
   'area-control',
@@ -28,6 +32,13 @@ describe('MechanicFilter', () => {
   it('non mostra il toggle se ci sono 5 o meno meccaniche', () => {
     render(<MechanicFilter mechanics={FEW_MECHANICS} selected={[]} onSelect={vi.fn()} />);
     expect(screen.getAllByRole('button')).toHaveLength(3);
+    expect(screen.queryByTestId('mechanic-toggle')).not.toBeInTheDocument();
+  });
+
+  it('non mostra il toggle se ci sono esattamente 5 meccaniche (boundary)', () => {
+    const exactly5 = MANY_MECHANICS.slice(0, 5);
+    render(<MechanicFilter mechanics={exactly5} selected={[]} onSelect={vi.fn()} />);
+    expect(screen.getAllByRole('button')).toHaveLength(5);
     expect(screen.queryByTestId('mechanic-toggle')).not.toBeInTheDocument();
   });
 

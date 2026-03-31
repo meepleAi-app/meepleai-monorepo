@@ -24,12 +24,12 @@ import { toast } from '@/components/layout';
 import { MechanicFilter } from '@/components/library/MechanicFilter';
 import { ShelfCard } from '@/components/library/ShelfCard';
 import { ShelfRow } from '@/components/library/ShelfRow';
-import { useDebounce } from '@/components/ui/data-display/entity-list-view/hooks/use-debounce';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
 import { SectionBlock } from '@/components/ui/SectionBlock';
 import { useCatalogTrending } from '@/hooks/queries/useCatalogTrending';
 import { useAddGameToLibrary, useLibrary } from '@/hooks/queries/useLibrary';
 import { useSharedGames, useGameMechanics } from '@/hooks/queries/useSharedGames';
+import { useDebounce } from '@/hooks/useDebounce';
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
 import { cn } from '@/lib/utils';
 
@@ -164,6 +164,10 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
     setPage(1);
+    // NOTE: We intentionally do NOT reset accumulatedItems here.
+    // debouncedSearch takes 300ms to update → clearing items immediately would
+    // cause a 300ms empty-state flash before the new query fires.
+    // The useEffect below resets items when catalogData arrives with page===1.
   }, []);
 
   const handleMechanicToggle = useCallback((mechanic: string) => {
@@ -171,6 +175,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
       prev.includes(mechanic) ? prev.filter(m => m !== mechanic) : [...prev, mechanic]
     );
     setPage(1);
+    // Same intentional trade-off as handleSearchChange: no immediate items reset.
   }, []);
 
   const handleLoadMore = useCallback(() => {

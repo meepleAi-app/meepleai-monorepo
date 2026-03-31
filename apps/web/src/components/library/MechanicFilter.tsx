@@ -64,6 +64,10 @@ export function MechanicFilter({ mechanics, selected, onSelect }: MechanicFilter
         <button
           type="button"
           data-testid="mechanic-toggle"
+          aria-expanded={expanded}
+          aria-label={
+            expanded ? 'Mostra meno meccaniche' : `Mostra ${hiddenCount} meccaniche aggiuntive`
+          }
           onClick={() => setExpanded(e => !e)}
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-[#21262d] text-[#8b949e] hover:bg-[#30363d] hover:text-[#e6edf3] transition-colors border border-dashed border-[#30363d]"
         >

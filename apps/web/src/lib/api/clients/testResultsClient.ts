@@ -60,7 +60,7 @@ export function createTestResultsClient({
     async getAll(query?: TestResultsQuery): Promise<TestResultList> {
       const params = new URLSearchParams();
 
-      if (query?.typologyId) params.append('typologyId', query.typologyId);
+      if (query?.agentDefinitionId) params.append('agentDefinitionId', query.agentDefinitionId);
       if (query?.from) params.append('from', query.from);
       if (query?.to) params.append('to', query.to);
       if (query?.savedOnly !== undefined) params.append('savedOnly', String(query.savedOnly));

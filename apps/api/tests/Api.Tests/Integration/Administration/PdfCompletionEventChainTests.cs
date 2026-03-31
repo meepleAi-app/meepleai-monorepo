@@ -2,7 +2,6 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
-using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -10,6 +9,7 @@ using Api.Infrastructure.Entities;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using AgentDef = Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -39,7 +39,6 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
 
     private static readonly Guid UserId = Guid.NewGuid();
     private static readonly Guid GameId = Guid.NewGuid();
-    private static readonly Guid TypologyId = Guid.NewGuid();
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -94,7 +93,7 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Helper: seed DB with PDF, User, AgentTypology
+    // Helper: seed DB with PDF, User
     // ────────────────────────────────────────────────────────────────────────
 
     private async Task<Guid> SeedAdminPdfAsync(string priority = "Admin")
@@ -122,18 +121,29 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
     }
 
     private AutoCreateAgentOnPdfReadyHandler CreateHandler(
-        Mock<IAgentTypologyRepository> typologyRepo,
+        Mock<IAgentDefinitionRepository> definitionRepo,
         Mock<IMediator> mediator)
     {
         return new AutoCreateAgentOnPdfReadyHandler(
             _dbContext!,
-            typologyRepo.Object,
+            definitionRepo.Object,
             mediator.Object,
             new Mock<ILogger<AutoCreateAgentOnPdfReadyHandler>>().Object);
     }
 
-    private static AgentTypology CreateApprovedTypology() =>
-        new(TypologyId, "Default", "Desc", "Prompt", AgentStrategy.SingleModel(), Guid.NewGuid(), TypologyStatus.Approved);
+    private AgentDef CreateActiveSystemDefinition()
+    {
+        var def = AgentDef.Create(
+            "Default",
+            "Desc",
+            AgentType.RulesInterpreter,
+            AgentDefinitionConfig.Default());
+        def.Activate();
+        var field = typeof(AgentDef).GetField("_isSystemDefined",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        field.SetValue(def, true);
+        return def;
+    }
 
     // ────────────────────────────────────────────────────────────────────────
     // Happy path: event chain fires CreateGameAgentCommand
@@ -144,10 +154,11 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
     {
         // Arrange
         var pdfId = await SeedAdminPdfAsync("Admin");
+        var activeDefinition = CreateActiveSystemDefinition();
 
-        var mockTypology = new Mock<IAgentTypologyRepository>();
-        mockTypology.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CreateApprovedTypology()]);
+        var mockDefinitionRepo = new Mock<IAgentDefinitionRepository>();
+        mockDefinitionRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([activeDefinition]);
 
         CreateGameAgentCommand? capturedCommand = null;
         var mockMediator = new Mock<IMediator>();
@@ -160,11 +171,11 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
                 LibraryEntryId = Guid.NewGuid(),
                 GameId = GameId,
                 Status = "active",
-                Typology = new AgentTypologyInfo { Id = TypologyId, Name = "Default" },
+                Definition = new AgentDefinitionInfo { Id = activeDefinition.Id, Name = "Default" },
                 Strategy = new AgentStrategyInfo { Name = "Balanced", Parameters = null },
             });
 
-        var handler = CreateHandler(mockTypology, mockMediator);
+        var handler = CreateHandler(mockDefinitionRepo, mockMediator);
         var evt = new PdfStateChangedEvent(pdfId, PdfProcessingState.Indexing, PdfProcessingState.Ready, UserId);
 
         // Act
@@ -173,7 +184,7 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
         // Assert: command dispatched with correct data from real DB
         capturedCommand.Should().NotBeNull("CreateGameAgentCommand should be dispatched");
         capturedCommand!.UserId.Should().Be(UserId);
-        capturedCommand.TypologyId.Should().Be(TypologyId);
+        capturedCommand.AgentDefinitionId.Should().Be(activeDefinition.Id);
         capturedCommand.StrategyName.Should().Be("Balanced");
         capturedCommand.UserTier.Should().Be("premium");
         capturedCommand.UserRole.Should().Be("admin");
@@ -189,10 +200,10 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
         // Arrange
         var pdfId = await SeedAdminPdfAsync("Normal");
 
-        var mockTypology = new Mock<IAgentTypologyRepository>();
+        var mockDefinitionRepo = new Mock<IAgentDefinitionRepository>();
         var mockMediator = new Mock<IMediator>();
 
-        var handler = CreateHandler(mockTypology, mockMediator);
+        var handler = CreateHandler(mockDefinitionRepo, mockMediator);
         var evt = new PdfStateChangedEvent(pdfId, PdfProcessingState.Indexing, PdfProcessingState.Ready, UserId);
 
         // Act
@@ -213,10 +224,10 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
     {
         // Arrange — PDF exists but state is not Ready
         await SeedAdminPdfAsync("Admin");
-        var mockTypology = new Mock<IAgentTypologyRepository>();
+        var mockDefinitionRepo = new Mock<IAgentDefinitionRepository>();
         var mockMediator = new Mock<IMediator>();
 
-        var handler = CreateHandler(mockTypology, mockMediator);
+        var handler = CreateHandler(mockDefinitionRepo, mockMediator);
         var evt = new PdfStateChangedEvent(Guid.NewGuid(), PdfProcessingState.Pending, PdfProcessingState.Extracting, UserId);
 
         // Act
@@ -237,17 +248,18 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
     {
         // Arrange
         var pdfId = await SeedAdminPdfAsync("Admin");
+        var activeDefinition = CreateActiveSystemDefinition();
 
-        var mockTypology = new Mock<IAgentTypologyRepository>();
-        mockTypology.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CreateApprovedTypology()]);
+        var mockDefinitionRepo = new Mock<IAgentDefinitionRepository>();
+        mockDefinitionRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([activeDefinition]);
 
         var mockMediator = new Mock<IMediator>();
         mockMediator
             .Setup(m => m.Send(It.IsAny<CreateGameAgentCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Agent creation failed"));
 
-        var handler = CreateHandler(mockTypology, mockMediator);
+        var handler = CreateHandler(mockDefinitionRepo, mockMediator);
         var evt = new PdfStateChangedEvent(pdfId, PdfProcessingState.Indexing, PdfProcessingState.Ready, UserId);
 
         // Act & Assert — pipeline must not break

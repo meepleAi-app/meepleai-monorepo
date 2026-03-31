@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -30,7 +31,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandler<ChatWithSessionAgentCommand, RagStreamingEvent>
 {
     private readonly IAgentSessionRepository _sessionRepository;
-    private readonly IAgentTypologyRepository _typologyRepository;
+    private readonly IAgentDefinitionRepository _definitionRepository;
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IGameRepository _gameRepository;
     private readonly ILiveSessionRepository _liveSessionRepository;
@@ -49,7 +50,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
 
     public ChatWithSessionAgentCommandHandler(
         IAgentSessionRepository sessionRepository,
-        IAgentTypologyRepository typologyRepository,
+        IAgentDefinitionRepository definitionRepository,
         IChatThreadRepository chatThreadRepository,
         IGameRepository gameRepository,
         ILiveSessionRepository liveSessionRepository,
@@ -63,7 +64,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ILogger<ChatWithSessionAgentCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
-        _typologyRepository = typologyRepository ?? throw new ArgumentNullException(nameof(typologyRepository));
+        _definitionRepository = definitionRepository ?? throw new ArgumentNullException(nameof(definitionRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
         _liveSessionRepository = liveSessionRepository ?? throw new ArgumentNullException(nameof(liveSessionRepository));
@@ -120,16 +121,16 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             yield break;
         }
 
-        // Load typology for prompt context
-        var typology = await _typologyRepository
-            .GetByIdAsync(agentSession.TypologyId, cancellationToken)
+        // Load definition for prompt context
+        var definition = await _definitionRepository
+            .GetByIdAsync(agentSession.AgentDefinitionId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (typology == null)
+        if (definition == null)
         {
             yield return CreateEvent(
                 StreamingEventType.Error,
-                new StreamingError($"AgentTypology {agentSession.TypologyId} not found", "TYPOLOGY_NOT_FOUND"));
+                new StreamingError($"AgentDefinition {agentSession.AgentDefinitionId} not found", "DEFINITION_NOT_FOUND"));
             yield break;
         }
 
@@ -159,7 +160,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             thread = new ChatThread(
                 id: Guid.NewGuid(),
                 userId: command.UserId,
-                agentType: typology.Name,
+                agentType: definition.Name,
                 title: command.UserQuestion.Length > 100
                     ? string.Concat(command.UserQuestion.AsSpan(0, 97), "...")
                     : command.UserQuestion);
@@ -180,7 +181,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
 
         // Assemble prompt with RAG context + chat history
         var assembled = await _ragPromptService.AssemblePromptAsync(
-            typology.Name,
+            definition.Name,
             gameTitle,
             agentSession.CurrentGameState,
             command.UserQuestion,
@@ -216,6 +217,37 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             _logger.LogInformation(
                 "Injected agent memory context into system prompt for session {SessionId} ({ContextLength} chars)",
                 command.AgentSessionId, memoryContext.Length);
+        }
+
+        // Inject live session context (turn, phase, players) into system prompt
+        if (liveSession != null)
+        {
+            var activePlayers = liveSession.Players
+                .Where(p => p.IsActive)
+                .Select(p => p.DisplayName)
+                .ToList();
+
+            var currentPlayerId = liveSession.GetCurrentTurnPlayerId();
+            var currentPlayerName = liveSession.Players
+                .FirstOrDefault(p => p.Id == currentPlayerId)?.DisplayName;
+
+            var sessionCtx = new LiveSessionContext(
+                SessionId: liveSession.Id,
+                GameName: liveSession.GameName,
+                CurrentTurnIndex: liveSession.CurrentTurnIndex,
+                CurrentPhaseIndex: liveSession.CurrentPhaseIndex,
+                CurrentPhaseName: liveSession.GetCurrentPhaseName(),
+                PhaseNames: liveSession.PhaseNames,
+                CurrentPlayerDisplayName: currentPlayerName,
+                ActivePlayerNames: activePlayers,
+                TurnAdvancePolicy: liveSession.TurnAdvancePolicy.ToString());
+
+            var sessionCtxBlock = AgentSessionContextBuilder.Build(sessionCtx);
+            if (!string.IsNullOrWhiteSpace(sessionCtxBlock))
+            {
+                systemPrompt = string.Create(CultureInfo.InvariantCulture,
+                    $"{systemPrompt}\n\n{sessionCtxBlock}");
+            }
         }
 
         // Budget check before LLM calls (fail-open: if check fails, allow request)
@@ -314,7 +346,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         var citationsJson = JsonSerializer.Serialize(finalCitations);
         thread.AddAssistantMessageWithMetadata(
             content: responseText,
-            agentType: typology.Name,
+            agentType: definition.Name,
             citationsJson: citationsJson,
             tokenCount: totalTokens);
 

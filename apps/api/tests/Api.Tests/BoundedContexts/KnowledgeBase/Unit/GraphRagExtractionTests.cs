@@ -251,28 +251,6 @@ public sealed class GraphRagExtractionTests : IDisposable
             Times.Once);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private static ILanguageDetector CreateLanguageDetectorMock()
-    {
-        var mock = new Mock<ILanguageDetector>();
-        mock.Setup(d => d.Detect(It.IsAny<string>()))
-            .Returns(new LanguageDetectionResult("en", true, 0.95));
-        return mock.Object;
-    }
-
-    private static IChunkTranslationService CreateChunkTranslationMock()
-    {
-        var mock = new Mock<IChunkTranslationService>();
-        mock.Setup(t => t.TranslateChunksAsync(
-                It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TranslatedChunk>());
-        return mock.Object;
-    }
-
     private PdfProcessingPipelineService CreatePipelineService(bool withEntityExtractor)
     {
         var languageDetectorMock = new Mock<ILanguageDetector>();

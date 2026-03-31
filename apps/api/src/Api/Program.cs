@@ -616,6 +616,7 @@ v1Api.MapUserAccountEndpoints(); // GDPR Art. 17: Self-service account deletion
 
 // Game Management (core only)
 v1Api.MapGameEndpoints();
+v1Api.MapGamePhaseTemplateEndpoints(); // Game phase templates for session setup
 v1Api.MapBggEndpoints(); // ISSUE-3120: BoardGameGeek integration
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
@@ -629,7 +630,6 @@ v1Api.MapDocumentCollectionEndpoints();
 // KnowledgeBase (RAG chat)
 v1Api.MapKnowledgeBaseEndpoints();
 v1Api.MapChatSessionEndpoints(); // Issue #3483: Chat session persistence endpoints
-v1Api.MapAgentEndpoints(); // Issue #866: Agent management endpoints
 v1Api.MapModelEndpoints(); // Issue #3377: AI model configuration endpoints
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();
@@ -780,9 +780,6 @@ if (!isAlphaMode)
     v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
     v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
     v1Api.MapArbitroAgentEndpoints(); // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
-    v1Api.MapDecisoreAgentEndpoints();  // Issue #3773
-    v1Api.MapGroup("/agent-typologies").MapAgentTypologyEndpoints(); // Issue #3177, #3178: Agent typology endpoints (AGT-003, AGT-004)
-    v1Api.MapGroup("/admin/agent-typologies").MapAdminAgentTypologyEndpoints(); // Admin-scoped agent typology management
     v1Api.MapAgentSessionEndpoints(); // Issue #3184 (AGT-010): Agent session lifecycle endpoints
     v1Api.MapGroup("/admin/ab-tests").MapAdminAbTestEndpoints(); // Issue #5497: A/B Test backend API endpoints
     v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints(); // Issue #3379: Agent test results history & persistence

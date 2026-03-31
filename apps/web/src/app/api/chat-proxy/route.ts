@@ -10,13 +10,6 @@
 
 import { NextRequest } from 'next/server';
 
-import {
-  DEFAULT_MAX_TOKENS,
-  DEFAULT_TEMPERATURE,
-  DEFAULT_TYPOLOGY_PROMPT,
-  getTypologyConfig,
-} from '@/lib/config/typology-config';
-
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -52,6 +45,10 @@ const StreamingEventType = {
 // ============================================================================
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const DEFAULT_SYSTEM_PROMPT =
+  'Sei un assistente esperto del gioco {gameName}. Aiuta i giocatori con regole, strategie e consigli. Rispondi sempre in italiano.';
+const DEFAULT_TEMPERATURE = 0.7;
+const DEFAULT_MAX_TOKENS = 1024;
 const DEFAULT_MODEL =
   process.env.OPENROUTER_DEFAULT_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
 const MAX_MESSAGE_LENGTH = 2000;
@@ -102,9 +99,7 @@ setInterval(() => {
 // ============================================================================
 
 function buildSystemPrompt(gameContext: ChatProxyRequest['gameContext']): string {
-  const config = getTypologyConfig(gameContext.agentTypology);
-  const template = config?.systemPrompt || DEFAULT_TYPOLOGY_PROMPT;
-  let prompt = template.replace(/{gameName}/g, gameContext.gameName);
+  let prompt = DEFAULT_SYSTEM_PROMPT.replace(/{gameName}/g, gameContext.gameName);
 
   if (gameContext.ragContext) {
     prompt += `\n\nContesto dalla knowledge base:\n${gameContext.ragContext}`;
@@ -186,18 +181,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Build OpenRouter request — use typology-specific defaults
-  const typologyConfig = getTypologyConfig(body.gameContext.agentTypology);
+  // Build OpenRouter request
   const systemPrompt = buildSystemPrompt(body.gameContext);
   const model = body.modelId || DEFAULT_MODEL;
-  const maxTokens = Math.min(
-    body.maxTokens || typologyConfig?.maxTokens || DEFAULT_MAX_TOKENS,
-    4096
-  );
-  const temperature = Math.max(
-    0,
-    Math.min(body.temperature ?? typologyConfig?.temperature ?? DEFAULT_TEMPERATURE, 2)
-  );
+  const maxTokens = Math.min(body.maxTokens || DEFAULT_MAX_TOKENS, 4096);
+  const temperature = Math.max(0, Math.min(body.temperature ?? DEFAULT_TEMPERATURE, 2));
 
   const openRouterBody = {
     model,

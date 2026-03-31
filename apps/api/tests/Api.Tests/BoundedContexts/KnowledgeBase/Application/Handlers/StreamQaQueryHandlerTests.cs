@@ -39,6 +39,7 @@ public class StreamQaQueryHandlerTests
     private readonly Mock<ChatContextDomainService> _chatContextServiceMock;
     private readonly Mock<IChatThreadRepository> _chatThreadRepositoryMock;
     private readonly Mock<IPdfDocumentRepository> _pdfDocumentRepositoryMock;
+    private readonly Mock<IVectorDocumentRepository> _vectorDocumentRepositoryMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IAiResponseCacheService> _cacheMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
@@ -71,6 +72,7 @@ public class StreamQaQueryHandlerTests
         _chatContextServiceMock = new Mock<ChatContextDomainService>();
         _chatThreadRepositoryMock = new Mock<IChatThreadRepository>();
         _pdfDocumentRepositoryMock = new Mock<IPdfDocumentRepository>();
+        _vectorDocumentRepositoryMock = new Mock<IVectorDocumentRepository>();
         _llmServiceMock = new Mock<ILlmService>();
         _cacheMock = new Mock<IAiResponseCacheService>();
         _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
@@ -84,6 +86,7 @@ public class StreamQaQueryHandlerTests
             _chatContextServiceMock.Object,
             _chatThreadRepositoryMock.Object,
             _pdfDocumentRepositoryMock.Object,
+            _vectorDocumentRepositoryMock.Object,
             _llmServiceMock.Object,
             _cacheMock.Object,
             _promptTemplateServiceMock.Object,

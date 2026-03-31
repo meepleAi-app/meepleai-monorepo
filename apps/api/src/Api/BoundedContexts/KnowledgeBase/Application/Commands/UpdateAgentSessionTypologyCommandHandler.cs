@@ -1,6 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
-using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -10,75 +9,64 @@ using Microsoft.Extensions.Logging;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
-/// Handler for UpdateAgentSessionTypologyCommand.
-/// Updates the agent typology of an active agent session.
-/// Issue #3252 (BACK-AGT-001): PATCH Endpoint - Update Agent Typology.
+/// Handler for UpdateAgentSessionDefinitionCommand.
+/// Updates the agent definition of an active agent session.
 /// </summary>
-internal sealed class UpdateAgentSessionTypologyCommandHandler : IRequestHandler<UpdateAgentSessionTypologyCommand>
+internal sealed class UpdateAgentSessionDefinitionCommandHandler : IRequestHandler<UpdateAgentSessionDefinitionCommand>
 {
     private readonly IAgentSessionRepository _sessionRepository;
-    private readonly IAgentTypologyRepository _typologyRepository;
+    private readonly IAgentDefinitionRepository _definitionRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<UpdateAgentSessionTypologyCommandHandler> _logger;
+    private readonly ILogger<UpdateAgentSessionDefinitionCommandHandler> _logger;
 
-    public UpdateAgentSessionTypologyCommandHandler(
+    public UpdateAgentSessionDefinitionCommandHandler(
         IAgentSessionRepository sessionRepository,
-        IAgentTypologyRepository typologyRepository,
+        IAgentDefinitionRepository definitionRepository,
         IUnitOfWork unitOfWork,
-        ILogger<UpdateAgentSessionTypologyCommandHandler> logger)
+        ILogger<UpdateAgentSessionDefinitionCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
-        _typologyRepository = typologyRepository ?? throw new ArgumentNullException(nameof(typologyRepository));
+        _definitionRepository = definitionRepository ?? throw new ArgumentNullException(nameof(definitionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task Handle(
-        UpdateAgentSessionTypologyCommand request,
+        UpdateAgentSessionDefinitionCommand request,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         _logger.LogInformation(
-            "Updating typology for agent session {SessionId} to {NewTypologyId}",
+            "Updating agent definition for session {SessionId} to {NewAgentDefinitionId}",
             request.AgentSessionId,
-            request.NewTypologyId);
+            request.NewAgentDefinitionId);
 
-        // Get agent session
         var agentSession = await _sessionRepository
             .GetByIdAsync(request.AgentSessionId, cancellationToken)
             .ConfigureAwait(false);
 
         if (agentSession == null)
-        {
             throw new NotFoundException("AgentSession", request.AgentSessionId.ToString());
-        }
 
-        // Validate new typology exists and is approved
-        var typology = await _typologyRepository
-            .GetByIdAsync(request.NewTypologyId, cancellationToken)
+        var definition = await _definitionRepository
+            .GetByIdAsync(request.NewAgentDefinitionId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (typology == null)
-        {
-            throw new NotFoundException("AgentTypology", request.NewTypologyId.ToString());
-        }
+        if (definition == null)
+            throw new NotFoundException("AgentDefinition", request.NewAgentDefinitionId.ToString());
 
-        if (typology.Status != TypologyStatus.Approved)
-        {
-            throw new ValidationException($"Typology {request.NewTypologyId} is not approved");
-        }
+        if (!definition.IsActive)
+            throw new ValidationException($"AgentDefinition {request.NewAgentDefinitionId} is not active");
 
-        // Update typology (domain handles IsActive validation)
-        agentSession.UpdateTypology(request.NewTypologyId);
+        agentSession.UpdateAgentDefinition(request.NewAgentDefinitionId);
 
-        // Persist
         await _sessionRepository.UpdateAsync(agentSession, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Typology updated successfully for agent session {SessionId} to {NewTypologyId}",
+            "Agent definition updated for session {SessionId} to {NewAgentDefinitionId}",
             request.AgentSessionId,
-            request.NewTypologyId);
+            request.NewAgentDefinitionId);
     }
 }

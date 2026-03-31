@@ -27,9 +27,9 @@ internal sealed class SaveAgentConfigCommandValidator : AbstractValidator<SaveAg
             .NotEmpty()
             .WithMessage("GameId is required");
 
-        RuleFor(x => x.TypologyId)
+        RuleFor(x => x.AgentDefinitionId)
             .NotEmpty()
-            .WithMessage("TypologyId is required");
+            .WithMessage("AgentDefinitionId is required");
 
         RuleFor(x => x.ModelName)
             .NotEmpty()

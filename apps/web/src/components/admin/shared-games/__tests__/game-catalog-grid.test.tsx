@@ -143,9 +143,7 @@ function createTestQueryClient() {
 
 function renderWithProviders(ui: React.ReactElement) {
   const client = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
 // ============================================================================

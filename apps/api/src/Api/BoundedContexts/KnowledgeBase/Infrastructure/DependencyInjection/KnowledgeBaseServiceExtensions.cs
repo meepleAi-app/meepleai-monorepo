@@ -12,7 +12,6 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Projections;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
-using Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Caching;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.ContextEngineering;
@@ -65,7 +64,6 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
         services.AddScoped<IConversationQueryRewriter, Application.Services.ConversationQueryRewriter>(); // Issue #5258: Query rewriting for multi-turn RAG
         services.AddScoped<IConversationSummarizer, Application.Services.ConversationSummarizer>(); // Issue #5259: Progressive conversation summarization
-        services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
         services.AddScoped<IRagPromptAssemblyService, RagPromptAssemblyService>(); // Replaces AgentPromptBuilder: RAG context + chat history + token budget
         services.AddScoped<IExpansionGameResolver, Infrastructure.Services.ExpansionGameResolver>(); // Issue #5588: Expansion priority in RAG search
@@ -78,12 +76,7 @@ internal static class KnowledgeBaseServiceExtensions
         // KB Domain abstraction over GM game session state (anti-corruption layer)
         services.AddScoped<IGameSessionStateReader, GameSessionStateReaderAdapter>();
 
-        // Issue #2404: Agent Mode Handlers (Scoped - use repositories and LLM services)
-        services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.PlayerModeHandler>();
-        services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.ChatModeHandler>();
-
         // Issue #2405: Ledger Mode Handler + State Parser
-        services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.LedgerModeHandler>();
         services.AddScoped<IStateParser, NaturalLanguageStateParser>();
 
         // Issue #5453: Structured RAG fusion — query intent classification + structured retrieval
@@ -97,19 +90,6 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<IContextRetrievalStrategy, PositionSimilarityStrategy>();
         services.AddSingleton<IContextRetrievalStrategy, HybridSearchStrategy>();
 
-        // Issue #3772: Game State Parser for Decisore Agent
-        services.AddSingleton<IGameStateParserService, GameStateParserFactory>();
-
-        // Issue #3770: Move Generator for Decisore Agent
-        services.AddScoped<IMoveGeneratorService, ChessMoveGenerator>();
-        services.AddScoped<ILegalMoveValidator, LegalMoveValidator>();
-        services.AddScoped<IMoveScorer, HeuristicMoveScorer>();
-
-        // Issue #3769: Decisore Agent Strategic Analysis
-        services.AddScoped<IDecisoreAgentService, DecisoreAgentService>();
-
-        // Issue #3771: Multi-Model Ensemble Evaluation
-        services.AddScoped<IMultiModelEvaluator, MultiModelEvaluator>();
         services.AddSingleton<IContextRetrievalStrategy, CapabilityMatchingStrategy>();
         services.AddScoped<IContextSource, ConversationMemorySource>();
         services.AddScoped<GameStateSource>();
@@ -291,9 +271,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>(); // Issue #924: ChatThread support
         services.AddScoped<ILlmCostLogRepository, LlmCostLogRepository>(); // ISSUE-960: Cost tracking
         services.AddScoped<ILlmRequestLogRepository, LlmRequestLogRepository>(); // ISSUE-5072: Detailed request logging with 30-day retention
-        services.AddScoped<IAgentRepository, AgentRepository>(); // Issue #866: Agent management
         services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>(); // Issue #3808: AgentDefinition for AI Lab
-        services.AddScoped<IAgentTypologyRepository, AgentTypologyRepository>(); // Issue #3175, #3177: AgentTypology CRUD
         services.AddScoped<IAgentSessionRepository, AgentSessionRepository>(); // Issue #3184 (AGT-010): Agent session lifecycle
         services.AddScoped<IChatSessionRepository, ChatSessionRepository>(); // Issue #3483: Chat session persistence
         services.AddScoped<IAgentTestResultRepository, AgentTestResultRepository>(); // Issue #3379: Agent test results
@@ -305,6 +283,7 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #3493: PostgreSQL Schema Extensions for Multi-Agent System
         services.AddScoped<IConversationMemoryRepository, ConversationMemoryRepository>();
         services.AddScoped<IAgentGameStateSnapshotRepository, AgentGameStateSnapshotRepository>();
+
         services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
         services.AddScoped<IAbTestSessionRepository, AbTestSessionRepository>(); // Issue #5491: A/B test sessions
@@ -330,7 +309,6 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<GetLlmCostReportQueryHandler>(); // ISSUE-960: Cost reporting
         services.AddScoped<GetQueryEfficiencyReportQueryHandler>(); // ISSUE-1725: Efficiency reporting
         services.AddScoped<GetMonthlyOptimizationReportQueryHandler>(); // ISSUE-1725: Monthly optimization
-        services.AddScoped<InvokeAgentCommandHandler>(); // Issue #867: Agent invocation
 
         services.AddScoped<RunEvaluationCommandHandler>();
         services.AddScoped<LoadDatasetCommandHandler>();

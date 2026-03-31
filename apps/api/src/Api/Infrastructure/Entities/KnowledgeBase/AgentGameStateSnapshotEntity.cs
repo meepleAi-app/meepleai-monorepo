@@ -1,13 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Pgvector; // Issue #3547: Vector type for pgvector columns
+using Pgvector;
 
 namespace Api.Infrastructure.Entities.KnowledgeBase;
 
 /// <summary>
 /// EF Core entity for agent game state snapshot persistence.
 /// Issue #3493: PostgreSQL Schema Extensions for Multi-Agent System.
-/// Issue #3547: Renamed table to avoid conflict with GameManagement's GameStateSnapshotEntity
 /// </summary>
 [Table("agent_game_state_snapshots")]
 public class AgentGameStateSnapshotEntity
@@ -26,7 +25,7 @@ public class AgentGameStateSnapshotEntity
 
     [Required]
     [Column("board_state_json", TypeName = "jsonb")]
-    public string BoardStateJson { get; set; } = "{}";
+    public string BoardStateJson { get; set; } = string.Empty;
 
     [Required]
     [Column("turn_number")]

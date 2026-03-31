@@ -55,6 +55,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<RuleConflictFAQEntity> RuleConflictFAQs => Set<RuleConflictFAQEntity>(); // ISSUE-3761: Conflict resolution FAQ
     public DbSet<GameReviewEntity> GameReviews => Set<GameReviewEntity>(); // ISSUE-4904: Game reviews API
     public DbSet<GameStrategyEntity> GameStrategies => Set<GameStrategyEntity>(); // ISSUE-4903: Game strategies API
+    public DbSet<GamePhaseTemplateEntity> GamePhaseTemplates => Set<GamePhaseTemplateEntity>(); // Game phase templates for session setup
     public DbSet<RecordScoreEntity> RecordScores => Set<RecordScoreEntity>(); // ISSUE-3888: Play record scores
     public DbSet<LiveGameSessionEntity> LiveGameSessions => Set<LiveGameSessionEntity>(); // ISSUE-4750: Live game sessions
     public DbSet<GameToolkitEntity> GameToolkits => Set<GameToolkitEntity>(); // ISSUE-4753: Game toolkit configs
@@ -68,7 +69,6 @@ public class MeepleAiDbContext : DbContext
     public DbSet<LiveTurnRecordEntity> LiveTurnRecords => Set<LiveTurnRecordEntity>(); // ISSUE-4750: Live session turn records
     public DbSet<RuleSpecEntity> RuleSpecs => Set<RuleSpecEntity>();
     public DbSet<RuleAtomEntity> RuleAtoms => Set<RuleAtomEntity>();
-    public DbSet<AgentEntity> Agents => Set<AgentEntity>();
     public DbSet<ChatEntity> Chats => Set<ChatEntity>();
     public DbSet<ChatThreadEntity> ChatThreads => Set<ChatThreadEntity>(); // DDD-PHASE3: KnowledgeBase ChatThread aggregate
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
@@ -88,9 +88,6 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
-    public DbSet<AgentConfigurationEntity> AgentConfigurations => Set<AgentConfigurationEntity>(); // ISSUE-2391 Sprint 2
-    public DbSet<AgentTypologyEntity> AgentTypologies => Set<AgentTypologyEntity>(); // ISSUE-3175: Agent typology domain model
-    public DbSet<TypologyPromptTemplateEntity> TypologyPromptTemplates => Set<TypologyPromptTemplateEntity>(); // ISSUE-3175: Typology prompt templates
     public DbSet<AgentSessionEntity> AgentSessions => Set<AgentSessionEntity>(); // ISSUE-3183: Agent session state persistence
     public DbSet<N8NConfigEntity> N8NConfigs => Set<N8NConfigEntity>();
     public DbSet<RuleSpecCommentEntity> RuleSpecComments => Set<RuleSpecCommentEntity>();
@@ -164,7 +161,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<DecisoreMoveFeedbackEntity> DecisoreMoveFeedbacks => Set<DecisoreMoveFeedbackEntity>(); // ISSUE-4335: Decisore beta testing feedback
     public DbSet<InsightFeedbackEntity> InsightFeedbacks => Set<InsightFeedbackEntity>(); // ISSUE-4124: AI Insights feedback for accuracy tracking
     public DbSet<ConversationMemoryEntity> ConversationMemories => Set<ConversationMemoryEntity>(); // ISSUE-3493: Temporal RAG
-    public DbSet<AgentGameStateSnapshotEntity> AgentGameStateSnapshots => Set<AgentGameStateSnapshotEntity>(); // ISSUE-3493: Position similarity
+    public DbSet<AgentGameStateSnapshotEntity> AgentGameStateSnapshots => Set<AgentGameStateSnapshotEntity>(); // ISSUE-3493: Game state snapshots for multi-agent system
     public DbSet<StrategyPatternEntity> StrategyPatterns => Set<StrategyPatternEntity>(); // ISSUE-3493: Cached evaluations
     public DbSet<BggImportQueueEntity> BggImportQueue => Set<BggImportQueueEntity>(); // ISSUE-3541: BGG import queue service
     public DbSet<PrivateGameEntity> PrivateGames => Set<PrivateGameEntity>(); // ISSUE-3662: Private games for user library
@@ -289,7 +286,6 @@ public class MeepleAiDbContext : DbContext
         // Must be done AFTER ApplyConfigurationsFromAssembly to override the property configs
         if (_isInMemoryDatabase)
         {
-            modelBuilder.Entity<AgentGameStateSnapshotEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<ConversationMemoryEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<StrategyPatternEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<PgVectorEmbeddingEntity>().Ignore(e => e.Vector);
@@ -344,8 +340,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.SystemConfiguration.Domain.Entities.UserRateLimitOverride>(); // ISSUE-2730
         modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>(); // User Library feature
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.RulebookAnalysis>(); // ISSUE-2402
-        modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentTypology>(); // ISSUE-3175
-        modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.TypologyPromptTemplate>(); // ISSUE-3175
+
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentSession>(); // ISSUE-3183
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(); // ISSUE-3483
         modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.ProposalMigration>(); // ISSUE-3666

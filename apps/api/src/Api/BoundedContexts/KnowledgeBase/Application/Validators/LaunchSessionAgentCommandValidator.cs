@@ -16,14 +16,11 @@ internal sealed class LaunchSessionAgentCommandValidator : AbstractValidator<Lau
         RuleFor(x => x.GameSessionId)
             .NotEqual(Guid.Empty).WithMessage("GameSessionId is required");
 
-        RuleFor(x => x.TypologyId)
-            .NotEqual(Guid.Empty).WithMessage("TypologyId is required");
+        RuleFor(x => x.AgentDefinitionId)
+            .NotEqual(Guid.Empty).WithMessage("AgentDefinitionId is required");
 
         RuleFor(x => x.UserId)
             .NotEqual(Guid.Empty).WithMessage("UserId is required");
-
-        RuleFor(x => x.AgentId)
-            .NotEqual(Guid.Empty).WithMessage("AgentId is required");
 
         RuleFor(x => x.GameId)
             .NotEqual(Guid.Empty).WithMessage("GameId is required");

@@ -17,23 +17,21 @@ public class AgentSessionTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var agentId = Guid.NewGuid();
+        var agentDefinitionId = Guid.NewGuid();
         var gameSessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
-        var typologyId = Guid.NewGuid();
         var initialState = GameState.Initial(userId);
 
         // Act
-        var session = new AgentSession(id, agentId, gameSessionId, userId, gameId, typologyId, initialState);
+        var session = new AgentSession(id, agentDefinitionId, gameSessionId, userId, gameId, initialState);
 
         // Assert
         session.Id.Should().Be(id);
-        session.AgentId.Should().Be(agentId);
+        session.AgentDefinitionId.Should().Be(agentDefinitionId);
         session.GameSessionId.Should().Be(gameSessionId);
         session.UserId.Should().Be(userId);
         session.GameId.Should().Be(gameId);
-        session.TypologyId.Should().Be(typologyId);
         session.CurrentGameState.Should().Be(initialState);
         session.IsActive.Should().BeTrue();
         session.StartedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
@@ -41,7 +39,7 @@ public class AgentSessionTests
     }
 
     [Fact]
-    public void Constructor_WithEmptyAgentId_ThrowsArgumentException()
+    public void Constructor_WithEmptyAgentDefinitionId_ThrowsArgumentException()
     {
         // Arrange
         var initialState = GameState.Initial(Guid.NewGuid());
@@ -53,12 +51,11 @@ public class AgentSessionTests
             Guid.NewGuid(),
             Guid.NewGuid(),
             Guid.NewGuid(),
-            Guid.NewGuid(),
             initialState);
 
         // Assert
         act.Should().Throw<ArgumentException>()
-            .WithMessage("*AgentId*");
+            .WithMessage("*AgentDefinitionId*");
     }
 
     [Fact]
@@ -66,13 +63,13 @@ public class AgentSessionTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var agentId = Guid.NewGuid();
+        var agentDefinitionId = Guid.NewGuid();
         var gameSessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var initialState = GameState.Initial(userId);
 
         // Act
-        var session = new AgentSession(id, agentId, gameSessionId, userId, Guid.NewGuid(), Guid.NewGuid(), initialState);
+        var session = new AgentSession(id, agentDefinitionId, gameSessionId, userId, Guid.NewGuid(), initialState);
 
         // Assert
         var domainEvents = session.DomainEvents;
@@ -80,7 +77,7 @@ public class AgentSessionTests
         var createdEvent = domainEvents.First() as AgentSessionCreatedEvent;
         createdEvent.Should().NotBeNull();
         createdEvent!.AgentSessionId.Should().Be(id);
-        createdEvent.AgentId.Should().Be(agentId);
+        createdEvent.AgentDefinitionId.Should().Be(agentDefinitionId);
         createdEvent.GameSessionId.Should().Be(gameSessionId);
         createdEvent.UserId.Should().Be(userId);
     }
@@ -91,13 +88,8 @@ public class AgentSessionTests
         // Arrange
         var userId = Guid.NewGuid();
         var session = new AgentSession(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            userId,
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            GameState.Initial(userId));
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            userId, Guid.NewGuid(), GameState.Initial(userId));
 
         var newState = GameState.Create(
             currentTurn: 5,
@@ -121,13 +113,8 @@ public class AgentSessionTests
         // Arrange
         var userId = Guid.NewGuid();
         var session = new AgentSession(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            userId,
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            GameState.Initial(userId));
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            userId, Guid.NewGuid(), GameState.Initial(userId));
         session.End();
 
         var newState = GameState.Initial(userId);
@@ -145,13 +132,8 @@ public class AgentSessionTests
     {
         // Arrange
         var session = new AgentSession(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            GameState.Initial(Guid.NewGuid()));
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            Guid.NewGuid(), Guid.NewGuid(), GameState.Initial(Guid.NewGuid()));
 
         // Act
         session.End();
@@ -167,13 +149,8 @@ public class AgentSessionTests
     {
         // Arrange
         var session = new AgentSession(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            GameState.Initial(Guid.NewGuid()));
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            Guid.NewGuid(), Guid.NewGuid(), GameState.Initial(Guid.NewGuid()));
         session.End();
 
         // Act
@@ -189,13 +166,8 @@ public class AgentSessionTests
     {
         // Arrange
         var session = new AgentSession(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            GameState.Initial(Guid.NewGuid()));
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            Guid.NewGuid(), Guid.NewGuid(), GameState.Initial(Guid.NewGuid()));
 
         // Act
         var duration = session.Duration;
@@ -210,13 +182,8 @@ public class AgentSessionTests
     {
         // Arrange
         var session = new AgentSession(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            GameState.Initial(Guid.NewGuid()));
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            Guid.NewGuid(), Guid.NewGuid(), GameState.Initial(Guid.NewGuid()));
 
         await Task.Delay(100); // Small delay
         session.End();

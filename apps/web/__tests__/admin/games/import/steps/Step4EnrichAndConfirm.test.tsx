@@ -189,7 +189,9 @@ describe('Step4EnrichAndConfirm', () => {
       renderWithQuery(<Step4EnrichAndConfirm />);
 
       expect(screen.getByText('Missing Data')).toBeInTheDocument();
-      expect(screen.getByText(/Nessun metadato estratto o dati catalogo disponibili/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Nessun metadato estratto o dati catalogo disponibili/i)
+      ).toBeInTheDocument();
     });
   });
 

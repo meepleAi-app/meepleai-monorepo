@@ -164,6 +164,18 @@ public sealed class PdfProcessingQuartzJob : IJob
             await pipelineService.ProcessAsync(
                 pdfDoc.Id, pdfDoc.FilePath, jobEntity.UserId, ct).ConfigureAwait(false);
 
+            // Fix: reload from DB to detect external cancellation during pipeline execution.
+            // CancelJobCommand changes status to Cancelled in DB without stopping the worker,
+            // so we must not overwrite it with Completed.
+            await _dbContext.Entry(jobEntity).ReloadAsync(ct).ConfigureAwait(false);
+            if (string.Equals(jobEntity.Status, nameof(JobStatus.Cancelled), StringComparison.Ordinal))
+            {
+                _logger.LogInformation(
+                    "Job {JobId} was cancelled externally during pipeline execution, skipping completion",
+                    jobEntity.Id);
+                return;
+            }
+
             // Pipeline completed — mark all steps as Completed with SSE events
             var completedAt = _timeProvider.GetUtcNow();
             var totalMs = (completedAt - startedAt).TotalMilliseconds;

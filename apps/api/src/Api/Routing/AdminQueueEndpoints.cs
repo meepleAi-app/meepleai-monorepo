@@ -80,13 +80,13 @@ internal static class AdminQueueEndpoints
             .Produces(200, contentType: "text/event-stream")
             .WithSummary("SSE stream for queue-wide real-time updates");
 
-        // Issue #5455: Priority bump endpoint
-        group.MapPatch("/{jobId:guid}/priority", HandleBumpPriority)
-            .WithName("BumpJobPriority")
+        // Issue #5455: Priority set endpoint
+        group.MapPatch("/{jobId:guid}/priority", HandleSetPriority)
+            .WithName("SetJobPriority")
             .Produces(204)
             .Produces(404)
             .Produces(409)
-            .WithSummary("Bump the priority of a queued job");
+            .WithSummary("Set the priority of a queued job to an absolute value");
 
         // Issue #5455: Queue configuration endpoints
         group.MapGet("/config", HandleGetQueueConfig)
@@ -286,13 +286,13 @@ internal static class AdminQueueEndpoints
         }
     }
 
-    private static async Task<IResult> HandleBumpPriority(
+    private static async Task<IResult> HandleSetPriority(
         Guid jobId,
-        BumpPriorityRequest request,
+        SetPriorityRequest request,
         IMediator mediator,
         CancellationToken ct)
     {
-        await mediator.Send(new BumpPriorityCommand(jobId, request.NewPriority), ct).ConfigureAwait(false);
+        await mediator.Send(new SetPriorityCommand(jobId, request.NewPriority), ct).ConfigureAwait(false);
         return Results.NoContent();
     }
 
@@ -370,5 +370,5 @@ internal static class AdminQueueEndpoints
 internal record EnqueuePdfRequest(Guid PdfDocumentId, int Priority = 0);
 internal record ReorderQueueRequest(List<Guid> OrderedJobIds);
 internal record EnqueuePdfResponse(Guid JobId);
-internal record BumpPriorityRequest(ProcessingPriority NewPriority);
+internal record SetPriorityRequest(ProcessingPriority NewPriority);
 internal record UpdateQueueConfigRequest(bool? IsPaused = null, int? MaxConcurrentWorkers = null);

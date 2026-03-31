@@ -138,7 +138,7 @@ internal class EnqueueBggBatchFromJsonCommandHandler
 
                 // Enqueue new game with requesting user for audit trail
                 await _queueService
-                    .EnqueueAsync(game.BggId, game.Name, request.UserId, cancellationToken)
+                    .EnqueueAsync(game.BggId, game.Name, request.UserId, request.AutoPublish, cancellationToken)
                     .ConfigureAwait(false);
 
                 result.Enqueued++;

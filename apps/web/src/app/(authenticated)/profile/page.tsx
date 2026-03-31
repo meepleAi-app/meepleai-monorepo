@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { ActivityFeed } from '@/components/profile/ActivityFeed';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -317,24 +318,14 @@ function AchievementsTab() {
 
 // ─── Activity Tab ─────────────────────────────────────────────────────────────
 
-function ActivityTab() {
+function ActivityTab(): React.ReactElement {
   return (
-    <Card className="border-l-4 border-l-blue-400 shadow-sm">
-      <CardContent className="py-14 flex flex-col items-center text-center gap-4">
-        <div className="rounded-full bg-blue-100 p-5">
-          <Activity className="h-8 w-8 text-blue-600" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold font-quicksand mb-2">Activity Feed Coming Soon</h2>
-          <p className="text-muted-foreground font-nunito text-sm max-w-sm">
-            Your recent game sessions, achievements earned, and library updates will appear here.
-          </p>
-        </div>
-        <Button asChild variant="outline" className="font-nunito">
-          <Link href="/sessions">Browse Sessions</Link>
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground font-nunito">
+        Le tue ultime partite, achievement e aggiornamenti
+      </p>
+      <ActivityFeed />
+    </div>
   );
 }
 

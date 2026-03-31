@@ -20,4 +20,10 @@ public record EnqueueBggBatchFromJsonCommand : IRequest<BulkImportResult>
     /// User ID performing the import (for audit trail)
     /// </summary>
     public required Guid UserId { get; init; }
+
+    /// <summary>
+    /// When true, all imported games are immediately quick-published (Draft → Published).
+    /// Useful for seeding scenarios where all games should be immediately visible.
+    /// </summary>
+    public bool AutoPublish { get; init; }
 }

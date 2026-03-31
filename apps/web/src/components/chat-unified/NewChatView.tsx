@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { trackRulesChatStarted } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
@@ -617,6 +618,11 @@ export function NewChatView() {
         });
 
         if (thread?.id) {
+          // Track flywheel event: rules chat successfully started
+          trackRulesChatStarted({
+            gameId: gameId,
+            promptType: 'general',
+          });
           router.push(`/chat/${thread.id}`);
         }
       } catch {

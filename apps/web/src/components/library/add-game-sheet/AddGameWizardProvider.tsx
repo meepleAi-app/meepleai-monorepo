@@ -13,6 +13,7 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 import { useQueryClient } from '@tanstack/react-query';
 
 import { libraryKeys } from '@/hooks/queries/useLibrary';
+import { trackGameAdded } from '@/lib/analytics/flywheel-events';
 import { useAddGameWizardStore } from '@/lib/stores/add-game-wizard-store';
 import type { WizardEntryPoint, SelectedGameData } from '@/lib/stores/add-game-wizard-store';
 
@@ -76,6 +77,10 @@ export function AddGameWizardProvider({ children }: { children: ReactNode }) {
     (_libraryEntryId: string) => {
       // Read gameId from Zustand store at success time to avoid stale closure
       const savedGameId = useAddGameWizardStore.getState().selectedGame?.gameId;
+      // Track flywheel event: game successfully added to library
+      if (savedGameId) {
+        trackGameAdded({ gameId: savedGameId, source: 'catalog' });
+      }
       // Invalidate library caches so UI reflects the new game
       queryClient.invalidateQueries({ queryKey: ['user-library'] });
       queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });

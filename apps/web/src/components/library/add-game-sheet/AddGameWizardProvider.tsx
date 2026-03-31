@@ -79,7 +79,9 @@ export function AddGameWizardProvider({ children }: { children: ReactNode }) {
       const savedGameId = useAddGameWizardStore.getState().selectedGame?.gameId;
       // Track flywheel event: game successfully added to library
       if (savedGameId) {
-        trackGameAdded({ gameId: savedGameId, source: 'catalog' });
+        const source =
+          entryPoint.type === 'fromSearch' && entryPoint.bggId != null ? 'bgg' : 'catalog';
+        trackGameAdded({ gameId: savedGameId, source });
       }
       // Invalidate library caches so UI reflects the new game
       queryClient.invalidateQueries({ queryKey: ['user-library'] });
@@ -92,7 +94,7 @@ export function AddGameWizardProvider({ children }: { children: ReactNode }) {
         queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(savedGameId) });
       }
     },
-    [queryClient]
+    [queryClient, entryPoint]
   );
 
   return (

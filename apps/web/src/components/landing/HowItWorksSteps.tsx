@@ -1,3 +1,5 @@
+import { type JSX } from 'react';
+
 const steps = [
   {
     num: '1',
@@ -25,7 +27,7 @@ const steps = [
   },
 ];
 
-export function HowItWorksSteps() {
+export function HowItWorksSteps(): JSX.Element {
   return (
     <section
       id="come-funziona"

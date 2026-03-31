@@ -25,11 +25,21 @@ export function useRecentSessions(limit: number): UseRecentSessionsResult {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     api.playRecords
       .getHistory({ page: 1, pageSize: limit })
-      .then(data => setSessions(data.records ?? []))
-      .catch(err => setError(err instanceof Error ? err.message : 'Errore nel caricamento'))
-      .finally(() => setIsLoading(false));
+      .then(data => {
+        if (!cancelled) setSessions(data.records ?? []);
+      })
+      .catch(err => {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Errore nel caricamento');
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [limit]);
 
   return { sessions, isLoading, error };

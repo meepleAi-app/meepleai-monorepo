@@ -11,11 +11,11 @@ namespace Api.BoundedContexts.UserLibrary.Application.Commands;
 
 /// <summary>
 /// Handler for SaveAgentConfigCommand (Issue #3212)
-/// Maps simplified frontend config to complete domain AgentConfiguration with typology defaults
+/// Maps simplified frontend config to complete domain AgentConfiguration
 /// </summary>
 internal sealed class SaveAgentConfigCommandHandler(
     IUserLibraryRepository libraryRepository,
-    IAgentTypologyRepository typologyRepository,
+    IAgentDefinitionRepository definitionRepository,
     IUnitOfWork unitOfWork,
     ILogger<SaveAgentConfigCommandHandler> logger)
     : ICommandHandler<SaveAgentConfigCommand, SaveAgentConfigResponse>
@@ -26,19 +26,19 @@ internal sealed class SaveAgentConfigCommandHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // 1. Validate typology exists and is approved
-        var typology = await typologyRepository
-            .GetByIdAsync(request.TypologyId, cancellationToken)
+        // 1. Validate definition exists and is active
+        var definition = await definitionRepository
+            .GetByIdAsync(request.AgentDefinitionId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (typology == null)
+        if (definition == null)
         {
-            throw new NotFoundException("AgentTypology", request.TypologyId.ToString());
+            throw new NotFoundException("AgentDefinition", request.AgentDefinitionId.ToString());
         }
 
-        if (typology.Status != KnowledgeBase.Domain.ValueObjects.TypologyStatus.Approved)
+        if (!definition.IsActive)
         {
-            throw new ConflictException($"Agent typology {typology.Name} is not approved (status: {typology.Status})");
+            throw new ConflictException($"Agent definition {definition.Name} is not active");
         }
 
         // 2. Get or create user library entry
@@ -53,15 +53,14 @@ internal sealed class SaveAgentConfigCommandHandler(
             await libraryRepository.AddAsync(entry, cancellationToken).ConfigureAwait(false);
         }
 
-        // 3. Map simplified config to complete AgentConfiguration with defaults
-        // Use typology defaults or sensible fallbacks
+        // 3. Map simplified config to complete AgentConfiguration
         var agentConfig = AgentConfiguration.Create(
             llmModel: request.ModelName,
-            temperature: 0.7, // Default temperature (typology could provide this in future)
-            maxTokens: 2000,  // Default max tokens (typology could provide this in future)
-            personality: typology.Name, // Use typology name as personality indicator
-            detailLevel: "Normale", // Default detail level
-            personalNotes: $"Typology: {typology.Name}, Cost: ${request.CostEstimate:F4}/query"
+            temperature: 0.7,
+            maxTokens: 2000,
+            personality: definition.Name,
+            detailLevel: "Normale",
+            personalNotes: $"Definition: {definition.Name}, Cost: ${request.CostEstimate:F4}/query"
         );
 
         // 4. Configure agent via domain method
@@ -71,10 +70,10 @@ internal sealed class SaveAgentConfigCommandHandler(
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         logger.LogInformation(
-            "Agent config saved for user {UserId}, game {GameId}, typology {TypologyId}, model {Model}",
+            "Agent config saved for user {UserId}, game {GameId}, definition {AgentDefinitionId}, model {Model}",
             request.UserId,
             request.GameId,
-            request.TypologyId,
+            request.AgentDefinitionId,
             request.ModelName
         );
 

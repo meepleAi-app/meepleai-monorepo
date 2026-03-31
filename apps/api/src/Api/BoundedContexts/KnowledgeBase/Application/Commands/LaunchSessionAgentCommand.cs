@@ -8,9 +8,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// </summary>
 internal record LaunchSessionAgentCommand(
     Guid GameSessionId,
-    Guid TypologyId,
+    Guid AgentDefinitionId,
     Guid UserId,
-    Guid AgentId,
     Guid GameId,
     string InitialGameStateJson
 ) : IRequest<Guid>;

@@ -1,6 +1,4 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Queries;
-using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -12,6 +10,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using LibraryAgentConfiguration = Api.BoundedContexts.UserLibrary.Domain.ValueObjects.AgentConfiguration;
+using AgentDef = Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition;
 using Microsoft.Extensions.Logging;
 using FluentAssertions;
 using Moq;
@@ -28,7 +27,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public sealed class CreateGameAgentCommandHandlerTests
 {
     private readonly Mock<ISharedGameRepository> _gameRepoMock;
-    private readonly Mock<IAgentTypologyRepository> _typologyRepoMock;
+    private readonly Mock<IAgentDefinitionRepository> _definitionRepoMock;
     private readonly Mock<IUserLibraryRepository> _libraryRepoMock;
     private readonly Mock<IVectorDocumentRepository> _vectorDocRepoMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
@@ -36,13 +35,13 @@ public sealed class CreateGameAgentCommandHandlerTests
     private readonly CreateGameAgentCommandHandler _handler;
 
     private readonly Guid _gameId = Guid.NewGuid();
-    private readonly Guid _typologyId = Guid.NewGuid();
+    private readonly Guid _definitionId = Guid.NewGuid();
     private readonly Guid _userId = Guid.NewGuid();
 
     public CreateGameAgentCommandHandlerTests()
     {
         _gameRepoMock = new Mock<ISharedGameRepository>();
-        _typologyRepoMock = new Mock<IAgentTypologyRepository>();
+        _definitionRepoMock = new Mock<IAgentDefinitionRepository>();
         _libraryRepoMock = new Mock<IUserLibraryRepository>();
         _vectorDocRepoMock = new Mock<IVectorDocumentRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
@@ -50,16 +49,16 @@ public sealed class CreateGameAgentCommandHandlerTests
 
         _handler = new CreateGameAgentCommandHandler(
             _gameRepoMock.Object,
-            _typologyRepoMock.Object,
+            _definitionRepoMock.Object,
             _libraryRepoMock.Object,
             _vectorDocRepoMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object);
 
-        // Default: game found, KB indexed, and approved typology found
+        // Default: game found, KB indexed, and active definition found
         SetupGameFound();
         SetupCompletedKnowledgeBase();
-        SetupApprovedTypology();
+        SetupActiveDefinition();
     }
 
     // ──────────────────────────────────────────────────
@@ -205,7 +204,7 @@ public sealed class CreateGameAgentCommandHandlerTests
     private CreateGameAgentCommand BuildCommand(string userTier, string userRole)
         => new(
             GameId: _gameId,
-            TypologyId: _typologyId,
+            AgentDefinitionId: _definitionId,
             StrategyName: "Balanced",
             StrategyParameters: null,
             UserId: _userId,
@@ -246,21 +245,18 @@ public sealed class CreateGameAgentCommandHandlerTests
             .ReturnsAsync(indexingInfo);
     }
 
-    private void SetupApprovedTypology()
+    private void SetupActiveDefinition()
     {
-        var strategy = AgentStrategy.Custom("Balanced", new Dictionary<string, object>(StringComparer.Ordinal));
-        var typology = new AgentTypology(
-            _typologyId,
-            "Standard Typology",
+        var definition = AgentDef.Create(
+            "Standard Definition",
             "Test description",
-            "System prompt",
-            strategy,
-            Guid.NewGuid(),
-            TypologyStatus.Approved);
+            AgentType.RulesInterpreter,
+            AgentDefinitionConfig.Default());
+        definition.Activate();
 
-        _typologyRepoMock
-            .Setup(r => r.GetByIdAsync(_typologyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(typology);
+        _definitionRepoMock
+            .Setup(r => r.GetByIdAsync(_definitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(definition);
     }
 
     private static UserLibraryEntry CreateEntryWithAgent(Guid userId, Guid gameId)

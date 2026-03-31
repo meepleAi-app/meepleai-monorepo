@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.UserLibrary.Application.Commands;
 internal sealed record SaveAgentConfigCommand(
     Guid UserId,
     Guid GameId,
-    Guid TypologyId,
+    Guid AgentDefinitionId,
     string ModelName,
     double CostEstimate
 ) : ICommand<SaveAgentConfigResponse>;

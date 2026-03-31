@@ -37,7 +37,7 @@ function getStorageKey(gameId: string): string {
 }
 
 interface CachedConfig {
-  typologyId: string;
+  agentDefinitionId: string;
   modelName: string;
   timestamp: number;
 }
@@ -67,7 +67,7 @@ function saveCachedConfig(gameId: string, config: Omit<CachedConfig, 'timestamp'
 // ========== Agent Config Request ==========
 
 interface AgentConfigRequest {
-  typologyId: string;
+  agentDefinitionId: string;
   modelName: string;
   costEstimate: number;
 }
@@ -83,8 +83,8 @@ interface UseAgentConfigModalParams {
 
 export interface UseAgentConfigModalResult {
   // State
-  selectedTypologyId: string | null;
-  setSelectedTypologyId: (id: string | null) => void;
+  selectedagentDefinitionId: string | null;
+  setSelectedagentDefinitionId: (id: string | null) => void;
   selectedModelName: string | null;
   setSelectedModelName: (name: string | null) => void;
 
@@ -128,7 +128,7 @@ export function useAgentConfigModal({
   const userTier: UserTier = user ? 'Premium' : 'Free';
 
   // Form state
-  const [selectedTypologyId, setSelectedTypologyId] = useState<string | null>(null);
+  const [selectedagentDefinitionId, setSelectedagentDefinitionId] = useState<string | null>(null);
   const [selectedModelName, setSelectedModelName] = useState<string | null>(null);
 
   // ========== Query: Typologies ==========
@@ -147,10 +147,7 @@ export function useAgentConfigModal({
 
   // ========== Query: Quota ==========
 
-  const {
-    data: quota,
-    isLoading: quotaLoading,
-  } = useSessionQuotaWithStatus(enabled);
+  const { data: quota, isLoading: quotaLoading } = useSessionQuotaWithStatus(enabled);
 
   const showWarning = useMemo(() => {
     if (!quota || quota.isUnlimited) return false;
@@ -168,7 +165,7 @@ export function useAgentConfigModal({
     }
     return apiModels.map((m, i) => ({
       name: m.name,
-      cost: (m.costPer1kInputTokens * 2 + m.costPer1kOutputTokens * 1),
+      cost: m.costPer1kInputTokens * 2 + m.costPer1kOutputTokens * 1,
       recommended: i === 0,
     }));
   }, [apiModels]);
@@ -177,7 +174,7 @@ export function useAgentConfigModal({
 
   const estimatedCost = useMemo(() => {
     if (!selectedModelName) return null;
-    const model = availableModels.find((m) => m.name === selectedModelName);
+    const model = availableModels.find(m => m.name === selectedModelName);
     return model?.cost ?? null;
   }, [selectedModelName, availableModels]);
 
@@ -186,17 +183,17 @@ export function useAgentConfigModal({
   useEffect(() => {
     const cached = loadCachedConfig(gameId);
     if (cached) {
-      setSelectedTypologyId(cached.typologyId);
+      setSelectedagentDefinitionId(cached.agentDefinitionId);
       setSelectedModelName(cached.modelName);
     } else if (!selectedModelName) {
       // Pre-select recommended model only if user hasn't selected one yet
-      const recommended = availableModels.find((m) => m.recommended);
+      const recommended = availableModels.find(m => m.recommended);
       const defaultModel = recommended ?? availableModels[0];
       if (defaultModel) {
         setSelectedModelName(defaultModel.name);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
 
   // ========== Mutation: Save Config ==========
@@ -211,10 +208,10 @@ export function useAgentConfigModal({
       const response = await api.library.saveAgentConfig(gameId, request);
       return { ...request, configId: response.configId };
     },
-    onSuccess: (data) => {
+    onSuccess: data => {
       // Save to localStorage
       saveCachedConfig(gameId, {
-        typologyId: data.typologyId,
+        agentDefinitionId: data.agentDefinitionId,
         modelName: data.modelName,
       });
 
@@ -222,7 +219,7 @@ export function useAgentConfigModal({
       queryClient.invalidateQueries({ queryKey: ['agent-config', gameId] });
 
       toast.success('Configurazione salvata', {
-        description: 'La configurazione dell\'agente è stata salvata correttamente.',
+        description: "La configurazione dell'agente è stata salvata correttamente.",
       });
     },
     onError: (error: Error) => {
@@ -235,7 +232,7 @@ export function useAgentConfigModal({
   // ========== Action: Save Config ==========
 
   const saveConfig = async (): Promise<void> => {
-    if (!selectedTypologyId || !selectedModelName || estimatedCost === null) {
+    if (!selectedagentDefinitionId || !selectedModelName || estimatedCost === null) {
       toast.error('Campi obbligatori mancanti', {
         description: 'Seleziona tipologia e modello prima di salvare.',
       });
@@ -243,7 +240,7 @@ export function useAgentConfigModal({
     }
 
     await saveConfigMutation({
-      typologyId: selectedTypologyId,
+      agentDefinitionId: selectedagentDefinitionId,
       modelName: selectedModelName,
       costEstimate: estimatedCost,
     });
@@ -252,14 +249,12 @@ export function useAgentConfigModal({
   // ========== Validation ==========
 
   const isValid =
-    selectedTypologyId !== null &&
-    selectedModelName !== null &&
-    estimatedCost !== null;
+    selectedagentDefinitionId !== null && selectedModelName !== null && estimatedCost !== null;
 
   return {
     // State
-    selectedTypologyId,
-    setSelectedTypologyId,
+    selectedagentDefinitionId,
+    setSelectedagentDefinitionId,
     selectedModelName,
     setSelectedModelName,
 

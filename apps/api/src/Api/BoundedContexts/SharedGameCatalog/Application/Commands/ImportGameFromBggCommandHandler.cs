@@ -68,6 +68,23 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
         // Map BGG data to SharedGame aggregate
         var sharedGame = MapBggDetailsToSharedGame(bggDetails, command.BggId, command.UserId);
 
+        // Auto-publish if requested (Draft → Published directly).
+        // Guard against Guid.Empty: queue items enqueued without a user context have UserId=Guid.Empty
+        // and QuickPublish throws ArgumentException for empty publisher identity.
+        if (command.AutoPublish)
+        {
+            if (command.UserId == Guid.Empty)
+            {
+                _logger.LogWarning(
+                    "AutoPublish requested but UserId is empty for BggId={BggId}; skipping publish",
+                    command.BggId);
+            }
+            else
+            {
+                sharedGame.QuickPublish(command.UserId);
+            }
+        }
+
         // Add aggregate to repository (converts to entity)
         await _repository.AddAsync(sharedGame, cancellationToken).ConfigureAwait(false);
 

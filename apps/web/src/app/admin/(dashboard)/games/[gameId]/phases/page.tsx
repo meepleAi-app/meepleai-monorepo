@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, use } from 'react';
 
 import { Plus, Trash2, Wand2, ArrowUp, ArrowDown, Save, Layers } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -42,9 +42,13 @@ function toRows(templates: PhaseTemplateDto[]): PhaseRow[] {
 
 // ========== Page ==========
 
-export default function GamePhasesAdminPage({ params }: { params: { id: string } }) {
+interface PhasesPageProps {
+  params: Promise<{ gameId: string }>;
+}
+
+export default function GamePhasesAdminPage({ params }: PhasesPageProps) {
   const router = useRouter();
-  const gameId = params.id;
+  const { gameId } = use(params);
 
   const [rows, setRows] = useState<PhaseRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);

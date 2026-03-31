@@ -14,7 +14,13 @@
 
 import { redirect } from 'next/navigation';
 
-import { HowItWorksSteps, SocialProofBar, WelcomeCTA, WelcomeHero } from '@/components/landing';
+import {
+  HowItWorksSteps,
+  RulesQuickDemo,
+  SocialProofBar,
+  WelcomeCTA,
+  WelcomeHero,
+} from '@/components/landing';
 import { getServerUser } from '@/lib/auth/server';
 
 import type { Metadata } from 'next';
@@ -137,6 +143,7 @@ export default async function LandingPage() {
       {/* Main Landing Content — <main> wrapper provided by PublicLayout */}
       <WelcomeHero />
       <HowItWorksSteps />
+      <RulesQuickDemo />
       <SocialProofBar />
       <WelcomeCTA />
     </>

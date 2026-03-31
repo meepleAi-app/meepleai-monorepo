@@ -15,6 +15,7 @@ import { BookOpen, Upload } from 'lucide-react';
 
 import { CopyrightDisclaimerModal } from '@/components/pdf/CopyrightDisclaimerModal';
 import { RagReadyIndicator } from '@/components/pdf/RagReadyIndicator';
+import { trackPdfUploaded } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 import { useAddGameWizardStore } from '@/lib/stores/add-game-wizard-store';
@@ -97,6 +98,11 @@ export function KnowledgeBaseStep() {
       setUploadedDocId(documentId);
       setCustomPdfUploaded(true);
       setShowUpload(false);
+
+      // Track flywheel event: PDF successfully uploaded
+      if (gameId) {
+        trackPdfUploaded({ gameId, fileSizeKb: Math.round(fileSizeBytes / 1024) });
+      }
 
       // Fire-and-forget: record disclaimer acceptance on the backend
       api.documents.acceptDisclaimer(documentId).catch(() => {});

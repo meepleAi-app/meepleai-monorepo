@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/overlays/alert-dialog-primitives';
 import { Button } from '@/components/ui/primitives/button';
 import type { InvitationDto } from '@/lib/api/schemas/invitation.schemas';
+import { formatShortDate } from '@/lib/utils/timeUtils';
 
 import { InvitationStatusBadge } from './InvitationStatusBadge';
 
@@ -30,21 +31,19 @@ export interface InvitationRowProps {
   invitation: InvitationDto;
   onResend?: (id: string) => void;
   onRevoke?: (id: string) => void;
+  /** Disable the Resend button while a resend mutation is pending */
+  isResending?: boolean;
+  /** Disable the Revoke button while a revoke mutation is pending */
+  isRevoking?: boolean;
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
-}
-
-export function InvitationRow({ invitation, onResend, onRevoke }: InvitationRowProps) {
+export function InvitationRow({
+  invitation,
+  onResend,
+  onRevoke,
+  isResending = false,
+  isRevoking = false,
+}: InvitationRowProps) {
   const isPending = invitation.status === 'Pending';
 
   return (
@@ -57,10 +56,10 @@ export function InvitationRow({ invitation, onResend, onRevoke }: InvitationRowP
         <InvitationStatusBadge status={invitation.status} />
       </td>
       <td className="p-3 align-middle text-sm text-muted-foreground">
-        {formatDate(invitation.createdAt)}
+        {formatShortDate(invitation.createdAt)}
       </td>
       <td className="p-3 align-middle text-sm text-muted-foreground">
-        {formatDate(invitation.expiresAt)}
+        {formatShortDate(invitation.expiresAt)}
       </td>
       <td className="p-3 align-middle">
         <div className="flex items-center gap-1">
@@ -71,8 +70,9 @@ export function InvitationRow({ invitation, onResend, onRevoke }: InvitationRowP
               onClick={() => onResend(invitation.id)}
               aria-label={`Resend invitation to ${invitation.email}`}
               className="gap-1"
+              disabled={isResending}
             >
-              <RefreshCwIcon className="h-3 w-3" />
+              <RefreshCwIcon className={`h-3 w-3 ${isResending ? 'animate-spin' : ''}`} />
               Resend
             </Button>
           )}
@@ -84,6 +84,7 @@ export function InvitationRow({ invitation, onResend, onRevoke }: InvitationRowP
                   size="sm"
                   className="gap-1 text-destructive hover:text-destructive"
                   aria-label={`Revoke invitation for ${invitation.email}`}
+                  disabled={isRevoking}
                 >
                   <XCircleIcon className="h-3 w-3" />
                   Revoke

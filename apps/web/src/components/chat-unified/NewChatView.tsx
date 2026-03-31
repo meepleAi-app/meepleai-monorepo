@@ -111,16 +111,24 @@ const DEFAULT_AGENTS: AgentOption[] = [
   },
 ];
 
+const RULE_SUGGESTIONS: QuickStartSuggestion[] = [
+  {
+    label: 'Ho una domanda sulle regole',
+    message: 'Ho una domanda sulle regole di un gioco',
+  },
+  {
+    label: 'Setup della partita',
+    message: 'Come funziona il setup di questa partita?',
+  },
+  {
+    label: 'Risolvi una disputa',
+    message: "C'è una disputa al tavolo — aiutami a risolverla",
+  },
+];
+
 function getQuickStartSuggestions(gameName?: string): QuickStartSuggestion[] {
   if (!gameName) {
-    return [
-      { label: 'Consiglia un gioco', message: 'Consigliami un gioco da tavolo per la serata' },
-      { label: 'Regole base', message: 'Spiegami le regole di base' },
-      {
-        label: 'Migliori per 2 giocatori',
-        message: 'Quali sono i migliori giochi per 2 giocatori?',
-      },
-    ];
+    return RULE_SUGGESTIONS;
   }
   return [
     { label: `Come si gioca a ${gameName}`, message: `Come si gioca a ${gameName}?` },

@@ -133,6 +133,7 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
         BggQueueJobType jobType;
         Guid? sharedGameId;
         string? gameName;
+        bool autoPublish;
         {
             using var readScope = _scopeFactory.CreateScope();
             var readQueueService = readScope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
@@ -154,6 +155,7 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
             jobType = queueItem.JobType;
             sharedGameId = queueItem.SharedGameId;
             gameName = queueItem.GameName;
+            autoPublish = queueItem.AutoPublish;
 
             _logger.LogInformation(
                 "Processing BGG import: Id={Id}, BggId={BggId}, Position={Position}, Attempt={Attempt}",
@@ -175,7 +177,7 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
 
             if (jobType == BggQueueJobType.Import && bggId.HasValue)
             {
-                var command = new ImportGameFromBggCommand(bggId.Value, userId);
+                var command = new ImportGameFromBggCommand(bggId.Value, userId, autoPublish);
                 createdGameId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
             }
             else if (jobType == BggQueueJobType.Enrichment && sharedGameId.HasValue)

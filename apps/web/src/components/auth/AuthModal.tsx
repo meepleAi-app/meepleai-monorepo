@@ -20,6 +20,7 @@ import { AccessibleModal } from '@/components/accessible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 import { useAuth, type AuthUser } from '@/hooks/useAuth';
+import { trackSignUp } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
 import { isAdminRole } from '@/lib/utils/roles';
@@ -193,6 +194,7 @@ export function AuthModal({
 
       try {
         const user = await register(data);
+        trackSignUp({ method: 'email' });
         onSuccess?.(user);
         onClose();
         // Redirect to email verification pending page with email as parameter

@@ -30,8 +30,8 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
-
-const AVAILABLE_ROLES = ['User', 'Editor', 'Admin'] as const;
+import { INVITATION_ROLES } from '@/lib/api/schemas/invitation.schemas';
+import { isValidEmail } from '@/lib/utils/validation';
 
 export interface InviteUserDialogProps {
   open: boolean;
@@ -68,8 +68,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
       return;
     }
 
-    // Basic email format check
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    if (!isValidEmail(trimmedEmail)) {
       setError('Please enter a valid email address');
       return;
     }
@@ -122,7 +121,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
-                {AVAILABLE_ROLES.map(r => (
+                {INVITATION_ROLES.map(r => (
                   <SelectItem key={r} value={r}>
                     {r}
                   </SelectItem>

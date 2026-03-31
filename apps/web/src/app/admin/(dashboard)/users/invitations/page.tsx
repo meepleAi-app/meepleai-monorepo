@@ -107,6 +107,9 @@ export default function InvitationsPage() {
     queryClient.invalidateQueries({ queryKey: ['admin', 'invitation-stats'] });
   }
 
+  const resendingId = resendMutation.isPending ? (resendMutation.variables as string) : null;
+  const revokingId = revokeMutation.isPending ? (revokeMutation.variables as string) : null;
+
   const invitations = invitationsData?.items ?? [];
   const totalCount = invitationsData?.totalCount ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -265,7 +268,8 @@ export default function InvitationsPage() {
               Failed to load invitations
             </p>
             <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-              {error instanceof Error ? error.message : 'Unknown error'}
+              Unable to load invitations. Please try again or contact support if the problem
+              persists.
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
@@ -330,6 +334,8 @@ export default function InvitationsPage() {
                     invitation={inv}
                     onResend={id => resendMutation.mutate(id)}
                     onRevoke={id => revokeMutation.mutate(id)}
+                    isResending={resendingId === inv.id}
+                    isRevoking={revokingId === inv.id}
                   />
                 ))
               )}

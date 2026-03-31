@@ -22,6 +22,10 @@ import { useRouter } from 'next/navigation';
 
 import { LiveScoreboard } from '@/components/game-night/LiveScoreboard';
 import type { LiveScoreboardPlayer } from '@/components/game-night/LiveScoreboard';
+import { GameOverModal } from '@/components/session/live/GameOverModal';
+import type { GameOverPlayer } from '@/components/session/live/GameOverModal';
+import { OfflineBanner } from '@/components/session/live/OfflineBanner';
+import { TurnStateHeader } from '@/components/session/live/TurnStateHeader';
 import { QuickToolBar } from '@/components/session/QuickToolBar';
 import type { ToolId } from '@/components/session/QuickToolBar';
 import { ScoreNumpad } from '@/components/session/ScoreNumpad';
@@ -29,9 +33,13 @@ import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { SessionBottomNav, type SessionTab } from '@/components/ui/navigation/SessionBottomNav';
 import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
+import { api } from '@/lib/api';
+import type { TurnPhasesDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { PLAYER_COLOR_HEX } from '@/lib/constants/player-colors';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
+import { useSyncWorker } from '@/lib/domain-hooks/useSyncWorker';
 import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useSyncQueueStore } from '@/lib/stores/sync-queue-store';
 import { cn } from '@/lib/utils';
 
 // ========== Props ==========
@@ -53,6 +61,12 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
   const recordScore = useSessionStore(s => s.recordScore);
   const completeSession = useSessionStore(s => s.completeSession);
 
+  // Offline sync worker — processes queue when online
+  useSyncWorker();
+
+  // Sync queue — enqueue for offline fallback
+  const enqueue = useSyncQueueStore(s => s.enqueue);
+
   // Tabs
   const [activeTab, setActiveTab] = useState<SessionTab>('game');
 
@@ -71,6 +85,9 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
 
+  // Turn phases
+  const [phases, setPhases] = useState<TurnPhasesDto | null>(null);
+
   // Timer
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -88,6 +105,36 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
   // ── SSE sync ────────────────────────────────────────────────────────────────
 
   useSessionSync({ sessionId });
+
+  // ── Phase data ──────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!session?.id) return;
+    api.liveSessions
+      .getPhases(session.id)
+      .then(setPhases)
+      .catch(() => {});
+  }, [session?.id, session?.currentTurnIndex]);
+
+  // ── Turn / Phase advance ─────────────────────────────────────────────────────
+
+  const handleAdvanceTurn = useCallback(async () => {
+    try {
+      await api.liveSessions.advanceTurn(sessionId);
+      await loadSession(sessionId);
+    } catch {
+      enqueue({ type: 'advanceTurn', sessionId, payload: {} });
+    }
+  }, [sessionId, enqueue, loadSession]);
+
+  const handleAdvancePhase = useCallback(async () => {
+    try {
+      await api.liveSessions.advancePhase(sessionId);
+      await loadSession(sessionId);
+    } catch {
+      enqueue({ type: 'advancePhase', sessionId, payload: {} });
+    }
+  }, [sessionId, enqueue, loadSession]);
 
   // ── Timer ───────────────────────────────────────────────────────────────────
 
@@ -163,6 +210,10 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
 
   const players = session?.players ?? [];
 
+  // Active player name (for TurnStateHeader)
+  const activePlayerName =
+    players.find(p => p.id === session?.currentTurnPlayerId)?.displayName ?? null;
+
   const scoreboardPlayers: LiveScoreboardPlayer[] = players
     .filter(p => p.isActive)
     .map(p => {
@@ -179,6 +230,11 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
       };
     });
 
+  // Game-over players ranked by totalScore desc
+  const gameOverPlayers: GameOverPlayer[] = [...scoreboardPlayers]
+    .sort((a, b) => b.totalScore - a.totalScore)
+    .map((p, i) => ({ ...p, rank: i + 1 }));
+
   // ── Loading state ───────────────────────────────────────────────────────────
 
   if (isLoading && !session) {
@@ -189,24 +245,15 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
     );
   }
 
-  // ── Session Ended Summary ───────────────────────────────────────────────────
+  // ── Game Over Modal ─────────────────────────────────────────────────────────
 
   if (sessionEnded || session?.status === 'Completed') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold font-quicksand">Partita completata!</h1>
-          <p className="text-sm text-muted-foreground">{session?.gameName ?? 'Sessione'}</p>
-        </div>
-
-        <div className="w-full max-w-sm">
-          <LiveScoreboard players={scoreboardPlayers} className="w-full" />
-        </div>
-
-        <GradientButton fullWidth size="lg" onClick={() => router.push('/sessions')}>
-          Torna alle sessioni
-        </GradientButton>
-      </div>
+      <GameOverModal
+        gameName={session?.gameName ?? 'Sessione'}
+        players={gameOverPlayers}
+        sessionId={sessionId}
+      />
     );
   }
 
@@ -214,6 +261,9 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
 
   return (
     <div className="flex flex-col min-h-screen pb-[var(--size-session-bottom-nav,56px)]">
+      {/* Offline / sync banner */}
+      <OfflineBanner />
+
       {/* Header */}
       <MobileHeader
         title={session?.gameName ?? 'Sessione'}
@@ -243,6 +293,20 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
               </span>
               <span className="text-xs text-muted-foreground">Tempo di gioco</span>
             </div>
+
+            {/* Turn / phase state */}
+            <TurnStateHeader
+              currentTurn={(session?.currentTurnIndex ?? 0) + 1}
+              currentPhase={phases?.currentPhaseName ?? null}
+              phaseCount={phases?.totalPhases ?? 0}
+              currentPhaseIndex={phases?.currentPhaseIndex ?? 0}
+              activePlayerName={activePlayerName}
+              canAdvanceTurn={session?.status === 'InProgress'}
+              canAdvancePhase={(phases?.hasPhases ?? false) && session?.status === 'InProgress'}
+              onAdvanceTurn={handleAdvanceTurn}
+              onAdvancePhase={handleAdvancePhase}
+              className="-mx-4"
+            />
 
             {/* Quick tools */}
             <QuickToolBar activeTool={activeTool} onSelectTool={handleSelectTool} />

@@ -1,22 +1,24 @@
 /**
- * SessionWizardMobile — 3-step mobile wizard for creating a game session
+ * SessionWizardMobile — 4-step mobile wizard for creating a game session
  *
  * Phase 5: Game Night — Task 3
+ * Game Session Flow v2.0 — Task 14 (added phases step)
  *
  * Steps:
  * 1. Choose Game — pick from library games
  * 2. Add Players — name + color
- * 3. Ready — summary + start
+ * 3. Configure Phases — pre-loaded templates, optional
+ * 4. Ready — summary + start
  *
  * API flow:
- *   createSession → addPlayer (per player) → navigate to /sessions/live/{id}
+ *   createSession → addPlayer (per player) → configurePhases (if any) → navigate to /sessions/live/{id}
  */
 
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 
-import { Search, Check, Plus, Trash2, Gamepad2, Users, Rocket } from 'lucide-react';
+import { Search, Check, Plus, Trash2, Gamepad2, Users, Rocket, Layers, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { GradientButton } from '@/components/ui/buttons/GradientButton';
@@ -24,6 +26,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { useLibrary } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
+import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 import { cn } from '@/lib/utils';
 
@@ -35,7 +38,12 @@ interface WizardPlayer {
   color: PlayerColor;
 }
 
-type WizardStep = 1 | 2 | 3;
+interface WizardPhase {
+  localId: string;
+  phaseName: string;
+}
+
+type WizardStep = 1 | 2 | 3 | 4;
 
 // ========== Constants ==========
 
@@ -51,7 +59,8 @@ const COLOR_PALETTE: { value: PlayerColor; label: string; hex: string; className
 const STEP_ICONS: Record<WizardStep, React.ElementType> = {
   1: Gamepad2,
   2: Users,
-  3: Rocket,
+  3: Layers,
+  4: Rocket,
 };
 
 // ========== Component ==========
@@ -68,6 +77,33 @@ export function SessionWizardMobile() {
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Phase templates
+  const [phaseTemplates, setPhaseTemplates] = useState<PhaseTemplateDto[]>([]);
+  const [phases, setPhases] = useState<WizardPhase[]>([]);
+  const [isLoadingPhases, setIsLoadingPhases] = useState(false);
+
+  // Load phase templates when game is selected
+  useEffect(() => {
+    if (!selectedGameId) {
+      setPhaseTemplates([]);
+      setPhases([]);
+      return;
+    }
+    setIsLoadingPhases(true);
+    api.games
+      .getPhaseTemplates(selectedGameId)
+      .then(templates => {
+        const sorted = [...templates].sort((a, b) => a.phaseOrder - b.phaseOrder);
+        setPhaseTemplates(sorted);
+        setPhases(sorted.map(t => ({ localId: t.id, phaseName: t.phaseName })));
+      })
+      .catch(() => {
+        setPhaseTemplates([]);
+        setPhases([]);
+      })
+      .finally(() => setIsLoadingPhases(false));
+  }, [selectedGameId]);
 
   // Fetch library games
   const { data: libraryData, isLoading: isLoadingLibrary } = useLibrary(
@@ -105,6 +141,19 @@ export function SessionWizardMobile() {
     setPlayers(prev => prev.map(p => (p.id === id ? { ...p, color } : p)));
   }, []);
 
+  // Phase management
+  const addPhase = useCallback(() => {
+    setPhases(prev => [...prev, { localId: `new-${Date.now()}`, phaseName: '' }]);
+  }, []);
+
+  const removePhase = useCallback((localId: string) => {
+    setPhases(prev => prev.filter(p => p.localId !== localId));
+  }, []);
+
+  const updatePhaseName = useCallback((localId: string, name: string) => {
+    setPhases(prev => prev.map(p => (p.localId === localId ? { ...p, phaseName: name } : p)));
+  }, []);
+
   // Create session and navigate
   const handleStart = useCallback(async () => {
     if (!selectedGameName || players.length === 0) return;
@@ -136,13 +185,24 @@ export function SessionWizardMobile() {
             `Errore aggiungendo "${failedName}" (${addedPlayers.length}/${players.length} aggiunti). ${msg}. ` +
               (remaining > 1 ? `${remaining - 1} giocatori restanti non aggiunti.` : '')
           );
-          // Still navigate — session was created and some players may have been added
           router.push(`/sessions/live/${sessionId}`);
           return;
         }
       }
 
-      // 3. Navigate to live session
+      // 3. Configure phases if any selected
+      const validPhases = phases.filter(p => p.phaseName.trim().length > 0);
+      if (validPhases.length > 0) {
+        try {
+          await api.liveSessions.configurePhases(sessionId, {
+            phaseNames: validPhases.map(p => p.phaseName.trim()),
+          });
+        } catch {
+          // Non-blocking — session can still be played without phases
+        }
+      }
+
+      // 4. Navigate to live session
       router.push(`/sessions/live/${sessionId}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Errore nella creazione della sessione';
@@ -150,7 +210,7 @@ export function SessionWizardMobile() {
     } finally {
       setIsCreating(false);
     }
-  }, [selectedGameName, selectedGameId, players, router]);
+  }, [selectedGameName, selectedGameId, players, phases, router]);
 
   // Navigation
   const canProceedStep1 = !!selectedGameName;
@@ -160,7 +220,7 @@ export function SessionWizardMobile() {
     <div className="flex flex-col min-h-[60vh]">
       {/* Progress dots */}
       <div className="flex items-center justify-center gap-3 py-4">
-        {([1, 2, 3] as WizardStep[]).map(s => {
+        {([1, 2, 3, 4] as WizardStep[]).map(s => {
           const Icon = STEP_ICONS[s];
           const isActive = s === step;
           const isDone = s < step;
@@ -372,8 +432,82 @@ export function SessionWizardMobile() {
           </div>
         )}
 
-        {/* ——— Step 3: Ready ——— */}
+        {/* ——— Step 3: Configure Phases ——— */}
         {step === 3 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-bold font-quicksand">Configura le fasi</h2>
+              <p className="text-sm text-muted-foreground">
+                {phaseTemplates.length > 0
+                  ? 'Fasi pre-caricate dalle impostazioni del gioco. Puoi modificarle o saltare.'
+                  : 'Aggiungi le fasi del turno, oppure salta questo passo.'}
+              </p>
+            </div>
+
+            {isLoadingPhases ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-muted-foreground">Caricamento fasi...</p>
+              </div>
+            ) : (
+              <>
+                {/* Phase list */}
+                <div className="space-y-2" role="list" aria-label="Fasi del turno">
+                  {phases.length === 0 && (
+                    <div className="flex items-center justify-center py-8 rounded-xl border border-dashed border-white/20">
+                      <p className="text-sm text-muted-foreground">
+                        Nessuna fase. Aggiungine una o salta.
+                      </p>
+                    </div>
+                  )}
+                  {phases.map((phase, idx) => (
+                    <div
+                      key={phase.localId}
+                      role="listitem"
+                      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                    >
+                      <span className="text-xs font-mono text-muted-foreground w-4 shrink-0">
+                        {idx + 1}
+                      </span>
+                      <div className="h-2 w-2 rounded-full bg-purple-400 shrink-0" aria-hidden />
+                      <Input
+                        value={phase.phaseName}
+                        onChange={e => updatePhaseName(phase.localId, e.target.value)}
+                        placeholder={`Fase ${idx + 1}`}
+                        className="flex-1 h-8 text-sm"
+                        aria-label={`Nome fase ${idx + 1}`}
+                      />
+                      <button
+                        onClick={() => removePhase(phase.localId)}
+                        className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-400 shrink-0"
+                        aria-label={`Rimuovi fase ${idx + 1}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <Button variant="outline" size="sm" onClick={addPhase} className="w-full">
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Aggiungi fase
+                </Button>
+              </>
+            )}
+
+            {/* Navigation */}
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
+                Indietro
+              </Button>
+              <GradientButton fullWidth size="lg" onClick={() => setStep(4)} className="flex-1">
+                {phases.filter(p => p.phaseName.trim()).length > 0 ? 'Avanti' : 'Salta'}
+              </GradientButton>
+            </div>
+          </div>
+        )}
+
+        {/* ——— Step 4: Ready ——— */}
+        {step === 4 && (
           <div className="space-y-6">
             <div>
               <h2 className="text-lg font-bold font-quicksand">Tutto pronto!</h2>
@@ -416,6 +550,27 @@ export function SessionWizardMobile() {
                   })}
                 </div>
               </div>
+
+              {/* Phases (if any) */}
+              {phases.filter(p => p.phaseName.trim()).length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Fasi ({phases.filter(p => p.phaseName.trim()).length})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {phases
+                      .filter(p => p.phaseName.trim())
+                      .map((phase, idx) => (
+                        <span
+                          key={phase.localId}
+                          className="text-xs bg-purple-500/15 text-purple-300 border border-purple-500/20 rounded-full px-2.5 py-0.5"
+                        >
+                          {idx + 1}. {phase.phaseName}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Error */}
@@ -427,7 +582,7 @@ export function SessionWizardMobile() {
 
             {/* Actions */}
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
+              <Button variant="outline" className="flex-1" onClick={() => setStep(3)}>
                 Indietro
               </Button>
               <GradientButton

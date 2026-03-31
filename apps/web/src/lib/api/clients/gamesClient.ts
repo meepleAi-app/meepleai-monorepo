@@ -47,6 +47,28 @@ import {
 
 import type { HttpClient } from '../core/httpClient';
 
+// ─── Phase Template types (Game Session Flow v2.0) ────────────────────────────
+
+const PhaseTemplateDtoSchema = z.object({
+  id: z.string().uuid(),
+  gameId: z.string().uuid(),
+  phaseName: z.string(),
+  phaseOrder: z.number().int(),
+  description: z.string().nullable(),
+});
+
+const PhaseTemplateSuggestionDtoSchema = z.object({
+  phaseName: z.string(),
+  phaseOrder: z.number().int(),
+  description: z.string(),
+  rationale: z.string(),
+});
+
+export type PhaseTemplateDto = z.infer<typeof PhaseTemplateDtoSchema>;
+export type PhaseTemplateSuggestionDto = z.infer<typeof PhaseTemplateSuggestionDtoSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface CreateGamesClientParams {
   httpClient: HttpClient;
 }
@@ -684,6 +706,37 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
         throw new Error('Failed to create review: no response from server');
       }
       return result;
+    },
+
+    // ========== Phase Templates (Game Session Flow v2.0) ==========
+
+    /** GET /api/v1/games/{gameId}/phase-templates */
+    async getPhaseTemplates(gameId: string): Promise<PhaseTemplateDto[]> {
+      const result = await httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/phase-templates`,
+        z.array(PhaseTemplateDtoSchema)
+      );
+      return result ?? [];
+    },
+
+    /** PUT /api/v1/games/{gameId}/phase-templates */
+    async upsertPhaseTemplates(
+      gameId: string,
+      phases: { phaseName: string; phaseOrder: number; description?: string }[]
+    ): Promise<void> {
+      await httpClient.put(`/api/v1/games/${encodeURIComponent(gameId)}/phase-templates`, {
+        phases,
+      });
+    },
+
+    /** POST /api/v1/games/{gameId}/phase-templates/suggest */
+    async suggestPhaseTemplates(gameId: string): Promise<PhaseTemplateSuggestionDto[]> {
+      const result = await httpClient.post(
+        `/api/v1/games/${encodeURIComponent(gameId)}/phase-templates/suggest`,
+        {},
+        z.array(PhaseTemplateSuggestionDtoSchema)
+      );
+      return result ?? [];
     },
   };
 }

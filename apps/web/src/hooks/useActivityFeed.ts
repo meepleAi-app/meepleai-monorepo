@@ -56,6 +56,7 @@ export function useActivityFeed(limit = 10): UseActivityFeedResult {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     let sessionsFailed = false;
     let badgesFailed = false;
 
@@ -74,8 +75,11 @@ export function useActivityFeed(limit = 10): UseActivityFeedResult {
 
     Promise.all([sessionsPromise, badgesPromise])
       .then(([sessions, badges]) => {
+        if (cancelled) return;
+
         if (sessionsFailed && badgesFailed) {
           setError('Errore nel caricamento delle attività');
+          setIsLoading(false);
           return;
         }
 
@@ -87,9 +91,18 @@ export function useActivityFeed(limit = 10): UseActivityFeedResult {
         );
 
         setItems(all.slice(0, limit));
+        setIsLoading(false);
       })
-      .catch(err => setError(err instanceof Error ? err.message : 'Errore'))
-      .finally(() => setIsLoading(false));
+      .catch(err => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Errore');
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [limit]);
 
   return { items, isLoading, error };

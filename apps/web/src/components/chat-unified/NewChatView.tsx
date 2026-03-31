@@ -68,6 +68,7 @@ interface CustomAgent {
 interface QuickStartSuggestion {
   label: string;
   message: string;
+  promptType?: 'rule_dispute' | 'setup' | 'general' | 'suggestion';
 }
 
 // ============================================================================
@@ -116,14 +117,17 @@ const RULE_SUGGESTIONS: QuickStartSuggestion[] = [
   {
     label: 'Ho una domanda sulle regole',
     message: 'Ho una domanda sulle regole di un gioco',
+    promptType: 'general',
   },
   {
     label: 'Setup della partita',
     message: 'Come funziona il setup di questa partita?',
+    promptType: 'setup',
   },
   {
     label: 'Risolvi una disputa',
     message: "C'è una disputa al tavolo — aiutami a risolverla",
+    promptType: 'rule_dispute',
   },
 ];
 
@@ -366,7 +370,10 @@ function QuickStartSection({
   disabled,
 }: {
   suggestions: QuickStartSuggestion[];
-  onSuggestionClick: (message: string) => void;
+  onSuggestionClick: (
+    message: string,
+    promptType?: 'rule_dispute' | 'setup' | 'general' | 'suggestion'
+  ) => void;
   disabled: boolean;
 }) {
   return (
@@ -376,7 +383,7 @@ function QuickStartSection({
         {suggestions.map(s => (
           <button
             key={s.label}
-            onClick={() => onSuggestionClick(s.message)}
+            onClick={() => onSuggestionClick(s.message, s.promptType)}
             disabled={disabled}
             className={cn(
               'px-4 py-2 rounded-full text-sm font-nunito transition-all duration-200',
@@ -601,7 +608,10 @@ export function NewChatView() {
 
   // Create thread and redirect
   const handleStartChat = useCallback(
-    async (initialMessage?: string) => {
+    async (
+      initialMessage?: string,
+      promptType: 'rule_dispute' | 'setup' | 'general' | 'suggestion' = 'general'
+    ) => {
       setIsCreating(true);
       setError(null);
 
@@ -621,7 +631,7 @@ export function NewChatView() {
           // Track flywheel event: rules chat successfully started
           trackRulesChatStarted({
             gameId: gameId,
-            promptType: 'general',
+            promptType,
           });
           router.push(`/chat/${thread.id}`);
         }
@@ -635,8 +645,8 @@ export function NewChatView() {
   );
 
   const handleQuickStart = useCallback(
-    (message: string) => {
-      void handleStartChat(message);
+    (message: string, promptType?: 'rule_dispute' | 'setup' | 'general' | 'suggestion') => {
+      void handleStartChat(message, promptType);
     },
     [handleStartChat]
   );

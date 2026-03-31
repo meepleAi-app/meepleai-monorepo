@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -216,6 +217,37 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             _logger.LogInformation(
                 "Injected agent memory context into system prompt for session {SessionId} ({ContextLength} chars)",
                 command.AgentSessionId, memoryContext.Length);
+        }
+
+        // Inject live session context (turn, phase, players) into system prompt
+        if (liveSession != null)
+        {
+            var activePlayers = liveSession.Players
+                .Where(p => p.IsActive)
+                .Select(p => p.DisplayName)
+                .ToList();
+
+            var currentPlayerId = liveSession.GetCurrentTurnPlayerId();
+            var currentPlayerName = liveSession.Players
+                .FirstOrDefault(p => p.Id == currentPlayerId)?.DisplayName;
+
+            var sessionCtx = new LiveSessionContext(
+                SessionId: liveSession.Id,
+                GameName: liveSession.GameName,
+                CurrentTurnIndex: liveSession.CurrentTurnIndex,
+                CurrentPhaseIndex: liveSession.CurrentPhaseIndex,
+                CurrentPhaseName: liveSession.GetCurrentPhaseName(),
+                PhaseNames: liveSession.PhaseNames,
+                CurrentPlayerDisplayName: currentPlayerName,
+                ActivePlayerNames: activePlayers,
+                TurnAdvancePolicy: liveSession.TurnAdvancePolicy.ToString());
+
+            var sessionCtxBlock = AgentSessionContextBuilder.Build(sessionCtx);
+            if (!string.IsNullOrWhiteSpace(sessionCtxBlock))
+            {
+                systemPrompt = string.Create(CultureInfo.InvariantCulture,
+                    $"{systemPrompt}\n\n{sessionCtxBlock}");
+            }
         }
 
         // Budget check before LLM calls (fail-open: if check fails, allow request)

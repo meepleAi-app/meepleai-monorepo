@@ -304,6 +304,7 @@ export default function AdminUsersPage() {
                       <Badge
                         variant="outline"
                         className="border-red-300 bg-red-50 text-red-900 dark:border-red-700 dark:bg-red-950/30 dark:text-red-300"
+                        title={u.suspendReason ?? undefined}
                       >
                         Sospeso
                       </Badge>

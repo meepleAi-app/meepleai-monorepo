@@ -96,22 +96,10 @@ start_api() {
     export REDIS_PORT=26379
     export REDIS_PASSWORD="$STAGING_REDIS_PASSWORD"
     export SkipMigrations=true
-    export EMBEDDING_PROVIDER=external
-    export Embedding__Provider=External
-    export EMBEDDING_MODEL=intfloat/multilingual-e5-base
-    export EMBEDDING_DIMENSIONS=768
-    export Embedding__Dimensions=768
-    # AI services via SSH tunnel (not public HTTPS)
-    export LOCAL_EMBEDDING_URL=http://localhost:18000
-    export Embedding__LocalServiceUrl=http://localhost:18000
-    export RERANKER_URL=http://localhost:18003
-    export EMBEDDING_FALLBACK_ENABLED=false
-    export Embedding__EnableFallback=false
 
-    # LLM - Ollama via SSH tunnel (staging:11434 → localhost:21434)
-    export OllamaUrl=http://localhost:21434
-    export Embedding__OllamaUrl=http://localhost:21434
-    export AI__Providers__Ollama__BaseUrl=http://localhost:21434
+    # RERANKER_URL: flat env var used by RerankerHealthCheck and AdminKBSettingsEndpoints
+    # (Reranking:BaseUrl is set via appsettings.Integration.json)
+    export RERANKER_URL=http://localhost:18003
 
     # Build connection string with SSL Mode=Disable (tunnel already encrypts)
     export ConnectionStrings__Postgres="Host=localhost;Port=25432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};SSL Mode=Disable;GssEncryptionMode=Disable"

@@ -16,7 +16,7 @@ import { type ReactNode, useEffect, useState, use } from 'react';
 import { BarChart3, FileText, MessageCircle, Plus, Wrench } from 'lucide-react';
 
 import { LiveScoreSheet } from '@/components/session';
-import { useSetNavConfig } from '@/context/NavigationContext';
+import { useSetNavConfig } from '@/contexts/NavigationContext';
 import { useSessionStore } from '@/lib/stores/sessionStore';
 
 interface SessionLayoutProps {

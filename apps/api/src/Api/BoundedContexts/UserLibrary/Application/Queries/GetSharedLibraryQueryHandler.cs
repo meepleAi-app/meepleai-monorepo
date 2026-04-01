@@ -16,20 +16,17 @@ internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuer
 {
     private readonly ILibraryShareLinkRepository _shareLinkRepository;
     private readonly IUserLibraryRepository _libraryRepository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<GetSharedLibraryQueryHandler> _logger;
 
     public GetSharedLibraryQueryHandler(
         ILibraryShareLinkRepository shareLinkRepository,
         IUserLibraryRepository libraryRepository,
-        IUnitOfWork unitOfWork,
         MeepleAiDbContext db,
         ILogger<GetSharedLibraryQueryHandler> logger)
     {
         _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -52,10 +49,8 @@ internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuer
             return null;
         }
 
-        // Record access
-        shareLink.RecordAccess();
-        await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Record access atomically to avoid race conditions on concurrent requests
+        await _shareLinkRepository.RecordAccessAsync(query.ShareToken, cancellationToken).ConfigureAwait(false);
 
         // Get owner display name
         var owner = await _db.Users

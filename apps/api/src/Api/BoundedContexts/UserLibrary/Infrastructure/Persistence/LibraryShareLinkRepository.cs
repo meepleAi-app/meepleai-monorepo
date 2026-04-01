@@ -90,6 +90,17 @@ internal class LibraryShareLinkRepository : RepositoryBase, ILibraryShareLinkRep
             .ConfigureAwait(false);
     }
 
+    public async Task RecordAccessAsync(string shareToken, CancellationToken cancellationToken = default)
+    {
+        await DbContext.LibraryShareLinks
+            .Where(l => l.ShareToken == shareToken && l.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(l => l.ViewCount, l => l.ViewCount + 1)
+                .SetProperty(l => l.LastAccessedAt, DateTime.UtcNow),
+            cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task AddAsync(LibraryShareLink entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);

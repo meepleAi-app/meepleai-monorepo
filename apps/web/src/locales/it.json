@@ -87,6 +87,7 @@
     "login": {
       "emailLabel": "Email",
       "emailPlaceholder": "tu@esempio.com",
+      "loadingMessage": "Caricamento...",
       "loggingIn": "Accesso in corso...",
       "loginButton": "Accedi",
       "passwordLabel": "Password",

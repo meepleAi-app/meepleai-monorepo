@@ -7,6 +7,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 
 /**
@@ -17,7 +18,7 @@ import { api } from '@/lib/api';
  */
 export function useLoanStatus(gameId: string) {
   return useQuery({
-    queryKey: ['library', 'loan-status', gameId],
+    queryKey: libraryKeys.loanStatus(gameId),
     queryFn: () => api.library.getLoanStatus(gameId),
     staleTime: 30_000,
   });
@@ -37,8 +38,8 @@ export function useMarkAsOnLoan(gameId: string) {
     mutationFn: (borrowerInfo: string) =>
       api.library.updateGameState(gameId, { newState: 'InPrestito', stateNotes: borrowerInfo }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library', 'loan-status', gameId] });
-      queryClient.invalidateQueries({ queryKey: ['library'] });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.loanStatus(gameId) });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
     },
   });
 }
@@ -56,8 +57,8 @@ export function useMarkAsReturned(gameId: string) {
   return useMutation({
     mutationFn: () => api.library.updateGameState(gameId, { newState: 'Owned', stateNotes: null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library', 'loan-status', gameId] });
-      queryClient.invalidateQueries({ queryKey: ['library'] });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.loanStatus(gameId) });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
     },
   });
 }

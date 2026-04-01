@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import { LoanGameDialog } from '../LoanGameDialog';
 
@@ -54,5 +54,23 @@ describe('LoanGameDialog', () => {
     render(<LoanGameDialog gameId="123" gameTitle="Catan" open onOpenChange={() => {}} />);
     fireEvent.change(screen.getByLabelText(/prestato a/i), { target: { value: 'Mario Rossi' } });
     expect(screen.getByRole('button', { name: /conferma prestito/i })).not.toBeDisabled();
+  });
+
+  it('chiama mutate con borrowerInfo trimmed quando si clicca conferma', () => {
+    render(<LoanGameDialog gameId="123" gameTitle="Catan" open onOpenChange={() => {}} />);
+    fireEvent.change(screen.getByLabelText(/prestato a/i), {
+      target: { value: '  Mario Rossi  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /conferma prestito/i }));
+    expect(mockMutate).toHaveBeenCalledWith('Mario Rossi', expect.any(Object));
+  });
+
+  it('chiama onOpenChange(false) dopo successo', async () => {
+    const onOpenChange = vi.fn();
+    mockMutate = vi.fn((_, options) => options?.onSuccess?.());
+    render(<LoanGameDialog gameId="123" gameTitle="Catan" open onOpenChange={onOpenChange} />);
+    fireEvent.change(screen.getByLabelText(/prestato a/i), { target: { value: 'Mario Rossi' } });
+    fireEvent.click(screen.getByRole('button', { name: /conferma prestito/i }));
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
 });

@@ -9,6 +9,7 @@ import { useMutation } from '@tanstack/react-query';
 
 import { toast } from '@/components/layout/Toast';
 import { api } from '@/lib/api';
+import { ConflictError } from '@/lib/api/core/errors';
 
 /**
  * Hook to send a loan reminder for a game
@@ -25,8 +26,8 @@ export function useSendLoanReminder(gameId: string) {
     onSuccess: () => {
       toast.success('Promemoria inviato correttamente.');
     },
-    onError: (error: Error) => {
-      if (error.message.includes('409')) {
+    onError: (error: unknown) => {
+      if (error instanceof ConflictError) {
         toast.error('Hai già inviato un promemoria nelle ultime 24 ore.');
       } else {
         toast.error("Errore durante l'invio del promemoria.");

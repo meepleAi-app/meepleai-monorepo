@@ -51,6 +51,8 @@ export const libraryKeys = {
   // Share link keys (Issue #2614)
   shareLink: () => [...libraryKeys.all, 'shareLink'] as const,
   sharedLibrary: (shareToken: string) => [...libraryKeys.all, 'shared', shareToken] as const,
+  // Loan status key (Loan Flow UI)
+  loanStatus: (gameId: string) => [...libraryKeys.all, 'loan-status', gameId] as const,
   // Private game keys (Game Night Flow)
   privateGame: (id: string) => [...libraryKeys.all, 'privateGame', id] as const,
   privateGames: (params?: Record<string, unknown>) =>

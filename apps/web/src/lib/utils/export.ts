@@ -7,9 +7,6 @@
  * Issue #2139: Testing Dashboard Export Functionality
  */
 
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-
 import { logger } from '@/lib/logger';
 
 /**
@@ -243,6 +240,12 @@ export async function exportTestingMetricsToPDF(
   }
 
   try {
+    // Lazy-load heavy PDF libraries on demand (~150KB removed from initial bundle)
+    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ]);
+
     // Capture the element as canvas
     const canvas = await html2canvas(element, {
       scale: 2, // Higher quality

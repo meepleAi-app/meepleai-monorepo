@@ -19,7 +19,7 @@ import {
   SheetTitle,
 } from '@/components/ui/navigation/sheet';
 import type { LiveSessionPlayerDto } from '@/lib/api/schemas/live-sessions.schemas';
-import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useSessionStore } from '@/lib/stores/session-store';
 
 import { toParticipant } from './adapters';
 import { ScoreInput } from './ScoreInput';

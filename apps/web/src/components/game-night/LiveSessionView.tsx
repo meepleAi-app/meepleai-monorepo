@@ -42,7 +42,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { api } from '@/lib/api';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
-import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useSessionStore } from '@/lib/stores/session-store';
 import { useQuickViewStore } from '@/stores/quick-view';
 
 import { ActivityFeed, type ActivityEvent } from './ActivityFeed';

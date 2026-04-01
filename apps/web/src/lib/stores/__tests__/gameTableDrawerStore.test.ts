@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
 
-import { useGameTableDrawer } from '../gameTableDrawerStore';
+import { useGameTableDrawer } from '../game-table-drawer-store';
 
 describe('useGameTableDrawer', () => {
   beforeEach(() => {

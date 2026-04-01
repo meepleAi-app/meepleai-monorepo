@@ -19,7 +19,7 @@ vi.mock('../useSessionSlot', () => ({
   useSessionSlot: () => mockSessionSlot(),
 }));
 
-vi.mock('@/lib/stores/sessionStore', () => ({
+vi.mock('@/lib/stores/session-store', () => ({
   useSessionStore: (selector: (s: Record<string, unknown>) => unknown) =>
     selector({
       pauseSession: vi.fn(),
@@ -27,7 +27,7 @@ vi.mock('@/lib/stores/sessionStore', () => ({
     }),
 }));
 
-vi.mock('@/lib/stores/cascadeNavigationStore', () => ({
+vi.mock('@/lib/stores/cascade-navigation-store', () => ({
   useCascadeNavigationStore: (selector: (s: Record<string, unknown>) => unknown) =>
     selector({
       openDeckStack: vi.fn(),

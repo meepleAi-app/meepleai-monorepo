@@ -7,7 +7,7 @@
  *  🔄 Turn Order  → TurnOrderTool + useTurnOrder
  *  🎲 Dice        → DiceRoller + useDiceRoller
  *  🖊️ Whiteboard  → WhiteboardTool + useWhiteboardTool
- *  📊 Scoreboard  → Scoreboard (data from sessionStore)
+ *  📊 Scoreboard  → Scoreboard (data from session-store)
  *
  * Custom toolkit tools (Issue #4976):
  *  - Fetches published GameToolkit via useGameToolkit(session.gameId)
@@ -15,7 +15,7 @@
  *  - Counter tools use CounterToolContent sub-component (encapsulates hook)
  *
  * Active tool persisted in URL query param `?tool=<toolId>` (Issue #4974).
- * `sessionStore.activeTool` mirrors the URL for cross-component access.
+ * `session-store.activeTool` mirrors the URL for cross-component access.
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -43,8 +43,8 @@ import { useGameToolkit } from '@/lib/domain-hooks/useGameToolkit';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useTurnOrder } from '@/lib/domain-hooks/useTurnOrder';
 import { useWhiteboardTool } from '@/lib/domain-hooks/useWhiteboardTool';
-import { useSessionStore } from '@/lib/stores/sessionStore';
-import type { ToolId } from '@/lib/stores/sessionStore';
+import { useSessionStore } from '@/lib/stores/session-store';
+import type { ToolId } from '@/lib/stores/session-store';
 import type { CounterToolDto } from '@/lib/types/gameToolkit';
 import { resolveSessionTools } from '@/lib/utils/resolveSessionTools';
 

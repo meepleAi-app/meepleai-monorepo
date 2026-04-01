@@ -21,7 +21,7 @@ vi.mock('@/components/dashboard/useDashboardMode', () => ({
     send: vi.fn(),
   })),
 }));
-vi.mock('@/lib/stores/sessionStore', () => ({
+vi.mock('@/lib/stores/session-store', () => ({
   useSessionStore: vi.fn(() => null),
 }));
 vi.mock('@/lib/stores/navbar-height-store', () => ({

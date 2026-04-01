@@ -11,7 +11,7 @@ import { NotificationBell } from '@/components/notifications';
 import { getSectionEmoji } from '@/config/navigation-emoji';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useNavbarHeightStore } from '@/lib/stores/navbar-height-store';
-import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useSessionStore } from '@/lib/stores/session-store';
 import { cn } from '@/lib/utils';
 
 import { ContextualCTA } from './ContextualCTA';

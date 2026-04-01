@@ -4,7 +4,7 @@ import React, { useEffect, useMemo } from 'react';
 
 import { Loader2, AlertCircle } from 'lucide-react';
 
-import { useToolboxStore } from '@/lib/stores/toolboxStore';
+import { useToolboxStore } from '@/lib/stores/toolbox-store';
 
 import { PhaseTimeline } from './PhaseTimeline';
 import { SharedContextBar } from './SharedContextBar';

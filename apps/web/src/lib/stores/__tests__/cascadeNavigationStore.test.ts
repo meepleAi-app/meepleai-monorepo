@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useCascadeNavigationStore } from '../cascadeNavigationStore';
+import { useCascadeNavigationStore } from '../cascade-navigation-store';
 
 describe('useCascadeNavigationStore', () => {
   beforeEach(() => {

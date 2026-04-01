@@ -13,7 +13,7 @@ import { type ReactNode, useEffect } from 'react';
 import { Clock, History, Play } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { useSetNavConfig } from '@/context/NavigationContext';
+import { useSetNavConfig } from '@/contexts/NavigationContext';
 
 export default function SessionsLayout({ children }: { children: ReactNode }) {
   const router = useRouter();

@@ -10,7 +10,7 @@
  * Features:
  * - SSE connection to /api/v1/toolboxes/{toolboxId}/events
  * - Auto-reconnect with exponential backoff (1s -> 30s, max 5 retries)
- * - Skips connection when toolboxStore.isOffline is true
+ * - Skips connection when toolbox-store.isOffline is true
  * - Cleanup on unmount
  *
  * Epic #412 — Game Toolbox.
@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
-import { useToolboxStore } from '@/lib/stores/toolboxStore';
+import { useToolboxStore } from '@/lib/stores/toolbox-store';
 
 // ============================================================================
 // Constants

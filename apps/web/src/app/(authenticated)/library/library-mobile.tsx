@@ -4,21 +4,23 @@
  * LibraryMobile - Mobile-first library page
  *
  * Phase 3, Task 4: Mobile library with grid layout, segmented tabs,
- * search bar, filter sheet, and BGG game import flow.
+ * search bar, filter sheet, and catalog game import flow.
+ *
+ * Note: BGG search was removed from user pages (restricted to admin only
+ * due to BGG commercial use licensing). Users add games via the shared
+ * catalog or manual entry through AddGameDrawer.
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Filter, Plus, Search } from 'lucide-react';
 
+import { AddGameDrawer } from '@/app/(authenticated)/library/AddGameDrawer';
 import { LibraryFilterSheet, type LibraryFilters } from '@/components/library/LibraryFilterSheet';
 import { SegmentedControl, type Segment } from '@/components/library/SegmentedControl';
-import { FullScreenSearch, type BggGameResult } from '@/components/search/FullScreenSearch';
-import { GamePreviewSheet } from '@/components/search/GamePreviewSheet';
 import { MeepleCard, MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
-import type { BggGameSummary } from '@/lib/api/clients/gameNightBggClient';
 import type { GameStateType } from '@/lib/api/schemas/library.schemas';
 
 // ── Segments ─────────────────────────────────────────────────────────────────
@@ -53,9 +55,7 @@ export function LibraryMobile() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_FILTERS);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-  const [bggSearchOpen, setBggSearchOpen] = useState(false);
-  const [previewGame, setPreviewGame] = useState<BggGameSummary | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
 
   // ── Debounced search ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -101,23 +101,6 @@ export function LibraryMobile() {
     ? `${stats.totalGames} gioch${stats.totalGames === 1 ? 'o' : 'i'}`
     : undefined;
 
-  // ── BGG search callbacks ─────────────────────────────────────────────────
-  const handleSelectBggGame = useCallback((game: BggGameResult) => {
-    setBggSearchOpen(false);
-    setPreviewGame({
-      bggId: game.bggId,
-      title: game.name,
-      yearPublished: game.yearPublished ?? null,
-      thumbnailUrl: game.thumbnailUrl ?? null,
-    });
-    setPreviewOpen(true);
-  }, []);
-
-  const handleGameAdded = useCallback(() => {
-    setPreviewOpen(false);
-    setPreviewGame(null);
-  }, []);
-
   // ── Filter apply callback ────────────────────────────────────────────────
   const handleApplyFilters = useCallback((newFilters: LibraryFilters) => {
     setFilters(newFilters);
@@ -143,7 +126,7 @@ export function LibraryMobile() {
             <button
               type="button"
               aria-label="Aggiungi gioco"
-              onClick={() => setBggSearchOpen(true)}
+              onClick={() => setAddDrawerOpen(true)}
               className="flex h-9 w-9 items-center justify-center rounded-full text-amber-400 hover:bg-amber-500/10"
             >
               <Plus className="h-5 w-5" />
@@ -191,11 +174,11 @@ export function LibraryMobile() {
             {!debouncedSearch && (
               <button
                 type="button"
-                onClick={() => setBggSearchOpen(true)}
+                onClick={() => setAddDrawerOpen(true)}
                 className="inline-flex items-center gap-2 rounded-lg bg-amber-500/20 px-4 py-2 text-sm font-medium text-amber-400 hover:bg-amber-500/30 transition-colors"
               >
                 <Plus className="h-4 w-4" />
-                Cerca su BGG
+                Aggiungi gioco
               </button>
             )}
           </div>
@@ -230,20 +213,8 @@ export function LibraryMobile() {
         onApply={handleApplyFilters}
       />
 
-      {/* BGG full-screen search */}
-      <FullScreenSearch
-        open={bggSearchOpen}
-        onClose={() => setBggSearchOpen(false)}
-        onSelectGame={handleSelectBggGame}
-      />
-
-      {/* Game preview bottom sheet */}
-      <GamePreviewSheet
-        open={previewOpen}
-        game={previewGame}
-        onOpenChange={setPreviewOpen}
-        onAdded={handleGameAdded}
-      />
+      {/* Add game drawer (catalog search / manual entry) */}
+      <AddGameDrawer open={addDrawerOpen} onClose={() => setAddDrawerOpen(false)} />
     </div>
   );
 }

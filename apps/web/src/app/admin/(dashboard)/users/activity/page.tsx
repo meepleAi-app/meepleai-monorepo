@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 
 import { Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { ActivityFilters } from '@/components/admin/users/activity-filters';
 import { ActivityTable, getDateRange } from '@/components/admin/users/activity-table';
@@ -43,8 +44,8 @@ export default function UserActivityPage() {
       a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
-      // export failed silently
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Esportazione fallita. Riprova.');
     } finally {
       setExporting(false);
     }
@@ -60,13 +61,13 @@ export default function UserActivityPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {totalCount > 0
-              ? `${totalCount.toLocaleString()} entries recorded`
-              : 'Monitor user actions and system events'}
+              ? `${totalCount.toLocaleString('it-IT')} registrazioni trovate`
+              : 'Monitora le azioni degli utenti e gli eventi di sistema'}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
           <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-          {exporting ? 'Exporting...' : 'Export CSV'}
+          {exporting ? 'Esportazione...' : 'Esporta CSV'}
         </Button>
       </div>
 

@@ -18,6 +18,7 @@ import {
   RefreshCwIcon,
   SearchIcon,
   UsersIcon,
+  XIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -50,7 +51,12 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
 
-  const usersQuery = useQuery({
+  const {
+    data: usersData,
+    isLoading,
+    refetch: refetchUsers,
+    isRefetching,
+  } = useQuery({
     queryKey: ['admin', 'users', { search: debouncedSearch, role: roleFilter, page }],
     queryFn: () =>
       api.admin.getAllUsers({
@@ -59,13 +65,13 @@ export default function AdminUsersPage() {
         page,
         limit: PAGE_SIZE,
       }),
-    staleTime: 30_000,
+    staleTime: 5_000,
   });
 
   const pendingInvitationsQuery = useQuery({
     queryKey: ['admin', 'invitations', 'pending-inline'],
     queryFn: () => api.invitations.getInvitations({ status: 'Pending', pageSize: 20 }),
-    staleTime: 30_000,
+    staleTime: 5_000,
   });
 
   const resendMutation = useMutation({
@@ -76,6 +82,17 @@ export default function AdminUsersPage() {
     },
     onError: err => {
       toast.error(err instanceof Error ? err.message : "Errore nel reinvio dell'invito");
+    },
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (id: string) => api.invitations.revokeInvitation(id),
+    onSuccess: () => {
+      toast.success('Invito revocato');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'invitations'] });
+    },
+    onError: err => {
+      toast.error(err instanceof Error ? err.message : "Errore nella revoca dell'invito");
     },
   });
 
@@ -98,11 +115,10 @@ export default function AdminUsersPage() {
     }
   }
 
-  const users = usersQuery.data?.items ?? [];
-  const totalUsers = usersQuery.data?.total ?? 0;
+  const users = usersData?.items ?? [];
+  const totalUsers = usersData?.total ?? 0;
   const totalPages = Math.ceil(totalUsers / PAGE_SIZE);
   const pendingInvitations = pendingInvitationsQuery.data?.items ?? [];
-  const isLoading = usersQuery.isLoading;
 
   // Reset page when filters change
   const handleSearchChange = (value: string) => {
@@ -117,21 +133,48 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <nav
+        aria-label="Breadcrumb"
+        className="flex items-center gap-1 text-sm text-muted-foreground"
+      >
+        <Link href="/admin" className="hover:text-foreground transition-colors">
+          Admin
+        </Link>
+        <span>›</span>
+        <span className="text-foreground font-medium">Utenti</span>
+      </nav>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Utenti</h1>
           <p className="text-muted-foreground">
             Gestisci utenti e inviti in sospeso.
-            {totalUsers > 0 && (
-              <span className="ml-1 text-foreground font-medium">{totalUsers} totali</span>
+            {(totalUsers > 0 || pendingInvitations.length > 0) && (
+              <span className="ml-1 text-foreground font-medium">
+                {totalUsers} utenti
+                {pendingInvitations.length > 0 && `, ${pendingInvitations.length} inviti in attesa`}
+              </span>
             )}
           </p>
         </div>
-        <Button onClick={() => setInviteDialogOpen(true)}>
-          <PlusIcon className="mr-2 h-4 w-4" />
-          Invita Utente
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchUsers()}
+            disabled={isRefetching}
+            className="gap-2"
+          >
+            <RefreshCwIcon className={`h-3.5 w-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
+            Aggiorna
+          </Button>
+          <Button onClick={() => setInviteDialogOpen(true)}>
+            <PlusIcon className="mr-2 h-4 w-4" />
+            Invita Utente
+          </Button>
+        </div>
       </div>
 
       {/* Search + Filter Bar */}
@@ -202,15 +245,29 @@ export default function AdminUsersPage() {
                       <InvitationStatusBadge status="Pending" />
                     </td>
                     <td className="px-3 py-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => resendMutation.mutate(inv.id)}
-                        aria-label={`Reinvia invito a ${inv.email}`}
-                      >
-                        <RefreshCwIcon className="mr-1 h-3 w-3" />
-                        Reinvia
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => resendMutation.mutate(inv.id)}
+                          disabled={resendMutation.isPending}
+                          aria-label={`Reinvia invito a ${inv.email}`}
+                        >
+                          <RefreshCwIcon className="mr-1 h-3 w-3" />
+                          Reinvia
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => revokeMutation.mutate(inv.id)}
+                          disabled={revokeMutation.isPending}
+                          aria-label={`Revoca invito per ${inv.email}`}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20"
+                        >
+                          <XIcon className="mr-1 h-3 w-3" />
+                          Revoca
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -243,12 +300,21 @@ export default function AdminUsersPage() {
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <Badge
-                      variant="outline"
-                      className="border-green-300 bg-green-50 text-green-900"
-                    >
-                      Attivo
-                    </Badge>
+                    {u.isSuspended ? (
+                      <Badge
+                        variant="outline"
+                        className="border-red-300 bg-red-50 text-red-900 dark:border-red-700 dark:bg-red-950/30 dark:text-red-300"
+                      >
+                        Sospeso
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="border-green-300 bg-green-50 text-green-900 dark:border-green-700 dark:bg-green-950/30 dark:text-green-300"
+                      >
+                        Attivo
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <Link href={`/admin/users/${u.id}`}>

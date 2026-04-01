@@ -20,6 +20,7 @@ import {
   MailIcon,
   PlusIcon,
   RefreshCwIcon,
+  SearchIcon,
   UploadIcon,
   XCircleIcon,
 } from 'lucide-react';
@@ -38,6 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type { InvitationStatus } from '@/lib/api/schemas/invitation.schemas';
 
@@ -48,6 +50,7 @@ const PAGE_SIZE = 20;
 export default function InvitationsPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [emailSearch, setEmailSearch] = useState('');
   const [page, setPage] = useState(1);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
@@ -56,7 +59,7 @@ export default function InvitationsPage() {
   const statsQuery = useQuery({
     queryKey: ['admin', 'invitation-stats'],
     queryFn: () => api.invitations.getInvitationStats(),
-    staleTime: 30_000,
+    staleTime: 5_000,
   });
 
   // Fetch invitations list
@@ -74,31 +77,31 @@ export default function InvitationsPage() {
         page,
         pageSize: PAGE_SIZE,
       }),
-    staleTime: 30_000,
+    staleTime: 5_000,
   });
 
   // Mutations
   const resendMutation = useMutation({
     mutationFn: (id: string) => api.invitations.resendInvitation(id),
     onSuccess: () => {
-      toast.success('Invitation resent successfully');
+      toast.success('Invito reinviato con successo');
       queryClient.invalidateQueries({ queryKey: ['admin', 'invitations'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'invitation-stats'] });
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to resend invitation');
+      toast.error(err instanceof Error ? err.message : "Errore nel reinvio dell'invito");
     },
   });
 
   const revokeMutation = useMutation({
     mutationFn: (id: string) => api.invitations.revokeInvitation(id),
     onSuccess: () => {
-      toast.success('Invitation revoked');
+      toast.success('Invito revocato');
       queryClient.invalidateQueries({ queryKey: ['admin', 'invitations'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'invitation-stats'] });
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to revoke invitation');
+      toast.error(err instanceof Error ? err.message : "Errore nella revoca dell'invito");
     },
   });
 
@@ -110,7 +113,12 @@ export default function InvitationsPage() {
   const resendingId = resendMutation.isPending ? (resendMutation.variables as string) : null;
   const revokingId = revokeMutation.isPending ? (revokeMutation.variables as string) : null;
 
-  const invitations = invitationsData?.items ?? [];
+  const allInvitations = invitationsData?.items ?? [];
+  const invitations = emailSearch.trim()
+    ? allInvitations.filter(inv =>
+        inv.email.toLowerCase().includes(emailSearch.trim().toLowerCase())
+      )
+    : allInvitations;
   const totalCount = invitationsData?.totalCount ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const stats = statsQuery.data;
@@ -121,10 +129,10 @@ export default function InvitationsPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-            Invitations
+            Inviti
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage user invitations and track their status.
+            Gestisci gli inviti utente e monitora il loro stato.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -136,7 +144,7 @@ export default function InvitationsPage() {
             className="gap-2"
           >
             <RefreshCwIcon className={`h-3.5 w-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
-            Refresh
+            Aggiorna
           </Button>
           <Button
             variant="outline"
@@ -145,11 +153,11 @@ export default function InvitationsPage() {
             className="gap-2"
           >
             <UploadIcon className="h-3.5 w-3.5" />
-            Bulk Invite
+            Invito Multiplo
           </Button>
           <Button size="sm" onClick={() => setInviteDialogOpen(true)} className="gap-2">
             <PlusIcon className="h-3.5 w-3.5" />
-            Invite User
+            Invita Utente
           </Button>
         </div>
       </div>
@@ -163,7 +171,7 @@ export default function InvitationsPage() {
                 <MailIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-sm text-muted-foreground">Totale</p>
                 <span className="text-xl font-bold block">
                   {stats ? stats.total : <Skeleton className="h-6 w-10 inline-block" />}
                 </span>
@@ -179,7 +187,7 @@ export default function InvitationsPage() {
                 <ClockIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-sm text-muted-foreground">In attesa</p>
                 <span className="text-xl font-bold block">
                   {stats ? stats.pending : <Skeleton className="h-6 w-10 inline-block" />}
                 </span>
@@ -195,7 +203,7 @@ export default function InvitationsPage() {
                 <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Accepted</p>
+                <p className="text-sm text-muted-foreground">Accettati</p>
                 <span className="text-xl font-bold block">
                   {stats ? stats.accepted : <Skeleton className="h-6 w-10 inline-block" />}
                 </span>
@@ -211,7 +219,7 @@ export default function InvitationsPage() {
                 <AlertCircleIcon className="h-5 w-5 text-slate-600 dark:text-zinc-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Expired</p>
+                <p className="text-sm text-muted-foreground">Scaduti</p>
                 <span className="text-xl font-bold block">
                   {stats ? stats.expired : <Skeleton className="h-6 w-10 inline-block" />}
                 </span>
@@ -227,7 +235,7 @@ export default function InvitationsPage() {
                 <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Revoked</p>
+                <p className="text-sm text-muted-foreground">Revocati</p>
                 <span className="text-xl font-bold block">
                   {stats ? (stats.revoked ?? 0) : <Skeleton className="h-6 w-10 inline-block" />}
                 </span>
@@ -237,8 +245,17 @@ export default function InvitationsPage() {
         </Card>
       </div>
 
-      {/* Status Filter */}
-      <div className="flex items-center gap-3">
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="relative w-full sm:w-64">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca per email..."
+            value={emailSearch}
+            onChange={e => setEmailSearch(e.target.value)}
+            className="pl-9 bg-white/70 dark:bg-zinc-800/70"
+          />
+        </div>
         <Select
           value={statusFilter}
           onValueChange={v => {
@@ -247,14 +264,14 @@ export default function InvitationsPage() {
           }}
         >
           <SelectTrigger className="w-44 bg-white/70 dark:bg-zinc-800/70">
-            <SelectValue placeholder="Filter by status" />
+            <SelectValue placeholder="Filtra per stato" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Accepted">Accepted</SelectItem>
-            <SelectItem value="Expired">Expired</SelectItem>
-            <SelectItem value="Revoked">Revoked</SelectItem>
+            <SelectItem value="all">Tutti gli stati</SelectItem>
+            <SelectItem value="Pending">In attesa</SelectItem>
+            <SelectItem value="Accepted">Accettati</SelectItem>
+            <SelectItem value="Expired">Scaduti</SelectItem>
+            <SelectItem value="Revoked">Revocati</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -265,15 +282,14 @@ export default function InvitationsPage() {
           <AlertCircleIcon className="h-5 w-5 text-red-500 shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-medium text-red-800 dark:text-red-200">
-              Failed to load invitations
+              Caricamento inviti fallito
             </p>
             <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-              Unable to load invitations. Please try again or contact support if the problem
-              persists.
+              Impossibile caricare gli inviti. Riprova o contatta il supporto.
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Retry
+            Riprova
           </Button>
         </div>
       )}
@@ -285,11 +301,11 @@ export default function InvitationsPage() {
             <thead>
               <tr className="border-b border-slate-200/60 dark:border-zinc-700/40">
                 <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Role</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Sent</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Expires</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Ruolo</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Stato</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Inviato</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Scade</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Azioni</th>
               </tr>
             </thead>
             <tbody>
@@ -321,9 +337,11 @@ export default function InvitationsPage() {
                   <td colSpan={6} className="p-8 text-center text-muted-foreground">
                     <MailIcon className="mx-auto mb-2 h-8 w-8 opacity-50" />
                     <p>
-                      {statusFilter !== 'all'
-                        ? 'No invitations match this filter'
-                        : 'No invitations sent yet'}
+                      {emailSearch.trim()
+                        ? `Nessun invito trovato per "${emailSearch.trim()}"`
+                        : statusFilter !== 'all'
+                          ? 'Nessun invito corrisponde al filtro'
+                          : 'Nessun invito inviato finora'}
                     </p>
                   </td>
                 </tr>
@@ -347,7 +365,7 @@ export default function InvitationsPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 dark:border-zinc-700/40">
             <p className="text-sm text-muted-foreground">
-              Showing {(page - 1) * PAGE_SIZE + 1}&ndash;{Math.min(page * PAGE_SIZE, totalCount)} of{' '}
+              {(page - 1) * PAGE_SIZE + 1}&ndash;{Math.min(page * PAGE_SIZE, totalCount)} di{' '}
               {totalCount}
             </p>
             <div className="flex items-center gap-1">
@@ -361,7 +379,7 @@ export default function InvitationsPage() {
                 <ChevronLeftIcon className="h-4 w-4" />
               </Button>
               <span className="px-3 text-sm">
-                Page {page} of {totalPages}
+                Pagina {page} di {totalPages}
               </span>
               <Button
                 variant="outline"

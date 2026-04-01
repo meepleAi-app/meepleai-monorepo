@@ -25,7 +25,7 @@ describe('export.ts', () => {
     vi.clearAllMocks();
   });
 
-  it('exportTestingMetricsToPDF resolves when element exists', async () => {
+  it('exportTestingMetricsToPDF resolves when element exists and calls lazy-loaded libraries', async () => {
     const el = document.createElement('div');
     el.id = 'test-export-element';
     el.style.height = '400px';
@@ -34,6 +34,12 @@ describe('export.ts', () => {
 
     const { exportTestingMetricsToPDF } = await import('../export');
     await expect(exportTestingMetricsToPDF('test-export-element')).resolves.toBeUndefined();
+
+    // Verify lazy-loaded libraries were actually called (regression guard for lazy-load)
+    const html2canvas = (await import('html2canvas')).default;
+    const jsPDF = (await import('jspdf')).default;
+    expect(html2canvas).toHaveBeenCalledWith(el, expect.objectContaining({ scale: 2 }));
+    expect(jsPDF).toHaveBeenCalledWith('p', 'mm', 'a4');
 
     document.body.removeChild(el);
   });

@@ -168,6 +168,8 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
     return mechanicsData?.map(m => m.slug) ?? [];
   }, [mechanicsData]);
 
+  const selectedMechanicsSet = useMemo(() => new Set(selectedMechanics), [selectedMechanics]);
+
   // ------------------------------------------------------------------
   // Handlers
   // ------------------------------------------------------------------
@@ -356,7 +358,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
               {/* Mechanic list */}
               <div className="max-h-64 overflow-y-auto p-2">
                 {availableMechanicSlugs.map(mechanic => {
-                  const isChecked = selectedMechanics.includes(mechanic);
+                  const isChecked = selectedMechanicsSet.has(mechanic);
                   return (
                     <label
                       key={mechanic}
@@ -371,7 +373,6 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
                         checked={isChecked}
                         onChange={() => handleMechanicToggle(mechanic)}
                         className="h-3.5 w-3.5 rounded accent-[#f0a030]"
-                        aria-label={MECHANIC_LABELS[mechanic] ?? mechanic}
                       />
                       <MechanicIcon mechanic={mechanic} size={14} />
                       <span className="text-sm">{MECHANIC_LABELS[mechanic] ?? mechanic}</span>

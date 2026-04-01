@@ -361,12 +361,12 @@ export default function InvitationsPage() {
           </table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
+        {/* Pagination — hidden when email search is active (client-side filter, server counts don't match) */}
+        {totalPages > 1 && !emailSearch.trim() && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 dark:border-zinc-700/40">
             <p className="text-sm text-muted-foreground">
-              {(page - 1) * PAGE_SIZE + 1}&ndash;{Math.min(page * PAGE_SIZE, totalCount)} di{' '}
-              {totalCount}
+              Mostrati {(page - 1) * PAGE_SIZE + 1}&ndash;{Math.min(page * PAGE_SIZE, totalCount)}{' '}
+              di {totalCount}
             </p>
             <div className="flex items-center gap-1">
               <Button

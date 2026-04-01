@@ -457,7 +457,7 @@ export default function AccessRequestsPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 dark:border-zinc-700/40">
             <p className="text-sm text-muted-foreground">
-              {(page - 1) * PAGE_SIZE + 1}&ndash;
+              Mostrati {(page - 1) * PAGE_SIZE + 1}&ndash;
               {Math.min(page * PAGE_SIZE, totalCount)} di {totalCount}
             </p>
             <div className="flex items-center gap-1">

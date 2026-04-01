@@ -141,7 +141,7 @@ export default function AdminUsersPage() {
         <Link href="/admin" className="hover:text-foreground transition-colors">
           Admin
         </Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <span className="text-foreground font-medium">Utenti</span>
       </nav>
 
@@ -250,7 +250,7 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => resendMutation.mutate(inv.id)}
-                          disabled={resendMutation.isPending}
+                          disabled={resendMutation.isPending && resendMutation.variables === inv.id}
                           aria-label={`Reinvia invito a ${inv.email}`}
                         >
                           <RefreshCwIcon className="mr-1 h-3 w-3" />
@@ -260,7 +260,7 @@ export default function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => revokeMutation.mutate(inv.id)}
-                          disabled={revokeMutation.isPending}
+                          disabled={revokeMutation.isPending && revokeMutation.variables === inv.id}
                           aria-label={`Revoca invito per ${inv.email}`}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20"
                         >

@@ -45,7 +45,7 @@ export default function UserActivityPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Esportazione fallita. Riprova.');
+      toast.error('Esportazione fallita. Riprova.');
     } finally {
       setExporting(false);
     }

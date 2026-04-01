@@ -85,23 +85,22 @@ describe('InvitationsPage', () => {
   it('renders page title and action buttons', async () => {
     renderWithQuery(<InvitationsPage />);
 
-    expect(screen.getByText('Invitations')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /invite user/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /bulk invite/i })).toBeInTheDocument();
+    expect(screen.getByText('Inviti')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /invita utente/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /invito multiplo/i })).toBeInTheDocument();
   });
 
   it('renders stats cards with data', async () => {
     renderWithQuery(<InvitationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Total')).toBeInTheDocument();
+      expect(screen.getByText('Totale')).toBeInTheDocument();
     });
 
-    // Use getAllByText: stats labels may co-exist with identical status badge text in loaded rows
-    expect(screen.getAllByText('Pending').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Accepted').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Expired')).toBeInTheDocument();
-    expect(screen.getByText('Revoked')).toBeInTheDocument();
+    expect(screen.getByText('In attesa')).toBeInTheDocument();
+    expect(screen.getByText('Accettati')).toBeInTheDocument();
+    expect(screen.getByText('Scaduti')).toBeInTheDocument();
+    expect(screen.getByText('Revocati')).toBeInTheDocument();
   });
 
   it('renders invitation rows after loading', async () => {
@@ -145,7 +144,7 @@ describe('InvitationsPage', () => {
     renderWithQuery(<InvitationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('No invitations sent yet')).toBeInTheDocument();
+      expect(screen.getByText('Nessun invito inviato finora')).toBeInTheDocument();
     });
   });
 
@@ -155,12 +154,12 @@ describe('InvitationsPage', () => {
     renderWithQuery(<InvitationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load invitations')).toBeInTheDocument();
+      expect(screen.getByText('Caricamento inviti fallito')).toBeInTheDocument();
     });
 
     expect(screen.queryByText(/DB timeout/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/unable to load invitations/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    expect(screen.getByText(/impossibile caricare gli inviti/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /riprova/i })).toBeInTheDocument();
   });
 
   it('resets page to 1 when status filter changes', async () => {
@@ -173,13 +172,44 @@ describe('InvitationsPage', () => {
     const trigger = screen.getByRole('combobox');
     await user.click(trigger);
 
-    const pendingOption = screen.getByRole('option', { name: 'Pending' });
+    const pendingOption = screen.getByRole('option', { name: 'In attesa' });
     await user.click(pendingOption);
 
     await waitFor(() => {
       expect(mockGetInvitations).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'Pending', page: 1 })
       );
+    });
+  });
+
+  it('filters invitations by email search', async () => {
+    renderWithQuery(<InvitationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText('Cerca per email...');
+    await user.type(searchInput, 'alice');
+
+    await waitFor(() => {
+      expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+      expect(screen.queryByText('bob@example.com')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows search empty state when no results match email search', async () => {
+    renderWithQuery(<InvitationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText('Cerca per email...');
+    await user.type(searchInput, 'xyz@notfound.com');
+
+    await waitFor(() => {
+      expect(screen.getByText(/nessun invito trovato per/i)).toBeInTheDocument();
     });
   });
 
@@ -263,11 +293,11 @@ describe('InvitationsPage', () => {
 
     const trigger = screen.getByRole('combobox');
     await user.click(trigger);
-    const expiredOption = screen.getByRole('option', { name: 'Expired' });
+    const expiredOption = screen.getByRole('option', { name: 'Scaduti' });
     await user.click(expiredOption);
 
     await waitFor(() => {
-      expect(screen.getByText('No invitations match this filter')).toBeInTheDocument();
+      expect(screen.getByText('Nessun invito corrisponde al filtro')).toBeInTheDocument();
     });
   });
 });

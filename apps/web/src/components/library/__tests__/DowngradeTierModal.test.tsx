@@ -27,13 +27,6 @@ vi.mock('@/hooks/queries/useLibraryDowngrade', () => ({
   })),
 }));
 
-vi.mock('@/components/layout/Toast', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
 // ============================================================================
 // Helper
 // ============================================================================
@@ -85,7 +78,7 @@ describe('DowngradeTierModal', () => {
     expect(screen.getByText('Catan')).toBeInTheDocument();
   });
 
-  it('pulsante conferma disabilitato quando non ci sono giochi da rimuovere', async () => {
+  it('pulsante conferma abilitato anche quando non ci sono giochi da rimuovere', async () => {
     const { useLibraryDowngradePreview } = await import('@/hooks/queries/useLibraryDowngrade');
     (useLibraryDowngradePreview as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { gamesToKeep: [], gamesToRemove: [] },
@@ -94,8 +87,8 @@ describe('DowngradeTierModal', () => {
     });
 
     render(<DowngradeTierModal {...defaultProps} newQuota={5} />);
-    const button = screen.getByRole('button', { name: /rimuovi/i });
-    expect(button).toBeDisabled();
+    const button = screen.getByRole('button', { name: /conferma downgrade/i });
+    expect(button).not.toBeDisabled();
   });
 
   it('non renderizza nulla quando open è false', async () => {

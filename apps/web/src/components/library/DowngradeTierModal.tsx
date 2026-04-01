@@ -121,14 +121,10 @@ export function DowngradeTierModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
-          <Button
-            variant="destructive"
-            disabled={isLoading || !hasGamesToRemove}
-            onClick={onComplete}
-          >
-            {hasGamesToRemove
-              ? `Rimuovi ${gamesToRemove.length} ${gamesToRemove.length === 1 ? 'gioco' : 'giochi'}`
-              : 'Rimuovi'}
+          <Button variant="destructive" disabled={isLoading} onClick={onComplete}>
+            {gamesToRemove.length > 0
+              ? `Conferma (${gamesToRemove.length} da rimuovere)`
+              : 'Conferma downgrade'}
           </Button>
         </DialogFooter>
       </DialogContent>

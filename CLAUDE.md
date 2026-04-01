@@ -8,7 +8,7 @@
 |------|---------|----------|
 | Start Dev (full) | `make dev` | `infra/` |
 | Start Dev (core) | `make dev-core` | `infra/` |
-| Start Integration | `make tunnel && make integration` | `infra/` |
+| Start Integration | `make tunnel && make integration` | `infra/` — **Windows: usa Git Bash, non PowerShell** |
 | Deploy Staging | `make staging` | `infra/` (on server) |
 | Setup Secrets | `make secrets-setup` | `infra/` |
 | Start API (no Docker) | `dotnet run` | `apps/api/src/Api/` |
@@ -18,6 +18,20 @@
 | API Docs | http://localhost:8080/scalar/v1 | Browser |
 | All Make commands | `make help` | `infra/` |
 | Alpha Mode | `make alpha` | `infra/` |
+
+### Integration Mode (Windows)
+
+Gli script di integration usano bash e tool Unix. Su Windows devono essere eseguiti in **Git Bash** (non PowerShell, non CMD).
+
+```bash
+# Apri Git Bash (non PowerShell) in infra/
+make integration-check   # Verifica prerequisiti (SSH key, tunnel, porte)
+make tunnel              # Apre SSH tunnel verso staging
+make integration         # Avvia API :8080 + Web :3000 localmente
+make integration-down    # Ferma tutto e chiude i tunnel
+```
+
+**Prerequisiti**: Git Bash (incluso in Git for Windows) · SSH key `~/.ssh/meepleai-staging` · Staging server attivo
 
 ### Alpha Mode
 

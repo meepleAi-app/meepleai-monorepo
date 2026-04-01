@@ -302,6 +302,9 @@ builder.Services.AddMediatR(cfg =>
     cfg.AddOpenBehavior(typeof(Api.SharedKernel.Application.Behaviors.ValidationBehavior<,>));
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Administration.Application.Behaviors.AuditLoggingBehavior<,>)); // Issue #3691: Audit logging
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.SessionTracking.Application.Behaviors.ValidatePlayerRoleBehavior<,>)); // Issue #4765: Role validation
+    var mediatrLicenseKey = Environment.GetEnvironmentVariable("MEDIATR_LICENSE_KEY");
+    if (!string.IsNullOrWhiteSpace(mediatrLicenseKey))
+        cfg.LicenseKey = mediatrLicenseKey;
 });
 
 // Application services (Domain, AI, Admin)

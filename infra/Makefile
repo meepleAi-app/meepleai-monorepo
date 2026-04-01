@@ -24,6 +24,9 @@ tunnel-stop: ## Close SSH tunnels
 tunnel-status: ## Check SSH tunnel status
 	bash scripts/integration-tunnel.sh status
 
+integration-check: ## Check prerequisites before make integration (SSH key, tunnel, ports)
+	bash scripts/integration-check.sh
+
 integration: ## Start local api+web with remote services (run 'make tunnel' first)
 	@echo "Ensure tunnels are open: make tunnel"
 	bash scripts/integration-start.sh
@@ -192,7 +195,7 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
 	node $(ROOT)/scripts/validate-workflows.js
 	@echo "✅ Workflows valid"
 
-.PHONY: dev dev-core dev-down tunnel tunnel-stop tunnel-status integration \
+.PHONY: dev dev-core dev-down tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down staging staging-down prod prod-down \
         alpha alpha-core alpha-down \
         secrets-setup secrets-sync \

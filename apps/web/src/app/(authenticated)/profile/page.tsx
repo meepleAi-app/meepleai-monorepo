@@ -1,18 +1,17 @@
 /**
  * Profile Landing Page - /profile
  *
- * Overview landing page with three tabs:
- *   - Overview: library stats + quick action links
- *   - Achievements: embedded achievements content (mirrors /profile/achievements)
- *   - Activity: coming soon placeholder
- *
- * @see Issue #4893
+ * Overview landing page con tre tab:
+ *   - Overview: library stats + ultime partite + quick action links
+ *   - Achievements: achievements inline
+ *   - Activity: activity feed
  */
 
 'use client';
 
 import { useEffect, useState } from 'react';
 
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
   BookOpen,
@@ -23,15 +22,19 @@ import {
   LayoutDashboard,
   Package,
   Trophy,
-  User,
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { AchievementsGrid } from '@/components/profile/AchievementsGrid';
 import { ActivityFeed } from '@/components/profile/ActivityFeed';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
+import { EditProfileSheet } from '@/components/profile/EditProfileSheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
+import { userKeys } from '@/hooks/queries/useCurrentUser';
+import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecentSessions } from '@/hooks/useRecentSessions';
 import { api } from '@/lib/api';
@@ -42,7 +45,7 @@ import { useCardHand } from '@/stores/use-card-hand';
 
 type Tab = 'overview' | 'achievements' | 'activity';
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── TabBar ───────────────────────────────────────────────────────────────────
 
 function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
@@ -76,6 +79,8 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
     </div>
   );
 }
+
+// ─── QuickActionLink ──────────────────────────────────────────────────────────
 
 function QuickActionLink({
   href,
@@ -129,21 +134,20 @@ function StatTile({
   );
 }
 
-// ─── Overview Tab ─────────────────────────────────────────────────────────────
+// ─── OverviewTab ──────────────────────────────────────────────────────────────
 
 function OverviewTab() {
-  const [stats, setStats] = useState<UserLibraryStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { sessions, isLoading: sessionsLoading } = useRecentSessions(3);
 
-  useEffect(() => {
-    api.library
-      .getStats()
-      .then(data => setStats(data))
-      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load stats'))
-      .finally(() => setIsLoading(false));
-  }, []);
+  const {
+    data: stats,
+    isLoading,
+    error,
+  } = useQuery<UserLibraryStats>({
+    queryKey: libraryKeys.stats(),
+    queryFn: () => api.library.getStats(),
+    staleTime: 2 * 60 * 1000,
+  });
 
   return (
     <div className="space-y-6">
@@ -162,7 +166,9 @@ function OverviewTab() {
           )}
           {error && (
             <Alert>
-              <AlertDescription className="font-nunito text-sm">{error}</AlertDescription>
+              <AlertDescription className="font-nunito text-sm">
+                {error instanceof Error ? error.message : 'Errore nel caricamento stats.'}
+              </AlertDescription>
             </Alert>
           )}
           {!isLoading && !error && stats && (
@@ -263,13 +269,13 @@ function OverviewTab() {
               href="/profile/achievements"
               icon={Trophy}
               label="Achievements"
-              description="View your earned badges and milestones"
+              description="Vedi badge e traguardi"
             />
             <QuickActionLink
               href="/library"
               icon={BookOpen}
               label="My Library"
-              description="Browse and manage your game collection"
+              description="Sfoglia la tua collezione"
             />
             <QuickActionLink
               href="/play-records"
@@ -284,39 +290,25 @@ function OverviewTab() {
   );
 }
 
-// ─── Achievements Tab ──────────────────────────────────────────────────────────
+// ─── AchievementsTab ──────────────────────────────────────────────────────────
 
 function AchievementsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground font-nunito">
-          Your earned badges and progress milestones
-        </p>
+        <p className="text-sm text-muted-foreground font-nunito">Badge guadagnati e progressi</p>
         <Button asChild variant="ghost" size="sm" className="font-nunito gap-1">
           <Link href="/profile/achievements">
-            View All <ChevronRight className="h-3 w-3" />
+            Tutti <ChevronRight className="h-3 w-3" />
           </Link>
         </Button>
       </div>
-      {/* Iframe-like embed via redirect to achievements page content */}
-      <Card className="border-l-4 border-l-amber-400">
-        <CardContent className="py-8 text-center">
-          <Trophy className="h-10 w-10 text-amber-500 mx-auto mb-3" />
-          <p className="font-medium font-quicksand mb-1">Your Achievements</p>
-          <p className="text-sm text-muted-foreground font-nunito mb-4">
-            View your full achievements gallery
-          </p>
-          <Button asChild variant="outline" className="font-nunito">
-            <Link href="/profile/achievements">Open Achievements</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <AchievementsGrid />
     </div>
   );
 }
 
-// ─── Activity Tab ─────────────────────────────────────────────────────────────
+// ─── ActivityTab ──────────────────────────────────────────────────────────────
 
 function ActivityTab(): React.ReactElement {
   return (
@@ -333,8 +325,15 @@ function ActivityTab(): React.ReactElement {
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { drawCard } = useCardHand();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+
+  const { data: profile } = useQuery({
+    queryKey: [...userKeys.current(), 'profile'],
+    queryFn: () => api.auth.getProfile(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => {
     drawCard({
@@ -345,28 +344,25 @@ export default function ProfilePage() {
     });
   }, [drawCard]);
 
-  const displayName = user?.displayName ?? user?.email ?? 'Player';
-  const initials = displayName
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+  const displayName = profile?.displayName ?? user?.displayName ?? user?.email ?? 'Player';
+  const avatarUrl = profile?.avatarUrl ?? null;
+
+  async function handleAvatarUpload(file: File): Promise<void> {
+    await api.auth.uploadAvatar(file);
+    await queryClient.invalidateQueries({ queryKey: userKeys.all });
+  }
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="container mx-auto max-w-3xl">
         {/* Profile Header */}
         <div className="flex items-center gap-4 mb-8 p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-border/50 shadow-sm">
-          {/* Avatar */}
-          <div className="h-16 w-16 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center shrink-0">
-            {user ? (
-              <span className="text-xl font-bold font-quicksand text-primary">{initials}</span>
-            ) : (
-              <User className="h-7 w-7 text-muted-foreground" />
-            )}
-          </div>
-          {/* Info */}
+          <AvatarUpload
+            currentAvatarUrl={avatarUrl}
+            displayName={displayName}
+            onUpload={handleAvatarUpload}
+            size={64}
+          />
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold font-quicksand truncate">{displayName}</h1>
             {user?.email && (
@@ -378,6 +374,7 @@ export default function ProfilePage() {
               </span>
             )}
           </div>
+          <EditProfileSheet currentDisplayName={displayName} />
         </div>
 
         {/* Tabs */}

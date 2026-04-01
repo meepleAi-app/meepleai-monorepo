@@ -34,6 +34,7 @@ import {
   SharedLibrarySchema,
   GameDetailDtoSchema,
   LabelDtoSchema,
+  LibraryForDowngradeSchema,
   type PaginatedLibraryResponse,
   type UserLibraryStats,
   type UserLibraryEntry,
@@ -51,6 +52,7 @@ import {
   type GameDetailDto,
   type LabelDto,
   type CreateCustomLabelRequest,
+  type LibraryForDowngrade,
 } from '../schemas/library.schemas';
 import {
   PendingMigrationDtoSchema,
@@ -156,6 +158,8 @@ export interface LibraryClient {
   // Loan Flow (Task 7/8)
   getLoanStatus(gameId: string): Promise<LoanStatusResponse | null>;
   sendLoanReminder(gameId: string, customMessage?: string): Promise<void>;
+  // Downgrade Preview (Task 12)
+  getLibraryForDowngrade(newQuota: number): Promise<LibraryForDowngrade>;
 }
 
 export interface LoanStatusResponse {
@@ -916,6 +920,25 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      */
     async sendLoanReminder(gameId: string, customMessage?: string): Promise<void> {
       await httpClient.post(`/api/v1/library/games/${gameId}/remind-loan`, { customMessage });
+    },
+
+    // ========== Downgrade Preview (Task 12) ==========
+
+    /**
+     * Get library entries split into keep/remove lists for a quota downgrade preview
+     * GET /api/v1/library/downgrade-preview?newQuota={n}
+     * @param newQuota - The new quota the user is downgrading to
+     * @returns Two lists: games that fit in the new quota and games to remove
+     */
+    async getLibraryForDowngrade(newQuota: number): Promise<LibraryForDowngrade> {
+      const data = await httpClient.get<LibraryForDowngrade>(
+        `/api/v1/library/downgrade-preview?newQuota=${newQuota}`,
+        LibraryForDowngradeSchema
+      );
+      if (!data) {
+        throw new Error('Failed to fetch downgrade preview');
+      }
+      return data;
     },
   };
 }

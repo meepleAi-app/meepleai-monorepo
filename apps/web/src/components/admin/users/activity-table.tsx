@@ -122,7 +122,7 @@ export function ActivityTable({
   if (isLoading) {
     return (
       <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg p-8 text-center text-muted-foreground">
-        Loading activity log...
+        Caricamento log...
       </div>
     );
   }
@@ -130,7 +130,7 @@ export function ActivityTable({
   if (isError) {
     return (
       <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg p-8 text-center text-red-600">
-        Failed to load activity log.
+        Impossibile caricare il log di attività.
       </div>
     );
   }
@@ -165,7 +165,7 @@ export function ActivityTable({
             {entries.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-12 text-center text-muted-foreground">
-                  No activity found.
+                  Nessuna attività trovata.
                 </td>
               </tr>
             ) : (
@@ -195,7 +195,7 @@ export function ActivityTable({
                         </div>
                       </div>
                     ) : (
-                      <span className="text-slate-400 text-sm">System</span>
+                      <span className="text-slate-400 text-sm">Sistema</span>
                     )}
                   </td>
                   <td className="py-3 px-4">
@@ -247,7 +247,7 @@ export function ActivityTable({
               disabled={page === 0}
               onClick={() => onPageChange?.(page - 1)}
             >
-              Previous
+              Precedente
             </Button>
             <Button
               variant="outline"
@@ -255,7 +255,7 @@ export function ActivityTable({
               disabled={page >= totalPages - 1}
               onClick={() => onPageChange?.(page + 1)}
             >
-              Next
+              Successivo
             </Button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserNotifications.Infrastructure.HealthChecks;
 using Api.Infrastructure.Health.Checks;
 using Api.Infrastructure.Health.Models;
+using Api.Services;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Api.Infrastructure.Health.Extensions;
@@ -38,13 +39,16 @@ public static class HealthCheckServiceExtensions
             timeout: TimeSpan.FromSeconds(5));
 
         // Embedding dimension validation — catches provider/schema mismatch at startup.
-        // Uses Degraded + NonCritical to match other AI health checks and avoid
-        // blocking dev/CI startup when embedding service is not running.
-        builder.AddCheck<EmbeddingDimensionHealthCheck>(
+        // Uses factory registration because IEmbeddingService is internal (CS0051 prevents
+        // a public constructor), and ActivatorUtilities does not resolve internal constructors.
+        builder.Add(new HealthCheckRegistration(
             "embedding-dimensions",
+            sp => new EmbeddingDimensionHealthCheck(
+                sp.GetRequiredService<IEmbeddingService>(),
+                sp.GetRequiredService<ILogger<EmbeddingDimensionHealthCheck>>()),
             HealthStatus.Degraded,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(1));
+            new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
+            TimeSpan.FromSeconds(1)));
 
         builder.AddCheck<RerankerHealthCheck>(
             "reranker",

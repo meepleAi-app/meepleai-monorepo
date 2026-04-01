@@ -100,7 +100,7 @@ export function EntityIndicator({
  * Issue #4062: Stacks entity badge, status, and custom badge vertically
  * with compact sizing (80px max), truncation, and hover tooltips.
  */
-export function VerticalTagStack({
+export const VerticalTagStack = React.memo(function VerticalTagStack({
   entity,
   customColor,
   status,
@@ -158,7 +158,7 @@ export function VerticalTagStack({
       </div>
     </TooltipProvider>
   );
-}
+});
 
 // ============================================================================
 // CoverImage
@@ -167,7 +167,7 @@ export function VerticalTagStack({
 /**
  * Cover image with optional gradient overlay and entity-specific placeholders
  */
-export function CoverImage({
+export const CoverImage = React.memo(function CoverImage({
   src,
   alt,
   variant,
@@ -316,7 +316,7 @@ export function CoverImage({
       )}
     </div>
   );
-}
+});
 
 // ============================================================================
 // MetadataChips

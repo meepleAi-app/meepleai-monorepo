@@ -26,7 +26,7 @@ import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-car
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
-import { useGameTableDrawer } from '@/lib/stores/gameTableDrawerStore';
+import { useGameTableDrawer } from '@/lib/stores/game-table-drawer-store';
 
 import GameDetailMobile from './game-detail-mobile';
 

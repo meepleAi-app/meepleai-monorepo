@@ -13,7 +13,7 @@ import { type ReactNode, useEffect } from 'react';
 import { BarChart2, History, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { useSetNavConfig } from '@/context/NavigationContext';
+import { useSetNavConfig } from '@/contexts/NavigationContext';
 
 export default function PlayRecordsLayout({ children }: { children: ReactNode }) {
   const router = useRouter();

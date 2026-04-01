@@ -39,7 +39,7 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
   },
 }));
 
-vi.mock('@/lib/stores/gameTableDrawerStore', () => ({
+vi.mock('@/lib/stores/game-table-drawer-store', () => ({
   useGameTableDrawer: mocks.useGameTableDrawer,
 }));
 

@@ -17,7 +17,7 @@ import { type ReactNode, useEffect } from 'react';
 import { Bot, FileText, HelpCircle, MessageSquare, Play, Wrench } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 
-import { useSetNavConfig } from '@/context/NavigationContext';
+import { useSetNavConfig } from '@/contexts/NavigationContext';
 
 export default function LibraryGameDetailLayout({ children }: { children: ReactNode }) {
   const { gameId } = useParams<{ gameId: string }>();

@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 
 import { Loader2, AlertCircle } from 'lucide-react';
 
-import { useToolboxStore } from '@/lib/stores/toolboxStore';
+import { useToolboxStore } from '@/lib/stores/toolbox-store';
 
 import { SharedContextBar } from './SharedContextBar';
 import { ToolCard } from './ToolCard';

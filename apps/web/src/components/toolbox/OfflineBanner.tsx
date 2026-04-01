@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 
 import { Info, X } from 'lucide-react';
 
-import { useToolboxStore } from '@/lib/stores/toolboxStore';
+import { useToolboxStore } from '@/lib/stores/toolbox-store';
 import { cn } from '@/lib/utils';
 
 interface OfflineBannerProps {

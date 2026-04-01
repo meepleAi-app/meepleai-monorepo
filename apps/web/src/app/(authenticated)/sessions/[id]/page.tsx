@@ -18,7 +18,7 @@ import { toScoreboardData, toSession } from '@/components/session/adapters';
 import { RelatedEntitiesSection } from '@/components/ui/data-display/entity-link/related-entities-section';
 import type { LiveSessionStatus } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
-import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useSessionStore } from '@/lib/stores/session-store';
 
 interface SessionPageProps {
   params: Promise<{ id: string }>;

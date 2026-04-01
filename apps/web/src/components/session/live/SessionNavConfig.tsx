@@ -15,7 +15,7 @@ import { useEffect } from 'react';
 
 import { Bot, Camera, LayoutDashboard, Trophy, Users } from 'lucide-react';
 
-import { useSetNavConfig } from '@/context/NavigationContext';
+import { useSetNavConfig } from '@/contexts/NavigationContext';
 
 interface SessionNavConfigProps {
   sessionId: string;

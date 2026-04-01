@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
-import { useGameTableDrawer } from '@/lib/stores/gameTableDrawerStore';
+import { useGameTableDrawer } from '@/lib/stores/game-table-drawer-store';
 
 import { HouseRulesSection } from './HouseRulesSection';
 

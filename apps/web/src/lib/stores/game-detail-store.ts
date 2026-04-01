@@ -39,23 +39,22 @@ const initialState: GameDetailState = {
 
 export const useGameDetailStore = create<GameDetailStore>()(
   devtools(
-    (set) => ({
+    set => ({
       ...initialState,
 
-      setGameId: (gameId) => set({ gameId }, false, 'setGameId'),
+      setGameId: gameId => set({ gameId }, false, 'setGameId'),
 
-      setCurrentState: (currentState) => set({ currentState }, false, 'setCurrentState'),
+      setCurrentState: currentState => set({ currentState }, false, 'setCurrentState'),
 
-      setIsUpdatingState: (isUpdatingState) =>
-        set({ isUpdatingState }, false, 'setIsUpdatingState'),
+      setIsUpdatingState: isUpdatingState => set({ isUpdatingState }, false, 'setIsUpdatingState'),
 
-      setIsRecordingSession: (isRecordingSession) =>
+      setIsRecordingSession: isRecordingSession =>
         set({ isRecordingSession }, false, 'setIsRecordingSession'),
 
-      setOptimisticSessionId: (optimisticSessionId) =>
+      setOptimisticSessionId: optimisticSessionId =>
         set({ optimisticSessionId }, false, 'setOptimisticSessionId'),
 
-      setError: (error) => set({ error }, false, 'setError'),
+      setError: error => set({ error }, false, 'setError'),
 
       reset: () => set(initialState, false, 'reset'),
     }),

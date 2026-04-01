@@ -169,10 +169,13 @@ describe('NavigationProvider + useNavigation', () => {
 
 describe('useSetNavConfig', () => {
   it('returns a function that updates navigation config', () => {
-    const { result } = renderHook(() => ({
-      nav: useNavigation(),
-      setter: useSetNavConfig(),
-    }), { wrapper });
+    const { result } = renderHook(
+      () => ({
+        nav: useNavigation(),
+        setter: useSetNavConfig(),
+      }),
+      { wrapper }
+    );
 
     act(() => {
       result.current.setter({

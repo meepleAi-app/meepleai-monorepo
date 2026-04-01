@@ -63,6 +63,13 @@ export interface ChatMessageListProps {
 }
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+/** Windowed slice: max DOM nodes rendered at once for performance */
+const WINDOW_SIZE = 50;
+
+// ============================================================================
 // Component
 // ============================================================================
 
@@ -79,6 +86,18 @@ export function ChatMessageList({
   onStopSpeaking,
   messagesEndRef,
 }: ChatMessageListProps) {
+  const [windowStart, setWindowStart] = React.useState(() =>
+    Math.max(0, messages.length - WINDOW_SIZE)
+  );
+
+  // Advance window when new messages arrive so the latest stays visible
+  React.useEffect(() => {
+    setWindowStart(Math.max(0, messages.length - WINDOW_SIZE));
+  }, [messages.length]);
+
+  const visibleMessages = messages.slice(windowStart);
+  const hiddenCount = windowStart;
+
   return (
     <>
       {messages.length === 0 ? (
@@ -89,51 +108,66 @@ export function ChatMessageList({
           </div>
         </div>
       ) : (
-        messages.map((msg, msgIndex) => {
-          // Show strategy badge on the last assistant message when available
-          const isLastAssistant =
-            msg.role === 'assistant' &&
-            !streamState.isStreaming &&
-            msgIndex === messages.length - 1;
-
-          return (
-            <div
-              key={msg.id}
-              className={cn(
-                'max-w-[85%] rounded-2xl px-4 py-3',
-                msg.role === 'user'
-                  ? 'ml-auto bg-amber-500 text-white'
-                  : 'mr-auto bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
-              )}
-              data-testid={`message-${msg.role}`}
-            >
-              <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
-              {msg.role === 'assistant' && isTtsSupported && ttsEnabled && (
-                <TtsSpeakerButton
-                  text={msg.content}
-                  isSpeaking={isSpeaking}
-                  onSpeak={onSpeak}
-                  onStop={onStopSpeaking}
-                />
-              )}
-              {msg.citations && msg.citations.length > 0 && (
-                <RuleSourceCard citations={msg.citations} gameTitle={gameTitle} />
-              )}
-              {isLastAssistant && streamState.strategyTier && (
-                <div className="mt-2">
-                  <ResponseMetaBadge strategyTier={streamState.strategyTier} />
-                </div>
-              )}
-              {isLastAssistant && isEditor && streamState.debugSteps.length > 0 && (
-                <TechnicalDetailsPanel
-                  debugSteps={streamState.debugSteps}
-                  executionId={streamState.executionId}
-                  showDebugLink={isAdmin}
-                />
-              )}
+        <>
+          {hiddenCount > 0 && (
+            <div className="flex justify-center mb-2">
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                onClick={() => setWindowStart(prev => Math.max(0, prev - WINDOW_SIZE))}
+              >
+                {hiddenCount} messaggi precedenti
+              </button>
             </div>
-          );
-        })
+          )}
+
+          {visibleMessages.map((msg, visibleIndex) => {
+            const msgIndex = windowStart + visibleIndex;
+            // Show strategy badge on the last assistant message when available
+            const isLastAssistant =
+              msg.role === 'assistant' &&
+              !streamState.isStreaming &&
+              msgIndex === messages.length - 1;
+
+            return (
+              <div
+                key={msg.id}
+                className={cn(
+                  'max-w-[85%] rounded-2xl px-4 py-3',
+                  msg.role === 'user'
+                    ? 'ml-auto bg-amber-500 text-white'
+                    : 'mr-auto bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
+                )}
+                data-testid={`message-${msg.role}`}
+              >
+                <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
+                {msg.role === 'assistant' && isTtsSupported && ttsEnabled && (
+                  <TtsSpeakerButton
+                    text={msg.content}
+                    isSpeaking={isSpeaking}
+                    onSpeak={onSpeak}
+                    onStop={onStopSpeaking}
+                  />
+                )}
+                {msg.citations && msg.citations.length > 0 && (
+                  <RuleSourceCard citations={msg.citations} gameTitle={gameTitle} />
+                )}
+                {isLastAssistant && streamState.strategyTier && (
+                  <div className="mt-2">
+                    <ResponseMetaBadge strategyTier={streamState.strategyTier} />
+                  </div>
+                )}
+                {isLastAssistant && isEditor && streamState.debugSteps.length > 0 && (
+                  <TechnicalDetailsPanel
+                    debugSteps={streamState.debugSteps}
+                    executionId={streamState.executionId}
+                    showDebugLink={isAdmin}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </>
       )}
 
       {/* Streaming status message */}

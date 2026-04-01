@@ -153,6 +153,15 @@ export interface LibraryClient {
     widgetType: string,
     request: UpdateWidgetRequest
   ): Promise<ToolkitDashboardDto>;
+  // Loan Flow (Task 7/8)
+  getLoanStatus(gameId: string): Promise<LoanStatusResponse | null>;
+  sendLoanReminder(gameId: string, customMessage?: string): Promise<void>;
+}
+
+export interface LoanStatusResponse {
+  isOnLoan: boolean;
+  borrowerInfo: string | null;
+  loanedSince: string | null; // ISO datetime
 }
 
 /**
@@ -878,6 +887,35 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       );
       if (!data) throw new Error('Failed to update toolkit widget');
       return data;
+    },
+
+    // ========== Loan Flow (Task 7/8) ==========
+
+    /**
+     * Get loan status for a game in user's library
+     * GET /api/v1/library/games/{gameId}/loan-status
+     * @param gameId - Game UUID
+     * @returns Loan status or null if game is not on loan
+     */
+    async getLoanStatus(gameId: string): Promise<LoanStatusResponse | null> {
+      return httpClient.get<LoanStatusResponse>(
+        `/api/v1/library/games/${gameId}/loan-status`,
+        z.object({
+          isOnLoan: z.boolean(),
+          borrowerInfo: z.string().nullable(),
+          loanedSince: z.string().nullable(),
+        })
+      );
+    },
+
+    /**
+     * Send a loan reminder to the borrower
+     * POST /api/v1/library/games/{gameId}/remind-loan
+     * @param gameId - Game UUID
+     * @param customMessage - Optional custom message for the reminder
+     */
+    async sendLoanReminder(gameId: string, customMessage?: string): Promise<void> {
+      await httpClient.post(`/api/v1/library/games/${gameId}/remind-loan`, { customMessage });
     },
   };
 }

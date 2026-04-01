@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MeepleAI — Dashboard Mock (Research Layout)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Nunito:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS — fedeli al codebase MeepleAI
+═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg-base:       #0c0c10;
+  --bg-surface:    #15151d;
+  --bg-elevated:   #1e1e2a;
+  --bg-highlight:  #252535;
+  --border:        rgba(255,255,255,0.07);
+  --border-hover:  rgba(255,255,255,0.14);
+
+  /* Entity colors — HSL matching entityColors in meeple-card-styles.ts */
+  --c-game:        hsl(25, 95%, 45%);   /* orange */
+  --c-player:      hsl(262, 83%, 58%);  /* purple */
+  --c-session:     hsl(240, 60%, 55%);  /* indigo */
+  --c-chat:        hsl(220, 80%, 55%);  /* blue */
+  --c-kb:          hsl(174, 60%, 40%);  /* teal */
+  --c-event:       hsl(350, 89%, 60%);  /* rose */
+  --c-agent:       hsl(38, 92%, 50%);   /* amber */
+
+  --text-primary:    #f0f0f5;
+  --text-secondary:  #9090a8;
+  --text-muted:      #5c5c70;
+
+  --sidebar-w: 52px;
+  --topnav-h: 48px;
+  --bottomnav-h: 56px;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
+  --shadow-xl:  0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-body:    'Nunito', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+}
+
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── View switcher ─── */
+.view-switcher {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  gap: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hover);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: var(--shadow-md);
+}
+.view-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.2s;
+  letter-spacing: 0.03em;
+}
+.view-btn.active {
+  background: var(--c-game);
+  color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SHELL LAYOUT
+═══════════════════════════════════════════════════════════════ */
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* ─── Top Nav ─── */
+.topnav {
+  height: var(--topnav-h);
+  min-height: var(--topnav-h);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  position: relative;
+  z-index: 40;
+}
+.topnav-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+.topnav-logo .logo-icon {
+  width: 28px; height: 28px;
+  background: var(--c-game);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.topnav-search {
+  flex: 1;
+  max-width: 380px;
+  margin-left: auto;
+  height: 32px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex; align-items: center;
+  padding: 0 10px;
+  gap: 7px;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.topnav-search:hover { border-color: var(--border-hover); }
+.topnav-search kbd {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--bg-highlight);
+  border: 1px solid var(--border-hover);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--text-secondary);
+}
+.topnav-avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--c-player), var(--c-game));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* ─── Body row: sidebar + main ─── */
+.body-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── Sidebar ─── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 2px;
+  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+  z-index: 30;
+}
+.sidebar.expanded {
+  width: 220px;
+  align-items: flex-start;
+  padding: 8px 0;
+}
+.sidebar-item {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 9px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 17px;
+  transition: all 0.15s;
+  position: relative;
+  flex-shrink: 0;
+}
+.sidebar.expanded .sidebar-item {
+  width: calc(100% - 12px);
+  margin: 0 6px;
+  padding: 0 10px;
+  justify-content: flex-start;
+  gap: 10px;
+}
+.sidebar-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.sidebar-item.active { background: rgba(245,130,31,0.12); color: var(--c-game); }
+.sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 20px;
+  background: var(--c-game);
+  border-radius: 0 3px 3px 0;
+}
+.sidebar.expanded .sidebar-item.active::before { display: none; }
+.sidebar-label {
+  display: none;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+}
+.sidebar.expanded .sidebar-label { display: block; }
+.sidebar-spacer { flex: 1; }
+.sidebar-toggle {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 9px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 14px;
+  transition: all 0.15s;
+}
+.sidebar-toggle:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+/* ─── Main ─── */
+.main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 20px 20px 24px;
+  scroll-behavior: smooth;
+}
+
+/* ─── Bottom Tab Bar (mobile) ─── */
+.bottom-tabbar {
+  display: none;
+  height: var(--bottomnav-h);
+  min-height: var(--bottomnav-h);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  padding: 0 4px;
+  align-items: center;
+  justify-content: space-around;
+}
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 18px;
+  transition: all 0.15s;
+}
+.tab-item span.tab-lbl {
+  font-size: 9px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.tab-item:hover { color: var(--text-secondary); }
+.tab-item.active { color: var(--c-game); }
+
+/* ═══════════════════════════════════════════════════════════════
+   VIEW MODES
+═══════════════════════════════════════════════════════════════ */
+
+/* SPLIT VIEW */
+body.split-view {
+  display: grid;
+  grid-template-columns: 1fr 375px;
+  gap: 0;
+  height: 100dvh;
+  overflow: hidden;
+}
+body.split-view .view-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.05em;
+}
+.desktop-panel, .mobile-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+.mobile-panel {
+  border-left: 1px solid var(--border);
+}
+
+/* DESKTOP VIEW (normale) */
+body.desktop-view .shell {
+  max-width: 100%;
+}
+body.desktop-view .sidebar { display: flex; }
+body.desktop-view .bottom-tabbar { display: none; }
+body.desktop-view .main { padding-bottom: 24px; }
+
+/* MOBILE VIEW */
+body.mobile-view .shell {
+  max-width: 390px;
+  margin: 0 auto;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+body.mobile-view .sidebar { display: none !important; }
+body.mobile-view .bottom-tabbar { display: flex; }
+body.mobile-view .main {
+  padding: 14px 14px 74px;
+}
+body.mobile-view .lib-grid { grid-template-columns: 1fr !important; }
+body.mobile-view .lib-card-wrap { display: block; }
+body.mobile-view .stats-bento { grid-template-columns: repeat(2, 1fr) !important; }
+body.mobile-view .quick-actions { gap: 8px; }
+body.mobile-view .qa-btn { min-width: 56px; font-size: 10px; padding: 8px 6px; }
+body.mobile-view .hero-banner { min-height: 100px; padding: 16px; }
+body.mobile-view .hero-title { font-size: 20px; }
+body.mobile-view .shelf-card-wrap { width: 120px !important; }
+body.mobile-view .section-title { font-size: 12px; }
+/* Mobile library: list variant */
+body.mobile-view .lib-card-inner {
+  flex-direction: row !important;
+  height: 64px;
+}
+body.mobile-view .lib-card-inner .card-cover {
+  width: 64px; height: 64px;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  aspect-ratio: unset !important;
+}
+body.mobile-view .lib-card-inner .card-body {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+body.mobile-view .lib-card-inner .card-cover .cover-tag-stack { display: none; }
+body.mobile-view .lib-card-inner .card-rating { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SPLIT VIEW — show both panels
+═══════════════════════════════════════════════════════════════ */
+body.split-view .view-switcher { top: 8px; right: 8px; }
+body.split-view .desktop-panel .shell .sidebar { display: flex; }
+body.split-view .desktop-panel .shell .bottom-tabbar { display: none; }
+body.split-view .mobile-panel .shell .sidebar { display: none !important; }
+body.split-view .mobile-panel .shell .bottom-tabbar { display: flex; }
+body.split-view .mobile-panel .shell .main {
+  padding: 14px 14px 74px;
+}
+body.split-view .mobile-panel .lib-grid { grid-template-columns: 1fr !important; }
+body.split-view .mobile-panel .lib-card-inner {
+  flex-direction: row !important;
+  height: 64px;
+}
+body.split-view .mobile-panel .lib-card-inner .card-cover {
+  width: 64px; height: 64px;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  aspect-ratio: unset !important;
+}
+body.split-view .mobile-panel .lib-card-inner .card-body {
+  padding: 8px 10px;
+}
+body.split-view .mobile-panel .lib-card-inner .cover-tag-stack { display: none; }
+body.split-view .mobile-panel .lib-card-inner .card-rating { display: none; }
+body.split-view .mobile-panel .stats-bento { grid-template-columns: repeat(2,1fr) !important; }
+body.split-view .mobile-panel .shelf-card-wrap { width: 110px !important; }
+body.split-view .mobile-panel .hero-title { font-size: 18px !important; }
+body.split-view .mobile-panel .hero-banner { min-height: 90px; padding: 14px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   CONTENT COMPONENTS
+═══════════════════════════════════════════════════════════════ */
+
+/* ─── Hero Banner ─── */
+.hero-banner {
+  background: linear-gradient(135deg,
+    hsl(25,40%,12%) 0%,
+    hsl(262,30%,14%) 60%,
+    hsl(25,50%,10%) 100%
+  );
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--c-game);
+  border-radius: var(--radius-xl);
+  padding: 20px 24px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.hero-banner::before {
+  content: '🎲';
+  position: absolute;
+  right: 20px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 56px;
+  opacity: 0.08;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(245,130,31,0.2);
+  color: var(--c-game);
+  border: 1px solid rgba(245,130,31,0.3);
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  width: fit-content;
+  margin-bottom: 6px;
+}
+.hero-badge .dot {
+  width: 6px; height: 6px;
+  background: var(--c-game);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.hero-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.hero-sub {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 3px;
+}
+.hero-cta {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--c-game);
+  color: white;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 8px;
+  width: fit-content;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(245,130,31,0.35);
+  transition: all 0.2s;
+}
+.hero-cta:hover {
+  background: hsl(25,95%,50%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245,130,31,0.45);
+}
+
+/* ─── Quick Actions ─── */
+.quick-actions {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+}
+.quick-actions::-webkit-scrollbar { display: none; }
+.qa-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 68px;
+  padding: 10px 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.qa-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+.qa-icon {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+
+/* ─── Section header ─── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-link {
+  font-size: 11px;
+  color: var(--c-game);
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0.85;
+  font-family: var(--font-display);
+}
+.section-link:hover { opacity: 1; }
+.section { margin-bottom: 24px; }
+
+/* ─── Horizontal Scroll Shelf ─── */
+.scroll-shelf {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+}
+.scroll-shelf::-webkit-scrollbar { display: none; }
+.shelf-card-wrap {
+  width: 140px;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+
+/* ─── Library Grid ─── */
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MEEPLE CARD — grid variant
+═══════════════════════════════════════════════════════════════ */
+.mc {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+.mc:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--border-hover);
+}
+/* entity left border */
+.mc[data-entity="game"]    { border-left: 3px solid var(--c-game); }
+.mc[data-entity="session"] { border-left: 3px solid var(--c-session); }
+.mc[data-entity="player"]  { border-left: 3px solid var(--c-player); }
+.mc[data-entity="chat"]    { border-left: 3px solid var(--c-chat); }
+.mc[data-entity="kb"]      { border-left: 3px solid var(--c-kb); }
+.mc[data-entity="event"]   { border-left: 3px solid var(--c-event); }
+.mc[data-entity="agent"]   { border-left: 3px solid var(--c-agent); }
+
+/* shimmer on hover */
+.mc::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%);
+  transform: translateX(-100%);
+  pointer-events: none;
+  transition: none;
+}
+.mc:hover::after {
+  transform: translateX(100%);
+  transition: transform 0.6s ease;
+}
+
+/* Cover area */
+.card-cover {
+  position: relative;
+  aspect-ratio: 7/10;
+  overflow: hidden;
+}
+.card-cover .bg-gradient {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px;
+  opacity: 0.6;
+}
+.card-cover .cover-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 50%);
+}
+.cover-tag-stack {
+  position: absolute;
+  top: 7px; left: 7px;
+  display: flex; flex-direction: column; gap: 4px;
+  z-index: 2;
+}
+.entity-badge {
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 5px;
+  width: fit-content;
+}
+.state-badge {
+  position: absolute;
+  bottom: 6px; right: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+.state-badge.success { background: rgba(16,185,129,0.75); color: white; }
+.state-badge.info    { background: rgba(59,130,246,0.75); color: white; }
+.state-badge.warning { background: rgba(245,158,11,0.75); color: black; }
+.cover-rank {
+  position: absolute;
+  top: 6px; right: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-game);
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  border-radius: 5px;
+  padding: 2px 6px;
+  z-index: 2;
+}
+
+/* Card body */
+.card-body {
+  padding: 8px 10px 10px;
+}
+.card-title {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.card-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.meta-chip {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.card-rating {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 5px;
+}
+.card-rating .stars { color: hsl(45,90%,60%); font-size: 9px; letter-spacing: 1px; }
+.card-rating .score {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+.wishlist-btn {
+  position: absolute;
+  bottom: 8px; right: 8px;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.mc:hover .wishlist-btn { opacity: 1; }
+
+/* ─── List Variant (for mobile library) ─── */
+.lib-card-inner {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BENTO STATS GRID
+═══════════════════════════════════════════════════════════════ */
+.stats-bento {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.stat-widget {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.stat-widget:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-hover);
+}
+.stat-icon {
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.stat-delta {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  width: fit-content;
+  margin-top: 2px;
+}
+.stat-delta.up { background: rgba(16,185,129,0.15); color: hsl(142,70%,55%); }
+.stat-delta.down { background: rgba(239,68,68,0.12); color: hsl(0,80%,65%); }
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION BACKGROUNDS — entity gradients for placeholders
+═══════════════════════════════════════════════════════════════ */
+.bg-game     { background: linear-gradient(135deg, hsl(30,50%,20%), hsl(20,60%,15%)); }
+.bg-session  { background: linear-gradient(135deg, hsl(240,40%,22%), hsl(240,30%,16%)); }
+.bg-chat     { background: linear-gradient(135deg, hsl(220,40%,20%), hsl(220,30%,15%)); }
+.bg-player   { background: linear-gradient(135deg, hsl(262,40%,20%), hsl(262,30%,15%)); }
+.bg-kb       { background: linear-gradient(135deg, hsl(174,35%,18%), hsl(174,25%,14%)); }
+.bg-event    { background: linear-gradient(135deg, hsl(350,40%,20%), hsl(350,30%,15%)); }
+.bg-agent    { background: linear-gradient(135deg, hsl(38,45%,20%), hsl(38,35%,15%)); }
+
+/* ═══════════════════════════════════════════════════════════════
+   CHAT PREVIEW SECTION
+═══════════════════════════════════════════════════════════════ */
+.chat-preview {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--c-chat);
+  border-radius: var(--radius-xl);
+  padding: 14px;
+  margin-bottom: 24px;
+}
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.chat-active-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--c-chat);
+  background: rgba(59,130,246,0.12);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.chat-message-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: flex-start;
+}
+.chat-bubble {
+  padding: 8px 11px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 85%;
+}
+.chat-bubble.user {
+  background: rgba(245,130,31,0.15);
+  border: 1px solid rgba(245,130,31,0.2);
+  margin-left: auto;
+  border-radius: 12px 12px 2px 12px;
+}
+.chat-bubble.ai {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 2px 12px 12px 12px;
+}
+.chat-citation {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(59,130,246,0.15);
+  color: hsl(220,80%,70%);
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  margin-left: 3px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+.chat-input {
+  flex: 1;
+  height: 34px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex; align-items: center;
+  gap: 7px;
+  cursor: text;
+}
+.chat-send {
+  width: 34px; height: 34px;
+  background: var(--c-chat);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.chat-send:hover { filter: brightness(1.1); transform: scale(1.05); }
+
+/* ═══════════════════════════════════════════════════════════════
+   GROUP LEADERBOARD
+═══════════════════════════════════════════════════════════════ */
+.leaderboard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--c-event);
+  border-radius: var(--radius-xl);
+  padding: 14px;
+  margin-bottom: 24px;
+}
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.lb-row:last-child { border-bottom: none; }
+.lb-rank {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  width: 22px;
+  text-align: center;
+}
+.lb-rank.gold   { color: hsl(45,90%,60%); font-size: 16px; }
+.lb-rank.silver { color: hsl(220,20%,70%); font-size: 16px; }
+.lb-rank.bronze { color: hsl(20,60%,55%); font-size: 16px; }
+.lb-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+.lb-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-display);
+}
+.lb-score {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.lb-badge {
+  font-size: 10px;
+  background: rgba(245,130,31,0.12);
+  color: var(--c-game);
+  padding: 2px 6px;
+  border-radius: 20px;
+  font-weight: 600;
+  border: 1px solid rgba(245,130,31,0.2);
+}
+
+/* ─── FAB ─── */
+.fab {
+  position: fixed;
+  bottom: 72px;
+  right: 16px;
+  width: 48px; height: 48px;
+  background: var(--c-game);
+  color: white;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(245,130,31,0.45);
+  z-index: 100;
+  transition: all 0.2s;
+}
+.fab:hover { transform: scale(1.05) rotate(5deg); }
+/* FAB only on mobile */
+body.desktop-view .fab { display: none; }
+body.split-view .mobile-panel .fab { display: flex; }
+body.split-view .desktop-panel .fab { display: none; }
+
+/* ─── Scrollbar ─── */
+.main::-webkit-scrollbar { width: 4px; }
+.main::-webkit-scrollbar-track { background: transparent; }
+.main::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 4px; }
+
+/* ─── Divider ─── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0 24px;
+}
+
+/* ─── Page title ─── */
+.page-section-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+</style>
+</head>
+<body class="desktop-view">
+
+<!-- View Switcher -->
+<div class="view-switcher">
+  <button class="view-btn active" onclick="setView('desktop')">Desktop</button>
+  <button class="view-btn" onclick="setView('mobile')">Mobile</button>
+  <button class="view-btn" onclick="setView('split')">Split</button>
+</div>
+
+<!-- DESKTOP / MOBILE SINGLE VIEW -->
+<div id="single-view">
+  <div class="shell">
+    <!-- Top Nav -->
+    <nav class="topnav">
+      <div class="topnav-logo">
+        <div class="logo-icon">🎲</div>
+        <span>MeepleAI</span>
+      </div>
+      <div class="topnav-search">
+        <span>🔍</span>
+        <span>Cerca giochi, regole, sessioni…</span>
+        <kbd>⌘K</kbd>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:8px">
+        <div style="font-size:18px;color:var(--text-muted);cursor:pointer">🔔</div>
+        <div class="topnav-avatar">M</div>
+      </div>
+    </nav>
+
+    <div class="body-row">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-item active" title="Dashboard">
+          <span>🏠</span><span class="sidebar-label">Dashboard</span>
+        </div>
+        <div class="sidebar-item" title="Giochi">
+          <span>🎲</span><span class="sidebar-label">Giochi</span>
+        </div>
+        <div class="sidebar-item" title="Libreria">
+          <span>📚</span><span class="sidebar-label">Libreria</span>
+        </div>
+        <div class="sidebar-item" title="Sessioni">
+          <span>🏆</span><span class="sidebar-label">Sessioni</span>
+        </div>
+        <div class="sidebar-item" title="Chat AI">
+          <span>💬</span><span class="sidebar-label">Chat AI</span>
+        </div>
+        <div class="sidebar-item" title="Knowledge Base">
+          <span>📄</span><span class="sidebar-label">Regole</span>
+        </div>
+        <div class="sidebar-spacer"></div>
+        <div class="sidebar-item" title="Impostazioni">
+          <span>⚙️</span><span class="sidebar-label">Impostazioni</span>
+        </div>
+        <div class="sidebar-toggle" title="Espandi" onclick="toggleSidebar()">⟫</div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main" id="main-content">
+        <!-- Hero -->
+        <div class="hero-banner">
+          <div>
+            <div class="hero-badge"><div class="dot"></div> SESSIONE LIVE</div>
+            <div class="hero-title">Ciao, Mario! 👋</div>
+            <div class="hero-sub">Wingspan — 3 giocatori in attesa</div>
+          </div>
+          <div class="hero-cta">Entra nella sessione →</div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+          <div class="qa-btn">
+            <div class="qa-icon" style="background:rgba(245,130,31,0.15)">📚</div>
+            Libreria
+          </div>
+          <div class="qa-btn">
+            <div class="qa-icon" style="background:rgba(99,102,241,0.15)">🎲</div>
+            Nuova partita
+          </div>
+          <div class="qa-btn">
+            <div class="qa-icon" style="background:rgba(59,130,246,0.15)">💬</div>
+            Chat AI
+          </div>
+          <div class="qa-btn">
+            <div class="qa-icon" style="background:rgba(20,184,166,0.15)">📄</div>
+            Regole
+          </div>
+          <div class="qa-btn">
+            <div class="qa-icon" style="background:rgba(168,85,247,0.15)">🔍</div>
+            Scopri
+          </div>
+        </div>
+
+        <!-- Stats Bento -->
+        <div class="stats-bento">
+          <div class="stat-widget">
+            <div class="stat-icon">🎲</div>
+            <div class="stat-value" style="color:var(--c-game)">47</div>
+            <div class="stat-label">Partite</div>
+            <div class="stat-delta up">+5 questo mese</div>
+          </div>
+          <div class="stat-widget">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-value" style="color:var(--c-session)">32h</div>
+            <div class="stat-label">Tempo di gioco</div>
+            <div class="stat-delta up">+3h vs mese</div>
+          </div>
+          <div class="stat-widget">
+            <div class="stat-icon">🏆</div>
+            <div class="stat-value" style="color:var(--c-event)">12</div>
+            <div class="stat-label">Vittorie</div>
+            <div class="stat-delta up">56% win rate</div>
+          </div>
+          <div class="stat-widget">
+            <div class="stat-icon">📚</div>
+            <div class="stat-value" style="color:var(--c-kb)">23</div>
+            <div class="stat-label">Giochi in libreria</div>
+            <div class="stat-delta up">+2 nuovi</div>
+          </div>
+        </div>
+
+        <!-- Shelf: Giocati di recente -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title"><span>🕐</span> Giocati di recente</div>
+            <div class="section-link">Tutte le sessioni →</div>
+          </div>
+          <div class="scroll-shelf">
+
+            <div class="shelf-card-wrap">
+              <div class="mc" data-entity="session">
+                <div class="card-cover bg-session">
+                  <div class="bg-gradient">🐦</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-session)">Sessione</span>
+                  </div>
+                  <span class="state-badge success">Completata</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-title">Wingspan</div>
+                  <div class="card-sub">Vincitore: Luigi</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">3 giocatori</span>
+                    <span class="meta-chip">1:45</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="shelf-card-wrap">
+              <div class="mc" data-entity="session">
+                <div class="card-cover bg-game">
+                  <div class="bg-gradient">🏝️</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-session)">Sessione</span>
+                  </div>
+                  <span class="state-badge info">2 giorni fa</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-title">Catan</div>
+                  <div class="card-sub">Vincitore: Mario</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">4 giocatori</span>
+                    <span class="meta-chip">2:10</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="shelf-card-wrap">
+              <div class="mc" data-entity="session">
+                <div class="card-cover" style="background:linear-gradient(135deg,hsl(340,40%,20%),hsl(340,30%,14%))">
+                  <div class="bg-gradient">🌸</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-session)">Sessione</span>
+                  </div>
+                  <span class="state-badge info">3 giorni fa</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-title">Azul</div>
+                  <div class="card-sub">Vincitore: Peach</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">2 giocatori</span>
+                    <span class="meta-chip">0:50</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="shelf-card-wrap">
+              <div class="mc" data-entity="session">
+                <div class="card-cover" style="background:linear-gradient(135deg,hsl(35,40%,18%),hsl(35,30%,13%))">
+                  <div class="bg-gradient">🧛</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-session)">Sessione</span>
+                  </div>
+                  <span class="state-badge info">5 giorni fa</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-title">Arkham Horror</div>
+                  <div class="card-sub">Sconfitta di gruppo</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">4 giocatori</span>
+                    <span class="meta-chip">3:20</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="shelf-card-wrap">
+              <div class="mc" data-entity="session">
+                <div class="card-cover" style="background:linear-gradient(135deg,hsl(165,40%,18%),hsl(165,30%,13%))">
+                  <div class="bg-gradient">🐙</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-session)">Sessione</span>
+                  </div>
+                  <span class="state-badge info">1 settimana fa</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-title">Pandemic</div>
+                  <div class="card-sub">Vittoria!</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">3 giocatori</span>
+                    <span class="meta-chip">1:30</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Chat Preview -->
+        <div class="chat-preview">
+          <div class="chat-header">
+            <div class="section-title"><span>💬</span> Chat AI — Catan Rulebook</div>
+            <div class="chat-active-badge"><span>●</span> Attiva</div>
+          </div>
+          <div class="chat-message-row">
+            <div class="chat-bubble user">Quante strade posso costruire per turno in Catan?</div>
+          </div>
+          <div class="chat-message-row">
+            <div class="chat-bubble ai">
+              In Catan puoi costruire <strong>quante strade vuoi</strong> in un singolo turno, purché tu abbia le risorse necessarie (1 legname + 1 mattone per strada).
+              <span class="chat-citation">p.8</span>
+              Non esiste un limite al numero di strade per turno.
+              <span class="chat-citation">p.12</span>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <div class="chat-input">Fai una domanda sul regolamento…</div>
+            <div class="chat-send">↑</div>
+          </div>
+        </div>
+
+        <!-- Shelf: La tua libreria -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title"><span>📚</span> La Tua Libreria</div>
+            <div class="section-link">23 giochi →</div>
+          </div>
+          <div class="lib-grid">
+
+            <div class="mc" data-entity="game">
+              <div class="lib-card-inner">
+                <div class="card-cover bg-session">
+                  <div class="bg-gradient">🐦</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-game)">Game</span>
+                    <span class="entity-badge" style="background:rgba(16,185,129,0.8);font-size:7px">Posseduto</span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="card-rating"><span class="stars">★★★★★</span><span class="score">8.9</span></div>
+                  <div class="card-title">Wingspan</div>
+                  <div class="card-sub">Stonemaier Games</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">1-5</span>
+                    <span class="meta-chip">40-70'</span>
+                  </div>
+                </div>
+              </div>
+              <div class="wishlist-btn">♥</div>
+            </div>
+
+            <div class="mc" data-entity="game">
+              <div class="lib-card-inner">
+                <div class="card-cover bg-game">
+                  <div class="bg-gradient">🏝️</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-game)">Game</span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="card-rating"><span class="stars">★★★★☆</span><span class="score">7.3</span></div>
+                  <div class="card-title">Catan</div>
+                  <div class="card-sub">Asmodee</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">3-4</span>
+                    <span class="meta-chip">60-120'</span>
+                  </div>
+                </div>
+              </div>
+              <div class="wishlist-btn">♥</div>
+            </div>
+
+            <div class="mc" data-entity="game">
+              <div class="lib-card-inner">
+                <div class="card-cover" style="background:linear-gradient(135deg,hsl(340,40%,18%),hsl(340,30%,13%))">
+                  <div class="bg-gradient">🌸</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-game)">Game</span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="card-rating"><span class="stars">★★★★★</span><span class="score">8.2</span></div>
+                  <div class="card-title">Azul</div>
+                  <div class="card-sub">Next Move Games</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">2-4</span>
+                    <span class="meta-chip">30-45'</span>
+                  </div>
+                </div>
+              </div>
+              <div class="wishlist-btn">♥</div>
+            </div>
+
+            <div class="mc" data-entity="game">
+              <div class="lib-card-inner">
+                <div class="card-cover" style="background:linear-gradient(135deg,hsl(35,40%,18%),hsl(35,30%,13%))">
+                  <div class="bg-gradient">🧛</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-game)">Game</span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="card-rating"><span class="stars">★★★★☆</span><span class="score">7.8</span></div>
+                  <div class="card-title">Arkham Horror</div>
+                  <div class="card-sub">Fantasy Flight</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">1-6</span>
+                    <span class="meta-chip">120-240'</span>
+                  </div>
+                </div>
+              </div>
+              <div class="wishlist-btn">♥</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Group Leaderboard -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title"><span>👥</span> Classifica Gruppo — Aprile</div>
+            <div class="section-link">Storico →</div>
+          </div>
+          <div class="leaderboard">
+            <div class="lb-row">
+              <div class="lb-rank gold">🥇</div>
+              <div class="lb-avatar" style="background:var(--c-game)">M</div>
+              <div class="lb-name">Mario</div>
+              <div class="lb-badge">Nemesis 👁️</div>
+              <div class="lb-score">12 vittorie</div>
+            </div>
+            <div class="lb-row">
+              <div class="lb-rank silver">🥈</div>
+              <div class="lb-avatar" style="background:var(--c-player)">L</div>
+              <div class="lb-name">Luigi</div>
+              <div class="lb-score">9 vittorie</div>
+            </div>
+            <div class="lb-row">
+              <div class="lb-rank bronze">🥉</div>
+              <div class="lb-avatar" style="background:var(--c-event)">P</div>
+              <div class="lb-name">Peach</div>
+              <div class="lb-score">7 vittorie</div>
+            </div>
+            <div class="lb-row">
+              <div class="lb-rank">4</div>
+              <div class="lb-avatar" style="background:var(--c-kb)">T</div>
+              <div class="lb-name">Toad</div>
+              <div class="lb-score">5 vittorie</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shelf: Popolari questa settimana -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title"><span>🔥</span> Popolari questa settimana</div>
+            <div class="section-link">Scopri tutti →</div>
+          </div>
+          <div class="scroll-shelf">
+
+            <div class="shelf-card-wrap">
+              <div class="mc" data-entity="game">
+                <div class="card-cover" style="background:linear-gradient(135deg,hsl(25,50%,20%),hsl(15,60%,14%))">
+                  <div class="bg-gradient">🏹</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-game)">Game</span>
+                  </div>
+                  <div class="cover-rank">#1</div>
+                </div>
+                <div class="card-body">
+                  <div class="card-title">Gloomhaven</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">🎲 128</span>
+                    <span class="meta-chip">📚 45</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="shelf-card-wrap">
+              <div class="mc" data-entity="game">
+                <div class="card-cover" style="background:linear-gradient(135deg,hsl(200,45%,18%),hsl(200,35%,12%))">
+                  <div class="bg-gradient">🌊</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-game)">Game</span>
+                  </div>
+                  <div class="cover-rank">#2</div>
+                </div>
+                <div class="card-body">
+                  <div class="card-title">Everdell</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">🎲 97</span>
+                    <span class="meta-chip">📚 31</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="shelf-card-wrap">
+              <div class="mc" data-entity="game">
+                <div class="card-cover" style="background:linear-gradient(135deg,hsl(120,35%,18%),hsl(120,25%,12%))">
+                  <div class="bg-gradient">🌿</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-game)">Game</span>
+                  </div>
+                  <div class="cover-rank">#3</div>
+                </div>
+                <div class="card-body">
+                  <div class="card-title">Cascadia</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">🎲 84</span>
+                    <span class="meta-chip">📚 22</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="shelf-card-wrap">
+              <div class="mc" data-entity="game">
+                <div class="card-cover bg-agent">
+                  <div class="bg-gradient">⚙️</div>
+                  <div class="cover-overlay"></div>
+                  <div class="cover-tag-stack">
+                    <span class="entity-badge" style="background:var(--c-game)">Game</span>
+                  </div>
+                  <div class="cover-rank">#4</div>
+                </div>
+                <div class="card-body">
+                  <div class="card-title">Terraforming Mars</div>
+                  <div class="card-meta">
+                    <span class="meta-chip">🎲 76</span>
+                    <span class="meta-chip">📚 28</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+    <!-- Bottom Tab Bar (mobile) -->
+    <nav class="bottom-tabbar">
+      <div class="tab-item active">
+        <span>🏠</span><span class="tab-lbl">Home</span>
+      </div>
+      <div class="tab-item">
+        <span>🎲</span><span class="tab-lbl">Giochi</span>
+      </div>
+      <div class="tab-item">
+        <span>💬</span><span class="tab-lbl">Chat</span>
+      </div>
+      <div class="tab-item">
+        <span>📊</span><span class="tab-lbl">Stats</span>
+      </div>
+      <div class="tab-item">
+        <span>👤</span><span class="tab-lbl">Profilo</span>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Mobile FAB -->
+  <div class="fab" title="Nuova sessione">＋</div>
+</div>
+
+<!-- SPLIT VIEW -->
+<div id="split-view" style="display:none; height:100dvh; display:none">
+  <div class="desktop-panel">
+    <div style="background:var(--bg-elevated);padding:8px 16px;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:0.05em;border-bottom:1px solid var(--border)">
+      ◼ DESKTOP — lg:ml-[52px] sidebar
+    </div>
+    <!-- clone desktop shell -->
+  </div>
+  <div class="mobile-panel">
+    <div style="background:var(--bg-elevated);padding:8px 16px;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:0.05em;border-bottom:1px solid var(--border)">
+      📱 MOBILE — 390px / bottom tab bar
+    </div>
+  </div>
+</div>
+
+<script>
+// Sidebar expand/collapse
+let sidebarExpanded = false;
+function toggleSidebar() {
+  sidebarExpanded = !sidebarExpanded;
+  const sidebar = document.getElementById('sidebar');
+  const toggle = sidebar.querySelector('.sidebar-toggle');
+  if (sidebarExpanded) {
+    sidebar.classList.add('expanded');
+    toggle.textContent = '⟪';
+  } else {
+    sidebar.classList.remove('expanded');
+    toggle.textContent = '⟫';
+  }
+}
+
+// View switcher
+function setView(mode) {
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.view-btn[onclick="setView('${mode}')"]`).classList.add('active');
+
+  const body = document.body;
+  body.classList.remove('desktop-view', 'mobile-view', 'split-view');
+
+  const singleView = document.getElementById('single-view');
+  const splitView = document.getElementById('split-view');
+
+  if (mode === 'split') {
+    body.classList.add('split-view');
+    // Build split view dynamically
+    singleView.style.display = 'none';
+    splitView.style.display = 'grid';
+    splitView.style.gridTemplateColumns = '1fr 390px';
+    splitView.style.height = '100dvh';
+
+    // Desktop panel
+    const desktopPanel = splitView.querySelector('.desktop-panel');
+    const mobilePanel = splitView.querySelector('.mobile-panel');
+    if (!desktopPanel.querySelector('.shell')) {
+      desktopPanel.appendChild(buildShell('desktop'));
+    }
+    if (!mobilePanel.querySelector('.shell')) {
+      mobilePanel.appendChild(buildShell('mobile'));
+    }
+  } else {
+    singleView.style.display = 'block';
+    splitView.style.display = 'none';
+    if (mode === 'desktop') {
+      body.classList.add('desktop-view');
+      // Show sidebar in singleView
+      document.querySelector('#single-view .sidebar').style.display = '';
+      document.querySelector('#single-view .bottom-tabbar').style.display = '';
+    } else {
+      body.classList.add('mobile-view');
+    }
+  }
+}
+
+function buildShell(type) {
+  // Clone the single view shell for split mode
+  const original = document.querySelector('#single-view .shell');
+  const clone = original.cloneNode(true);
+  if (type === 'desktop') {
+    clone.querySelector('.sidebar').style.display = 'flex';
+    clone.querySelector('.bottom-tabbar').style.display = 'none';
+  } else {
+    clone.querySelector('.sidebar').style.display = 'none';
+    clone.querySelector('.bottom-tabbar').style.display = 'flex';
+    clone.querySelector('.main').style.paddingBottom = '74px';
+  }
+  return clone;
+}
+
+// Add hover interaction to sidebar items
+document.querySelectorAll('.sidebar-item').forEach(item => {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

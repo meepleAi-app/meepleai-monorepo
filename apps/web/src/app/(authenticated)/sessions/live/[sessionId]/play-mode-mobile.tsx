@@ -38,7 +38,7 @@ import type { TurnPhasesDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { PLAYER_COLOR_HEX } from '@/lib/constants/player-colors';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSyncWorker } from '@/lib/domain-hooks/useSyncWorker';
-import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useSessionStore } from '@/lib/stores/session-store';
 import { useSyncQueueStore } from '@/lib/stores/sync-queue-store';
 import { cn } from '@/lib/utils';
 

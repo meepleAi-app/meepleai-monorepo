@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { getGameTemplateByName, type GameTemplate } from '@/lib/config/game-templates';
-import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useSessionStore } from '@/lib/stores/session-store';
 
 interface GameDetails {
   id: string;

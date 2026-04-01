@@ -19,7 +19,7 @@ import { FreeformToolbox } from '@/components/toolbox/FreeformToolbox';
 import { OfflineBanner } from '@/components/toolbox/OfflineBanner';
 import { PhasedToolbox } from '@/components/toolbox/PhasedToolbox';
 import { useToolboxSync } from '@/hooks/useToolboxSync';
-import { useToolboxStore } from '@/lib/stores/toolboxStore';
+import { useToolboxStore } from '@/lib/stores/toolbox-store';
 
 export default function GameToolboxPage() {
   const params = useParams();

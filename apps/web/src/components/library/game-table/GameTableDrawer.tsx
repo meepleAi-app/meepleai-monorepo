@@ -9,7 +9,7 @@ import { GameStatsPanel } from '@/components/library/game-table/GameStatsPanel';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs } from '@/hooks/queries/useAgentData';
-import type { DrawerContent } from '@/lib/stores/gameTableDrawerStore';
+import type { DrawerContent } from '@/lib/stores/game-table-drawer-store';
 
 // Lazy-load the embedded chat view to avoid pulling the full chat bundle eagerly
 const EmbeddedChatView = lazy(() =>

@@ -17,7 +17,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush }),
 }));
 
-vi.mock('@/lib/stores/gameTableDrawerStore', () => ({
+vi.mock('@/lib/stores/game-table-drawer-store', () => ({
   useGameTableDrawer: (selector: (s: { open: typeof mockDrawerOpen }) => unknown) =>
     selector({ open: mockDrawerOpen }),
 }));

@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 
 import { useGame } from '@/hooks/queries/useGames';
-import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useSessionStore } from '@/lib/stores/session-store';
 
 import { useDashboardMode } from './useDashboardMode';
 

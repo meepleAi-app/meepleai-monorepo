@@ -7,7 +7,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { useSessionStore } from '../sessionStore';
+import { useSessionStore } from '../session-store';
 import type { ScoreEntry, ScoreboardData } from '@/components/session/types';
 import type {
   LiveSessionDto,
@@ -68,7 +68,7 @@ const makeMockSession = (overrides: Partial<LiveSessionDto> = {}): LiveSessionDt
     ...overrides,
   }) as LiveSessionDto;
 
-describe('sessionStore', () => {
+describe('session-store', () => {
   beforeEach(() => {
     // Reset store before each test
     useSessionStore.getState().reset();

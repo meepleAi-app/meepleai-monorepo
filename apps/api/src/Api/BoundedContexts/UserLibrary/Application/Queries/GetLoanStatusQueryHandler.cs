@@ -30,7 +30,9 @@ internal class GetLoanStatusQueryHandler : IQueryHandler<GetLoanStatusQuery, Loa
         return new LoanStatusDto(
             IsOnLoan: entry.CurrentState.Value == GameStateType.InPrestito,
             BorrowerInfo: entry.CurrentState.StateNotes,
-            LoanedSince: entry.CurrentState.ChangedAt
+            LoanedSince: entry.CurrentState.Value == GameStateType.InPrestito
+                ? entry.CurrentState.ChangedAt
+                : null
         );
     }
 }

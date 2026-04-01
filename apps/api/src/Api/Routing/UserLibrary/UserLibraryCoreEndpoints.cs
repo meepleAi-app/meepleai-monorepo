@@ -1004,6 +1004,7 @@ internal static class UserLibraryCoreEndpoints
         .RequireAuthenticatedUser()
         .Produces<LoanStatusDto>(200)
         .Produces(404)
+        .Produces(401)
         .WithTags("Library")
         .WithSummary("Get loan status for a game")
         .WithDescription("Returns loan status (IsOnLoan, BorrowerInfo, LoanedSince) for a game in the user's library. Returns 404 if the game is not in the library.")

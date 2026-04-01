@@ -66,6 +66,7 @@ public sealed class GetLoanStatusQueryHandlerTests
         Assert.NotNull(result);
         Assert.False(result.IsOnLoan);
         Assert.Null(result.BorrowerInfo);
+        Assert.Null(result.LoanedSince);
     }
 
     [Fact]

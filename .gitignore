@@ -225,3 +225,8 @@ tools/bgg-fetcher/logs/
 docs/pages/screenshots/
 docs/pages/dist/
 docs/pages/manifest.json
+
+# Rulebook PDFs — managed via S3/blob storage, not git
+# These are seed data for RAG embedding pipeline only (upload via /admin/knowledge-base/upload)
+data/rulebook/
+data/pdfDocs/

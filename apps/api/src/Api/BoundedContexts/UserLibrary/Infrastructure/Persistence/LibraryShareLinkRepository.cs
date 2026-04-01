@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities.UserLibrary;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 
@@ -15,11 +16,15 @@ namespace Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 /// </summary>
 internal class LibraryShareLinkRepository : RepositoryBase, ILibraryShareLinkRepository
 {
+    private readonly ILogger<LibraryShareLinkRepository> _logger;
+
     public LibraryShareLinkRepository(
         MeepleAiDbContext dbContext,
-        IDomainEventCollector eventCollector)
+        IDomainEventCollector eventCollector,
+        ILogger<LibraryShareLinkRepository> logger)
         : base(dbContext, eventCollector)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<LibraryShareLink?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -92,13 +97,18 @@ internal class LibraryShareLinkRepository : RepositoryBase, ILibraryShareLinkRep
 
     public async Task RecordAccessAsync(string shareToken, CancellationToken cancellationToken = default)
     {
-        await DbContext.LibraryShareLinks
+        var rowsAffected = await DbContext.LibraryShareLinks
             .Where(l => l.ShareToken == shareToken && l.RevokedAt == null)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(l => l.ViewCount, l => l.ViewCount + 1)
                 .SetProperty(l => l.LastAccessedAt, DateTime.UtcNow),
             cancellationToken)
             .ConfigureAwait(false);
+
+        if (rowsAffected == 0)
+        {
+            _logger.LogWarning("RecordAccessAsync: no active share link found for token {ShareToken}", shareToken);
+        }
     }
 
     public async Task AddAsync(LibraryShareLink entity, CancellationToken cancellationToken = default)

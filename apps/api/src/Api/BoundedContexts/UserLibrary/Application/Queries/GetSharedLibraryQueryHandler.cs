@@ -29,7 +29,8 @@ internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuer
     {
         _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
-        _wishlistRepository = wishlistRepository ?? throw new ArgumentNullException(nameof(wishlistRepository));
+        ArgumentNullException.ThrowIfNull(wishlistRepository);
+        _wishlistRepository = wishlistRepository;
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }

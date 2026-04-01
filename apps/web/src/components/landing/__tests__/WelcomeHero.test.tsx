@@ -31,6 +31,12 @@ describe('WelcomeHero', () => {
     expect(cta).toHaveAttribute('href', '#come-funziona');
   });
 
+  it('mostra subtext che nomina dispute o regole', () => {
+    render(<WelcomeHero />);
+    const subtext = screen.getByText(/dispute|regol/i);
+    expect(subtext).toBeInTheDocument();
+  });
+
   it('has no accessibility violations', async () => {
     const { container } = render(<WelcomeHero />);
     const results = await axe(container);

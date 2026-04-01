@@ -11,6 +11,11 @@ import { z } from 'zod';
 // Enums
 // ──────────────────────────────────────────────
 
+export const InvitationRoleSchema = z.enum(['User', 'Editor', 'Admin']);
+export type InvitationRole = z.infer<typeof InvitationRoleSchema>;
+/** Readonly tuple of valid invitation roles, derived from schema. */
+export const INVITATION_ROLES = InvitationRoleSchema.options;
+
 export const InvitationStatusSchema = z.enum(['Pending', 'Accepted', 'Expired', 'Revoked']);
 
 // ──────────────────────────────────────────────
@@ -20,6 +25,9 @@ export const InvitationStatusSchema = z.enum(['Pending', 'Accepted', 'Expired', 
 export const InvitationDtoSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
+  // Intentionally z.string() for forward compatibility: the backend may introduce new roles
+  // without a frontend deploy. InvitationRoleSchema (enum) is used only for UI form
+  // validation and CSV parsing, not for parsing received API data.
   role: z.string(),
   status: InvitationStatusSchema,
   expiresAt: z.string(),

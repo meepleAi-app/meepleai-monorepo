@@ -72,7 +72,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 2
+          fetch-depth: 0  # Full history needed to compare against github.event.before on merge commits
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          # PDFs are managed via S3 blob storage, not git
+          sparse-checkout: |
+            apps/
+            infra/
+            .github/
+            tests/
+            scripts/
+            packages/
+          sparse-checkout-cone-mode: true
 
       - uses: dorny/paths-filter@v4
         id: changes
@@ -119,6 +129,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          sparse-checkout: |
+            apps/
+            .github/
+          sparse-checkout-cone-mode: true
 
       - name: Verify CI passed on this commit
         env:
@@ -185,6 +201,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          sparse-checkout: |
+            apps/
+            .github/
+          sparse-checkout-cone-mode: true
 
       - name: Generate Version
         id: version
@@ -371,6 +393,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          sparse-checkout: |
+            infra/
+            .github/
+          sparse-checkout-cone-mode: true
 
       # Option 1: SSH Deploy (VPS/Dedicated Server)
       - name: Deploy via SSH
@@ -460,6 +488,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          sparse-checkout: |
+            tests/
+            apps/web/
+            .github/
+          sparse-checkout-cone-mode: true
 
       - name: Deep Health Check
         run: |
@@ -665,6 +700,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          sparse-checkout: |
+            apps/web/
+            .github/
+          sparse-checkout-cone-mode: true
 
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend

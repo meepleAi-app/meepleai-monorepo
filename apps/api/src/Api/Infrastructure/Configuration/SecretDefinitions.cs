@@ -161,6 +161,11 @@ internal static class SecretDefinitions
             SecretLevel.Optional,
             "N8N_ENCRYPTION_KEY",
             "N8N_BASIC_AUTH_PASSWORD"
+        ),
+
+        ["mediatr"] = new(
+            SecretLevel.Optional,
+            "MEDIATR_LICENSE_KEY"
         )
     };
 

@@ -87,13 +87,13 @@ start_api() {
     export ASPNETCORE_ENVIRONMENT=Integration
     export ASPNETCORE_URLS="http://+:8080"
     export POSTGRES_HOST=localhost
-    export POSTGRES_PORT=15432
+    export POSTGRES_PORT=25432
     export POSTGRES_USER="$STAGING_POSTGRES_USER"
     export POSTGRES_DB="$STAGING_POSTGRES_DB"
     export POSTGRES_PASSWORD="$STAGING_POSTGRES_PASSWORD"
     export POSTGRES_SSL_MODE=Disable
     export REDIS_HOST=localhost
-    export REDIS_PORT=16379
+    export REDIS_PORT=26379
     export REDIS_PASSWORD="$STAGING_REDIS_PASSWORD"
     export SkipMigrations=true
     export EMBEDDING_PROVIDER=external
@@ -101,17 +101,18 @@ start_api() {
     export EMBEDDING_MODEL=intfloat/multilingual-e5-base
     export EMBEDDING_DIMENSIONS=768
     export Embedding__Dimensions=768
-    export LOCAL_EMBEDDING_URL=https://meepleai.app/services/embedding
-    export Embedding__LocalServiceUrl=https://meepleai.app/services/embedding
-    export RERANKER_URL=https://meepleai.app/services/reranker
+    # AI services via SSH tunnel (not public HTTPS)
+    export LOCAL_EMBEDDING_URL=http://localhost:18000
+    export Embedding__LocalServiceUrl=http://localhost:18000
+    export RERANKER_URL=http://localhost:18003
     export EMBEDDING_FALLBACK_ENABLED=false
-    export Embedding__FallbackEnabled=false
+    export Embedding__EnableFallback=false
 
     # Build connection string with SSL Mode=Disable (tunnel already encrypts)
-    export ConnectionStrings__Postgres="Host=localhost;Port=15432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};SSL Mode=Disable;GssEncryptionMode=Disable"
+    export ConnectionStrings__Postgres="Host=localhost;Port=25432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};SSL Mode=Disable;GssEncryptionMode=Disable"
 
     cd "$API_DIR"
-    dotnet run &
+    dotnet run --no-launch-profile &
     API_PID=$!
     echo "API started (PID: $API_PID) on http://localhost:8080"
     echo "$API_PID" > /tmp/meepleai-integration-api.pid

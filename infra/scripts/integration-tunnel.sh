@@ -32,8 +32,8 @@ resolve_container_ip() {
 print_ports() {
     echo ""
     echo "  -- Core ------------------------------------"
-    echo "  PostgreSQL    localhost:15432 -> staging postgres (Docker IP)"
-    echo "  Redis         localhost:16379 -> staging redis (Docker IP)"
+    echo "  PostgreSQL    localhost:25432 -> staging postgres (Docker IP)"
+    echo "  Redis         localhost:26379 -> staging redis (Docker IP)"
     echo ""
     echo "  -- AI Services -----------------------------"
     echo "  Embedding     localhost:18000 -> staging:8000"
@@ -82,12 +82,12 @@ do_start() {
       -o ControlMaster=auto \
       -o ControlPath="$CONTROL_SOCKET" \
       -o ControlPersist=yes \
-      -o ExitOnForwardFailure=yes \
+      -o ExitOnForwardFailure=no \
       -o ServerAliveInterval=30 \
       -o ServerAliveCountMax=3 \
       -i "$SSH_KEY" \
-      -L 15432:${POSTGRES_IP}:5432 \
-      -L 16379:${REDIS_IP}:6379 \
+      -L 25432:${POSTGRES_IP}:5432 \
+      -L 26379:${REDIS_IP}:6379 \
       -L 18000:localhost:8000 \
       -L 18001:localhost:8001 \
       -L 18002:localhost:8002 \

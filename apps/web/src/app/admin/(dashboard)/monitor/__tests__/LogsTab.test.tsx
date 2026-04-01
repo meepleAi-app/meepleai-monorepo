@@ -3,24 +3,20 @@ import { describe, it, expect, vi } from 'vitest';
 import { LogsTab } from '../LogsTab';
 
 vi.mock('@/lib/api', () => ({
-  api: {
-    admin: {
-      getDockerContainers: vi.fn().mockResolvedValue([]),
-      getContainerLogs: vi.fn().mockResolvedValue(null),
-    },
-  },
+  api: { admin: { getDockerContainers: vi.fn().mockResolvedValue([]) } },
 }));
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 
 describe('LogsTab', () => {
-  it('renders LogViewer and shows empty state when no containers', async () => {
+  it('renders LogViewer with loading state initially', () => {
     render(<LogsTab />);
+    expect(screen.getByTestId('log-viewer-loading')).toBeInTheDocument();
+  });
 
-    // Initially shows the loading spinner
-    expect(screen.getByTestId('log-viewer-loading')).toBeTruthy();
-
-    // After async fetch resolves, shows empty state
+  it('shows empty state when no containers', async () => {
+    render(<LogsTab />);
     await waitFor(() => {
-      expect(screen.getByTestId('log-viewer-empty')).toBeTruthy();
+      expect(screen.getByTestId('log-viewer-empty')).toBeInTheDocument();
     });
   });
 });

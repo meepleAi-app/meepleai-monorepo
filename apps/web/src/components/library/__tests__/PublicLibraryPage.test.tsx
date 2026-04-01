@@ -55,11 +55,17 @@ const MOCK_CATALOG = { items: MOCK_GAMES, total: 2, page: 1, pageSize: 18 };
 const MOCK_LIBRARY = { items: [{ gameId: 'g1' }], totalCount: 1 };
 const MOCK_ADD_MUTATE = vi.fn();
 
+const MOCK_MECHANICS = [
+  { id: 'm1', slug: 'deck-building', name: 'Deck Building' },
+  { id: 'm2', slug: 'cooperative', name: 'Cooperative' },
+];
+
 function setupMocks(
   overrides: Partial<{
     catalogError: boolean;
     trendingError: boolean;
     catalogEmpty: boolean;
+    withMechanics: boolean;
   }> = {}
 ) {
   (useSharedGames as Mock).mockReturnValue(
@@ -69,7 +75,9 @@ function setupMocks(
         ? { data: { items: [], total: 0, page: 1, pageSize: 18 }, isLoading: false, isError: false }
         : { data: MOCK_CATALOG, isLoading: false, isError: false }
   );
-  (useGameMechanics as Mock).mockReturnValue({ data: [] });
+  (useGameMechanics as Mock).mockReturnValue({
+    data: overrides.withMechanics ? MOCK_MECHANICS : [],
+  });
   (useCatalogTrending as Mock).mockReturnValue(
     overrides.trendingError
       ? { data: undefined, isLoading: false, isError: true }
@@ -154,5 +162,58 @@ describe('PublicLibraryPage', () => {
     expect(addButtons.length).toBeGreaterThan(0);
     await user.click(addButtons[0]);
     expect(MOCK_ADD_MUTATE).toHaveBeenCalled();
+  });
+
+  describe('Mechanic filter Popover', () => {
+    beforeEach(() => setupMocks({ withMechanics: true }));
+
+    it('mostra il bottone Meccaniche quando ci sono meccaniche disponibili', async () => {
+      renderWithQuery(<PublicLibraryPage />);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /filtra per meccanica/i })).toBeInTheDocument();
+      });
+    });
+
+    it('apre il popover e mostra le checkbox delle meccaniche', async () => {
+      const user = userEvent.setup();
+      renderWithQuery(<PublicLibraryPage />);
+      await waitFor(() => screen.getByRole('button', { name: /filtra per meccanica/i }));
+      await user.click(screen.getByRole('button', { name: /filtra per meccanica/i }));
+      await waitFor(() => {
+        expect(screen.getByText('Deck Building')).toBeInTheDocument();
+        expect(screen.getByText('Cooperativo')).toBeInTheDocument();
+      });
+    });
+
+    it('selezionare una meccanica aggiunge un chip attivo dismissibile', async () => {
+      const user = userEvent.setup();
+      renderWithQuery(<PublicLibraryPage />);
+      await waitFor(() => screen.getByRole('button', { name: /filtra per meccanica/i }));
+      await user.click(screen.getByRole('button', { name: /filtra per meccanica/i }));
+      await waitFor(() => screen.getByText('Deck Building'));
+      const [firstCheckbox] = screen.getAllByRole('checkbox', { hidden: true });
+      await user.click(firstCheckbox);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /rimuovi filtro/i })).toBeInTheDocument();
+      });
+    });
+
+    it('clicking il chip dismissibile rimuove il filtro', async () => {
+      const user = userEvent.setup();
+      renderWithQuery(<PublicLibraryPage />);
+      await waitFor(() => screen.getByRole('button', { name: /filtra per meccanica/i }));
+      // Apri e seleziona
+      await user.click(screen.getByRole('button', { name: /filtra per meccanica/i }));
+      await waitFor(() => screen.getByText('Deck Building'));
+      const [firstCheckbox] = screen.getAllByRole('checkbox', { hidden: true });
+      await user.click(firstCheckbox);
+      // Verifica chip
+      await waitFor(() => screen.getByRole('button', { name: /rimuovi filtro/i }));
+      // Rimuovi cliccando il chip
+      await user.click(screen.getByRole('button', { name: /rimuovi filtro/i }));
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: /rimuovi filtro/i })).not.toBeInTheDocument();
+      });
+    });
   });
 });

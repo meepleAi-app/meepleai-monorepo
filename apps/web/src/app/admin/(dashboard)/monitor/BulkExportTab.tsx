@@ -49,8 +49,18 @@ function triggerDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function csvEscape(value: string | number): string {
+  const str = String(value);
+  if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
 function arrayToCsv(headers: string[], rows: (string | number)[][]): string {
-  return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  return [headers.map(csvEscape).join(','), ...rows.map(r => r.map(csvEscape).join(','))].join(
+    '\n'
+  );
 }
 
 export function BulkExportTab() {
@@ -63,6 +73,7 @@ export function BulkExportTab() {
   const handleExportUsers = async () => {
     setItemLoading('users', true);
     try {
+      // NOTE: capped at 10,000 — sufficient for current scale; revisit if users exceed this
       const result = await api.admin.getAllUsers({ limit: 10000, page: 1 });
       const headers = [
         'ID',
@@ -89,7 +100,14 @@ export function BulkExportTab() {
         new Blob([csv], { type: 'text/csv' }),
         `users-${new Date().toISOString().slice(0, 10)}.csv`
       );
-      toast({ title: `${result.items.length} users exported` });
+      const exported = result.items.length;
+      const total = result.total ?? exported;
+      toast({
+        title:
+          total > exported
+            ? `${exported} of ${total} users exported (first ${exported})`
+            : `${exported} users exported`,
+      });
     } catch {
       toast({ title: 'Users export failed', variant: 'destructive' });
     } finally {

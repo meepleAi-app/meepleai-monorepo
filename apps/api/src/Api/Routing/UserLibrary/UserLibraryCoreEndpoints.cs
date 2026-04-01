@@ -56,6 +56,7 @@ internal static class UserLibraryCoreEndpoints
         MapUpdateGameStateEndpoint(group);
         MapRecordGameSessionEndpoint(group);
         MapSendLoanReminderEndpoint(group);
+        MapGetLoanStatusEndpoint(group);
 
         // Toolkit dashboard endpoints (Issue #5147 — Epic B4)
         MapGetActiveToolkitEndpoint(group);
@@ -980,6 +981,32 @@ internal static class UserLibraryCoreEndpoints
         .WithTags("Library", "Games", "Notifications")
         .WithSummary("Send loan reminder")
         .WithDescription("Sends notification reminder about loaned game. Rate limited to 1 per 24h. Game must be in InPrestito state.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetLoanStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/games/{gameId:guid}/loan-status", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            var result = await mediator.Send(new GetLoanStatusQuery(userId, gameId), ct).ConfigureAwait(false);
+            return result is null ? Results.NotFound() : Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<LoanStatusDto>(200)
+        .Produces(404)
+        .WithTags("Library")
+        .WithSummary("Get loan status for a game")
+        .WithDescription("Returns loan status (IsOnLoan, BorrowerInfo, LoanedSince) for a game in the user's library. Returns 404 if the game is not in the library.")
         .WithOpenApi();
     }
 

@@ -82,22 +82,6 @@
     }
   ],
   "categories": ["games", "entertainment", "utilities"],
-  "screenshots": [
-    {
-      "src": "/screenshots/desktop-home.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "MeepleAI Home"
-    },
-    {
-      "src": "/screenshots/mobile-home.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "MeepleAI Mobile"
-    }
-  ],
   "related_applications": [],
   "prefer_related_applications": false
 }

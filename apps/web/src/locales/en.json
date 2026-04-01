@@ -96,6 +96,7 @@
     "login": {
       "emailLabel": "Email",
       "emailPlaceholder": "you@example.com",
+      "loadingMessage": "Loading...",
       "loggingIn": "Logging in...",
       "loginButton": "Login",
       "passwordLabel": "Password",

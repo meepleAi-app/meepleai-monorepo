@@ -42,6 +42,22 @@ resolve_staging_db() {
     echo "  User: $STAGING_POSTGRES_USER | DB: $STAGING_POSTGRES_DB"
 }
 
+# Resolve staging Redis password from the actual running container
+resolve_staging_redis() {
+    echo "Resolving staging Redis credentials..."
+    local env_output
+    env_output=$(ssh -i "$SSH_KEY" "$STAGING_HOST" \
+        "docker inspect meepleai-redis --format '{{range .Config.Env}}{{println .}}{{end}}'" 2>/dev/null)
+
+    STAGING_REDIS_PASSWORD=$(echo "$env_output" | grep "^REDIS_PASSWORD=" | cut -d= -f2-)
+
+    if [ -z "$STAGING_REDIS_PASSWORD" ]; then
+        echo "WARNING: Cannot resolve staging Redis password. Redis may reject connections."
+    else
+        echo "  Redis password resolved."
+    fi
+}
+
 # Load secrets from .secret files
 load_secrets() {
     for f in "$SECRETS_DIR"/*.secret; do
@@ -63,8 +79,9 @@ start_api() {
     # Load local secrets (for non-DB settings like JWT, admin email, etc.)
     load_secrets
 
-    # Resolve actual staging DB credentials from running container
+    # Resolve actual staging credentials from running containers
     resolve_staging_db
+    resolve_staging_redis
 
     # Override for integration
     export ASPNETCORE_ENVIRONMENT=Integration
@@ -77,6 +94,7 @@ start_api() {
     export POSTGRES_SSL_MODE=Disable
     export REDIS_HOST=localhost
     export REDIS_PORT=16379
+    export REDIS_PASSWORD="$STAGING_REDIS_PASSWORD"
     export SkipMigrations=true
     export EMBEDDING_PROVIDER=external
     export Embedding__Provider=External

@@ -30,6 +30,7 @@ internal static class UserLibraryCoreEndpoints
         MapGetUserLibraryEndpoint(group);
         MapGetLibraryStatsEndpoint(group);
         MapGetLibraryQuotaEndpoint(group);
+        MapGetLibraryForDowngradeEndpoint(group);
         MapAddGameToLibraryEndpoint(group);
         MapRemoveGameFromLibraryEndpoint(group);
         MapUpdateLibraryEntryEndpoint(group);
@@ -182,6 +183,37 @@ internal static class UserLibraryCoreEndpoints
         .WithTags("Library")
         .WithSummary("Get library quota")
         .WithDescription("Returns quota information for user's library including games in library, max allowed, remaining slots, and tier.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetLibraryForDowngradeEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/downgrade-preview", async (
+            [FromQuery] int newQuota,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetLibraryForDowngradeQuery(userId, newQuota);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<LibraryForDowngradeDto>(200)
+        .Produces(401)
+        .WithTags("Library")
+        .WithName("GetLibraryForDowngrade")
+        .WithSummary("Get library downgrade preview")
+        .WithDescription("Returns games sorted by priority (favorites first, then most played, then most recently added) split into keep/remove lists based on the new quota.")
         .WithOpenApi();
     }
 

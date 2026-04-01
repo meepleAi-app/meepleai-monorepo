@@ -29,10 +29,10 @@ export const dynamic = 'force-dynamic';
 export default function GamingHubDashboardPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <div className="lg:hidden">
+      <div className="md:hidden">
         <DashboardMobile />
       </div>
-      <div className="hidden lg:block">
+      <div className="hidden md:block">
         <DashboardClient />
       </div>
     </RequireRole>

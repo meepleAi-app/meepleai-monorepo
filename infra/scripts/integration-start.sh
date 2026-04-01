@@ -108,6 +108,11 @@ start_api() {
     export EMBEDDING_FALLBACK_ENABLED=false
     export Embedding__EnableFallback=false
 
+    # LLM - Ollama via SSH tunnel (staging:11434 → localhost:21434)
+    export OllamaUrl=http://localhost:21434
+    export Embedding__OllamaUrl=http://localhost:21434
+    export AI__Providers__Ollama__BaseUrl=http://localhost:21434
+
     # Build connection string with SSL Mode=Disable (tunnel already encrypts)
     export ConnectionStrings__Postgres="Host=localhost;Port=25432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};SSL Mode=Disable;GssEncryptionMode=Disable"
 

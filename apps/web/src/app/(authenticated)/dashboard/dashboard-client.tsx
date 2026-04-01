@@ -44,14 +44,13 @@ function parsePlayTimeHours(timeSpan: string): string {
 
 // ─── Bento Widget ─────────────────────────────────────────────────────────────
 
-// Tailwind col-span classes (explicit strings for Tailwind v4 scanning)
+// Tailwind col-span classes (explicit strings for Tailwind v4 scanning).
+// tablet col-span (tc) is always ≤ 6 via Math.min in BentoWidget, so only 2–6 needed here.
 const COL_SPAN: Record<number, string> = {
   2: 'col-span-2',
   3: 'col-span-3',
   4: 'col-span-4',
   6: 'col-span-6',
-  8: 'col-span-6', // max 6 on tablet grid
-  12: 'col-span-6',
 };
 const LG_COL_SPAN: Record<number, string> = {
   2: 'lg:col-span-2',
@@ -111,6 +110,15 @@ function BentoWidget({
         ...(accentBg ? { background: accentBg } : {}),
       }}
       onClick={onClick}
+      {...(onClick
+        ? {
+            role: 'button' as const,
+            tabIndex: 0,
+            onKeyDown: (e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') onClick();
+            },
+          }
+        : {})}
     >
       {children}
     </div>
@@ -218,12 +226,13 @@ function LiveSessionWidget({
             {session.winnerName ? ` · Vincitore: ${session.winnerName}` : ''}
           </p>
         </div>
-        <button
-          className="shrink-0 px-3.5 py-1.5 rounded-lg text-[11px] font-bold text-white transition-opacity hover:opacity-90"
+        <span
+          className="shrink-0 px-3.5 py-1.5 rounded-lg text-[11px] font-bold text-white"
           style={{ background: C.game }}
+          aria-hidden="true"
         >
           Entra →
-        </button>
+        </span>
       </div>
     </BentoWidget>
   );
@@ -434,6 +443,7 @@ function ChatPreviewWidget() {
         <button
           className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-sm"
           style={{ background: C.chat }}
+          aria-label="Vai alla chat"
         >
           ↑
         </button>
@@ -642,7 +652,7 @@ export function DashboardClient() {
     fetchRecentSessions(8);
     fetchTrendingGames(6);
     updateFilters({ sort: 'alphabetical', pageSize: 8, page: 1 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- store actions are stable Zustand references
   }, []);
 
   const latestSession = recentSessions[0];

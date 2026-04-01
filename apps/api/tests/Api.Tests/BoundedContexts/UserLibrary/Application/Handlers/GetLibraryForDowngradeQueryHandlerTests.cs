@@ -52,7 +52,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests
 
         var result = await _handler.Handle(
             new GetLibraryForDowngradeQuery(userId, NewQuota: 2),
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
         result.GamesToKeep.Should().HaveCount(2);
         result.GamesToRemove.Should().HaveCount(1);
@@ -75,7 +75,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests
 
         var result = await _handler.Handle(
             new GetLibraryForDowngradeQuery(userId, NewQuota: 1),
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
         result.GamesToKeep.Should().HaveCount(1);
         result.GamesToKeep[0].IsFavorite.Should().BeTrue();
@@ -97,7 +97,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests
 
         var result = await _handler.Handle(
             new GetLibraryForDowngradeQuery(userId, NewQuota: 2),
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
         result.GamesToKeep.Should().HaveCount(2);
         result.GamesToRemove.Should().BeEmpty();
@@ -119,7 +119,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests
 
         var result = await _handler.Handle(
             new GetLibraryForDowngradeQuery(userId, NewQuota: 0),
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
         result.GamesToKeep.Should().BeEmpty();
         result.GamesToRemove.Should().HaveCount(2);
@@ -136,7 +136,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests
 
         var result = await _handler.Handle(
             new GetLibraryForDowngradeQuery(userId, NewQuota: 5),
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
         result.GamesToKeep.Should().BeEmpty();
         result.GamesToRemove.Should().BeEmpty();
@@ -145,7 +145,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests
     [Fact]
     public async Task Handle_NullQueryThrows()
     {
-        var act = async () => await _handler.Handle(null!, CancellationToken.None);
+        var act = async () => await _handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
@@ -161,7 +161,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests
 
         var result = await _handler.Handle(
             new GetLibraryForDowngradeQuery(userId, NewQuota: 1),
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
         result.GamesToKeep.Should().HaveCount(1);
         result.GamesToKeep[0].GameTitle.Should().Be("Unknown Game");

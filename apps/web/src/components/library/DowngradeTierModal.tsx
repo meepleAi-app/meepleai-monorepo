@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import {
@@ -16,6 +16,7 @@ import {
   useBulkRemoveFromLibrary,
   useLibraryDowngradePreview,
 } from '@/hooks/queries/useLibraryDowngrade';
+import { useToast } from '@/hooks/useToast';
 
 interface DowngradeTierModalProps {
   /** The new library quota the user is downgrading to */
@@ -37,9 +38,14 @@ export function DowngradeTierModal({
   onOpenChange,
   onComplete,
 }: DowngradeTierModalProps) {
-  const { data, isLoading } = useLibraryDowngradePreview(newQuota, open);
+  const { data, isLoading, error: previewError } = useLibraryDowngradePreview(newQuota, open);
   const { mutate: bulkRemove, isPending } = useBulkRemoveFromLibrary();
   const [selectedToRemove, setSelectedToRemove] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (open) setSelectedToRemove(new Set());
+  }, [open]);
 
   const suggestedRemove = data?.gamesToRemove ?? [];
   const toKeep = data?.gamesToKeep ?? [];
@@ -59,7 +65,16 @@ export function DowngradeTierModal({
   function handleConfirm() {
     const ids = Array.from(selectedToRemove);
     if (ids.length === 0) return;
-    bulkRemove(ids, { onSuccess: onComplete });
+    bulkRemove(ids, {
+      onSuccess: onComplete,
+      onError: () => {
+        toast({
+          title: 'Errore',
+          description: 'Impossibile rimuovere i giochi selezionati. Riprova.',
+          variant: 'destructive',
+        });
+      },
+    });
   }
 
   return (
@@ -71,6 +86,10 @@ export function DowngradeTierModal({
 
         {isLoading ? (
           <p className="text-muted-foreground py-8 text-center">Caricamento...</p>
+        ) : previewError ? (
+          <p className="text-destructive py-8 text-center text-sm">
+            Impossibile caricare l&apos;anteprima. Riprova più tardi.
+          </p>
         ) : (
           <div className="space-y-6">
             {/* Games that will be kept */}

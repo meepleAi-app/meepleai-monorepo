@@ -20,6 +20,15 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+// Mock secureStorage so decrypt/encrypt are identity functions in tests.
+// The real implementation uses AES-GCM which requires properly encoded base64
+// data — in tests we just want to read/write plain strings from localStorage.
+vi.mock('@/lib/api/core/secureStorage', () => ({
+  encrypt: (value: string) => Promise.resolve(value),
+  decrypt: (value: string) => Promise.resolve(value),
+  clearEncryptionKey: () => {},
+}));
+
 // Mutable store state — allows per-test customization
 const mockStoreState = {
   pendingProposals: [] as Array<{

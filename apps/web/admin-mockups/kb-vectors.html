@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vector Collections - MeepleAI Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            quicksand: ['Quicksand', 'sans-serif'],
+            nunito: ['Nunito', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Nunito', sans-serif; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Quicksand', sans-serif; }
+
+    .glass {
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+    }
+
+    .admin-bg {
+      background-color: #fef7ed;
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(251, 191, 36, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(251, 146, 60, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 80%, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
+    }
+
+    .health-bar {
+      height: 8px;
+      background: rgba(0,0,0,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .health-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body class="admin-bg min-h-screen p-6">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Vector Collections</h1>
+        <p class="text-gray-600">Manage your knowledge base vector stores</p>
+      </div>
+      <button class="glass px-6 py-3 bg-amber-100/80 hover:bg-amber-200/80 text-amber-900 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all">
+        + Create Collection
+      </button>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="glass bg-white/70 rounded-lg p-4 border border-white/40">
+        <div class="text-sm text-gray-600 mb-1">Total Collections</div>
+        <div class="text-2xl font-bold text-gray-900">3</div>
+      </div>
+      <div class="glass bg-white/70 rounded-lg p-4 border border-white/40">
+        <div class="text-sm text-gray-600 mb-1">Total Vectors</div>
+        <div class="text-2xl font-bold text-gray-900">80,000</div>
+      </div>
+      <div class="glass bg-white/70 rounded-lg p-4 border border-white/40">
+        <div class="text-sm text-gray-600 mb-1">Storage Used</div>
+        <div class="text-2xl font-bold text-gray-900">6.8 GB</div>
+      </div>
+      <div class="glass bg-white/70 rounded-lg p-4 border border-white/40">
+        <div class="text-sm text-gray-600 mb-1">Avg Health</div>
+        <div class="text-2xl font-bold text-emerald-600">96%</div>
+      </div>
+    </div>
+
+    <!-- Collections Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <!-- Collection Card 1 -->
+      <div class="glass bg-white/70 rounded-lg p-6 border border-white/40 hover:shadow-lg transition-shadow">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-1">Game Rules</h3>
+            <div class="text-sm text-gray-600">Primary knowledge base</div>
+          </div>
+          <span class="glass px-3 py-1 bg-emerald-100/80 text-emerald-800 text-xs font-semibold rounded-full">
+            Active
+          </span>
+        </div>
+
+        <div class="space-y-3 mb-4">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Vectors</span>
+            <span class="font-semibold text-gray-900">45,000</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Dimensions</span>
+            <span class="font-semibold text-gray-900">1536</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Storage Size</span>
+            <span class="font-semibold text-gray-900">2.3 GB</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Last Updated</span>
+            <span class="text-sm text-gray-900">2 hours ago</span>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm text-gray-600">Health</span>
+            <span class="text-sm font-semibold text-emerald-600">98%</span>
+          </div>
+          <div class="health-bar">
+            <div class="health-fill" style="width: 98%"></div>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button class="flex-1 glass px-4 py-2 bg-white/80 hover:bg-white text-gray-700 rounded-lg text-sm font-medium transition-all">
+            View Details
+          </button>
+          <button class="glass px-4 py-2 bg-white/80 hover:bg-white text-gray-700 rounded-lg text-sm font-medium transition-all">
+            ⚙️
+          </button>
+        </div>
+      </div>
+
+      <!-- Collection Card 2 -->
+      <div class="glass bg-white/70 rounded-lg p-6 border border-white/40 hover:shadow-lg transition-shadow">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-1">Strategy Guides</h3>
+            <div class="text-sm text-gray-600">Advanced gameplay content</div>
+          </div>
+          <span class="glass px-3 py-1 bg-emerald-100/80 text-emerald-800 text-xs font-semibold rounded-full">
+            Active
+          </span>
+        </div>
+
+        <div class="space-y-3 mb-4">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Vectors</span>
+            <span class="font-semibold text-gray-900">23,000</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Dimensions</span>
+            <span class="font-semibold text-gray-900">1536</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Storage Size</span>
+            <span class="font-semibold text-gray-900">2.3 GB</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Last Updated</span>
+            <span class="text-sm text-gray-900">5 hours ago</span>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm text-gray-600">Health</span>
+            <span class="text-sm font-semibold text-emerald-600">96%</span>
+          </div>
+          <div class="health-bar">
+            <div class="health-fill" style="width: 96%"></div>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button class="flex-1 glass px-4 py-2 bg-white/80 hover:bg-white text-gray-700 rounded-lg text-sm font-medium transition-all">
+            View Details
+          </button>
+          <button class="glass px-4 py-2 bg-white/80 hover:bg-white text-gray-700 rounded-lg text-sm font-medium transition-all">
+            ⚙️
+          </button>
+        </div>
+      </div>
+
+      <!-- Collection Card 3 -->
+      <div class="glass bg-white/70 rounded-lg p-6 border border-white/40 hover:shadow-lg transition-shadow">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-1">FAQ Database</h3>
+            <div class="text-sm text-gray-600">Common questions & answers</div>
+          </div>
+          <span class="glass px-3 py-1 bg-amber-100/80 text-amber-800 text-xs font-semibold rounded-full">
+            Indexing
+          </span>
+        </div>
+
+        <div class="space-y-3 mb-4">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Vectors</span>
+            <span class="font-semibold text-gray-900">12,000</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Dimensions</span>
+            <span class="font-semibold text-gray-900">1536</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Storage Size</span>
+            <span class="font-semibold text-gray-900">2.3 GB</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Last Updated</span>
+            <span class="text-sm text-gray-900">1 day ago</span>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm text-gray-600">Health</span>
+            <span class="text-sm font-semibold text-emerald-600">94%</span>
+          </div>
+          <div class="health-bar">
+            <div class="health-fill" style="width: 94%"></div>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button class="flex-1 glass px-4 py-2 bg-white/80 hover:bg-white text-gray-700 rounded-lg text-sm font-medium transition-all">
+            View Details
+          </button>
+          <button class="glass px-4 py-2 bg-white/80 hover:bg-white text-gray-700 rounded-lg text-sm font-medium transition-all">
+            ⚙️
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Footer -->
+    <div class="mt-8 glass bg-white/70 rounded-lg p-4 border border-white/40">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-gray-600">
+          <span class="font-semibold text-gray-900">3</span> collections •
+          <span class="font-semibold text-gray-900">80,000</span> total vectors •
+          Last sync: <span class="font-semibold text-gray-900">15 min ago</span>
+        </div>
+        <div class="flex gap-2">
+          <button class="glass px-4 py-2 bg-white/80 hover:bg-white text-gray-700 rounded-lg text-sm font-medium transition-all">
+            🔄 Sync All
+          </button>
+          <button class="glass px-4 py-2 bg-white/80 hover:bg-white text-gray-700 rounded-lg text-sm font-medium transition-all">
+            📊 Analytics
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

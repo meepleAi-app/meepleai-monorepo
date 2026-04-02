@@ -15,14 +15,13 @@
 
 'use client';
 
-import { BookOpen, AlertTriangle, Star, Library, Clock, Heart } from 'lucide-react';
+import { BookOpen, AlertTriangle, Star, Library, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 import { SharedLibraryGameCard } from '@/components/library';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
@@ -157,29 +156,6 @@ export default function SharedLibraryPage() {
               </p>
             </CardContent>
           </Card>
-        )}
-
-        {/* Wishlist Section */}
-        {sharedLibrary.wishlistItems && sharedLibrary.wishlistItems.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Heart className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-semibold font-quicksand">Lista dei desideri</h2>
-              <Badge variant="secondary">{sharedLibrary.wishlistItems.length}</Badge>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {sharedLibrary.wishlistItems.map(item => (
-                <MeepleCard
-                  key={item.gameId}
-                  entity="game"
-                  variant="grid"
-                  title={item.gameTitle}
-                  imageUrl={item.gameImageUrl ?? undefined}
-                  badge={item.priority}
-                />
-              ))}
-            </div>
-          </section>
         )}
 
         {/* Footer CTA */}

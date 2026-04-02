@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Strategy Configuration - MeepleAI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: hsl(30 25% 97%);
+      --bg-card: rgba(255,255,255,0.90);
+      --bg-surface: rgba(255,255,255,0.70);
+      --text: hsl(20 10% 15%);
+      --text-muted: hsl(20 5% 45%);
+      --text-faint: hsl(20 5% 65%);
+      --border: rgba(0,0,0,0.08);
+      --border-strong: rgba(0,0,0,0.15);
+      --primary: hsl(25 95% 45%);
+      --primary-bg: hsl(38 100% 95%);
+      --primary-bg-strong: hsl(38 90% 88%);
+      --green: hsl(142 60% 42%);
+      --green-bg: hsl(142 50% 94%);
+      --amber: hsl(38 92% 50%);
+      --amber-bg: hsl(38 100% 95%);
+      --red: hsl(0 72% 51%);
+      --red-bg: hsl(0 70% 95%);
+      --blue: hsl(217 91% 60%);
+      --blue-bg: hsl(217 90% 95%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.04);
+      --shadow-lg: 0 10px 30px rgba(0,0,0,0.07), 0 4px 8px rgba(0,0,0,0.04);
+      --radius: 16px;
+      --radius-sm: 12px;
+      --radius-xs: 8px;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    html.dark {
+      --bg: hsl(240 10% 10%);
+      --bg-card: rgba(39,39,42,0.90);
+      --bg-surface: rgba(39,39,42,0.70);
+      --text: hsl(0 0% 93%);
+      --text-muted: hsl(0 0% 60%);
+      --text-faint: hsl(0 0% 40%);
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.15);
+      --primary-bg: hsl(25 40% 15%);
+      --primary-bg-strong: hsl(25 50% 22%);
+      --green-bg: hsl(142 30% 14%);
+      --amber-bg: hsl(38 40% 14%);
+      --red-bg: hsl(0 40% 14%);
+      --blue-bg: hsl(217 40% 14%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+      --shadow-lg: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    html.light body {
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(251,191,36,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(251,146,60,0.06) 0%, transparent 50%);
+    }
+    html.dark body {
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(251,191,36,0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(251,146,60,0.02) 0%, transparent 50%);
+    }
+    h1,h2,h3,h4 { font-family: 'Quicksand', sans-serif; }
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px) saturate(150%);
+      -webkit-backdrop-filter: blur(12px) saturate(150%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: box-shadow 0.25s;
+    }
+    .glass-card:hover { box-shadow: var(--shadow-lg); }
+    .section-title {
+      font-family: 'Quicksand'; font-weight: 700; font-size: 16px;
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      font-family: var(--mono); letter-spacing: -0.3px;
+    }
+    .badge-green { background: var(--green-bg); color: var(--green); }
+    .badge-amber { background: var(--amber-bg); color: var(--amber); }
+    .badge-blue { background: var(--blue-bg); color: var(--blue); }
+    .badge-primary { background: var(--primary-bg); color: var(--primary); }
+    .overview-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .overview-stat { text-align: center; }
+    .overview-stat .stat-value { font-family: 'Quicksand'; font-size: 28px; font-weight: 700; color: var(--primary); }
+    .overview-stat .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .config-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .config-field label {
+      font-size: 12px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .config-field input[type="number"],
+    .config-field select {
+      padding: 8px 12px; border-radius: var(--radius-xs);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface); color: var(--text);
+      font-family: var(--mono); font-size: 13px; width: 100%;
+    }
+    .config-field input:focus, .config-field select:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
+    }
+    .slider-wrap { display: flex; align-items: center; gap: 10px; }
+    .slider-wrap input[type="range"] { flex: 1; accent-color: var(--primary); height: 6px; }
+    .slider-val {
+      font-family: var(--mono); font-size: 13px; font-weight: 600;
+      min-width: 40px; text-align: center;
+      padding: 2px 8px; border-radius: 6px; background: var(--primary-bg); color: var(--primary);
+    }
+    .filter-check { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; cursor: pointer; }
+    .filter-check input[type="radio"] { accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; }
+    .toggle-switch { position: relative; width: 44px; height: 24px; display: inline-block; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0; cursor: pointer;
+      background: var(--border-strong); border-radius: 12px; transition: background 0.3s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: white; box-shadow: var(--shadow-sm); transition: transform 0.3s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--primary); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+    .tier-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .tier-table th, .tier-table td { padding: 10px 16px; text-align: center; }
+    .tier-table th {
+      font-size: 12px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid var(--border-strong);
+    }
+    .tier-table td { border-bottom: 1px solid var(--border); }
+    .tier-table .role-cell { text-align: left; font-weight: 700; font-size: 14px; }
+    .tier-check { width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; }
+    .strategy-table { width: 100%; border-collapse: collapse; }
+    .strategy-table th {
+      text-align: left; padding: 10px 14px; font-size: 12px;
+      font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.3px; border-bottom: 2px solid var(--border-strong);
+    }
+    .strategy-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .strategy-table .mono { font-family: var(--mono); font-size: 12px; }
+    .edit-btn {
+      padding: 5px 14px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .edit-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+    .conf-gauge { height: 16px; border-radius: 8px; overflow: hidden; display: flex; margin: 12px 0; }
+    .conf-gauge .seg-low { flex: 50; background: linear-gradient(90deg, hsl(0,65%,55%), hsl(30,80%,55%)); }
+    .conf-gauge .seg-med { flex: 30; background: linear-gradient(90deg, hsl(38,90%,50%), hsl(45,85%,55%)); }
+    .conf-gauge .seg-high { flex: 20; background: linear-gradient(90deg, hsl(100,50%,48%), hsl(142,60%,42%)); }
+    .conf-labels { display: flex; font-size: 11px; color: var(--text-muted); font-family: var(--mono); margin-top: 4px; }
+    .conf-labels span:first-child { flex: 50; }
+    .conf-labels span:nth-child(2) { flex: 30; text-align: center; }
+    .conf-labels span:last-child { flex: 20; text-align: right; }
+    .unsaved-banner {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--primary); color: white;
+      padding: 14px 24px;
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+      z-index: 100; transform: translateY(100%);
+      transition: transform 0.3s ease;
+      font-weight: 600; font-size: 14px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    }
+    .unsaved-banner.show { transform: translateY(0); }
+    .unsaved-banner button {
+      padding: 6px 20px; border-radius: 8px;
+      font-weight: 700; font-size: 13px; cursor: pointer; border: none; transition: all 0.2s;
+    }
+    .unsaved-banner .save-btn { background: white; color: var(--primary); }
+    .unsaved-banner .save-btn:hover { background: hsl(0 0% 95%); }
+    .unsaved-banner .discard-btn { background: transparent; color: white; border: 2px solid rgba(255,255,255,0.5); }
+    .unsaved-banner .discard-btn:hover { border-color: white; }
+    @media (max-width: 900px) {
+      .config-grid { grid-template-columns: 1fr; }
+      .overview-cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- OVERVIEW CARDS -->
+  <div class="overview-cards">
+    <div class="glass-card">
+      <div class="overview-stat">
+        <div style="font-size:24px;margin-bottom:8px">&#9889;</div>
+        <div class="stat-value">HybridRAG</div>
+        <div class="stat-label">Active Strategy</div>
+        <div style="font-size:12px;color:var(--text-faint);margin-top:8px">Combines vector search, keyword matching, and cross-encoder reranking for maximum relevance.</div>
+        <button class="edit-btn" style="margin-top:12px" onclick="markUnsaved()">Edit Strategy</button>
+      </div>
+    </div>
+    <div class="glass-card">
+      <div class="overview-stat">
+        <div style="font-size:24px;margin-bottom:8px">&#129302;</div>
+        <div class="stat-value">4</div>
+        <div class="stat-label">Active Models</div>
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <span class="badge badge-primary">Claude 3.5</span>
+          <span class="badge badge-blue">GPT-4o</span>
+          <span class="badge badge-green">Llama 3.1</span>
+          <span class="badge badge-amber">Mistral</span>
+        </div>
+      </div>
+    </div>
+    <div class="glass-card">
+      <div class="overview-stat">
+        <div style="font-size:24px;margin-bottom:8px">&#128200;</div>
+        <div style="display:flex;justify-content:center;gap:24px;margin-top:4px">
+          <div><div class="stat-value" style="font-size:22px">0.84</div><div class="stat-label">Avg Confidence</div></div>
+          <div><div class="stat-value" style="font-size:22px">743ms</div><div class="stat-label">Avg Latency</div></div>
+          <div><div class="stat-value" style="font-size:22px">34%</div><div class="stat-label">Cache Hit Rate</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RETRIEVAL & GENERATION CONFIG -->
+  <div class="config-grid">
+    <div class="glass-card">
+      <div class="section-title"><span class="icon">&#128270;</span> Retrieval Configuration</div>
+      <div class="config-field">
+        <label>TopK Results</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="edit-btn" onclick="adjustNum('topk',-1)" style="padding:4px 10px;font-size:16px;font-weight:700">&minus;</button>
+          <input type="number" id="topk" value="5" min="1" max="20" style="width:70px;text-align:center" onchange="markUnsaved()">
+          <button class="edit-btn" onclick="adjustNum('topk',1)" style="padding:4px 10px;font-size:16px;font-weight:700">+</button>
+        </div>
+      </div>
+      <div class="config-field">
+        <label>Min Relevance Score</label>
+        <div class="slider-wrap">
+          <input type="range" id="minScore" min="0" max="100" value="65" oninput="updateSlider(this,'minScoreVal',0.01)" onchange="markUnsaved()">
+          <span class="slider-val" id="minScoreVal">0.65</span>
+        </div>
+      </div>
+      <div class="config-field">
+        <label>Search Type</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label class="filter-check" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);gap:6px"><input type="radio" name="searchType" onchange="markUnsaved()"> Vector Only</label>
+          <label class="filter-check" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);gap:6px"><input type="radio" name="searchType" onchange="markUnsaved()"> Keyword Only</label>
+          <label class="filter-check" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);gap:6px"><input type="radio" name="searchType" checked onchange="markUnsaved()"> Hybrid</label>
+        </div>
+      </div>
+      <div class="config-field">
+        <label>Reranker</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <label class="toggle-switch"><input type="checkbox" checked onchange="markUnsaved()"><span class="toggle-slider"></span></label>
+          <select style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-family:var(--mono);font-size:12px" onchange="markUnsaved()">
+            <option>cross-encoder/ms-marco-MiniLM-L-6-v2</option>
+            <option>BAAI/bge-reranker-v2-m3</option>
+          </select>
+        </div>
+      </div>
+      <div class="config-field">
+        <label>Cache TTL</label>
+        <select style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-family:var(--mono);font-size:13px" onchange="markUnsaved()">
+          <option>15 minutes</option><option selected>30 minutes</option><option>1 hour</option><option>6 hours</option><option>24 hours</option>
+        </select>
+      </div>
+    </div>
+    <div class="glass-card">
+      <div class="section-title"><span class="icon">&#129302;</span> Generation Configuration</div>
+      <div class="config-field">
+        <label>Provider</label>
+        <select id="providerSelect" onchange="updateModels();markUnsaved()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-size:13px">
+          <option value="openrouter">OpenRouter</option><option value="openai">OpenAI</option><option value="ollama">Ollama (Local)</option>
+        </select>
+      </div>
+      <div class="config-field">
+        <label>Model</label>
+        <select id="modelSelect" onchange="markUnsaved()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-family:var(--mono);font-size:12px">
+          <option>anthropic/claude-3.5-sonnet</option><option>openai/gpt-4o</option><option>meta-llama/llama-3.1-70b</option><option>mistralai/mistral-large</option>
+        </select>
+      </div>
+      <div class="config-field">
+        <label>Temperature</label>
+        <div class="slider-wrap">
+          <input type="range" id="tempSlider" min="0" max="200" value="30" oninput="updateSlider(this,'tempVal',0.01)" onchange="markUnsaved()">
+          <span class="slider-val" id="tempVal">0.30</span>
+        </div>
+      </div>
+      <div class="config-field">
+        <label>Max Tokens</label>
+        <input type="number" id="maxTokens" value="2048" min="256" max="8192" step="256" onchange="markUnsaved()">
+      </div>
+      <div class="config-field">
+        <label>Top P</label>
+        <div class="slider-wrap">
+          <input type="range" id="topPSlider" min="0" max="100" value="90" oninput="updateSlider(this,'topPVal',0.01)" onchange="markUnsaved()">
+          <span class="slider-val" id="topPVal">0.90</span>
+        </div>
+      </div>
+      <div class="config-field">
+        <label>Budget Mode</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <label class="toggle-switch"><input type="checkbox" onchange="markUnsaved()"><span class="toggle-slider"></span></label>
+          <span style="font-size:12px;color:var(--amber);font-weight:600">Uses cheaper models with lower quality</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIER ACCESS MATRIX -->
+  <div class="glass-card">
+    <div class="section-title"><span class="icon">&#128274;</span> Tier Access Matrix</div>
+    <div style="overflow-x:auto" id="tierMatrixContainer"></div>
+  </div>
+
+  <!-- STRATEGY-MODEL MAPPINGS -->
+  <div class="glass-card">
+    <div class="section-title"><span class="icon">&#128279;</span> Strategy-Model Mappings</div>
+    <div style="overflow-x:auto" id="strategyTableContainer"></div>
+  </div>
+
+  <!-- CONFIDENCE THRESHOLDS -->
+  <div class="glass-card" style="margin-bottom:60px">
+    <div class="section-title"><span class="icon">&#127919;</span> Confidence Thresholds</div>
+    <div class="conf-gauge"><div class="seg-low"></div><div class="seg-med"></div><div class="seg-high"></div></div>
+    <div class="conf-labels">
+      <span>Low (&lt; 0.50)</span><span>Medium (0.50 &ndash; 0.80)</span><span>High (&ge; 0.80)</span>
+    </div>
+    <div style="margin-top:16px;padding:14px;border-radius:var(--radius-xs);background:var(--bg-surface);border:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px">Scoring Formula</div>
+      <code style="font-size:14px;font-weight:600;color:var(--primary)">Overall = 0.7 &times; SearchRelevance + 0.3 &times; LLMConfidence</code>
+    </div>
+    <div class="config-grid" style="margin-top:16px;gap:12px">
+      <div class="config-field">
+        <label>Low Threshold</label>
+        <div class="slider-wrap">
+          <input type="range" min="0" max="100" value="50" oninput="updateSlider(this,'lowThVal',0.01)" onchange="markUnsaved()">
+          <span class="slider-val" id="lowThVal" style="background:var(--red-bg);color:var(--red)">0.50</span>
+        </div>
+      </div>
+      <div class="config-field">
+        <label>High Threshold</label>
+        <div class="slider-wrap">
+          <input type="range" min="0" max="100" value="80" oninput="updateSlider(this,'highThVal',0.01)" onchange="markUnsaved()">
+          <span class="slider-val" id="highThVal" style="background:var(--green-bg);color:var(--green)">0.80</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="unsaved-banner" id="unsavedBanner">
+    <span id="unsavedText">&#9888; You have unsaved changes</span>
+    <button class="save-btn" onclick="saveBanner()">Save All</button>
+    <button class="discard-btn" onclick="discardBanner()">Discard</button>
+  </div>
+
+  <script>
+    // Helper to create elements
+    function el(tag, attrs, children) {
+      var e = document.createElement(tag);
+      if (attrs) Object.keys(attrs).forEach(function(k) {
+        if (k === 'className') e.className = attrs[k];
+        else if (k === 'textContent') e.textContent = attrs[k];
+        else e.setAttribute(k, attrs[k]);
+      });
+      if (children) {
+        if (typeof children === 'string') e.textContent = children;
+        else if (Array.isArray(children)) children.forEach(function(c) { if (c) e.appendChild(c); });
+        else e.appendChild(children);
+      }
+      return e;
+    }
+
+    // DATA
+    var TIER_MATRIX = [
+      { role: 'Anonymous', access: [true, false, false, false] },
+      { role: 'User', access: [true, true, false, false] },
+      { role: 'Editor', access: [true, true, true, true] },
+      { role: 'Admin', access: [true, true, true, true] }
+    ];
+    var TIER_COLS = ['RetrievalOnly', 'SingleModel', 'MultiModelConsensus', 'HybridRAG'];
+
+    var STRATEGY_MAPPINGS = [
+      { name: 'POC', badgeCls: 'badge-primary', provider: 'Ollama', model: 'llama-3.1-8b', fallback: 'mistral-7b' },
+      { name: 'SingleModel', badgeCls: 'badge-blue', provider: 'OpenRouter', model: 'anthropic/claude-3.5-sonnet', fallback: 'openai/gpt-4o' },
+      { name: 'MultiModelConsensus', badgeCls: 'badge-amber', provider: 'OpenRouter', model: 'claude-3.5 + gpt-4o', fallback: 'llama-3.1-70b' },
+      { name: 'HybridRAG', badgeCls: 'badge-green', provider: 'OpenRouter', model: 'anthropic/claude-3.5-sonnet', fallback: 'gpt-4o, llama-3.1-70b' }
+    ];
+
+    // BUILD TIER MATRIX
+    (function() {
+      var container = document.getElementById('tierMatrixContainer');
+      var table = el('table', { className: 'tier-table' });
+      var thead = el('thead');
+      var headRow = el('tr');
+      headRow.appendChild(el('th', { style: 'text-align:left', textContent: 'Role' }));
+      TIER_COLS.forEach(function(c) { headRow.appendChild(el('th', { textContent: c })); });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+      var tbdy = el('tbody');
+      TIER_MATRIX.forEach(function(row) {
+        var tr = el('tr');
+        tr.appendChild(el('td', { className: 'role-cell', textContent: row.role }));
+        row.access.forEach(function(checked) {
+          var td = el('td');
+          var cb = el('input', { type: 'checkbox', className: 'tier-check' });
+          cb.checked = checked;
+          cb.addEventListener('change', markUnsaved);
+          td.appendChild(cb);
+          tr.appendChild(td);
+        });
+        tbdy.appendChild(tr);
+      });
+      table.appendChild(tbdy);
+      container.appendChild(table);
+    })();
+
+    // BUILD STRATEGY-MODEL MAPPINGS
+    (function() {
+      var container = document.getElementById('strategyTableContainer');
+      var table = el('table', { className: 'strategy-table' });
+      var thead = el('thead');
+      var headRow = el('tr');
+      ['Strategy', 'Primary Provider', 'Primary Model', 'Fallback Models', 'Actions'].forEach(function(h) {
+        headRow.appendChild(el('th', { textContent: h }));
+      });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+      var tbdy = el('tbody');
+      STRATEGY_MAPPINGS.forEach(function(s) {
+        var tr = el('tr');
+        var nameTd = el('td');
+        nameTd.appendChild(el('span', { className: 'badge ' + s.badgeCls, textContent: s.name }));
+        tr.appendChild(nameTd);
+        tr.appendChild(el('td', { textContent: s.provider }));
+        tr.appendChild(el('td', { className: 'mono', textContent: s.model }));
+        tr.appendChild(el('td', { className: 'mono', textContent: s.fallback }));
+        var actTd = el('td');
+        var btn = el('button', { className: 'edit-btn', textContent: 'Edit' });
+        btn.addEventListener('click', markUnsaved);
+        actTd.appendChild(btn);
+        tr.appendChild(actTd);
+        tbdy.appendChild(tr);
+      });
+      table.appendChild(tbdy);
+      container.appendChild(table);
+    })();
+
+    // CONFIG HELPERS
+    function updateSlider(input, valId, multiplier) {
+      document.getElementById(valId).textContent = (input.value * multiplier).toFixed(2);
+    }
+    function adjustNum(id, delta) {
+      var inp = document.getElementById(id);
+      inp.value = Math.max(parseInt(inp.min), Math.min(parseInt(inp.max), parseInt(inp.value) + delta));
+      markUnsaved();
+    }
+    function updateModels() {
+      var provider = document.getElementById('providerSelect').value;
+      var sel = document.getElementById('modelSelect');
+      while (sel.firstChild) sel.removeChild(sel.firstChild);
+      var models = {
+        openrouter: ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o', 'meta-llama/llama-3.1-70b', 'mistralai/mistral-large'],
+        openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+        ollama: ['llama3.1:8b', 'llama3.1:70b', 'mistral:7b', 'mixtral:8x7b']
+      };
+      (models[provider] || []).forEach(function(m) { sel.appendChild(el('option', { textContent: m })); });
+    }
+
+    // UNSAVED BANNER
+    function markUnsaved() {
+      document.getElementById('unsavedBanner').classList.add('show');
+    }
+    function saveBanner() {
+      var banner = document.getElementById('unsavedBanner');
+      var txt = document.getElementById('unsavedText');
+      txt.textContent = '\u2713 Changes saved successfully!';
+      banner.style.background = 'var(--green)';
+      setTimeout(function() {
+        banner.classList.remove('show');
+        setTimeout(function() {
+          banner.style.background = '';
+          txt.textContent = '\u26A0 You have unsaved changes';
+        }, 300);
+      }, 2000);
+    }
+    function discardBanner() {
+      document.getElementById('unsavedBanner').classList.remove('show');
+    }
+  </script>
+</body>
+</html>

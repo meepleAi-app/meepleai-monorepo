@@ -39,10 +39,4 @@ internal interface ILibraryShareLinkRepository : IRepository<LibraryShareLink, G
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Count of share links created in last 24 hours</returns>
     Task<int> CountRecentByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Atomically increments ViewCount and sets LastAccessedAt for the given share token.
-    /// Uses a direct UPDATE statement to avoid race conditions.
-    /// </summary>
-    Task RecordAccessAsync(string shareToken, CancellationToken cancellationToken = default);
 }

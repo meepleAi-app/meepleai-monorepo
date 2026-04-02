@@ -73,7 +73,6 @@ export default function AgentPage({ params }: AgentPageProps) {
 
   const players = useLiveSessionStore(s => s.players);
   const gameName = useLiveSessionStore(s => s.gameName);
-  const isOffline = useLiveSessionStore(s => s.isOffline);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -94,7 +93,7 @@ export default function AgentPage({ params }: AgentPageProps) {
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed || isLoading || isOffline) return;
+    if (!trimmed || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -244,21 +243,17 @@ export default function AgentPage({ params }: AgentPageProps) {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={
-            isOffline
-              ? "Offline — l'arbitro non è disponibile"
-              : 'Chiedi all\'arbitro... es. "Come funziona il commercio?"'
-          }
+          placeholder="Chiedi una regola... (Invio per inviare)"
           className="flex-1 resize-none min-h-[42px] max-h-[120px] font-nunito text-sm"
           rows={1}
-          disabled={isLoading || isOffline}
+          disabled={isLoading}
           aria-label="Messaggio per l'arbitro"
         />
         <Button
           type="submit"
           size="icon"
-          disabled={isLoading || isOffline || !input.trim()}
-          className="h-[42px] w-[42px] bg-amber-500 hover:bg-amber-600 shrink-0 disabled:opacity-50"
+          disabled={isLoading || !input.trim()}
+          className="h-[42px] w-[42px] bg-amber-500 hover:bg-amber-600 shrink-0"
           aria-label="Invia messaggio"
         >
           <Send className="h-4 w-4 text-white" />

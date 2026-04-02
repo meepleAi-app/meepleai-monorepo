@@ -61,6 +61,8 @@ services:
       Frontend__BaseUrl: "https://meepleai.app"
       Authentication__SessionCookie__Secure: "true"
       Authentication__SessionCookie__SameSite: "Lax"
+      # Ollama disabled in staging — all LLM traffic goes to OpenRouter
+      AI__Providers__Ollama__Enabled: "false"
     volumes:
       - ./secrets:/app/infra/secrets:ro
     labels:
@@ -104,10 +106,20 @@ services:
 
   # ===========================================================================
   # AI Services — Traefik basic auth for integration access
+  # Resource limits are reduced vs base compose (CAX21 has 8GB total).
+  # Use 'make staging' only when AI features are needed; prefer 'make staging-core' otherwise.
   # ===========================================================================
 
   embedding-service:
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.embedding.rule=Host(`meepleai.app`) && PathPrefix(`/services/embedding`)"
@@ -119,6 +131,14 @@ services:
 
   reranker-service:
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.reranker.rule=Host(`meepleai.app`) && PathPrefix(`/services/reranker`)"
@@ -130,6 +150,14 @@ services:
 
   unstructured-service:
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.unstructured.rule=Host(`meepleai.app`) && PathPrefix(`/services/unstructured`)"
@@ -141,6 +169,14 @@ services:
 
   smoldocling-service:
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.smoldocling.rule=Host(`meepleai.app`) && PathPrefix(`/services/smoldocling`)"
@@ -150,16 +186,24 @@ services:
       - "traefik.http.middlewares.strip-services-smoldocling.stripprefix.prefixes=/services/smoldocling"
       - "traefik.http.services.smoldocling.loadbalancer.server.port=8002"
 
-  ollama:
+  orchestration-service:
     restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.ollama.rule=Host(`meepleai.app`) && PathPrefix(`/services/ollama`)"
-      - "traefik.http.routers.ollama.entrypoints=websecure"
-      - "traefik.http.routers.ollama.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.ollama.middlewares=integration-auth,strip-services-ollama"
-      - "traefik.http.middlewares.strip-services-ollama.stripprefix.prefixes=/services/ollama"
-      - "traefik.http.services.ollama.loadbalancer.server.port=11434"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Ollama excluded from staging: 4GB RAM reservation saved on CAX21 (8GB total).
+  # All LLM traffic uses OpenRouter. Re-enable with profile 'ollama' if needed.
+  ollama:
+    profiles: [ollama-local-dev-only]
+
+  ollama-pull:
+    profiles: [ollama-local-dev-only]
 
   # ===========================================================================
   # Monitoring — Traefik basic auth
@@ -197,9 +241,10 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=60d'
+      - '--storage.tsdb.retention.size=5GB'
       - '--web.enable-lifecycle'
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus.staging.yml:/etc/prometheus/prometheus.yml:ro  # staging-specific labels
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       - prometheus-staging:/prometheus
 

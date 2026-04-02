@@ -30,7 +30,6 @@ internal static class UserLibraryCoreEndpoints
         MapGetUserLibraryEndpoint(group);
         MapGetLibraryStatsEndpoint(group);
         MapGetLibraryQuotaEndpoint(group);
-        MapGetLibraryForDowngradeEndpoint(group);
         MapAddGameToLibraryEndpoint(group);
         MapRemoveGameFromLibraryEndpoint(group);
         MapUpdateLibraryEntryEndpoint(group);
@@ -57,7 +56,6 @@ internal static class UserLibraryCoreEndpoints
         MapUpdateGameStateEndpoint(group);
         MapRecordGameSessionEndpoint(group);
         MapSendLoanReminderEndpoint(group);
-        MapGetLoanStatusEndpoint(group);
 
         // Toolkit dashboard endpoints (Issue #5147 — Epic B4)
         MapGetActiveToolkitEndpoint(group);
@@ -183,40 +181,6 @@ internal static class UserLibraryCoreEndpoints
         .WithTags("Library")
         .WithSummary("Get library quota")
         .WithDescription("Returns quota information for user's library including games in library, max allowed, remaining slots, and tier.")
-        .WithOpenApi();
-    }
-
-    private static void MapGetLibraryForDowngradeEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/library/downgrade-preview", async (
-            [FromQuery] int newQuota,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            if (newQuota < 0)
-                return Results.BadRequest("newQuota must be non-negative");
-
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var query = new GetLibraryForDowngradeQuery(userId, newQuota);
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            return Results.Ok(result);
-        })
-        .RequireAuthenticatedUser()
-        .Produces<LibraryForDowngradeDto>(200)
-        .Produces(401)
-        .WithTags("Library")
-        .WithName("GetLibraryForDowngrade")
-        .WithSummary("Get library downgrade preview")
-        .WithDescription("Returns games sorted by priority (favorites first, then most played, then most recently added) split into keep/remove lists based on the new quota.")
         .WithOpenApi();
     }
 
@@ -1019,38 +983,6 @@ internal static class UserLibraryCoreEndpoints
         .WithOpenApi();
     }
 
-    private static void MapGetLoanStatusEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/library/games/{gameId:guid}/loan-status", async (
-            Guid gameId,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var query = new GetLoanStatusQuery(userId, gameId);
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            return result is null ? Results.NotFound() : Results.Ok(result);
-        })
-        .RequireAuthenticatedUser()
-        .Produces<LoanStatusDto>(200)
-        .Produces(401)
-        .Produces(404)
-        .WithTags("Library")
-        .WithName("GetLoanStatus")
-        .WithSummary("Get loan status of a game")
-        .WithDescription("Returns whether the game is currently on loan, the borrower info, and when it was loaned out. Returns 404 if the game is not in the user's library.")
-        .WithOpenApi();
-    }
-
     /// <summary>
     /// GET active Toolkit for a game (default or user override).
     /// Returns null (204) when no toolkit has been created yet.
@@ -1221,5 +1153,4 @@ internal static class UserLibraryCoreEndpoints
         .WithDescription("Explicitly declares ownership of a game in the library, granting RAG access to the game's knowledge base. Idempotent.")
         .WithOpenApi();
     }
-
 }

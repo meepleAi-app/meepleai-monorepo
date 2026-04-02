@@ -498,5 +498,19 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithCronSchedule("0 0 */6 * * ?")
                 .WithDescription("Runs every 6 hours to verify configured LLM models are still available on OpenRouter"));
         });
+
+        // KB-05: Daily KB coverage score computation for all shared games
+        services.AddQuartz(q =>
+        {
+            q.AddJob<KbCoverageComputeJob>(opts => opts
+                .WithIdentity("kb-coverage-compute-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("kb-coverage-compute-job", "knowledge-base")
+                .WithIdentity("kb-coverage-compute-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 2 * * ?")
+                .WithDescription("Calcola daily il coverage score KB per ogni gioco"));
+        });
     }
 }

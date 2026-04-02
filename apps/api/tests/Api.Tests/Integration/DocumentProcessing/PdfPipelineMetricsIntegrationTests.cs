@@ -122,7 +122,7 @@ public sealed class PdfPipelineMetricsIntegrationTests : IAsyncLifetime
 
         // Act: Transition through all states in-memory (following existing test pattern)
         // Note: Intermediate states verified in-memory since repository MapToDomain
-        // uses deprecated ProcessingStatus string which doesn't distinguish mid-pipeline states.
+        // maps the 7-state ProcessingState string; mid-pipeline states are exercised here.
         _dbContext.ChangeTracker.Clear();
         var doc = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
 

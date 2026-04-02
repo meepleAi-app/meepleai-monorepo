@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.UserLibrary.Application.Queries;
 /// Handler for getting a shared library by its share token (public access).
 /// Records access and returns library data.
 /// </summary>
-internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuery, SharedLibraryDto?>
+internal sealed class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuery, SharedLibraryDto?>
 {
     private readonly ILibraryShareLinkRepository _shareLinkRepository;
     private readonly IUserLibraryRepository _libraryRepository;
@@ -83,7 +83,7 @@ internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuer
             sortBy: "addedAt",
             descending: true,
             page: 1,
-            pageSize: 100, // Get all for shared view
+            pageSize: 500, // Get all for shared view
             cancellationToken: cancellationToken
         ).ConfigureAwait(false);
 

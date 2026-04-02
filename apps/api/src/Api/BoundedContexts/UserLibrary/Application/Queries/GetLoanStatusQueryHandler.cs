@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.UserLibrary.Application.Queries;
 /// Handler for <see cref="GetLoanStatusQuery"/>.
 /// Returns the loan status of a specific game in the user's library.
 /// </summary>
-internal class GetLoanStatusQueryHandler : IQueryHandler<GetLoanStatusQuery, LoanStatusDto?>
+internal sealed class GetLoanStatusQueryHandler : IQueryHandler<GetLoanStatusQuery, LoanStatusDto?>
 {
     private readonly IUserLibraryRepository _repository;
 

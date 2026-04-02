@@ -35,8 +35,13 @@ export function LoanGameDialog({ gameId, gameTitle, open, onOpenChange }: LoanGa
     });
   }
 
+  function handleOpenChange(isOpen: boolean) {
+    if (!isOpen) setBorrowerInfo('');
+    onOpenChange(isOpen);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Presta &quot;{gameTitle}&quot;</DialogTitle>
@@ -53,7 +58,7 @@ export function LoanGameDialog({ gameId, gameTitle, open, onOpenChange }: LoanGa
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Annulla
           </Button>
           <Button onClick={handleConfirm} disabled={!borrowerInfo.trim() || isPending}>

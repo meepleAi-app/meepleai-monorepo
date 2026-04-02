@@ -24,7 +24,6 @@ import { LiveScoreboard } from '@/components/game-night/LiveScoreboard';
 import type { LiveScoreboardPlayer } from '@/components/game-night/LiveScoreboard';
 import { GameOverModal } from '@/components/session/live/GameOverModal';
 import type { GameOverPlayer } from '@/components/session/live/GameOverModal';
-import { OfflineBanner } from '@/components/session/live/OfflineBanner';
 import { TurnStateHeader } from '@/components/session/live/TurnStateHeader';
 import { QuickToolBar } from '@/components/session/QuickToolBar';
 import type { ToolId } from '@/components/session/QuickToolBar';
@@ -37,7 +36,6 @@ import { api } from '@/lib/api';
 import type { TurnPhasesDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { PLAYER_COLOR_HEX } from '@/lib/constants/player-colors';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
-import { useSyncWorker } from '@/lib/domain-hooks/useSyncWorker';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSyncQueueStore } from '@/lib/stores/sync-queue-store';
 import { cn } from '@/lib/utils';
@@ -60,9 +58,6 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
   const loadSession = useSessionStore(s => s.loadSession);
   const recordScore = useSessionStore(s => s.recordScore);
   const completeSession = useSessionStore(s => s.completeSession);
-
-  // Offline sync worker — processes queue when online
-  useSyncWorker();
 
   // Sync queue — enqueue for offline fallback
   const enqueue = useSyncQueueStore(s => s.enqueue);
@@ -261,9 +256,6 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
 
   return (
     <div className="flex flex-col min-h-screen pb-[var(--size-session-bottom-nav,56px)]">
-      {/* Offline / sync banner */}
-      <OfflineBanner />
-
       {/* Header */}
       <MobileHeader
         title={session?.gameName ?? 'Sessione'}

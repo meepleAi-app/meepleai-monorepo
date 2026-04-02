@@ -87,3 +87,77 @@ export const RagConfigSchema = z.object({
 });
 
 export type RagConfigResponse = z.infer<typeof RagConfigSchema>;
+
+// ========== KB Management Schemas (KB-01/02/03/06/08/10) ==========
+
+/**
+ * User-facing knowledge base status for a game.
+ * Returned by GET /api/v1/games/{gameId}/knowledge-base
+ */
+export const UserGameKbStatusSchema = z.object({
+  gameId: z.string(),
+  isIndexed: z.boolean(),
+  documentCount: z.number().int().nonnegative(),
+  coverageScore: z.number().min(0).max(100),
+  coverageLevel: z.enum(['None', 'Basic', 'Standard', 'Complete']),
+  suggestedQuestions: z.array(z.string()),
+});
+
+export type UserGameKbStatus = z.infer<typeof UserGameKbStatusSchema>;
+
+/**
+ * Admin view of indexed documents for a game's KB.
+ * Returned by GET /api/v1/admin/kb/games/{gameId}/documents
+ */
+export const AdminKbDocumentSchema = z.object({
+  id: z.string(),
+  pdfDocumentId: z.string(),
+  language: z.string(),
+  chunkCount: z.number().int().nonnegative(),
+  indexingStatus: z.string(),
+  indexedAt: z.string(),
+  sharedGameId: z.string().optional(),
+});
+
+export const AdminGameKbDocumentsSchema = z.object({
+  gameId: z.string(),
+  documents: z.array(AdminKbDocumentSchema),
+});
+
+export type AdminGameKbDocuments = z.infer<typeof AdminGameKbDocumentsSchema>;
+
+/**
+ * Admin feedback list for a game's KB.
+ * Returned by GET /api/v1/admin/kb/games/{gameId}/feedback
+ */
+export const AdminKbFeedbackItemSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  gameId: z.string(),
+  chatSessionId: z.string(),
+  messageId: z.string(),
+  outcome: z.string(),
+  comment: z.string().optional(),
+  createdAt: z.string(),
+});
+
+export const AdminKbFeedbackSchema = z.object({
+  total: z.number().int().nonnegative(),
+  items: z.array(AdminKbFeedbackItemSchema),
+});
+
+export type AdminKbFeedback = z.infer<typeof AdminKbFeedbackSchema>;
+
+/**
+ * Per-game KB settings (admin override).
+ * Returned by GET /PUT /api/v1/admin/kb/games/{gameId}/settings
+ */
+export const GameKbSettingsSchema = z.object({
+  gameId: z.string(),
+  maxChunksOverride: z.number().int().positive().optional(),
+  chunkSizeOverride: z.number().int().positive().optional(),
+  cacheEnabledOverride: z.boolean().optional(),
+  languageOverride: z.string().optional(),
+});
+
+export type GameKbSettings = z.infer<typeof GameKbSettingsSchema>;

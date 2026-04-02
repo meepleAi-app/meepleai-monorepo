@@ -446,27 +446,18 @@ function ChatPreviewWidget() {
           Regole & Domande
         </span>
       </div>
-      <div className="flex-1 flex flex-col gap-1.5 overflow-hidden justify-end">
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-4">
         <div
-          className="self-end max-w-[80%] rounded-lg px-2.5 py-1.5 text-[11px]"
-          style={{ background: `${C.game}18`, border: `1px solid ${C.game}22` }}
+          className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+          style={{ background: `${C.chat}15` }}
         >
-          Quante strade posso costruire?
+          💬
         </div>
-        <div
-          className="self-start max-w-[90%] rounded-lg px-2.5 py-1.5 text-[11px] text-muted-foreground"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.07)',
-          }}
-        >
-          Puoi costruire tutte le strade che vuoi, purché tu abbia le risorse.{' '}
-          <span
-            className="font-mono text-[8px] rounded px-1 py-0.5 cursor-pointer"
-            style={{ background: `${C.chat}18`, color: C.chat }}
-          >
-            p.8
-          </span>
+        <div>
+          <p className="font-quicksand font-bold text-sm text-foreground">Chiedi all&apos;AI</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Regole, strategie e suggerimenti per i tuoi giochi da tavolo
+          </p>
         </div>
       </div>
       <div
@@ -486,9 +477,14 @@ function ChatPreviewWidget() {
           Fai una domanda…
         </div>
         <button
+          type="button"
           className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-sm"
           style={{ background: C.chat }}
           aria-label="Vai alla chat"
+          onClick={e => {
+            e.stopPropagation();
+            router.push('/chat');
+          }}
         >
           ↑
         </button>

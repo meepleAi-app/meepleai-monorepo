@@ -44,7 +44,7 @@ export default function UserActivityPage() {
       a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch {
       toast.error('Esportazione fallita. Riprova.');
     } finally {
       setExporting(false);

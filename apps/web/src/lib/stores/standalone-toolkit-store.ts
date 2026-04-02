@@ -126,6 +126,7 @@ export const useStandaloneToolkitStore = create<StandaloneToolkitStore>()(
             [deckId]: {
               ...deck,
               drawPile: rest,
+              discardPile,
               lastDrawnCard: card,
               undoSnapshot: snapshot,
               undoExpiry: Date.now() + UNDO_WINDOW_MS,
@@ -278,8 +279,9 @@ export const useStandaloneToolkitStore = create<StandaloneToolkitStore>()(
       randomizer: { originalItems: [], remainingItems: [], lastExtracted: null },
 
       setRandomizerItems: items => {
+        const capped = items.slice(0, 50);
         set({
-          randomizer: { originalItems: items, remainingItems: [...items], lastExtracted: null },
+          randomizer: { originalItems: capped, remainingItems: [...capped], lastExtracted: null },
         });
       },
 

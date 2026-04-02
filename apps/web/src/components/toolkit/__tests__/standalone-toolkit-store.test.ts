@@ -61,6 +61,22 @@ describe('CardDeck', () => {
     expect(success).toBe(false);
     expect(result.current.decks['d1'].drawPile).toHaveLength(2);
   });
+
+  it('reshuffles discard pile when draw pile is empty and reshuffleOnEmpty is true', () => {
+    const { result } = renderHook(() => useStandaloneToolkitStore());
+    act(() => result.current.initDeck('d1', 'Test', ['A'], true));
+    // Draw the only card (pile now empty)
+    act(() => result.current.drawCard('d1'));
+    // Discard the drawn card
+    act(() => result.current.discardCard('d1', result.current.decks['d1'].lastDrawnCard!));
+    // Draw again — should reshuffle discard into draw pile
+    let card: string | null = null;
+    act(() => {
+      card = result.current.drawCard('d1');
+    });
+    expect(card).toBe('A');
+    expect(result.current.decks['d1'].discardPile).toHaveLength(0);
+  });
 });
 
 describe('Counter', () => {
@@ -98,6 +114,27 @@ describe('Counter', () => {
     act(() => result.current.resetCounter('c1'));
     expect(result.current.counters[0].value).toBe(5);
   });
+
+  it('addCounter appends a new counter', () => {
+    const { result } = renderHook(() => useStandaloneToolkitStore());
+    act(() => result.current.initCounters([{ id: 'c1', name: 'P', initialValue: 0 }]));
+    act(() => result.current.addCounter({ id: 'c2', name: 'Q', initialValue: 5 }));
+    expect(result.current.counters).toHaveLength(2);
+    expect(result.current.counters[1].value).toBe(5);
+  });
+
+  it('removeCounter removes counter without affecting others', () => {
+    const { result } = renderHook(() => useStandaloneToolkitStore());
+    act(() =>
+      result.current.initCounters([
+        { id: 'c1', name: 'P', initialValue: 0 },
+        { id: 'c2', name: 'Q', initialValue: 5 },
+      ])
+    );
+    act(() => result.current.removeCounter('c1'));
+    expect(result.current.counters).toHaveLength(1);
+    expect(result.current.counters[0].id).toBe('c2');
+  });
 });
 
 describe('Randomizer', () => {
@@ -130,5 +167,13 @@ describe('Randomizer', () => {
     act(() => result.current.extractRandom());
     act(() => result.current.resetRandomizer());
     expect(result.current.randomizer.remainingItems).toHaveLength(3);
+  });
+
+  it('setRandomizerItems caps at 50 items', () => {
+    const { result } = renderHook(() => useStandaloneToolkitStore());
+    const items = Array.from({ length: 60 }, (_, i) => `item-${i}`);
+    act(() => result.current.setRandomizerItems(items));
+    expect(result.current.randomizer.remainingItems).toHaveLength(50);
+    expect(result.current.randomizer.originalItems).toHaveLength(50);
   });
 });

@@ -1,3 +1,5 @@
+import type React from 'react';
+
 import { cva } from 'class-variance-authority';
 
 // ============================================================================
@@ -231,3 +233,29 @@ export const CARD_SECTION_HEIGHTS = {
   bottomBar: 24,
   // artBox e textBox: spazio rimanente calcolato dinamicamente
 } as const;
+
+// ─── Warm Heritage Frame Style Helper ───────────────────────────────────────
+
+/**
+ * Restituisce style inline per il frame Warm Heritage MTG.
+ * Usa box-shadow multipli per simulare il bordo doppio ambra.
+ */
+export function getCardFrameStyle(variant: keyof typeof CARD_DIMENSIONS): React.CSSProperties {
+  const dim = CARD_DIMENSIONS[variant];
+  return {
+    width: `${dim.width}px`,
+    height: `${dim.height}px`,
+    background: CARD_FRAME.background,
+    borderRadius: CARD_FRAME.cornerRadiusOuter,
+    boxShadow: [
+      `0 0 0 1px #c8963a`,
+      `0 0 0 2px #0d0905`,
+      `0 0 0 3px rgba(200,150,58,0.35)`,
+      `0 4px 20px rgba(0,0,0,0.7)`,
+    ].join(', '),
+    overflow: 'hidden',
+    position: 'relative',
+    flexShrink: 0,
+    aspectRatio: '5/7',
+  };
+}

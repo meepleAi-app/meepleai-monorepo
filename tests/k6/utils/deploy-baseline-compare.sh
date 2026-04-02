@@ -24,7 +24,7 @@ THRESHOLD="${REGRESSION_THRESHOLD_PCT:-20}"
 
 # Portable float comparison using awk
 float_gt() { awk "BEGIN { exit !($1 > $2) }"; }
-float_pct_change() { awk "BEGIN { printf \"%.1f\", (($1 - $2) / $2) * 100 }"; }
+float_pct_change() { awk "BEGIN { if ($2 == 0) { printf \"0.0\" } else { printf \"%.1f\", (($1 - $2) / $2) * 100 } }"; }
 float_fmt() { awk "BEGIN { printf \"%.1f\", $1 }"; }
 
 # Extract metrics from K6 summary JSON
@@ -88,7 +88,7 @@ else
 
   compare_metric() {
     local name="$1" curr="$2" prev="$3" unit="$4"
-    if [ -z "$prev" ] || [ "$prev" = "null" ] || [ "$prev" = "0" ]; then
+    if [ -z "$prev" ] || [ "$prev" = "null" ] || awk "BEGIN { exit !($prev == 0) }"; then
       add "| $name | ${curr}${unit} | — | — | New |"
       return
     fi

@@ -44,6 +44,7 @@ import {
   DRAWER_ENTITY_TYPE_MAP,
   meepleCardVariants,
   contentVariants,
+  getCardFrameStyle,
 } from '../../meeple-card-styles';
 import { useCardTheme } from '../hooks/useCardTheme';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
@@ -260,15 +261,24 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
         />
       )}
 
-      <CardCover
-        src={coverSrc}
-        alt={title}
-        variant={variant}
-        entity={entity}
-        customColor={customColor}
-        showEntityType
-        stateLabel={stateLabel}
-      />
+      <div
+        data-card-thumbnail
+        className="shrink-0 overflow-hidden"
+        style={{
+          ...getCardFrameStyle('list'),
+          borderRadius: '6px',
+        }}
+      >
+        <CardCover
+          src={coverSrc}
+          alt={title}
+          variant={variant}
+          entity={entity}
+          customColor={customColor}
+          showEntityType
+          stateLabel={stateLabel}
+        />
+      </div>
 
       {/* Content area */}
       <div className={contentVariants({ variant })}>

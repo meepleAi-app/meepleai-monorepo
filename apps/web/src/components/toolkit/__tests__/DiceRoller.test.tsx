@@ -18,6 +18,15 @@ describe('DiceRoller — standard dice', () => {
     expect(value).toBeGreaterThanOrEqual(1);
     expect(value).toBeLessThanOrEqual(6);
   });
+
+  it('calls onRoll callback for standard dice', () => {
+    const onRoll = vi.fn();
+    render(<DiceRoller config={{ name: 'D6', sides: 6, count: 1 }} onRoll={onRoll} />);
+    fireEvent.click(screen.getByRole('button', { name: /tira/i }));
+    expect(onRoll).toHaveBeenCalledWith(
+      expect.objectContaining({ faces: expect.any(Array), total: expect.any(String) })
+    );
+  });
 });
 
 describe('DiceRoller — custom faces', () => {
@@ -57,5 +66,15 @@ describe('DiceRoller — multi-dice', () => {
     const result = parseInt(screen.getByTestId('dice-total').textContent ?? '0', 10);
     expect(result).toBeGreaterThanOrEqual(2);
     expect(result).toBeLessThanOrEqual(12);
+  });
+
+  it('shows multiple dice-result elements for custom multi-dice without dice-total', () => {
+    render(
+      <DiceRoller config={{ name: '2 Skill Dice', customFaces: ['✅', '❌', '⭐'], count: 2 }} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /tira/i }));
+    const results = screen.getAllByTestId('dice-result');
+    expect(results).toHaveLength(2);
+    expect(screen.queryByTestId('dice-total')).toBeNull();
   });
 });

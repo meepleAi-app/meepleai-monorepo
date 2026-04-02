@@ -24,11 +24,12 @@ const C = {
   game: 'hsl(25,95%,45%)',
   player: 'hsl(262,83%,58%)',
   session: 'hsl(240,60%,55%)',
-  chat: 'hsl(220,80%,55%)',
   kb: 'hsl(174,60%,40%)',
   event: 'hsl(350,89%,60%)',
   agent: 'hsl(38,92%,50%)',
-  success: 'hsl(142,70%,45%)',
+  // Design system tokens (premium-gaming.css)
+  success: 'var(--gaming-accent-success)',
+  chat: 'var(--gaming-accent-info)',
 } as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -194,7 +195,7 @@ function LiveSessionWidget({
       colSpan={8}
       rowSpan={2}
       accentColor={C.success}
-      accentBg="rgba(16,185,129,0.04)"
+      accentBg="color-mix(in srgb, var(--gaming-accent-success) 4%, transparent)"
       className="flex flex-col justify-between"
       onClick={() => router.push(`/sessions/${session.id}`)}
       data-testid="widget-live-session"
@@ -204,9 +205,9 @@ function LiveSessionWidget({
         <span
           className="inline-flex items-center gap-1.5 text-[11px] font-bold rounded-full px-2.5 py-0.5"
           style={{
-            background: 'rgba(16,185,129,0.12)',
+            background: 'color-mix(in srgb, var(--gaming-accent-success) 12%, transparent)',
             color: C.success,
-            border: '1px solid rgba(16,185,129,0.2)',
+            border: '1px solid color-mix(in srgb, var(--gaming-accent-success) 20%, transparent)',
           }}
         >
           <span

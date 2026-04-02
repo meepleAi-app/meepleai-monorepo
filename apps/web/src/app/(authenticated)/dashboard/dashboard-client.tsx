@@ -14,13 +14,14 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
-import type { SessionSummaryDto, TrendingGameDto, UserGameDto } from '@/lib/api/dashboard-client';
+import type { TrendingGameDto, UserGameDto } from '@/lib/api/dashboard-client';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 import { cn } from '@/lib/utils';
 
 import { BentoWidget, WidgetLabel } from './widgets/BentoWidget';
 import { C } from './widgets/dashboard-colors';
 import { KpiWidget } from './widgets/KpiWidget';
+import { LeaderboardWidget } from './widgets/LeaderboardWidget';
 import { LiveSessionWidget } from './widgets/LiveSessionWidget';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -197,59 +198,6 @@ function ChatPreviewWidget() {
         >
           ↑
         </button>
-      </div>
-    </BentoWidget>
-  );
-}
-
-// ─── Leaderboard Widget (6×3) ─────────────────────────────────────────────────
-
-function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
-  const winners = sessions
-    .filter(s => s.winnerName)
-    .reduce<Record<string, number>>((acc, s) => {
-      const key = s.winnerName ?? '';
-      acc[key] = (acc[key] ?? 0) + 1;
-      return acc;
-    }, {});
-
-  const sorted = Object.entries(winners)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 4);
-
-  const medals = ['🥇', '🥈', '🥉', '4️⃣'];
-  const avatarColors = [C.game, C.player, C.event, C.session];
-
-  return (
-    <BentoWidget colSpan={6} rowSpan={3} accentColor={C.event} className="flex flex-col">
-      <WidgetLabel>Classifica Gruppo</WidgetLabel>
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {sorted.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground mt-2">
-            Gioca partite con amici per vedere la classifica
-          </p>
-        ) : (
-          sorted.map(([name, wins], i) => (
-            <div
-              key={name}
-              className="flex items-center gap-2 py-1.5 border-b border-border/40 last:border-0"
-            >
-              <span className="text-sm w-5 text-center shrink-0">{medals[i]}</span>
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-                style={{ background: avatarColors[i] }}
-              >
-                {name[0]?.toUpperCase()}
-              </div>
-              <span className="flex-1 font-quicksand font-semibold text-[11px] truncate">
-                {name}
-              </span>
-              <span className="font-mono text-[9px] text-muted-foreground shrink-0">
-                {wins} vitt.
-              </span>
-            </div>
-          ))
-        )}
       </div>
     </BentoWidget>
   );

@@ -652,6 +652,7 @@ v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapCacheEndpoints();             // Cache management
 v1Api.MapAdminKnowledgeBaseEndpoints();  // Issues #4654, #4655: KB and SharedGames for Admin Dashboard
+v1Api.MapAdminGameKbEndpoints();         // KB-01, KB-02: Admin per-game KB document management
 v1Api.MapAdminSharedGameContentEndpoints(); // Issue #236: Admin shared game content + MAU monitoring
 
 // Infrastructure

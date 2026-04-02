@@ -401,73 +401,68 @@ function LibraryWidget({
   );
 }
 
-// ─── Chat Preview Widget (6×4) ────────────────────────────────────────────────
+// ─── Quick Actions Widget (6×4) ───────────────────────────────────────────────
 
-function ChatPreviewWidget() {
+const QUICK_ACTIONS = [
+  {
+    icon: '🎲',
+    label: 'Nuova Partita',
+    sub: 'Registra una sessione',
+    href: '/sessions/new',
+    color: C.game,
+  },
+  {
+    icon: '💬',
+    label: 'Chat AI',
+    sub: 'Fai domande sulle regole',
+    href: '/chat',
+    color: C.chat,
+  },
+  {
+    icon: '📚',
+    label: 'Aggiungi Gioco',
+    sub: 'Cerca nel catalogo',
+    href: '/library?tab=collection',
+    color: C.kb,
+  },
+  {
+    icon: '📊',
+    label: 'Storico',
+    sub: 'Vedi tutte le partite',
+    href: '/sessions',
+    color: C.session,
+  },
+] as const;
+
+function QuickActionsWidget() {
   const router = useRouter();
   return (
     <BentoWidget
       colSpan={6}
       rowSpan={4}
-      accentColor={C.chat}
       className="flex flex-col"
-      onClick={() => router.push('/chat')}
+      data-testid="widget-quick-actions"
     >
-      <div className="flex items-center justify-between mb-2">
-        <WidgetLabel>Chat AI</WidgetLabel>
-        <span
-          className="text-[11px] font-bold rounded-full px-2 py-0.5"
-          style={{ background: `${C.chat}20`, color: C.chat }}
-        >
-          Regole & Domande
-        </span>
-      </div>
-      <div className="flex-1 flex flex-col gap-1.5 overflow-hidden justify-end">
-        <div
-          className="self-end max-w-[80%] rounded-lg px-2.5 py-1.5 text-[11px]"
-          style={{ background: `${C.game}18`, border: `1px solid ${C.game}22` }}
-        >
-          Quante strade posso costruire?
-        </div>
-        <div
-          className="self-start max-w-[90%] rounded-lg px-2.5 py-1.5 text-[11px] text-muted-foreground"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.07)',
-          }}
-        >
-          Puoi costruire tutte le strade che vuoi, purché tu abbia le risorse.{' '}
-          <span
-            className="font-mono text-[11px] rounded px-1 py-0.5 cursor-pointer"
-            style={{ background: `${C.chat}18`, color: C.chat }}
+      <WidgetLabel>Azioni Rapide</WidgetLabel>
+      <div className="flex-1 grid grid-cols-2 gap-2 mt-1">
+        {QUICK_ACTIONS.map(action => (
+          <button
+            key={action.href}
+            type="button"
+            onClick={() => router.push(action.href)}
+            className="flex flex-col items-start gap-1 rounded-xl p-3 border border-border/40 hover:border-border hover:bg-muted/20 transition-colors text-left"
+            style={{ borderLeft: `3px solid ${action.color}` }}
           >
-            p.8
-          </span>
-        </div>
-      </div>
-      <div
-        className="mt-auto pt-2 flex gap-1.5"
-        onClick={e => {
-          e.stopPropagation();
-          router.push('/chat');
-        }}
-      >
-        <div
-          className="flex-1 h-7 rounded-lg flex items-center px-2.5 text-[11px] text-muted-foreground/50"
-          style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.07)',
-          }}
-        >
-          Fai una domanda…
-        </div>
-        <button
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-sm"
-          style={{ background: C.chat }}
-          aria-label="Vai alla chat"
-        >
-          ↑
-        </button>
+            <span className="text-xl">{action.icon}</span>
+            <span
+              className="font-quicksand font-bold text-[13px] leading-tight"
+              style={{ color: action.color }}
+            >
+              {action.label}
+            </span>
+            <span className="text-[11px] text-muted-foreground leading-tight">{action.sub}</span>
+          </button>
+        ))}
       </div>
     </BentoWidget>
   );
@@ -671,8 +666,8 @@ export function DashboardClient() {
           href="/library"
         />
 
-        {/* Row 5-8: Chat AI (6×4) */}
-        <ChatPreviewWidget />
+        {/* Row 5-8: Quick Actions (6×4) */}
+        <QuickActionsWidget />
 
         {/* Row 7-9: Leaderboard (6×3) */}
         <LeaderboardWidget sessions={recentSessions} />

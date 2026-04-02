@@ -50,6 +50,12 @@ export function DowngradeTierModal({
   const suggestedRemove = data?.gamesToRemove ?? [];
   const toKeep = data?.gamesToKeep ?? [];
 
+  /**
+   * We deliberately track selections by `gameId` (not `entryId`) because the
+   * backend endpoint for removal is `DELETE /api/v1/library/games/{gameId}` —
+   * see UserLibraryCoreEndpoints.cs → MapDelete("/library/games/{gameId:guid}").
+   * `bulkRemoveFromLibrary` fires one DELETE per gameId, so we must pass gameIds.
+   */
   function toggleRemove(gameId: string) {
     setSelectedToRemove(prev => {
       const next = new Set(prev);

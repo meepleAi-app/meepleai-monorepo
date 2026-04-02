@@ -160,12 +160,13 @@ function LiveSessionWidget({
     return (
       <BentoWidget colSpan={8} rowSpan={2} className="flex items-center gap-4">
         <div className="flex-1 min-w-0">
-          <p className="font-quicksand font-bold text-base" style={{ color: 'hsl(0,72%,51%)' }}>
+          <p className="font-quicksand font-bold text-base text-destructive">
             Errore nel caricamento
           </p>
           <p className="text-sm text-muted-foreground mt-0.5">{error}</p>
         </div>
         <button
+          type="button"
           onClick={e => {
             e.stopPropagation();
             onRetry();
@@ -365,6 +366,7 @@ function LibraryWidget({
           <div className="flex flex-col items-center justify-center flex-1 gap-2 py-4 text-center">
             <p className="text-[11px] text-muted-foreground">Errore nel caricamento giochi</p>
             <button
+              type="button"
               onClick={e => {
                 e.stopPropagation();
                 onRetry();
@@ -573,8 +575,9 @@ function TrendingWidget({
       <WidgetLabel>Popolari questa settimana</WidgetLabel>
       {error ? (
         <div className="flex items-center gap-2 mt-1">
-          <p className="text-[10px] text-muted-foreground flex-1">Dati non disponibili</p>
+          <p className="text-[10px] text-muted-foreground flex-1">Errore nel caricamento</p>
           <button
+            type="button"
             onClick={e => {
               e.stopPropagation();
               onRetry();

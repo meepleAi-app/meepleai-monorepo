@@ -495,6 +495,9 @@ function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
       data-testid="widget-leaderboard"
     >
       <WidgetLabel>Classifica Gruppo</WidgetLabel>
+      <p className="text-[11px] text-muted-foreground/60 font-mono -mt-1 mb-1.5">
+        basata sulle ultime partite
+      </p>
       <div className="flex-1 flex flex-col overflow-hidden">
         {sorted.length === 0 ? (
           <p className="text-[11px] text-muted-foreground mt-2">
@@ -540,7 +543,7 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
       onClick={() => router.push('/games')}
       data-testid="widget-trending"
     >
-      <WidgetLabel>Popolari questa settimana</WidgetLabel>
+      <WidgetLabel>Popolari su MeepleAI · 7 giorni</WidgetLabel>
       <div className="flex gap-3 mt-1 overflow-hidden">
         {isLoading
           ? Array.from({ length: 5 }).map((_, i) => (

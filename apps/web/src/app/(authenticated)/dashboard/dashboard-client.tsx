@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import type { SessionSummaryDto, TrendingGameDto, UserGameDto } from '@/lib/api/dashboard-client';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 import { cn } from '@/lib/utils';
@@ -605,9 +606,44 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
   );
 }
 
+// ─── Greeting Widget (12×1) ──────────────────────────────────────────────────
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Buongiorno';
+  if (h < 18) return 'Buon pomeriggio';
+  return 'Buonasera';
+}
+
+function GreetingWidget({ displayName }: { displayName?: string | null }) {
+  const greeting = getGreeting();
+  const name = displayName ?? '';
+  const today = new Date().toLocaleDateString('it-IT', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  return (
+    <BentoWidget
+      colSpan={12}
+      rowSpan={1}
+      className="flex items-center justify-between"
+      data-testid="widget-greeting"
+    >
+      <p className="font-quicksand font-extrabold text-base leading-none truncate">
+        {greeting}
+        {name ? `, ${name}` : ''}! 👋
+      </p>
+      <p className="text-[11px] text-muted-foreground shrink-0 capitalize">{today}</p>
+    </BentoWidget>
+  );
+}
+
 // ─── Dashboard Client ─────────────────────────────────────────────────────────
 
 export function DashboardClient() {
+  const { user } = useAuthUser();
   const {
     stats,
     isLoadingStats,
@@ -647,6 +683,9 @@ export function DashboardClient() {
           className="grid grid-cols-6 lg:grid-cols-12"
           style={{ gridAutoRows: '60px', gap: '8px' }}
         >
+          {/* Row 0: Greeting (12×1) */}
+          <GreetingWidget displayName={user?.displayName} />
+
           {/* Row 1-2: Live Session (8×2) + Partite (4×2) */}
           <LiveSessionWidget
             session={latestSession}

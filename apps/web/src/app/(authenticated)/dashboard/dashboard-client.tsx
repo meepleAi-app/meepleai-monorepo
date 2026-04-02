@@ -138,9 +138,13 @@ function WidgetLabel({ children }: { children: React.ReactNode }) {
 function LiveSessionWidget({
   session,
   isLoading,
+  error,
+  onRetry,
 }: {
   session: SessionSummaryDto | undefined;
   isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
 }) {
   const router = useRouter();
 
@@ -148,6 +152,28 @@ function LiveSessionWidget({
     return (
       <BentoWidget colSpan={8} rowSpan={2} accentColor={C.success} className="animate-pulse">
         <div className="h-full" />
+      </BentoWidget>
+    );
+  }
+
+  if (error) {
+    return (
+      <BentoWidget colSpan={8} rowSpan={2} className="flex items-center gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="font-quicksand font-bold text-base" style={{ color: 'hsl(0,72%,51%)' }}>
+            Errore nel caricamento
+          </p>
+          <p className="text-sm text-muted-foreground mt-0.5">{error}</p>
+        </div>
+        <button
+          onClick={e => {
+            e.stopPropagation();
+            onRetry();
+          }}
+          className="shrink-0 px-4 py-2 rounded-lg text-sm font-bold border border-border hover:bg-muted/30 transition-colors"
+        >
+          Riprova
+        </button>
       </BentoWidget>
     );
   }
@@ -304,10 +330,14 @@ function LibraryWidget({
   games,
   totalCount,
   isLoading,
+  error,
+  onRetry,
 }: {
   games: UserGameDto[];
   totalCount: number;
   isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
 }) {
   const router = useRouter();
 
@@ -331,6 +361,19 @@ function LibraryWidget({
               <div className="w-8 h-3 rounded bg-muted/40" />
             </div>
           ))
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 py-4 text-center">
+            <p className="text-[11px] text-muted-foreground">Errore nel caricamento giochi</p>
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                onRetry();
+              }}
+              className="text-[10px] font-bold px-3 py-1.5 rounded-lg border border-border hover:bg-muted/30 transition-colors"
+            >
+              Riprova
+            </button>
+          </div>
         ) : games.length === 0 ? (
           <p className="text-[11px] text-muted-foreground mt-2">Nessun gioco in libreria ancora</p>
         ) : (
@@ -507,7 +550,17 @@ function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
 
 // ─── Trending Widget (6×2) ───────────────────────────────────────────────────
 
-function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoading: boolean }) {
+function TrendingWidget({
+  games,
+  isLoading,
+  error,
+  onRetry,
+}: {
+  games: TrendingGameDto[];
+  isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
+}) {
   const router = useRouter();
   return (
     <BentoWidget
@@ -518,44 +571,59 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
       onClick={() => router.push('/games')}
     >
       <WidgetLabel>Popolari questa settimana</WidgetLabel>
-      <div className="flex gap-3 mt-1 overflow-hidden">
-        {isLoading
-          ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-1 shrink-0">
-                <div className="w-9 h-12 rounded-md bg-muted/60 animate-pulse" />
-                <div className="w-9 h-2 rounded bg-muted/40 animate-pulse" />
-              </div>
-            ))
-          : games.slice(0, 6).map(game => (
-              <div
-                key={game.gameId}
-                className="flex flex-col items-center gap-1 cursor-pointer shrink-0 group/card"
-                onClick={e => {
-                  e.stopPropagation();
-                  router.push(`/games/${game.gameId}`);
-                }}
-              >
-                {game.thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={game.thumbnailUrl}
-                    alt={game.title}
-                    className="w-9 h-12 rounded-md object-cover group-hover/card:ring-1 group-hover/card:ring-primary transition-all"
-                  />
-                ) : (
-                  <div
-                    className="w-9 h-12 rounded-md flex items-center justify-center text-lg"
-                    style={{ background: 'rgba(255,255,255,0.06)' }}
-                  >
-                    🎲
-                  </div>
-                )}
-                <span className="font-quicksand text-[8px] font-bold text-center w-9 truncate">
-                  {game.title}
-                </span>
-              </div>
-            ))}
-      </div>
+      {error ? (
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-[10px] text-muted-foreground flex-1">Dati non disponibili</p>
+          <button
+            onClick={e => {
+              e.stopPropagation();
+              onRetry();
+            }}
+            className="text-[9px] font-bold px-2 py-1 rounded border border-border hover:bg-muted/30 transition-colors"
+          >
+            Riprova
+          </button>
+        </div>
+      ) : (
+        <div className="flex gap-3 mt-1 overflow-hidden">
+          {isLoading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex flex-col items-center gap-1 shrink-0">
+                  <div className="w-9 h-12 rounded-md bg-muted/60 animate-pulse" />
+                  <div className="w-9 h-2 rounded bg-muted/40 animate-pulse" />
+                </div>
+              ))
+            : games.slice(0, 6).map(game => (
+                <div
+                  key={game.gameId}
+                  className="flex flex-col items-center gap-1 cursor-pointer shrink-0 group/card"
+                  onClick={e => {
+                    e.stopPropagation();
+                    router.push(`/games/${game.gameId}`);
+                  }}
+                >
+                  {game.thumbnailUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={game.thumbnailUrl}
+                      alt={game.title}
+                      className="w-9 h-12 rounded-md object-cover group-hover/card:ring-1 group-hover/card:ring-primary transition-all"
+                    />
+                  ) : (
+                    <div
+                      className="w-9 h-12 rounded-md flex items-center justify-center text-lg"
+                      style={{ background: 'rgba(255,255,255,0.06)' }}
+                    >
+                      🎲
+                    </div>
+                  )}
+                  <span className="font-quicksand text-[8px] font-bold text-center w-9 truncate">
+                    {game.title}
+                  </span>
+                </div>
+              ))}
+        </div>
+      )}
     </BentoWidget>
   );
 }
@@ -637,13 +705,17 @@ export function DashboardClient() {
     fetchStats,
     recentSessions,
     isLoadingSessions,
+    sessionsError,
     fetchRecentSessions,
     updateFilters,
     games,
     isLoadingGames,
+    gamesError,
+    fetchGames,
     totalGamesCount,
     trendingGames,
     isLoadingTrending,
+    trendingError,
     fetchTrendingGames,
   } = useDashboardStore();
 
@@ -673,7 +745,12 @@ export function DashboardClient() {
           style={{ gridAutoRows: '60px', gap: '8px' }}
         >
           {/* Row 1-2: Live Session (8×2) + Partite (4×2) */}
-          <LiveSessionWidget session={latestSession} isLoading={isLoadingSessions} />
+          <LiveSessionWidget
+            session={latestSession}
+            isLoading={isLoadingSessions}
+            error={sessionsError}
+            onRetry={() => fetchRecentSessions(8)}
+          />
           <KpiWidget
             label="Partite (mese)"
             value={isLoadingStats ? '…' : monthlyPlays}
@@ -695,6 +772,8 @@ export function DashboardClient() {
             games={games}
             totalCount={totalGamesCount || totalGames}
             isLoading={isLoadingGames}
+            error={gamesError}
+            onRetry={fetchGames}
           />
           <KpiWidget
             label="Ore sett."
@@ -720,7 +799,12 @@ export function DashboardClient() {
           <LeaderboardWidget sessions={recentSessions} />
 
           {/* Row 9-10: Trending (6×2) */}
-          <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
+          <TrendingWidget
+            games={trendingGames}
+            isLoading={isLoadingTrending}
+            error={trendingError}
+            onRetry={() => fetchTrendingGames(6)}
+          />
         </div>
       </div>
     </div>

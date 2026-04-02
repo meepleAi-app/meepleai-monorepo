@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 
+import { NotFoundError } from '../core/errors';
 import {
   AgentConfigDtoSchema,
   type AgentConfigDto,
@@ -34,6 +35,7 @@ import {
   SharedLibrarySchema,
   GameDetailDtoSchema,
   LabelDtoSchema,
+  LibraryForDowngradeSchema,
   type PaginatedLibraryResponse,
   type UserLibraryStats,
   type UserLibraryEntry,
@@ -51,6 +53,7 @@ import {
   type GameDetailDto,
   type LabelDto,
   type CreateCustomLabelRequest,
+  type LibraryForDowngrade,
 } from '../schemas/library.schemas';
 import {
   PendingMigrationDtoSchema,
@@ -153,6 +156,17 @@ export interface LibraryClient {
     widgetType: string,
     request: UpdateWidgetRequest
   ): Promise<ToolkitDashboardDto>;
+  // Loan Flow (Task 7/8)
+  getLoanStatus(gameId: string): Promise<LoanStatusResponse | null>;
+  sendLoanReminder(gameId: string, customMessage?: string): Promise<void>;
+  // Downgrade Preview (Task 12)
+  getLibraryForDowngrade(newQuota: number): Promise<LibraryForDowngrade>;
+}
+
+export interface LoanStatusResponse {
+  isOnLoan: boolean;
+  borrowerInfo: string | null;
+  loanedSince: string | null; // ISO datetime
 }
 
 /**
@@ -877,6 +891,61 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
         ToolkitDashboardDtoSchema
       );
       if (!data) throw new Error('Failed to update toolkit widget');
+      return data;
+    },
+
+    // ========== Loan Flow (Task 7/8) ==========
+
+    /**
+     * Get loan status for a game in user's library
+     * GET /api/v1/library/games/{gameId}/loan-status
+     * @param gameId - Game UUID
+     * @returns Loan status or null if game is not on loan
+     */
+    async getLoanStatus(gameId: string): Promise<LoanStatusResponse | null> {
+      try {
+        return await httpClient.get<LoanStatusResponse>(
+          `/api/v1/library/games/${gameId}/loan-status`,
+          z.object({
+            isOnLoan: z.boolean(),
+            borrowerInfo: z.string().nullable(),
+            loanedSince: z.string().nullable(),
+          })
+        );
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          return null;
+        }
+        throw error;
+      }
+    },
+
+    /**
+     * Send a loan reminder to the borrower
+     * POST /api/v1/library/games/{gameId}/remind-loan
+     * @param gameId - Game UUID
+     * @param customMessage - Optional custom message for the reminder
+     */
+    async sendLoanReminder(gameId: string, customMessage?: string): Promise<void> {
+      await httpClient.post(`/api/v1/library/games/${gameId}/remind-loan`, { customMessage });
+    },
+
+    // ========== Downgrade Preview (Task 12) ==========
+
+    /**
+     * Get library entries split into keep/remove lists for a quota downgrade preview
+     * GET /api/v1/library/downgrade-preview?newQuota={n}
+     * @param newQuota - The new quota the user is downgrading to
+     * @returns Two lists: games that fit in the new quota and games to remove
+     */
+    async getLibraryForDowngrade(newQuota: number): Promise<LibraryForDowngrade> {
+      const data = await httpClient.get<LibraryForDowngrade>(
+        `/api/v1/library/downgrade-preview?newQuota=${newQuota}`,
+        LibraryForDowngradeSchema
+      );
+      if (!data) {
+        throw new Error('Failed to fetch downgrade preview');
+      }
       return data;
     },
   };

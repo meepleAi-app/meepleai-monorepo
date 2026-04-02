@@ -27,7 +27,8 @@ internal record SharedLibraryDto(
     int TotalGames,
     int FavoritesCount,
     string PrivacyLevel,
-    DateTime SharedAt
+    DateTime SharedAt,
+    IReadOnlyList<SharedWishlistItemDto> WishlistItems  // NEW — sempre presente, può essere vuota
 );
 
 /// <summary>
@@ -43,4 +44,15 @@ internal record SharedLibraryGameDto(
     bool IsFavorite,
     string? Notes,
     DateTime AddedAt
+);
+
+/// <summary>
+/// DTO for a public wishlist item in a shared library view.
+/// TargetPrice is intentionally excluded for privacy.
+/// </summary>
+internal record SharedWishlistItemDto(
+    Guid GameId,
+    string GameTitle,
+    string? GameImageUrl,
+    string Priority  // "High" | "Medium" | "Low"
 );

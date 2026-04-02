@@ -106,10 +106,20 @@ services:
 
   # ===========================================================================
   # AI Services — Traefik basic auth for integration access
+  # Resource limits are reduced vs base compose (CAX21 has 8GB total).
+  # Use 'make staging' only when AI features are needed; prefer 'make staging-core' otherwise.
   # ===========================================================================
 
   embedding-service:
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.embedding.rule=Host(`meepleai.app`) && PathPrefix(`/services/embedding`)"
@@ -121,6 +131,14 @@ services:
 
   reranker-service:
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.reranker.rule=Host(`meepleai.app`) && PathPrefix(`/services/reranker`)"
@@ -132,6 +150,14 @@ services:
 
   unstructured-service:
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.unstructured.rule=Host(`meepleai.app`) && PathPrefix(`/services/unstructured`)"
@@ -143,6 +169,14 @@ services:
 
   smoldocling-service:
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.smoldocling.rule=Host(`meepleai.app`) && PathPrefix(`/services/smoldocling`)"
@@ -151,6 +185,17 @@ services:
       - "traefik.http.routers.smoldocling.middlewares=integration-auth,strip-services-smoldocling"
       - "traefik.http.middlewares.strip-services-smoldocling.stripprefix.prefixes=/services/smoldocling"
       - "traefik.http.services.smoldocling.loadbalancer.server.port=8002"
+
+  orchestration-service:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   # Ollama excluded from staging: 4GB RAM reservation saved on CAX21 (8GB total).
   # All LLM traffic uses OpenRouter. Re-enable with profile 'ollama' if needed.

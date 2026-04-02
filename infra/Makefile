@@ -35,11 +35,15 @@ integration-down: ## Stop integration (local processes + tunnels)
 	bash scripts/integration-start.sh stop
 	bash scripts/integration-tunnel.sh stop
 
-staging: ## Deploy staging on server (meepleai.app)
+staging: ## Deploy staging — core + AI + monitoring (CAX31+ recommended, ~14GB reservation)
 	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
 		--profile ai --profile monitoring --profile proxy up -d
 
-staging-down: ## Stop staging
+staging-core: ## Deploy staging core only — no AI services (safe for CAX21, ~6GB reservation)
+	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
+		--profile monitoring --profile proxy up -d
+
+staging-down: ## Stop staging (all profiles)
 	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
 		--profile ai --profile monitoring --profile proxy down
 

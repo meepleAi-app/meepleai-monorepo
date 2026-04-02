@@ -4,15 +4,14 @@
  * Dashboard Bento — Layout B (Bento Command)
  *
  * Desktop dashboard with:
- * - 200px sidebar nav (expanded, within main area)
  * - 12-column bento grid with variable-span widgets
- * - Live session, KPI stats, library, chat preview, leaderboard, trending
+ * - Live session, KPI stats, library, quick actions, leaderboard, trending
  */
 
 import { useEffect } from 'react';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import type { SessionSummaryDto, TrendingGameDto, UserGameDto } from '@/lib/api/dashboard-client';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
@@ -560,74 +559,6 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
   );
 }
 
-// ─── Bento Sidebar ────────────────────────────────────────────────────────────
-
-const SIDEBAR_NAV = [
-  { icon: '🏠', label: 'Dashboard', href: '/dashboard' },
-  { icon: '📚', label: 'Libreria', href: '/library?tab=collection' },
-  { icon: '🎲', label: 'Sessioni', href: '/sessions' },
-  { icon: '💬', label: 'Chat AI', href: '/chat' },
-  { icon: '📄', label: 'Regole KB', href: '/library?tab=private' },
-  { icon: '👥', label: 'Giocatori', href: '/players' },
-];
-
-const SIDEBAR_MANAGE = [
-  { icon: '📊', label: 'Analytics', href: '/play-records' },
-  { icon: '⚙️', label: 'Impostazioni', href: '/settings' },
-];
-
-function BentoDashboardSidebar() {
-  const pathname = usePathname();
-
-  const isActive = (href: string) => {
-    const path = href.split('?')[0];
-    if (path === '/dashboard') return pathname === '/dashboard';
-    return pathname.startsWith(path);
-  };
-
-  return (
-    <aside className="hidden lg:flex w-[200px] min-w-[200px] h-full bg-card border-r border-border/40 flex-col py-3 px-2 overflow-y-auto shrink-0">
-      <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 px-2 pb-1 pt-1">
-        Navigazione
-      </p>
-      {SIDEBAR_NAV.map(item => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={cn(
-            'flex items-center gap-2 px-2 py-1.5 rounded-lg font-quicksand text-[12px] font-semibold transition-colors',
-            isActive(item.href)
-              ? 'text-[hsl(25,95%,45%)] bg-[rgba(245,130,31,0.1)]'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
-          )}
-        >
-          <span className="text-sm w-5 text-center shrink-0">{item.icon}</span>
-          <span>{item.label}</span>
-        </Link>
-      ))}
-      <div className="h-px bg-border/40 my-2 mx-2" />
-      <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 px-2 pb-1">
-        Gestione
-      </p>
-      {SIDEBAR_MANAGE.map(item => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={cn(
-            'flex items-center gap-2 px-2 py-1.5 rounded-lg font-quicksand text-[12px] font-semibold transition-colors',
-            isActive(item.href)
-              ? 'text-[hsl(25,95%,45%)] bg-[rgba(245,130,31,0.1)]'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
-          )}
-        >
-          <span className="text-sm w-5 text-center shrink-0">{item.icon}</span>
-          <span>{item.label}</span>
-        </Link>
-      ))}
-    </aside>
-  );
-}
-
 // ─── Dashboard Client ─────────────────────────────────────────────────────────
 
 export function DashboardClient() {
@@ -663,65 +594,60 @@ export function DashboardClient() {
   const totalGames = stats?.totalGames ?? 0;
 
   return (
-    <div className="flex h-full bg-background overflow-hidden">
-      <BentoDashboardSidebar />
+    <div className="flex-1 overflow-y-auto p-3.5">
+      <div
+        className="grid grid-cols-6 lg:grid-cols-12"
+        style={{ gridAutoRows: '60px', gap: '8px' }}
+      >
+        {/* Row 1-2: Live Session (8×2) + Partite (4×2) */}
+        <LiveSessionWidget session={latestSession} isLoading={isLoadingSessions} />
+        <KpiWidget
+          label="Partite (mese)"
+          value={isLoadingStats ? '…' : monthlyPlays}
+          badge={
+            playsChange !== null && playsChange !== undefined && playsChange !== 0
+              ? `${playsChange > 0 ? '+' : ''}${playsChange}%`
+              : undefined
+          }
+          badgePositive={(playsChange ?? 0) > 0}
+          accentColor={C.game}
+          colSpan={4}
+          tabletColSpan={6}
+          rowSpan={2}
+          href="/sessions"
+        />
 
-      {/* Bento grid area */}
-      <div className="flex-1 overflow-y-auto p-3.5">
-        <div
-          className="grid grid-cols-6 lg:grid-cols-12"
-          style={{ gridAutoRows: '60px', gap: '8px' }}
-        >
-          {/* Row 1-2: Live Session (8×2) + Partite (4×2) */}
-          <LiveSessionWidget session={latestSession} isLoading={isLoadingSessions} />
-          <KpiWidget
-            label="Partite (mese)"
-            value={isLoadingStats ? '…' : monthlyPlays}
-            badge={
-              playsChange !== null && playsChange !== undefined && playsChange !== 0
-                ? `${playsChange > 0 ? '+' : ''}${playsChange}%`
-                : undefined
-            }
-            badgePositive={(playsChange ?? 0) > 0}
-            accentColor={C.game}
-            colSpan={4}
-            tabletColSpan={6}
-            rowSpan={2}
-            href="/sessions"
-          />
+        {/* Row 3-6: Library (6×4) + Ore (3×2) + Giochi (3×2) */}
+        <LibraryWidget
+          games={games}
+          totalCount={totalGamesCount || totalGames}
+          isLoading={isLoadingGames}
+        />
+        <KpiWidget
+          label="Ore sett."
+          value={isLoadingStats ? '…' : weeklyHours}
+          sub="questa settimana"
+          accentColor={C.session}
+          colSpan={3}
+          rowSpan={2}
+        />
+        <KpiWidget
+          label="Giochi in lib."
+          value={isLoadingStats ? '…' : totalGames}
+          accentColor={C.event}
+          colSpan={3}
+          rowSpan={2}
+          href="/library"
+        />
 
-          {/* Row 3-6: Library (6×4) + Ore (3×2) + Giochi (3×2) */}
-          <LibraryWidget
-            games={games}
-            totalCount={totalGamesCount || totalGames}
-            isLoading={isLoadingGames}
-          />
-          <KpiWidget
-            label="Ore sett."
-            value={isLoadingStats ? '…' : weeklyHours}
-            sub="questa settimana"
-            accentColor={C.session}
-            colSpan={3}
-            rowSpan={2}
-          />
-          <KpiWidget
-            label="Giochi in lib."
-            value={isLoadingStats ? '…' : totalGames}
-            accentColor={C.event}
-            colSpan={3}
-            rowSpan={2}
-            href="/library"
-          />
+        {/* Row 5-8: Chat AI (6×4) */}
+        <ChatPreviewWidget />
 
-          {/* Row 5-8: Chat AI (6×4) */}
-          <ChatPreviewWidget />
+        {/* Row 7-9: Leaderboard (6×3) */}
+        <LeaderboardWidget sessions={recentSessions} />
 
-          {/* Row 7-9: Leaderboard (6×3) */}
-          <LeaderboardWidget sessions={recentSessions} />
-
-          {/* Row 9-10: Trending (6×2) */}
-          <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
-        </div>
+        {/* Row 9-10: Trending (6×2) */}
+        <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
       </div>
     </div>
   );

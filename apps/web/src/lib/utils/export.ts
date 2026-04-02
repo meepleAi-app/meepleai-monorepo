@@ -9,8 +9,6 @@
 
 import { logger } from '@/lib/logger';
 
-import { logger } from '@/lib/logger';
-
 /**
  * Testing metrics data structure for export
  */

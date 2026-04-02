@@ -197,9 +197,10 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=60d'
+      - '--storage.tsdb.retention.size=5GB'
       - '--web.enable-lifecycle'
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus.staging.yml:/etc/prometheus/prometheus.yml:ro  # staging-specific labels
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       - prometheus-staging:/prometheus
 

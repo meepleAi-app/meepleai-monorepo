@@ -151,13 +151,38 @@ receivers:
           {{ end }}
         send_resolved: true
 
-  # AI/RAG specific alerts
+  # AI/RAG specific alerts — fallback al webhook API + email opzionale
   - name: 'ai-alerts'
-    # Configure notifications here if needed
+    webhook_configs:
+      - url: 'http://api:8080/api/v1/alerts/prometheus'
+        send_resolved: true
+    # email_configs opzionale: decommentare per notifiche email RAG
+    # email_configs:
+    #   - to: '${ALERT_EMAIL_TO}'
+    #     headers:
+    #       Subject: '🤖 [AI/RAG] {{ .GroupLabels.alertname }} - MeepleAI'
+    #     send_resolved: true
 
-  # Dependency health alerts
+  # Dependency health alerts (Postgres, Redis, pgvector) — fallback al webhook API
   - name: 'dependency-alerts'
-    # Configure notifications here if needed
+    webhook_configs:
+      - url: 'http://api:8080/api/v1/alerts/prometheus'
+        send_resolved: true
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        headers:
+          Subject: '🗄️ [DEPENDENCY] {{ .GroupLabels.alertname }} - MeepleAI'
+        html: |
+          <h2 style="color: #d93025;">🗄️ DEPENDENCY ALERT</h2>
+          <h3>{{ .GroupLabels.alertname }}</h3>
+          {{ range .Alerts }}
+          <div style="border-left: 4px solid #d93025; padding-left: 12px; margin: 16px 0;">
+            <p><strong>Service:</strong> {{ .Labels.service }}</p>
+            <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+            <p><strong>Started:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}</p>
+          </div>
+          {{ end }}
+        send_resolved: true
 
   # SEC-08: 2FA Security alerts - Email + Slack notifications
   - name: '2fa-security-alerts'

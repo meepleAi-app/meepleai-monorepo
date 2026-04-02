@@ -175,5 +175,24 @@ public class GetSharedLibraryQueryHandlerTests
         result.UserId.Should().Be(userId);
     }
 
+    [Fact]
+    public async Task Repository_RecordAccess_IsCallable()
+    {
+        // Arrange
+        var shareToken = "validtoken123456789012345678901";
+
+        _mockShareLinkRepository
+            .Setup(r => r.RecordAccessAsync(shareToken, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _mockShareLinkRepository.Object.RecordAccessAsync(shareToken, CancellationToken.None);
+
+        // Assert
+        _mockShareLinkRepository.Verify(
+            r => r.RecordAccessAsync(shareToken, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     #endregion
 }

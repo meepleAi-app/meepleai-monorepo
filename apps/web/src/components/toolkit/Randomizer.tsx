@@ -1,133 +1,101 @@
 'use client';
 
-import React, { useState } from 'react';
-
-import { Plus, Shuffle, Trash2, X } from 'lucide-react';
+import { useState, KeyboardEvent } from 'react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { useStandaloneToolkitStore } from '@/lib/stores/standalone-toolkit-store';
 
-/**
- * Randomizer — random selection from a configurable list of items.
- */
-export function Randomizer() {
-  const [items, setItems] = useState<string[]>([]);
-  const [newItem, setNewItem] = useState('');
-  const [picked, setPicked] = useState<string | null>(null);
+const MAX_ITEMS = 50;
+
+interface RandomizerProps {
+  onAction?: (extracted: string) => void;
+}
+
+export function Randomizer({ onAction }: RandomizerProps) {
+  const [inputValue, setInputValue] = useState('');
+  const { randomizer, setRandomizerItems, extractRandom, resetRandomizer } =
+    useStandaloneToolkitStore();
 
   const addItem = () => {
-    const value = newItem.trim();
-    if (!value) return;
-    setItems(prev => [...prev, value]);
-    setNewItem('');
-    setPicked(null);
+    const trimmed = inputValue.trim();
+    if (!trimmed || randomizer.originalItems.length >= MAX_ITEMS) return;
+    const next = [...randomizer.originalItems, trimmed];
+    setRandomizerItems(next);
+    setInputValue('');
   };
 
-  const removeItem = (index: number) => {
-    setItems(prev => prev.filter((_, i) => i !== index));
-    setPicked(null);
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') addItem();
   };
 
-  const pickRandom = () => {
-    if (items.length === 0) return;
-    const idx = Math.floor(Math.random() * items.length);
-    setPicked(items[idx]);
+  const handleExtract = () => {
+    const result = extractRandom();
+    if (result) onAction?.(result);
   };
 
-  const clearAll = () => {
-    setItems([]);
-    setPicked(null);
-  };
+  const isEmpty = randomizer.remainingItems.length === 0;
 
   return (
-    <div className="space-y-3" data-testid="randomizer">
-      {/* Add item */}
+    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-slate-700">Randomizzatore</span>
+        <span className="text-xs text-slate-400">
+          <span data-testid="pool-count">{randomizer.remainingItems.length}</span>/
+          {randomizer.originalItems.length}
+        </span>
+      </div>
+
       <div className="flex gap-2">
         <Input
-          value={newItem}
-          onChange={e => setNewItem(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && addItem()}
-          placeholder="Aggiungi elemento…"
-          className="h-8 text-sm"
-          aria-label="New item"
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Aggiungi voce..."
+          className="flex-1"
+          disabled={randomizer.originalItems.length >= MAX_ITEMS}
         />
         <Button
           variant="outline"
           size="sm"
           onClick={addItem}
-          disabled={!newItem.trim()}
-          aria-label="Add item"
-          className="gap-1"
+          disabled={randomizer.originalItems.length >= MAX_ITEMS}
         >
-          <Plus className="h-3.5 w-3.5" />
-          Aggiungi
+          +
         </Button>
       </div>
 
-      {/* Item list */}
-      {items.length === 0 ? (
-        <p className="py-3 text-center text-sm text-slate-400">
-          Nessun elemento. Aggiungine qualcuno!
-        </p>
-      ) : (
-        <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-slate-200 p-2">
-          {items.map((item, idx) => (
-            <div
-              key={idx}
-              className={`flex items-center justify-between rounded-md px-3 py-1.5 text-sm transition-colors ${
-                item === picked
-                  ? 'border border-amber-300 bg-amber-50 font-medium text-amber-800'
-                  : 'bg-slate-50 text-slate-700'
-              }`}
-              data-testid={`item-${idx}`}
-            >
-              <span className="truncate">{item}</span>
-              <button
-                onClick={() => removeItem(idx)}
-                aria-label={`Remove ${item}`}
-                className="ml-2 flex-shrink-0 text-slate-400 hover:text-red-500 transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Result */}
-      {picked && (
+      {randomizer.lastExtracted && (
         <div
-          className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4 text-center"
+          className="rounded-md border-2 border-purple-300 bg-purple-50 p-3 text-center text-base font-semibold text-purple-800"
           data-testid="randomizer-result"
-          aria-live="polite"
         >
-          <p className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-1">
-            Selezionato
-          </p>
-          <p className="text-xl font-bold text-amber-800">{picked}</p>
+          {randomizer.lastExtracted}
         </div>
       )}
 
-      {/* Actions */}
+      {isEmpty && randomizer.originalItems.length > 0 && (
+        <p className="text-center text-xs text-slate-400">
+          Pool esaurito — premi Reset per ricominciare
+        </p>
+      )}
+
       <div className="flex gap-2">
         <Button
-          onClick={pickRandom}
-          disabled={items.length === 0}
-          className="flex-1 gap-1"
-          aria-label="Pick random item"
+          onClick={handleExtract}
+          disabled={isEmpty || randomizer.originalItems.length === 0}
+          className="flex-1"
+          aria-label="Estrai elemento"
         >
-          <Shuffle className="h-4 w-4" />
-          Scegli a caso
+          🎯 Estrai
         </Button>
         <Button
           variant="outline"
-          onClick={clearAll}
-          disabled={items.length === 0}
-          aria-label="Clear all items"
-          className="gap-1"
+          onClick={resetRandomizer}
+          disabled={randomizer.originalItems.length === 0}
+          aria-label="Reset pool"
         >
-          <Trash2 className="h-3.5 w-3.5" />
-          Svuota
+          ↩ Reset
         </Button>
       </div>
     </div>

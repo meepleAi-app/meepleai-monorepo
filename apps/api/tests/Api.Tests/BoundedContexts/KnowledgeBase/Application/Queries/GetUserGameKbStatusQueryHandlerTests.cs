@@ -5,7 +5,7 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
-using Moq;
+using NSubstitute;
 using Xunit;
 using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 
@@ -19,17 +19,17 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class GetUserGameKbStatusQueryHandlerTests
 {
-    private readonly Mock<IVectorDocumentRepository> _vectorRepoMock;
-    private readonly Mock<IConfigurationRepository> _configRepoMock;
+    private readonly IVectorDocumentRepository _vectorRepoMock;
+    private readonly IConfigurationRepository _configRepoMock;
     private readonly GetUserGameKbStatusQueryHandler _sut;
 
     public GetUserGameKbStatusQueryHandlerTests()
     {
-        _vectorRepoMock = new Mock<IVectorDocumentRepository>();
-        _configRepoMock = new Mock<IConfigurationRepository>();
+        _vectorRepoMock = Substitute.For<IVectorDocumentRepository>();
+        _configRepoMock = Substitute.For<IConfigurationRepository>();
         _sut = new GetUserGameKbStatusQueryHandler(
-            _vectorRepoMock.Object,
-            _configRepoMock.Object);
+            _vectorRepoMock,
+            _configRepoMock);
     }
 
     [Fact]
@@ -38,8 +38,8 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
         // Arrange
         var gameId = Guid.NewGuid();
         _vectorRepoMock
-            .Setup(r => r.GetByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<VectorDocument>());
+            .GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
+            .Returns(new List<VectorDocument>());
 
         // Act
         var result = await _sut.Handle(
@@ -63,16 +63,16 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
         var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 10);
 
         _vectorRepoMock
-            .Setup(r => r.GetByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<VectorDocument> { vectorDoc });
+            .GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
+            .Returns(new List<VectorDocument> { vectorDoc });
 
         _configRepoMock
-            .Setup(r => r.GetByKeyAsync(
-                It.IsAny<string>(),
-                It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SystemConfig?)null);
+            .GetByKeyAsync(
+                Arg.Any<string>(),
+                Arg.Any<string?>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
+            .Returns((SystemConfig?)null);
 
         // Act
         var result = await _sut.Handle(
@@ -94,8 +94,8 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
         var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "it", 25);
 
         _vectorRepoMock
-            .Setup(r => r.GetByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<VectorDocument> { vectorDoc });
+            .GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
+            .Returns(new List<VectorDocument> { vectorDoc });
 
         var coverageKey = $"KB:Coverage:{gameId}";
         var coverageConfig = new SystemConfig(
@@ -107,20 +107,20 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
             category: "KnowledgeBase");
 
         _configRepoMock
-            .Setup(r => r.GetByKeyAsync(
+            .GetByKeyAsync(
                 coverageKey,
-                It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(coverageConfig);
+                Arg.Any<string?>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
+            .Returns(coverageConfig);
 
         _configRepoMock
-            .Setup(r => r.GetByKeyAsync(
+            .GetByKeyAsync(
                 $"KB:SuggestedQuestions:{gameId}",
-                It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SystemConfig?)null);
+                Arg.Any<string?>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
+            .Returns((SystemConfig?)null);
 
         // Act
         var result = await _sut.Handle(
@@ -142,17 +142,17 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
         var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 15);
 
         _vectorRepoMock
-            .Setup(r => r.GetByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<VectorDocument> { vectorDoc });
+            .GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
+            .Returns(new List<VectorDocument> { vectorDoc });
 
         var coverageKey = $"KB:Coverage:{gameId}";
         _configRepoMock
-            .Setup(r => r.GetByKeyAsync(
+            .GetByKeyAsync(
                 coverageKey,
-                It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SystemConfig?)null);
+                Arg.Any<string?>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
+            .Returns((SystemConfig?)null);
 
         var questionsKey = $"KB:SuggestedQuestions:{gameId}";
         var questionsConfig = new SystemConfig(
@@ -164,12 +164,12 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
             category: "KnowledgeBase");
 
         _configRepoMock
-            .Setup(r => r.GetByKeyAsync(
+            .GetByKeyAsync(
                 questionsKey,
-                It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(questionsConfig);
+                Arg.Any<string?>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
+            .Returns(questionsConfig);
 
         // Act
         var result = await _sut.Handle(
@@ -190,8 +190,8 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
         var vectorDoc = new VectorDocument(Guid.NewGuid(), gameId, Guid.NewGuid(), "en", 5);
 
         _vectorRepoMock
-            .Setup(r => r.GetByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<VectorDocument> { vectorDoc });
+            .GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
+            .Returns(new List<VectorDocument> { vectorDoc });
 
         var coverageKey = $"KB:Coverage:{gameId}";
         var badConfig = new SystemConfig(
@@ -203,20 +203,20 @@ public sealed class GetUserGameKbStatusQueryHandlerTests
             category: "KnowledgeBase");
 
         _configRepoMock
-            .Setup(r => r.GetByKeyAsync(
+            .GetByKeyAsync(
                 coverageKey,
-                It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(badConfig);
+                Arg.Any<string?>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
+            .Returns(badConfig);
 
         _configRepoMock
-            .Setup(r => r.GetByKeyAsync(
+            .GetByKeyAsync(
                 $"KB:SuggestedQuestions:{gameId}",
-                It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SystemConfig?)null);
+                Arg.Any<string?>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
+            .Returns((SystemConfig?)null);
 
         // Act
         var result = await _sut.Handle(

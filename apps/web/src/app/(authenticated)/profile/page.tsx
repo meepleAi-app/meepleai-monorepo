@@ -347,7 +347,11 @@ export default function ProfilePage() {
   const displayName = profile?.displayName ?? user?.displayName ?? user?.email ?? 'Player';
   const avatarUrl = profile?.avatarUrl ?? null;
 
-  async function handleAvatarUpload(file: File): Promise<void> {
+  async function handleAvatarUpload(file: File, previewUrl: string): Promise<void> {
+    // Optimistic update immediato con blob URL
+    queryClient.setQueryData([...userKeys.current(), 'profile'], (prev: typeof profile) =>
+      prev ? { ...prev, avatarUrl: previewUrl } : prev
+    );
     const result = await api.auth.uploadAvatar(file);
     if (result?.avatarUrl) {
       queryClient.setQueryData([...userKeys.current(), 'profile'], (prev: typeof profile) =>

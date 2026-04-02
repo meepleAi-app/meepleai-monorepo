@@ -26,6 +26,10 @@ export interface AchievementDto {
 
 type AchievementFilter = 'all' | 'earned' | 'locked' | 'in-progress';
 
+const achievementKeys = {
+  all: ['achievements'] as const,
+};
+
 function getStatus(a: AchievementDto): 'earned' | 'locked' | 'in-progress' {
   if (a.isUnlocked) return 'earned';
   if (a.progress !== null && a.progress > 0) return 'in-progress';
@@ -54,7 +58,7 @@ export function AchievementsGrid(): React.ReactElement {
     isLoading,
     error,
   } = useQuery<AchievementDto[]>({
-    queryKey: ['achievements'],
+    queryKey: achievementKeys.all,
     queryFn: async () => {
       const res = await apiClient.get<AchievementDto[]>('/api/v1/achievements');
       return res ?? [];

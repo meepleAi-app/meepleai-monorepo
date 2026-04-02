@@ -63,9 +63,9 @@ export default function LiveSessionLayout({ children, params }: LiveSessionLayou
     refetchInterval: 15_000,
   });
 
-  // Active player name derived from players list
-  const activePlayerName =
-    players.length > 0 ? ((players.find(p => p.isOnline) ?? players[0])?.name ?? null) : null;
+  // Active player name derived from players list (first player as safe fallback;
+  // isOnline is a network-presence flag, not a turn indicator)
+  const activePlayerName = players[0]?.name ?? null;
 
   const handleAdvanceTurn = useCallback(async () => {
     try {

@@ -18,18 +18,7 @@ import type { SessionSummaryDto, TrendingGameDto, UserGameDto } from '@/lib/api/
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 import { cn } from '@/lib/utils';
 
-// ─── Entity colors (matches meeple-card-styles.ts) ───────────────────────────
-
-const C = {
-  game: 'hsl(25,95%,45%)',
-  player: 'hsl(262,83%,58%)',
-  session: 'hsl(240,60%,55%)',
-  chat: 'hsl(220,80%,55%)',
-  kb: 'hsl(174,60%,40%)',
-  event: 'hsl(350,89%,60%)',
-  agent: 'hsl(38,92%,50%)',
-  success: 'hsl(142,70%,45%)',
-} as const;
+import { C } from './widgets/dashboard-colors';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

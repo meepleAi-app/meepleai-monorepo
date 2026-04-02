@@ -14,6 +14,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import type { SessionSummaryDto, TrendingGameDto, UserGameDto } from '@/lib/api/dashboard-client';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 import { cn } from '@/lib/utils';
@@ -142,9 +143,11 @@ function WidgetLabel({ children }: { children: React.ReactNode }) {
 function LiveSessionWidget({
   session,
   isLoading,
+  error,
 }: {
   session: SessionSummaryDto | undefined;
   isLoading: boolean;
+  error?: string | null;
 }) {
   const router = useRouter();
 
@@ -158,6 +161,20 @@ function LiveSessionWidget({
         data-testid="widget-live-session"
       >
         <div className="h-full" />
+      </BentoWidget>
+    );
+  }
+
+  if (error) {
+    return (
+      <BentoWidget
+        colSpan={8}
+        rowSpan={2}
+        className="flex items-center gap-3 border-dashed"
+        data-testid="widget-live-session"
+      >
+        <span className="text-xl">⚠️</span>
+        <p className="text-sm text-muted-foreground">{error}</p>
       </BentoWidget>
     );
   }
@@ -597,6 +614,7 @@ export function DashboardClient() {
     fetchStats,
     recentSessions,
     isLoadingSessions,
+    sessionsError,
     fetchRecentSessions,
     updateFilters,
     games,
@@ -624,60 +642,66 @@ export function DashboardClient() {
 
   return (
     <div className="flex-1 overflow-y-auto p-3.5">
-      <div
-        className="grid grid-cols-6 lg:grid-cols-12"
-        style={{ gridAutoRows: '60px', gap: '8px' }}
-      >
-        {/* Row 1-2: Live Session (8×2) + Partite (4×2) */}
-        <LiveSessionWidget session={latestSession} isLoading={isLoadingSessions} />
-        <KpiWidget
-          label="Partite (mese)"
-          value={isLoadingStats ? '…' : monthlyPlays}
-          badge={
-            playsChange !== null && playsChange !== undefined && playsChange !== 0
-              ? `${playsChange > 0 ? '+' : ''}${playsChange}%`
-              : undefined
-          }
-          badgePositive={(playsChange ?? 0) > 0}
-          accentColor={C.game}
-          colSpan={4}
-          tabletColSpan={6}
-          rowSpan={2}
-          href="/sessions"
-        />
+      <ErrorBoundary componentName="DashboardClient">
+        <div
+          className="grid grid-cols-6 lg:grid-cols-12"
+          style={{ gridAutoRows: '60px', gap: '8px' }}
+        >
+          {/* Row 1-2: Live Session (8×2) + Partite (4×2) */}
+          <LiveSessionWidget
+            session={latestSession}
+            isLoading={isLoadingSessions}
+            error={sessionsError}
+          />
+          <KpiWidget
+            label="Partite (mese)"
+            value={isLoadingStats ? '…' : monthlyPlays}
+            badge={
+              playsChange !== null && playsChange !== undefined && playsChange !== 0
+                ? `${playsChange > 0 ? '+' : ''}${playsChange}%`
+                : undefined
+            }
+            badgePositive={(playsChange ?? 0) > 0}
+            accentColor={C.game}
+            colSpan={4}
+            tabletColSpan={6}
+            rowSpan={2}
+            href="/sessions"
+          />
 
-        {/* Row 3-6: Library (6×4) + Ore (3×2) + Giochi (3×2) */}
-        <LibraryWidget
-          games={games}
-          totalCount={totalGamesCount || totalGames}
-          isLoading={isLoadingGames}
-        />
-        <KpiWidget
-          label="Ore sett."
-          value={isLoadingStats ? '…' : weeklyHours}
-          sub="questa settimana"
-          accentColor={C.session}
-          colSpan={3}
-          rowSpan={2}
-        />
-        <KpiWidget
-          label="Giochi in lib."
-          value={isLoadingStats ? '…' : totalGames}
-          accentColor={C.event}
-          colSpan={3}
-          rowSpan={2}
-          href="/library"
-        />
+          {/* Row 3-6: Library (6×4) + Ore (3×2) + Giochi (3×2) */}
+          <LibraryWidget
+            games={games}
+            totalCount={totalGamesCount || totalGames}
+            isLoading={isLoadingGames}
+          />
+          <KpiWidget
+            label="Ore sett."
+            value={isLoadingStats ? '…' : weeklyHours}
+            sub="questa settimana"
+            accentColor={C.session}
+            colSpan={3}
+            rowSpan={2}
+          />
+          <KpiWidget
+            label="Giochi in lib."
+            value={isLoadingStats ? '…' : totalGames}
+            accentColor={C.event}
+            colSpan={3}
+            rowSpan={2}
+            href="/library"
+          />
 
-        {/* Row 5-8: Quick Actions (6×4) */}
-        <QuickActionsWidget />
+          {/* Row 5-8: Quick Actions (6×4) */}
+          <QuickActionsWidget />
 
-        {/* Row 7-9: Leaderboard (6×3) */}
-        <LeaderboardWidget sessions={recentSessions} />
+          {/* Row 7-9: Leaderboard (6×3) */}
+          <LeaderboardWidget sessions={recentSessions} />
 
-        {/* Row 9-10: Trending (6×2) */}
-        <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
-      </div>
+          {/* Row 9-10: Trending (6×2) */}
+          <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
+        </div>
+      </ErrorBoundary>
     </div>
   );
 }

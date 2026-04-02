@@ -32,6 +32,7 @@ import { SessionScoreTable } from '../../meeple-card-features/SessionScoreTable'
 import { SessionStatusBadge } from '../../meeple-card-features/SessionStatusBadge';
 import { SessionTurnSequence } from '../../meeple-card-features/SessionTurnSequence';
 import { SnapshotHistorySlider } from '../../meeple-card-features/SnapshotHistorySlider';
+import { SymbolStrip } from '../../meeple-card-features/SymbolStrip';
 import { TimeTravelOverlay } from '../../meeple-card-features/TimeTravelOverlay';
 import {
   EntityIndicator,
@@ -44,6 +45,8 @@ import {
   DRAWER_ENTITY_TYPE_MAP,
   meepleCardVariants,
   contentVariants,
+  getCardFrameStyle,
+  CARD_SECTION_HEIGHTS,
 } from '../../meeple-card-styles';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
 import { CardActions, CardActionStrip } from '../parts/CardActions';
@@ -132,6 +135,21 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
     stateLabel,
     coverLabels,
     subtypeIcons,
+    identityChip1,
+    identityChip2,
+    playerCountDisplay,
+    playTimeDisplay,
+    gamesPlayed,
+    winRate,
+    winnerScore,
+    sessionDate,
+    conversationCount,
+    agentAccuracy,
+    linkedKbCount,
+    pageCount,
+    chunkCount,
+    bottomStatLabel,
+    bottomStatValue,
   } = props;
 
   const variant = 'featured' as const;
@@ -232,6 +250,7 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
       )}
       style={
         {
+          ...getCardFrameStyle('featured'),
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
           viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
@@ -254,6 +273,7 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
       data-variant={variant}
+      data-card-root
     >
       {selectable && (
         <BulkSelectCheckbox
@@ -305,6 +325,23 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
         subtypeIcons={subtypeIcons}
         stateLabel={stateLabel}
         actionStrip={stripElement}
+      />
+
+      <SymbolStrip
+        entity={entity}
+        identityChip1={identityChip1}
+        identityChip2={identityChip2}
+        playerCountDisplay={playerCountDisplay}
+        playTimeDisplay={playTimeDisplay}
+        gamesPlayed={gamesPlayed}
+        winRate={winRate}
+        winnerScore={winnerScore}
+        sessionDate={sessionDate}
+        conversationCount={conversationCount}
+        agentAccuracy={agentAccuracy}
+        linkedKbCount={linkedKbCount}
+        pageCount={pageCount}
+        chunkCount={chunkCount}
       />
 
       {/* Content area */}
@@ -456,6 +493,20 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
         {metadata.length > 0 && <MetadataChips metadata={metadata} variant={variant} />}
 
         {/* Action buttons are rendered by CardActions above (featured variant) */}
+      </div>
+
+      {/* Bottom bar */}
+      <div
+        className="flex items-center justify-between px-2 shrink-0 bg-black/70 border-t border-white/5"
+        style={{ height: `${CARD_SECTION_HEIGHTS.bottomBar}px` }}
+      >
+        <span className="text-[9px] text-white/40 truncate">{subtitle}</span>
+        {bottomStatValue && (
+          <span className="text-[9px] text-white/60 shrink-0">
+            {bottomStatLabel ? `${bottomStatLabel} ` : ''}
+            {bottomStatValue}
+          </span>
+        )}
       </div>
 
       {/* Agent action footer */}

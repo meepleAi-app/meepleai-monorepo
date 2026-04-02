@@ -513,5 +513,19 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithCronSchedule("0 0 2 * * ?")
                 .WithDescription("Calcola daily il coverage score KB per ogni gioco"));
         });
+
+        // KB-09: Daily pre-calculation of suggested questions for all shared games with completed KB
+        services.AddQuartz(q =>
+        {
+            q.AddJob<KbSuggestedQuestionsJob>(opts => opts
+                .WithIdentity("kb-suggested-questions-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("kb-suggested-questions-job", "knowledge-base")
+                .WithIdentity("kb-suggested-questions-trigger", "knowledge-base")
+                .WithCronSchedule("0 30 3 * * ?")
+                .WithDescription("Genera daily le domande suggerite per ogni gioco con KB completata"));
+        });
     }
 }

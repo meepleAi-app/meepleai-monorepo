@@ -378,12 +378,39 @@ export function ActiveSessionPageContent() {
 
       // Custom dice → standalone DiceRoller widget
       if (activeTool.startsWith('custom-dice-')) {
-        return <ToolkitDiceRoller />;
+        const diceIdx = parseInt(activeTool.replace('custom-dice-', ''), 10);
+        const diceDto = toolkit.diceTools[diceIdx];
+        if (diceDto) {
+          const diceConfig = diceDto.customFaces?.length
+            ? { name: diceDto.name, customFaces: diceDto.customFaces, count: diceDto.quantity }
+            : {
+                name: diceDto.name,
+                sides: parseInt(diceDto.diceType.replace(/\D/g, ''), 10) || 6,
+                count: diceDto.quantity,
+              };
+          return <ToolkitDiceRoller config={diceConfig} />;
+        }
       }
 
       // Custom timer → standalone Timer widget
       if (activeTool.startsWith('custom-timer-')) {
-        return <ToolkitTimer />;
+        const timerIdx = parseInt(activeTool.replace('custom-timer-', ''), 10);
+        const timerDto = toolkit.timerTools[timerIdx];
+        if (timerDto) {
+          const timerType =
+            timerDto.timerType === 'countup'
+              ? 'countup'
+              : timerDto.timerType === 'turn'
+                ? 'turn'
+                : 'countdown';
+          return (
+            <ToolkitTimer
+              name={timerDto.name}
+              defaultSeconds={timerDto.durationSeconds}
+              type={timerType}
+            />
+          );
+        }
       }
 
       // Card and other unimplemented types — placeholder

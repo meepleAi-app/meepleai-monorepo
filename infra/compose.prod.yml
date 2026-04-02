@@ -64,6 +64,7 @@ services:
       - ./secrets/prod/oauth.secret
       - ./secrets/prod/redis.secret
       - ./secrets/prod/embedding-service.secret
+      - ./secrets/prod/email.secret
       - ./secrets/prod/storage.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -260,7 +261,7 @@ services:
       - '--storage.tsdb.retention.size=50GB'
       - '--web.enable-lifecycle'
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro  # prod-specific labels
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       - prometheus-prod:/prometheus
     deploy:

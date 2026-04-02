@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 
+import { NotFoundError } from '../core/errors';
 import {
   AgentConfigDtoSchema,
   type AgentConfigDto,
@@ -902,14 +903,21 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      * @returns Loan status or null if game is not on loan
      */
     async getLoanStatus(gameId: string): Promise<LoanStatusResponse | null> {
-      return httpClient.get<LoanStatusResponse>(
-        `/api/v1/library/games/${gameId}/loan-status`,
-        z.object({
-          isOnLoan: z.boolean(),
-          borrowerInfo: z.string().nullable(),
-          loanedSince: z.string().nullable(),
-        })
-      );
+      try {
+        return await httpClient.get<LoanStatusResponse>(
+          `/api/v1/library/games/${gameId}/loan-status`,
+          z.object({
+            isOnLoan: z.boolean(),
+            borrowerInfo: z.string().nullable(),
+            loanedSince: z.string().nullable(),
+          })
+        );
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          return null;
+        }
+        throw error;
+      }
     },
 
     /**

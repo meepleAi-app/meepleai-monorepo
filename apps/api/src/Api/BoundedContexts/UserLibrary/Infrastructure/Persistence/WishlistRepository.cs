@@ -166,8 +166,9 @@ internal class WishlistRepository : RepositoryBase, IWishlistRepository
         var updatedAtProp = typeof(WishlistItem).GetProperty("UpdatedAt");
         updatedAtProp?.SetValue(item, entity.UpdatedAt);
 
-        var visibilityProp = typeof(WishlistItem).GetProperty("Visibility");
-        visibilityProp?.SetValue(item, (WishlistVisibility)entity.Visibility);
+        var visibilityProp = typeof(WishlistItem).GetProperty("Visibility")
+            ?? throw new InvalidOperationException("WishlistItem.Visibility property not found via reflection");
+        visibilityProp.SetValue(item, (WishlistVisibility)entity.Visibility);
 
         // Clear domain events from Create method
         item.ClearDomainEvents();

@@ -194,6 +194,9 @@ internal static class UserLibraryCoreEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
+            if (newQuota < 0)
+                return Results.BadRequest("newQuota must be non-negative");
+
             var (authenticated, session, error) = context.TryGetAuthenticatedUser();
             if (!authenticated) return error!;
 

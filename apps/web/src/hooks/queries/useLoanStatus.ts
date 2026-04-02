@@ -1,8 +1,8 @@
 /**
  * useLoanStatus - TanStack Query hooks for loan flow
  *
- * Provides query and mutations for marking games as on loan,
- * marking them as returned, and fetching current loan status.
+ * Provides query and mutations for marking games as on loan
+ * and fetching current loan status.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -37,25 +37,6 @@ export function useMarkAsOnLoan(gameId: string) {
   return useMutation({
     mutationFn: (borrowerInfo: string) =>
       api.library.updateGameState(gameId, { newState: 'InPrestito', stateNotes: borrowerInfo }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: libraryKeys.loanStatus(gameId) });
-      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
-    },
-  });
-}
-
-/**
- * Hook to mark a game as returned (state → Owned)
- *
- * Invalidates loan-status and library queries on success.
- *
- * @param gameId - Game UUID
- * @returns UseMutationResult for marking game as returned
- */
-export function useMarkAsReturned(gameId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => api.library.updateGameState(gameId, { newState: 'Owned', stateNotes: null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: libraryKeys.loanStatus(gameId) });
       queryClient.invalidateQueries({ queryKey: libraryKeys.all });

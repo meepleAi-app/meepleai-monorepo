@@ -7,6 +7,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
+import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 import type { LibraryForDowngrade } from '@/lib/api/schemas/library.schemas';
 
@@ -22,7 +23,7 @@ import type { LibraryForDowngrade } from '@/lib/api/schemas/library.schemas';
  */
 export function useLibraryDowngradePreview(newQuota: number, enabled: boolean) {
   return useQuery<LibraryForDowngrade, Error>({
-    queryKey: ['library', 'downgrade-preview', newQuota],
+    queryKey: libraryKeys.downgradePreview(newQuota),
     queryFn: () => api.library.getLibraryForDowngrade(newQuota),
     enabled,
     staleTime: 0, // Always fresh — quota context can change

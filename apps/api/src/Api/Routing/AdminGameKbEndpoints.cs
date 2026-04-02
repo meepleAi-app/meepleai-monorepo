@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.RemoveDocumentFromKb;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminGameKbDocuments;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminKbFeedback;
 using Api.Filters;
 using MediatR;
 
@@ -9,6 +10,7 @@ namespace Api.Routing;
 /// Admin endpoints for per-game KB document management.
 /// KB-01: List indexed documents for a game.
 /// KB-02: Remove a document from a game's KB.
+/// KB-08: Paginated feedback review per-game.
 /// </summary>
 internal static class AdminGameKbEndpoints
 {
@@ -44,6 +46,24 @@ internal static class AdminGameKbEndpoints
         })
         .WithName("RemoveDocumentFromKb")
         .WithSummary("Rimuove un documento dalla KB di un gioco (admin)");
+
+        // KB-08: GET /api/v1/admin/kb/games/{gameId}/feedback
+        g.MapGet("/{gameId:guid}/feedback", async (
+            Guid gameId,
+            string? outcome,
+            DateTime? from,
+            int? page,
+            int? pageSize,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var result = await mediator.Send(new GetAdminKbFeedbackQuery(
+                gameId, outcome, from,
+                page ?? 1, pageSize ?? 20), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetAdminKbFeedback")
+        .WithSummary("Lista feedback utenti su risposte KB per-gioco (admin)");
 
         return group;
     }

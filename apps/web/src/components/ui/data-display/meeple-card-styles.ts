@@ -256,6 +256,5 @@ export function getCardFrameStyle(variant: keyof typeof CARD_DIMENSIONS): React.
     overflow: 'hidden',
     position: 'relative',
     flexShrink: 0,
-    aspectRatio: '5/7',
   };
 }

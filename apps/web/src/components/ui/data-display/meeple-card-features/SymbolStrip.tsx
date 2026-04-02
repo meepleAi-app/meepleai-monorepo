@@ -27,11 +27,9 @@ interface SymbolStripProps {
 
 function MetricPill({ icon, value }: { icon: string; value: string | number }) {
   return (
-    <span
-      title={icon}
-      className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono bg-black/40 border border-white/10 text-white/80 whitespace-nowrap"
-    >
-      {String(value)}
+    <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-mono bg-black/40 border border-white/10 text-white/80 whitespace-nowrap">
+      <span>{icon}</span>
+      <span>{value}</span>
     </span>
   );
 }

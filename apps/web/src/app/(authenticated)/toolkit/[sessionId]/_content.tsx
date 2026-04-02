@@ -394,7 +394,23 @@ export function ActiveSessionPageContent() {
 
       // Custom timer → standalone Timer widget
       if (activeTool.startsWith('custom-timer-')) {
-        return <ToolkitTimer />;
+        const timerIdx = parseInt(activeTool.replace('custom-timer-', ''), 10);
+        const timerDto = toolkit.timerTools[timerIdx];
+        if (timerDto) {
+          const timerType =
+            timerDto.timerType === 'countup'
+              ? 'countup'
+              : timerDto.timerType === 'turn'
+                ? 'turn'
+                : 'countdown';
+          return (
+            <ToolkitTimer
+              name={timerDto.name}
+              defaultSeconds={timerDto.durationSeconds}
+              type={timerType}
+            />
+          );
+        }
       }
 
       // Card and other unimplemented types — placeholder

@@ -106,11 +106,11 @@ export function DowngradeTierModal({
                     <div
                       key={g.entryId}
                       className="flex items-center gap-3 p-2 rounded border cursor-pointer hover:bg-muted/50"
-                      onClick={() => toggleRemove(g.entryId)}
+                      onClick={() => toggleRemove(g.gameId)}
                     >
                       <Checkbox
-                        checked={selectedToRemove.has(g.entryId)}
-                        onCheckedChange={() => toggleRemove(g.entryId)}
+                        checked={selectedToRemove.has(g.gameId)}
+                        onCheckedChange={() => toggleRemove(g.gameId)}
                       />
                       <div className="flex-1 min-w-0">
                         <MeepleCard

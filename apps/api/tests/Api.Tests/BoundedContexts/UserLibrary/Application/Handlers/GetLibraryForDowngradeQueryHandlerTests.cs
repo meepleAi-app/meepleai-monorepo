@@ -89,6 +89,32 @@ public class GetLibraryForDowngradeQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Handle_LibraryExactlyAtQuota_AllGoToKeepNoneToRemove()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameIds = Enumerable.Range(0, 3).Select(_ => Guid.NewGuid()).ToArray();
+        var entries = BuildEntries(userId, gameIds);
+
+        _mockRepository
+            .Setup(r => r.GetUserLibraryPaginatedAsync(
+                userId, null, null, null, "addedAt", true, 1, 1000, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((entries, entries.Count));
+
+        SeedSharedGames(gameIds);
+
+        // Quota exactly equals library size
+        var query = new GetLibraryForDowngradeQuery(userId, NewQuota: 3);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.GamesToKeep.Should().HaveCount(3);
+        result.GamesToRemove.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Handle_QuotaLessThanEntries_SplitsCorrectly()
     {
         // Arrange
@@ -177,6 +203,51 @@ public class GetLibraryForDowngradeQueryHandlerTests : IDisposable
         result.GamesToKeep.Should().HaveCount(2);
         result.GamesToKeep[0].IsFavorite.Should().BeTrue();
         result.GamesToKeep[0].GameId.Should().Be(favoriteGameId);
+    }
+
+    #endregion
+
+    #region Sort order — TimesPlayed tiebreak
+
+    [Fact]
+    public async Task Handle_NonFavorites_SortedByTimesPlayedDescending()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var highPlayGameId = Guid.NewGuid();
+        var lowPlayGameId = Guid.NewGuid();
+
+        var highPlayEntry = new UserLibraryEntry(Guid.NewGuid(), userId, highPlayGameId);
+        highPlayEntry.RecordGameSession(DateTime.UtcNow.AddDays(-3), 60);
+        highPlayEntry.RecordGameSession(DateTime.UtcNow.AddDays(-2), 60);
+        highPlayEntry.RecordGameSession(DateTime.UtcNow.AddDays(-1), 60); // 3 plays
+
+        var lowPlayEntry = new UserLibraryEntry(Guid.NewGuid(), userId, lowPlayGameId);
+        lowPlayEntry.RecordGameSession(DateTime.UtcNow.AddDays(-1), 60); // 1 play
+
+        // lowPlayEntry is first in input list to confirm sort reorders it
+        var entries = new List<UserLibraryEntry> { lowPlayEntry, highPlayEntry };
+
+        _mockRepository
+            .Setup(r => r.GetUserLibraryPaginatedAsync(
+                userId, null, null, null, "addedAt", true, 1, 1000, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((entries, entries.Count));
+
+        SeedSharedGames(new[] { highPlayGameId, lowPlayGameId });
+
+        // Keep only 1 — the entry with the most plays must survive
+        var query = new GetLibraryForDowngradeQuery(userId, NewQuota: 1);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.GamesToKeep.Should().HaveCount(1);
+        result.GamesToKeep[0].GameId.Should().Be(highPlayGameId);
+        result.GamesToKeep[0].TimesPlayed.Should().Be(3);
+
+        result.GamesToRemove.Should().HaveCount(1);
+        result.GamesToRemove[0].GameId.Should().Be(lowPlayGameId);
     }
 
     #endregion

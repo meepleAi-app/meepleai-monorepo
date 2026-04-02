@@ -61,6 +61,8 @@ services:
       Frontend__BaseUrl: "https://meepleai.app"
       Authentication__SessionCookie__Secure: "true"
       Authentication__SessionCookie__SameSite: "Lax"
+      # Ollama disabled in staging — all LLM traffic goes to OpenRouter
+      AI__Providers__Ollama__Enabled: "false"
     volumes:
       - ./secrets:/app/infra/secrets:ro
     labels:
@@ -150,16 +152,13 @@ services:
       - "traefik.http.middlewares.strip-services-smoldocling.stripprefix.prefixes=/services/smoldocling"
       - "traefik.http.services.smoldocling.loadbalancer.server.port=8002"
 
+  # Ollama excluded from staging: 4GB RAM reservation saved on CAX21 (8GB total).
+  # All LLM traffic uses OpenRouter. Re-enable with profile 'ollama' if needed.
   ollama:
-    restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.ollama.rule=Host(`meepleai.app`) && PathPrefix(`/services/ollama`)"
-      - "traefik.http.routers.ollama.entrypoints=websecure"
-      - "traefik.http.routers.ollama.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.ollama.middlewares=integration-auth,strip-services-ollama"
-      - "traefik.http.middlewares.strip-services-ollama.stripprefix.prefixes=/services/ollama"
-      - "traefik.http.services.ollama.loadbalancer.server.port=11434"
+    profiles: [ollama-local-dev-only]
+
+  ollama-pull:
+    profiles: [ollama-local-dev-only]
 
   # ===========================================================================
   # Monitoring — Traefik basic auth

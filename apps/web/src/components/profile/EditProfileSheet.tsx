@@ -87,6 +87,7 @@ export function EditProfileSheet({ currentDisplayName }: EditProfileSheetProps) 
               id="displayName"
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !isSaving && handleSave()}
               placeholder="Il tuo nome"
               maxLength={50}
               disabled={isSaving}

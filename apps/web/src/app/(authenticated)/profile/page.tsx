@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -330,7 +330,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   const { data: profile } = useQuery({
-    queryKey: [...userKeys.current(), 'profile'],
+    queryKey: userKeys.profile(),
     queryFn: () => api.auth.getProfile(),
     staleTime: 5 * 60 * 1000,
   });
@@ -347,19 +347,26 @@ export default function ProfilePage() {
   const displayName = profile?.displayName ?? user?.displayName ?? user?.email ?? 'Player';
   const avatarUrl = profile?.avatarUrl ?? null;
 
-  async function handleAvatarUpload(file: File, previewUrl: string): Promise<void> {
-    // Optimistic update immediato con blob URL
-    queryClient.setQueryData([...userKeys.current(), 'profile'], (prev: typeof profile) =>
-      prev ? { ...prev, avatarUrl: previewUrl } : prev
-    );
-    const result = await api.auth.uploadAvatar(file);
-    if (result?.avatarUrl) {
-      queryClient.setQueryData([...userKeys.current(), 'profile'], (prev: typeof profile) =>
-        prev ? { ...prev, avatarUrl: result.avatarUrl } : prev
+  const handleAvatarUpload = useCallback(
+    async (file: File, previewUrl: string): Promise<void> => {
+      // Optimistic update immediato con blob URL
+      queryClient.setQueryData(userKeys.profile(), (prev: typeof profile) =>
+        prev ? { ...prev, avatarUrl: previewUrl } : prev
       );
-    }
-    await queryClient.invalidateQueries({ queryKey: userKeys.all });
-  }
+      const result = await api.auth.uploadAvatar(file);
+      if (result?.avatarUrl) {
+        queryClient.setQueryData(userKeys.profile(), (prev: typeof profile) =>
+          prev ? { ...prev, avatarUrl: result.avatarUrl } : prev
+        );
+      }
+      await queryClient.invalidateQueries({ queryKey: userKeys.all });
+      // Revoke the blob URL only after the server response has been applied and
+      // the query cache is updated with the real avatar URL — prevents a blank
+      // avatar during the optimistic window.
+      URL.revokeObjectURL(previewUrl);
+    },
+    [queryClient]
+  );
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">

@@ -81,6 +81,18 @@ import {
 
 import type { HttpClient } from '../core/httpClient';
 
+export interface LoanStatusResponse {
+  isOnLoan: boolean;
+  borrowerInfo: string | null;
+  loanedSince: string | null;
+}
+
+const LoanStatusResponseSchema = z.object({
+  isOnLoan: z.boolean(),
+  borrowerInfo: z.string().nullable(),
+  loanedSince: z.string().nullable(),
+});
+
 export interface CreateLibraryClientParams {
   httpClient: HttpClient;
 }
@@ -143,6 +155,9 @@ export interface LibraryClient {
   getEntityLinkCount(entityType: string, entityId: string): Promise<number>;
   createEntityLink(request: CreateEntityLinkRequest): Promise<EntityLinkDto>;
   deleteEntityLink(linkId: string): Promise<void>;
+  // Loan Status (Library Improvements)
+  getLoanStatus(gameId: string): Promise<LoanStatusResponse | null>;
+  sendLoanReminder(gameId: string, customMessage?: string): Promise<void>;
   // Ownership Declaration (RAG Access)
   declareOwnership(gameId: string): Promise<OwnershipResult>;
   // Toolkit Dashboard (Issue #5147 — Epic B4)
@@ -808,6 +823,32 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      */
     async deleteEntityLink(linkId: string): Promise<void> {
       await httpClient.delete(`/api/v1/library/entity-links/${linkId}`);
+    },
+
+    // ========== Loan Status (Library Improvements) ==========
+
+    /**
+     * Get loan status for a game in user's library
+     * @param gameId - Game UUID
+     * @returns Loan status or null if not on loan / not found
+     */
+    async getLoanStatus(gameId: string): Promise<LoanStatusResponse | null> {
+      return httpClient.get<LoanStatusResponse>(
+        `/api/v1/library/games/${gameId}/loan-status`,
+        LoanStatusResponseSchema
+      );
+    },
+
+    /**
+     * Send a loan reminder to the borrower
+     * @param gameId - Game UUID
+     * @param customMessage - Optional custom message to include
+     */
+    async sendLoanReminder(gameId: string, customMessage?: string): Promise<void> {
+      await httpClient.post(
+        `/api/v1/library/games/${gameId}/remind-loan`,
+        customMessage !== undefined ? { customMessage } : {}
+      );
     },
 
     // ========== Ownership Declaration (RAG Access) ==========

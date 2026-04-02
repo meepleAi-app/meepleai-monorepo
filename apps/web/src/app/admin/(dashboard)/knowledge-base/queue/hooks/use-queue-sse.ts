@@ -145,7 +145,7 @@ export function useQueueSSE(enabled: boolean = true) {
         setConnectionState('error');
       }
     };
-  }, [enabled, cleanup, handleEvent]);
+  }, [enabled, cleanup, handleEvent, invalidateQueue]);
 
   // Keep connectRef up-to-date to avoid stale closures in reconnect timers
   connectRef.current = connect;

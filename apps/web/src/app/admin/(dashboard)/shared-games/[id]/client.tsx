@@ -298,6 +298,12 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link href={`/admin/shared-games/${gameId}/knowledge-base`}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Bot className="h-4 w-4" />
+              Knowledge Base
+            </Button>
+          </Link>
           <Link href={`/admin/shared-games/${gameId}/rag-setup`}>
             <Button variant="outline" size="sm" className="gap-2">
               <Settings2 className="h-4 w-4" />

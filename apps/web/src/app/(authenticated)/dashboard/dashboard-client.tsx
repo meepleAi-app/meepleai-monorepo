@@ -730,6 +730,16 @@ export function DashboardClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- store actions are stable Zustand references
   }, []);
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) fetchRecentSessions(8);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    // fetchRecentSessions is a stable Zustand action reference
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const latestSession = recentSessions[0];
 
   const monthlyPlays = stats?.monthlyPlays ?? 0;

@@ -440,9 +440,9 @@ jobs:
 
             echo "🚀 Deploying services:$SERVICES"
 
-            # Deploy only changed services
+            # Deploy only changed services (--force-recreate ensures container restarts even if image digest unchanged)
             docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
-              --profile minimal up -d --no-deps $SERVICES
+              --profile minimal up -d --no-deps --force-recreate $SERVICES
 
             # Health check via docker exec (port not exposed on host)
             echo "⏳ Waiting for API health..."

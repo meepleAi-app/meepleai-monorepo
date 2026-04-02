@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.SubmitKbFeedback;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetUserGameKbStatus;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,21 @@ internal static class UserGameKbEndpoints
 {
     public static RouteGroupBuilder MapUserGameKbEndpoints(this RouteGroupBuilder group)
     {
+        // KB-03: stato KB per un gioco (utente)
+        group.MapGet("/games/{gameId:guid}/knowledge-base", async (
+            Guid gameId,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var dto = await mediator.Send(new GetUserGameKbStatusQuery(gameId), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(dto);
+        })
+        .RequireSession()
+        .WithName("GetUserGameKbStatus")
+        .WithTags("Games", "KnowledgeBase")
+        .WithSummary("Stato della Knowledge Base per il gioco");
+
         // KB-06: feedback utente su risposta chat
         group.MapPost("/games/{gameId:guid}/knowledge-base/feedback", async (
             Guid gameId,

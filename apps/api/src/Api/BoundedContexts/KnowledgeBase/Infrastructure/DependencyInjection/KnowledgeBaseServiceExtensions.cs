@@ -291,6 +291,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
         services.AddScoped<IAdminRagStrategyRepository, AdminRagStrategyRepository>(); // Issue #5314: Admin strategy CRUD
         services.AddScoped<IModelCompatibilityRepository, ModelCompatibilityRepository>(); // Issue #5496: Model compatibility matrix + change log
+        services.AddScoped<IKbUserFeedbackRepository, KbUserFeedbackRepository>(); // KB-06: User feedback on KB chat responses
 
         // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
         services.AddScoped<IVectorStoreAdapter, PgVectorStoreAdapter>();
@@ -497,6 +498,34 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithIdentity("model-availability-check-trigger", "knowledge-base")
                 .WithCronSchedule("0 0 */6 * * ?")
                 .WithDescription("Runs every 6 hours to verify configured LLM models are still available on OpenRouter"));
+        });
+
+        // KB-05: Daily KB coverage score computation for all shared games
+        services.AddQuartz(q =>
+        {
+            q.AddJob<KbCoverageComputeJob>(opts => opts
+                .WithIdentity("kb-coverage-compute-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("kb-coverage-compute-job", "knowledge-base")
+                .WithIdentity("kb-coverage-compute-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 2 * * ?")
+                .WithDescription("Calcola daily il coverage score KB per ogni gioco"));
+        });
+
+        // KB-09: Daily pre-calculation of suggested questions for all shared games with completed KB
+        services.AddQuartz(q =>
+        {
+            q.AddJob<KbSuggestedQuestionsJob>(opts => opts
+                .WithIdentity("kb-suggested-questions-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("kb-suggested-questions-job", "knowledge-base")
+                .WithIdentity("kb-suggested-questions-trigger", "knowledge-base")
+                .WithCronSchedule("0 30 3 * * ?")
+                .WithDescription("Genera daily le domande suggerite per ogni gioco con KB completata"));
         });
     }
 }

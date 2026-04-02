@@ -597,6 +597,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 isEditor={isEditor}
                 isAdmin={isAdmin}
                 gameTitle={game?.title}
+                gameId={thread?.gameId}
+                threadId={threadId}
                 isTtsSupported={isTtsSupported}
                 ttsEnabled={voicePrefs.ttsEnabled}
                 isSpeaking={isSpeaking}

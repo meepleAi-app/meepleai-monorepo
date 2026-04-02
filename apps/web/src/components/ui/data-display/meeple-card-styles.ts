@@ -199,3 +199,35 @@ export const coverOverlayStyles = {
     info: 'bg-blue-500/80 text-white',
   },
 } as const;
+
+// ─── Warm Heritage MTG Frame Tokens ────────────────────────────────────────
+
+export const CARD_FRAME = {
+  outerBorderGradient: 'linear-gradient(180deg, #c8963a 0%, #e8b84b 50%, #c8963a 100%)',
+  innerBorder: 'rgba(200, 150, 58, 0.35)',
+  background: 'radial-gradient(ellipse at center, #1a1208 0%, #0d0905 100%)',
+  framePadding: '3px',
+  cornerRadiusOuter: '8px',
+  cornerRadiusInner: '5px',
+} as const;
+
+// ─── Fixed Card Dimensions (5:7 aspect ratio) ──────────────────────────────
+
+export const CARD_DIMENSIONS = {
+  grid: { width: 200, height: 280 },
+  compact: { width: 160, height: 224 },
+  featured: { width: 280, height: 392 },
+  hero: { width: 360, height: 504 },
+  list: { width: 80, height: 112 },
+  expanded: { width: 320, height: 448 },
+} as const;
+
+// ─── Section Heights (px, within grid card) ────────────────────────────────
+
+export const CARD_SECTION_HEIGHTS = {
+  titleBar: 32,
+  symbolStrip: 26,
+  footer: 28,
+  bottomBar: 24,
+  // artBox e textBox: spazio rimanente calcolato dinamicamente
+} as const;

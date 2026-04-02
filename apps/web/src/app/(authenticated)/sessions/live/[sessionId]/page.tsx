@@ -19,6 +19,8 @@ import type { GameOverPlayer } from '@/components/session/live/GameOverModal';
 import { SessionCardParent } from '@/components/session/live/SessionCardParent';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
+import { PlayModeMobile } from './play-mode-mobile';
+
 const AVATAR_COLORS = [
   '#ef4444',
   '#3b82f6',
@@ -29,8 +31,6 @@ const AVATAR_COLORS = [
   '#ec4899',
   '#14b8a6',
 ];
-
-import { PlayModeMobile } from './play-mode-mobile';
 
 interface LiveSessionPageProps {
   params: Promise<{ sessionId: string }>;

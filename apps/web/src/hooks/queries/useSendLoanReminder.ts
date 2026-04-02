@@ -1,24 +1,22 @@
 /**
- * useSendLoanReminder - TanStack Query mutation hook for sending loan reminders
+ * useSendLoanReminder - TanStack Query mutation hook for loan reminders
  *
- * Sends a loan reminder to the borrower for a given game.
- * Handles rate-limit (409) errors with a specific message.
+ * Library Improvements: Loan flow UI
+ *
+ * Sends a reminder notification to a borrower who has not yet returned a game.
+ * Handles 409 conflict (already reminded in last 24h) with a specific toast message.
  */
 
 import { useMutation } from '@tanstack/react-query';
 
 import { toast } from '@/components/layout/Toast';
 import { api } from '@/lib/api';
-import { ConflictError } from '@/lib/api/core/errors';
 
 /**
  * Hook to send a loan reminder for a game
  *
- * Shows a success toast on success, or an error toast on failure.
- * Handles 409 (rate limit: already sent in last 24h) specifically.
- *
  * @param gameId - Game UUID
- * @returns UseMutationResult for sending loan reminder
+ * @returns UseMutationResult — call `mutate(customMessage?)` to trigger
  */
 export function useSendLoanReminder(gameId: string) {
   return useMutation({
@@ -26,11 +24,11 @@ export function useSendLoanReminder(gameId: string) {
     onSuccess: () => {
       toast.success('Promemoria inviato correttamente.');
     },
-    onError: (error: unknown) => {
-      if (error instanceof ConflictError) {
-        toast.error('Hai già inviato un promemoria nelle ultime 24 ore.');
+    onError: (error: Error) => {
+      if (error.message.includes('409')) {
+        toast.error('Promemoria già inviato nelle ultime 24 ore.');
       } else {
-        toast.error("Errore durante l'invio del promemoria.");
+        toast.error('Impossibile inviare il promemoria.');
       }
     },
   });

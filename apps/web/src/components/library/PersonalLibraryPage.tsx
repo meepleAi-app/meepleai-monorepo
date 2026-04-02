@@ -21,49 +21,16 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useLayoutResponsive } from '@/components/layout/LayoutProvider';
-import { SectionBlock } from '@/components/ui/SectionBlock';
 import { useLibrary } from '@/hooks/queries/useLibrary';
-import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 
-import { CreateGameCtaCard } from './CreateGameCtaCard';
 import { LibraryEmptyState } from './LibraryEmptyState';
-import { LibraryFiltersPanel } from './LibraryFiltersPanel';
+import { LIBRARY_FILTER_CHIPS, LibraryFiltersPanel, applyFilter } from './LibraryFiltersPanel';
 import { LibraryGameGrid } from './LibraryGameGrid';
 import { LibraryHeroBanner } from './LibraryHeroBanner';
 import { LibraryPageHeader } from './LibraryPageHeader';
 import { LibraryToolbar } from './LibraryToolbar';
 import { UsageWidget } from './UsageWidget';
-
-// ── Filter logic ────────────────────────────────────────────────────────────
-
-function applyFilter(items: UserLibraryEntry[], filterId: string): UserLibraryEntry[] {
-  switch (filterId) {
-    case 'recent':
-      return [...items].sort(
-        (a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
-      );
-    case 'rating':
-      return [...items].sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0));
-    case 'players-2-4':
-      return items.filter(
-        g => g.minPlayers != null && g.maxPlayers != null && g.minPlayers <= 4 && g.maxPlayers >= 2
-      );
-    case 'under-60':
-      return items.filter(g => g.playingTimeMinutes != null && g.playingTimeMinutes <= 60);
-    case 'most-played':
-      // playCount not yet on UserLibraryEntry DTO — sort by addedAt (oldest first = likely most played)
-      return [...items].sort(
-        (a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
-      );
-    case 'strategy':
-      // category/mechanics not yet on UserLibraryEntry DTO — requires backend GetUserGamesQuery filter
-      // For now, return all items (chip acts as no-op until backend wired)
-      return items;
-    default:
-      return items;
-  }
-}
 
 // ── Main component ──────────────────────────────────────────────────────────
 
@@ -188,44 +155,21 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
 
           {/* Filter chips row + view toggle */}
           <LibraryFiltersPanel
+            chips={LIBRARY_FILTER_CHIPS}
             activeFilter={activeFilter}
             onFilterChange={setActiveFilter}
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewChange={setViewMode}
+            isMobile={isMobile}
           />
 
-          {/* Section 1: Shared catalog games */}
-          {(filteredCatalog.length > 0 || !query) && (
-            <SectionBlock icon={'\ud83d\udcda'} title="Dal Catalogo">
-              <LibraryGameGrid
-                items={filteredCatalog}
-                effectiveView={effectiveView}
-                emptyMessage="Nessun gioco del catalogo corrisponde alla ricerca."
-              />
-            </SectionBlock>
-          )}
-
-          {/* Section 2: Private/custom games */}
-          {(filteredCustom.length > 0 || !query) && (
-            <SectionBlock icon={'\ud83c\udfae'} title="Giochi Personalizzati">
-              {filteredCustom.length === 0 && !query ? (
-                <CreateGameCtaCard />
-              ) : (
-                <>
-                  <LibraryGameGrid
-                    items={filteredCustom}
-                    effectiveView={effectiveView}
-                    emptyMessage="Nessun gioco personalizzato corrisponde alla ricerca."
-                  />
-                  {filteredCustom.length > 0 && (
-                    <div className="mt-3">
-                      <CreateGameCtaCard />
-                    </div>
-                  )}
-                </>
-              )}
-            </SectionBlock>
-          )}
+          {/* Game sections: catalog + custom */}
+          <LibraryGameGrid
+            filteredCatalog={filteredCatalog}
+            filteredCustom={filteredCustom}
+            effectiveView={effectiveView}
+            searchQuery={searchQuery}
+          />
         </div>
 
         {/* Sidebar: compact quota widget (desktop only) */}

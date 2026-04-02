@@ -11,7 +11,6 @@
 
 import { z } from 'zod';
 
-import { NotFoundError } from '../core/errors';
 import {
   AgentConfigDtoSchema,
   type AgentConfigDto,
@@ -35,7 +34,6 @@ import {
   SharedLibrarySchema,
   GameDetailDtoSchema,
   LabelDtoSchema,
-  LibraryForDowngradeSchema,
   type PaginatedLibraryResponse,
   type UserLibraryStats,
   type UserLibraryEntry,
@@ -53,7 +51,6 @@ import {
   type GameDetailDto,
   type LabelDto,
   type CreateCustomLabelRequest,
-  type LibraryForDowngrade,
 } from '../schemas/library.schemas';
 import {
   PendingMigrationDtoSchema,
@@ -83,6 +80,51 @@ import {
 } from '../schemas/toolkit.schemas';
 
 import type { HttpClient } from '../core/httpClient';
+
+export interface LoanStatusResponse {
+  isOnLoan: boolean;
+  borrowerInfo: string | null;
+  loanedSince: string | null;
+}
+
+const LoanStatusResponseSchema = z.object({
+  isOnLoan: z.boolean(),
+  borrowerInfo: z.string().nullable(),
+  loanedSince: z.string().nullable(),
+});
+
+// Library Downgrade Preview (Library Improvements)
+export interface LibraryDowngradeGameDto {
+  entryId: string;
+  gameId: string;
+  gameTitle: string;
+  gameImageUrl: string | null;
+  isFavorite: boolean;
+  timesPlayed: number;
+  addedAt: string;
+  lastPlayedAt: string | null;
+}
+
+export interface LibraryForDowngradeResponse {
+  gamesToKeep: LibraryDowngradeGameDto[];
+  gamesToRemove: LibraryDowngradeGameDto[];
+}
+
+const LibraryDowngradeGameDtoSchema = z.object({
+  entryId: z.string(),
+  gameId: z.string(),
+  gameTitle: z.string(),
+  gameImageUrl: z.string().nullable(),
+  isFavorite: z.boolean(),
+  timesPlayed: z.number(),
+  addedAt: z.string(),
+  lastPlayedAt: z.string().nullable(),
+});
+
+const LibraryForDowngradeResponseSchema = z.object({
+  gamesToKeep: z.array(LibraryDowngradeGameDtoSchema),
+  gamesToRemove: z.array(LibraryDowngradeGameDtoSchema),
+});
 
 export interface CreateLibraryClientParams {
   httpClient: HttpClient;
@@ -146,6 +188,9 @@ export interface LibraryClient {
   getEntityLinkCount(entityType: string, entityId: string): Promise<number>;
   createEntityLink(request: CreateEntityLinkRequest): Promise<EntityLinkDto>;
   deleteEntityLink(linkId: string): Promise<void>;
+  // Loan Status (Library Improvements)
+  getLoanStatus(gameId: string): Promise<LoanStatusResponse | null>;
+  sendLoanReminder(gameId: string, customMessage?: string): Promise<void>;
   // Ownership Declaration (RAG Access)
   declareOwnership(gameId: string): Promise<OwnershipResult>;
   // Toolkit Dashboard (Issue #5147 — Epic B4)
@@ -156,17 +201,9 @@ export interface LibraryClient {
     widgetType: string,
     request: UpdateWidgetRequest
   ): Promise<ToolkitDashboardDto>;
-  // Loan Flow (Task 7/8)
-  getLoanStatus(gameId: string): Promise<LoanStatusResponse | null>;
-  sendLoanReminder(gameId: string, customMessage?: string): Promise<void>;
-  // Downgrade Preview (Task 12)
-  getLibraryForDowngrade(newQuota: number): Promise<LibraryForDowngrade>;
-}
-
-export interface LoanStatusResponse {
-  isOnLoan: boolean;
-  borrowerInfo: string | null;
-  loanedSince: string | null; // ISO datetime
+  // Library Downgrade Preview (Library Improvements)
+  getLibraryForDowngrade(newQuota: number): Promise<LibraryForDowngradeResponse>;
+  bulkRemoveFromLibrary(gameIds: string[]): Promise<void>;
 }
 
 /**
@@ -824,6 +861,32 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       await httpClient.delete(`/api/v1/library/entity-links/${linkId}`);
     },
 
+    // ========== Loan Status (Library Improvements) ==========
+
+    /**
+     * Get loan status for a game in user's library
+     * @param gameId - Game UUID
+     * @returns Loan status or null if not on loan / not found
+     */
+    async getLoanStatus(gameId: string): Promise<LoanStatusResponse | null> {
+      return httpClient.get<LoanStatusResponse>(
+        `/api/v1/library/games/${gameId}/loan-status`,
+        LoanStatusResponseSchema
+      );
+    },
+
+    /**
+     * Send a loan reminder to the borrower
+     * @param gameId - Game UUID
+     * @param customMessage - Optional custom message to include
+     */
+    async sendLoanReminder(gameId: string, customMessage?: string): Promise<void> {
+      await httpClient.post(
+        `/api/v1/library/games/${gameId}/remind-loan`,
+        customMessage !== undefined ? { customMessage } : {}
+      );
+    },
+
     // ========== Ownership Declaration (RAG Access) ==========
 
     /**
@@ -894,59 +957,28 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       return data;
     },
 
-    // ========== Loan Flow (Task 7/8) ==========
+    // ========== Library Downgrade Preview (Library Improvements) ==========
 
     /**
-     * Get loan status for a game in user's library
-     * GET /api/v1/library/games/{gameId}/loan-status
-     * @param gameId - Game UUID
-     * @returns Loan status or null if game is not on loan
+     * Preview which library entries would be kept vs removed on tier downgrade.
+     * GET /api/v1/library/downgrade-preview?newQuota=N
      */
-    async getLoanStatus(gameId: string): Promise<LoanStatusResponse | null> {
-      try {
-        return await httpClient.get<LoanStatusResponse>(
-          `/api/v1/library/games/${gameId}/loan-status`,
-          z.object({
-            isOnLoan: z.boolean(),
-            borrowerInfo: z.string().nullable(),
-            loanedSince: z.string().nullable(),
-          })
-        );
-      } catch (error) {
-        if (error instanceof NotFoundError) {
-          return null;
-        }
-        throw error;
-      }
-    },
-
-    /**
-     * Send a loan reminder to the borrower
-     * POST /api/v1/library/games/{gameId}/remind-loan
-     * @param gameId - Game UUID
-     * @param customMessage - Optional custom message for the reminder
-     */
-    async sendLoanReminder(gameId: string, customMessage?: string): Promise<void> {
-      await httpClient.post(`/api/v1/library/games/${gameId}/remind-loan`, { customMessage });
-    },
-
-    // ========== Downgrade Preview (Task 12) ==========
-
-    /**
-     * Get library entries split into keep/remove lists for a quota downgrade preview
-     * GET /api/v1/library/downgrade-preview?newQuota={n}
-     * @param newQuota - The new quota the user is downgrading to
-     * @returns Two lists: games that fit in the new quota and games to remove
-     */
-    async getLibraryForDowngrade(newQuota: number): Promise<LibraryForDowngrade> {
-      const data = await httpClient.get<LibraryForDowngrade>(
+    async getLibraryForDowngrade(newQuota: number): Promise<LibraryForDowngradeResponse> {
+      const data = await httpClient.get<LibraryForDowngradeResponse>(
         `/api/v1/library/downgrade-preview?newQuota=${newQuota}`,
-        LibraryForDowngradeSchema
+        LibraryForDowngradeResponseSchema
       );
-      if (!data) {
-        throw new Error('Failed to fetch downgrade preview');
-      }
-      return data;
+      return data ?? { gamesToKeep: [], gamesToRemove: [] };
+    },
+
+    /**
+     * Remove multiple games from the library by their gameIds.
+     * Fires parallel DELETE /api/v1/library/games/{gameId} for each entry.
+     */
+    async bulkRemoveFromLibrary(gameIds: string[]): Promise<void> {
+      await Promise.all(
+        gameIds.map(gameId => httpClient.delete(`/api/v1/library/games/${gameId}`))
+      );
     },
   };
 }

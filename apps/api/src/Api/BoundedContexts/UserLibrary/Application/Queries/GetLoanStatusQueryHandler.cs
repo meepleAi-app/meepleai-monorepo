@@ -5,11 +5,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Queries;
 
-/// <summary>
-/// Handler for <see cref="GetLoanStatusQuery"/>.
-/// Returns the loan status of a specific game in the user's library.
-/// </summary>
-internal sealed class GetLoanStatusQueryHandler : IQueryHandler<GetLoanStatusQuery, LoanStatusDto?>
+internal class GetLoanStatusQueryHandler : IQueryHandler<GetLoanStatusQuery, LoanStatusDto?>
 {
     private readonly IUserLibraryRepository _repository;
 
@@ -30,9 +26,7 @@ internal sealed class GetLoanStatusQueryHandler : IQueryHandler<GetLoanStatusQue
         return new LoanStatusDto(
             IsOnLoan: entry.CurrentState.Value == GameStateType.InPrestito,
             BorrowerInfo: entry.CurrentState.StateNotes,
-            LoanedSince: entry.CurrentState.Value == GameStateType.InPrestito
-                ? entry.CurrentState.ChangedAt
-                : null
+            LoanedSince: entry.CurrentState.ChangedAt
         );
     }
 }

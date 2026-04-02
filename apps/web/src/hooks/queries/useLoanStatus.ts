@@ -1,36 +1,43 @@
 /**
- * useLoanStatus - TanStack Query hooks for loan flow
+ * useLoanStatus - TanStack Query hooks for game loan management
  *
- * Provides query and mutations for marking games as on loan
- * and fetching current loan status.
+ * Library Improvements: Loan flow UI
+ *
+ * Provides hooks for querying loan status and mutating game loan state.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 
 /**
- * Hook to fetch the loan status of a game in user's library
+ * Query key factory for loan status queries
+ */
+export const loanStatusKeys = {
+  all: ['library', 'loan-status'] as const,
+  byGame: (gameId: string) => [...loanStatusKeys.all, gameId] as const,
+};
+
+/**
+ * Hook to fetch the current loan status for a game
  *
  * @param gameId - Game UUID
  * @returns UseQueryResult with loan status or null
  */
 export function useLoanStatus(gameId: string) {
   return useQuery({
-    queryKey: libraryKeys.loanStatus(gameId),
+    queryKey: loanStatusKeys.byGame(gameId),
     queryFn: () => api.library.getLoanStatus(gameId),
     staleTime: 30_000,
+    enabled: !!gameId,
   });
 }
 
 /**
  * Hook to mark a game as on loan (state → InPrestito)
- *
- * Invalidates loan-status and library queries on success.
+ * stateNotes is used to store the borrower info
  *
  * @param gameId - Game UUID
- * @returns UseMutationResult for marking game as on loan
  */
 export function useMarkAsOnLoan(gameId: string) {
   const queryClient = useQueryClient();
@@ -38,8 +45,24 @@ export function useMarkAsOnLoan(gameId: string) {
     mutationFn: (borrowerInfo: string) =>
       api.library.updateGameState(gameId, { newState: 'InPrestito', stateNotes: borrowerInfo }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: libraryKeys.loanStatus(gameId) });
-      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+      queryClient.invalidateQueries({ queryKey: loanStatusKeys.byGame(gameId) });
+      queryClient.invalidateQueries({ queryKey: ['library'] });
+    },
+  });
+}
+
+/**
+ * Hook to mark a game as returned (state → Owned)
+ *
+ * @param gameId - Game UUID
+ */
+export function useMarkAsReturned(gameId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.library.updateGameState(gameId, { newState: 'Owned', stateNotes: null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: loanStatusKeys.byGame(gameId) });
+      queryClient.invalidateQueries({ queryKey: ['library'] });
     },
   });
 }

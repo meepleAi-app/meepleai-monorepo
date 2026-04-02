@@ -1031,18 +1031,23 @@ internal static class UserLibraryCoreEndpoints
             if (!authenticated) return error!;
 
             if (!TryGetUserId(context, session, out var userId))
+            {
                 return Results.Unauthorized();
+            }
 
-            var result = await mediator.Send(new GetLoanStatusQuery(userId, gameId), ct).ConfigureAwait(false);
+            var query = new GetLoanStatusQuery(userId, gameId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
             return result is null ? Results.NotFound() : Results.Ok(result);
         })
         .RequireAuthenticatedUser()
         .Produces<LoanStatusDto>(200)
-        .Produces(404)
         .Produces(401)
+        .Produces(404)
         .WithTags("Library")
-        .WithSummary("Get loan status for a game")
-        .WithDescription("Returns loan status (IsOnLoan, BorrowerInfo, LoanedSince) for a game in the user's library. Returns 404 if the game is not in the library.")
+        .WithName("GetLoanStatus")
+        .WithSummary("Get loan status of a game")
+        .WithDescription("Returns whether the game is currently on loan, the borrower info, and when it was loaned out. Returns 404 if the game is not in the user's library.")
         .WithOpenApi();
     }
 
@@ -1216,4 +1221,5 @@ internal static class UserLibraryCoreEndpoints
         .WithDescription("Explicitly declares ownership of a game in the library, granting RAG access to the game's knowledge base. Idempotent.")
         .WithOpenApi();
     }
+
 }

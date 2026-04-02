@@ -1,119 +1,162 @@
-/**
- * DowngradeTierModal Component (Task 12)
- *
- * Informational modal shown when a user is about to downgrade their tier.
- * Displays which games will be kept within the new quota and which ones
- * exceed the limit. The user must acknowledge before proceeding.
- *
- * Features:
- * - Loads downgrade preview from API
- * - Lists games to keep and games to remove
- * - Confirm button disabled when no games need removal
- * - Calls onComplete when user confirms
- */
-
 'use client';
 
-import React from 'react';
+import { useEffect, useState } from 'react';
 
-import { Loader2, Trash2, CheckCircle } from 'lucide-react';
-
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { useLibraryDowngradePreview } from '@/hooks/queries/useLibraryDowngrade';
-import type { LibraryDowngradeGame } from '@/lib/api/schemas/library.schemas';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
+import {
+  useBulkRemoveFromLibrary,
+  useLibraryDowngradePreview,
+} from '@/hooks/queries/useLibraryDowngrade';
+import { useToast } from '@/hooks/useToast';
 
-export interface DowngradeTierModalProps {
-  /** New quota the user is downgrading to */
+interface DowngradeTierModalProps {
+  /** The new library quota the user is downgrading to */
   newQuota: number;
-  /** Dialog open state */
   open: boolean;
-  /** Callback to control open state */
   onOpenChange: (open: boolean) => void;
-  /** Callback when user confirms the downgrade */
+  /** Called after the removal is completed successfully */
   onComplete: () => void;
 }
 
+/**
+ * Modal shown when a user is about to downgrade to a tier with a smaller library quota.
+ * Displays which games would be kept (highest priority) and lets the user select which
+ * games to remove from their library.
+ */
 export function DowngradeTierModal({
   newQuota,
   open,
   onOpenChange,
   onComplete,
 }: DowngradeTierModalProps) {
-  const { data, isLoading } = useLibraryDowngradePreview(newQuota, open);
+  const { data, isLoading, error: previewError } = useLibraryDowngradePreview(newQuota, open);
+  const { mutate: bulkRemove, isPending } = useBulkRemoveFromLibrary();
+  const [selectedToRemove, setSelectedToRemove] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
 
-  const gamesToRemove: LibraryDowngradeGame[] = data?.gamesToRemove ?? [];
-  const gamesToKeep: LibraryDowngradeGame[] = data?.gamesToKeep ?? [];
+  useEffect(() => {
+    if (open) setSelectedToRemove(new Set());
+  }, [open]);
 
-  const hasGamesToRemove = gamesToRemove.length > 0;
+  const suggestedRemove = data?.gamesToRemove ?? [];
+  const toKeep = data?.gamesToKeep ?? [];
+
+  /**
+   * We deliberately track selections by `gameId` (not `entryId`) because the
+   * backend endpoint for removal is `DELETE /api/v1/library/games/{gameId}` —
+   * see UserLibraryCoreEndpoints.cs → MapDelete("/library/games/{gameId:guid}").
+   * `bulkRemoveFromLibrary` fires one DELETE per gameId, so we must pass gameIds.
+   */
+  function toggleRemove(gameId: string) {
+    setSelectedToRemove(prev => {
+      const next = new Set(prev);
+      if (next.has(gameId)) {
+        next.delete(gameId);
+      } else {
+        next.add(gameId);
+      }
+      return next;
+    });
+  }
+
+  function handleConfirm() {
+    const ids = Array.from(selectedToRemove);
+    if (ids.length === 0) return;
+    bulkRemove(ids, {
+      onSuccess: onComplete,
+      onError: () => {
+        toast({
+          title: 'Errore',
+          description: 'Impossibile rimuovere i giochi selezionati. Riprova.',
+          variant: 'destructive',
+        });
+      },
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Anteprima cambio piano</DialogTitle>
-          <DialogDescription>
-            Con il nuovo piano potrai tenere al massimo {newQuota}{' '}
-            {newQuota === 1 ? 'gioco' : 'giochi'} in libreria.
-          </DialogDescription>
+          <DialogTitle>Gestisci la libreria ({newQuota} giochi max)</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span>Caricamento anteprima...</span>
-          </div>
+          <p className="text-muted-foreground py-8 text-center">Caricamento...</p>
+        ) : previewError ? (
+          <p className="text-destructive py-8 text-center text-sm">
+            Impossibile caricare l&apos;anteprima. Riprova più tardi.
+          </p>
         ) : (
-          <div className="space-y-4">
-            {hasGamesToRemove ? (
-              <section aria-label="Giochi da rimuovere">
-                <h3 className="text-sm font-semibold text-destructive flex items-center gap-1 mb-2">
-                  <Trash2 className="h-4 w-4" />
-                  Giochi che verranno rimossi ({gamesToRemove.length})
-                </h3>
-                <ul className="space-y-1 max-h-48 overflow-y-auto">
-                  {gamesToRemove.map(game => (
-                    <li
-                      key={game.entryId}
-                      className="text-sm px-2 py-1 rounded bg-destructive/10 text-destructive-foreground"
-                    >
-                      {game.gameTitle}
-                      {game.isFavorite && (
-                        <span className="ml-1 text-xs text-muted-foreground">(preferito)</span>
-                      )}
-                    </li>
+          <div className="space-y-6">
+            {/* Games that will be kept */}
+            <div>
+              <h3 className="font-medium mb-2 text-green-700">
+                Giochi che verranno mantenuti ({toKeep.length})
+              </h3>
+              {toKeep.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2 opacity-70">
+                  {toKeep.map(g => (
+                    <MeepleCard
+                      key={g.entryId}
+                      entity="game"
+                      variant="compact"
+                      title={g.gameTitle}
+                      imageUrl={g.gameImageUrl ?? undefined}
+                    />
                   ))}
-                </ul>
-              </section>
-            ) : (
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                Nessun gioco verrà rimosso con questo piano.
-              </p>
-            )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nessun gioco da mantenere.</p>
+              )}
+            </div>
 
-            {gamesToKeep.length > 0 && (
-              <section aria-label="Giochi che rimangono">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-1 mb-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  Giochi che rimarranno ({gamesToKeep.length})
-                </h3>
-                <ul className="space-y-1 max-h-32 overflow-y-auto">
-                  {gamesToKeep.map(game => (
-                    <li key={game.entryId} className="text-sm px-2 py-1 rounded bg-muted">
-                      {game.gameTitle}
-                    </li>
+            {/* Games suggested for removal */}
+            <div>
+              <h3 className="font-medium mb-2 text-destructive">
+                Seleziona giochi da rimuovere ({selectedToRemove.size} selezionati)
+              </h3>
+              {suggestedRemove.length > 0 ? (
+                <div className="space-y-2">
+                  {suggestedRemove.map(g => (
+                    <div
+                      key={g.entryId}
+                      className="flex items-center gap-3 p-2 rounded border cursor-pointer hover:bg-muted/50"
+                      onClick={() => toggleRemove(g.gameId)}
+                    >
+                      <Checkbox
+                        checked={selectedToRemove.has(g.gameId)}
+                        onCheckedChange={() => toggleRemove(g.gameId)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <MeepleCard
+                          entity="game"
+                          variant="compact"
+                          title={g.gameTitle}
+                          imageUrl={g.gameImageUrl ?? undefined}
+                        />
+                      </div>
+                      {g.isFavorite && (
+                        <span className="text-xs text-amber-500 shrink-0">&#9733; Preferito</span>
+                      )}
+                    </div>
                   ))}
-                </ul>
-              </section>
-            )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  La tua libreria rientra già nel nuovo limite.
+                </p>
+              )}
+            </div>
           </div>
         )}
 
@@ -121,10 +164,12 @@ export function DowngradeTierModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
-          <Button variant="destructive" disabled={isLoading} onClick={onComplete}>
-            {gamesToRemove.length > 0
-              ? `Conferma (${gamesToRemove.length} da rimuovere)`
-              : 'Conferma downgrade'}
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={selectedToRemove.size === 0 || isPending}
+          >
+            Rimuovi {selectedToRemove.size > 0 ? `${selectedToRemove.size} ` : ''}giochi selezionati
           </Button>
         </DialogFooter>
       </DialogContent>

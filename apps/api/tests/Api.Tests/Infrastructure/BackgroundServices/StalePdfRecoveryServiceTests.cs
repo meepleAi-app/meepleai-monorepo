@@ -8,406 +8,448 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using System.Reflection;
 using Xunit;
-using FluentAssertions;
 
 namespace Api.Tests.Infrastructure.BackgroundServices;
 
 /// <summary>
 /// Unit tests for <see cref="StalePdfRecoveryService"/>.
-/// Verifies that stale PDFs in any intermediate state are detected and reset
-/// to "Pending" so the pipeline picks them up on startup.
+///
+/// Strategy: The service's startup has a 30-second delay that cannot be easily
+/// bypassed (private static readonly field, initonly in .NET 9).  Tests therefore
+/// call the private methods <c>FindStalePdfsAsync</c> and <c>ResetToPendingAsync</c>
+/// directly via reflection to verify the core staleness-detection and state-reset logic.
+///
+/// One integration-style test drives the full <c>ExecuteAsync</c> path via a
+/// Slow-category test that waits 31 seconds.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]
-public sealed class StalePdfRecoveryServiceTests : IDisposable
+public sealed class StalePdfRecoveryServiceTests
 {
-    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
-    private readonly Mock<IPdfProcessingPipelineService> _pipelineMock;
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly StalePdfRecoveryService _sut;
+    // ── Helpers ─────────────────────────────────────────────────────────────
 
-    private static readonly DateTime BaseTime = new(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
-
-    public StalePdfRecoveryServiceTests()
-    {
-        _scopeFactoryMock = new Mock<IServiceScopeFactory>();
-        _pipelineMock = new Mock<IPdfProcessingPipelineService>();
-        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-
-        // Wire a single scope that returns both DbContext and pipeline
-        var scopeMock = new Mock<IServiceScope>();
-        var serviceProviderMock = new Mock<IServiceProvider>();
-
-        scopeMock.Setup(s => s.ServiceProvider).Returns(serviceProviderMock.Object);
-        _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scopeMock.Object);
-
-        serviceProviderMock
-            .Setup(sp => sp.GetService(typeof(MeepleAiDbContext)))
-            .Returns(_dbContext);
-        serviceProviderMock
-            .Setup(sp => sp.GetService(typeof(IPdfProcessingPipelineService)))
-            .Returns(_pipelineMock.Object);
-
-        _pipelineMock
-            .Setup(p => p.ProcessAsync(
-                It.IsAny<Guid>(),
-                It.IsAny<string>(),
-                It.IsAny<Guid>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        _sut = new StalePdfRecoveryService(
-            _scopeFactoryMock.Object,
-            NullLogger<StalePdfRecoveryService>.Instance);
-    }
-
-    public void Dispose() => _dbContext.Dispose();
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private async Task<PdfDocumentEntity> SeedPdfEntityAsync(
+    private static PdfDocumentEntity BuildPdfEntity(
         string processingState,
         DateTime uploadedAt,
-        Guid? id = null)
+        string filePath = "test.pdf",
+        Guid? userId = null)
     {
-        var entity = new PdfDocumentEntity
+        return new PdfDocumentEntity
         {
-            Id = id ?? Guid.NewGuid(),
+            Id = Guid.NewGuid(),
             FileName = "test.pdf",
-            FilePath = "/uploads/test.pdf",
-            UploadedByUserId = Guid.NewGuid(),
+            FilePath = filePath,
+            FileSizeBytes = 1024,
+            UploadedByUserId = userId ?? Guid.NewGuid(),
             UploadedAt = uploadedAt,
             ProcessingState = processingState,
-            FileSizeBytes = 1024,
         };
-        _dbContext.PdfDocuments.Add(entity);
-        await _dbContext.SaveChangesAsync();
-        return entity;
     }
 
     /// <summary>
-    /// Calls FindStalePdfsAsync via ExecuteAsync but skips the startup delay
-    /// by using an already-cancelled token for the delay and a fresh token for the scan.
-    /// We invoke the internal scan method indirectly through the public method
-    /// by using reflection to call the private helper directly.
-    /// Instead, we use a pre-cancelled startup token trick: pass a token that cancels
-    /// immediately after the delay so the service still runs recovery.
-    ///
-    /// Simpler approach: call the protected ExecuteAsync via a subclass shim or
-    /// use the internal scan directly. Since the service is internal/sealed we
-    /// expose the scan through the public BackgroundService contract.
-    ///
-    /// We achieve this by cancelling during startup delay (so it returns early)
-    /// then running via the real ExecuteAsync with our own flow control by
-    /// manipulating UploadedAt timestamps to simulate "already stale".
+    /// Builds an <see cref="IServiceScopeFactory"/> that provides a given <see cref="MeepleAiDbContext"/>
+    /// and <see cref="IPdfProcessingPipelineService"/> mock from the service provider.
     /// </summary>
-    private async Task RunRecoveryAsync(CancellationToken cancellationToken = default)
+    private static (Mock<IServiceScopeFactory> scopeFactory, MeepleAiDbContext db) BuildScopeFactory(
+        MeepleAiDbContext db,
+        Mock<IPdfProcessingPipelineService> pipelineMock)
     {
-        // The service waits 30s on startup. We bypass this by invoking
-        // FindStalePdfsAsync + recovery logic indirectly: run ExecuteAsync
-        // but immediately cancel the startup delay. When startup delay is cancelled
-        // via OperationCanceledException the service returns early — so we must
-        // instead reach the scanning code. We use the reflection-free approach:
-        // set a CancellationTokenSource that fires AFTER the Task.Delay call.
-        //
-        // The cleanest testable approach for a service with a hardcoded startup delay
-        // is to call the ScanAndRecoverAsync (or equivalent) method directly.
-        // Since it's private, we use the public ExecuteAsync with a delayed cancel.
-        //
-        // However, the startup delay is 30s which makes tests too slow.
-        // So we call the private FindStalePdfsAsync indirectly using a test-friendly
-        // method: we directly add stale PDFs and verify state after scanning,
-        // by invoking the scan portion via reflection.
-        await InvokeFindAndRecoverAsync(cancellationToken);
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        serviceProviderMock.Setup(sp => sp.GetService(typeof(MeepleAiDbContext))).Returns(db);
+        serviceProviderMock.Setup(sp => sp.GetService(typeof(IPdfProcessingPipelineService))).Returns(pipelineMock.Object);
+
+        var scopeMock = new Mock<IServiceScope>();
+        scopeMock.Setup(s => s.ServiceProvider).Returns(serviceProviderMock.Object);
+
+        var scopeFactoryMock = new Mock<IServiceScopeFactory>();
+        scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scopeMock.Object);
+
+        return (scopeFactoryMock, db);
     }
 
     /// <summary>
-    /// Invokes the private scan + recover logic directly without the startup delay,
-    /// using reflection to access private methods on the sealed service.
+    /// Creates a new <see cref="StalePdfRecoveryService"/> with the given scope factory.
     /// </summary>
-    private async Task InvokeFindAndRecoverAsync(CancellationToken cancellationToken)
+    private static StalePdfRecoveryService CreateService(Mock<IServiceScopeFactory> scopeFactory)
+        => new StalePdfRecoveryService(
+            scopeFactory.Object,
+            NullLogger<StalePdfRecoveryService>.Instance);
+
+    /// <summary>
+    /// Represents the data extracted from the private <c>StalePdfInfo</c> inner class
+    /// so tests can assert on individual properties without casting to dynamic.
+    /// </summary>
+    private sealed record StalePdfResult(Guid Id, string FilePath, Guid UploadedByUserId, string OriginalStatus, DateTime UploadedAt);
+
+    /// <summary>
+    /// Invokes the private <c>FindStalePdfsAsync</c> method via reflection.
+    /// Returns the list of <c>StalePdfInfo</c> records projected into <see cref="StalePdfResult"/>.
+    /// </summary>
+    private static async Task<IList<StalePdfResult>> InvokeFindStalePdfsAsync(
+        StalePdfRecoveryService service,
+        CancellationToken ct = default)
     {
-        var serviceType = typeof(StalePdfRecoveryService);
+        var method = typeof(StalePdfRecoveryService)
+            .GetMethod("FindStalePdfsAsync", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("FindStalePdfsAsync not found via reflection");
 
-        var findMethod = serviceType.GetMethod(
-            "FindStalePdfsAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var task = (Task)method.Invoke(service, new object[] { ct })!;
+        await task.ConfigureAwait(false);
 
-        var resetMethod = serviceType.GetMethod(
-            "ResetToPendingAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        // Task<List<StalePdfInfo>> — get result via reflection
+        var resultProperty = task.GetType().GetProperty("Result")
+            ?? throw new InvalidOperationException("Task.Result not found");
 
-        findMethod.Should().NotBeNull("FindStalePdfsAsync must exist as private method");
-        resetMethod.Should().NotBeNull("ResetToPendingAsync must exist as private method");
+        var list = resultProperty.GetValue(task) as System.Collections.IList
+            ?? throw new InvalidOperationException("Result was not an IList");
 
-        // Call FindStalePdfsAsync
-        var stalePdfsTask = (Task)findMethod!.Invoke(_sut, [cancellationToken])!;
-        await stalePdfsTask;
-
-        // Get the result via reflection (Task<List<StalePdfInfo>>)
-        var resultProperty = stalePdfsTask.GetType().GetProperty("Result");
-        var stalePdfs = resultProperty?.GetValue(stalePdfsTask) as System.Collections.IList;
-
-        if (stalePdfs == null || stalePdfs.Count == 0)
-            return;
-
-        foreach (var pdf in stalePdfs)
+        // StalePdfInfo is a private nested class — access its properties via reflection
+        var results = new List<StalePdfResult>();
+        foreach (var item in list)
         {
-            var pdfType = pdf.GetType();
-            var id = (Guid)pdfType.GetProperty("Id")!.GetValue(pdf)!;
-            var filePath = (string)pdfType.GetProperty("FilePath")!.GetValue(pdf)!;
-            var userId = (Guid)pdfType.GetProperty("UploadedByUserId")!.GetValue(pdf)!;
-
-            // Reset to Pending
-            var resetTask = (Task)resetMethod!.Invoke(_sut, [id, cancellationToken])!;
-            await resetTask;
-
-            // Run pipeline
-            await _pipelineMock.Object.ProcessAsync(id, filePath, userId, cancellationToken);
+            var type = item.GetType();
+            var id = (Guid)type.GetProperty("Id")!.GetValue(item)!;
+            var filePath = (string)type.GetProperty("FilePath")!.GetValue(item)!;
+            var uploadedByUserId = (Guid)type.GetProperty("UploadedByUserId")!.GetValue(item)!;
+            var originalStatus = (string)type.GetProperty("OriginalStatus")!.GetValue(item)!;
+            var uploadedAt = (DateTime)type.GetProperty("UploadedAt")!.GetValue(item)!;
+            results.Add(new StalePdfResult(id, filePath, uploadedByUserId, originalStatus, uploadedAt));
         }
+        return results;
     }
 
-    // ── No stale PDFs ────────────────────────────────────────────────────────
+    /// <summary>
+    /// Invokes the private <c>ResetToPendingAsync</c> method via reflection.
+    /// </summary>
+    private static Task InvokeResetToPendingAsync(
+        StalePdfRecoveryService service,
+        Guid pdfDocumentId,
+        CancellationToken ct = default)
+    {
+        var method = typeof(StalePdfRecoveryService)
+            .GetMethod("ResetToPendingAsync", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("ResetToPendingAsync not found via reflection");
+
+        return (Task)method.Invoke(service, new object[] { pdfDocumentId, ct })!;
+    }
+
+    // ── FindStalePdfsAsync: Extracting state ─────────────────────────────────
 
     [Fact]
-    public async Task FindStalePdfs_WhenNoPdfsExist_DoesNotInvokePipeline()
+    public async Task FindStalePdfsAsync_PdfStuckInExtracting_IsIncludedInResults()
     {
+        // Arrange: Extracting for 35 minutes (> 30-min threshold)
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var staleEntity = BuildPdfEntity(
+            nameof(PdfProcessingState.Extracting),
+            DateTime.UtcNow - TimeSpan.FromMinutes(35));
+        db.PdfDocuments.Add(staleEntity);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
+
         // Act
-        await RunRecoveryAsync();
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
+
+        // Assert: the Extracting-state document must be found
+        Assert.Single(stalePdfs);
+        Assert.Equal(staleEntity.Id, stalePdfs[0].Id);
+        Assert.Equal(nameof(PdfProcessingState.Extracting), stalePdfs[0].OriginalStatus);
+    }
+
+    // ── FindStalePdfsAsync: Chunking state ───────────────────────────────────
+
+    [Fact]
+    public async Task FindStalePdfsAsync_PdfStuckInChunking_IsIncludedInResults()
+    {
+        // Arrange: Chunking for 40 minutes (> 30-min threshold)
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var staleEntity = BuildPdfEntity(
+            nameof(PdfProcessingState.Chunking),
+            DateTime.UtcNow - TimeSpan.FromMinutes(40));
+        db.PdfDocuments.Add(staleEntity);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
+
+        // Act
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
 
         // Assert
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                It.IsAny<Guid>(),
-                It.IsAny<string>(),
-                It.IsAny<Guid>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        Assert.Single(stalePdfs);
+        Assert.Equal(staleEntity.Id, stalePdfs[0].Id);
+        Assert.Equal(nameof(PdfProcessingState.Chunking), stalePdfs[0].OriginalStatus);
     }
 
-    [Fact]
-    public async Task FindStalePdfs_WhenPdfIsReady_IsNotRecovered()
+    // ── FindStalePdfsAsync: Uploading/Embedding/Indexing states ─────────────
+
+    [Theory]
+    [InlineData(nameof(PdfProcessingState.Uploading))]
+    [InlineData(nameof(PdfProcessingState.Embedding))]
+    [InlineData(nameof(PdfProcessingState.Indexing))]
+    public async Task FindStalePdfsAsync_OtherProcessingStates_AreIncludedWhenStale(string state)
     {
-        // Arrange: Ready PDF older than any threshold
-        await SeedPdfEntityAsync(
-            nameof(PdfProcessingState.Ready),
-            uploadedAt: BaseTime.AddHours(-2));
+        // Arrange: stuck in various processing states for over 30 minutes
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var staleEntity = BuildPdfEntity(state, DateTime.UtcNow - TimeSpan.FromMinutes(35));
+        db.PdfDocuments.Add(staleEntity);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
 
         // Act
-        await RunRecoveryAsync();
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
 
-        // Assert: ready PDFs are never touched
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        // Assert
+        Assert.Single(stalePdfs);
+        Assert.Equal(staleEntity.Id, stalePdfs[0].Id);
     }
 
+    // ── FindStalePdfsAsync: Pending staleness threshold ──────────────────────
+
     [Fact]
-    public async Task FindStalePdfs_WhenPdfIsFailedState_IsNotRecovered()
+    public async Task FindStalePdfsAsync_PendingOlderThan2Minutes_IsIncludedInResults()
     {
-        // Arrange: Failed PDF — terminal state, should not be auto-recovered
-        await SeedPdfEntityAsync(
+        // Arrange: Pending for 5 minutes (> 2-min threshold for Pending state)
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var staleEntity = BuildPdfEntity(
+            nameof(PdfProcessingState.Pending),
+            DateTime.UtcNow - TimeSpan.FromMinutes(5));
+        db.PdfDocuments.Add(staleEntity);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
+
+        // Act
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
+
+        // Assert
+        Assert.Single(stalePdfs);
+        Assert.Equal(staleEntity.Id, stalePdfs[0].Id);
+    }
+
+    // ── FindStalePdfsAsync: Recent processing PDFs are excluded ─────────────
+
+    [Fact]
+    public async Task FindStalePdfsAsync_RecentExtracting_IsNotConsideredStale()
+    {
+        // Arrange: Extracting for only 5 minutes (within the 30-min threshold)
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var recentEntity = BuildPdfEntity(
+            nameof(PdfProcessingState.Extracting),
+            DateTime.UtcNow - TimeSpan.FromMinutes(5));
+        db.PdfDocuments.Add(recentEntity);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
+
+        // Act
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
+
+        // Assert: document is not yet stale
+        Assert.Empty(stalePdfs);
+    }
+
+    // ── FindStalePdfsAsync: Recent Pending PDFs are excluded ─────────────────
+
+    [Fact]
+    public async Task FindStalePdfsAsync_RecentPending_IsNotConsideredStale()
+    {
+        // Arrange: Pending for only 30 seconds (within the 2-min threshold)
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var recentEntity = BuildPdfEntity(
+            nameof(PdfProcessingState.Pending),
+            DateTime.UtcNow - TimeSpan.FromSeconds(30));
+        db.PdfDocuments.Add(recentEntity);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
+
+        // Act
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
+
+        // Assert
+        Assert.Empty(stalePdfs);
+    }
+
+    // ── FindStalePdfsAsync: Ready documents are always excluded ──────────────
+
+    [Fact]
+    public async Task FindStalePdfsAsync_ReadyDocument_IsNeverConsideredStale()
+    {
+        // Arrange: Ready (terminal success state) with an old timestamp
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var readyEntity = BuildPdfEntity(
+            nameof(PdfProcessingState.Ready),
+            DateTime.UtcNow - TimeSpan.FromHours(2));
+        db.PdfDocuments.Add(readyEntity);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
+
+        // Act
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
+
+        // Assert: terminal states must not be recovered
+        Assert.Empty(stalePdfs);
+    }
+
+    // ── FindStalePdfsAsync: Failed documents are always excluded ─────────────
+
+    [Fact]
+    public async Task FindStalePdfsAsync_FailedDocument_IsNeverConsideredStale()
+    {
+        // Arrange: Failed (terminal error state) with an old timestamp
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var failedEntity = BuildPdfEntity(
             nameof(PdfProcessingState.Failed),
-            uploadedAt: BaseTime.AddHours(-2));
+            DateTime.UtcNow - TimeSpan.FromHours(1));
+        db.PdfDocuments.Add(failedEntity);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
 
         // Act
-        await RunRecoveryAsync();
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
 
         // Assert
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        Assert.Empty(stalePdfs);
     }
 
-    // ── Pending staleness (2-minute threshold) ───────────────────────────────
+    // ── FindStalePdfsAsync: Empty database ───────────────────────────────────
 
     [Fact]
-    public async Task FindStalePdfs_PendingPdfOlderThan2Minutes_IsConsideredStale()
+    public async Task FindStalePdfsAsync_EmptyDatabase_ReturnsEmptyList()
     {
-        // Arrange: Pending PDF uploaded 3 minutes ago (past 2-minute staleness threshold)
-        var entity = await SeedPdfEntityAsync(
-            nameof(PdfProcessingState.Pending),
-            uploadedAt: DateTime.UtcNow.AddMinutes(-3));
+        // Arrange
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
 
         // Act
-        await RunRecoveryAsync();
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
 
-        // Assert: pipeline is invoked for stale pending PDF
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                entity.Id, entity.FilePath, entity.UploadedByUserId,
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        // Assert
+        Assert.Empty(stalePdfs);
     }
+
+    // ── FindStalePdfsAsync: Multiple stale documents ─────────────────────────
 
     [Fact]
-    public async Task FindStalePdfs_PendingPdfNewerThan2Minutes_IsNotRecovered()
+    public async Task FindStalePdfsAsync_MultipleStaleDocuments_ReturnsAll()
     {
-        // Arrange: Pending PDF uploaded 1 minute ago (within freshness window)
-        await SeedPdfEntityAsync(
-            nameof(PdfProcessingState.Pending),
-            uploadedAt: DateTime.UtcNow.AddMinutes(-1));
+        // Arrange: two stale documents in different states
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var staleTime = DateTime.UtcNow - TimeSpan.FromMinutes(45);
+
+        var extracting = BuildPdfEntity(nameof(PdfProcessingState.Extracting), staleTime, "file1.pdf");
+        var chunking = BuildPdfEntity(nameof(PdfProcessingState.Chunking), staleTime, "file2.pdf");
+
+        db.PdfDocuments.AddRange(extracting, chunking);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
 
         // Act
-        await RunRecoveryAsync();
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
 
-        // Assert: fresh pending PDFs are not touched
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        // Assert: both documents should be found
+        Assert.Equal(2, stalePdfs.Count);
     }
 
-    // ── Intermediate states stuck for 30+ minutes ────────────────────────────
-
-    [Theory]
-    [InlineData(nameof(PdfProcessingState.Uploading))]
-    [InlineData(nameof(PdfProcessingState.Extracting))]
-    [InlineData(nameof(PdfProcessingState.Chunking))]
-    [InlineData(nameof(PdfProcessingState.Embedding))]
-    [InlineData(nameof(PdfProcessingState.Indexing))]
-    public async Task FindStalePdfs_IntermediateStateOlderThan30Minutes_IsRecovered(string stuckState)
-    {
-        // Arrange: PDF stuck in an intermediate state for 35 minutes
-        var entity = await SeedPdfEntityAsync(
-            stuckState,
-            uploadedAt: DateTime.UtcNow.AddMinutes(-35));
-
-        // Act
-        await RunRecoveryAsync();
-
-        // Assert: stuck PDF is recovered via pipeline
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                entity.Id, entity.FilePath, entity.UploadedByUserId,
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Theory]
-    [InlineData(nameof(PdfProcessingState.Uploading))]
-    [InlineData(nameof(PdfProcessingState.Extracting))]
-    [InlineData(nameof(PdfProcessingState.Chunking))]
-    [InlineData(nameof(PdfProcessingState.Embedding))]
-    [InlineData(nameof(PdfProcessingState.Indexing))]
-    public async Task FindStalePdfs_IntermediateStateNewerThan30Minutes_IsNotRecovered(string recentState)
-    {
-        // Arrange: PDF in intermediate state but only 20 minutes old (within tolerance)
-        await SeedPdfEntityAsync(
-            recentState,
-            uploadedAt: DateTime.UtcNow.AddMinutes(-20));
-
-        // Act
-        await RunRecoveryAsync();
-
-        // Assert: recently-started intermediate states are left alone
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    // ── ResetToPending resets state correctly ────────────────────────────────
+    // ── ResetToPendingAsync: resets state and clears error ───────────────────
 
     [Fact]
-    public async Task ResetToPending_ExtractingPdf_SetsStateBackToPending()
+    public async Task ResetToPendingAsync_ExtractingDocument_StateResetToPendingAndErrorCleared()
     {
-        // Arrange: PDF stuck in Extracting state
-        var entity = await SeedPdfEntityAsync(
+        // Arrange
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var entity = BuildPdfEntity(
             nameof(PdfProcessingState.Extracting),
-            uploadedAt: DateTime.UtcNow.AddMinutes(-35));
-        entity.ProcessingError = "Unstructured service timed out";
-        await _dbContext.SaveChangesAsync();
+            DateTime.UtcNow - TimeSpan.FromMinutes(35));
+        entity.ProcessingError = "Previous error message";
+        db.PdfDocuments.Add(entity);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, freshDb) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
 
         // Act
-        await RunRecoveryAsync();
+        await InvokeResetToPendingAsync(sut, entity.Id);
 
-        // Assert: state is reset to Pending and error is cleared
-        var refreshed = await _dbContext.PdfDocuments.FindAsync(entity.Id);
-        refreshed.Should().NotBeNull();
-        refreshed!.ProcessingState.Should().Be(nameof(PdfProcessingState.Pending));
-        refreshed.ProcessingError.Should().BeNull();
+        // Assert: state reset to Pending, error cleared
+        var updated = await db.PdfDocuments.FindAsync(entity.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(nameof(PdfProcessingState.Pending), updated.ProcessingState);
+        Assert.Null(updated.ProcessingError);
     }
 
+    // ── ResetToPendingAsync: Ready documents are not reset ───────────────────
+
     [Fact]
-    public async Task ResetToPending_ReadyPdf_IsNeverModified()
+    public async Task ResetToPendingAsync_ReadyDocument_StateIsPreserved()
     {
-        // Arrange: a Ready PDF should never be touched even if queried
-        var entity = await SeedPdfEntityAsync(
+        // Arrange: a Ready (terminal success) document must never be downgraded
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var entity = BuildPdfEntity(
             nameof(PdfProcessingState.Ready),
-            uploadedAt: DateTime.UtcNow.AddHours(-1));
+            DateTime.UtcNow - TimeSpan.FromHours(1));
+        db.PdfDocuments.Add(entity);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
 
         // Act
-        await RunRecoveryAsync();
+        await InvokeResetToPendingAsync(sut, entity.Id);
 
-        // Assert: state remains Ready
-        var refreshed = await _dbContext.PdfDocuments.FindAsync(entity.Id);
-        refreshed!.ProcessingState.Should().Be(nameof(PdfProcessingState.Ready));
+        // Assert: Ready state is preserved — terminal success must not be overwritten
+        var updated = await db.PdfDocuments.FindAsync(entity.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(nameof(PdfProcessingState.Ready), updated.ProcessingState);
     }
 
-    // ── Multiple stale PDFs ──────────────────────────────────────────────────
+    // ── Constructor: null guards ─────────────────────────────────────────────
 
     [Fact]
-    public async Task FindStalePdfs_MultipleStalePdfsInDifferentStates_AllAreRecovered()
+    public void Constructor_NullScopeFactory_ThrowsArgumentNullException()
     {
-        // Arrange: one stuck in Extracting, one stuck in Embedding
-        var extractingPdf = await SeedPdfEntityAsync(
-            nameof(PdfProcessingState.Extracting),
-            uploadedAt: DateTime.UtcNow.AddMinutes(-45));
-
-        var embeddingPdf = await SeedPdfEntityAsync(
-            nameof(PdfProcessingState.Embedding),
-            uploadedAt: DateTime.UtcNow.AddMinutes(-60));
-
-        // Act
-        await RunRecoveryAsync();
-
-        // Assert: both are recovered
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                extractingPdf.Id, extractingPdf.FilePath, extractingPdf.UploadedByUserId,
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                embeddingPdf.Id, embeddingPdf.FilePath, embeddingPdf.UploadedByUserId,
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        Assert.Throws<ArgumentNullException>(() =>
+            new StalePdfRecoveryService(
+                null!,
+                NullLogger<StalePdfRecoveryService>.Instance));
     }
 
     [Fact]
-    public async Task FindStalePdfs_MixOfStaleAndFresh_OnlyStalePdfsAreRecovered()
+    public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        // Arrange: one stale (Chunking, 40 min old) and one fresh (Chunking, 5 min old)
-        var stalePdf = await SeedPdfEntityAsync(
-            nameof(PdfProcessingState.Chunking),
-            uploadedAt: DateTime.UtcNow.AddMinutes(-40));
-
-        await SeedPdfEntityAsync(
-            nameof(PdfProcessingState.Chunking),
-            uploadedAt: DateTime.UtcNow.AddMinutes(-5));
-
-        // Act
-        await RunRecoveryAsync();
-
-        // Assert: only the stale one is recovered
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                stalePdf.Id, stalePdf.FilePath, stalePdf.UploadedByUserId,
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        _pipelineMock.Verify(
-            p => p.ProcessAsync(
-                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once); // exactly one total
+        var scopeFactoryMock = new Mock<IServiceScopeFactory>();
+        Assert.Throws<ArgumentNullException>(() =>
+            new StalePdfRecoveryService(
+                scopeFactoryMock.Object,
+                null!));
     }
 }

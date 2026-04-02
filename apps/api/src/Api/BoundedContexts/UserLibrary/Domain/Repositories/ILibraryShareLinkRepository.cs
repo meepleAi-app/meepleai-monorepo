@@ -44,7 +44,5 @@ internal interface ILibraryShareLinkRepository : IRepository<LibraryShareLink, G
     /// Atomically increments ViewCount and sets LastAccessedAt for the given share token.
     /// Uses a direct UPDATE statement to avoid race conditions.
     /// </summary>
-    /// <param name="shareToken">The share token to record access for</param>
-    /// <param name="cancellationToken">Cancellation token</param>
     Task RecordAccessAsync(string shareToken, CancellationToken cancellationToken = default);
 }

@@ -38,4 +38,4 @@ La wishlist con `WishlistVisibility.Public` è visibile anche nel profilo pubbli
 1. Token esiste nel DB
 2. `RevokedAt == null`
 3. `ExpiresAt == null || ExpiresAt > UtcNow`
-4. Incremento `ViewCount` atomico (vedi Task 4 — OPS-002)
+4. Incremento `ViewCount` atomico (vedi fix ViewCount)

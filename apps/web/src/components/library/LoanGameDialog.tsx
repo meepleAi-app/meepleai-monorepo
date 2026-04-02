@@ -1,3 +1,10 @@
+/**
+ * LoanGameDialog Component
+ *
+ * Dialog for recording that a game has been loaned out.
+ * Captures borrower info and transitions the game state to InPrestito.
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -14,10 +21,14 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { useMarkAsOnLoan } from '@/hooks/queries/useLoanStatus';
 
-interface LoanGameDialogProps {
+export interface LoanGameDialogProps {
+  /** Game UUID */
   gameId: string;
+  /** Game title for display */
   gameTitle: string;
+  /** Dialog open state */
   open: boolean;
+  /** Callback to change open state */
   onOpenChange: (open: boolean) => void;
 }
 
@@ -35,14 +46,16 @@ export function LoanGameDialog({ gameId, gameTitle, open, onOpenChange }: LoanGa
     });
   }
 
-  function handleOpenChange(isOpen: boolean) {
-    if (!isOpen) setBorrowerInfo('');
-    onOpenChange(isOpen);
+  function handleClose(nextOpen: boolean) {
+    if (!nextOpen) {
+      setBorrowerInfo('');
+    }
+    onOpenChange(nextOpen);
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle>Presta &quot;{gameTitle}&quot;</DialogTitle>
         </DialogHeader>
@@ -58,7 +71,7 @@ export function LoanGameDialog({ gameId, gameTitle, open, onOpenChange }: LoanGa
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             Annulla
           </Button>
           <Button onClick={handleConfirm} disabled={!borrowerInfo.trim() || isPending}>

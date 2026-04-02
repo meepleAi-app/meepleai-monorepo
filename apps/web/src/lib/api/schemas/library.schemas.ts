@@ -233,7 +233,7 @@ export const SharedWishlistItemSchema = z.object({
   gameId: z.string().uuid(),
   gameTitle: z.string(),
   gameImageUrl: z.string().nullable(),
-  priority: z.string(), // "High" | "Medium" | "Low"
+  priority: z.enum(['High', 'Medium', 'Low']),
 });
 
 export type SharedWishlistItem = z.infer<typeof SharedWishlistItemSchema>;
@@ -364,29 +364,6 @@ export const CreateCustomLabelRequestSchema = z.object({
 });
 
 export type CreateCustomLabelRequest = z.infer<typeof CreateCustomLabelRequestSchema>;
-
-// ========================================
-// Downgrade Preview Schemas (Task 12)
-// ========================================
-
-export const LibraryDowngradeGameSchema = z.object({
-  entryId: z.string().uuid(),
-  gameId: z.string().uuid(),
-  gameTitle: z.string(),
-  gameImageUrl: z.string().nullable(),
-  isFavorite: z.boolean(),
-  timesPlayed: z.number(),
-  addedAt: z.string(),
-  lastPlayedAt: z.string().nullable(),
-});
-
-export const LibraryForDowngradeSchema = z.object({
-  gamesToKeep: z.array(LibraryDowngradeGameSchema),
-  gamesToRemove: z.array(LibraryDowngradeGameSchema),
-});
-
-export type LibraryDowngradeGame = z.infer<typeof LibraryDowngradeGameSchema>;
-export type LibraryForDowngrade = z.infer<typeof LibraryForDowngradeSchema>;
 
 /**
  * Predefined label constants matching backend PredefinedLabels.cs

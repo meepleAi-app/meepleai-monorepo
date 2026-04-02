@@ -40,20 +40,6 @@ export function CardDeckTool({
   const handleDraw = () => {
     const card = drawCard(deckId);
     if (card) {
-      // Add drawn card to discard pile while preserving the undo snapshot set by drawCard
-      useStandaloneToolkitStore.setState(s => {
-        const current = s.decks[deckId];
-        if (!current) return s;
-        return {
-          decks: {
-            ...s.decks,
-            [deckId]: {
-              ...current,
-              discardPile: [...current.discardPile, card],
-            },
-          },
-        };
-      });
       onAction?.('draw', card);
     }
   };

@@ -121,6 +121,9 @@ export const useStandaloneToolkitStore = create<StandaloneToolkitStore>()(
         const snapshot = { drawPile, discardPile };
         const [card, ...rest] = drawPile;
 
+        // discardPile is either [] (after reshuffle) or the original pile (no reshuffle)
+        const newDiscardPile = [...discardPile, card];
+
         set(s => {
           const current = s.decks[deckId];
           if (!current) return s;
@@ -130,7 +133,7 @@ export const useStandaloneToolkitStore = create<StandaloneToolkitStore>()(
               [deckId]: {
                 ...current,
                 drawPile: rest,
-                discardPile,
+                discardPile: newDiscardPile,
                 lastDrawnCard: card,
                 undoSnapshot: snapshot,
                 undoExpiry: Date.now() + UNDO_WINDOW_MS,

@@ -18,7 +18,7 @@ describe('CardDeck', () => {
     expect(result.current.decks['d1'].discardPile).toHaveLength(0);
   });
 
-  it('drawCard removes a card from drawPile', () => {
+  it('drawCard removes a card from drawPile and adds it to discardPile', () => {
     const { result } = renderHook(() => useStandaloneToolkitStore());
     act(() => result.current.initDeck('d1', 'Test', ['A', 'B', 'C'], false));
     let card: string | null = null;
@@ -27,6 +27,8 @@ describe('CardDeck', () => {
     });
     expect(card).not.toBeNull();
     expect(result.current.decks['d1'].drawPile).toHaveLength(2);
+    expect(result.current.decks['d1'].discardPile).toHaveLength(1);
+    expect(result.current.decks['d1'].discardPile).toContain(card);
   });
 
   it('undoDraw restores state within 30s window', () => {
@@ -65,17 +67,15 @@ describe('CardDeck', () => {
   it('reshuffles discard pile when draw pile is empty and reshuffleOnEmpty is true', () => {
     const { result } = renderHook(() => useStandaloneToolkitStore());
     act(() => result.current.initDeck('d1', 'Test', ['A'], true));
-    // Draw the only card (pile now empty)
+    // Draw the only card — drawCard auto-adds it to discard pile
     act(() => result.current.drawCard('d1'));
-    // Discard the drawn card
-    act(() => result.current.discardCard('d1', result.current.decks['d1'].lastDrawnCard!));
-    // Draw again — should reshuffle discard into draw pile
+    // discard pile now has 1 card; draw pile is empty → next draw reshuffles
     let card: string | null = null;
     act(() => {
       card = result.current.drawCard('d1');
     });
     expect(card).toBe('A');
-    expect(result.current.decks['d1'].discardPile).toHaveLength(0);
+    expect(result.current.decks['d1'].discardPile).toHaveLength(1); // card re-added after reshuffle draw
   });
 
   it('discardCard adds card to discard pile', () => {

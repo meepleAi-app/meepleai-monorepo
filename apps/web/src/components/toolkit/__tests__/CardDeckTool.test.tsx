@@ -50,6 +50,25 @@ describe('CardDeckTool', () => {
     expect(screen.getByText('10 carte')).toBeInTheDocument();
   });
 
+  it('mostra mazzo esaurito quando draw pile è vuoto', () => {
+    const twoCards = ['A', 'B'];
+    render(
+      <CardDeckTool deckId="exhausted" name="Mini" cards={twoCards} reshuffleOnEmpty={false} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /pesca/i }));
+    fireEvent.click(screen.getByRole('button', { name: /pesca/i }));
+    expect(screen.getByText(/mazzo esaurito/i)).toBeInTheDocument();
+  });
+
+  it('il bottone annulla scompare dopo undo', () => {
+    render(
+      <CardDeckTool deckId="undo-test" name="Test" cards={defaultCards} reshuffleOnEmpty={false} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /pesca/i }));
+    fireEvent.click(screen.getByRole('button', { name: /annulla/i }));
+    expect(screen.queryByRole('button', { name: /annulla/i })).not.toBeInTheDocument();
+  });
+
   it('deck vuoto con reshuffleOnEmpty ricarica le carte', () => {
     const twoCards = ['A', 'B'];
     render(<CardDeckTool deckId="test2" name="Mini" cards={twoCards} reshuffleOnEmpty={true} />);

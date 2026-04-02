@@ -15,14 +15,16 @@ interface CounterToolProps {
 }
 
 export function CounterTool({ id, name, initialValue, min, max, onAction }: CounterToolProps) {
-  const { counters, initCounters, incrementCounter, decrementCounter, resetCounter } =
+  const { counters, addCounter, incrementCounter, decrementCounter, resetCounter } =
     useStandaloneToolkitStore();
 
   const counter = counters.find(c => c.id === id);
 
   useEffect(() => {
     if (!counter) {
-      initCounters([{ id, name, initialValue, min, max }]);
+      // Use addCounter (not initCounters) to avoid wiping other counters on the page.
+      // Props are intentionally omitted from deps: counter init runs once per id.
+      addCounter({ id, name, initialValue, min, max });
     }
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -41,7 +43,8 @@ export function CounterTool({ id, name, initialValue, min, max, onAction }: Coun
           className="h-12 w-12 text-xl"
           onClick={() => {
             decrementCounter(id);
-            onAction?.('decrement', counter.value - 1);
+            const next = counter.value - 1;
+            onAction?.('decrement', min !== undefined ? Math.max(next, min) : next);
           }}
           disabled={atMin}
           aria-label={`- ${name}`}
@@ -60,7 +63,8 @@ export function CounterTool({ id, name, initialValue, min, max, onAction }: Coun
           className="h-12 w-12 text-xl"
           onClick={() => {
             incrementCounter(id);
-            onAction?.('increment', counter.value + 1);
+            const next = counter.value + 1;
+            onAction?.('increment', max !== undefined ? Math.min(next, max) : next);
           }}
           disabled={atMax}
           aria-label={`+ ${name}`}

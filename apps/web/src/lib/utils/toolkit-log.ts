@@ -36,7 +36,11 @@ export function clearOldEntries(): void {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - MAX_AGE_DAYS);
   const log = getToolLog().filter(e => new Date(e.timestamp) >= cutoff);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(log));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(log));
+  } catch {
+    // silent — avoid crashing page mount effect on quota errors
+  }
 }
 
 export function generateLogId(): string {

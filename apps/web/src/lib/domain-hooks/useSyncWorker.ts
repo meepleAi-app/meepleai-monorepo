@@ -51,7 +51,7 @@ export function useSyncWorker() {
               await api.liveSessions.advanceTurn(op.sessionId);
               break;
             case 'advancePhase':
-              await api.liveSessions.advanceTurn(op.sessionId);
+              await api.liveSessions.advancePhase(op.sessionId);
               break;
             case 'recordScore':
               await api.liveSessions.recordScore(

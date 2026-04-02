@@ -10,6 +10,8 @@ import type { ChatAnalyticsDto } from '@/lib/api/schemas/chat-analytics.schemas'
 import type { ModelPerformanceDto } from '@/lib/api/schemas/model-performance.schemas';
 import type { PdfAnalyticsDto } from '@/lib/api/schemas/pdf.schemas';
 
+type Period = 7 | 30 | 90;
+
 interface MetricCardProps {
   title: string;
   children: React.ReactNode;
@@ -34,19 +36,20 @@ function MetricRow({ label, value }: { label: string; value: string | number }) 
 }
 
 export function AiUsageTab() {
+  const [period, setPeriod] = useState<Period>(30);
   const [pdfData, setPdfData] = useState<PdfAnalyticsDto | null>(null);
   const [chatData, setChatData] = useState<ChatAnalyticsDto | null>(null);
   const [modelData, setModelData] = useState<ModelPerformanceDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const loadData = () => {
+  const loadData = (p: Period) => {
     setLoading(true);
     setError(false);
     Promise.all([
-      api.admin.getPdfAnalytics(30).catch(() => null),
-      api.admin.getChatAnalytics(30).catch(() => null),
-      api.admin.getModelPerformance(30).catch(() => null),
+      api.admin.getPdfAnalytics(p).catch(() => null),
+      api.admin.getChatAnalytics(p).catch(() => null),
+      api.admin.getModelPerformance(p).catch(() => null),
     ])
       .then(([pdf, chat, model]) => {
         setPdfData(pdf);
@@ -59,8 +62,8 @@ export function AiUsageTab() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(period);
+  }, [period]);
 
   if (loading) {
     return (
@@ -77,13 +80,32 @@ export function AiUsageTab() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
-          Analitiche Utilizzo AI
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Elaborazione PDF, attività chat e performance dei modelli negli ultimi 30 giorni.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
+            Analitiche Utilizzo AI
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Elaborazione PDF, attività chat e performance dei modelli.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 rounded-lg border p-1">
+            {([7, 30, 90] as const).map(p => (
+              <Button
+                key={p}
+                variant={period === p ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setPeriod(p)}
+              >
+                {p}d
+              </Button>
+            ))}
+          </div>
+          <Button variant="outline" size="icon" onClick={() => loadData(period)}>
+            <RefreshCwIcon className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -92,7 +114,7 @@ export function AiUsageTab() {
           <p className="text-sm text-amber-800 dark:text-amber-200 flex-1">
             Impossibile caricare alcune metriche AI. I dati potrebbero essere incompleti.
           </p>
-          <Button variant="outline" size="sm" onClick={loadData}>
+          <Button variant="outline" size="sm" onClick={() => loadData(period)}>
             <RefreshCwIcon className="h-3.5 w-3.5 mr-1.5" />
             Riprova
           </Button>

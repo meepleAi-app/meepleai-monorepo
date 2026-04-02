@@ -7,6 +7,7 @@ import {
   ListOrderedIcon,
   ArrowRightIcon,
   CpuIcon,
+  ThumbsUpIcon,
 } from 'lucide-react';
 import { type Metadata } from 'next';
 import Link from 'next/link';
@@ -81,6 +82,15 @@ const sections = [
     href: '/admin/knowledge-base/embedding',
     color: 'from-violet-500 to-purple-600',
     stats: 'View metrics',
+  },
+  {
+    title: 'User Feedback',
+    description:
+      'Review thumbs up/down feedback from users on KB-powered chat responses, filter by outcome and paginate results',
+    icon: ThumbsUpIcon,
+    href: '/admin/knowledge-base/feedback',
+    color: 'from-rose-500 to-pink-600',
+    stats: 'View feedback',
   },
 ];
 

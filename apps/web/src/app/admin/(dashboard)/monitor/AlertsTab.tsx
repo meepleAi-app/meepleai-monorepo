@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-import { AlertTriangleIcon, RefreshCwIcon } from 'lucide-react';
+import { AlertTriangleIcon, Plus, RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AlertRuleList } from '@/components/admin/alert-rules/AlertRuleList';
@@ -13,6 +13,8 @@ import { api } from '@/lib/api';
 import { alertRulesApi } from '@/lib/api/alert-rules.api';
 import type { AlertRule } from '@/lib/api/schemas/alert-rules.schemas';
 
+import { CreateAlertRuleDialog } from './CreateAlertRuleDialog';
+
 export function AlertsTab() {
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -20,6 +22,7 @@ export function AlertsTab() {
   const [totalServices, setTotalServices] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const loadData = () => {
     setLoading(true);
@@ -100,19 +103,33 @@ export function AlertsTab() {
         healthyServices={healthyServices}
         totalServices={totalServices}
       />
-      <div>
-        <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
-          Regole di Alert
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Configura soglie di alert e destinazioni delle notifiche.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
+            Regole di Alert
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Configura soglie di alert e destinazioni delle notifiche.
+          </p>
+        </div>
+        <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="gap-1.5">
+          <Plus className="h-4 w-4" />
+          Nuova Regola
+        </Button>
       </div>
       <AlertRuleList
         rules={rules}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onToggle={handleToggle}
+      />
+      <CreateAlertRuleDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onCreated={() => {
+          setCreateDialogOpen(false);
+          loadData();
+        }}
       />
     </div>
   );

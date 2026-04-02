@@ -234,6 +234,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<Api.Infrastructure.Entities.KnowledgeBase.SimilarityAuditResultEntity> SimilarityAuditResults => Set<Api.Infrastructure.Entities.KnowledgeBase.SimilarityAuditResultEntity>();
     public DbSet<Api.Infrastructure.Entities.KnowledgeBase.AnalysisFeedbackEntity> AnalysisFeedback => Set<Api.Infrastructure.Entities.KnowledgeBase.AnalysisFeedbackEntity>();
 
+    // KB-06: User feedback on KB chat responses
+    public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback> KbUserFeedbacks => Set<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         ArgumentNullException.ThrowIfNull(optionsBuilder);

@@ -204,7 +204,7 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ProcessingStatus_ReturnsProcessingWithNullProgress()
+    public async Task Handle_ProcessingState_ReturnsProcessingWithNullProgress()
     {
         // Arrange
         var (gameId, userId, game) = CreateGameWithOwner();

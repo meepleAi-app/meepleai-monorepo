@@ -30,6 +30,7 @@ internal static class UserLibraryCoreEndpoints
         MapGetUserLibraryEndpoint(group);
         MapGetLibraryStatsEndpoint(group);
         MapGetLibraryQuotaEndpoint(group);
+        MapGetLibraryForDowngradeEndpoint(group);
         MapAddGameToLibraryEndpoint(group);
         MapRemoveGameFromLibraryEndpoint(group);
         MapUpdateLibraryEntryEndpoint(group);
@@ -185,6 +186,40 @@ internal static class UserLibraryCoreEndpoints
         .WithTags("Library")
         .WithSummary("Get library quota")
         .WithDescription("Returns quota information for user's library including games in library, max allowed, remaining slots, and tier.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetLibraryForDowngradeEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/downgrade-preview", async (
+            [FromQuery] int newQuota,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            if (newQuota < 0)
+                return Results.BadRequest("newQuota must be non-negative");
+
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetLibraryForDowngradeQuery(userId, newQuota);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<LibraryForDowngradeDto>(200)
+        .Produces(401)
+        .WithTags("Library")
+        .WithName("GetLibraryForDowngrade")
+        .WithSummary("Get library downgrade preview")
+        .WithDescription("Returns games sorted by priority (favorites first, then most played, then most recently added) split into keep/remove lists based on the new quota.")
         .WithOpenApi();
     }
 
@@ -984,6 +1019,33 @@ internal static class UserLibraryCoreEndpoints
         .WithTags("Library", "Games", "Notifications")
         .WithSummary("Send loan reminder")
         .WithDescription("Sends notification reminder about loaned game. Rate limited to 1 per 24h. Game must be in InPrestito state.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetLoanStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/games/{gameId:guid}/loan-status", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            var result = await mediator.Send(new GetLoanStatusQuery(userId, gameId), ct).ConfigureAwait(false);
+            return result is null ? Results.NotFound() : Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<LoanStatusDto>(200)
+        .Produces(404)
+        .Produces(401)
+        .WithTags("Library")
+        .WithSummary("Get loan status for a game")
+        .WithDescription("Returns loan status (IsOnLoan, BorrowerInfo, LoanedSince) for a game in the user's library. Returns 404 if the game is not in the library.")
         .WithOpenApi();
     }
 

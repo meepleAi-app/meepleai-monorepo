@@ -18,6 +18,11 @@ import {
   TestTube,
   Download,
   Mail,
+  Users,
+  Box,
+  ScrollText,
+  BarChart3,
+  Settings,
 } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
@@ -28,8 +33,13 @@ import { AlertsTab } from './AlertsTab';
 import { BulkExportTab } from './BulkExportTab';
 import { CacheTab } from './CacheTab';
 import { CommandCenterTab } from './CommandCenterTab';
+import { ContainersTab } from './ContainersTab';
 import { EmailManagementTab } from './EmailManagementTab';
+import { GrafanaTab } from './GrafanaTab';
 import { InfrastructureTab } from './InfrastructureTab';
+import { LogsTab } from './LogsTab';
+import { MauTab } from './MauTab';
+import { OperationsLinkTab } from './OperationsLinkTab';
 import { TestingTab } from './TestingTab';
 
 interface AdminMonitorPageProps {
@@ -47,6 +57,16 @@ const TABS: readonly HubTab[] = [
     icon: <Terminal />,
   },
   { id: 'testing', label: 'Testing', href: '/admin/monitor?tab=testing', icon: <TestTube /> },
+  { id: 'mau', label: 'MAU', href: '/admin/monitor?tab=mau', icon: <Users /> },
+  { id: 'containers', label: 'Containers', href: '/admin/monitor?tab=containers', icon: <Box /> },
+  { id: 'logs', label: 'Logs', href: '/admin/monitor?tab=logs', icon: <ScrollText /> },
+  { id: 'grafana', label: 'Grafana', href: '/admin/monitor?tab=grafana', icon: <BarChart3 /> },
+  {
+    id: 'operations',
+    label: 'Operations',
+    href: '/admin/monitor?tab=operations',
+    icon: <Settings />,
+  },
   { id: 'export', label: 'Bulk Export', href: '/admin/monitor?tab=export', icon: <Download /> },
   { id: 'email', label: 'Email', href: '/admin/monitor?tab=email', icon: <Mail /> },
   { id: 'history', label: 'History', href: '/admin/monitor?tab=history', icon: <History /> },
@@ -115,6 +135,36 @@ function renderTabContent(tab: TabId) {
       return (
         <Suspense fallback={<TabSkeleton />}>
           <AlertHistoryTab />
+        </Suspense>
+      );
+    case 'mau':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <MauTab />
+        </Suspense>
+      );
+    case 'containers':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <ContainersTab />
+        </Suspense>
+      );
+    case 'logs':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <LogsTab />
+        </Suspense>
+      );
+    case 'grafana':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <GrafanaTab />
+        </Suspense>
+      );
+    case 'operations':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <OperationsLinkTab />
         </Suspense>
       );
     default:

@@ -29,9 +29,11 @@ import { useRouter } from 'next/navigation';
 import { AiReadySection } from '@/components/library/AiReadySection';
 import { FavoriteToggle } from '@/components/library/FavoriteToggle';
 import { PdfUploadSheet } from '@/components/library/PdfUploadSheet';
+import { Badge } from '@/components/ui/data-display/badge';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { GlassCard } from '@/components/ui/surfaces/GlassCard';
 import { useLibraryGameDetail, libraryKeys } from '@/hooks/queries/useLibrary';
+import { useGameKbStatus } from '@/hooks/use-game-kb-status';
 
 export interface GameDetailMobileProps {
   gameId: string;
@@ -67,6 +69,7 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: game, isLoading, error } = useLibraryGameDetail(gameId);
+  const { data: kbStatus } = useGameKbStatus(gameId);
   const [uploadOpen, setUploadOpen] = useState(false);
 
   // -- Loading --
@@ -165,6 +168,39 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
                 </span>
               )}
             </div>
+
+            {/* KB Coverage Badge */}
+            {kbStatus?.isIndexed && (
+              <div className="space-y-2" data-testid="kb-status-mobile">
+                <Badge
+                  variant="secondary"
+                  className="gap-1 text-teal-600 border-teal-200 bg-teal-50"
+                  data-testid="kb-coverage-badge-mobile"
+                >
+                  <BookOpen className="h-3 w-3" />
+                  KB {kbStatus.coverageLevel}
+                </Badge>
+
+                {kbStatus.suggestedQuestions.length > 0 && (
+                  <div data-testid="suggested-questions-mobile">
+                    <p className="text-xs text-[var(--gaming-text-secondary)] mb-1.5">
+                      Domande frequenti:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {kbStatus.suggestedQuestions.map((q, i) => (
+                        <button
+                          key={i}
+                          className="text-xs px-3 py-1 rounded-full border border-white/10 bg-white/5 text-[var(--gaming-text-secondary)] hover:bg-white/10 transition-colors"
+                          data-testid="suggested-question-btn-mobile"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </GlassCard>
 

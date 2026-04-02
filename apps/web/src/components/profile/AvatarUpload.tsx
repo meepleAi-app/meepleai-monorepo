@@ -12,10 +12,10 @@
 
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Camera, Loader2, X, ZoomIn, ZoomOut } from 'lucide-react';
-import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import ReactCrop, { type PercentCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/data-display/avatar';
@@ -67,7 +67,7 @@ function getInitials(name: string): string {
 /**
  * Creates a centered crop with aspect ratio 1:1
  */
-function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number): Crop {
+function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number): PercentCrop {
   return centerCrop(
     makeAspectCrop(
       {
@@ -80,7 +80,7 @@ function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: numbe
     ),
     mediaWidth,
     mediaHeight
-  );
+  ) as PercentCrop;
 }
 
 /**
@@ -88,7 +88,7 @@ function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: numbe
  */
 async function getCroppedImg(
   image: HTMLImageElement,
-  crop: Crop,
+  crop: PercentCrop,
   targetSize: number
 ): Promise<{ blob: Blob; url: string }> {
   const canvas = document.createElement('canvas');
@@ -147,7 +147,7 @@ export function AvatarUpload({
   const [isHovered, setIsHovered] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [crop, setCrop] = useState<Crop>();
+  const [crop, setCrop] = useState<PercentCrop | undefined>(undefined);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -157,6 +157,15 @@ export function AvatarUpload({
   const imageRef = useRef<HTMLImageElement>(null);
   // Track blob URL for cleanup to prevent memory leaks
   const blobUrlRef = useRef<string | null>(null);
+
+  // Cleanup: revoke any pending blob URL when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+    };
+  }, []);
 
   // Handlers
   const handleAvatarClick = useCallback(() => {
@@ -197,7 +206,7 @@ export function AvatarUpload({
         setIsDialogOpen(true);
       };
       img.onerror = () => {
-        setError('Impossibile caricare l\'immagine. Verifica che sia un\'immagine valida.');
+        setError("Impossibile caricare l'immagine. Verifica che sia un'immagine valida.");
       };
       img.src = reader.result as string;
     };
@@ -233,15 +242,18 @@ export function AvatarUpload({
       // Create a File from the Blob
       const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
 
-      // Call the upload callback with optimistic preview
+      // Call the upload callback with optimistic preview.
+      // Do NOT revoke the blob URL here — the caller (page.tsx) uses it for
+      // optimistic setQueryData and will revoke it after invalidateQueries resolves.
       await onUpload(file, url);
 
       // Close dialog on success
       setIsDialogOpen(false);
       setSelectedImage(null);
       setCrop(undefined);
+      setZoom(1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Errore durante l\'upload dell\'avatar.');
+      setError(err instanceof Error ? err.message : "Errore durante l'upload dell'avatar.");
     } finally {
       setIsUploading(false);
     }
@@ -264,8 +276,7 @@ export function AvatarUpload({
     setZoom(prev => Math.max(prev - 0.1, 1));
   }, []);
 
-  // Size classes based on size prop
-  const sizeClass = `h-[${size}px] w-[${size}px]`;
+  // Dimensioni via inline style (Tailwind 4 non genera classi dinamiche a runtime)
   const sizeStyle = { width: size, height: size };
 
   return (
@@ -287,7 +298,7 @@ export function AvatarUpload({
         aria-label={`Avatar di ${displayName}`}
         aria-disabled={disabled}
       >
-        <Avatar className={sizeClass} style={sizeStyle}>
+        <Avatar style={sizeStyle}>
           <AvatarImage src={currentAvatarUrl || undefined} alt={displayName} />
           <AvatarFallback className="text-2xl bg-orange-100 text-orange-600">
             {getInitials(displayName || 'U')}
@@ -352,8 +363,8 @@ export function AvatarUpload({
           <DialogHeader>
             <DialogTitle>Ritaglia avatar</DialogTitle>
             <DialogDescription>
-              Seleziona l'area dell'immagine da usare come avatar. L'immagine verrà ridimensionata
-              a 400x400 pixel.
+              Seleziona l'area dell'immagine da usare come avatar. L'immagine verrà ridimensionata a
+              400x400 pixel.
             </DialogDescription>
           </DialogHeader>
 
@@ -366,8 +377,10 @@ export function AvatarUpload({
 
           {/* Crop area */}
           <div className="flex flex-col items-center gap-4">
+            {/* overflow-auto consente lo scroll quando zoom > 1 — react-image-crop
+                 legge le dimensioni reali del layout, non CSS transform */}
             {selectedImage && (
-              <div className="relative max-h-[400px] overflow-hidden rounded-lg bg-muted">
+              <div className="relative max-h-[400px] overflow-auto rounded-lg bg-muted">
                 <ReactCrop
                   crop={crop}
                   onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -384,11 +397,10 @@ export function AvatarUpload({
                     alt="Immagine da ritagliare"
                     onLoad={handleImageLoad}
                     style={{
-                      maxHeight: '400px',
-                      maxWidth: '100%',
-                      transform: `scale(${zoom})`,
-                      transformOrigin: 'center',
-                      transition: 'transform 0.2s ease-out',
+                      display: 'block',
+                      width: `${zoom * 100}%`,
+                      maxWidth: 'none',
+                      transition: 'width 0.2s ease-out',
                     }}
                   />
                 </ReactCrop>

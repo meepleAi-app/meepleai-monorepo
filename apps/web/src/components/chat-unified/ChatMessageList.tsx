@@ -8,13 +8,16 @@
  * - Response meta badge (strategy tier)
  * - Technical details panel (debug info for editors)
  * - Streaming status, model downgrade banner, streaming bubble
+ * - KB-07: Feedback buttons wired to POST /games/{id}/knowledge-base/feedback
  */
 
 'use client';
 
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 
+import { FeedbackButtons, type FeedbackValue } from '@/components/ui/meeple/feedback-buttons';
 import type { AgentChatStreamState } from '@/hooks/useAgentChatStream';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 import { ResponseMetaBadge } from './ResponseMetaBadge';
@@ -52,6 +55,10 @@ export interface ChatMessageListProps {
   isEditor: boolean;
   isAdmin: boolean;
   gameTitle?: string;
+  /** KB-07: Game ID used to submit feedback — pass null/undefined to hide feedback buttons */
+  gameId?: string | null;
+  /** KB-07: Thread ID used as chatSessionId in feedback payload */
+  threadId?: string;
   /** TTS state */
   isTtsSupported: boolean;
   ttsEnabled: boolean;
@@ -79,6 +86,8 @@ export function ChatMessageList({
   isEditor,
   isAdmin,
   gameTitle,
+  gameId,
+  threadId,
   isTtsSupported,
   ttsEnabled,
   isSpeaking,
@@ -88,6 +97,37 @@ export function ChatMessageList({
 }: ChatMessageListProps) {
   const [windowStart, setWindowStart] = React.useState(() =>
     Math.max(0, messages.length - WINDOW_SIZE)
+  );
+
+  // KB-07: Per-message feedback state (messageId → FeedbackValue)
+  const [feedbackMap, setFeedbackMap] = useState<Map<string, FeedbackValue>>(new Map());
+  const [feedbackLoadingMap, setFeedbackLoadingMap] = useState<Map<string, boolean>>(new Map());
+
+  // KB-07: Submit feedback handler — wires FeedbackButtons to POST /games/{id}/knowledge-base/feedback
+  const handleFeedback = useCallback(
+    async (messageId: string, feedbackValue: FeedbackValue, comment?: string) => {
+      if (!gameId || !threadId) return;
+
+      setFeedbackLoadingMap(prev => new Map(prev).set(messageId, true));
+      try {
+        if (feedbackValue !== null) {
+          // FeedbackValue uses 'not-helpful'; API requires 'not_helpful'
+          const outcome = feedbackValue === 'not-helpful' ? 'not_helpful' : 'helpful';
+          await api.knowledgeBase.submitKbFeedback(gameId, {
+            chatSessionId: threadId,
+            messageId,
+            outcome,
+            comment,
+          });
+        }
+        setFeedbackMap(prev => new Map(prev).set(messageId, feedbackValue));
+      } catch {
+        // Silent fail: feedback is non-critical, do not surface errors to user
+      } finally {
+        setFeedbackLoadingMap(prev => new Map(prev).set(messageId, false));
+      }
+    },
+    [gameId, threadId]
   );
 
   // Advance window when new messages arrive so the latest stays visible
@@ -163,6 +203,20 @@ export function ChatMessageList({
                     executionId={streamState.executionId}
                     showDebugLink={isAdmin}
                   />
+                )}
+                {/* KB-07: Feedback buttons — only for assistant messages when gameId is available */}
+                {msg.role === 'assistant' && !!gameId && !!threadId && (
+                  <div className="mt-3 pt-3 border-t border-border/30">
+                    <FeedbackButtons
+                      value={feedbackMap.get(msg.id) ?? null}
+                      onFeedbackChange={(feedbackValue, comment) =>
+                        handleFeedback(msg.id, feedbackValue, comment)
+                      }
+                      isLoading={feedbackLoadingMap.get(msg.id) ?? false}
+                      showCommentOnNegative
+                      size="sm"
+                    />
+                  </div>
                 )}
               </div>
             );

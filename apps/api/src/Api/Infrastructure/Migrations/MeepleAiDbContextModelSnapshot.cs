@@ -1690,6 +1690,60 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("agent_definitions", "knowledge_base");
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ChatSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("chat_session_id");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("comment");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("outcome");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_kb_user_feedback_created_at");
+
+                    b.HasIndex("GameId")
+                        .HasDatabaseName("IX_kb_user_feedback_game_id");
+
+                    b.HasIndex("MessageId")
+                        .HasDatabaseName("IX_kb_user_feedback_message_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_kb_user_feedback_user_id");
+
+                    b.ToTable("kb_user_feedback", "knowledge_base");
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5667,6 +5721,49 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("IX_UserAchievements_UserId_UnlockedAt");
 
                     b.ToTable("user_achievements", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentGameStateSnapshotEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActivePlayerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("active_player_id");
+
+                    b.Property<Guid>("AgentSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_session_id");
+
+                    b.Property<string>("BoardStateJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("board_state_json");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Vector>("Embedding")
+                        .HasColumnType("vector(1024)")
+                        .HasColumnName("embedding");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<int>("TurnNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("turn_number");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentSessionId");
+
+                    b.ToTable("agent_game_state_snapshots");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTestResultEntity", b =>
@@ -13247,6 +13344,17 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Achievement");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentGameStateSnapshotEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.AgentSessionEntity", "AgentSession")
+                        .WithMany()
+                        .HasForeignKey("AgentSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AgentSession");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTestResultEntity", b =>

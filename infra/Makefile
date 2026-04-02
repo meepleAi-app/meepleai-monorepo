@@ -24,6 +24,9 @@ tunnel-stop: ## Close SSH tunnels
 tunnel-status: ## Check SSH tunnel status
 	bash scripts/integration-tunnel.sh status
 
+integration-check: ## Check prerequisites before make integration (SSH key, tunnel, ports)
+	bash scripts/integration-check.sh
+
 integration: ## Start local api+web with remote services (run 'make tunnel' first)
 	@echo "Ensure tunnels are open: make tunnel"
 	bash scripts/integration-start.sh
@@ -32,11 +35,15 @@ integration-down: ## Stop integration (local processes + tunnels)
 	bash scripts/integration-start.sh stop
 	bash scripts/integration-tunnel.sh stop
 
-staging: ## Deploy staging on server (meepleai.app)
+staging: ## Deploy staging — core + AI + monitoring (CAX31+ recommended, ~14GB reservation)
 	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
 		--profile ai --profile monitoring --profile proxy up -d
 
-staging-down: ## Stop staging
+staging-core: ## Deploy staging core only — no AI services (safe for CAX21, ~6GB reservation)
+	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
+		--profile monitoring --profile proxy up -d
+
+staging-down: ## Stop staging (all profiles)
 	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
 		--profile ai --profile monitoring --profile proxy down
 
@@ -192,7 +199,7 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
 	node $(ROOT)/scripts/validate-workflows.js
 	@echo "✅ Workflows valid"
 
-.PHONY: dev dev-core dev-down tunnel tunnel-stop tunnel-status integration \
+.PHONY: dev dev-core dev-down tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down staging staging-down prod prod-down \
         alpha alpha-core alpha-down \
         secrets-setup secrets-sync \

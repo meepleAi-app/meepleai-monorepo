@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 import { GameTableDrawer } from '../GameTableDrawer';
-import type { DrawerContent } from '@/lib/stores/gameTableDrawerStore';
+import type { DrawerContent } from '@/lib/stores/game-table-drawer-store';
 
 vi.mock('@/components/library/game-table/GameStatsPanel', () => ({
   GameStatsPanel: ({ gameId }: { gameId: string }) => (

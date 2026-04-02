@@ -5,7 +5,7 @@ import { createContext, useEffect, useRef } from 'react';
 import { useActorRef } from '@xstate/react';
 import { createActor, type ActorRefFrom } from 'xstate';
 
-import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useSessionStore } from '@/lib/stores/session-store';
 
 import { dashboardMachine } from './DashboardEngine';
 

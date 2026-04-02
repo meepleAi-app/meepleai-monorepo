@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
+import { encrypt } from '@/lib/api/core/secureStorage';
 
 // ============================================================================
 // Types
@@ -58,9 +59,10 @@ export default function JoinSessionPage({ params }: JoinPageProps) {
           guestName: trimmedName,
         });
 
-        // Store session token for subsequent API calls
+        // Store session token for subsequent API calls (encrypted)
         const targetSessionId = result.sessionId || sessionId;
-        sessionStorage.setItem(`session-token-${targetSessionId}`, result.connectionToken);
+        const encryptedToken = await encrypt(result.connectionToken);
+        sessionStorage.setItem(`session-token-${targetSessionId}`, encryptedToken);
 
         // Redirect to the session page
         router.push(`/sessions/${targetSessionId}`);

@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import { AnimatePresence, motion } from 'framer-motion';
 import { Library, Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -104,7 +106,7 @@ interface CollectionGameGridProps {
   onPageChange: (page: number) => void;
 }
 
-export function CollectionGameGrid({
+export const CollectionGameGrid = React.memo(function CollectionGameGrid({
   games,
   carouselGames,
   viewMode,
@@ -215,4 +217,4 @@ export function CollectionGameGrid({
       )}
     </section>
   );
-}
+});

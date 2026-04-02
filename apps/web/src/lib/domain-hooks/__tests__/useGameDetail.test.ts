@@ -49,7 +49,7 @@ const mockGameDetail: GameDetail = {
   checklist: [],
 };
 
-vi.mock('@/lib/stores/useGameDetailStore', () => ({
+vi.mock('@/lib/stores/game-detail-store', () => ({
   useGameDetailStore: vi.fn(selector => {
     const mockStore = {
       setGameId: vi.fn(),

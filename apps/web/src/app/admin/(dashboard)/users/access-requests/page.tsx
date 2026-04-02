@@ -78,7 +78,7 @@ export default function AccessRequestsPage() {
   const statsQuery = useQuery({
     queryKey: ['admin', 'access-request-stats'],
     queryFn: () => api.accessRequests.getAccessRequestStats(),
-    staleTime: 30_000,
+    staleTime: 5_000,
   });
 
   // Fetch list
@@ -96,7 +96,7 @@ export default function AccessRequestsPage() {
         page,
         pageSize: PAGE_SIZE,
       }),
-    staleTime: 30_000,
+    staleTime: 5_000,
   });
 
   function invalidateAll() {
@@ -108,11 +108,11 @@ export default function AccessRequestsPage() {
   const approveMutation = useMutation({
     mutationFn: (id: string) => api.accessRequests.approveAccessRequest(id),
     onSuccess: () => {
-      toast.success('Access request approved');
+      toast.success('Richiesta approvata');
       invalidateAll();
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to approve request');
+      toast.error(err instanceof Error ? err.message : "Errore nell'approvazione");
     },
   });
 
@@ -121,11 +121,11 @@ export default function AccessRequestsPage() {
     mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
       api.accessRequests.rejectAccessRequest(id, reason),
     onSuccess: () => {
-      toast.success('Access request rejected');
+      toast.success('Richiesta rifiutata');
       invalidateAll();
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to reject request');
+      toast.error(err instanceof Error ? err.message : 'Errore nel rifiuto');
     },
   });
 
@@ -134,14 +134,14 @@ export default function AccessRequestsPage() {
     mutationFn: (ids: string[]) => api.accessRequests.bulkApproveAccessRequests(ids),
     onSuccess: result => {
       toast.success(
-        `Approved ${result.succeeded} of ${result.processed} requests` +
-          (result.failed > 0 ? ` (${result.failed} failed)` : '')
+        `Approvati ${result.succeeded} di ${result.processed}` +
+          (result.failed > 0 ? ` (${result.failed} falliti)` : '')
       );
       setSelectedIds(new Set());
       invalidateAll();
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Bulk approve failed');
+      toast.error(err instanceof Error ? err.message : 'Approvazione multipla fallita');
     },
   });
 
@@ -193,10 +193,10 @@ export default function AccessRequestsPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-            Access Requests
+            Richieste di Accesso
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Review and manage user access requests for invite-only registration.
+            Gestisci le richieste di accesso per la registrazione su invito.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -208,18 +208,21 @@ export default function AccessRequestsPage() {
             className="gap-2"
           >
             <RefreshCwIcon className={`h-3.5 w-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
-            Refresh
+            Aggiorna
           </Button>
-          <Button
-            size="sm"
-            onClick={() => bulkApproveMutation.mutate([...selectedIds])}
-            disabled={bulkDisabled}
-            className="gap-2"
-          >
-            <UserCheckIcon className="h-3.5 w-3.5" />
-            Approve Selected
-            {selectedCount > 0 && ` (${selectedCount})`}
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              size="sm"
+              onClick={() => bulkApproveMutation.mutate([...selectedIds])}
+              disabled={bulkDisabled}
+              className="gap-2"
+            >
+              <UserCheckIcon className="h-3.5 w-3.5" />
+              Approva Selezionati
+              {selectedCount > 0 && ` (${selectedCount})`}
+            </Button>
+            <p className="text-xs text-muted-foreground">Max {BULK_APPROVE_MAX} per volta</p>
+          </div>
         </div>
       </div>
 
@@ -232,7 +235,7 @@ export default function AccessRequestsPage() {
                 <InboxIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-sm text-muted-foreground">Totale</p>
                 <span className="text-xl font-bold block">
                   {stats ? stats.total : <Skeleton className="h-6 w-10 inline-block" />}
                 </span>
@@ -248,7 +251,7 @@ export default function AccessRequestsPage() {
                 <ClockIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-sm text-muted-foreground">In attesa</p>
                 <span className="text-xl font-bold block">
                   {stats ? stats.pending : <Skeleton className="h-6 w-10 inline-block" />}
                 </span>
@@ -264,7 +267,7 @@ export default function AccessRequestsPage() {
                 <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Approved</p>
+                <p className="text-sm text-muted-foreground">Approvati</p>
                 <span className="text-xl font-bold block">
                   {stats ? stats.approved : <Skeleton className="h-6 w-10 inline-block" />}
                 </span>
@@ -280,7 +283,7 @@ export default function AccessRequestsPage() {
                 <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Rejected</p>
+                <p className="text-sm text-muted-foreground">Rifiutati</p>
                 <span className="text-xl font-bold block">
                   {stats ? stats.rejected : <Skeleton className="h-6 w-10 inline-block" />}
                 </span>
@@ -304,15 +307,15 @@ export default function AccessRequestsPage() {
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Approved">Approved</SelectItem>
-            <SelectItem value="Rejected">Rejected</SelectItem>
+            <SelectItem value="all">Tutti gli stati</SelectItem>
+            <SelectItem value="Pending">In attesa</SelectItem>
+            <SelectItem value="Approved">Approvati</SelectItem>
+            <SelectItem value="Rejected">Rifiutati</SelectItem>
           </SelectContent>
         </Select>
         {selectedCount > BULK_APPROVE_MAX && (
           <p className="text-sm text-amber-600 dark:text-amber-400">
-            Select up to {BULK_APPROVE_MAX} requests for bulk approve
+            Seleziona al massimo {BULK_APPROVE_MAX} richieste per l&apos;approvazione multipla
           </p>
         )}
       </div>
@@ -323,14 +326,14 @@ export default function AccessRequestsPage() {
           <AlertCircleIcon className="h-5 w-5 text-red-500 shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-medium text-red-800 dark:text-red-200">
-              Failed to load access requests
+              Caricamento richieste fallito
             </p>
             <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-              {error instanceof Error ? error.message : 'Unknown error'}
+              {error instanceof Error ? error.message : 'Errore sconosciuto'}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Retry
+            Riprova
           </Button>
         </div>
       )}
@@ -354,10 +357,10 @@ export default function AccessRequestsPage() {
                   />
                 </th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Requested At</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Reviewed By</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Stato</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Richiesto il</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Revisionato da</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Azioni</th>
               </tr>
             </thead>
             <tbody>
@@ -390,8 +393,8 @@ export default function AccessRequestsPage() {
                     <InboxIcon className="mx-auto mb-2 h-8 w-8 opacity-50" />
                     <p>
                       {statusFilter !== 'all'
-                        ? 'No requests match this filter'
-                        : 'No access requests yet'}
+                        ? 'Nessuna richiesta corrisponde al filtro'
+                        : 'Nessuna richiesta di accesso'}
                     </p>
                   </td>
                 </tr>
@@ -428,7 +431,7 @@ export default function AccessRequestsPage() {
                             disabled={approveMutation.isPending}
                           >
                             <CheckCircleIcon className="h-3 w-3" />
-                            Approve
+                            Approva
                           </Button>
                           <Button
                             size="sm"
@@ -438,7 +441,7 @@ export default function AccessRequestsPage() {
                             disabled={rejectMutation.isPending}
                           >
                             <XCircleIcon className="h-3 w-3" />
-                            Reject
+                            Rifiuta
                           </Button>
                         </div>
                       )}
@@ -454,8 +457,8 @@ export default function AccessRequestsPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 dark:border-zinc-700/40">
             <p className="text-sm text-muted-foreground">
-              Showing {(page - 1) * PAGE_SIZE + 1}&ndash;
-              {Math.min(page * PAGE_SIZE, totalCount)} of {totalCount}
+              Mostrati {(page - 1) * PAGE_SIZE + 1}&ndash;
+              {Math.min(page * PAGE_SIZE, totalCount)} di {totalCount}
             </p>
             <div className="flex items-center gap-1">
               <Button
@@ -468,7 +471,7 @@ export default function AccessRequestsPage() {
                 <ChevronLeftIcon className="h-4 w-4" />
               </Button>
               <span className="px-3 text-sm">
-                Page {page} of {totalPages}
+                Pagina {page} di {totalPages}
               </span>
               <Button
                 variant="outline"

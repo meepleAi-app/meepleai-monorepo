@@ -6,7 +6,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { useGameDetailStore } from '@/lib/stores/useGameDetailStore';
+import { useGameDetailStore } from '@/lib/stores/game-detail-store';
 
 export const GAME_DETAIL_QUERY_KEY = (gameId: string) => ['game-detail', gameId] as const;
 

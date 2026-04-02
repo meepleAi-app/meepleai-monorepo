@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import type { DrawnCardDto } from '@/lib/api/schemas/toolbox.schemas';
-import { useToolboxStore } from '@/lib/stores/toolboxStore';
+import { useToolboxStore } from '@/lib/stores/toolbox-store';
 
 interface ToolCardDeckProps {
   toolboxId: string;

@@ -11,18 +11,20 @@
 
 import React from 'react';
 
-import { FileText, MessageSquare, Activity, ChevronRight, Upload } from 'lucide-react';
+import { FileText, MessageSquare, Activity, ChevronRight, Upload, BookOpen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { DocumentSelectionPanel } from '@/components/library/DocumentSelectionPanel';
+import { Badge } from '@/components/ui/data-display/badge';
 import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
 import type { AgentStatus } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
 import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
+import { useGameKbStatus } from '@/hooks/use-game-kb-status';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
-import { useGameTableDrawer } from '@/lib/stores/gameTableDrawerStore';
+import { useGameTableDrawer } from '@/lib/stores/game-table-drawer-store';
 
 import { HouseRulesSection } from './HouseRulesSection';
 
@@ -73,11 +75,45 @@ export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps):
   const { data: threads = [], isLoading: threadsLoading } = useAgentThreads(resolvedAgentId ?? '');
   const { status: agentStatus, isLoading: statusLoading } = useAgentStatus(resolvedAgentId ?? '');
   const drawerOpen = useGameTableDrawer(s => s.open);
+  const { data: kbStatus } = useGameKbStatus(gameId);
 
   const lastThread = resolvedAgentId && threads.length > 0 ? threads[0] : null;
 
   return (
     <div className="space-y-3">
+      {/* KB Coverage Badge + Suggested Questions */}
+      {kbStatus?.isIndexed && (
+        <div className={CARD_ROW} data-testid="kb-status-section">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge
+              variant="secondary"
+              className="gap-1 text-teal-600 border-teal-200 bg-teal-50"
+              data-testid="kb-coverage-badge"
+            >
+              <BookOpen className="h-3 w-3" />
+              KB {kbStatus.coverageLevel}
+            </Badge>
+          </div>
+
+          {kbStatus.suggestedQuestions.length > 0 && (
+            <div className="mt-1">
+              <p className="text-xs text-[#8b949e] font-nunito mb-2">Domande frequenti:</p>
+              <div className="flex flex-wrap gap-2" data-testid="suggested-questions">
+                {kbStatus.suggestedQuestions.map((q, i) => (
+                  <button
+                    key={i}
+                    className="text-xs px-3 py-1 rounded-full border border-[#30363d] bg-[#30363d] text-[#e6edf3] hover:bg-[#444d56] transition-colors"
+                    data-testid="suggested-question-btn"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* KB Documents */}
       <div className={CARD_ROW} data-testid="kb-docs-section">
         <div className="flex items-center gap-2 mb-2">

@@ -9,13 +9,13 @@ import { useDashboardMode } from '../useDashboardMode';
 import { DashboardEngineProvider } from '../DashboardEngineProvider';
 
 // ---------------------------------------------------------------------------
-// Mock sessionStore — vi.hoisted so factory can reference the mock fn
+// Mock session-store — vi.hoisted so factory can reference the mock fn
 // ---------------------------------------------------------------------------
 const { mockGetState } = vi.hoisted(() => ({
   mockGetState: vi.fn().mockReturnValue({ activeSession: null }),
 }));
 
-vi.mock('@/lib/stores/sessionStore', () => ({
+vi.mock('@/lib/stores/session-store', () => ({
   useSessionStore: Object.assign(
     (selector?: (state: unknown) => unknown) => {
       const state = mockGetState();

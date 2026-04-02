@@ -18,6 +18,7 @@ import { ScoreBoard } from '@/components/session/live/ScoreBoard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { decrypt, encrypt } from '@/lib/api/core/secureStorage';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -38,26 +39,31 @@ interface SessionInfo {
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 
-function getSavedToken(): string | null {
+async function getSavedToken(): Promise<string | null> {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return await decrypt(raw);
   } catch {
     return null;
   }
 }
 
-function getSavedName(): string | null {
+async function getSavedName(): Promise<string | null> {
   try {
-    return localStorage.getItem(STORAGE_NAME_KEY);
+    const raw = localStorage.getItem(STORAGE_NAME_KEY);
+    if (!raw) return null;
+    return await decrypt(raw);
   } catch {
     return null;
   }
 }
 
-function saveParticipantData(token: string, name: string) {
+async function saveParticipantData(token: string, name: string): Promise<void> {
   try {
-    localStorage.setItem(STORAGE_KEY, token);
-    localStorage.setItem(STORAGE_NAME_KEY, name);
+    const [encToken, encName] = await Promise.all([encrypt(token), encrypt(name)]);
+    localStorage.setItem(STORAGE_KEY, encToken);
+    localStorage.setItem(STORAGE_NAME_KEY, encName);
   } catch {
     // Storage unavailable — continue without persistence
   }
@@ -127,8 +133,7 @@ export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
       });
 
       // Auto-rejoin if valid saved token
-      const savedToken = getSavedToken();
-      const savedName = getSavedName();
+      const [savedToken, savedName] = await Promise.all([getSavedToken(), getSavedName()]);
 
       if (savedToken && savedName) {
         const tokenRes = await fetch(
@@ -199,7 +204,7 @@ export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
 
       const joinData = (await res.json()) as { participantToken?: string };
       if (joinData.participantToken) {
-        saveParticipantData(joinData.participantToken, trimmed);
+        await saveParticipantData(joinData.participantToken, trimmed);
       }
 
       setGuestName(trimmed);

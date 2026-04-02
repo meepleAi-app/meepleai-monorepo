@@ -1,6 +1,6 @@
 import { memo, useCallback, type MouseEvent } from 'react';
 
-import { useCascadeNavigationStore } from '@/lib/stores/cascadeNavigationStore';
+import { useCascadeNavigationStore } from '@/lib/stores/cascade-navigation-store';
 import { cn } from '@/lib/utils';
 
 import { ManaSymbol } from '../mana/ManaSymbol';

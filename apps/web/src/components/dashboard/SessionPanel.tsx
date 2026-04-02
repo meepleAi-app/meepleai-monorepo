@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 
-import { useCascadeNavigationStore } from '@/lib/stores/cascadeNavigationStore';
-import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useCascadeNavigationStore } from '@/lib/stores/cascade-navigation-store';
+import { useSessionStore } from '@/lib/stores/session-store';
 
 import { useSessionSlot } from './useSessionSlot';
 

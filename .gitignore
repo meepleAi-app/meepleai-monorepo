@@ -227,6 +227,6 @@ docs/pages/dist/
 docs/pages/manifest.json
 
 # Rulebook PDFs — managed via S3/blob storage, not git
-# These are seed data for RAG embedding pipeline only (upload via /admin/knowledge-base/upload)
+# These are seed data for RAG embedding pipeline only
 data/rulebook/
 data/pdfDocs/

@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 
-import { useNavStore, type NavTab } from '@/lib/stores/navStore';
+import { useNavStore, type NavTab } from '@/lib/stores/nav-store';
 
 export type { NavTab };
 

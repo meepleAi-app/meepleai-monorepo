@@ -87,7 +87,6 @@ jobs:
       - uses: dorny/paths-filter@v4
         id: changes
         with:
-          base: ${{ github.event.before }}
           filters: |
             api:
               - 'apps/api/**'
@@ -131,6 +130,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
             apps/
             .github/
@@ -202,6 +202,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
             apps/
             .github/
@@ -393,6 +394,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
             infra/
             .github/
@@ -487,6 +489,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
             tests/
             apps/web/
@@ -698,6 +701,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
             apps/web/
             .github/

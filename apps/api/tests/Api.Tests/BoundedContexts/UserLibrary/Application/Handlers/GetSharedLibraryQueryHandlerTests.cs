@@ -1,10 +1,8 @@
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
-using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
-using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
@@ -16,12 +14,6 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
 [Trait("Category", TestCategories.Unit)]
 public class GetSharedLibraryQueryHandlerTests
 {
-    private readonly Mock<ILibraryShareLinkRepository> _mockShareLinkRepository;
-
-    public GetSharedLibraryQueryHandlerTests()
-    {
-        _mockShareLinkRepository = new Mock<ILibraryShareLinkRepository>();
-    }
 
     #region Query Validation Tests
 

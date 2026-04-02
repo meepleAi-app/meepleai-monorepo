@@ -1,7 +1,9 @@
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,17 +17,20 @@ internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuer
 {
     private readonly ILibraryShareLinkRepository _shareLinkRepository;
     private readonly IUserLibraryRepository _libraryRepository;
+    private readonly IWishlistRepository _wishlistRepository;
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<GetSharedLibraryQueryHandler> _logger;
 
     public GetSharedLibraryQueryHandler(
         ILibraryShareLinkRepository shareLinkRepository,
         IUserLibraryRepository libraryRepository,
+        IWishlistRepository wishlistRepository,
         MeepleAiDbContext db,
         ILogger<GetSharedLibraryQueryHandler> logger)
     {
         _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
+        _wishlistRepository = wishlistRepository ?? throw new ArgumentNullException(nameof(wishlistRepository));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -108,13 +113,42 @@ internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuer
             );
         }).ToList();
 
+        // Fetch public wishlist items
+        var wishlistItems = await _wishlistRepository.GetUserWishlistAsync(shareLink.UserId, cancellationToken)
+            .ConfigureAwait(false);
+        var publicWishlistItems = wishlistItems.Where(w => w.Visibility == WishlistVisibility.Public).ToList();
+
+        // Get SharedGame info for wishlist items not already loaded
+        var wishlistGameIds = publicWishlistItems.Select(w => w.GameId).Except(gameIds).ToList();
+        var wishlistGames = wishlistGameIds.Count > 0
+            ? await _db.SharedGames
+                .AsNoTracking()
+                .Where(g => wishlistGameIds.Contains(g.Id))
+                .ToDictionaryAsync(g => g.Id, cancellationToken)
+                .ConfigureAwait(false)
+            : new Dictionary<Guid, SharedGameEntity>();
+
+        var allGames = sharedGames.Concat(wishlistGames).ToDictionary(kv => kv.Key, kv => kv.Value);
+
+        var wishlistDtos = publicWishlistItems.Select(w =>
+        {
+            allGames.TryGetValue(w.GameId, out var game);
+            return new SharedWishlistItemDto(
+                GameId: w.GameId,
+                GameTitle: game?.Title ?? "Unknown Game",
+                GameImageUrl: game?.ImageUrl,
+                Priority: w.Priority.ToString()
+            );
+        }).ToList();
+
         return new SharedLibraryDto(
             OwnerDisplayName: ownerDisplayName,
             Games: games,
             TotalGames: totalCount,
             FavoritesCount: favoritesCount,
             PrivacyLevel: shareLink.PrivacyLevel.ToString().ToLowerInvariant(),
-            SharedAt: shareLink.CreatedAt
+            SharedAt: shareLink.CreatedAt,
+            WishlistItems: wishlistDtos
         );
     }
 }

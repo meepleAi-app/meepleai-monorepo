@@ -15,14 +15,14 @@
 
 'use client';
 
-
-import { BookOpen, AlertTriangle, Star, Library, Clock } from 'lucide-react';
+import { BookOpen, AlertTriangle, Star, Library, Clock, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 import { SharedLibraryGameCard } from '@/components/library';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
@@ -33,11 +33,7 @@ export default function SharedLibraryPage() {
   const shareToken = params?.token as string;
 
   // Fetch shared library data
-  const {
-    data: sharedLibrary,
-    isLoading,
-    error,
-  } = useSharedLibrary(shareToken);
+  const { data: sharedLibrary, isLoading, error } = useSharedLibrary(shareToken);
 
   // Loading state
   if (isLoading) {
@@ -147,12 +143,8 @@ export default function SharedLibraryPage() {
         {/* Games Grid */}
         {sharedLibrary.games.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {sharedLibrary.games.map((game) => (
-              <SharedLibraryGameCard
-                key={game.gameId}
-                game={game}
-                showNotes={hasNotes}
-              />
+            {sharedLibrary.games.map(game => (
+              <SharedLibraryGameCard key={game.gameId} game={game} showNotes={hasNotes} />
             ))}
           </div>
         ) : (
@@ -167,14 +159,35 @@ export default function SharedLibraryPage() {
           </Card>
         )}
 
+        {/* Wishlist Section */}
+        {sharedLibrary.wishlistItems && sharedLibrary.wishlistItems.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Heart className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-semibold font-quicksand">Lista dei desideri</h2>
+              <Badge variant="secondary">{sharedLibrary.wishlistItems.length}</Badge>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {sharedLibrary.wishlistItems.map(item => (
+                <MeepleCard
+                  key={item.gameId}
+                  entity="game"
+                  variant="grid"
+                  title={item.gameTitle}
+                  imageUrl={item.gameImageUrl ?? undefined}
+                  badge={item.priority}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Footer CTA */}
         <div className="border-t pt-8 mt-8">
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="flex flex-col md:flex-row items-center justify-between gap-4 py-6">
               <div className="text-center md:text-left">
-                <h3 className="font-semibold text-lg mb-1">
-                  Vuoi creare la tua libreria?
-                </h3>
+                <h3 className="font-semibold text-lg mb-1">Vuoi creare la tua libreria?</h3>
                 <p className="text-muted-foreground">
                   Registrati gratuitamente e inizia a gestire la tua collezione di giochi da tavolo.
                 </p>

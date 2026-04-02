@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
@@ -30,6 +30,10 @@ export function EditProfileSheet({ currentDisplayName }: EditProfileSheetProps) 
   const [displayName, setDisplayName] = useState(currentDisplayName);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDisplayName(currentDisplayName);
+  }, [currentDisplayName]);
 
   async function handleSave() {
     const trimmed = displayName.trim();

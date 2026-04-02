@@ -348,7 +348,12 @@ export default function ProfilePage() {
   const avatarUrl = profile?.avatarUrl ?? null;
 
   async function handleAvatarUpload(file: File): Promise<void> {
-    await api.auth.uploadAvatar(file);
+    const result = await api.auth.uploadAvatar(file);
+    if (result?.avatarUrl) {
+      queryClient.setQueryData([...userKeys.current(), 'profile'], (prev: typeof profile) =>
+        prev ? { ...prev, avatarUrl: result.avatarUrl } : prev
+      );
+    }
     await queryClient.invalidateQueries({ queryKey: userKeys.all });
   }
 

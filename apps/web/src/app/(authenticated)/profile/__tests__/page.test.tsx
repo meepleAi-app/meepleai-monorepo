@@ -66,6 +66,11 @@ vi.mock('@/components/profile/EditProfileSheet', () => ({
   ),
 }));
 
+// ActivityFeed usa useActivityFeed internamente — lo stubbiamo per isolare il test
+vi.mock('@/components/profile/ActivityFeed', () => ({
+  ActivityFeed: () => <div data-testid="activity-feed">Activity</div>,
+}));
+
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const mockUser = {
@@ -201,7 +206,7 @@ describe('ProfilePage', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /Activity/i }));
 
-    expect(screen.getByText('Nessuna attività ancora')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-feed')).toBeInTheDocument();
   });
 
   it('shows loading skeleton while fetching stats', async () => {

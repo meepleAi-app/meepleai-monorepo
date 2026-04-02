@@ -18,9 +18,9 @@ export function ProcessingQueueWidget() {
     queryKey: ['admin', 'overview', 'queue-counts'],
     queryFn: async (): Promise<QueueCounts> => {
       const [queued, processing, failed] = await Promise.all([
-        api.admin.getProcessingQueue({ status: 'Queued', pageSize: 1 }).catch(() => null),
-        api.admin.getProcessingQueue({ status: 'Processing', pageSize: 1 }).catch(() => null),
-        api.admin.getProcessingQueue({ status: 'Failed', pageSize: 1 }).catch(() => null),
+        api.admin.getProcessingQueue({ statusFilter: 'Queued', pageSize: 1 }).catch(() => null),
+        api.admin.getProcessingQueue({ statusFilter: 'Processing', pageSize: 1 }).catch(() => null),
+        api.admin.getProcessingQueue({ statusFilter: 'Failed', pageSize: 1 }).catch(() => null),
       ]);
       return {
         queued: queued?.total ?? 0,

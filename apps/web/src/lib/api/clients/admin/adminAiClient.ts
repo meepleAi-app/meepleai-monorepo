@@ -553,14 +553,14 @@ export function createAdminAiClient(http: HttpClient) {
     },
 
     async getProcessingQueue(params?: {
-      status?: string;
-      search?: string;
+      statusFilter?: string;
+      searchText?: string;
       page?: number;
       pageSize?: number;
     }): Promise<ProcessingQueueResponse> {
       const queryParams = new URLSearchParams();
-      if (params?.status) queryParams.set('status', params.status);
-      if (params?.search) queryParams.set('search', params.search);
+      if (params?.statusFilter) queryParams.set('statusFilter', params.statusFilter);
+      if (params?.searchText) queryParams.set('searchText', params.searchText);
       if (params?.page) queryParams.set('page', params.page.toString());
       if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
 

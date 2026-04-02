@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockGetProcessingQueue = vi.hoisted(() => vi.fn());
@@ -43,8 +43,8 @@ describe('ProcessingQueueWidget', () => {
   });
 
   it('shows queued count when there are jobs in attesa', async () => {
-    mockGetProcessingQueue.mockImplementation(({ status }: { status: string }) => {
-      if (status === 'Queued') return Promise.resolve(makeQueueResponse(3));
+    mockGetProcessingQueue.mockImplementation(({ statusFilter }: { statusFilter: string }) => {
+      if (statusFilter === 'Queued') return Promise.resolve(makeQueueResponse(3));
       return Promise.resolve(makeQueueResponse(0));
     });
 
@@ -56,8 +56,8 @@ describe('ProcessingQueueWidget', () => {
   });
 
   it('shows processing count when there are jobs in elaborazione', async () => {
-    mockGetProcessingQueue.mockImplementation(({ status }: { status: string }) => {
-      if (status === 'Processing') return Promise.resolve(makeQueueResponse(2));
+    mockGetProcessingQueue.mockImplementation(({ statusFilter }: { statusFilter: string }) => {
+      if (statusFilter === 'Processing') return Promise.resolve(makeQueueResponse(2));
       return Promise.resolve(makeQueueResponse(0));
     });
 
@@ -69,8 +69,8 @@ describe('ProcessingQueueWidget', () => {
   });
 
   it('shows failed count when there are jobs falliti', async () => {
-    mockGetProcessingQueue.mockImplementation(({ status }: { status: string }) => {
-      if (status === 'Failed') return Promise.resolve(makeQueueResponse(1));
+    mockGetProcessingQueue.mockImplementation(({ statusFilter }: { statusFilter: string }) => {
+      if (statusFilter === 'Failed') return Promise.resolve(makeQueueResponse(1));
       return Promise.resolve(makeQueueResponse(0));
     });
 
@@ -90,14 +90,17 @@ describe('ProcessingQueueWidget', () => {
       expect(mockGetProcessingQueue).toHaveBeenCalledTimes(3);
     });
 
-    expect(mockGetProcessingQueue).toHaveBeenCalledWith({ status: 'Queued', pageSize: 1 });
-    expect(mockGetProcessingQueue).toHaveBeenCalledWith({ status: 'Processing', pageSize: 1 });
-    expect(mockGetProcessingQueue).toHaveBeenCalledWith({ status: 'Failed', pageSize: 1 });
+    expect(mockGetProcessingQueue).toHaveBeenCalledWith({ statusFilter: 'Queued', pageSize: 1 });
+    expect(mockGetProcessingQueue).toHaveBeenCalledWith({
+      statusFilter: 'Processing',
+      pageSize: 1,
+    });
+    expect(mockGetProcessingQueue).toHaveBeenCalledWith({ statusFilter: 'Failed', pageSize: 1 });
   });
 
   it('links to the processing queue page', async () => {
-    mockGetProcessingQueue.mockImplementation(({ status }: { status: string }) => {
-      if (status === 'Queued') return Promise.resolve(makeQueueResponse(1));
+    mockGetProcessingQueue.mockImplementation(({ statusFilter }: { statusFilter: string }) => {
+      if (statusFilter === 'Queued') return Promise.resolve(makeQueueResponse(1));
       return Promise.resolve(makeQueueResponse(0));
     });
 

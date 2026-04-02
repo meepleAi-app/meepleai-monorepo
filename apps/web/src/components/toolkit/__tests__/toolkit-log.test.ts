@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { appendToolLog, getToolLog, clearOldEntries } from '@/lib/utils/toolkit-log';
 import type { ToolLogEntry } from '@/lib/types/standalone-toolkit';
 
@@ -40,6 +40,22 @@ describe('appendToolLog', () => {
       result: '60s',
     });
     expect(getToolLog()).toHaveLength(2);
+  });
+
+  it('does not throw when localStorage.setItem throws a quota exceeded error', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError');
+    });
+    expect(() =>
+      appendToolLog({
+        id: 'quota-test',
+        timestamp: '2026-04-02T10:00:00Z',
+        toolType: 'dice',
+        action: 'roll',
+        result: 'D6 → 5',
+      })
+    ).not.toThrow();
+    vi.restoreAllMocks();
   });
 
   it('drops oldest entry when limit of 100 is reached', () => {

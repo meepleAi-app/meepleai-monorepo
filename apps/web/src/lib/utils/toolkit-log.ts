@@ -24,7 +24,11 @@ export function appendToolLog(entry: ToolLogEntry): void {
   } catch {
     // localStorage pieno — rimuovi metà delle voci più vecchie e riprova
     log = log.slice(Math.floor(log.length / 2));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(log));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(log));
+    } catch {
+      // retry also failed — discard silently to avoid propagating storage errors
+    }
   }
 }
 

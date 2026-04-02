@@ -4,7 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -17,15 +17,15 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class GetAdminGameKbDocumentsQueryHandlerTests
 {
-    private readonly Mock<IVectorDocumentRepository> _repoMock;
-    private readonly Mock<ILogger<GetAdminGameKbDocumentsQueryHandler>> _loggerMock;
+    private readonly IVectorDocumentRepository _repo;
+    private readonly ILogger<GetAdminGameKbDocumentsQueryHandler> _logger;
     private readonly GetAdminGameKbDocumentsQueryHandler _handler;
 
     public GetAdminGameKbDocumentsQueryHandlerTests()
     {
-        _repoMock = new Mock<IVectorDocumentRepository>();
-        _loggerMock = new Mock<ILogger<GetAdminGameKbDocumentsQueryHandler>>();
-        _handler = new GetAdminGameKbDocumentsQueryHandler(_repoMock.Object, _loggerMock.Object);
+        _repo = Substitute.For<IVectorDocumentRepository>();
+        _logger = Substitute.For<ILogger<GetAdminGameKbDocumentsQueryHandler>>();
+        _handler = new GetAdminGameKbDocumentsQueryHandler(_repo, _logger);
     }
 
     [Fact]
@@ -33,9 +33,8 @@ public sealed class GetAdminGameKbDocumentsQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _repoMock
-            .Setup(r => r.GetByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<VectorDocument>());
+        _repo.GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
+            .Returns(new List<VectorDocument>());
 
         var query = new GetAdminGameKbDocumentsQuery(gameId);
 
@@ -58,9 +57,8 @@ public sealed class GetAdminGameKbDocumentsQueryHandlerTests
 
         var vectorDoc = new VectorDocument(docId, gameId, pdfDocId, "en", 42);
 
-        _repoMock
-            .Setup(r => r.GetByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<VectorDocument> { vectorDoc });
+        _repo.GetByGameIdAsync(gameId, Arg.Any<CancellationToken>())
+            .Returns(new List<VectorDocument> { vectorDoc });
 
         var query = new GetAdminGameKbDocumentsQuery(gameId);
 

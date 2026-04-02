@@ -31,7 +31,7 @@ internal sealed class GetAdminKbFeedbackQueryHandler
         var page = Math.Max(MinPage, query.Page);
         var pageSize = Math.Clamp(query.PageSize, MinPageSize, MaxPageSize);
 
-        var feedbackTask = _repo.GetByGameIdAsync(
+        var feedbackList = await _repo.GetByGameIdAsync(
             query.GameId,
             query.OutcomeFilter,
             query.FromDate,
@@ -39,14 +39,11 @@ internal sealed class GetAdminKbFeedbackQueryHandler
             pageSize,
             cancellationToken).ConfigureAwait(false);
 
-        var countTask = _repo.CountByGameIdAsync(
+        var total = await _repo.CountByGameIdAsync(
             query.GameId,
             query.OutcomeFilter,
             query.FromDate,
             cancellationToken).ConfigureAwait(false);
-
-        var feedbackList = await feedbackTask;
-        var total = await countTask;
 
         var items = feedbackList
             .Select(f => new AdminKbFeedbackItemDto(

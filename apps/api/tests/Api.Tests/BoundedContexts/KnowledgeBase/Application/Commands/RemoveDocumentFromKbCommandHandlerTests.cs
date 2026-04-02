@@ -5,7 +5,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
@@ -18,15 +18,15 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class RemoveDocumentFromKbCommandHandlerTests
 {
-    private readonly Mock<IVectorDocumentRepository> _repoMock;
-    private readonly Mock<ILogger<RemoveDocumentFromKbCommandHandler>> _loggerMock;
+    private readonly IVectorDocumentRepository _repo;
+    private readonly ILogger<RemoveDocumentFromKbCommandHandler> _logger;
     private readonly RemoveDocumentFromKbCommandHandler _handler;
 
     public RemoveDocumentFromKbCommandHandlerTests()
     {
-        _repoMock = new Mock<IVectorDocumentRepository>();
-        _loggerMock = new Mock<ILogger<RemoveDocumentFromKbCommandHandler>>();
-        _handler = new RemoveDocumentFromKbCommandHandler(_repoMock.Object, _loggerMock.Object);
+        _repo = Substitute.For<IVectorDocumentRepository>();
+        _logger = Substitute.For<ILogger<RemoveDocumentFromKbCommandHandler>>();
+        _handler = new RemoveDocumentFromKbCommandHandler(_repo, _logger);
     }
 
     [Fact]
@@ -36,9 +36,8 @@ public sealed class RemoveDocumentFromKbCommandHandlerTests
         var vectorDocId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
 
-        _repoMock
-            .Setup(r => r.GetByIdAsync(vectorDocId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((VectorDocument?)null);
+        _repo.GetByIdAsync(vectorDocId, Arg.Any<CancellationToken>())
+            .Returns((VectorDocument?)null);
 
         var command = new RemoveDocumentFromKbCommand(vectorDocId, gameId);
 
@@ -47,7 +46,7 @@ public sealed class RemoveDocumentFromKbCommandHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<NotFoundException>();
-        _repoMock.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        await _repo.DidNotReceive().DeleteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -58,9 +57,8 @@ public sealed class RemoveDocumentFromKbCommandHandlerTests
         var gameId = Guid.NewGuid();
         var vectorDoc = new VectorDocument(vectorDocId, gameId, Guid.NewGuid(), "en", 10);
 
-        _repoMock
-            .Setup(r => r.GetByIdAsync(vectorDocId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(vectorDoc);
+        _repo.GetByIdAsync(vectorDocId, Arg.Any<CancellationToken>())
+            .Returns(vectorDoc);
 
         var command = new RemoveDocumentFromKbCommand(vectorDocId, gameId);
 
@@ -68,7 +66,7 @@ public sealed class RemoveDocumentFromKbCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        _repoMock.Verify(r => r.DeleteAsync(vectorDocId, It.IsAny<CancellationToken>()), Times.Once);
+        await _repo.Received(1).DeleteAsync(vectorDocId, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -81,9 +79,8 @@ public sealed class RemoveDocumentFromKbCommandHandlerTests
 
         var vectorDoc = new VectorDocument(vectorDocId, ownerGameId, Guid.NewGuid(), "it", 5);
 
-        _repoMock
-            .Setup(r => r.GetByIdAsync(vectorDocId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(vectorDoc);
+        _repo.GetByIdAsync(vectorDocId, Arg.Any<CancellationToken>())
+            .Returns(vectorDoc);
 
         var command = new RemoveDocumentFromKbCommand(vectorDocId, requestedGameId);
 
@@ -92,6 +89,6 @@ public sealed class RemoveDocumentFromKbCommandHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<NotFoundException>();
-        _repoMock.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        await _repo.DidNotReceive().DeleteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 }

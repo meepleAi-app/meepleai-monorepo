@@ -2,7 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands.SubmitKbFeedback;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
@@ -15,13 +15,13 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class SubmitKbFeedbackCommandHandlerTests
 {
-    private readonly Mock<IKbUserFeedbackRepository> _repoMock;
+    private readonly IKbUserFeedbackRepository _repo;
     private readonly SubmitKbFeedbackCommandHandler _sut;
 
     public SubmitKbFeedbackCommandHandlerTests()
     {
-        _repoMock = new Mock<IKbUserFeedbackRepository>();
-        _sut = new SubmitKbFeedbackCommandHandler(_repoMock.Object);
+        _repo = Substitute.For<IKbUserFeedbackRepository>();
+        _sut = new SubmitKbFeedbackCommandHandler(_repo);
     }
 
     [Fact]
@@ -36,9 +36,9 @@ public sealed class SubmitKbFeedbackCommandHandlerTests
         await _sut.Handle(cmd, CancellationToken.None);
 
         // Assert
-        _repoMock.Verify(r => r.AddAsync(
-            It.Is<KbUserFeedback>(f => f.Outcome == "helpful" && f.GameId == cmd.GameId),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await _repo.Received(1).AddAsync(
+            Arg.Is<KbUserFeedback>(f => f.Outcome == "helpful" && f.GameId == cmd.GameId),
+            Arg.Any<CancellationToken>());
     }
 
     [Theory]
@@ -54,13 +54,13 @@ public sealed class SubmitKbFeedbackCommandHandlerTests
         await _sut.Handle(cmd, CancellationToken.None);
 
         // Assert
-        _repoMock.Verify(r => r.AddAsync(
-            It.IsAny<KbUserFeedback>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await _repo.Received(1).AddAsync(
+            Arg.Any<KbUserFeedback>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_WithComment_TruncatesIfOver500Chars()
+    public async Task Handle_WithComment_ThrowsIfOver500Chars()
     {
         // Arrange
         var longComment = new string('x', 600);
@@ -69,12 +69,10 @@ public sealed class SubmitKbFeedbackCommandHandlerTests
             "helpful", longComment);
 
         // Act
-        await _sut.Handle(cmd, CancellationToken.None);
+        var act = () => _sut.Handle(cmd, CancellationToken.None);
 
-        // Assert
-        _repoMock.Verify(r => r.AddAsync(
-            It.Is<KbUserFeedback>(f => f.Comment != null && f.Comment.Length == 500),
-            It.IsAny<CancellationToken>()), Times.Once);
+        // Assert — domain factory must throw, not silently truncate
+        await Assert.ThrowsAsync<ArgumentException>(act);
     }
 
     [Fact]

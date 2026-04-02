@@ -28,6 +28,9 @@ public sealed class KbUserFeedback : AggregateRoot<Guid>
         if (outcome is not "helpful" and not "not_helpful")
             throw new ArgumentException("Outcome must be 'helpful' or 'not_helpful'", nameof(outcome));
 
+        if (comment?.Length > 500)
+            throw new ArgumentException("Comment must not exceed 500 characters.", nameof(comment));
+
         return new KbUserFeedback
         {
             Id = Guid.NewGuid(),
@@ -36,7 +39,7 @@ public sealed class KbUserFeedback : AggregateRoot<Guid>
             ChatSessionId = chatSessionId,
             MessageId = messageId,
             Outcome = outcome,
-            Comment = comment?.Length > 500 ? comment[..500] : comment,
+            Comment = comment,
             CreatedAt = DateTime.UtcNow
         };
     }

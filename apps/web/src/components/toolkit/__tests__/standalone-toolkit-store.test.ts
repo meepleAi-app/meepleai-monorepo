@@ -77,6 +77,30 @@ describe('CardDeck', () => {
     expect(card).toBe('A');
     expect(result.current.decks['d1'].discardPile).toHaveLength(0);
   });
+
+  it('discardCard adds card to discard pile', () => {
+    const { result } = renderHook(() => useStandaloneToolkitStore());
+    act(() => result.current.initDeck('d1', 'Test', ['A', 'B', 'C'], false));
+    act(() => result.current.discardCard('d1', 'A'));
+    expect(result.current.decks['d1'].discardPile).toContain('A');
+    expect(result.current.decks['d1'].discardPile).toHaveLength(1);
+  });
+
+  it('discardCard ignores cards not in cardFaces', () => {
+    const { result } = renderHook(() => useStandaloneToolkitStore());
+    act(() => result.current.initDeck('d1', 'Test', ['A', 'B', 'C'], false));
+    act(() => result.current.discardCard('d1', 'INVALID'));
+    expect(result.current.decks['d1'].discardPile).toHaveLength(0);
+  });
+
+  it('shuffleDeck preserves card count and clears undo snapshot', () => {
+    const { result } = renderHook(() => useStandaloneToolkitStore());
+    act(() => result.current.initDeck('d1', 'Test', ['A', 'B', 'C'], false));
+    act(() => result.current.drawCard('d1')); // creates undoSnapshot
+    act(() => result.current.shuffleDeck('d1'));
+    expect(result.current.decks['d1'].drawPile).toHaveLength(2);
+    expect(result.current.decks['d1'].undoSnapshot).toBeNull();
+  });
 });
 
 describe('Counter', () => {
@@ -134,6 +158,25 @@ describe('Counter', () => {
     act(() => result.current.removeCounter('c1'));
     expect(result.current.counters).toHaveLength(1);
     expect(result.current.counters[0].id).toBe('c2');
+  });
+
+  it('setCounter clamps to min and max bounds', () => {
+    const { result } = renderHook(() => useStandaloneToolkitStore());
+    act(() =>
+      result.current.initCounters([{ id: 'c1', name: 'P', initialValue: 5, min: 0, max: 10 }])
+    );
+    act(() => result.current.setCounter('c1', -5));
+    expect(result.current.counters[0].value).toBe(0);
+    act(() => result.current.setCounter('c1', 999));
+    expect(result.current.counters[0].value).toBe(10);
+  });
+
+  it('addCounter rejects duplicate id', () => {
+    const { result } = renderHook(() => useStandaloneToolkitStore());
+    act(() => result.current.initCounters([{ id: 'c1', name: 'P', initialValue: 0 }]));
+    act(() => result.current.addCounter({ id: 'c1', name: 'Duplicate', initialValue: 99 }));
+    expect(result.current.counters).toHaveLength(1);
+    expect(result.current.counters[0].name).toBe('P');
   });
 });
 

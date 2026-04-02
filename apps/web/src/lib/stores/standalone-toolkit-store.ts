@@ -105,6 +105,7 @@ export const useStandaloneToolkitStore = create<StandaloneToolkitStore>()(
       },
 
       drawCard: deckId => {
+        // Use get() for early-exit checks; re-read from state inside set() for the update
         const deck = get().decks[deckId];
         if (!deck) return null;
 
@@ -120,71 +121,81 @@ export const useStandaloneToolkitStore = create<StandaloneToolkitStore>()(
         const snapshot = { drawPile, discardPile };
         const [card, ...rest] = drawPile;
 
-        set(s => ({
-          decks: {
-            ...s.decks,
-            [deckId]: {
-              ...deck,
-              drawPile: rest,
-              discardPile,
-              lastDrawnCard: card,
-              undoSnapshot: snapshot,
-              undoExpiry: Date.now() + UNDO_WINDOW_MS,
+        set(s => {
+          const current = s.decks[deckId];
+          if (!current) return s;
+          return {
+            decks: {
+              ...s.decks,
+              [deckId]: {
+                ...current,
+                drawPile: rest,
+                discardPile,
+                lastDrawnCard: card,
+                undoSnapshot: snapshot,
+                undoExpiry: Date.now() + UNDO_WINDOW_MS,
+              },
             },
-          },
-        }));
+          };
+        });
         return card;
       },
 
       discardCard: (deckId, card) => {
-        const deck = get().decks[deckId];
-        if (!deck) return;
-        const snapshot = { drawPile: [...deck.drawPile], discardPile: [...deck.discardPile] };
-        set(s => ({
-          decks: {
-            ...s.decks,
-            [deckId]: {
-              ...deck,
-              discardPile: [...deck.discardPile, card],
-              undoSnapshot: snapshot,
-              undoExpiry: Date.now() + UNDO_WINDOW_MS,
+        set(s => {
+          const deck = s.decks[deckId];
+          if (!deck || !deck.cardFaces.includes(card)) return s;
+          const snapshot = { drawPile: [...deck.drawPile], discardPile: [...deck.discardPile] };
+          return {
+            decks: {
+              ...s.decks,
+              [deckId]: {
+                ...deck,
+                discardPile: [...deck.discardPile, card],
+                undoSnapshot: snapshot,
+                undoExpiry: Date.now() + UNDO_WINDOW_MS,
+              },
             },
-          },
-        }));
+          };
+        });
       },
 
       shuffleDeck: deckId => {
-        const deck = get().decks[deckId];
-        if (!deck) return;
-        set(s => ({
-          decks: {
-            ...s.decks,
-            [deckId]: {
-              ...deck,
-              drawPile: shuffleArray(deck.drawPile),
-              undoSnapshot: null,
-              undoExpiry: null,
+        set(s => {
+          const deck = s.decks[deckId];
+          if (!deck) return s;
+          return {
+            decks: {
+              ...s.decks,
+              [deckId]: {
+                ...deck,
+                drawPile: shuffleArray(deck.drawPile),
+                undoSnapshot: null,
+                undoExpiry: null,
+              },
             },
-          },
-        }));
+          };
+        });
       },
 
       resetDeck: deckId => {
-        const deck = get().decks[deckId];
-        if (!deck) return;
-        set(s => ({
-          decks: {
-            ...s.decks,
-            [deckId]: {
-              ...deck,
-              drawPile: shuffleArray(deck.cardFaces),
-              discardPile: [],
-              lastDrawnCard: null,
-              undoSnapshot: null,
-              undoExpiry: null,
+        set(s => {
+          const deck = s.decks[deckId];
+          if (!deck) return s;
+          return {
+            decks: {
+              ...s.decks,
+              [deckId]: {
+                ...deck,
+                drawPile: shuffleArray(deck.cardFaces),
+                discardPile: [],
+                lastDrawnCard: null,
+                undoSnapshot: null,
+                undoExpiry: null,
+              },
             },
-          },
-        }));
+          };
+        });
       },
 
       undoDraw: deckId => {
@@ -192,19 +203,23 @@ export const useStandaloneToolkitStore = create<StandaloneToolkitStore>()(
         if (!deck?.undoSnapshot || !deck.undoExpiry) return false;
         if (Date.now() > deck.undoExpiry) return false;
 
-        set(s => ({
-          decks: {
-            ...s.decks,
-            [deckId]: {
-              ...deck,
-              drawPile: deck.undoSnapshot!.drawPile,
-              discardPile: deck.undoSnapshot!.discardPile,
-              lastDrawnCard: null,
-              undoSnapshot: null,
-              undoExpiry: null,
+        set(s => {
+          const current = s.decks[deckId];
+          if (!current?.undoSnapshot) return s;
+          return {
+            decks: {
+              ...s.decks,
+              [deckId]: {
+                ...current,
+                drawPile: current.undoSnapshot.drawPile,
+                discardPile: current.undoSnapshot.discardPile,
+                lastDrawnCard: null,
+                undoSnapshot: null,
+                undoExpiry: null,
+              },
             },
-          },
-        }));
+          };
+        });
         return true;
       },
 
@@ -266,9 +281,12 @@ export const useStandaloneToolkitStore = create<StandaloneToolkitStore>()(
       },
 
       addCounter: config => {
-        set(s => ({
-          counters: [...s.counters, { ...config, value: config.initialValue }],
-        }));
+        set(s => {
+          if (s.counters.some(c => c.id === config.id)) return s;
+          return {
+            counters: [...s.counters, { ...config, value: config.initialValue }],
+          };
+        });
       },
 
       removeCounter: id => {

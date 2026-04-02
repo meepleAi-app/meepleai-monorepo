@@ -32,6 +32,8 @@ internal sealed class KbCoverageComputeJob : IJob
     // Sentinel user ID used for system-generated configuration entries.
     private static readonly Guid SystemUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
+    private const string CompletedStatus = "completed";
+
     public KbCoverageComputeJob(
         MeepleAiDbContext dbContext,
         IConfigurationRepository configRepository,
@@ -96,19 +98,19 @@ internal sealed class KbCoverageComputeJob : IJob
 
                 bool hasRulebook = parsed.Any(x =>
                     x.Category == DocumentCategory.Rulebook &&
-                    string.Equals(x.IndexingStatus, "completed", StringComparison.Ordinal));
+                    string.Equals(x.IndexingStatus, CompletedStatus, StringComparison.Ordinal));
 
                 bool hasErrata = parsed.Any(x =>
                     x.Category == DocumentCategory.Errata &&
-                    string.Equals(x.IndexingStatus, "completed", StringComparison.Ordinal));
+                    string.Equals(x.IndexingStatus, CompletedStatus, StringComparison.Ordinal));
 
                 bool hasFaq = parsed.Any(x =>
                     (x.Category == DocumentCategory.QuickStart ||
                      x.Category == DocumentCategory.Reference) &&
-                    string.Equals(x.IndexingStatus, "completed", StringComparison.Ordinal));
+                    string.Equals(x.IndexingStatus, CompletedStatus, StringComparison.Ordinal));
 
                 int completedChunks = parsed
-                    .Where(x => string.Equals(x.IndexingStatus, "completed", StringComparison.Ordinal))
+                    .Where(x => string.Equals(x.IndexingStatus, CompletedStatus, StringComparison.Ordinal))
                     .Sum(x => x.ChunkCount);
 
                 int totalChunks = parsed.Sum(x => x.ChunkCount);

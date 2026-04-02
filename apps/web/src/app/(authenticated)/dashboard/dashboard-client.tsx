@@ -10,6 +10,7 @@
 
 import { useEffect } from 'react';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -78,6 +79,7 @@ interface BentoWidgetProps {
   className?: string;
   children: React.ReactNode;
   onClick?: () => void;
+  'data-testid'?: string;
 }
 
 function BentoWidget({
@@ -89,10 +91,12 @@ function BentoWidget({
   className,
   children,
   onClick,
+  'data-testid': dataTestId,
 }: BentoWidgetProps) {
   const tc = tabletColSpan ?? Math.min(colSpan, 6);
   return (
     <div
+      data-testid={dataTestId}
       className={cn(
         // Responsive grid spans
         COL_SPAN[tc] ?? `col-span-${tc}`,
@@ -126,7 +130,7 @@ function BentoWidget({
 
 function WidgetLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-1.5">
+    <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-1.5">
       {children}
     </p>
   );
@@ -145,7 +149,13 @@ function LiveSessionWidget({
 
   if (isLoading) {
     return (
-      <BentoWidget colSpan={8} rowSpan={2} accentColor={C.success} className="animate-pulse">
+      <BentoWidget
+        colSpan={8}
+        rowSpan={2}
+        accentColor={C.success}
+        className="animate-pulse"
+        data-testid="widget-live-session"
+      >
         <div className="h-full" />
       </BentoWidget>
     );
@@ -153,7 +163,12 @@ function LiveSessionWidget({
 
   if (!session) {
     return (
-      <BentoWidget colSpan={8} rowSpan={2} className="border-dashed flex items-center gap-4">
+      <BentoWidget
+        colSpan={8}
+        rowSpan={2}
+        className="border-dashed flex items-center gap-4"
+        data-testid="widget-live-session"
+      >
         <div className="flex-1 min-w-0">
           <p className="font-quicksand font-bold text-base text-foreground">
             Nessuna sessione attiva
@@ -182,11 +197,12 @@ function LiveSessionWidget({
       accentBg="rgba(16,185,129,0.04)"
       className="flex flex-col justify-between"
       onClick={() => router.push(`/sessions/${session.id}`)}
+      data-testid="widget-live-session"
     >
       <div className="flex items-center justify-between mb-2">
         <WidgetLabel>Sessione Live</WidgetLabel>
         <span
-          className="inline-flex items-center gap-1.5 text-[10px] font-bold rounded-full px-2.5 py-0.5"
+          className="inline-flex items-center gap-1.5 text-[11px] font-bold rounded-full px-2.5 py-0.5"
           style={{
             background: 'rgba(16,185,129,0.12)',
             color: C.success,
@@ -206,11 +222,13 @@ function LiveSessionWidget({
           style={{ background: 'rgba(255,255,255,0.06)' }}
         >
           {session.gameImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={session.gameImageUrl}
               alt={session.gameName}
+              width={44}
+              height={44}
               className="w-full h-full object-cover"
+              unoptimized
             />
           ) : (
             '🎲'
@@ -283,7 +301,7 @@ function KpiWidget({
       {badge && (
         <span
           className={cn(
-            'inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full',
+            'inline-block mt-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full',
             badgePositive
               ? 'bg-emerald-500/15 text-emerald-400'
               : 'bg-muted/60 text-muted-foreground'
@@ -292,7 +310,7 @@ function KpiWidget({
           {badge}
         </span>
       )}
-      {sub && !badge && <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>}
+      {sub && !badge && <p className="text-[11px] text-muted-foreground mt-1">{sub}</p>}
     </BentoWidget>
   );
 }
@@ -316,6 +334,7 @@ function LibraryWidget({
       rowSpan={4}
       className="flex flex-col gap-0"
       onClick={() => router.push('/library')}
+      data-testid="widget-library"
     >
       <WidgetLabel>La Tua Libreria</WidgetLabel>
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -343,11 +362,13 @@ function LibraryWidget({
               }}
             >
               {(game.thumbnailUrl ?? game.imageUrl) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={game.thumbnailUrl ?? game.imageUrl ?? ''}
                   alt={game.title}
+                  width={28}
+                  height={28}
                   className="w-7 h-7 rounded-md object-cover shrink-0"
+                  unoptimized
                 />
               ) : (
                 <div
@@ -362,7 +383,7 @@ function LibraryWidget({
               </span>
               {game.averageRating !== null && game.averageRating !== undefined && (
                 <span
-                  className="font-mono text-[9px] font-semibold shrink-0"
+                  className="font-mono text-[11px] font-semibold shrink-0"
                   style={{ color: C.game }}
                 >
                   ★ {game.averageRating.toFixed(1)}
@@ -372,7 +393,7 @@ function LibraryWidget({
           ))
         )}
       </div>
-      <p className="text-[10px] font-bold mt-2 pt-1" style={{ color: C.game }}>
+      <p className="text-[11px] font-bold mt-2 pt-1" style={{ color: C.game }}>
         Vedi tutti {totalCount} →
       </p>
     </BentoWidget>
@@ -394,7 +415,7 @@ function ChatPreviewWidget() {
       <div className="flex items-center justify-between mb-2">
         <WidgetLabel>Chat AI</WidgetLabel>
         <span
-          className="text-[9px] font-bold rounded-full px-2 py-0.5"
+          className="text-[11px] font-bold rounded-full px-2 py-0.5"
           style={{ background: `${C.chat}20`, color: C.chat }}
         >
           Regole & Domande
@@ -416,7 +437,7 @@ function ChatPreviewWidget() {
         >
           Puoi costruire tutte le strade che vuoi, purché tu abbia le risorse.{' '}
           <span
-            className="font-mono text-[8px] rounded px-1 py-0.5 cursor-pointer"
+            className="font-mono text-[11px] rounded px-1 py-0.5 cursor-pointer"
             style={{ background: `${C.chat}18`, color: C.chat }}
           >
             p.8
@@ -470,7 +491,13 @@ function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
   const avatarColors = [C.game, C.player, C.event, C.session];
 
   return (
-    <BentoWidget colSpan={6} rowSpan={3} accentColor={C.event} className="flex flex-col">
+    <BentoWidget
+      colSpan={6}
+      rowSpan={3}
+      accentColor={C.event}
+      className="flex flex-col"
+      data-testid="widget-leaderboard"
+    >
       <WidgetLabel>Classifica Gruppo</WidgetLabel>
       <div className="flex-1 flex flex-col overflow-hidden">
         {sorted.length === 0 ? (
@@ -485,7 +512,7 @@ function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
             >
               <span className="text-sm w-5 text-center shrink-0">{medals[i]}</span>
               <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+                className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
                 style={{ background: avatarColors[i] }}
               >
                 {name[0]?.toUpperCase()}
@@ -493,7 +520,7 @@ function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
               <span className="flex-1 font-quicksand font-semibold text-[11px] truncate">
                 {name}
               </span>
-              <span className="font-mono text-[9px] text-muted-foreground shrink-0">
+              <span className="font-mono text-[11px] text-muted-foreground shrink-0">
                 {wins} vitt.
               </span>
             </div>
@@ -515,6 +542,7 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
       accentColor={C.kb}
       className="flex flex-col"
       onClick={() => router.push('/games')}
+      data-testid="widget-trending"
     >
       <WidgetLabel>Popolari questa settimana</WidgetLabel>
       <div className="flex gap-3 mt-1 overflow-hidden">
@@ -535,11 +563,13 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
                 }}
               >
                 {game.thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={game.thumbnailUrl}
                     alt={game.title}
+                    width={36}
+                    height={48}
                     className="w-9 h-12 rounded-md object-cover group-hover/card:ring-1 group-hover/card:ring-primary transition-all"
+                    unoptimized
                   />
                 ) : (
                   <div
@@ -549,7 +579,7 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
                     🎲
                   </div>
                 )}
-                <span className="font-quicksand text-[8px] font-bold text-center w-9 truncate">
+                <span className="font-quicksand text-[11px] font-bold text-center w-9 truncate">
                   {game.title}
                 </span>
               </div>

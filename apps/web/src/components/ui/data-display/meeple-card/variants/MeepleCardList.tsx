@@ -44,7 +44,6 @@ import {
   DRAWER_ENTITY_TYPE_MAP,
   meepleCardVariants,
   contentVariants,
-  getCardFrameStyle,
 } from '../../meeple-card-styles';
 import { useCardTheme } from '../hooks/useCardTheme';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
@@ -228,7 +227,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
       data-variant={variant}
-      data-card-root
     >
       {selectable && (
         <BulkSelectCheckbox
@@ -262,24 +260,15 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
         />
       )}
 
-      <div
-        data-card-thumbnail
-        className="shrink-0 overflow-hidden"
-        style={{
-          ...getCardFrameStyle('list'),
-          borderRadius: '6px',
-        }}
-      >
-        <CardCover
-          src={coverSrc}
-          alt={title}
-          variant={variant}
-          entity={entity}
-          customColor={customColor}
-          showEntityType
-          stateLabel={stateLabel}
-        />
-      </div>
+      <CardCover
+        src={coverSrc}
+        alt={title}
+        variant={variant}
+        entity={entity}
+        customColor={customColor}
+        showEntityType
+        stateLabel={stateLabel}
+      />
 
       {/* Content area */}
       <div className={contentVariants({ variant })}>

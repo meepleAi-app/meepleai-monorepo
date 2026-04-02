@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleAI Admin Hub — Integrated Layout Mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   MeepleAI Admin Hub — Faithful Layout Integration Mock
+
+   Matches: AuthenticatedLayout → Sidebar + main content
+   Source:  globals.css dark theme + Sidebar.tsx + SidebarNav.tsx
+   ═══════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* ── Dark theme tokens (globals.css .dark) ── */
+  --bg: hsl(0 0% 10%);
+  --bg-card: hsl(0 0% 18%);
+  --bg-muted: hsl(0 0% 20%);
+  --fg: hsl(30 25% 90%);
+  --fg-muted: hsl(0 0% 60%);
+  --fg-dim: hsl(0 0% 50%);
+  --border: hsl(0 0% 25%);
+  --border-light: hsl(0 0% 20%);
+  --primary: hsl(25 95% 60%);
+  --accent: hsl(45 93% 56%);
+  --purple: hsl(262 83% 62%);
+  --purple-bg: hsl(262 83% 62% / 0.1);
+  --green: hsl(142 76% 50%);
+  --destructive: hsl(0 72% 51%);
+
+  /* ── Entity colors (MeepleCard v2) ── */
+  --e-game: 25 95% 45%;
+  --e-player: 262 83% 58%;
+  --e-session: 240 60% 55%;
+  --e-agent: 38 92% 50%;
+  --e-document: 210 40% 55%;
+  --e-chat: 220 80% 55%;
+  --e-event: 350 89% 60%;
+
+  /* ── Layout (from Sidebar.tsx + AuthenticatedLayout) ── */
+  --sidebar-w: 220px;
+  --sidebar-collapsed: 60px;
+
+  /* ── Radius ── */
+  --radius: 16px;
+  --radius-sm: 12px;
+  --radius-xs: 8px;
+}
+
+body {
+  font-family: 'Nunito', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+h1, h2, h3, h4, h5, h6 { font-family: 'Quicksand', system-ui, sans-serif; }
+
+/* ── Body texture (globals.css body::before + ::after) ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(210,105,30,0.015) 2px, rgba(210,105,30,0.015) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139,90,60,0.02) 2px, rgba(139,90,60,0.02) 4px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(210,105,30,0.03), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ══════════════════════════════════════════════
+   SIDEBAR — Matches Sidebar.tsx exactly
+   Position: fixed left, full height
+   Width: 220px expanded
+   BG: bg-card in dark mode = hsl(0 0% 18%)
+   ══════════════════════════════════════════════ */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width 200ms ease-in-out;
+}
+
+/* ── Sidebar Toggle (SidebarToggle.tsx) ── */
+.sidebar-toggle {
+  position: absolute;
+  right: -12px;
+  top: 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+  color: var(--fg-muted);
+  transition: all 150ms;
+}
+.sidebar-toggle:hover { background: var(--bg-muted); color: var(--fg); }
+.sidebar-toggle svg { width: 14px; height: 14px; }
+
+/* ── Logo Section ── */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-logo-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sidebar-logo-icon svg { width: 18px; height: 18px; color: #fff; }
+.sidebar-logo-text {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+
+/* ── Nav Area (SidebarNav.tsx) ── */
+.sidebar-nav {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Nav item: 44px min-height, px-3 py-2, gap-3, rounded-lg */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  position: relative;
+}
+.nav-item:hover {
+  background: var(--bg-muted);
+  color: var(--fg);
+}
+/* Active state: purple (262 83% 62%) */
+.nav-item.active {
+  background: var(--purple-bg);
+  color: var(--purple);
+  font-weight: 600;
+}
+.nav-item svg { width: 20px; height: 20px; flex-shrink: 0; opacity: 0.7; }
+.nav-item.active svg { opacity: 1; }
+
+/* Nav group separator + label */
+.nav-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 4px;
+}
+.nav-group-label {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+  padding: 8px 12px 4px;
+}
+
+/* Library submenu */
+.nav-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-left: 16px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-light);
+}
+.nav-submenu .nav-item {
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.nav-submenu .nav-item svg { width: 16px; height: 16px; }
+
+/* Chevron for expandable items */
+.nav-chevron {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  transition: transform 200ms;
+  opacity: 0.5;
+}
+.nav-chevron.open { transform: rotate(180deg); }
+
+/* ── User Section (SidebarUser.tsx) ── */
+.sidebar-user {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.sidebar-user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sidebar-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sidebar-user-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 150ms;
+}
+.sidebar-user-btn:hover { background: var(--bg-muted); color: var(--fg); }
+.sidebar-user-btn svg { width: 18px; height: 18px; }
+.sidebar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: hsl(25 95% 60% / 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.sidebar-user-info {
+  flex: 1;
+  min-width: 0;
+}
+.sidebar-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-email {
+  font-size: 11px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Notification badge */
+.notif-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--destructive);
+  border: 2px solid var(--bg-card);
+}
+
+/* ══════════════════════════════════════════════
+   MAIN CONTENT AREA — Matches AuthenticatedLayout
+   ml-[220px], container, px-4 sm:px-6 lg:px-8
+   ══════════════════════════════════════════════ */
+.main {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+  transition: margin-left 200ms ease-in-out;
+}
+.main-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+@media (min-width: 640px) { .main-container { padding: 0 24px; } }
+@media (min-width: 1024px) { .main-container { padding: 0 32px; } }
+
+/* ── Breadcrumb (desktop, hidden sm:block py-3) ── */
+.breadcrumb-bar {
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+.breadcrumb-bar a {
+  color: var(--fg-muted);
+  text-decoration: none;
+  transition: color 150ms;
+}
+.breadcrumb-bar a:hover { color: var(--fg); }
+.breadcrumb-bar .current {
+  color: var(--fg);
+  font-weight: 600;
+}
+.breadcrumb-bar svg { width: 14px; height: 14px; opacity: 0.5; }
+
+/* ══════════════════════════════════════════════
+   ADMIN HUB CONTENT (page content area)
+   ══════════════════════════════════════════════ */
+.hub-content { padding-bottom: 48px; }
+
+.hub-header { margin-bottom: 24px; }
+.hub-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+.hub-subtitle {
+  font-size: 14px;
+  color: var(--fg-muted);
+  margin-top: 4px;
+}
+
+/* ── Tab Bar (Radix TabsList style from tabs.tsx) ── */
+.tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  background: hsl(0 0% 20% / 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid hsl(0 0% 25% / 0.3);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  margin-bottom: 24px;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-xs);
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  font-family: 'Quicksand', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 200ms;
+}
+.tab-btn:hover { color: var(--fg); background: hsl(0 0% 25% / 0.4); }
+/* Active: matches data-[state=active]:bg-background shadow */
+.tab-btn.active {
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+.tab-btn svg { width: 14px; height: 14px; }
+.tab-badge {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  background: var(--destructive);
+  color: #fff;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+/* ── Tab Panels ── */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: fadeUp 0.25s ease-out; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Card Grid (responsive: 3 / 2 / 1 col) ── */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+@media (max-width: 1200px) { .card-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* ── Hub Card (MeepleCard featured-variant style) ── */
+.hub-card {
+  position: relative;
+  background: hsl(0 0% 16% / 0.7);
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  transition: transform 350ms cubic-bezier(0.4,0,0.2,1),
+              box-shadow 350ms cubic-bezier(0.4,0,0.2,1),
+              outline-color 250ms,
+              border-color 250ms;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Left accent */
+.hub-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: hsl(var(--card-hsl));
+  border-radius: var(--radius) 0 0 var(--radius);
+  transition: width 250ms;
+}
+/* Gradient wash */
+.hub-card::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(135deg, hsl(var(--card-hsl) / 0.06), transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+.hub-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.5);
+  outline-color: hsl(var(--card-hsl) / 0.4);
+  border-color: hsl(var(--card-hsl) / 0.2);
+}
+.hub-card:hover::before { width: 6px; }
+
+/* Card inner elements */
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.card-title-row { display: flex; align-items: center; gap: 10px; }
+.card-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  background: hsl(var(--card-hsl) / 0.15);
+}
+.card-icon svg { width: 18px; height: 18px; color: hsl(var(--card-hsl)); }
+.card-title { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 15px; color: var(--fg); line-height: 1.2; }
+.card-subtitle { font-size: 12px; color: var(--fg-muted); margin-top: 2px; }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.status-dot.green { background: var(--green); box-shadow: 0 0 8px hsl(142 76% 50% / 0.5); }
+.status-dot.amber { background: var(--accent); box-shadow: 0 0 8px hsl(45 93% 56% / 0.5); }
+.status-dot.red { background: var(--destructive); box-shadow: 0 0 8px hsl(0 72% 51% / 0.5); }
+
+.kpi-row { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+.kpi-item { flex: 1; min-width: 0; }
+.kpi-value { font-family: 'Quicksand', sans-serif; font-size: 20px; font-weight: 700; color: var(--fg); line-height: 1.1; }
+.kpi-value.sm { font-size: 16px; }
+.kpi-label { font-size: 11px; color: var(--fg-muted); font-weight: 500; margin-top: 2px; }
+.kpi-change { font-size: 11px; font-weight: 600; margin-top: 2px; }
+.kpi-change.up { color: var(--green); }
+.kpi-change.down { color: var(--destructive); }
+
+.sparkline-wrap { height: 36px; margin-bottom: 12px; opacity: 0.9; }
+.sparkline-wrap svg { width: 100%; height: 100%; }
+
+.alert-counts { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.alert-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+.alert-chip.critical { background: hsl(0 72% 51% / 0.15); color: hsl(0 72% 65%); }
+.alert-chip.warning { background: hsl(45 93% 56% / 0.15); color: hsl(45 93% 60%); }
+.alert-chip.info { background: hsl(220 80% 55% / 0.15); color: hsl(220 80% 65%); }
+
+.actions-row { display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border-light); }
+.action-btn {
+  font-family: 'Nunito', sans-serif; font-size: 12px; font-weight: 600;
+  padding: 6px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: hsl(0 0% 20% / 0.5);
+  color: var(--fg); cursor: pointer; transition: all 150ms; white-space: nowrap;
+}
+.action-btn:hover { background: hsl(var(--card-hsl) / 0.15); border-color: hsl(var(--card-hsl) / 0.3); color: hsl(var(--card-hsl)); }
+.action-btn.primary { background: hsl(var(--card-hsl) / 0.15); border-color: hsl(var(--card-hsl) / 0.25); color: hsl(var(--card-hsl)); }
+.action-btn.primary:hover { background: hsl(var(--card-hsl) / 0.25); }
+
+/* ── Stagger ── */
+.hub-card { opacity: 0; animation: fadeUp 0.3s ease-out forwards; }
+.hub-card:nth-child(1) { animation-delay: 0.04s; }
+.hub-card:nth-child(2) { animation-delay: 0.08s; }
+.hub-card:nth-child(3) { animation-delay: 0.12s; }
+.hub-card:nth-child(4) { animation-delay: 0.16s; }
+.hub-card:nth-child(5) { animation-delay: 0.20s; }
+.hub-card:nth-child(6) { animation-delay: 0.24s; }
+.hub-card:nth-child(7) { animation-delay: 0.28s; }
+
+/* ── Mobile: hide sidebar, show header ── */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .mobile-header { display: flex !important; }
+  .main-container { padding: 0 16px; }
+}
+
+/* ── Mobile Header (UnifiedHeader.tsx — md:hidden) ── */
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: hsl(0 0% 18% / 0.95);
+  border-bottom: 1px solid hsl(0 0% 25% / 0.3);
+}
+.mobile-header-left { display: flex; align-items: center; gap: 8px; }
+.mobile-header-right { display: flex; align-items: center; gap: 4px; }
+.mobile-header-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: var(--fg-muted); cursor: pointer;
+}
+.mobile-header-btn:hover { background: var(--bg-muted); }
+.mobile-header-btn svg { width: 20px; height: 20px; }
+.mobile-logo {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 15px; color: var(--fg);
+}
+.mobile-logo-dot {
+  width: 24px; height: 24px; border-radius: 7px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+}
+.mobile-logo-dot svg { width: 14px; height: 14px; color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR (Sidebar.tsx — fixed left, 220px, dark card bg) ═══ -->
+<aside class="sidebar">
+  <!-- Toggle -->
+  <div class="sidebar-toggle">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+  </div>
+
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <span class="sidebar-logo-text">MeepleAI</span>
+  </div>
+
+  <!-- Nav -->
+  <nav class="sidebar-nav">
+    <!-- Dashboard -->
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      Dashboard
+    </a>
+
+    <!-- Library (expandable) -->
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Library
+      <svg class="nav-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </a>
+
+    <!-- Chat -->
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect x="2" y="2" width="20" height="8" rx="2"/><path d="M2 14h20"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
+      Chat
+    </a>
+
+    <!-- Catalog -->
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+      Catalogo
+    </a>
+
+    <!-- Strumenti group -->
+    <div class="nav-separator"></div>
+    <div class="nav-group-label">Strumenti</div>
+
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Agenti
+    </a>
+
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Sessioni
+    </a>
+
+    <!-- Admin separator -->
+    <div class="nav-separator"></div>
+    <div class="nav-group-label">Admin</div>
+
+    <!-- Admin Hub (active) -->
+    <a class="nav-item active" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Admin Hub
+    </a>
+  </nav>
+
+  <!-- User Section -->
+  <div class="sidebar-user">
+    <div class="sidebar-user-actions">
+      <button class="sidebar-user-btn" style="position:relative">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="notif-badge"></span>
+      </button>
+      <button class="sidebar-user-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+    <div class="sidebar-user-row">
+      <div class="sidebar-avatar">AK</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">Admin User</div>
+        <div class="sidebar-user-email">admin@meepleai.com</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ MOBILE HEADER (UnifiedHeader.tsx — hidden on md+) ═══ -->
+<header class="mobile-header">
+  <div class="mobile-header-left">
+    <button class="mobile-header-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="mobile-logo">
+      <div class="mobile-logo-dot">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>
+      </div>
+      MeepleAI
+    </div>
+  </div>
+  <div class="mobile-header-right">
+    <button class="mobile-header-btn" style="position:relative">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="notif-badge" style="top:6px;right:6px"></span>
+    </button>
+    <button class="mobile-header-btn">
+      <div class="sidebar-avatar" style="width:28px;height:28px;font-size:11px">A</div>
+    </button>
+  </div>
+</header>
+
+<!-- ═══ MAIN CONTENT (AuthenticatedLayout main area) ═══ -->
+<div class="main">
+  <div class="main-container">
+
+    <!-- Breadcrumb (hidden sm:block py-3) -->
+    <div class="breadcrumb-bar">
+      <a href="#">Home</a>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      <a href="#">Admin</a>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      <span class="current">Hub</span>
+    </div>
+
+    <!-- Page Content (pb-4 wrapper from AuthenticatedLayout) -->
+    <div class="hub-content">
+
+      <div class="hub-header">
+        <h1 class="hub-title">Admin Hub</h1>
+        <p class="hub-subtitle">Panoramica completa del sistema &mdash; tutte le sezioni in un'unica vista</p>
+      </div>
+
+      <!-- Tab Bar -->
+      <div class="tab-bar" role="tablist">
+        <button class="tab-btn active" data-tab="overview" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          Overview
+        </button>
+        <button class="tab-btn" data-tab="users" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          Users
+        </button>
+        <button class="tab-btn" data-tab="games" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          Games
+          <span class="tab-badge">5</span>
+        </button>
+        <button class="tab-btn" data-tab="ai" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
+          AI &amp; Agents
+          <span class="tab-badge">2</span>
+        </button>
+        <button class="tab-btn" data-tab="config" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33"/></svg>
+          Config
+        </button>
+        <button class="tab-btn" data-tab="analytics" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Analytics
+        </button>
+        <button class="tab-btn" data-tab="alerts" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          Alerts
+          <span class="tab-badge">3</span>
+        </button>
+        <button class="tab-btn" data-tab="system" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          System
+        </button>
+      </div>
+
+      <!-- ═══ OVERVIEW TAB ═══ -->
+      <div class="tab-panel active" id="tab-overview">
+        <div class="card-grid">
+
+          <div class="hub-card" style="--card-hsl:38 92% 50%">
+            <div class="card-head">
+              <div class="card-title-row">
+                <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                <div><div class="card-title">System Health</div><div class="card-subtitle">Stato dei servizi</div></div>
+              </div>
+              <div class="status-dot green"></div>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi-item"><div class="kpi-value">99.7%</div><div class="kpi-label">Uptime (30d)</div></div>
+              <div class="kpi-item"><div class="kpi-value sm">7/8</div><div class="kpi-label">Servizi OK</div></div>
+              <div class="kpi-item"><div class="kpi-value sm">42ms</div><div class="kpi-label">Avg Latency</div></div>
+            </div>
+            <div class="actions-row">
+              <button class="action-btn primary">Infrastruttura</button>
+              <button class="action-btn">Dettagli</button>
+            </div>
+          </div>
+
+          <div class="hub-card" style="--card-hsl:262 83% 58%">
+            <div class="card-head">
+              <div class="card-title-row">
+                <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+                <div><div class="card-title">Utenti Attivi</div><div class="card-subtitle">Online e DAU</div></div>
+              </div>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi-item"><div class="kpi-value">47</div><div class="kpi-label">Online ora</div></div>
+              <div class="kpi-item"><div class="kpi-value sm">1,234</div><div class="kpi-label">Totali</div><div class="kpi-change up">&#9650; 12%</div></div>
+              <div class="kpi-item"><div class="kpi-value sm">312</div><div class="kpi-label">DAU</div></div>
+            </div>
+            <div class="sparkline-wrap">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(262 83% 58%)" stop-opacity="0.25"/><stop offset="100%" stop-color="hsl(262 83% 58%)" stop-opacity="0"/></linearGradient></defs>
+                <path d="M0,28 Q25,26 50,22 T100,16 T150,10 T200,6" fill="none" stroke="hsl(262 83% 58%)" stroke-width="2"/>
+                <path d="M0,28 Q25,26 50,22 T100,16 T150,10 T200,6 V36 H0 Z" fill="url(#g1)"/>
+              </svg>
+            </div>
+            <div class="actions-row">
+              <button class="action-btn primary">Lista Utenti</button>
+              <button class="action-btn">Sessioni</button>
+            </div>
+          </div>
+
+          <div class="hub-card" style="--card-hsl:350 89% 60%">
+            <div class="card-head">
+              <div class="card-title-row">
+                <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+                <div><div class="card-title">Azioni in Sospeso</div><div class="card-subtitle">Da gestire</div></div>
+              </div>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi-item"><div class="kpi-value" style="color:hsl(350 89% 60%)">5</div><div class="kpi-label">Approvazioni</div></div>
+              <div class="kpi-item"><div class="kpi-value sm" style="color:hsl(45 93% 56%)">3</div><div class="kpi-label">Alert attivi</div></div>
+              <div class="kpi-item"><div class="kpi-value sm" style="color:hsl(262 83% 58%)">2</div><div class="kpi-label">Tipol. pending</div></div>
+            </div>
+            <div class="sparkline-wrap">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(350 89% 60%)" stop-opacity="0.2"/><stop offset="100%" stop-color="hsl(350 89% 60%)" stop-opacity="0"/></linearGradient></defs>
+                <path d="M0,30 Q30,26 60,24 T120,18 T180,20 T200,16" fill="none" stroke="hsl(350 89% 60%)" stroke-width="2"/>
+                <path d="M0,30 Q30,26 60,24 T120,18 T180,20 T200,16 V36 H0 Z" fill="url(#g2)"/>
+              </svg>
+            </div>
+            <div class="actions-row">
+              <button class="action-btn primary">Coda Approvazioni</button>
+              <button class="action-btn">Vedi Alert</button>
+            </div>
+          </div>
+
+          <div class="hub-card" style="--card-hsl:38 92% 50%">
+            <div class="card-head">
+              <div class="card-title-row">
+                <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M20.66 7A10 10 0 0 0 12 2v10h10a10 10 0 0 0-1.34-5z" opacity="0.4"/></svg></div>
+                <div><div class="card-title">AI Usage</div><div class="card-subtitle">Richieste e costi oggi</div></div>
+              </div>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi-item"><div class="kpi-value">2,847</div><div class="kpi-label">Richieste oggi</div><div class="kpi-change up">&#9650; 8%</div></div>
+              <div class="kpi-item"><div class="kpi-value sm">$14.20</div><div class="kpi-label">Costo oggi</div></div>
+              <div class="kpi-item"><div class="kpi-value sm">324ms</div><div class="kpi-label">Avg Response</div></div>
+            </div>
+            <div class="sparkline-wrap">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <defs><linearGradient id="g3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(38 92% 50%)" stop-opacity="0.25"/><stop offset="100%" stop-color="hsl(38 92% 50%)" stop-opacity="0"/></linearGradient></defs>
+                <path d="M0,30 Q20,26 40,22 T80,18 T120,20 T160,12 T200,6" fill="none" stroke="hsl(38 92% 50%)" stroke-width="2"/>
+                <path d="M0,30 Q20,26 40,22 T80,18 T120,20 T160,12 T200,6 V36 H0 Z" fill="url(#g3)"/>
+              </svg>
+            </div>
+            <div class="actions-row">
+              <button class="action-btn primary">AI Usage</button>
+              <button class="action-btn">Modelli</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══ USERS TAB ═══ -->
+      <div class="tab-panel" id="tab-users">
+        <div class="card-grid">
+          <div class="hub-card" style="--card-hsl:262 83% 58%">
+            <div class="card-head">
+              <div class="card-title-row">
+                <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                <div><div class="card-title">Lista Utenti</div><div class="card-subtitle">Gestione e ruoli</div></div>
+              </div>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi-item"><div class="kpi-value">1,234</div><div class="kpi-label">Totale utenti</div></div>
+              <div class="kpi-item"><div class="kpi-value sm">18</div><div class="kpi-label">Nuovi oggi</div><div class="kpi-change up">&#9650; 23%</div></div>
+              <div class="kpi-item"><div class="kpi-value sm">94%</div><div class="kpi-label">Verificati</div></div>
+            </div>
+            <div class="sparkline-wrap">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <defs><linearGradient id="g4" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(262 83% 58%)" stop-opacity="0.25"/><stop offset="100%" stop-color="hsl(262 83% 58%)" stop-opacity="0"/></linearGradient></defs>
+                <path d="M0,32 Q30,28 60,24 T120,18 T180,12 T200,8" fill="none" stroke="hsl(262 83% 58%)" stroke-width="2"/>
+                <path d="M0,32 Q30,28 60,24 T120,18 T180,12 T200,8 V36 H0 Z" fill="url(#g4)"/>
+              </svg>
+            </div>
+            <div class="actions-row">
+              <button class="action-btn primary">Gestisci Utenti</button>
+              <button class="action-btn">Bulk Actions</button>
+            </div>
+          </div>
+          <div class="hub-card" style="--card-hsl:262 83% 58%">
+            <div class="card-head">
+              <div class="card-title-row">
+                <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                <div><div class="card-title">Sessioni Attive</div><div class="card-subtitle">Sessioni live</div></div>
+              </div>
+              <div class="status-dot green"></div>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi-item"><div class="kpi-value">47</div><div class="kpi-label">Sessioni live</div></div>
+              <div class="kpi-item"><div class="kpi-value sm">12m</div><div class="kpi-label">Durata media</div></div>
+            </div>
+            <div class="actions-row"><button class="action-btn primary">Sessioni</button></div>
+          </div>
+          <div class="hub-card" style="--card-hsl:262 83% 58%">
+            <div class="card-head">
+              <div class="card-title-row">
+                <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
+                <div><div class="card-title">API Keys</div><div class="card-subtitle">Chiavi attive</div></div>
+              </div>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi-item"><div class="kpi-value">86</div><div class="kpi-label">Chiavi attive</div></div>
+              <div class="kpi-item"><div class="kpi-value sm">3.2K</div><div class="kpi-label">Chiamate oggi</div><div class="kpi-change up">&#9650; 5%</div></div>
+            </div>
+            <div class="actions-row">
+              <button class="action-btn primary">Gestisci Keys</button>
+              <button class="action-btn">Crea Nuova</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ GAMES TAB ═══ -->
+      <div class="tab-panel" id="tab-games">
+        <div class="card-grid">
+          <div class="hub-card" style="--card-hsl:25 95% 45%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></div><div><div class="card-title">Catalogo Giochi</div><div class="card-subtitle">892 giochi condivisi</div></div></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value">892</div><div class="kpi-label">Totale</div></div><div class="kpi-item"><div class="kpi-value sm">14</div><div class="kpi-label">Nuovi sett.</div><div class="kpi-change up">&#9650; 32%</div></div></div>
+            <div class="sparkline-wrap"><svg viewBox="0 0 200 36" preserveAspectRatio="none"><defs><linearGradient id="g5" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(25 95% 45%)" stop-opacity="0.25"/><stop offset="100%" stop-color="hsl(25 95% 45%)" stop-opacity="0"/></linearGradient></defs><path d="M0,32 Q30,28 60,24 T120,18 T180,12 T200,8" fill="none" stroke="hsl(25 95% 45%)" stroke-width="2"/><path d="M0,32 Q30,28 60,24 T120,18 T180,12 T200,8 V36 H0 Z" fill="url(#g5)"/></svg></div>
+            <div class="actions-row"><button class="action-btn primary">Catalogo</button><button class="action-btn">Aggiungi</button></div>
+          </div>
+          <div class="hub-card" style="--card-hsl:25 95% 45%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div><div class="card-title">Approvazioni</div><div class="card-subtitle">In attesa di review</div></div></div><div class="status-dot amber"></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value" style="color:hsl(25 95% 55%)">5</div><div class="kpi-label">In coda</div></div><div class="kpi-item"><div class="kpi-value sm">2.4h</div><div class="kpi-label">Attesa media</div></div><div class="kpi-item"><div class="kpi-value sm">89%</div><div class="kpi-label">Tasso appr.</div></div></div>
+            <div class="actions-row"><button class="action-btn primary">Coda Review</button><button class="action-btn">Pending Del.</button></div>
+          </div>
+          <div class="hub-card" style="--card-hsl:25 95% 45%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div><div class="card-title">Import BGG</div><div class="card-subtitle">BoardGameGeek sync</div></div></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value sm">12 feb</div><div class="kpi-label">Ultimo import</div></div><div class="kpi-item"><div class="kpi-value sm">97%</div><div class="kpi-label">Success rate</div></div></div>
+            <div class="actions-row"><button class="action-btn primary">Importa da BGG</button><button class="action-btn">Bulk Import</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ AI TAB ═══ -->
+      <div class="tab-panel" id="tab-ai">
+        <div class="card-grid">
+          <div class="hub-card" style="--card-hsl:38 92% 50%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/></svg></div><div><div class="card-title">Agent Definitions</div><div class="card-subtitle">12 agenti configurati</div></div></div><div class="status-dot green"></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value">12</div><div class="kpi-label">Totale</div></div><div class="kpi-item"><div class="kpi-value sm">10</div><div class="kpi-label">Attivi</div></div><div class="kpi-item"><div class="kpi-value sm" style="color:var(--destructive)">1</div><div class="kpi-label">Errore</div></div></div>
+            <div class="actions-row"><button class="action-btn primary">Gestisci</button><button class="action-btn">Playground</button></div>
+          </div>
+          <div class="hub-card" style="--card-hsl:38 92% 50%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></div><div><div class="card-title">AI Models</div><div class="card-subtitle">Configurazione modelli</div></div></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value sm">6</div><div class="kpi-label">Modelli config.</div></div><div class="kpi-item"><div class="kpi-value sm">GPT-4o</div><div class="kpi-label">Primario</div></div></div>
+            <div class="actions-row"><button class="action-btn primary">Configura</button></div>
+          </div>
+          <div class="hub-card" style="--card-hsl:38 92% 50%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><div><div class="card-title">RAG Dashboard</div><div class="card-subtitle">Retrieval & search</div></div></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value">1.2K</div><div class="kpi-label">Query oggi</div></div><div class="kpi-item"><div class="kpi-value sm">180ms</div><div class="kpi-label">Avg latency</div></div></div>
+            <div class="sparkline-wrap"><svg viewBox="0 0 200 36" preserveAspectRatio="none"><defs><linearGradient id="g6" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(38 92% 50%)" stop-opacity="0.25"/><stop offset="100%" stop-color="hsl(38 92% 50%)" stop-opacity="0"/></linearGradient></defs><path d="M0,28 Q25,24 50,20 T100,16 T150,18 T200,10" fill="none" stroke="hsl(38 92% 50%)" stroke-width="2"/><path d="M0,28 Q25,24 50,20 T100,16 T150,18 T200,10 V36 H0 Z" fill="url(#g6)"/></svg></div>
+            <div class="actions-row"><button class="action-btn primary">RAG Monitor</button><button class="action-btn">Tier Config</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ ALERTS TAB ═══ -->
+      <div class="tab-panel" id="tab-alerts">
+        <div class="card-grid">
+          <div class="hub-card" style="--card-hsl:350 89% 60%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div><div class="card-title">Alert Attivi</div><div class="card-subtitle">Richiede attenzione</div></div></div><div class="status-dot red"></div></div>
+            <div class="alert-counts"><span class="alert-chip critical">2 Critical</span><span class="alert-chip warning">1 Warning</span><span class="alert-chip info">4 Info</span></div>
+            <div class="sparkline-wrap"><svg viewBox="0 0 200 36" preserveAspectRatio="none"><defs><linearGradient id="g7" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(350 89% 60%)" stop-opacity="0.2"/><stop offset="100%" stop-color="hsl(350 89% 60%)" stop-opacity="0"/></linearGradient></defs><path d="M0,18 Q25,20 50,16 T100,22 T150,14 T200,20" fill="none" stroke="hsl(350 89% 60%)" stroke-width="2"/><path d="M0,18 Q25,20 50,16 T100,22 T150,14 T200,20 V36 H0 Z" fill="url(#g7)"/></svg></div>
+            <div class="actions-row"><button class="action-btn primary">Vedi Alert</button><button class="action-btn">Muta Tutti</button></div>
+          </div>
+          <div class="hub-card" style="--card-hsl:350 89% 60%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div><div class="card-title">Alert Rules</div><div class="card-subtitle">18 regole configurate</div></div></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value">18</div><div class="kpi-label">Regole totali</div></div><div class="kpi-item"><div class="kpi-value sm">15</div><div class="kpi-label">Attive</div></div></div>
+            <div class="actions-row"><button class="action-btn primary">Gestisci Regole</button><button class="action-btn">Crea Regola</button></div>
+          </div>
+          <div class="hub-card" style="--card-hsl:350 89% 60%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06"/></svg></div><div><div class="card-title">Alert Config</div><div class="card-subtitle">Canali notifica</div></div></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value sm">Email</div><div class="kpi-label">Primario</div></div><div class="kpi-item"><div class="kpi-value sm">Slack</div><div class="kpi-label">Secondario</div></div></div>
+            <div class="actions-row"><button class="action-btn primary">Configura</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SYSTEM TAB ═══ -->
+      <div class="tab-panel" id="tab-system">
+        <div class="card-grid">
+          <div class="hub-card" style="--card-hsl:240 60% 55%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></div><div><div class="card-title">Infrastruttura</div><div class="card-subtitle">Health e status DB</div></div></div><div class="status-dot green"></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value sm">5/5</div><div class="kpi-label">Core services</div></div><div class="kpi-item"><div class="kpi-value sm">PG 16</div><div class="kpi-label">DB Version</div></div></div>
+            <div class="actions-row"><button class="action-btn primary">Dettagli</button></div>
+          </div>
+          <div class="hub-card" style="--card-hsl:240 60% 55%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div><div><div class="card-title">Cache Redis</div><div class="card-subtitle">Performance e memoria</div></div></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value">94.2%</div><div class="kpi-label">Hit rate</div></div><div class="kpi-item"><div class="kpi-value sm">128MB</div><div class="kpi-label">Memoria usata</div></div></div>
+            <div class="sparkline-wrap"><svg viewBox="0 0 200 36" preserveAspectRatio="none"><defs><linearGradient id="g8" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(240 60% 55%)" stop-opacity="0.2"/><stop offset="100%" stop-color="hsl(240 60% 55%)" stop-opacity="0"/></linearGradient></defs><path d="M0,22 Q30,18 60,20 T120,14 T180,12 T200,8" fill="none" stroke="hsl(240 60% 55%)" stroke-width="2"/><path d="M0,22 Q30,18 60,20 T120,14 T180,12 T200,8 V36 H0 Z" fill="url(#g8)"/></svg></div>
+            <div class="actions-row"><button class="action-btn primary">Cache Manager</button><button class="action-btn">Invalida</button></div>
+          </div>
+          <div class="hub-card" style="--card-hsl:240 60% 55%">
+            <div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg></div><div><div class="card-title">Audit Log</div><div class="card-subtitle">Trail completo</div></div></div></div>
+            <div class="kpi-row"><div class="kpi-item"><div class="kpi-value">342</div><div class="kpi-label">Eventi oggi</div><div class="kpi-change up">&#9650; 6%</div></div></div>
+            <div class="actions-row"><button class="action-btn primary">Audit Log</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty panels for config/analytics (same structure) -->
+      <div class="tab-panel" id="tab-config"><div class="card-grid">
+        <div class="hub-card" style="--card-hsl:210 40% 55%"><div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06"/></svg></div><div><div class="card-title">Impostazioni Generali</div><div class="card-subtitle">Configurazione globale</div></div></div></div><div class="kpi-row"><div class="kpi-item"><div class="kpi-value sm">14 feb</div><div class="kpi-label">Ultima modifica</div></div></div><div class="actions-row"><button class="action-btn primary">Configura</button></div></div>
+        <div class="hub-card" style="--card-hsl:210 40% 55%"><div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div><div class="card-title">Rate Limits</div><div class="card-subtitle">Limiti per tier e utente</div></div></div></div><div class="kpi-row"><div class="kpi-item"><div class="kpi-value sm">4</div><div class="kpi-label">Tier configurati</div></div><div class="kpi-item"><div class="kpi-value sm">28</div><div class="kpi-label">Hits limite oggi</div></div></div><div class="actions-row"><button class="action-btn primary">Rate Limits</button><button class="action-btn">Override</button></div></div>
+        <div class="hub-card" style="--card-hsl:210 40% 55%"><div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div><div><div class="card-title">Game &amp; PDF Limits</div><div class="card-subtitle">Limiti per tier</div></div></div></div><div class="kpi-row"><div class="kpi-item"><div class="kpi-value sm">Free: 50</div><div class="kpi-label">Basic: 200 | Pro: Illim.</div></div></div><div class="actions-row"><button class="action-btn primary">Configura Limiti</button></div></div>
+      </div></div>
+
+      <div class="tab-panel" id="tab-analytics"><div class="card-grid">
+        <div class="hub-card" style="--card-hsl:220 80% 55%"><div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><div><div class="card-title">Analytics Dashboard</div><div class="card-subtitle">Metriche e trend</div></div></div></div><div class="kpi-row"><div class="kpi-item"><div class="kpi-value">8.4K</div><div class="kpi-label">Page views oggi</div><div class="kpi-change up">&#9650; 15%</div></div><div class="kpi-item"><div class="kpi-value sm">312</div><div class="kpi-label">Visitatori unici</div></div></div><div class="sparkline-wrap"><svg viewBox="0 0 200 36" preserveAspectRatio="none"><defs><linearGradient id="g9" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="hsl(220 80% 55%)" stop-opacity="0.25"/><stop offset="100%" stop-color="hsl(220 80% 55%)" stop-opacity="0"/></linearGradient></defs><path d="M0,30 Q25,26 50,22 T100,18 T150,12 T200,6" fill="none" stroke="hsl(220 80% 55%)" stroke-width="2"/><path d="M0,30 Q25,26 50,22 T100,18 T150,12 T200,6 V36 H0 Z" fill="url(#g9)"/></svg></div><div class="actions-row"><button class="action-btn primary">Dashboard</button><button class="action-btn">Export</button></div></div>
+        <div class="hub-card" style="--card-hsl:220 80% 55%"><div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div><div class="card-title">Reports</div><div class="card-subtitle">Report personalizzati</div></div></div></div><div class="kpi-row"><div class="kpi-item"><div class="kpi-value sm">24</div><div class="kpi-label">Report generati</div></div><div class="kpi-item"><div class="kpi-value sm">3</div><div class="kpi-label">Schedulati</div></div></div><div class="actions-row"><button class="action-btn primary">Genera Report</button></div></div>
+        <div class="hub-card" style="--card-hsl:220 80% 55%"><div class="card-head"><div class="card-title-row"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div><div class="card-title">Management</div><div class="card-subtitle">Metriche di sistema</div></div></div></div><div class="kpi-row"><div class="kpi-item"><div class="kpi-value sm">99.7%</div><div class="kpi-label">Uptime</div></div><div class="kpi-item"><div class="kpi-value sm">42ms</div><div class="kpi-label">Latenza media</div></div></div><div class="actions-row"><button class="action-btn primary">Gestione</button></div></div>
+      </div></div>
+
+    </div><!-- /hub-content -->
+  </div><!-- /main-container -->
+</div><!-- /main -->
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const panel = document.getElementById('tab-' + btn.dataset.tab);
+    if (panel) {
+      panel.classList.add('active');
+      panel.querySelectorAll('.hub-card').forEach(c => {
+        c.style.animation = 'none';
+        c.offsetHeight;
+        c.style.animation = '';
+      });
+    }
+  });
+});
+</script>
+</body>
+</html>

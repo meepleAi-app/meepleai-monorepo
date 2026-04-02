@@ -107,8 +107,8 @@ export function QueueTab() {
     try {
       const [queueRes, statusRes] = await Promise.all([
         api.admin.getProcessingQueue({
-          statusFilter: statusFilter || undefined,
-          searchText: search || undefined,
+          status: statusFilter || undefined,
+          search: search || undefined,
           page,
           pageSize: 20,
         }),

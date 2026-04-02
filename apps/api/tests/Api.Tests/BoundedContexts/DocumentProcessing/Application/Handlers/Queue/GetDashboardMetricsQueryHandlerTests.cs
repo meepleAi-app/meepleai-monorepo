@@ -68,13 +68,13 @@ public sealed class GetDashboardMetricsQueryHandlerTests
 
         // Document within 24h window
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Ready",
+            ProcessingStatus: "completed",
             uploadedAt: DateTime.UtcNow.AddHours(-12),
             userId: userId));
 
         // Document outside 24h window — should be excluded
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Ready",
+            ProcessingStatus: "completed",
             uploadedAt: DateTime.UtcNow.AddHours(-48),
             userId: userId));
 
@@ -100,19 +100,19 @@ public sealed class GetDashboardMetricsQueryHandlerTests
 
         // Document within 7d window
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Ready",
+            ProcessingStatus: "completed",
             uploadedAt: DateTime.UtcNow.AddDays(-3),
             userId: userId));
 
         // Document within 7d window
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Failed",
+            ProcessingStatus: "failed",
             uploadedAt: DateTime.UtcNow.AddDays(-5),
             userId: userId));
 
         // Document outside 7d window
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Ready",
+            ProcessingStatus: "completed",
             uploadedAt: DateTime.UtcNow.AddDays(-10),
             userId: userId));
 
@@ -139,22 +139,22 @@ public sealed class GetDashboardMetricsQueryHandlerTests
 
         // 3 docs within 30d, 1 outside
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Ready",
+            ProcessingStatus: "completed",
             uploadedAt: DateTime.UtcNow.AddDays(-5),
             userId: userId));
 
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Ready",
+            ProcessingStatus: "completed",
             uploadedAt: DateTime.UtcNow.AddDays(-20),
             userId: userId));
 
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Failed",
+            ProcessingStatus: "failed",
             uploadedAt: DateTime.UtcNow.AddDays(-25),
             userId: userId));
 
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Ready",
+            ProcessingStatus: "completed",
             uploadedAt: DateTime.UtcNow.AddDays(-60),
             userId: userId));
 
@@ -181,13 +181,13 @@ public sealed class GetDashboardMetricsQueryHandlerTests
 
         // Document within 24h
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Ready",
+            ProcessingStatus: "completed",
             uploadedAt: DateTime.UtcNow.AddHours(-6),
             userId: userId));
 
         // Document outside 24h
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Ready",
+            ProcessingStatus: "completed",
             uploadedAt: DateTime.UtcNow.AddDays(-3),
             userId: userId));
 
@@ -284,10 +284,10 @@ public sealed class GetDashboardMetricsQueryHandlerTests
 
         // 3 completed, 1 failed = 25% failure rate
         dbContext.Set<PdfDocumentEntity>().AddRange(
-            CreatePdfDocument(processingState: "Ready", uploadedAt: DateTime.UtcNow.AddHours(-1), userId: userId),
-            CreatePdfDocument(processingState: "Ready", uploadedAt: DateTime.UtcNow.AddHours(-2), userId: userId),
-            CreatePdfDocument(processingState: "Ready", uploadedAt: DateTime.UtcNow.AddHours(-3), userId: userId),
-            CreatePdfDocument(processingState: "Failed", uploadedAt: DateTime.UtcNow.AddHours(-4), userId: userId));
+            CreatePdfDocument(ProcessingStatus: "completed", uploadedAt: DateTime.UtcNow.AddHours(-1), userId: userId),
+            CreatePdfDocument(ProcessingStatus: "completed", uploadedAt: DateTime.UtcNow.AddHours(-2), userId: userId),
+            CreatePdfDocument(ProcessingStatus: "completed", uploadedAt: DateTime.UtcNow.AddHours(-3), userId: userId),
+            CreatePdfDocument(ProcessingStatus: "failed", uploadedAt: DateTime.UtcNow.AddHours(-4), userId: userId));
 
         await dbContext.SaveChangesAsync();
 
@@ -312,7 +312,7 @@ public sealed class GetDashboardMetricsQueryHandlerTests
 
         // Only "pending" documents — neither completed nor failed
         dbContext.Set<PdfDocumentEntity>().Add(CreatePdfDocument(
-            processingState: "Pending",
+            ProcessingStatus: "pending",
             uploadedAt: DateTime.UtcNow.AddHours(-1),
             userId: userId));
 
@@ -338,8 +338,8 @@ public sealed class GetDashboardMetricsQueryHandlerTests
         var userId = Guid.NewGuid();
 
         dbContext.Set<PdfDocumentEntity>().AddRange(
-            CreatePdfDocument(processingState: "Failed", uploadedAt: DateTime.UtcNow.AddHours(-1), userId: userId),
-            CreatePdfDocument(processingState: "Failed", uploadedAt: DateTime.UtcNow.AddHours(-2), userId: userId));
+            CreatePdfDocument(ProcessingStatus: "failed", uploadedAt: DateTime.UtcNow.AddHours(-1), userId: userId),
+            CreatePdfDocument(ProcessingStatus: "failed", uploadedAt: DateTime.UtcNow.AddHours(-2), userId: userId));
 
         await dbContext.SaveChangesAsync();
 
@@ -389,9 +389,9 @@ public sealed class GetDashboardMetricsQueryHandlerTests
 
         // 2 completed, 1 failed = 33.333...% → should round to 33.3%
         dbContext.Set<PdfDocumentEntity>().AddRange(
-            CreatePdfDocument(processingState: "Ready", uploadedAt: DateTime.UtcNow.AddHours(-1), userId: userId),
-            CreatePdfDocument(processingState: "Ready", uploadedAt: DateTime.UtcNow.AddHours(-2), userId: userId),
-            CreatePdfDocument(processingState: "Failed", uploadedAt: DateTime.UtcNow.AddHours(-3), userId: userId));
+            CreatePdfDocument(ProcessingStatus: "completed", uploadedAt: DateTime.UtcNow.AddHours(-1), userId: userId),
+            CreatePdfDocument(ProcessingStatus: "completed", uploadedAt: DateTime.UtcNow.AddHours(-2), userId: userId),
+            CreatePdfDocument(ProcessingStatus: "failed", uploadedAt: DateTime.UtcNow.AddHours(-3), userId: userId));
 
         await dbContext.SaveChangesAsync();
 
@@ -455,8 +455,20 @@ public sealed class GetDashboardMetricsQueryHandlerTests
 
     #region Helper Methods
 
+    /// <summary>
+    /// Maps legacy test status values to the authoritative ProcessingState values.
+    /// Handler queries ProcessingState ("Ready"/"Failed"), not legacy ProcessingStatus.
+    /// </summary>
+    private static string MapToProcessingState(string status) => status switch
+    {
+        "completed" => "Ready",
+        "failed" => "Failed",
+        "pending" => "Pending",
+        _ => "Pending"
+    };
+
     private static PdfDocumentEntity CreatePdfDocument(
-        string processingState,
+        string ProcessingStatus,
         DateTime uploadedAt,
         Guid userId,
         Guid? id = null)
@@ -469,7 +481,7 @@ public sealed class GetDashboardMetricsQueryHandlerTests
             FileSizeBytes = 1024,
             UploadedByUserId = userId,
             UploadedAt = uploadedAt,
-            ProcessingState = processingState
+            ProcessingState = MapToProcessingState(ProcessingStatus)
         };
     }
 

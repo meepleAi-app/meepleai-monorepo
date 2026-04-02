@@ -39,12 +39,4 @@ internal interface IWishlistRepository : IRepository<WishlistItem, Guid>
         Guid userId,
         Guid gameId,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets all wishlist items with Public visibility for a user.
-    /// Used for share link and public profile features.
-    /// </summary>
-    Task<IReadOnlyList<WishlistItem>> GetPublicByUserIdAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default);
 }

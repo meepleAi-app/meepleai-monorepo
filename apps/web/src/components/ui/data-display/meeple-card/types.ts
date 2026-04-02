@@ -366,42 +366,6 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   isTimeTravelMode?: boolean;
   /** Toggle time travel mode */
   onTimeTravelToggle?: (enabled: boolean) => void;
-
-  // ─── Symbol Strip — Identity Chips ─────────────────────────────────────
-  /** Primo chip identità (es. "Strategia", "Euro", "Worker Placement") */
-  identityChip1?: string;
-  /** Secondo chip identità (es. "Cooperativo", "Esperto") */
-  identityChip2?: string;
-
-  // ─── Symbol Strip — Metric Pills (entity-specific) ──────────────────────
-  // Game metrics
-  /** Es. "2-4" o "1-6" */
-  playerCountDisplay?: string;
-  /** Es. "45min" o "2h" */
-  playTimeDisplay?: string;
-
-  // Player metrics
-  gamesPlayed?: number;
-  /** Win rate 0-100 */
-  winRate?: number;
-
-  // Session metrics
-  winnerScore?: string;
-  sessionDate?: string;
-
-  // Agent metrics
-  conversationCount?: number;
-  /** Accuracy 0-100 */
-  agentAccuracy?: number;
-  linkedKbCount?: number;
-
-  // KnowledgeBase metrics
-  pageCount?: number;
-  chunkCount?: number;
-
-  // ─── Bottom Bar ──────────────────────────────────────────────────────────
-  bottomStatLabel?: string;
-  bottomStatValue?: string;
 }
 
 // ============================================================================

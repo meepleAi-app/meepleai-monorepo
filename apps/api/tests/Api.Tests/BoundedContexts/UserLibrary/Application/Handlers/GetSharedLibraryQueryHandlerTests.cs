@@ -1,8 +1,10 @@
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
@@ -14,6 +16,12 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
 [Trait("Category", TestCategories.Unit)]
 public class GetSharedLibraryQueryHandlerTests
 {
+    private readonly Mock<ILibraryShareLinkRepository> _mockShareLinkRepository;
+
+    public GetSharedLibraryQueryHandlerTests()
+    {
+        _mockShareLinkRepository = new Mock<ILibraryShareLinkRepository>();
+    }
 
     #region Query Validation Tests
 
@@ -121,4 +129,51 @@ public class GetSharedLibraryQueryHandlerTests
 
     #endregion
 
+    #region Repository Behavior Tests
+
+    [Fact]
+    public async Task Repository_GetByShareToken_ReturnsNullForNonExistent()
+    {
+        // Arrange
+        var shareToken = "nonexistenttoken12345678901234";
+
+        _mockShareLinkRepository
+            .Setup(r => r.GetByShareTokenAsync(shareToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((LibraryShareLink?)null);
+
+        // Act
+        var result = await _mockShareLinkRepository.Object.GetByShareTokenAsync(
+            shareToken, CancellationToken.None);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Repository_GetByShareToken_ReturnsShareLink()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var shareLink = LibraryShareLink.Create(
+            userId,
+            LibrarySharePrivacyLevel.Public,
+            true,
+            null);
+        var shareToken = shareLink.ShareToken;
+
+        _mockShareLinkRepository
+            .Setup(r => r.GetByShareTokenAsync(shareToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(shareLink);
+
+        // Act
+        var result = await _mockShareLinkRepository.Object.GetByShareTokenAsync(
+            shareToken, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.ShareToken.Should().Be(shareToken);
+        result.UserId.Should().Be(userId);
+    }
+
+    #endregion
 }

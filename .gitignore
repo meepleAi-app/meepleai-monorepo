@@ -145,13 +145,6 @@ test-results/
 # Playwright MCP temp files
 tmpclaude-*-cwd
 nul
-
-# Compiler/test output artifacts (should not be committed)
-apps/web/tsc_out.txt
-apps/web/test-results.json
-
-# Claude session docs (local only, not production docs)
-claudedocs/
 docs/02-development/MeepleAI_Configuration_Variables.xlsx
 apps/api/test-results.txt
 

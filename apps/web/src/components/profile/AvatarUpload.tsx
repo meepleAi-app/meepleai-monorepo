@@ -12,7 +12,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { Camera, Loader2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import ReactCrop, { type PercentCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
@@ -158,15 +158,6 @@ export function AvatarUpload({
   // Track blob URL for cleanup to prevent memory leaks
   const blobUrlRef = useRef<string | null>(null);
 
-  // Cleanup: revoke any pending blob URL when the component unmounts
-  useEffect(() => {
-    return () => {
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-      }
-    };
-  }, []);
-
   // Handlers
   const handleAvatarClick = useCallback(() => {
     if (disabled || isUploading) return;
@@ -242,9 +233,7 @@ export function AvatarUpload({
       // Create a File from the Blob
       const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
 
-      // Call the upload callback with optimistic preview.
-      // Do NOT revoke the blob URL here — the caller (page.tsx) uses it for
-      // optimistic setQueryData and will revoke it after invalidateQueries resolves.
+      // Call the upload callback with optimistic preview
       await onUpload(file, url);
 
       // Close dialog on success
@@ -252,6 +241,12 @@ export function AvatarUpload({
       setSelectedImage(null);
       setCrop(undefined);
       setZoom(1);
+
+      // Revoca il blob URL ora che il server ha risposto con l'URL reale
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore durante l'upload dell'avatar.");
     } finally {

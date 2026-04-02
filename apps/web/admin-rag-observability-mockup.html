@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleAI RAG Observability - Design Prototype</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: hsl(30 25% 97%);
+      --bg-card: rgba(255,255,255,0.90);
+      --bg-card-hover: rgba(255,255,255,0.95);
+      --bg-surface: rgba(255,255,255,0.70);
+      --text: hsl(20 10% 15%);
+      --text-muted: hsl(20 5% 45%);
+      --text-faint: hsl(20 5% 65%);
+      --border: rgba(0,0,0,0.08);
+      --border-strong: rgba(0,0,0,0.15);
+      --primary: hsl(25 95% 45%);
+      --primary-light: hsl(25 95% 55%);
+      --primary-bg: hsl(38 100% 95%);
+      --primary-bg-strong: hsl(38 90% 88%);
+      --green: hsl(142 60% 42%);
+      --green-bg: hsl(142 50% 94%);
+      --green-glow: hsla(142, 60%, 42%, 0.3);
+      --amber: hsl(38 92% 50%);
+      --amber-bg: hsl(38 100% 95%);
+      --red: hsl(0 72% 51%);
+      --red-bg: hsl(0 70% 95%);
+      --blue: hsl(217 91% 60%);
+      --blue-bg: hsl(217 90% 95%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.04);
+      --shadow-lg: 0 10px 30px rgba(0,0,0,0.07), 0 4px 8px rgba(0,0,0,0.04);
+      --shadow-glow: 0 0 20px rgba(245,158,11,0.15);
+      --radius: 16px;
+      --radius-sm: 12px;
+      --radius-xs: 8px;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    html.dark {
+      --bg: hsl(240 10% 10%);
+      --bg-card: rgba(39,39,42,0.90);
+      --bg-card-hover: rgba(39,39,42,0.95);
+      --bg-surface: rgba(39,39,42,0.70);
+      --text: hsl(0 0% 93%);
+      --text-muted: hsl(0 0% 60%);
+      --text-faint: hsl(0 0% 40%);
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.15);
+      --primary-bg: hsl(25 40% 15%);
+      --primary-bg-strong: hsl(25 50% 22%);
+      --green-bg: hsl(142 30% 14%);
+      --amber-bg: hsl(38 40% 14%);
+      --red-bg: hsl(0 40% 14%);
+      --blue-bg: hsl(217 40% 14%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+      --shadow-lg: 0 10px 30px rgba(0,0,0,0.4);
+      --shadow-glow: 0 0 20px rgba(245,158,11,0.1);
+    }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    html.light body {
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(251,191,36,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(251,146,60,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 80%, rgba(245,158,11,0.05) 0%, transparent 50%);
+    }
+    html.dark body {
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(251,191,36,0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(251,146,60,0.02) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 80%, rgba(245,158,11,0.015) 0%, transparent 50%);
+    }
+    h1,h2,h3,h4,h5,h6,.font-heading { font-family: 'Quicksand', sans-serif; }
+    code, .mono { font-family: var(--mono); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+    * { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease, box-shadow 0.2s ease; }
+
+    .app-header {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .header-inner {
+      max-width: 1400px; margin: 0 auto;
+      padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 60px;
+    }
+    .header-left { display: flex; align-items: center; gap: 24px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: 'Quicksand'; font-weight: 700; font-size: 18px; color: var(--primary); }
+    .logo-icon { width: 32px; height: 32px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .tab-nav { display: flex; gap: 4px; }
+    .tab-btn {
+      padding: 8px 18px; border-radius: var(--radius-xs);
+      font-family: 'Quicksand'; font-weight: 600; font-size: 14px;
+      border: none; cursor: pointer;
+      background: transparent; color: var(--text-muted);
+      position: relative; transition: all 0.2s;
+    }
+    .tab-btn:hover { color: var(--text); background: var(--bg-surface); }
+    .tab-btn.active { color: var(--primary); background: var(--primary-bg); }
+    .tab-btn.active::after {
+      content: ''; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+      width: 24px; height: 2.5px; background: var(--primary); border-radius: 2px;
+    }
+    .dark-toggle {
+      width: 44px; height: 24px; border-radius: 12px;
+      background: var(--border-strong); border: none; cursor: pointer;
+      position: relative; transition: background 0.3s;
+    }
+    .dark-toggle::after {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: white; box-shadow: var(--shadow-sm);
+      transition: transform 0.3s;
+    }
+    html.dark .dark-toggle { background: var(--primary); }
+    html.dark .dark-toggle::after { transform: translateX(20px); }
+    .page { display: none; max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .page.active { display: block; animation: fadeIn 0.3s ease; }
+
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px) saturate(150%);
+      -webkit-backdrop-filter: blur(12px) saturate(150%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 20px;
+      transition: all 0.25s;
+    }
+    .glass-card:hover { box-shadow: var(--shadow-lg); }
+    .glass-card-sm {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+      padding: 16px;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      font-family: var(--mono); letter-spacing: -0.3px;
+    }
+    .badge-green { background: var(--green-bg); color: var(--green); }
+    .badge-amber { background: var(--amber-bg); color: var(--amber); }
+    .badge-red { background: var(--red-bg); color: var(--red); }
+    .badge-blue { background: var(--blue-bg); color: var(--blue); }
+    .badge-primary { background: var(--primary-bg); color: var(--primary); }
+    .badge-glow-green { box-shadow: 0 0 8px var(--green-glow); }
+    .section-title {
+      font-family: 'Quicksand'; font-weight: 700; font-size: 16px;
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-title .icon { font-size: 18px; }
+    .label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes flow { 0% { stroke-dashoffset: 16; } 100% { stroke-dashoffset: 0; } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes glow-pulse { 0%,100% { box-shadow: 0 0 4px var(--green-glow); } 50% { box-shadow: 0 0 12px var(--green-glow); } }
+
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+      animation: glow-pulse 2s ease-in-out infinite;
+    }
+
+    /* Pipeline Explorer */
+    .exec-selector { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .exec-dropdown {
+      flex: 1; min-width: 280px; padding: 10px 16px;
+      border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+      background: var(--bg-surface); color: var(--text);
+      font-family: 'Nunito'; font-size: 14px;
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 12 12'%3E%3Cpath stroke='%23888' stroke-width='1.5' d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+    }
+    .exec-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .exec-meta-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); }
+    .exec-meta-item strong { color: var(--text); font-weight: 600; }
+
+    .pipeline-container { position: relative; overflow-x: auto; padding: 24px 0; }
+    .pipeline-nodes { display: flex; align-items: center; gap: 0; min-width: max-content; justify-content: center; }
+    .pipeline-node {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 16px 20px; border-radius: var(--radius-sm);
+      background: var(--bg-card); border: 2px solid var(--border);
+      cursor: pointer; transition: all 0.3s; position: relative; min-width: 130px;
+    }
+    .pipeline-node:hover {
+      border-color: var(--primary); transform: translateY(-3px);
+      box-shadow: var(--shadow-lg), var(--shadow-glow);
+    }
+    .pipeline-node.active {
+      border-color: var(--primary); background: var(--primary-bg);
+      box-shadow: var(--shadow-lg), 0 0 25px rgba(245,158,11,0.2);
+    }
+    .pipeline-node .node-icon { font-size: 28px; line-height: 1; }
+    .pipeline-node .node-name { font-family: 'Quicksand'; font-weight: 700; font-size: 13px; }
+    .pipeline-node .node-latency { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+    .pipeline-node .node-status {
+      position: absolute; top: 8px; right: 8px;
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .node-status.ok { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+    .node-status.error { background: var(--red); box-shadow: 0 0 6px hsla(0,72%,51%,0.4); }
+    .node-status.cache { background: var(--blue); box-shadow: 0 0 6px hsla(217,91%,60%,0.4); }
+    .latency-green { color: var(--green); }
+    .latency-amber { color: var(--amber); }
+    .latency-red { color: var(--red); }
+    .pipeline-connector { width: 48px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pipeline-connector svg { overflow: visible; }
+    .pipeline-connector line {
+      stroke: var(--primary); stroke-width: 2;
+      stroke-dasharray: 8 8;
+      animation: flow 0.8s linear infinite;
+    }
+    .latency-bar-container { margin-top: 16px; }
+    .latency-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--border); }
+    .latency-segment { height: 100%; transition: width 0.5s ease; }
+    .latency-bar-labels { display: flex; margin-top: 6px; }
+    .latency-bar-label { font-size: 10px; font-family: var(--mono); color: var(--text-faint); text-align: center; }
+
+    .timeline { display: flex; flex-direction: column; gap: 8px; }
+    .timeline-step {
+      border-radius: var(--radius-sm); overflow: hidden;
+      background: var(--bg-card); border: 1px solid var(--border); transition: all 0.25s;
+    }
+    .timeline-step.active { border-color: var(--primary); }
+    .timeline-step-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px; cursor: pointer; transition: background 0.2s;
+    }
+    .timeline-step-header:hover { background: var(--bg-surface); }
+    .timeline-step .step-icon { font-size: 20px; flex-shrink: 0; }
+    .timeline-step .step-name { font-family: 'Quicksand'; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+    .timeline-step .step-bar-wrap { flex: 1; margin: 0 12px; }
+    .timeline-step .step-bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+    .timeline-step .step-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+    .timeline-step .step-duration { font-family: var(--mono); font-size: 13px; font-weight: 600; flex-shrink: 0; min-width: 60px; text-align: right; }
+    .timeline-step .step-pct { font-size: 11px; color: var(--text-faint); font-family: var(--mono); flex-shrink: 0; min-width: 36px; text-align: right; }
+    .timeline-step .expand-icon { flex-shrink: 0; color: var(--text-faint); transition: transform 0.3s; font-size: 14px; }
+    .timeline-step.open .expand-icon { transform: rotate(180deg); }
+    .timeline-detail {
+      max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.3s;
+      padding: 0 18px;
+    }
+    .timeline-step.open .timeline-detail { max-height: 500px; padding: 0 18px 18px; }
+    .detail-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
+    }
+    .detail-item { display: flex; flex-direction: column; gap: 2px; }
+    .detail-item .detail-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .detail-item .detail-value { font-size: 14px; font-weight: 600; }
+    .detail-item .detail-value.mono { font-family: var(--mono); font-size: 13px; }
+
+    /* Debug Console */
+    .debug-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; min-height: 500px; }
+    .live-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .live-header-left { display: flex; align-items: center; gap: 10px; }
+    .refresh-selector {
+      padding: 4px 10px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg-surface);
+      color: var(--text); font-size: 12px; font-family: var(--mono);
+    }
+    .exec-table { width: 100%; border-collapse: collapse; }
+    .exec-table th {
+      text-align: left; padding: 8px 12px;
+      font-size: 11px; color: var(--text-faint); font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-strong); white-space: nowrap;
+    }
+    .exec-table td {
+      padding: 10px 12px; border-bottom: 1px solid var(--border);
+      font-size: 13px; white-space: nowrap;
+    }
+    .exec-table tbody tr { cursor: pointer; transition: background 0.15s; }
+    .exec-table tbody tr:hover { background: var(--bg-surface); }
+    .exec-table tbody tr.selected { background: var(--primary-bg); }
+    .exec-table .query-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .exec-table .ts-cell { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+    .exec-table .latency-cell { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+    .exec-table .conf-cell { font-family: var(--mono); font-size: 12px; }
+
+    .filter-section { margin-bottom: 16px; }
+    .filter-section .filter-title {
+      font-family: 'Quicksand'; font-weight: 700; font-size: 12px;
+      color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .filter-check { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; cursor: pointer; }
+    .filter-check input[type="checkbox"],
+    .filter-check input[type="radio"] { accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; }
+    .filter-radio { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-radio-btn {
+      padding: 5px 12px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .filter-radio-btn.active, .filter-radio-btn:hover {
+      background: var(--primary-bg); border-color: var(--primary); color: var(--primary);
+    }
+    .exec-detail-panel { margin-top: 16px; animation: fadeIn 0.3s ease; }
+    .exec-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .doc-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .doc-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; border-radius: var(--radius-xs);
+      background: var(--bg-surface); font-size: 13px;
+    }
+    .doc-item .doc-score { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+    .waterfall { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .waterfall-row { display: flex; align-items: center; gap: 10px; }
+    .waterfall-label { width: 120px; font-size: 12px; flex-shrink: 0; color: var(--text-muted); }
+    .waterfall-bar-wrap { flex: 1; height: 20px; background: var(--border); border-radius: 4px; overflow: hidden; position: relative; }
+    .waterfall-bar {
+      height: 100%; border-radius: 4px; position: absolute; left: 0; top: 0;
+      display: flex; align-items: center; padding-left: 6px;
+      font-size: 10px; font-family: var(--mono); color: white; font-weight: 600;
+      transition: width 0.5s ease;
+    }
+    .waterfall-bar.embed-bar { background: linear-gradient(90deg, hsl(270,60%,55%), hsl(270,60%,65%)); }
+    .waterfall-bar.search-bar { background: linear-gradient(90deg, hsl(200,70%,50%), hsl(200,70%,60%)); }
+    .waterfall-bar.rerank-bar { background: linear-gradient(90deg, hsl(160,60%,42%), hsl(160,60%,52%)); }
+    .waterfall-bar.llm-bar { background: linear-gradient(90deg, var(--primary), var(--primary-light)); }
+    .waterfall-bar.cache-bar { background: linear-gradient(90deg, hsl(217,60%,50%), hsl(217,60%,60%)); }
+    .waterfall-time { font-family: var(--mono); font-size: 11px; color: var(--text-faint); flex-shrink: 0; width: 50px; text-align: right; }
+
+    /* Strategy Config */
+    .overview-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .overview-stat { text-align: center; }
+    .overview-stat .stat-value { font-family: 'Quicksand'; font-size: 28px; font-weight: 700; color: var(--primary); }
+    .overview-stat .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .config-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .config-field label {
+      font-size: 12px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .config-field input[type="number"],
+    .config-field input[type="text"],
+    .config-field select {
+      padding: 8px 12px; border-radius: var(--radius-xs);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface); color: var(--text);
+      font-family: var(--mono); font-size: 13px; width: 100%;
+    }
+    .config-field input:focus, .config-field select:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
+    }
+    .slider-wrap { display: flex; align-items: center; gap: 10px; }
+    .slider-wrap input[type="range"] { flex: 1; accent-color: var(--primary); height: 6px; }
+    .slider-val {
+      font-family: var(--mono); font-size: 13px; font-weight: 600;
+      min-width: 40px; text-align: center;
+      padding: 2px 8px; border-radius: 6px; background: var(--primary-bg); color: var(--primary);
+    }
+    .tier-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .tier-table th, .tier-table td { padding: 10px 16px; text-align: center; }
+    .tier-table th { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid var(--border-strong); }
+    .tier-table td { border-bottom: 1px solid var(--border); }
+    .tier-table .role-cell { text-align: left; font-weight: 700; font-size: 14px; }
+    .tier-check { width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; }
+    .toggle-switch { position: relative; width: 44px; height: 24px; display: inline-block; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0; cursor: pointer;
+      background: var(--border-strong); border-radius: 12px; transition: background 0.3s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: white; box-shadow: var(--shadow-sm); transition: transform 0.3s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--primary); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    .strategy-table { width: 100%; border-collapse: collapse; }
+    .strategy-table th {
+      text-align: left; padding: 10px 14px; font-size: 12px;
+      font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.3px; border-bottom: 2px solid var(--border-strong);
+    }
+    .strategy-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .strategy-table .mono { font-family: var(--mono); font-size: 12px; }
+    .edit-btn {
+      padding: 5px 14px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .edit-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+
+    .conf-gauge { height: 16px; border-radius: 8px; overflow: hidden; display: flex; margin: 12px 0; }
+    .conf-gauge .seg-low { flex: 50; background: linear-gradient(90deg, hsl(0,65%,55%), hsl(30,80%,55%)); }
+    .conf-gauge .seg-med { flex: 30; background: linear-gradient(90deg, hsl(38,90%,50%), hsl(45,85%,55%)); }
+    .conf-gauge .seg-high { flex: 20; background: linear-gradient(90deg, hsl(100,50%,48%), hsl(142,60%,42%)); }
+    .conf-labels { display: flex; font-size: 11px; color: var(--text-muted); font-family: var(--mono); margin-top: 4px; }
+    .conf-labels span:first-child { flex: 50; }
+    .conf-labels span:nth-child(2) { flex: 30; text-align: center; }
+    .conf-labels span:last-child { flex: 20; text-align: right; }
+
+    .unsaved-banner {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--primary); color: white;
+      padding: 14px 24px;
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+      z-index: 100; transform: translateY(100%);
+      transition: transform 0.3s ease;
+      font-weight: 600; font-size: 14px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    }
+    .unsaved-banner.show { transform: translateY(0); }
+    .unsaved-banner button {
+      padding: 6px 20px; border-radius: 8px;
+      font-weight: 700; font-size: 13px; cursor: pointer; border: none; transition: all 0.2s;
+    }
+    .unsaved-banner .save-btn { background: white; color: var(--primary); }
+    .unsaved-banner .save-btn:hover { background: hsl(0 0% 95%); }
+    .unsaved-banner .discard-btn { background: transparent; color: white; border: 2px solid rgba(255,255,255,0.5); }
+    .unsaved-banner .discard-btn:hover { border-color: white; }
+
+    .prototype-label {
+      position: fixed; bottom: 16px; right: 16px;
+      background: rgba(0,0,0,0.8); color: white;
+      padding: 6px 14px; border-radius: 20px;
+      font-size: 11px; font-family: var(--mono); z-index: 200; pointer-events: none;
+    }
+    @media (max-width: 900px) {
+      .debug-layout { grid-template-columns: 1fr; }
+      .exec-detail-grid { grid-template-columns: 1fr; }
+      .config-grid { grid-template-columns: 1fr; }
+      .overview-cards { grid-template-columns: 1fr; }
+      .pipeline-nodes { padding: 0 16px; }
+      .header-left { gap: 12px; }
+      .tab-btn { padding: 6px 12px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="logo">
+          <div class="logo-icon">&#9823;</div>
+          <span>RAG Observability</span>
+        </div>
+        <nav class="tab-nav" id="tabNav"></nav>
+      </div>
+      <div class="header-right">
+        <span style="font-size:13px;color:var(--text-muted)">&#9790;</span>
+        <button class="dark-toggle" id="darkToggle" title="Toggle dark mode"></button>
+        <span style="font-size:13px;color:var(--text-muted)">&#9788;</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- TAB 1: PIPELINE EXPLORER -->
+  <div id="page-pipeline" class="page active">
+    <div class="glass-card" style="margin-bottom:20px">
+      <div class="exec-selector">
+        <select class="exec-dropdown" id="execSelect">
+          <option value="exec1">&#10003; "best cooperative board games for 2 players" &mdash; 982ms</option>
+          <option value="exec2">&#10007; "rules for catan" &mdash; timeout</option>
+          <option value="exec3">&#9889; "party games 6 players" &mdash; 234ms (cache)</option>
+          <option value="exec4">&#10003; "how to play pandemic legacy" &mdash; 1204ms</option>
+          <option value="exec5">&#10003; "top strategy games 2025" &mdash; 456ms</option>
+        </select>
+        <div class="exec-meta">
+          <div class="exec-meta-item">Agent: <strong>GameAdvisor</strong></div>
+          <div class="exec-meta-item">Strategy: <span class="badge badge-primary">HybridRAG</span></div>
+          <div class="exec-meta-item">Time: <strong style="font-family:var(--mono)">14:23:05</strong></div>
+          <div class="exec-meta-item">Total: <strong class="latency-amber" style="font-family:var(--mono)">982ms</strong></div>
+          <div class="exec-meta-item"><span class="badge badge-green badge-glow-green">0.87 Confidence</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:20px">
+      <div class="section-title"><span class="icon">&#128269;</span> Pipeline Flow</div>
+      <div class="pipeline-container">
+        <div class="pipeline-nodes" id="pipelineNodes"></div>
+      </div>
+      <div class="latency-bar-container">
+        <div class="section-title" style="font-size:13px;margin-bottom:8px"><span class="icon">&#9201;</span> Latency Breakdown (982ms total)</div>
+        <div class="latency-bar" id="latencyBar"></div>
+        <div class="latency-bar-labels" id="latencyLabels"></div>
+      </div>
+    </div>
+
+    <div class="glass-card">
+      <div class="section-title"><span class="icon">&#128197;</span> Step Details</div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: DEBUG CONSOLE -->
+  <div id="page-debug" class="page">
+    <div class="debug-layout">
+      <div class="glass-card" style="overflow:hidden">
+        <div class="live-header">
+          <div class="live-header-left">
+            <div class="section-title" style="margin:0"><span class="icon">&#128225;</span> Live Executions</div>
+            <div class="live-dot" id="liveDot"></div>
+            <span style="font-size:12px;color:var(--green);font-weight:600">AUTO</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:11px;color:var(--text-faint)">Refresh:</label>
+            <select class="refresh-selector"><option>5s</option><option selected>10s</option><option>30s</option></select>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="exec-table">
+            <thead><tr><th>Time</th><th></th><th>Query</th><th>Strategy</th><th>Latency</th><th>Conf.</th><th>Agent</th></tr></thead>
+            <tbody id="execTableBody"></tbody>
+          </table>
+        </div>
+        <div style="text-align:center;padding:12px"><button class="edit-btn" style="font-size:12px">Load More</button></div>
+        <div id="execDetailPanel" style="display:none">
+          <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+          <div class="section-title" style="font-size:14px"><span class="icon">&#128269;</span> Execution Detail</div>
+          <div class="exec-detail-grid">
+            <div>
+              <div style="margin-bottom:12px">
+                <div class="label" style="margin-bottom:6px">User Query</div>
+                <div class="glass-card-sm"><span class="mono" style="font-size:13px" id="detailQuery"></span></div>
+              </div>
+              <div style="margin-bottom:12px">
+                <div class="label" style="margin-bottom:6px">Agent Response</div>
+                <div class="glass-card-sm" style="max-height:150px;overflow-y:auto"><span style="font-size:13px;line-height:1.6" id="detailResponse"></span></div>
+              </div>
+              <div>
+                <div class="label" style="margin-bottom:6px">Retrieved Documents</div>
+                <div class="doc-list" id="detailDocs"></div>
+              </div>
+            </div>
+            <div>
+              <div class="label" style="margin-bottom:6px">Call Trace (Waterfall)</div>
+              <div class="waterfall" id="detailWaterfall"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="section-title" style="font-size:14px"><span class="icon">&#128295;</span> Filters</div>
+        <div class="filter-section">
+          <div class="filter-title">Strategy</div>
+          <label class="filter-check"><input type="checkbox" checked> POC</label>
+          <label class="filter-check"><input type="checkbox" checked> SingleModel</label>
+          <label class="filter-check"><input type="checkbox" checked> MultiModelConsensus</label>
+          <label class="filter-check"><input type="checkbox" checked> HybridRAG</label>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Status</div>
+          <div class="filter-radio" id="statusFilter"></div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Agent</div>
+          <select class="exec-dropdown" style="min-width:auto;width:100%;font-size:12px;padding:7px 12px">
+            <option>All Agents</option><option>GameAdvisor</option><option>RulesExpert</option><option>Recommender</option>
+          </select>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Confidence</div>
+          <div class="slider-wrap"><input type="range" min="0" max="100" value="0" style="flex:1"><span class="slider-val">0.00</span></div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Latency (ms)</div>
+          <div class="slider-wrap">
+            <span class="mono" style="font-size:11px;color:var(--text-faint)">0</span>
+            <input type="range" min="0" max="5000" value="5000" style="flex:1">
+            <span class="slider-val">5000</span>
+          </div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Date Range</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <input type="date" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-size:12px;font-family:var(--mono)" value="2026-02-17">
+            <input type="date" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-size:12px;font-family:var(--mono)" value="2026-02-17">
+          </div>
+        </div>
+        <button class="edit-btn" style="width:100%;margin-top:8px;padding:8px;font-weight:700">Apply Filters</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: STRATEGY CONFIG -->
+  <div id="page-config" class="page">
+    <div class="overview-cards" style="margin-bottom:20px">
+      <div class="glass-card">
+        <div class="overview-stat">
+          <div style="font-size:24px;margin-bottom:8px">&#9889;</div>
+          <div class="stat-value">HybridRAG</div>
+          <div class="stat-label">Active Strategy</div>
+          <div style="font-size:12px;color:var(--text-faint);margin-top:8px">Combines vector search, keyword matching, and cross-encoder reranking for maximum relevance.</div>
+          <button class="edit-btn" style="margin-top:12px" onclick="markUnsaved()">Edit Strategy</button>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="overview-stat">
+          <div style="font-size:24px;margin-bottom:8px">&#129302;</div>
+          <div class="stat-value">4</div>
+          <div class="stat-label">Active Models</div>
+          <div style="display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <span class="badge badge-primary">Claude 3.5</span>
+            <span class="badge badge-blue">GPT-4o</span>
+            <span class="badge badge-green">Llama 3.1</span>
+            <span class="badge badge-amber">Mistral</span>
+          </div>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="overview-stat">
+          <div style="font-size:24px;margin-bottom:8px">&#128200;</div>
+          <div style="display:flex;justify-content:center;gap:24px;margin-top:4px">
+            <div><div class="stat-value" style="font-size:22px">0.84</div><div class="stat-label">Avg Confidence</div></div>
+            <div><div class="stat-value" style="font-size:22px">743ms</div><div class="stat-label">Avg Latency</div></div>
+            <div><div class="stat-value" style="font-size:22px">34%</div><div class="stat-label">Cache Hit Rate</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-grid" style="margin-bottom:20px">
+      <div class="glass-card">
+        <div class="section-title"><span class="icon">&#128270;</span> Retrieval Configuration</div>
+        <div class="config-field">
+          <label>TopK Results</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="edit-btn" onclick="adjustNum('topk',-1)" style="padding:4px 10px;font-size:16px;font-weight:700">&minus;</button>
+            <input type="number" id="topk" value="5" min="1" max="20" style="width:70px;text-align:center" onchange="markUnsaved()">
+            <button class="edit-btn" onclick="adjustNum('topk',1)" style="padding:4px 10px;font-size:16px;font-weight:700">+</button>
+          </div>
+        </div>
+        <div class="config-field">
+          <label>Min Relevance Score</label>
+          <div class="slider-wrap">
+            <input type="range" id="minScore" min="0" max="100" value="65" oninput="updateSlider(this,'minScoreVal',0.01)" onchange="markUnsaved()">
+            <span class="slider-val" id="minScoreVal">0.65</span>
+          </div>
+        </div>
+        <div class="config-field">
+          <label>Search Type</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <label class="filter-check" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);gap:6px"><input type="radio" name="searchType" onchange="markUnsaved()"> Vector Only</label>
+            <label class="filter-check" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);gap:6px"><input type="radio" name="searchType" onchange="markUnsaved()"> Keyword Only</label>
+            <label class="filter-check" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);gap:6px"><input type="radio" name="searchType" checked onchange="markUnsaved()"> Hybrid</label>
+          </div>
+        </div>
+        <div class="config-field">
+          <label>Reranker</label>
+          <div style="display:flex;align-items:center;gap:12px">
+            <label class="toggle-switch"><input type="checkbox" checked onchange="markUnsaved()"><span class="toggle-slider"></span></label>
+            <select style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-family:var(--mono);font-size:12px" onchange="markUnsaved()">
+              <option>cross-encoder/ms-marco-MiniLM-L-6-v2</option>
+              <option>BAAI/bge-reranker-v2-m3</option>
+            </select>
+          </div>
+        </div>
+        <div class="config-field">
+          <label>Cache TTL</label>
+          <select style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-family:var(--mono);font-size:13px" onchange="markUnsaved()">
+            <option>15 minutes</option><option selected>30 minutes</option><option>1 hour</option><option>6 hours</option><option>24 hours</option>
+          </select>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="section-title"><span class="icon">&#129302;</span> Generation Configuration</div>
+        <div class="config-field">
+          <label>Provider</label>
+          <select id="providerSelect" onchange="updateModels();markUnsaved()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-size:13px">
+            <option value="openrouter">OpenRouter</option><option value="openai">OpenAI</option><option value="ollama">Ollama (Local)</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Model</label>
+          <select id="modelSelect" onchange="markUnsaved()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text);font-family:var(--mono);font-size:12px">
+            <option>anthropic/claude-3.5-sonnet</option><option>openai/gpt-4o</option><option>meta-llama/llama-3.1-70b</option><option>mistralai/mistral-large</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Temperature</label>
+          <div class="slider-wrap">
+            <input type="range" id="tempSlider" min="0" max="200" value="30" oninput="updateSlider(this,'tempVal',0.01)" onchange="markUnsaved()">
+            <span class="slider-val" id="tempVal">0.30</span>
+          </div>
+        </div>
+        <div class="config-field">
+          <label>Max Tokens</label>
+          <input type="number" id="maxTokens" value="2048" min="256" max="8192" step="256" onchange="markUnsaved()">
+        </div>
+        <div class="config-field">
+          <label>Top P</label>
+          <div class="slider-wrap">
+            <input type="range" id="topPSlider" min="0" max="100" value="90" oninput="updateSlider(this,'topPVal',0.01)" onchange="markUnsaved()">
+            <span class="slider-val" id="topPVal">0.90</span>
+          </div>
+        </div>
+        <div class="config-field">
+          <label>Budget Mode</label>
+          <div style="display:flex;align-items:center;gap:12px">
+            <label class="toggle-switch"><input type="checkbox" onchange="markUnsaved()"><span class="toggle-slider"></span></label>
+            <span style="font-size:12px;color:var(--amber);font-weight:600">Uses cheaper models with lower quality</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:20px">
+      <div class="section-title"><span class="icon">&#128274;</span> Tier Access Matrix</div>
+      <div style="overflow-x:auto" id="tierMatrixContainer"></div>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:20px">
+      <div class="section-title"><span class="icon">&#128279;</span> Strategy-Model Mappings</div>
+      <div style="overflow-x:auto" id="strategyTableContainer"></div>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:60px">
+      <div class="section-title"><span class="icon">&#127919;</span> Confidence Thresholds</div>
+      <div class="conf-gauge"><div class="seg-low"></div><div class="seg-med"></div><div class="seg-high"></div></div>
+      <div class="conf-labels">
+        <span>Low (&lt; 0.50)</span><span>Medium (0.50 &ndash; 0.80)</span><span>High (&ge; 0.80)</span>
+      </div>
+      <div style="margin-top:16px;padding:14px;border-radius:var(--radius-xs);background:var(--bg-surface);border:1px solid var(--border)">
+        <div class="label" style="margin-bottom:6px">Scoring Formula</div>
+        <code style="font-size:14px;font-weight:600;color:var(--primary)">Overall = 0.7 &times; SearchRelevance + 0.3 &times; LLMConfidence</code>
+      </div>
+      <div class="config-grid" style="margin-top:16px;gap:12px">
+        <div class="config-field">
+          <label>Low Threshold</label>
+          <div class="slider-wrap">
+            <input type="range" min="0" max="100" value="50" oninput="updateSlider(this,'lowThVal',0.01)" onchange="markUnsaved()">
+            <span class="slider-val" id="lowThVal" style="background:var(--red-bg);color:var(--red)">0.50</span>
+          </div>
+        </div>
+        <div class="config-field">
+          <label>High Threshold</label>
+          <div class="slider-wrap">
+            <input type="range" min="0" max="100" value="80" oninput="updateSlider(this,'highThVal',0.01)" onchange="markUnsaved()">
+            <span class="slider-val" id="highThVal" style="background:var(--green-bg);color:var(--green)">0.80</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="unsaved-banner" id="unsavedBanner">
+    <span id="unsavedText">&#9888; You have unsaved changes</span>
+    <button class="save-btn" onclick="saveBanner()">Save All</button>
+    <button class="discard-btn" onclick="discardBanner()">Discard</button>
+  </div>
+  <div class="prototype-label">DESIGN PROTOTYPE &mdash; RAG Observability</div>
+
+  <script>
+    // ================ DATA ================
+    var PIPELINE_STEPS = [
+      { icon: '\u{1F4AC}', name: 'Query', latency: 12, status: 'ok', pct: 1.2, color: 'var(--green)',
+        details: [
+          { label: 'Original Query', value: '"best cooperative board games for 2 players"', mono: true },
+          { label: 'Language', value: 'English (en)' },
+          { label: 'Intent', value: 'recommendation', badge: 'badge-primary' },
+          { label: 'Entities', value: 'cooperative, 2-player, board games', mono: true }
+        ]},
+      { icon: '\u{1F522}', name: 'Embedding', latency: 45, status: 'ok', pct: 4.6, color: 'hsl(142,50%,50%)',
+        details: [
+          { label: 'Model', value: 'all-MiniLM-L6-v2', mono: true },
+          { label: 'Dimensions', value: '384', mono: true },
+          { label: 'Cache', value: 'MISS', badge: 'badge-red' },
+          { label: 'Tokens', value: '12 tokens', mono: true }
+        ]},
+      { icon: '\u{1F50D}', name: 'Vector Search', latency: 185, status: 'ok', pct: 18.8, color: 'var(--amber)',
+        details: [
+          { label: 'Results Found', value: '23 documents', mono: true },
+          { label: 'Search Type', value: 'Hybrid', badge: 'badge-primary' },
+          { label: 'Min Score', value: '0.42', mono: true, style: 'color:var(--red)' },
+          { label: 'Max Score', value: '0.94', mono: true, style: 'color:var(--green)' },
+          { label: 'Avg Score', value: '0.71', mono: true, style: 'color:var(--amber)' },
+          { label: 'Collection', value: 'game_rules_v2', mono: true }
+        ]},
+      { icon: '\u{1F4CA}', name: 'Reranking', latency: 120, status: 'ok', pct: 12.2, color: 'hsl(38,70%,55%)',
+        details: [
+          { label: 'Model', value: 'cross-encoder/ms-marco-MiniLM-L-6-v2', mono: true },
+          { label: 'Input', value: '23 documents', mono: true },
+          { label: 'Output', value: '5 documents (TopK)', mono: true },
+          { label: 'Score Range', value: '0.78 - 0.96', mono: true }
+        ]},
+      { icon: '\u{1F916}', name: 'LLM Generation', latency: 608, status: 'ok', pct: 61.9, color: 'var(--red)',
+        details: [
+          { label: 'Provider', value: 'OpenRouter' },
+          { label: 'Model', value: 'anthropic/claude-3.5-sonnet', mono: true },
+          { label: 'Prompt Tokens', value: '1,842', mono: true },
+          { label: 'Completion Tokens', value: '326', mono: true },
+          { label: 'Temperature', value: '0.3', mono: true },
+          { label: 'Confidence', value: '0.87', badge: 'badge-green badge-glow-green' }
+        ]},
+      { icon: '\u{1F4DD}', name: 'Response', latency: 12, status: 'ok', pct: 1.2, color: 'var(--green)',
+        details: [
+          { label: 'Answer Preview', value: 'Based on my analysis of cooperative board games for 2 players, here are the top recommendations: Pandemic (score: 0.96), Spirit Island (0.94), Gloomhaven: Jaws of the Lion (0.91)...', wide: true },
+          { label: 'Citations', value: '5 documents', mono: true },
+          { label: 'Quality', value: 'High', badge: 'badge-green badge-glow-green' },
+          { label: 'Response Size', value: '1.2 KB', mono: true }
+        ]}
+    ];
+
+    var MOCK_EXECS = [
+      { ts: '14:23:05', status: 'ok', query: 'best cooperative board games for 2 players', strategy: 'HybridRAG', latency: 982, conf: 0.87, agent: 'GameAdvisor' },
+      { ts: '14:22:48', status: 'ok', query: 'how to play spirit island solo', strategy: 'SingleModel', latency: 456, conf: 0.92, agent: 'RulesExpert' },
+      { ts: '14:22:31', status: 'cache', query: 'top strategy games 2025', strategy: 'HybridRAG', latency: 23, conf: 0.89, agent: 'Recommender' },
+      { ts: '14:22:15', status: 'error', query: 'rules for catan cities and knights expansion', strategy: 'MultiModelConsensus', latency: 5000, conf: 0.00, agent: 'RulesExpert' },
+      { ts: '14:21:59', status: 'ok', query: 'party games for 6 players quick setup', strategy: 'HybridRAG', latency: 734, conf: 0.81, agent: 'Recommender' },
+      { ts: '14:21:42', status: 'ok', query: 'wingspan strategy guide', strategy: 'SingleModel', latency: 1204, conf: 0.76, agent: 'GameAdvisor' },
+      { ts: '14:21:28', status: 'cache', query: 'gloomhaven setup guide', strategy: 'HybridRAG', latency: 18, conf: 0.94, agent: 'RulesExpert' },
+      { ts: '14:21:11', status: 'ok', query: 'best deck building games', strategy: 'SingleModel', latency: 567, conf: 0.83, agent: 'Recommender' },
+      { ts: '14:20:55', status: 'ok', query: 'terraforming mars vs ark nova comparison', strategy: 'MultiModelConsensus', latency: 2341, conf: 0.91, agent: 'GameAdvisor' },
+      { ts: '14:20:38', status: 'error', query: 'avalon rules deduction table', strategy: 'HybridRAG', latency: 5000, conf: 0.00, agent: 'RulesExpert' },
+      { ts: '14:20:22', status: 'ok', query: 'scythe faction tier list', strategy: 'SingleModel', latency: 890, conf: 0.72, agent: 'GameAdvisor' },
+      { ts: '14:20:05', status: 'cache', query: 'pandemic legacy season 1 setup', strategy: 'HybridRAG', latency: 15, conf: 0.96, agent: 'RulesExpert' },
+      { ts: '14:19:48', status: 'ok', query: 'light games under 30 minutes', strategy: 'POC', latency: 234, conf: 0.68, agent: 'Recommender' },
+      { ts: '14:19:31', status: 'ok', query: 'root board game factions guide', strategy: 'HybridRAG', latency: 1102, conf: 0.85, agent: 'RulesExpert' },
+      { ts: '14:19:14', status: 'ok', query: 'everdell solo mode rules', strategy: 'SingleModel', latency: 678, conf: 0.79, agent: 'RulesExpert' }
+    ];
+
+    var TIER_MATRIX = [
+      { role: 'Anonymous', access: [true, false, false, false] },
+      { role: 'User', access: [true, true, false, false] },
+      { role: 'Editor', access: [true, true, true, true] },
+      { role: 'Admin', access: [true, true, true, true] }
+    ];
+    var TIER_COLS = ['RetrievalOnly', 'SingleModel', 'MultiModelConsensus', 'HybridRAG'];
+
+    var STRATEGY_MAPPINGS = [
+      { name: 'POC', badgeCls: 'badge-primary', provider: 'Ollama', model: 'llama-3.1-8b', fallback: 'mistral-7b' },
+      { name: 'SingleModel', badgeCls: 'badge-blue', provider: 'OpenRouter', model: 'anthropic/claude-3.5-sonnet', fallback: 'openai/gpt-4o' },
+      { name: 'MultiModelConsensus', badgeCls: 'badge-amber', provider: 'OpenRouter', model: 'claude-3.5 + gpt-4o', fallback: 'llama-3.1-70b' },
+      { name: 'HybridRAG', badgeCls: 'badge-green', provider: 'OpenRouter', model: 'anthropic/claude-3.5-sonnet', fallback: 'gpt-4o, llama-3.1-70b' }
+    ];
+
+    // ================ HELPERS ================
+    function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function el(tag, attrs, children) {
+      var e = document.createElement(tag);
+      if (attrs) Object.keys(attrs).forEach(function(k) {
+        if (k === 'className') e.className = attrs[k];
+        else if (k === 'textContent') e.textContent = attrs[k];
+        else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
+        else e.setAttribute(k, attrs[k]);
+      });
+      if (children) {
+        if (typeof children === 'string') e.textContent = children;
+        else if (Array.isArray(children)) children.forEach(function(c) { if (c) e.appendChild(c); });
+        else e.appendChild(children);
+      }
+      return e;
+    }
+    function latencyClass(ms) { return ms < 100 ? 'latency-green' : ms <= 500 ? 'latency-amber' : 'latency-red'; }
+    function confStyle(c) { return c >= 0.80 ? 'color:var(--green)' : c >= 0.50 ? 'color:var(--amber)' : 'color:var(--red)'; }
+    function statusSymbol(s) { return s === 'ok' ? '\u2713' : s === 'error' ? '\u2717' : '\u26A1'; }
+    function statusColor(s) { return s === 'ok' ? 'var(--green)' : s === 'error' ? 'var(--red)' : 'var(--blue)'; }
+    var STRATEGY_BADGE = { POC: 'badge-primary', SingleModel: 'badge-blue', MultiModelConsensus: 'badge-amber', HybridRAG: 'badge-green' };
+
+    // ================ TABS ================
+    var TABS = [
+      { id: 'pipeline', label: 'Pipeline Explorer' },
+      { id: 'debug', label: 'Debug Console' },
+      { id: 'config', label: 'Strategy Config' }
+    ];
+    var tabNav = document.getElementById('tabNav');
+    TABS.forEach(function(t) {
+      var btn = el('button', { className: 'tab-btn' + (t.id === 'pipeline' ? ' active' : ''), 'data-tab': t.id }, t.label);
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        document.getElementById('page-' + t.id).classList.add('active');
+      });
+      tabNav.appendChild(btn);
+    });
+
+    // ================ DARK MODE ================
+    document.getElementById('darkToggle').addEventListener('click', function() {
+      document.documentElement.classList.toggle('dark');
+      document.documentElement.classList.toggle('light');
+    });
+
+    // ================ PIPELINE EXPLORER ================
+    function buildPipeline() {
+      var container = document.getElementById('pipelineNodes');
+      PIPELINE_STEPS.forEach(function(step, idx) {
+        if (idx > 0) {
+          var conn = el('div', { className: 'pipeline-connector' });
+          var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('width', '48'); svg.setAttribute('height', '2');
+          var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', '0'); line.setAttribute('y1', '1');
+          line.setAttribute('x2', '48'); line.setAttribute('y2', '1');
+          svg.appendChild(line); conn.appendChild(svg);
+          container.appendChild(conn);
+        }
+        var node = el('div', { className: 'pipeline-node' + (idx === 0 ? ' active' : ''), 'data-step': String(idx) });
+        node.addEventListener('click', function() { selectNode(idx); });
+        var statusDot = el('span', { className: 'node-status ' + step.status });
+        var icon = el('span', { className: 'node-icon', textContent: step.icon });
+        var name = el('span', { className: 'node-name', textContent: step.name });
+        var lat = el('span', { className: 'node-latency ' + latencyClass(step.latency), textContent: step.latency + 'ms' });
+        node.appendChild(statusDot); node.appendChild(icon); node.appendChild(name); node.appendChild(lat);
+        container.appendChild(node);
+      });
+
+      // Latency bar
+      var bar = document.getElementById('latencyBar');
+      var labels = document.getElementById('latencyLabels');
+      PIPELINE_STEPS.forEach(function(step) {
+        var seg = el('div', { className: 'latency-segment', style: 'width:' + step.pct + '%;background:' + step.color, title: step.name + ': ' + step.latency + 'ms' });
+        bar.appendChild(seg);
+        var lbl = el('div', { className: 'latency-bar-label', style: 'width:' + step.pct + '%', textContent: step.latency > 20 ? step.latency + 'ms' : '' });
+        labels.appendChild(lbl);
+      });
+    }
+
+    function buildTimeline() {
+      var timeline = document.getElementById('timeline');
+      PIPELINE_STEPS.forEach(function(step, idx) {
+        var stepEl = el('div', { className: 'timeline-step' + (idx === 0 ? ' open active' : ''), 'data-step': String(idx) });
+
+        var header = el('div', { className: 'timeline-step-header' });
+        header.addEventListener('click', function() { stepEl.classList.toggle('open'); });
+        header.appendChild(el('span', { className: 'step-icon', textContent: step.icon }));
+        header.appendChild(el('span', { className: 'step-name', textContent: step.name }));
+
+        var barWrap = el('div', { className: 'step-bar-wrap' });
+        var barOuter = el('div', { className: 'step-bar' });
+        barOuter.appendChild(el('div', { className: 'step-bar-fill', style: 'width:' + step.pct + '%;background:' + step.color }));
+        barWrap.appendChild(barOuter);
+        header.appendChild(barWrap);
+
+        header.appendChild(el('span', { className: 'step-duration ' + latencyClass(step.latency), textContent: step.latency + 'ms' }));
+        header.appendChild(el('span', { className: 'step-pct', textContent: step.pct + '%' }));
+        header.appendChild(el('span', { className: 'expand-icon', textContent: '\u25BC' }));
+        stepEl.appendChild(header);
+
+        var detail = el('div', { className: 'timeline-detail' });
+        var grid = el('div', { className: 'detail-grid', style: 'margin-top:12px' });
+        step.details.forEach(function(d) {
+          var item = el('div', { className: 'detail-item' });
+          if (d.wide) item.style.gridColumn = '1 / -1';
+          item.appendChild(el('span', { className: 'detail-label', textContent: d.label }));
+          var valEl;
+          if (d.badge) {
+            valEl = el('span', { className: 'detail-value' });
+            valEl.appendChild(el('span', { className: 'badge ' + d.badge, textContent: d.value }));
+          } else {
+            valEl = el('span', { className: 'detail-value' + (d.mono ? ' mono' : ''), textContent: d.value });
+            if (d.style) valEl.style.cssText = d.style;
+          }
+          item.appendChild(valEl);
+          grid.appendChild(item);
+        });
+        detail.appendChild(grid);
+        stepEl.appendChild(detail);
+        timeline.appendChild(stepEl);
+      });
+    }
+
+    function selectNode(idx) {
+      document.querySelectorAll('.pipeline-node').forEach(function(n) { n.classList.remove('active'); });
+      document.querySelectorAll('.pipeline-node')[idx].classList.add('active');
+      var steps = document.querySelectorAll('.timeline-step');
+      steps.forEach(function(s, i) {
+        s.classList.remove('active');
+        if (i === idx) {
+          s.classList.add('active');
+          if (!s.classList.contains('open')) s.classList.add('open');
+          s.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    }
+
+    buildPipeline();
+    buildTimeline();
+
+    // ================ DEBUG CONSOLE ================
+    function buildExecTable() {
+      var tbody = document.getElementById('execTableBody');
+      MOCK_EXECS.forEach(function(e, i) {
+        var tr = el('tr');
+        tr.appendChild(el('td', { className: 'ts-cell', textContent: e.ts }));
+        var statusTd = el('td');
+        statusTd.appendChild(el('span', { style: 'color:' + statusColor(e.status), textContent: statusSymbol(e.status) }));
+        tr.appendChild(statusTd);
+        tr.appendChild(el('td', { className: 'query-cell', textContent: e.query }));
+        var stratTd = el('td');
+        stratTd.appendChild(el('span', { className: 'badge ' + (STRATEGY_BADGE[e.strategy] || 'badge-primary'), style: 'font-size:10px', textContent: e.strategy }));
+        tr.appendChild(stratTd);
+        tr.appendChild(el('td', { className: 'latency-cell ' + latencyClass(e.latency), textContent: e.latency >= 5000 ? 'timeout' : e.latency + 'ms' }));
+        tr.appendChild(el('td', { className: 'conf-cell', style: confStyle(e.conf), textContent: e.conf > 0 ? e.conf.toFixed(2) : '-' }));
+        tr.appendChild(el('td', { style: 'font-size:12px;color:var(--text-muted)', textContent: e.agent }));
+        tr.addEventListener('click', function() { showExecDetail(i, tr); });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function showExecDetail(idx, row) {
+      document.querySelectorAll('.exec-table tbody tr').forEach(function(r) { r.classList.remove('selected'); });
+      row.classList.add('selected');
+      var e = MOCK_EXECS[idx];
+      var panel = document.getElementById('execDetailPanel');
+      panel.style.display = 'block';
+
+      document.getElementById('detailQuery').textContent = e.query;
+      var defaultResp = 'The agent provided a comprehensive answer based on the retrieved documents from the game knowledge base. The response included specific game recommendations with relevance scores and brief descriptions.';
+      var resp = e.query.indexOf('cooperative') >= 0
+        ? 'Based on my analysis of cooperative board games for 2 players, here are the top recommendations: Pandemic (score: 0.96), Spirit Island (0.94), Gloomhaven: Jaws of the Lion (0.91), Forbidden Desert (0.88), The Crew: Mission Deep Sea (0.85).'
+        : defaultResp;
+      document.getElementById('detailResponse').textContent = resp;
+
+      // Documents
+      var docsEl = document.getElementById('detailDocs');
+      while (docsEl.firstChild) docsEl.removeChild(docsEl.firstChild);
+      var mockDocs = [
+        { title: 'Pandemic - Full Review & Analysis', score: 0.96, page: 12 },
+        { title: 'Spirit Island Strategy Guide', score: 0.94, page: 3 },
+        { title: 'Top 50 Cooperative Games (2025)', score: 0.91, page: 1 },
+        { title: 'Gloomhaven: JotL Rulebook', score: 0.88, page: 45 },
+        { title: '2-Player Board Game Buyer\'s Guide', score: 0.85, page: 8 }
+      ];
+      mockDocs.forEach(function(d) {
+        var item = el('div', { className: 'doc-item' });
+        item.appendChild(el('span', { textContent: d.title + ' ' }));
+        item.firstChild.appendChild(el('span', { style: 'color:var(--text-faint);font-size:11px', textContent: 'p.' + d.page }));
+        item.appendChild(el('span', { className: 'doc-score', style: confStyle(d.score), textContent: d.score.toFixed(2) }));
+        docsEl.appendChild(item);
+      });
+
+      // Waterfall
+      var wfEl = document.getElementById('detailWaterfall');
+      while (wfEl.firstChild) wfEl.removeChild(wfEl.firstChild);
+      var totalMs = Math.min(e.latency, 5000);
+      var calls = [
+        { label: 'Embedding API', cls: 'embed-bar', frac: 0.05, offset: 0 },
+        { label: 'Qdrant Search', cls: 'search-bar', frac: 0.19, offset: 0.05 },
+        { label: 'Cache Check', cls: 'cache-bar', frac: 0.02, offset: 0 },
+        { label: 'Reranker API', cls: 'rerank-bar', frac: 0.12, offset: 0.24 },
+        { label: 'LLM API', cls: 'llm-bar', frac: 0.62, offset: 0.36 }
+      ];
+      calls.forEach(function(c) {
+        var ms = Math.round(totalMs * c.frac);
+        var row = el('div', { className: 'waterfall-row' });
+        row.appendChild(el('span', { className: 'waterfall-label', textContent: c.label }));
+        var bwrap = el('div', { className: 'waterfall-bar-wrap' });
+        bwrap.appendChild(el('div', {
+          className: 'waterfall-bar ' + c.cls,
+          style: 'width:' + (c.frac * 100) + '%;left:' + (c.offset * 100) + '%',
+          textContent: ms + 'ms'
+        }));
+        row.appendChild(bwrap);
+        row.appendChild(el('span', { className: 'waterfall-time', textContent: ms + 'ms' }));
+        wfEl.appendChild(row);
+      });
+
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Status filter radio buttons
+    var statusFilter = document.getElementById('statusFilter');
+    ['All', 'Success', 'Error', 'Cache'].forEach(function(s) {
+      var btn = el('button', { className: 'filter-radio-btn' + (s === 'All' ? ' active' : ''), textContent: s });
+      btn.addEventListener('click', function() {
+        statusFilter.querySelectorAll('.filter-radio-btn').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+      });
+      statusFilter.appendChild(btn);
+    });
+
+    buildExecTable();
+
+    // ================ STRATEGY CONFIG ================
+    // Tier Matrix
+    (function() {
+      var container = document.getElementById('tierMatrixContainer');
+      var table = el('table', { className: 'tier-table' });
+      var thead = el('thead');
+      var headRow = el('tr');
+      headRow.appendChild(el('th', { style: 'text-align:left', textContent: 'Role' }));
+      TIER_COLS.forEach(function(c) { headRow.appendChild(el('th', { textContent: c })); });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+      var tbdy = el('tbody');
+      TIER_MATRIX.forEach(function(row) {
+        var tr = el('tr');
+        tr.appendChild(el('td', { className: 'role-cell', textContent: row.role }));
+        row.access.forEach(function(checked) {
+          var td = el('td');
+          var cb = el('input', { type: 'checkbox', className: 'tier-check' });
+          cb.checked = checked;
+          cb.addEventListener('change', markUnsaved);
+          td.appendChild(cb);
+          tr.appendChild(td);
+        });
+        tbdy.appendChild(tr);
+      });
+      table.appendChild(tbdy);
+      container.appendChild(table);
+    })();
+
+    // Strategy-Model Mappings
+    (function() {
+      var container = document.getElementById('strategyTableContainer');
+      var table = el('table', { className: 'strategy-table' });
+      var thead = el('thead');
+      var headRow = el('tr');
+      ['Strategy', 'Primary Provider', 'Primary Model', 'Fallback Models', 'Actions'].forEach(function(h) {
+        headRow.appendChild(el('th', { textContent: h }));
+      });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+      var tbdy = el('tbody');
+      STRATEGY_MAPPINGS.forEach(function(s) {
+        var tr = el('tr');
+        var nameTd = el('td');
+        nameTd.appendChild(el('span', { className: 'badge ' + s.badgeCls, textContent: s.name }));
+        tr.appendChild(nameTd);
+        tr.appendChild(el('td', { textContent: s.provider }));
+        tr.appendChild(el('td', { className: 'mono', textContent: s.model }));
+        tr.appendChild(el('td', { className: 'mono', textContent: s.fallback }));
+        var actTd = el('td');
+        var btn = el('button', { className: 'edit-btn', textContent: 'Edit' });
+        btn.addEventListener('click', markUnsaved);
+        actTd.appendChild(btn);
+        tr.appendChild(actTd);
+        tbdy.appendChild(tr);
+      });
+      table.appendChild(tbdy);
+      container.appendChild(table);
+    })();
+
+    // ================ CONFIG HELPERS ================
+    function updateSlider(input, valId, multiplier) {
+      document.getElementById(valId).textContent = (input.value * multiplier).toFixed(2);
+    }
+    function adjustNum(id, delta) {
+      var inp = document.getElementById(id);
+      inp.value = Math.max(parseInt(inp.min), Math.min(parseInt(inp.max), parseInt(inp.value) + delta));
+      markUnsaved();
+    }
+    function updateModels() {
+      var provider = document.getElementById('providerSelect').value;
+      var sel = document.getElementById('modelSelect');
+      while (sel.firstChild) sel.removeChild(sel.firstChild);
+      var models = {
+        openrouter: ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o', 'meta-llama/llama-3.1-70b', 'mistralai/mistral-large'],
+        openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+        ollama: ['llama3.1:8b', 'llama3.1:70b', 'mistral:7b', 'mixtral:8x7b']
+      };
+      (models[provider] || []).forEach(function(m) { sel.appendChild(el('option', { textContent: m })); });
+    }
+
+    // ================ UNSAVED BANNER ================
+    function markUnsaved() {
+      document.getElementById('unsavedBanner').classList.add('show');
+    }
+    function saveBanner() {
+      var banner = document.getElementById('unsavedBanner');
+      var txt = document.getElementById('unsavedText');
+      txt.textContent = '\u2713 Changes saved successfully!';
+      banner.style.background = 'var(--green)';
+      setTimeout(function() {
+        banner.classList.remove('show');
+        setTimeout(function() {
+          banner.style.background = '';
+          txt.textContent = '\u26A0 You have unsaved changes';
+        }, 300);
+      }, 2000);
+    }
+    function discardBanner() {
+      document.getElementById('unsavedBanner').classList.remove('show');
+    }
+
+    // ================ AUTO-REFRESH SIMULATION ================
+    setInterval(function() {
+      var dot = document.getElementById('liveDot');
+      if (dot) dot.style.opacity = dot.style.opacity === '0.3' ? '1' : '0.3';
+    }, 1000);
+  </script>
+</body>
+</html>

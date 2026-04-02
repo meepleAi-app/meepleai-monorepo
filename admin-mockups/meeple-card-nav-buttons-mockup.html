@@ -1,0 +1,2887 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleCard NavigationFooter - Button States Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   DESIGN TOKENS (from meeple-card codebase)
+   ============================================ */
+:root {
+  /* Entity Colors (HSL) */
+  --entity-game: 25 95% 45%;
+  --entity-player: 262 83% 58%;
+  --entity-session: 240 60% 55%;
+  --entity-agent: 38 92% 50%;
+  --entity-document: 210 40% 55%;
+  --entity-chat: 220 80% 55%;
+  --entity-event: 350 89% 60%;
+
+  /* Warm Shadows */
+  --shadow-warm-sm: 0 1px 3px rgba(180, 120, 60, 0.08), 0 1px 2px rgba(180, 120, 60, 0.06);
+  --shadow-warm-md: 0 4px 6px -1px rgba(180, 120, 60, 0.08), 0 2px 4px rgba(180, 120, 60, 0.05);
+  --shadow-warm-lg: 0 10px 15px -3px rgba(180, 120, 60, 0.08), 0 4px 6px rgba(180, 120, 60, 0.04);
+  --shadow-warm-xl: 0 20px 25px -5px rgba(180, 120, 60, 0.10), 0 8px 10px rgba(180, 120, 60, 0.06);
+  --shadow-warm-2xl: 0 25px 50px -12px rgba(180, 120, 60, 0.18);
+
+  /* Surface Colors */
+  --bg-page: #faf8f5;
+  --bg-card: rgba(255, 255, 255, 0.80);
+  --bg-card-hover: rgba(255, 255, 255, 0.92);
+  --bg-muted: rgba(245, 240, 235, 0.60);
+  --bg-muted-dark: rgba(245, 240, 235, 0.40);
+  --border-color: rgba(200, 180, 160, 0.25);
+  --border-light: rgba(200, 180, 160, 0.15);
+  --text-primary: #1a1612;
+  --text-secondary: rgba(26, 22, 18, 0.65);
+  --text-muted: rgba(26, 22, 18, 0.45);
+
+  /* Nav Footer */
+  --nav-footer-bg: rgba(245, 240, 235, 0.28);
+  --nav-icon-bg: rgba(255, 255, 255, 0.60);
+  --nav-icon-border: rgba(200, 180, 160, 0.30);
+}
+
+[data-theme="dark"] {
+  --bg-page: #0f0d0b;
+  --bg-card: rgba(30, 27, 24, 0.80);
+  --bg-card-hover: rgba(40, 36, 32, 0.92);
+  --bg-muted: rgba(40, 36, 32, 0.60);
+  --bg-muted-dark: rgba(40, 36, 32, 0.40);
+  --border-color: rgba(100, 90, 75, 0.30);
+  --border-light: rgba(100, 90, 75, 0.20);
+  --text-primary: #f0ece8;
+  --text-secondary: rgba(240, 236, 232, 0.65);
+  --text-muted: rgba(240, 236, 232, 0.40);
+  --nav-footer-bg: rgba(40, 36, 32, 0.28);
+  --nav-icon-bg: rgba(40, 36, 32, 0.60);
+  --nav-icon-border: rgba(100, 90, 75, 0.30);
+  --shadow-warm-sm: 0 1px 3px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.10);
+  --shadow-warm-md: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.10);
+  --shadow-warm-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.18), 0 4px 6px rgba(0, 0, 0, 0.10);
+  --shadow-warm-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.22), 0 8px 10px rgba(0, 0, 0, 0.12);
+  --shadow-warm-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+}
+
+/* ============================================
+   BASE RESET & LAYOUT
+   ============================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5 { font-family: 'Quicksand', sans-serif; }
+
+.page-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* Page Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 48px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.page-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, hsl(25, 95%, 45%), hsl(38, 92%, 50%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.page-header .subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Theme Toggle */
+.theme-toggle {
+  width: 48px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--bg-muted);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: hsl(38, 92%, 50%);
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+[data-theme="dark"] .theme-toggle::after {
+  transform: translateX(22px);
+  background: hsl(220, 80%, 55%);
+}
+
+/* Section */
+.section {
+  margin-bottom: 56px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.section-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, hsl(25, 95%, 45%), hsl(38, 92%, 50%));
+  color: white;
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.section-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  margin-bottom: 20px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* ============================================
+   MEEPLE CARD - GRID VARIANT
+   ============================================ */
+.grid-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.mc-grid {
+  width: 270px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-warm-sm);
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+  transition: all 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
+}
+
+.mc-grid:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-warm-xl);
+  background: var(--bg-card-hover);
+}
+
+/* Entity Left Border */
+.mc-grid .entity-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  border-radius: 16px 0 0 16px;
+  transition: width 300ms ease;
+}
+
+.mc-grid:hover .entity-border {
+  width: 5px;
+}
+
+/* Cover Image */
+.mc-grid .cover {
+  position: relative;
+  aspect-ratio: 7/10;
+  overflow: hidden;
+  border-radius: 16px 16px 0 0;
+}
+
+.mc-grid .cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 500ms ease;
+}
+
+.mc-grid:hover .cover img {
+  transform: scale(1.05);
+}
+
+.mc-grid .cover .shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 600ms ease;
+}
+
+.mc-grid:hover .cover .shimmer {
+  transform: translateX(100%);
+}
+
+.mc-grid .cover .overlay-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  pointer-events: none;
+}
+
+/* Vertical Tag Stack */
+.tag-stack {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tag-badge {
+  max-width: 80px;
+  padding: 2px 8px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  backdrop-filter: blur(4px);
+}
+
+/* Quick Actions (hover) */
+.quick-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 15;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.mc-grid:hover .quick-actions,
+.mc-list:hover .quick-actions {
+  opacity: 1;
+}
+
+.qa-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.80);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.50);
+  cursor: pointer;
+  transition: all 300ms ease;
+  position: relative;
+}
+
+[data-theme="dark"] .qa-btn {
+  background: rgba(40, 36, 32, 0.80);
+  border-color: rgba(100, 90, 75, 0.40);
+}
+
+.qa-btn:hover {
+  transform: scale(1.10);
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+[data-theme="dark"] .qa-btn:hover {
+  background: rgba(60, 54, 48, 0.95);
+}
+
+.qa-btn svg {
+  width: 15px;
+  height: 15px;
+  stroke: var(--text-secondary);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Card Content */
+.mc-grid .content {
+  padding: 12px 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mc-grid .card-title {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.mc-grid .card-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Rating */
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.stars {
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+}
+
+.star-full { color: hsl(38, 92%, 50%); }
+.star-half { color: hsl(38, 92%, 50%, 0.50); }
+.star-empty { color: var(--text-muted); opacity: 0.30; }
+
+.rating-value {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+/* Metadata Footer */
+.metadata-footer {
+  display: flex;
+  gap: 12px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-muted);
+}
+
+.meta-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.70rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.meta-chip svg {
+  width: 12px;
+  height: 12px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 2;
+}
+
+/* ============================================
+   NAVIGATION FOOTER (the star of the show)
+   ============================================ */
+.nav-footer {
+  padding: 7px 10px 9px;
+  border-top: 1px solid var(--border-light);
+  background: var(--nav-footer-bg);
+  border-radius: 0 0 16px 16px;
+}
+
+.nav-footer-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.nav-footer-line {
+  height: 1px;
+  flex: 1;
+  max-width: 35px;
+  background: var(--border-light);
+}
+
+.nav-footer-label {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.nav-icons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Individual Nav Button */
+.nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-decoration: none;
+  cursor: pointer;
+  position: relative;
+  transition: transform 200ms ease;
+}
+
+.nav-btn:hover {
+  transform: scale(1.08);
+}
+
+.nav-btn-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nav-icon-bg);
+  border: 1px solid var(--nav-icon-border);
+  backdrop-filter: blur(4px);
+  transition: all 250ms ease;
+  position: relative;
+}
+
+.nav-btn:hover .nav-btn-icon {
+  border-color: var(--btn-color);
+  box-shadow: 0 0 10px var(--btn-glow);
+}
+
+.nav-btn-icon svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--text-secondary);
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 200ms ease;
+}
+
+.nav-btn:hover .nav-btn-icon svg {
+  stroke: var(--btn-stroke);
+}
+
+.nav-btn-label {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 200ms ease;
+}
+
+.nav-btn:hover .nav-btn-label {
+  color: var(--btn-stroke);
+}
+
+/* Badge Count */
+.nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: 'Quicksand', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  color: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  z-index: 2;
+}
+
+/* Plus Overlay */
+.nav-plus {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  z-index: 2;
+  line-height: 1;
+}
+
+/* Disabled State */
+.nav-btn.disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.nav-btn.disabled:hover {
+  transform: none;
+}
+
+.nav-btn.disabled .nav-btn-icon {
+  background: var(--bg-muted);
+}
+
+.nav-btn.disabled:hover .nav-btn-icon {
+  border-color: var(--nav-icon-border);
+  box-shadow: none;
+}
+
+.nav-btn.disabled:hover .nav-btn-icon svg {
+  stroke: var(--text-muted);
+}
+
+/* Tooltip */
+.nav-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-primary);
+  color: var(--bg-page);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+  z-index: 20;
+  max-width: 220px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.nav-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--text-primary);
+}
+
+.nav-btn:hover .nav-tooltip,
+.nav-btn.show-tooltip .nav-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+/* ============================================
+   LIST VARIANT
+   ============================================ */
+.mc-list {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-warm-sm);
+  transition: all 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+}
+
+.mc-list:hover {
+  transform: translateX(4px);
+  box-shadow: var(--shadow-warm-md);
+  background: var(--bg-card-hover);
+}
+
+.mc-list .entity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mc-list .thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.mc-list .thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mc-list .list-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mc-list .card-title {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mc-list .card-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* List Nav Footer (inline, right-aligned) */
+.mc-list .nav-footer-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-light);
+}
+
+.mc-list .nav-btn {
+  flex-direction: row;
+  gap: 0;
+}
+
+.mc-list .nav-btn-label { display: none; }
+
+.mc-list .nav-btn-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.mc-list .nav-btn-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.mc-list .nav-badge {
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  font-size: 8px;
+}
+
+.mc-list .nav-plus {
+  width: 12px;
+  height: 12px;
+  font-size: 9px;
+  bottom: -1px;
+  right: -1px;
+}
+
+/* ============================================
+   FEATURED VARIANT
+   ============================================ */
+.featured-container {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.mc-featured {
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-warm-lg);
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+  transition: all 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+}
+
+.mc-featured:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-warm-2xl);
+}
+
+.mc-featured .entity-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  border-radius: 20px 0 0 20px;
+  transition: width 300ms ease;
+}
+
+.mc-featured:hover .entity-border {
+  width: 6px;
+}
+
+.mc-featured .cover {
+  position: relative;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+}
+
+.mc-featured .cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 500ms ease;
+}
+
+.mc-featured:hover .cover img {
+  transform: scale(1.04);
+}
+
+.mc-featured .cover .shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 600ms ease;
+}
+
+.mc-featured:hover .cover .shimmer {
+  transform: translateX(100%);
+}
+
+.mc-featured .content {
+  padding: 16px 18px 12px;
+  flex: 1;
+}
+
+.mc-featured .card-title {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.mc-featured .card-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.mc-featured .nav-footer {
+  border-radius: 0 0 20px 20px;
+  padding: 8px 14px 10px;
+}
+
+.mc-featured .nav-icons { gap: 16px; }
+
+.mc-featured .nav-btn-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.mc-featured .nav-btn-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mc-featured .nav-btn-label { font-size: 9px; }
+
+/* ============================================
+   POPOVER
+   ============================================ */
+.popover-demo {
+  position: relative;
+  display: inline-block;
+}
+
+.popover {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-warm-xl);
+  z-index: 30;
+  overflow: hidden;
+}
+
+.popover::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px;
+  height: 12px;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.popover-title {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.popover-title svg {
+  width: 14px;
+  height: 14px;
+  stroke: hsl(210, 40%, 55%);
+}
+
+.popover-add {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(210, 40%, 55%, 0.10);
+  border: 1px solid hsl(210, 40%, 55%, 0.25);
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.popover-add:hover {
+  background: hsl(210, 40%, 55%, 0.20);
+  border-color: hsl(210, 40%, 55%, 0.45);
+}
+
+.popover-add svg {
+  width: 13px;
+  height: 13px;
+  stroke: hsl(210, 40%, 55%);
+}
+
+.popover-list {
+  padding: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.popover-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 200ms ease;
+}
+
+.popover-item:hover {
+  background: hsl(210, 40%, 55%, 0.08);
+}
+
+.popover-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(210, 40%, 55%, 0.10);
+  flex-shrink: 0;
+}
+
+.popover-item-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: hsl(210, 40%, 55%);
+}
+
+.popover-item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.popover-item-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.popover-item-meta {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.popover-item-arrow {
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 200ms ease;
+}
+
+.popover-item:hover .popover-item-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.popover-item-arrow svg {
+  width: 14px;
+  height: 14px;
+  stroke: hsl(210, 40%, 55%);
+}
+
+/* ============================================
+   DISABLED DETAIL SECTION
+   ============================================ */
+.disabled-detail-grid {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.disabled-example {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.disabled-example .nav-btn {
+  position: relative;
+}
+
+.disabled-example .nav-btn .nav-btn-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.disabled-example .nav-btn .nav-btn-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.disabled-example .nav-plus {
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  bottom: -3px;
+  right: -3px;
+}
+
+.disabled-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.disabled-example .nav-tooltip {
+  font-size: 11px;
+  padding: 7px 12px;
+  max-width: 260px;
+}
+
+/* Always show tooltips in this section */
+.disabled-detail-grid .nav-btn.show-tooltip .nav-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+/* ============================================
+   CARD STATE LABELS
+   ============================================ */
+.state-label {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.state-not-in-collection {
+  background: rgba(200, 180, 160, 0.15);
+  color: var(--text-muted);
+  border: 1px dashed var(--border-color);
+}
+
+.state-full { background: hsl(140, 60%, 90%); color: hsl(140, 60%, 30%); }
+.state-partial { background: hsl(38, 90%, 90%); color: hsl(38, 90%, 35%); }
+.state-empty { background: hsl(210, 50%, 90%); color: hsl(210, 50%, 35%); }
+
+[data-theme="dark"] .state-full { background: hsl(140, 40%, 18%); color: hsl(140, 60%, 65%); }
+[data-theme="dark"] .state-partial { background: hsl(38, 40%, 18%); color: hsl(38, 80%, 65%); }
+[data-theme="dark"] .state-empty { background: hsl(210, 30%, 18%); color: hsl(210, 50%, 65%); }
+
+/* ============================================
+   SVG ICON DEFINITIONS (inline)
+   ============================================ */
+.icon { display: inline-block; vertical-align: middle; }
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .grid-container { flex-direction: column; align-items: center; }
+  .featured-container { flex-direction: column; align-items: center; }
+  .mc-featured { width: 100%; max-width: 400px; }
+  .disabled-detail-grid { gap: 24px; }
+}
+
+/* ============================================
+   PLACEHOLDER IMAGES (gradient fallbacks)
+   ============================================ */
+.img-catan { background: linear-gradient(135deg, hsl(30, 60%, 85%), hsl(20, 70%, 70%)); }
+.img-wingspan { background: linear-gradient(135deg, hsl(190, 50%, 85%), hsl(170, 60%, 70%)); }
+.img-azul { background: linear-gradient(135deg, hsl(210, 60%, 85%), hsl(220, 70%, 65%)); }
+.img-spirit { background: linear-gradient(135deg, hsl(140, 45%, 80%), hsl(160, 55%, 60%)); }
+
+/* Game title overlays on placeholder */
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.cover-placeholder .game-icon {
+  font-size: 3rem;
+  opacity: 0.3;
+}
+
+.mc-featured .cover-placeholder .game-icon { font-size: 4rem; }
+
+/* Entity-specific placeholder gradients */
+.img-session-1 { background: linear-gradient(135deg, hsl(240, 35%, 88%), hsl(240, 50%, 75%)); }
+.img-session-2 { background: linear-gradient(135deg, hsl(245, 30%, 85%), hsl(250, 45%, 72%)); }
+.img-session-3 { background: linear-gradient(135deg, hsl(235, 38%, 86%), hsl(238, 55%, 70%)); }
+.img-doc-1 { background: linear-gradient(135deg, hsl(210, 25%, 88%), hsl(210, 35%, 75%)); }
+.img-doc-2 { background: linear-gradient(135deg, hsl(215, 28%, 86%), hsl(208, 38%, 72%)); }
+.img-agent-1 { background: linear-gradient(135deg, hsl(38, 40%, 88%), hsl(38, 55%, 72%)); }
+.img-agent-2 { background: linear-gradient(135deg, hsl(42, 35%, 86%), hsl(35, 50%, 70%)); }
+.img-chat-1 { background: linear-gradient(135deg, hsl(220, 35%, 88%), hsl(220, 55%, 72%)); }
+.img-chat-2 { background: linear-gradient(135deg, hsl(225, 30%, 86%), hsl(218, 50%, 70%)); }
+.img-player-1 { background: linear-gradient(135deg, hsl(262, 35%, 88%), hsl(262, 50%, 75%)); }
+.img-player-2 { background: linear-gradient(135deg, hsl(265, 30%, 86%), hsl(258, 45%, 72%)); }
+.img-player-3 { background: linear-gradient(135deg, hsl(260, 38%, 84%), hsl(264, 55%, 70%)); }
+
+/* Compact variant for Player cards */
+.mc-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-warm-sm);
+  transition: all 250ms ease;
+  cursor: pointer;
+  max-width: 280px;
+}
+
+.mc-compact:hover {
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-warm-md);
+}
+
+.mc-compact .entity-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mc-compact .compact-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mc-compact .compact-avatar .game-icon {
+  font-size: 1rem;
+  opacity: 0.4;
+}
+
+.mc-compact .compact-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mc-compact .card-title {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mc-compact .card-subtitle {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.mc-compact .nav-footer-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mc-compact .nav-btn-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.mc-compact .nav-btn-icon svg {
+  width: 11px;
+  height: 11px;
+}
+
+.mc-compact .nav-badge {
+  top: -3px;
+  right: -3px;
+  min-width: 12px;
+  height: 12px;
+  font-size: 7px;
+}
+
+.mc-compact .nav-plus {
+  width: 10px;
+  height: 10px;
+  font-size: 8px;
+  bottom: -1px;
+  right: -1px;
+}
+
+/* Section divider for card types */
+.card-type-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+}
+
+.card-type-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-type-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.card-type-info h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.card-type-info p {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* Button matrix mini-table inside cards */
+.btn-matrix {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: var(--bg-muted);
+  border-radius: 6px;
+  line-height: 1.5;
+}
+</style>
+</head>
+<body>
+
+<!-- SVG Sprite (hidden) -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="icon-doc" viewBox="0 0 16 16"><path d="M9 1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5L9 1z" fill="none" stroke="currentColor" stroke-width="1.5"/><polyline points="9,1 9,5 13,5" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="5.5" y1="8" x2="10.5" y2="8" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="10.5" x2="10.5" y2="10.5" stroke="currentColor" stroke-width="1.2"/></symbol>
+  <symbol id="icon-session" viewBox="0 0 16 16"><circle cx="5.5" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10.5" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 13c0-2.2 1.6-4 3.5-4s3.5 1.8 3.5 4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 13c0-2.2 1.6-4 3.5-4s3.5 1.8 3.5 4" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="icon-agent" viewBox="0 0 16 16"><rect x="3" y="4" width="10" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="8" r="1" fill="currentColor"/><line x1="6" y1="11" x2="10" y2="11" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="2" x2="8" y2="4" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="1.5" r="0.8" fill="currentColor"/></symbol>
+  <symbol id="icon-chat" viewBox="0 0 16 16"><path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5l-3 3V3z" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="5.5" x2="11" y2="5.5" stroke="currentColor" stroke-width="1.1"/><line x1="5" y1="8" x2="9" y2="8" stroke="currentColor" stroke-width="1.1"/></symbol>
+  <symbol id="icon-game" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="5.5" cy="8" r="1.8" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="6.8" x2="5.5" y2="9.2" stroke="currentColor" stroke-width="1"/><line x1="4.3" y1="8" x2="6.7" y2="8" stroke="currentColor" stroke-width="1"/><circle cx="10" cy="6.8" r="0.6" fill="currentColor"/><circle cx="11.2" cy="8" r="0.6" fill="currentColor"/><circle cx="10" cy="9.2" r="0.6" fill="currentColor"/><circle cx="8.8" cy="8" r="0.6" fill="currentColor"/></symbol>
+  <symbol id="icon-player" viewBox="0 0 16 16"><circle cx="8" cy="5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="icon-plus" viewBox="0 0 16 16"><line x1="8" y1="4" x2="8" y2="12" stroke="currentColor" stroke-width="2"/><line x1="4" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="icon-arrow-right" viewBox="0 0 16 16"><line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" stroke-width="1.5"/><polyline points="9,4 13,8 9,12" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="icon-library-add" viewBox="0 0 16 16"><rect x="2" y="1" width="12" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="5" x2="8" y2="11" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="icon-users-count" viewBox="0 0 16 16"><circle cx="6" cy="5.5" r="1.8" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M2 13c0-2.2 1.8-4 4-4s4 1.8 4 4" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="11" cy="5.5" r="1.5" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.6"/><path d="M10 9c1 0 2.2.6 2.8 1.5" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.6"/></symbol>
+  <symbol id="icon-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.3"/><polyline points="8,4.5 8,8 10.5,9.5" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="icon-heart" viewBox="0 0 16 16"><path d="M8 13.5S1.5 9.5 1.5 5.5C1.5 3.5 3 2 5 2c1.2 0 2.3.6 3 1.5C8.7 2.6 9.8 2 11 2c2 0 3.5 1.5 3.5 3.5 0 4-6.5 8-6.5 8z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+</svg>
+
+<div class="page-container">
+
+  <!-- ===== HEADER ===== -->
+  <div class="page-header">
+    <div>
+      <h1>MeepleCard NavigationFooter</h1>
+      <div class="subtitle">Matrice completa pulsanti inter-entita' &mdash; 6 card types &bull; 11 sezioni</div>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode"></button>
+  </div>
+
+  <!-- ===== LEGEND ===== -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:hsl(25,95%,45%)"></div>
+      <span>Game</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:hsl(262,83%,58%)"></div>
+      <span>Player</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:hsl(240,60%,55%)"></div>
+      <span>Session</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:hsl(210,40%,55%)"></div>
+      <span>Documento/KB</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:hsl(38,92%,50%)"></div>
+      <span>Agente AI</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:hsl(220,80%,55%)"></div>
+      <span>Chat</span>
+    </div>
+    <div class="legend-item" style="margin-left:12px; padding-left:12px; border-left:1px solid var(--border-color)">
+      <span style="font-weight:700">N</span> = badge count
+    </div>
+    <div class="legend-item">
+      <span style="font-weight:700">+</span> = crea nuovo
+    </div>
+    <div class="legend-item">
+      <span style="opacity:0.4">&#9679;</span> = disabilitato
+    </div>
+  </div>
+
+  <!-- ===== SECTION 1: GRID VIEW ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">1</div>
+      <div class="section-title">Grid View</div>
+      <div class="section-desc">280px cards &bull; 4 stati diversi</div>
+    </div>
+
+    <div class="grid-container">
+
+      <!-- Card 1: NOT in collection -->
+      <div>
+        <div class="state-label state-not-in-collection">Non in collezione</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(25,95%,45%)"></div>
+          <!-- Quick Action: Add to Collection (hover) -->
+          <div class="quick-actions">
+            <div class="qa-btn" title="Aggiungi alla collezione" style="--qa-color:hsl(25,95%,45%)">
+              <svg><use href="#icon-library-add"/></svg>
+            </div>
+          </div>
+          <div class="cover">
+            <div class="cover-placeholder img-catan"><div class="game-icon">&#127922;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(25,95%,45%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(25,95%,45%,0.15);color:hsl(25,95%,40%)">Gioco</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Catan</div>
+            <div class="card-subtitle">Kosmos &bull; 1995</div>
+            <div class="rating">
+              <div class="stars">
+                <span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-half">&#9733;</span><span class="star-empty">&#9733;</span>
+              </div>
+              <span class="rating-value">7.1</span>
+            </div>
+          </div>
+          <div class="metadata-footer">
+            <div class="meta-chip"><svg><use href="#icon-users-count"/></svg> 3-4</div>
+            <div class="meta-chip"><svg><use href="#icon-clock"/></svg> 60-120 min</div>
+          </div>
+          <!-- NO nav-footer (not in collection) -->
+        </div>
+      </div>
+
+      <!-- Card 2: ALL entities -->
+      <div>
+        <div class="state-label state-full">Tutte le entita'</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(25,95%,45%)"></div>
+          <div class="cover">
+            <div class="cover-placeholder img-wingspan"><div class="game-icon">&#129414;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(25,95%,45%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(25,95%,45%,0.15);color:hsl(25,95%,40%)">Gioco</div>
+            <div class="tag-badge" style="background:hsla(140,60%,85%,0.9);color:hsl(140,60%,30%)">Owned</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Wingspan</div>
+            <div class="card-subtitle">Stonemaier Games &bull; 2019</div>
+            <div class="rating">
+              <div class="stars">
+                <span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-half">&#9733;</span>
+              </div>
+              <span class="rating-value">8.1</span>
+            </div>
+          </div>
+          <div class="metadata-footer">
+            <div class="meta-chip"><svg><use href="#icon-users-count"/></svg> 1-5</div>
+            <div class="meta-chip"><svg><use href="#icon-clock"/></svg> 40-70 min</div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- KB: 3 docs -->
+              <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-doc"/></svg>
+                  <div class="nav-badge" style="background:hsl(210,40%,55%)">3</div>
+                </div>
+                <div class="nav-btn-label">KB</div>
+              </div>
+              <!-- Sessions: 5 -->
+              <div class="nav-btn" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-session"/></svg>
+                  <div class="nav-badge" style="background:hsl(240,60%,55%)">5</div>
+                </div>
+                <div class="nav-btn-label">Sessioni</div>
+              </div>
+              <!-- Agent: 1 -->
+              <div class="nav-btn" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-agent"/></svg>
+                  <div class="nav-badge" style="background:hsl(38,92%,50%)">1</div>
+                </div>
+                <div class="nav-btn-label">Agente</div>
+              </div>
+              <!-- Chat: 2 -->
+              <div class="nav-btn" style="--btn-color:hsla(220,80%,55%,0.40);--btn-glow:hsla(220,80%,55%,0.20);--btn-stroke:hsl(220,80%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-chat"/></svg>
+                  <div class="nav-badge" style="background:hsl(220,80%,55%)">2</div>
+                </div>
+                <div class="nav-btn-label">Chat</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: SOME entities -->
+      <div>
+        <div class="state-label state-partial">Entita' parziali</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(25,95%,45%)"></div>
+          <div class="cover">
+            <div class="cover-placeholder img-azul"><div class="game-icon">&#9670;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(25,95%,45%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(25,95%,45%,0.15);color:hsl(25,95%,40%)">Gioco</div>
+            <div class="tag-badge" style="background:hsla(38,90%,90%,0.9);color:hsl(38,90%,35%)">Wishlist</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Azul</div>
+            <div class="card-subtitle">Next Move Games &bull; 2017</div>
+            <div class="rating">
+              <div class="stars">
+                <span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-empty">&#9733;</span>
+              </div>
+              <span class="rating-value">7.8</span>
+            </div>
+          </div>
+          <div class="metadata-footer">
+            <div class="meta-chip"><svg><use href="#icon-users-count"/></svg> 2-4</div>
+            <div class="meta-chip"><svg><use href="#icon-clock"/></svg> 30-45 min</div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- KB: 1 doc -->
+              <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-doc"/></svg>
+                  <div class="nav-badge" style="background:hsl(210,40%,55%)">1</div>
+                </div>
+                <div class="nav-btn-label">KB</div>
+              </div>
+              <!-- Sessions: 0 with + -->
+              <div class="nav-btn" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-session"/></svg>
+                  <div class="nav-plus" style="background:hsl(240,60%,55%)">+</div>
+                </div>
+                <div class="nav-btn-label">Sessioni</div>
+              </div>
+              <!-- Agent: HIDDEN (no RAG docs) -->
+              <!-- Chat: HIDDEN (no agent) -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: ZERO entities, all creatable (some disabled) -->
+      <div>
+        <div class="state-label state-empty">Tutto creabile</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(25,95%,45%)"></div>
+          <div class="cover">
+            <div class="cover-placeholder img-spirit"><div class="game-icon">&#127795;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(25,95%,45%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(25,95%,45%,0.15);color:hsl(25,95%,40%)">Gioco</div>
+            <div class="tag-badge" style="background:hsla(210,50%,90%,0.9);color:hsl(210,50%,35%)">Nuovo</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Spirit Island</div>
+            <div class="card-subtitle">Greater Than Games &bull; 2017</div>
+            <div class="rating">
+              <div class="stars">
+                <span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span>
+              </div>
+              <span class="rating-value">8.4</span>
+            </div>
+          </div>
+          <div class="metadata-footer">
+            <div class="meta-chip"><svg><use href="#icon-users-count"/></svg> 1-4</div>
+            <div class="meta-chip"><svg><use href="#icon-clock"/></svg> 90-120 min</div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- KB: 0 with + -->
+              <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-doc"/></svg>
+                  <div class="nav-plus" style="background:hsl(210,40%,55%)">+</div>
+                </div>
+                <div class="nav-btn-label">KB</div>
+              </div>
+              <!-- Sessions: 0 with + -->
+              <div class="nav-btn" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-session"/></svg>
+                  <div class="nav-plus" style="background:hsl(240,60%,55%)">+</div>
+                </div>
+                <div class="nav-btn-label">Sessioni</div>
+              </div>
+              <!-- Agent: 0, DISABLED (limite raggiunto) -->
+              <div class="nav-btn disabled" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-agent"/></svg>
+                  <div class="nav-plus" style="background:hsl(0,0%,60%)">+</div>
+                </div>
+                <div class="nav-btn-label">Agente</div>
+                <div class="nav-tooltip">Limite raggiunto per il tuo piano</div>
+              </div>
+              <!-- Chat: HIDDEN (no agent) -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION 2: LIST VIEW ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">2</div>
+      <div class="section-title">List View</div>
+      <div class="section-desc">Full width rows &bull; Nav inline a destra</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;max-width:720px">
+
+      <!-- List 1: Full entities -->
+      <div class="state-label state-full" style="margin-bottom:2px">Tutte le entita'</div>
+      <div class="mc-list">
+        <div class="entity-dot" style="background:hsl(25,95%,45%)"></div>
+        <div class="thumb"><div class="cover-placeholder img-wingspan" style="border-radius:10px"><div class="game-icon" style="font-size:1.2rem">&#129414;</div></div></div>
+        <div class="list-content">
+          <div class="card-title">Wingspan</div>
+          <div class="card-subtitle">Stonemaier Games &bull; 2019 &bull; <span class="star-full" style="font-size:0.68rem">&#9733;</span> 8.1</div>
+        </div>
+        <div class="nav-footer-inline">
+          <!-- KB: 3 -->
+          <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+            <div class="nav-btn-icon">
+              <svg><use href="#icon-doc"/></svg>
+              <div class="nav-badge" style="background:hsl(210,40%,55%)">3</div>
+            </div>
+          </div>
+          <!-- Session: 5 -->
+          <div class="nav-btn" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+            <div class="nav-btn-icon">
+              <svg><use href="#icon-session"/></svg>
+              <div class="nav-badge" style="background:hsl(240,60%,55%)">5</div>
+            </div>
+          </div>
+          <!-- Agent: 1 -->
+          <div class="nav-btn" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+            <div class="nav-btn-icon">
+              <svg><use href="#icon-agent"/></svg>
+              <div class="nav-badge" style="background:hsl(38,92%,50%)">1</div>
+            </div>
+          </div>
+          <!-- Chat: 2 -->
+          <div class="nav-btn" style="--btn-color:hsla(220,80%,55%,0.40);--btn-glow:hsla(220,80%,55%,0.20);--btn-stroke:hsl(220,80%,55%)">
+            <div class="nav-btn-icon">
+              <svg><use href="#icon-chat"/></svg>
+              <div class="nav-badge" style="background:hsl(220,80%,55%)">2</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- List 2: Partial + disabled -->
+      <div class="state-label state-partial" style="margin-bottom:2px;margin-top:8px">Parziali + disabilitati</div>
+      <div class="mc-list">
+        <div class="entity-dot" style="background:hsl(25,95%,45%)"></div>
+        <div class="thumb"><div class="cover-placeholder img-azul" style="border-radius:10px"><div class="game-icon" style="font-size:1.2rem">&#9670;</div></div></div>
+        <div class="list-content">
+          <div class="card-title">Azul</div>
+          <div class="card-subtitle">Next Move Games &bull; 2017 &bull; <span class="star-full" style="font-size:0.68rem">&#9733;</span> 7.8</div>
+        </div>
+        <div class="nav-footer-inline">
+          <!-- KB: 1 -->
+          <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+            <div class="nav-btn-icon">
+              <svg><use href="#icon-doc"/></svg>
+              <div class="nav-badge" style="background:hsl(210,40%,55%)">1</div>
+            </div>
+          </div>
+          <!-- Session: 0 + -->
+          <div class="nav-btn" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+            <div class="nav-btn-icon">
+              <svg><use href="#icon-session"/></svg>
+              <div class="nav-plus" style="background:hsl(240,60%,55%)">+</div>
+            </div>
+          </div>
+          <!-- Agent: disabled -->
+          <div class="nav-btn disabled" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+            <div class="nav-btn-icon">
+              <svg><use href="#icon-agent"/></svg>
+              <div class="nav-plus" style="background:hsl(0,0%,60%)">+</div>
+            </div>
+            <div class="nav-tooltip">Limite di 10 agenti totali raggiunto</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- List 3: Not in collection -->
+      <div class="state-label state-not-in-collection" style="margin-bottom:2px;margin-top:8px">Non in collezione</div>
+      <div class="mc-list">
+        <div class="entity-dot" style="background:hsl(25,95%,45%)"></div>
+        <div class="thumb"><div class="cover-placeholder img-catan" style="border-radius:10px"><div class="game-icon" style="font-size:1.2rem">&#127922;</div></div></div>
+        <div class="list-content">
+          <div class="card-title">Catan</div>
+          <div class="card-subtitle">Kosmos &bull; 1995 &bull; <span class="star-full" style="font-size:0.68rem">&#9733;</span> 7.1</div>
+        </div>
+        <!-- Quick Action: Add to Collection (hover) -->
+        <div class="quick-actions" style="position:static;opacity:1;margin-left:auto">
+          <div class="qa-btn" title="Aggiungi alla collezione">
+            <svg><use href="#icon-library-add"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 3: FEATURED / CAROUSEL VIEW ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">3</div>
+      <div class="section-title">Featured / Carousel View</div>
+      <div class="section-desc">400px cards &bull; 16:9 cover &bull; Larger nav buttons</div>
+    </div>
+
+    <div class="featured-container">
+
+      <!-- Featured 1: Rich game -->
+      <div class="mc-featured">
+        <div class="entity-border" style="background:hsl(25,95%,45%)"></div>
+        <div class="cover">
+          <div class="cover-placeholder img-wingspan" style="aspect-ratio:16/9"><div class="game-icon" style="font-size:4rem">&#129414;</div></div>
+          <div class="shimmer"></div>
+        </div>
+        <div class="tag-stack">
+          <div class="tag-badge" style="background:hsla(25,95%,45%,0.15);color:hsl(25,95%,40%)">Gioco</div>
+          <div class="tag-badge" style="background:hsla(140,60%,85%,0.9);color:hsl(140,60%,30%)">Owned</div>
+        </div>
+        <div class="content">
+          <div class="card-title">Wingspan</div>
+          <div class="card-subtitle">Stonemaier Games &bull; 2019 &bull; Competitivo, Engine Building</div>
+          <div class="rating" style="margin-top:6px">
+            <div class="stars" style="font-size:0.88rem">
+              <span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-half">&#9733;</span>
+            </div>
+            <span class="rating-value" style="font-size:0.82rem">8.1</span>
+          </div>
+        </div>
+        <div class="nav-footer">
+          <div class="nav-footer-header">
+            <div class="nav-footer-line"></div>
+            <div class="nav-footer-label">Naviga verso</div>
+            <div class="nav-footer-line"></div>
+          </div>
+          <div class="nav-icons">
+            <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+              <div class="nav-btn-icon">
+                <svg><use href="#icon-doc"/></svg>
+                <div class="nav-badge" style="background:hsl(210,40%,55%)">3</div>
+              </div>
+              <div class="nav-btn-label">Documenti</div>
+            </div>
+            <div class="nav-btn" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+              <div class="nav-btn-icon">
+                <svg><use href="#icon-session"/></svg>
+                <div class="nav-badge" style="background:hsl(240,60%,55%)">5</div>
+              </div>
+              <div class="nav-btn-label">Sessioni</div>
+            </div>
+            <div class="nav-btn" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+              <div class="nav-btn-icon">
+                <svg><use href="#icon-agent"/></svg>
+                <div class="nav-badge" style="background:hsl(38,92%,50%)">1</div>
+              </div>
+              <div class="nav-btn-label">Agente</div>
+            </div>
+            <div class="nav-btn" style="--btn-color:hsla(220,80%,55%,0.40);--btn-glow:hsla(220,80%,55%,0.20);--btn-stroke:hsl(220,80%,55%)">
+              <div class="nav-btn-icon">
+                <svg><use href="#icon-chat"/></svg>
+                <div class="nav-badge" style="background:hsl(220,80%,55%)">2</div>
+              </div>
+              <div class="nav-btn-label">Chat</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Featured 2: New game, all '+' -->
+      <div class="mc-featured">
+        <div class="entity-border" style="background:hsl(25,95%,45%)"></div>
+        <div class="cover">
+          <div class="cover-placeholder img-spirit" style="aspect-ratio:16/9"><div class="game-icon" style="font-size:4rem">&#127795;</div></div>
+          <div class="shimmer"></div>
+        </div>
+        <div class="tag-stack">
+          <div class="tag-badge" style="background:hsla(25,95%,45%,0.15);color:hsl(25,95%,40%)">Gioco</div>
+          <div class="tag-badge" style="background:hsla(210,50%,90%,0.9);color:hsl(210,50%,35%)">Nuovo</div>
+        </div>
+        <div class="content">
+          <div class="card-title">Spirit Island</div>
+          <div class="card-subtitle">Greater Than Games &bull; 2017 &bull; Cooperativo, Area Control</div>
+          <div class="rating" style="margin-top:6px">
+            <div class="stars" style="font-size:0.88rem">
+              <span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span><span class="star-full">&#9733;</span>
+            </div>
+            <span class="rating-value" style="font-size:0.82rem">8.4</span>
+          </div>
+        </div>
+        <div class="nav-footer">
+          <div class="nav-footer-header">
+            <div class="nav-footer-line"></div>
+            <div class="nav-footer-label">Naviga verso</div>
+            <div class="nav-footer-line"></div>
+          </div>
+          <div class="nav-icons">
+            <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+              <div class="nav-btn-icon">
+                <svg><use href="#icon-doc"/></svg>
+                <div class="nav-plus" style="background:hsl(210,40%,55%)">+</div>
+              </div>
+              <div class="nav-btn-label">Documenti</div>
+            </div>
+            <div class="nav-btn" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+              <div class="nav-btn-icon">
+                <svg><use href="#icon-session"/></svg>
+                <div class="nav-plus" style="background:hsl(240,60%,55%)">+</div>
+              </div>
+              <div class="nav-btn-label">Sessioni</div>
+            </div>
+            <div class="nav-btn" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+              <div class="nav-btn-icon">
+                <svg><use href="#icon-agent"/></svg>
+                <div class="nav-plus" style="background:hsl(38,92%,50%)">+</div>
+              </div>
+              <div class="nav-btn-label">Agente</div>
+            </div>
+            <!-- Chat: HIDDEN (no agent yet) -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION 4: POPOVER MOCKUP ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">4</div>
+      <div class="section-title">Popover Multi-Entita'</div>
+      <div class="section-desc">Click su KB con 3 documenti &rarr; lista popover</div>
+    </div>
+
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+      <!-- Mini card for context -->
+      <div style="position:relative;padding-top:300px">
+        <div class="popover">
+          <div class="popover-header">
+            <div class="popover-title">
+              <svg style="fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-doc"/></svg>
+              Documenti KB (3)
+            </div>
+            <div class="popover-add" title="Carica nuovo PDF">
+              <svg style="fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-plus"/></svg>
+            </div>
+          </div>
+          <div class="popover-list">
+            <div class="popover-item">
+              <div class="popover-item-icon">
+                <svg style="fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-doc"/></svg>
+              </div>
+              <div class="popover-item-text">
+                <div class="popover-item-name">Regolamento_IT.pdf</div>
+                <div class="popover-item-meta">24 pagine &bull; Indicizzato &bull; 2.4 MB</div>
+              </div>
+              <div class="popover-item-arrow">
+                <svg style="fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-arrow-right"/></svg>
+              </div>
+            </div>
+            <div class="popover-item">
+              <div class="popover-item-icon">
+                <svg style="fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-doc"/></svg>
+              </div>
+              <div class="popover-item-text">
+                <div class="popover-item-name">Quick_Reference.pdf</div>
+                <div class="popover-item-meta">2 pagine &bull; Indicizzato &bull; 0.8 MB</div>
+              </div>
+              <div class="popover-item-arrow">
+                <svg style="fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-arrow-right"/></svg>
+              </div>
+            </div>
+            <div class="popover-item">
+              <div class="popover-item-icon">
+                <svg style="fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-doc"/></svg>
+              </div>
+              <div class="popover-item-text">
+                <div class="popover-item-name">FAQ_Ufficiale_v2.pdf</div>
+                <div class="popover-item-meta">8 pagine &bull; Indicizzato &bull; 1.1 MB</div>
+              </div>
+              <div class="popover-item-arrow">
+                <svg style="fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-arrow-right"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- The card below the popover -->
+        <div style="width:270px">
+          <div class="mc-grid" style="cursor:default">
+            <div class="entity-border" style="background:hsl(25,95%,45%)"></div>
+            <div class="nav-footer" style="border-radius:16px;border-top:none;border:1px solid var(--border-light)">
+              <div class="nav-footer-header">
+                <div class="nav-footer-line"></div>
+                <div class="nav-footer-label">Naviga verso</div>
+                <div class="nav-footer-line"></div>
+              </div>
+              <div class="nav-icons">
+                <!-- KB: 3 (ACTIVE / SELECTED) -->
+                <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%);transform:scale(1.08)">
+                  <div class="nav-btn-icon" style="background:hsla(210,40%,55%,0.12);border-color:hsla(210,40%,55%,0.4);box-shadow:0 0 10px hsla(210,40%,55%,0.2)">
+                    <svg style="stroke:hsl(210,40%,55%)"><use href="#icon-doc"/></svg>
+                    <div class="nav-badge" style="background:hsl(210,40%,55%)">3</div>
+                  </div>
+                  <div class="nav-btn-label" style="color:hsl(210,40%,55%)">KB</div>
+                </div>
+                <div class="nav-btn" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+                  <div class="nav-btn-icon">
+                    <svg><use href="#icon-session"/></svg>
+                    <div class="nav-badge" style="background:hsl(240,60%,55%)">5</div>
+                  </div>
+                  <div class="nav-btn-label">Sessioni</div>
+                </div>
+                <div class="nav-btn" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+                  <div class="nav-btn-icon">
+                    <svg><use href="#icon-agent"/></svg>
+                    <div class="nav-badge" style="background:hsl(38,92%,50%)">1</div>
+                  </div>
+                  <div class="nav-btn-label">Agente</div>
+                </div>
+                <div class="nav-btn" style="--btn-color:hsla(220,80%,55%,0.40);--btn-glow:hsla(220,80%,55%,0.20);--btn-stroke:hsl(220,80%,55%)">
+                  <div class="nav-btn-icon">
+                    <svg><use href="#icon-chat"/></svg>
+                    <div class="nav-badge" style="background:hsl(220,80%,55%)">2</div>
+                  </div>
+                  <div class="nav-btn-label">Chat</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Explanation panel -->
+      <div style="max-width:340px;padding:20px;background:var(--bg-card);backdrop-filter:blur(12px);border-radius:14px;border:1px solid var(--border-light);box-shadow:var(--shadow-warm-sm)">
+        <h4 style="font-size:0.88rem;font-weight:700;margin-bottom:12px">Comportamento Click</h4>
+        <div style="font-size:0.78rem;color:var(--text-secondary);display:flex;flex-direction:column;gap:10px">
+          <div>
+            <strong style="color:var(--text-primary)">0 entita'</strong> &rarr; <span style="color:hsl(210,40%,55%);font-weight:600">Crea nuovo</span><br>
+            <span style="font-size:0.72rem;color:var(--text-muted)">Apre direttamente il flusso di creazione (upload PDF, nuova sessione, etc.)</span>
+          </div>
+          <div style="border-top:1px solid var(--border-light);padding-top:10px">
+            <strong style="color:var(--text-primary)">1 entita'</strong> &rarr; <span style="color:hsl(240,60%,55%);font-weight:600">Navigazione diretta</span><br>
+            <span style="font-size:0.72rem;color:var(--text-muted)">Click porta direttamente alla pagina dell'entita' collegata</span>
+          </div>
+          <div style="border-top:1px solid var(--border-light);padding-top:10px">
+            <strong style="color:var(--text-primary)">N entita'</strong> &rarr; <span style="color:hsl(38,92%,50%);font-weight:600">Popover lista</span><br>
+            <span style="font-size:0.72rem;color:var(--text-muted)">Mostra lista compact MeepleCard con header + pulsante [+] per crearne nuove</span>
+          </div>
+          <div style="border-top:1px solid var(--border-light);padding-top:10px">
+            <strong style="color:var(--text-primary)">Chat (con history)</strong> &rarr; <span style="color:hsl(220,80%,55%);font-weight:600">History page</span><br>
+            <span style="font-size:0.72rem;color:var(--text-muted)">Naviga alla history per scegliere se riprendere una chat esistente o crearne una nuova</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 5: DISABLED STATE DETAIL ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">5</div>
+      <div class="section-title">Stati Disabilitati + Tooltip</div>
+      <div class="section-desc">Hover per vedere i tooltip</div>
+    </div>
+
+    <div class="disabled-detail-grid">
+      <!-- Agent disabled: per-game limit -->
+      <div class="disabled-example">
+        <div class="nav-btn disabled show-tooltip" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+          <div class="nav-tooltip">Hai raggiunto il limite di 3 agenti per questo gioco</div>
+          <div class="nav-btn-icon">
+            <svg><use href="#icon-agent"/></svg>
+            <div class="nav-plus" style="background:hsl(0,0%,60%)">+</div>
+          </div>
+        </div>
+        <div class="disabled-label">Agente<br><span style="color:hsl(38,92%,50%);font-size:0.62rem">Limite per gioco</span></div>
+      </div>
+
+      <!-- Agent disabled: total limit -->
+      <div class="disabled-example">
+        <div class="nav-btn disabled show-tooltip" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+          <div class="nav-tooltip">Limite di 10 agenti totali raggiunto per il tuo piano. Esegui l'upgrade per continuare.</div>
+          <div class="nav-btn-icon">
+            <svg><use href="#icon-agent"/></svg>
+            <div class="nav-plus" style="background:hsl(0,0%,60%)">+</div>
+          </div>
+        </div>
+        <div class="disabled-label">Agente<br><span style="color:hsl(38,92%,50%);font-size:0.62rem">Limite totale piano</span></div>
+      </div>
+
+      <!-- KB disabled: storage limit -->
+      <div class="disabled-example">
+        <div class="nav-btn disabled show-tooltip" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+          <div class="nav-tooltip">Limite di storage raggiunto per il tuo piano. Libera spazio o esegui l'upgrade.</div>
+          <div class="nav-btn-icon">
+            <svg><use href="#icon-doc"/></svg>
+            <div class="nav-plus" style="background:hsl(0,0%,60%)">+</div>
+          </div>
+        </div>
+        <div class="disabled-label">Documenti KB<br><span style="color:hsl(210,40%,55%);font-size:0.62rem">Limite storage</span></div>
+      </div>
+
+      <!-- Chat disabled: no agent -->
+      <div class="disabled-example">
+        <div class="nav-btn disabled show-tooltip" style="--btn-color:hsla(220,80%,55%,0.40);--btn-glow:hsla(220,80%,55%,0.20);--btn-stroke:hsl(220,80%,55%)">
+          <div class="nav-tooltip">Crea prima un agente AI per questo gioco</div>
+          <div class="nav-btn-icon">
+            <svg><use href="#icon-chat"/></svg>
+            <div class="nav-plus" style="background:hsl(0,0%,60%)">+</div>
+          </div>
+        </div>
+        <div class="disabled-label">Chat<br><span style="color:hsl(220,80%,55%);font-size:0.62rem">Richiede agente</span></div>
+      </div>
+
+      <!-- Session disabled: feature disabled -->
+      <div class="disabled-example">
+        <div class="nav-btn disabled show-tooltip" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+          <div class="nav-tooltip">Funzionalita' sessioni non disponibile per il tuo piano</div>
+          <div class="nav-btn-icon">
+            <svg><use href="#icon-session"/></svg>
+            <div class="nav-plus" style="background:hsl(0,0%,60%)">+</div>
+          </div>
+        </div>
+        <div class="disabled-label">Sessioni<br><span style="color:hsl(240,60%,55%);font-size:0.62rem">Feature disabilitata</span></div>
+      </div>
+
+      <!-- Service unavailable -->
+      <div class="disabled-example">
+        <div class="nav-btn disabled show-tooltip" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+          <div class="nav-tooltip">Servizio AI temporaneamente non disponibile. Riprova tra qualche minuto.</div>
+          <div class="nav-btn-icon">
+            <svg><use href="#icon-agent"/></svg>
+            <div class="nav-plus" style="background:hsl(0, 70%, 55%)">!</div>
+          </div>
+        </div>
+        <div class="disabled-label">Agente<br><span style="color:hsl(0,70%,55%);font-size:0.62rem">Servizio offline</span></div>
+      </div>
+    </div>
+
+    <!-- Visibility Rules Summary (Game Card) -->
+    <div style="margin-top:32px;padding:18px 22px;background:var(--bg-card);backdrop-filter:blur(12px);border-radius:14px;border:1px solid var(--border-light);box-shadow:var(--shadow-warm-sm);max-width:700px">
+      <h4 style="font-size:0.88rem;font-weight:700;margin-bottom:14px">Regole di Visibilita' (Game Card)</h4>
+      <table style="width:100%;font-size:0.75rem;border-collapse:collapse">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border-color)">
+            <th style="text-align:left;padding:6px 8px;font-weight:700;color:var(--text-primary)">Pulsante</th>
+            <th style="text-align:left;padding:6px 8px;font-weight:700;color:var(--text-primary)">Visibile se</th>
+            <th style="text-align:left;padding:6px 8px;font-weight:700;color:var(--text-primary)">'+' abilitato se</th>
+            <th style="text-align:left;padding:6px 8px;font-weight:700;color:var(--text-primary)">'+' disabilitato se</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:8px;display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" style="stroke:hsl(210,40%,55%);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-doc"/></svg>
+              <strong>KB</strong>
+            </td>
+            <td style="padding:8px;color:var(--text-secondary)">Gioco in collezione</td>
+            <td style="padding:8px;color:hsl(140,60%,35%)">Storage disponibile</td>
+            <td style="padding:8px;color:hsl(0,60%,50%)">Limite storage / feature off</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:8px;display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" style="stroke:hsl(240,60%,55%);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-session"/></svg>
+              <strong>Sessioni</strong>
+            </td>
+            <td style="padding:8px;color:var(--text-secondary)">Gioco in collezione</td>
+            <td style="padding:8px;color:hsl(140,60%,35%)">Feature attiva nel piano</td>
+            <td style="padding:8px;color:hsl(0,60%,50%)">Feature disabilitata</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:8px;display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" style="stroke:hsl(38,92%,50%);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-agent"/></svg>
+              <strong>Agente</strong>
+            </td>
+            <td style="padding:8px;color:var(--text-secondary)">In collezione + ha KB con RAG</td>
+            <td style="padding:8px;color:hsl(140,60%,35%)">Slots liberi (per-game E totale)</td>
+            <td style="padding:8px;color:hsl(0,60%,50%)">Limite per-game / totale / servizio</td>
+          </tr>
+          <tr>
+            <td style="padding:8px;display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" style="stroke:hsl(220,80%,55%);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><use href="#icon-chat"/></svg>
+              <strong>Chat</strong>
+            </td>
+            <td style="padding:8px;color:var(--text-secondary)">In collezione + esiste Agente</td>
+            <td style="padding:8px;color:hsl(140,60%,35%)">Agente attivo + servizio OK</td>
+            <td style="padding:8px;color:hsl(0,60%,50%)">Servizio offline / limite chat</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 6: SESSION CARDS ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">6</div>
+      <div class="section-title">Session Card</div>
+      <div class="section-desc">entity: session &bull; Colore: Indigo (240, 60%, 55%)</div>
+    </div>
+
+    <div class="card-type-divider" style="background:hsla(240,60%,55%,0.05)">
+      <div class="card-type-icon" style="background:hsla(240,60%,55%,0.12)">
+        <svg style="stroke:hsl(240,60%,55%)"><use href="#icon-session"/></svg>
+      </div>
+      <div class="card-type-info">
+        <h4 style="color:hsl(240,60%,55%)">Session Card</h4>
+        <p>Pulsanti: Game (se gameId) + Players (sempre) + KB (se game in collezione) + Chat (se game ha Agent)</p>
+      </div>
+    </div>
+
+    <div class="grid-container">
+
+      <!-- Session 1: Full links (game-specific session) -->
+      <div>
+        <div class="state-label state-full">Sessione completa</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(240,60%,55%)"></div>
+          <div class="cover">
+            <div class="cover-placeholder img-session-1"><div class="game-icon">&#127918;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(240,60%,55%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(240,60%,55%,0.15);color:hsl(240,60%,45%)">Sessione</div>
+            <div class="tag-badge" style="background:hsla(140,60%,85%,0.9);color:hsl(140,60%,30%)">Attiva</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Serata Wingspan</div>
+            <div class="card-subtitle">Codice: WNG-42 &bull; 14 Feb 2026</div>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <div class="meta-chip"><svg><use href="#icon-users-count"/></svg> 4 giocatori</div>
+              <div class="meta-chip"><svg><use href="#icon-clock"/></svg> 1h 20m</div>
+            </div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- Game -->
+              <div class="nav-btn" style="--btn-color:hsla(25,95%,45%,0.40);--btn-glow:hsla(25,95%,45%,0.20);--btn-stroke:hsl(25,95%,45%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-game"/></svg>
+                </div>
+                <div class="nav-btn-label">Gioco</div>
+              </div>
+              <!-- Players: 4 -->
+              <div class="nav-btn" style="--btn-color:hsla(262,83%,58%,0.40);--btn-glow:hsla(262,83%,58%,0.20);--btn-stroke:hsl(262,83%,58%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-player"/></svg>
+                  <div class="nav-badge" style="background:hsl(262,83%,58%)">4</div>
+                </div>
+                <div class="nav-btn-label">Giocatori</div>
+              </div>
+              <!-- KB: 2 -->
+              <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-doc"/></svg>
+                  <div class="nav-badge" style="background:hsl(210,40%,55%)">2</div>
+                </div>
+                <div class="nav-btn-label">Regole</div>
+              </div>
+              <!-- Chat: 1 -->
+              <div class="nav-btn" style="--btn-color:hsla(220,80%,55%,0.40);--btn-glow:hsla(220,80%,55%,0.20);--btn-stroke:hsl(220,80%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-chat"/></svg>
+                  <div class="nav-badge" style="background:hsl(220,80%,55%)">1</div>
+                </div>
+                <div class="nav-btn-label">Chat</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session 2: Generic session (no game) -->
+      <div>
+        <div class="state-label state-partial">Sessione generica</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(240,60%,55%)"></div>
+          <div class="cover">
+            <div class="cover-placeholder img-session-2"><div class="game-icon">&#127922;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(240,60%,55%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(240,60%,55%,0.15);color:hsl(240,60%,45%)">Sessione</div>
+            <div class="tag-badge" style="background:hsla(38,90%,90%,0.9);color:hsl(38,90%,35%)">Finalizzata</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Game Night</div>
+            <div class="card-subtitle">Codice: GNT-07 &bull; 10 Feb 2026</div>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <div class="meta-chip"><svg><use href="#icon-users-count"/></svg> 2 giocatori</div>
+            </div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- Game: HIDDEN (generic session, no gameId) -->
+              <!-- Players: 2 -->
+              <div class="nav-btn" style="--btn-color:hsla(262,83%,58%,0.40);--btn-glow:hsla(262,83%,58%,0.20);--btn-stroke:hsl(262,83%,58%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-player"/></svg>
+                  <div class="nav-badge" style="background:hsl(262,83%,58%)">2</div>
+                </div>
+                <div class="nav-btn-label">Giocatori</div>
+              </div>
+              <!-- KB: HIDDEN (no game) -->
+              <!-- Chat: HIDDEN (no game = no agent) -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session 3: New session, adding players -->
+      <div>
+        <div class="state-label state-empty">Sessione nuova</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(240,60%,55%)"></div>
+          <div class="cover">
+            <div class="cover-placeholder img-session-3"><div class="game-icon">&#9889;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(240,60%,55%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(240,60%,55%,0.15);color:hsl(240,60%,45%)">Sessione</div>
+            <div class="tag-badge" style="background:hsla(210,50%,90%,0.9);color:hsl(210,50%,35%)">In attesa</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Torneo Azul</div>
+            <div class="card-subtitle">Codice: AZL-19 &bull; Oggi</div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- Game -->
+              <div class="nav-btn" style="--btn-color:hsla(25,95%,45%,0.40);--btn-glow:hsla(25,95%,45%,0.20);--btn-stroke:hsl(25,95%,45%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-game"/></svg>
+                </div>
+                <div class="nav-btn-label">Gioco</div>
+              </div>
+              <!-- Players: 0, add -->
+              <div class="nav-btn" style="--btn-color:hsla(262,83%,58%,0.40);--btn-glow:hsla(262,83%,58%,0.20);--btn-stroke:hsl(262,83%,58%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-player"/></svg>
+                  <div class="nav-plus" style="background:hsl(262,83%,58%)">+</div>
+                </div>
+                <div class="nav-btn-label">Giocatori</div>
+              </div>
+              <!-- KB: 1 (game has docs) -->
+              <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-doc"/></svg>
+                  <div class="nav-badge" style="background:hsl(210,40%,55%)">1</div>
+                </div>
+                <div class="nav-btn-label">Regole</div>
+              </div>
+              <!-- Chat: HIDDEN (no agent on this game) -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION 7: DOCUMENT/KB CARDS ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">7</div>
+      <div class="section-title">Document / KB Card</div>
+      <div class="section-desc">entity: document &bull; Colore: Slate (210, 40%, 55%)</div>
+    </div>
+
+    <div class="card-type-divider" style="background:hsla(210,40%,55%,0.05)">
+      <div class="card-type-icon" style="background:hsla(210,40%,55%,0.12)">
+        <svg style="stroke:hsl(210,40%,55%)"><use href="#icon-doc"/></svg>
+      </div>
+      <div class="card-type-info">
+        <h4 style="color:hsl(210,40%,55%)">Document / KB Card</h4>
+        <p>Pulsanti: Game (se gameId) + Agent (se game ha Agent con RAG)</p>
+      </div>
+    </div>
+
+    <div class="grid-container">
+
+      <!-- Doc 1: Full links -->
+      <div>
+        <div class="state-label state-full">Doc con agente</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(210,40%,55%)"></div>
+          <div class="cover">
+            <div class="cover-placeholder img-doc-1"><div class="game-icon">&#128196;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(210,40%,55%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(210,40%,55%,0.15);color:hsl(210,40%,45%)">Documento</div>
+            <div class="tag-badge" style="background:hsla(140,60%,85%,0.9);color:hsl(140,60%,30%)">Indicizzato</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Regolamento_IT.pdf</div>
+            <div class="card-subtitle">Wingspan &bull; 24 pagine &bull; 2.4 MB</div>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <div class="meta-chip"><svg><use href="#icon-doc"/></svg> 156 chunks</div>
+              <div class="meta-chip"><svg><use href="#icon-clock"/></svg> Indicizzato 3gg fa</div>
+            </div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- Game -->
+              <div class="nav-btn" style="--btn-color:hsla(25,95%,45%,0.40);--btn-glow:hsla(25,95%,45%,0.20);--btn-stroke:hsl(25,95%,45%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-game"/></svg>
+                </div>
+                <div class="nav-btn-label">Gioco</div>
+              </div>
+              <!-- Agent: 1 -->
+              <div class="nav-btn" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-agent"/></svg>
+                  <div class="nav-badge" style="background:hsl(38,92%,50%)">1</div>
+                </div>
+                <div class="nav-btn-label">Agente</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Doc 2: No agent -->
+      <div>
+        <div class="state-label state-partial">Doc senza agente</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(210,40%,55%)"></div>
+          <div class="cover">
+            <div class="cover-placeholder img-doc-2"><div class="game-icon">&#128221;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(210,40%,55%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(210,40%,55%,0.15);color:hsl(210,40%,45%)">Documento</div>
+            <div class="tag-badge" style="background:hsla(38,90%,90%,0.9);color:hsl(38,90%,35%)">In coda</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Quick_Reference_EN.pdf</div>
+            <div class="card-subtitle">Azul &bull; 2 pagine &bull; 0.8 MB</div>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <div class="meta-chip"><svg><use href="#icon-clock"/></svg> Caricato oggi</div>
+            </div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- Game -->
+              <div class="nav-btn" style="--btn-color:hsla(25,95%,45%,0.40);--btn-glow:hsla(25,95%,45%,0.20);--btn-stroke:hsl(25,95%,45%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-game"/></svg>
+                </div>
+                <div class="nav-btn-label">Gioco</div>
+              </div>
+              <!-- Agent: HIDDEN (no agent on this game) -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION 8: AGENT CARDS ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">8</div>
+      <div class="section-title">Agent Card</div>
+      <div class="section-desc">entity: agent &bull; Colore: Amber (38, 92%, 50%)</div>
+    </div>
+
+    <div class="card-type-divider" style="background:hsla(38,92%,50%,0.05)">
+      <div class="card-type-icon" style="background:hsla(38,92%,50%,0.12)">
+        <svg style="stroke:hsl(38,92%,50%)"><use href="#icon-agent"/></svg>
+      </div>
+      <div class="card-type-info">
+        <h4 style="color:hsl(38,92%,50%)">Agent Card</h4>
+        <p>Pulsanti: Game (sempre) + Chat (sempre) + KB (sempre)</p>
+      </div>
+    </div>
+
+    <div class="grid-container">
+
+      <!-- Agent 1: Established agent -->
+      <div>
+        <div class="state-label state-full">Agente attivo</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(38,92%,50%)"></div>
+          <div class="cover">
+            <div class="cover-placeholder img-agent-1"><div class="game-icon">&#129302;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(38,92%,50%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(38,92%,50%,0.15);color:hsl(38,92%,40%)">Agente</div>
+            <div class="tag-badge" style="background:hsla(140,60%,85%,0.9);color:hsl(140,60%,30%)">Attivo</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Wingspan Expert</div>
+            <div class="card-subtitle">GPT-4o &bull; RAG Hybrid &bull; 847 invocazioni</div>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <div class="meta-chip"><svg><use href="#icon-doc"/></svg> 3 documenti</div>
+              <div class="meta-chip"><svg><use href="#icon-chat"/></svg> 4 chat</div>
+            </div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- Game -->
+              <div class="nav-btn" style="--btn-color:hsla(25,95%,45%,0.40);--btn-glow:hsla(25,95%,45%,0.20);--btn-stroke:hsl(25,95%,45%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-game"/></svg>
+                </div>
+                <div class="nav-btn-label">Gioco</div>
+              </div>
+              <!-- Chat: 4 -->
+              <div class="nav-btn" style="--btn-color:hsla(220,80%,55%,0.40);--btn-glow:hsla(220,80%,55%,0.20);--btn-stroke:hsl(220,80%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-chat"/></svg>
+                  <div class="nav-badge" style="background:hsl(220,80%,55%)">4</div>
+                </div>
+                <div class="nav-btn-label">Chat</div>
+              </div>
+              <!-- KB: 3 -->
+              <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-doc"/></svg>
+                  <div class="nav-badge" style="background:hsl(210,40%,55%)">3</div>
+                </div>
+                <div class="nav-btn-label">KB</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent 2: New agent -->
+      <div>
+        <div class="state-label state-empty">Agente nuovo</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(38,92%,50%)"></div>
+          <div class="cover">
+            <div class="cover-placeholder img-agent-2"><div class="game-icon">&#128640;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(38,92%,50%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(38,92%,50%,0.15);color:hsl(38,92%,40%)">Agente</div>
+            <div class="tag-badge" style="background:hsla(38,90%,90%,0.9);color:hsl(38,90%,35%)">Training</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Spirit Island Helper</div>
+            <div class="card-subtitle">Claude 3.5 &bull; RAG &bull; 0 invocazioni</div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- Game -->
+              <div class="nav-btn" style="--btn-color:hsla(25,95%,45%,0.40);--btn-glow:hsla(25,95%,45%,0.20);--btn-stroke:hsl(25,95%,45%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-game"/></svg>
+                </div>
+                <div class="nav-btn-label">Gioco</div>
+              </div>
+              <!-- Chat: 0 with + -->
+              <div class="nav-btn" style="--btn-color:hsla(220,80%,55%,0.40);--btn-glow:hsla(220,80%,55%,0.20);--btn-stroke:hsl(220,80%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-chat"/></svg>
+                  <div class="nav-plus" style="background:hsl(220,80%,55%)">+</div>
+                </div>
+                <div class="nav-btn-label">Chat</div>
+              </div>
+              <!-- KB: 0 with + -->
+              <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-doc"/></svg>
+                  <div class="nav-plus" style="background:hsl(210,40%,55%)">+</div>
+                </div>
+                <div class="nav-btn-label">KB</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION 9: CHAT SESSION CARDS ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">9</div>
+      <div class="section-title">Chat Session Card</div>
+      <div class="section-desc">entity: chatSession &bull; Colore: Blue (220, 80%, 55%)</div>
+    </div>
+
+    <div class="card-type-divider" style="background:hsla(220,80%,55%,0.05)">
+      <div class="card-type-icon" style="background:hsla(220,80%,55%,0.12)">
+        <svg style="stroke:hsl(220,80%,55%)"><use href="#icon-chat"/></svg>
+      </div>
+      <div class="card-type-info">
+        <h4 style="color:hsl(220,80%,55%)">Chat Session Card</h4>
+        <p>Pulsanti: Game (se gameId) + Agent (sempre, chat ha sempre agente) + Document (se docs referenziati)</p>
+      </div>
+    </div>
+
+    <div class="grid-container">
+
+      <!-- Chat 1: Full links -->
+      <div>
+        <div class="state-label state-full">Chat con documenti</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(220,80%,55%)"></div>
+          <div class="cover" style="aspect-ratio:4/3">
+            <div class="cover-placeholder img-chat-1" style="aspect-ratio:4/3"><div class="game-icon">&#128172;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(220,80%,55%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(220,80%,55%,0.15);color:hsl(220,80%,45%)">Chat</div>
+            <div class="tag-badge" style="background:hsla(140,60%,85%,0.9);color:hsl(140,60%,30%)">Attiva</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Setup di Wingspan</div>
+            <div class="card-subtitle">Wingspan Expert &bull; 12 messaggi &bull; 5 min fa</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;font-style:italic">"Come si prepara il vassoio mangiatoie..."</div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- Game -->
+              <div class="nav-btn" style="--btn-color:hsla(25,95%,45%,0.40);--btn-glow:hsla(25,95%,45%,0.20);--btn-stroke:hsl(25,95%,45%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-game"/></svg>
+                </div>
+                <div class="nav-btn-label">Gioco</div>
+              </div>
+              <!-- Agent -->
+              <div class="nav-btn" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-agent"/></svg>
+                </div>
+                <div class="nav-btn-label">Agente</div>
+              </div>
+              <!-- Documents: 2 -->
+              <div class="nav-btn" style="--btn-color:hsla(210,40%,55%,0.40);--btn-glow:hsla(210,40%,55%,0.20);--btn-stroke:hsl(210,40%,55%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-doc"/></svg>
+                  <div class="nav-badge" style="background:hsl(210,40%,55%)">2</div>
+                </div>
+                <div class="nav-btn-label">Fonti</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat 2: Minimal (no referenced docs) -->
+      <div>
+        <div class="state-label state-partial">Chat senza fonti</div>
+        <div class="mc-grid">
+          <div class="entity-border" style="background:hsl(220,80%,55%)"></div>
+          <div class="cover" style="aspect-ratio:4/3">
+            <div class="cover-placeholder img-chat-2" style="aspect-ratio:4/3"><div class="game-icon">&#128488;</div></div>
+            <div class="shimmer"></div>
+            <div class="overlay-gradient" style="background:linear-gradient(to top, hsla(220,80%,55%,0.15), transparent 60%)"></div>
+          </div>
+          <div class="tag-stack">
+            <div class="tag-badge" style="background:hsla(220,80%,55%,0.15);color:hsl(220,80%,45%)">Chat</div>
+            <div class="tag-badge" style="background:hsla(210,50%,90%,0.9);color:hsl(210,50%,35%)">Archiviata</div>
+          </div>
+          <div class="content">
+            <div class="card-title">Strategia Azul</div>
+            <div class="card-subtitle">Azul Helper &bull; 4 messaggi &bull; 2gg fa</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;font-style:italic">"Qual e' la strategia migliore per..."</div>
+          </div>
+          <div class="nav-footer">
+            <div class="nav-footer-header">
+              <div class="nav-footer-line"></div>
+              <div class="nav-footer-label">Naviga verso</div>
+              <div class="nav-footer-line"></div>
+            </div>
+            <div class="nav-icons">
+              <!-- Game -->
+              <div class="nav-btn" style="--btn-color:hsla(25,95%,45%,0.40);--btn-glow:hsla(25,95%,45%,0.20);--btn-stroke:hsl(25,95%,45%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-game"/></svg>
+                </div>
+                <div class="nav-btn-label">Gioco</div>
+              </div>
+              <!-- Agent -->
+              <div class="nav-btn" style="--btn-color:hsla(38,92%,50%,0.40);--btn-glow:hsla(38,92%,50%,0.20);--btn-stroke:hsl(38,92%,50%)">
+                <div class="nav-btn-icon">
+                  <svg><use href="#icon-agent"/></svg>
+                </div>
+                <div class="nav-btn-label">Agente</div>
+              </div>
+              <!-- Documents: HIDDEN (no docs referenced in this chat) -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION 10: PLAYER CARDS ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">10</div>
+      <div class="section-title">Player Card (Compact)</div>
+      <div class="section-desc">entity: player &bull; Colore: Purple (262, 83%, 58%) &bull; variant: compact</div>
+    </div>
+
+    <div class="card-type-divider" style="background:hsla(262,83%,58%,0.05)">
+      <div class="card-type-icon" style="background:hsla(262,83%,58%,0.12)">
+        <svg style="stroke:hsl(262,83%,58%)"><use href="#icon-player"/></svg>
+      </div>
+      <div class="card-type-info">
+        <h4 style="color:hsl(262,83%,58%)">Player Card</h4>
+        <p>Pulsanti: Sessions (se ha partecipato a sessioni). Player cards tipicamente in variante compact.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;max-width:440px">
+
+      <!-- Player 1: Many sessions -->
+      <div class="state-label state-full" style="margin-bottom:2px">Con sessioni</div>
+      <div class="mc-compact">
+        <div class="entity-dot" style="background:hsl(262,83%,58%)"></div>
+        <div class="compact-avatar img-player-1" style="border-radius:50%"><div class="game-icon" style="opacity:0.5;font-size:1rem">&#128100;</div></div>
+        <div class="compact-content">
+          <div class="card-title">Marco R.</div>
+          <div class="card-subtitle">5 sessioni &bull; Ultimo: 14 Feb</div>
+        </div>
+        <div class="nav-footer-inline">
+          <div class="nav-btn" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+            <div class="nav-btn-icon">
+              <svg><use href="#icon-session"/></svg>
+              <div class="nav-badge" style="background:hsl(240,60%,55%)">5</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player 2: 1 session (direct nav) -->
+      <div class="state-label state-partial" style="margin-bottom:2px;margin-top:8px">Una sessione</div>
+      <div class="mc-compact">
+        <div class="entity-dot" style="background:hsl(262,83%,58%)"></div>
+        <div class="compact-avatar img-player-2" style="border-radius:50%"><div class="game-icon" style="opacity:0.5;font-size:1rem">&#128100;</div></div>
+        <div class="compact-content">
+          <div class="card-title">Sara T.</div>
+          <div class="card-subtitle">1 sessione &bull; Ultimo: 10 Feb</div>
+        </div>
+        <div class="nav-footer-inline">
+          <div class="nav-btn" style="--btn-color:hsla(240,60%,55%,0.40);--btn-glow:hsla(240,60%,55%,0.20);--btn-stroke:hsl(240,60%,55%)">
+            <div class="nav-btn-icon">
+              <svg><use href="#icon-session"/></svg>
+              <div class="nav-badge" style="background:hsl(240,60%,55%)">1</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player 3: No sessions (footer hidden) -->
+      <div class="state-label state-not-in-collection" style="margin-bottom:2px;margin-top:8px">Nessuna sessione</div>
+      <div class="mc-compact">
+        <div class="entity-dot" style="background:hsl(262,83%,58%)"></div>
+        <div class="compact-avatar img-player-3" style="border-radius:50%"><div class="game-icon" style="opacity:0.5;font-size:1rem">&#128100;</div></div>
+        <div class="compact-content">
+          <div class="card-title">Luca B.</div>
+          <div class="card-subtitle">Invitato &bull; Mai giocato</div>
+        </div>
+        <!-- No nav footer (no sessions) -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 11: COMPLETE MATRIX SUMMARY ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">&Sigma;</div>
+      <div class="section-title">Matrice Completa</div>
+      <div class="section-desc">Riepilogo tutti i pulsanti per ogni card type</div>
+    </div>
+
+    <div style="padding:18px 22px;background:var(--bg-card);backdrop-filter:blur(12px);border-radius:14px;border:1px solid var(--border-light);box-shadow:var(--shadow-warm-sm);overflow-x:auto">
+      <table style="width:100%;font-size:0.72rem;border-collapse:collapse;min-width:640px">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border-color)">
+            <th style="text-align:left;padding:8px;font-weight:700;color:var(--text-primary);min-width:100px">Card Type</th>
+            <th style="text-align:center;padding:8px;font-weight:700">
+              <svg width="14" height="14" style="stroke:hsl(25,95%,45%);fill:none;stroke-width:1.5;vertical-align:middle"><use href="#icon-game"/></svg>
+              <span style="color:hsl(25,95%,45%)">Game</span>
+            </th>
+            <th style="text-align:center;padding:8px;font-weight:700">
+              <svg width="14" height="14" style="stroke:hsl(262,83%,58%);fill:none;stroke-width:1.5;vertical-align:middle"><use href="#icon-player"/></svg>
+              <span style="color:hsl(262,83%,58%)">Players</span>
+            </th>
+            <th style="text-align:center;padding:8px;font-weight:700">
+              <svg width="14" height="14" style="stroke:hsl(240,60%,55%);fill:none;stroke-width:1.5;vertical-align:middle"><use href="#icon-session"/></svg>
+              <span style="color:hsl(240,60%,55%)">Sessions</span>
+            </th>
+            <th style="text-align:center;padding:8px;font-weight:700">
+              <svg width="14" height="14" style="stroke:hsl(210,40%,55%);fill:none;stroke-width:1.5;vertical-align:middle"><use href="#icon-doc"/></svg>
+              <span style="color:hsl(210,40%,55%)">KB/Doc</span>
+            </th>
+            <th style="text-align:center;padding:8px;font-weight:700">
+              <svg width="14" height="14" style="stroke:hsl(38,92%,50%);fill:none;stroke-width:1.5;vertical-align:middle"><use href="#icon-agent"/></svg>
+              <span style="color:hsl(38,92%,50%)">Agent</span>
+            </th>
+            <th style="text-align:center;padding:8px;font-weight:700">
+              <svg width="14" height="14" style="stroke:hsl(220,80%,55%);fill:none;stroke-width:1.5;vertical-align:middle"><use href="#icon-chat"/></svg>
+              <span style="color:hsl(220,80%,55%)">Chat</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:8px;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:hsl(25,95%,45%)"></span>
+              Game
+            </td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">In coll.</td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">In coll.</td>
+            <td style="text-align:center;padding:8px;color:hsl(38,92%,50%)">In coll. + RAG</td>
+            <td style="text-align:center;padding:8px;color:hsl(220,80%,55%)">Ha Agent</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:8px;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:hsl(240,60%,55%)"></span>
+              Session
+            </td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">Se gameId</td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">Sempre</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">Game in coll.</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:hsl(220,80%,55%)">Game ha Agent</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:8px;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:hsl(210,40%,55%)"></span>
+              Document
+            </td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">Se gameId</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:hsl(38,92%,50%)">Game ha Agent</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:8px;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:hsl(38,92%,50%)"></span>
+              Agent
+            </td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">Sempre</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">Sempre</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">Sempre</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:8px;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:hsl(220,80%,55%)"></span>
+              Chat
+            </td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">Se gameId</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:hsl(210,40%,55%)">Se refs</td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">Sempre</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+          </tr>
+          <tr>
+            <td style="padding:8px;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:hsl(262,83%,58%)"></span>
+              Player
+            </td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:hsl(140,60%,35%)">Se partecipato</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+            <td style="text-align:center;padding:8px;color:var(--text-muted)">&mdash;</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px;font-size:0.65rem;color:var(--text-muted);display:flex;gap:16px;flex-wrap:wrap">
+        <span><strong style="color:hsl(140,60%,35%)">Verde</strong> = condizione per visibilita'</span>
+        <span><strong style="color:var(--text-muted)">&mdash;</strong> = mai visibile su questo card type</span>
+        <span><strong style="color:hsl(38,92%,50%)">Colore entita'</strong> = condizione speciale</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  html.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
+}
+</script>
+
+</body>
+</html>

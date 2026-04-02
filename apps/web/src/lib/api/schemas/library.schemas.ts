@@ -229,15 +229,6 @@ export const SharedLibraryGameSchema = z.object({
 
 export type SharedLibraryGame = z.infer<typeof SharedLibraryGameSchema>;
 
-export const SharedWishlistItemSchema = z.object({
-  gameId: z.string().uuid(),
-  gameTitle: z.string(),
-  gameImageUrl: z.string().nullable(),
-  priority: z.enum(['High', 'Medium', 'Low']),
-});
-
-export type SharedWishlistItem = z.infer<typeof SharedWishlistItemSchema>;
-
 export const SharedLibrarySchema = z.object({
   ownerDisplayName: z.string(),
   games: z.array(SharedLibraryGameSchema),
@@ -245,7 +236,6 @@ export const SharedLibrarySchema = z.object({
   favoritesCount: z.number().int().nonnegative(),
   privacyLevel: z.enum(['public', 'unlisted']),
   sharedAt: z.string().datetime(),
-  wishlistItems: z.array(SharedWishlistItemSchema).optional().default([]),
 });
 
 export type SharedLibrary = z.infer<typeof SharedLibrarySchema>;

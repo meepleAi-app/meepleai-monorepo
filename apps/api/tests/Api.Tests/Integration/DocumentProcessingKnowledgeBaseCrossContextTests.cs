@@ -168,7 +168,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
     }
 
     [Fact]
-    public async Task PdfUpload_CreatesDocument_WithPendingProcessingState()
+    public async Task PdfUpload_CreatesDocument_WithPendingProcessingStatus()
     {
         // Arrange
         await ResetDatabaseAsync();

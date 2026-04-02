@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI Logo Test - Authentic Shape</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 1rem;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            color: #1e293b;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: #f8fafc;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .card h3 {
+            font-size: 1rem;
+            color: #64748b;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .logo-container {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+            margin-bottom: 1rem;
+        }
+
+        .dark-bg {
+            background: #0f172a;
+        }
+
+        .sizes {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 1.5rem;
+            padding: 2rem;
+            background: white;
+            border-radius: 0.5rem;
+        }
+
+        .size-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .size-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .full-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 MeepleAI Logo - Authentic Meeple Shape</h1>
+
+        <div class="grid">
+            <!-- Icon Only - Light BG -->
+            <div class="card">
+                <h3>Icon Only (Light)</h3>
+                <div class="logo-container">
+                    <img src="meepleai-logo-icon.svg" alt="MeepleAI" width="120" height="120" />
+                </div>
+                <p style="color: #64748b; font-size: 0.875rem;">
+                    Icon con gradient blu-viola<br/>
+                    <strong>File:</strong> meepleai-logo-icon.svg
+                </p>
+            </div>
+
+            <!-- Icon Only - Dark BG -->
+            <div class="card">
+                <h3>Icon Only (Dark)</h3>
+                <div class="logo-container dark-bg">
+                    <img src="meepleai-logo-white.svg" alt="MeepleAI" width="120" height="120" />
+                </div>
+                <p style="color: #64748b; font-size: 0.875rem;">
+                    Icon bianco per sfondi scuri<br/>
+                    <strong>File:</strong> meepleai-logo-white.svg
+                </p>
+            </div>
+
+            <!-- Monochrome -->
+            <div class="card">
+                <h3>Monochrome (Print)</h3>
+                <div class="logo-container">
+                    <img src="meepleai-logo-monochrome.svg" alt="MeepleAI" width="120" height="120" />
+                </div>
+                <p style="color: #64748b; font-size: 0.875rem;">
+                    Versione B&W per stampa<br/>
+                    <strong>File:</strong> meepleai-logo-monochrome.svg
+                </p>
+            </div>
+        </div>
+
+        <!-- Full Logo with Wordmark -->
+        <div style="margin-top: 3rem;">
+            <h2 style="font-size: 1.5rem; text-align: center; color: #1e293b; margin-bottom: 1.5rem;">
+                Full Logo con Wordmark
+            </h2>
+            <div class="card">
+                <div class="logo-container">
+                    <div class="full-logo">
+                        <img src="meepleai-logo-full.svg" alt="MeepleAI" height="100" style="max-width: 100%;" />
+                    </div>
+                </div>
+                <p style="color: #64748b; font-size: 0.875rem;">
+                    Logo completo per navbar e header<br/>
+                    <strong>File:</strong> meepleai-logo-full.svg
+                </p>
+            </div>
+        </div>
+
+        <!-- Scalability Test -->
+        <div style="margin-top: 3rem;">
+            <h2 style="font-size: 1.5rem; text-align: center; color: #1e293b; margin-bottom: 1.5rem;">
+                Test Scalabilità
+            </h2>
+            <div class="card">
+                <div class="sizes">
+                    <div class="size-item">
+                        <img src="meepleai-logo-icon.svg" width="16" height="16" />
+                        <span class="size-label">16px<br/>(Favicon)</span>
+                    </div>
+                    <div class="size-item">
+                        <img src="meepleai-logo-icon.svg" width="32" height="32" />
+                        <span class="size-label">32px<br/>(App)</span>
+                    </div>
+                    <div class="size-item">
+                        <img src="meepleai-logo-icon.svg" width="64" height="64" />
+                        <span class="size-label">64px<br/>(Navbar)</span>
+                    </div>
+                    <div class="size-item">
+                        <img src="meepleai-logo-icon.svg" width="128" height="128" />
+                        <span class="size-label">128px<br/>(Hero)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison with Reference -->
+        <div style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, #f0f9ff, #f5f3ff); border-radius: 1rem; border-left: 4px solid #3B82F6;">
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 1rem;">
+                ✅ Authentic Meeple Characteristics
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; color: #475569;">
+                <div>
+                    <strong style="color: #3B82F6;">✓ Head</strong>
+                    <p style="font-size: 0.875rem; margin-top: 0.25rem;">Circular, proportional</p>
+                </div>
+                <div>
+                    <strong style="color: #3B82F6;">✓ Arms</strong>
+                    <p style="font-size: 0.875rem; margin-top: 0.25rem;">Extended horizontally (cross shape)</p>
+                </div>
+                <div>
+                    <strong style="color: #3B82F6;">✓ Body</strong>
+                    <p style="font-size: 0.875rem; margin-top: 0.25rem;">Wide, dress/skirt shape</p>
+                </div>
+                <div>
+                    <strong style="color: #3B82F6;">✓ Base</strong>
+                    <p style="font-size: 0.875rem; margin-top: 0.25rem;">Broad, stable stance</p>
+                </div>
+            </div>
+            <p style="color: #64748b; font-size: 0.875rem; margin-top: 1.5rem; line-height: 1.6;">
+                <strong>Reference:</strong> Classic meeple from Carcassonne - iconic board game piece shape with arms extended horizontally like a cross, creating the signature silhouette recognized by all board gamers.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

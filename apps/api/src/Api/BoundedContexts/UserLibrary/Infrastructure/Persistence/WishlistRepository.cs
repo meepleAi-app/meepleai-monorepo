@@ -96,20 +96,6 @@ internal class WishlistRepository : RepositoryBase, IWishlistRepository
             .ConfigureAwait(false);
     }
 
-    public async Task<IReadOnlyList<WishlistItem>> GetPublicByUserIdAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default)
-    {
-        var entities = await DbContext.WishlistItems
-            .AsNoTracking()
-            .Where(e => e.UserId == userId && e.Visibility == (int)WishlistVisibility.Public)
-            .OrderByDescending(e => e.Priority)
-            .ThenByDescending(e => e.AddedAt)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-
-        return entities.Select(MapToDomain).ToList();
-    }
-
     public async Task AddAsync(WishlistItem item, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -165,10 +151,6 @@ internal class WishlistRepository : RepositoryBase, IWishlistRepository
 
         var updatedAtProp = typeof(WishlistItem).GetProperty("UpdatedAt");
         updatedAtProp?.SetValue(item, entity.UpdatedAt);
-
-        var visibilityProp = typeof(WishlistItem).GetProperty("Visibility")
-            ?? throw new InvalidOperationException("WishlistItem.Visibility property not found via reflection");
-        visibilityProp.SetValue(item, (WishlistVisibility)entity.Visibility);
 
         // Clear domain events from Create method
         item.ClearDomainEvents();

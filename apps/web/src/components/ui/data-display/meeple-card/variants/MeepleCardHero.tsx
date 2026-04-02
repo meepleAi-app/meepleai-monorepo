@@ -33,7 +33,6 @@ import { SessionStatusBadge } from '../../meeple-card-features/SessionStatusBadg
 import { SessionTurnSequence } from '../../meeple-card-features/SessionTurnSequence';
 import { SnapshotHistorySlider } from '../../meeple-card-features/SnapshotHistorySlider';
 import { StatusBadge } from '../../meeple-card-features/StatusBadge';
-import { SymbolStrip } from '../../meeple-card-features/SymbolStrip';
 import { TimeTravelOverlay } from '../../meeple-card-features/TimeTravelOverlay';
 import {
   EntityIndicator,
@@ -46,8 +45,6 @@ import {
   DRAWER_ENTITY_TYPE_MAP,
   meepleCardVariants,
   contentVariants,
-  getCardFrameStyle,
-  CARD_SECTION_HEIGHTS,
 } from '../../meeple-card-styles';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
 import { CardActions, CardActionStrip } from '../parts/CardActions';
@@ -134,21 +131,6 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
     stateLabel,
     coverLabels,
     subtypeIcons,
-    identityChip1,
-    identityChip2,
-    playerCountDisplay,
-    playTimeDisplay,
-    gamesPlayed,
-    winRate,
-    winnerScore,
-    sessionDate,
-    conversationCount,
-    agentAccuracy,
-    linkedKbCount,
-    pageCount,
-    chunkCount,
-    bottomStatLabel,
-    bottomStatValue,
   } = props;
 
   const variant = 'hero' as const;
@@ -247,7 +229,6 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
       )}
       style={
         {
-          ...getCardFrameStyle('hero'),
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
           willChange: 'transform, box-shadow, outline',
@@ -271,7 +252,6 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
       data-variant={variant}
-      data-card-root
     >
       {selectable && (
         <BulkSelectCheckbox
@@ -331,22 +311,6 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
 
       {/* Content area (overlaid at bottom) */}
       <div className={contentVariants({ variant })}>
-        <SymbolStrip
-          entity={entity}
-          identityChip1={identityChip1}
-          identityChip2={identityChip2}
-          playerCountDisplay={playerCountDisplay}
-          playTimeDisplay={playTimeDisplay}
-          gamesPlayed={gamesPlayed}
-          winRate={winRate}
-          winnerScore={winnerScore}
-          sessionDate={sessionDate}
-          conversationCount={conversationCount}
-          agentAccuracy={agentAccuracy}
-          linkedKbCount={linkedKbCount}
-          pageCount={pageCount}
-          chunkCount={chunkCount}
-        />
         <CardActions
           variant={variant}
           entity={entity}
@@ -501,20 +465,6 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
         {/* Action buttons are rendered by CardActions above (hero variant) */}
 
         {/* Badge overlay: not rendered for hero (handled by VerticalTagStack / CardBadges) */}
-      </div>
-
-      {/* Bottom bar */}
-      <div
-        className="flex items-center justify-between px-2 shrink-0 bg-black/70 border-t border-white/5"
-        style={{ height: `${CARD_SECTION_HEIGHTS.bottomBar}px` }}
-      >
-        <span className="text-[9px] text-white/40 truncate">{subtitle}</span>
-        {bottomStatValue && (
-          <span className="text-[9px] text-white/60 shrink-0">
-            {bottomStatLabel ? `${bottomStatLabel} ` : ''}
-            {bottomStatValue}
-          </span>
-        )}
       </div>
 
       {/* Agent action footer */}

@@ -34,7 +34,6 @@ import { SessionStatusBadge } from '../../meeple-card-features/SessionStatusBadg
 import { SessionTurnSequence } from '../../meeple-card-features/SessionTurnSequence';
 import { SnapshotHistorySlider } from '../../meeple-card-features/SnapshotHistorySlider';
 import { StatusGlow } from '../../meeple-card-features/StatusGlow';
-import { SymbolStrip } from '../../meeple-card-features/SymbolStrip';
 import { TimeTravelOverlay } from '../../meeple-card-features/TimeTravelOverlay';
 import { RatingDisplay, MeepleCardSkeleton } from '../../meeple-card-parts';
 import {
@@ -42,8 +41,6 @@ import {
   DRAWER_ENTITY_TYPE_MAP,
   meepleCardVariants,
   contentVariants,
-  getCardFrameStyle,
-  CARD_SECTION_HEIGHTS,
 } from '../../meeple-card-styles';
 import { useCardTheme } from '../hooks/useCardTheme';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
@@ -136,21 +133,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     coverLabels,
     subtypeIcons,
     showHolo = false,
-    identityChip1,
-    identityChip2,
-    playerCountDisplay,
-    playTimeDisplay,
-    gamesPlayed,
-    winRate,
-    winnerScore,
-    sessionDate,
-    conversationCount,
-    agentAccuracy,
-    linkedKbCount,
-    pageCount,
-    chunkCount,
-    bottomStatLabel,
-    bottomStatValue,
   } = props;
 
   const cardTheme = useCardTheme();
@@ -272,7 +254,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
       )}
       style={
         {
-          ...getCardFrameStyle('grid'),
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
           viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
@@ -295,7 +276,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
       data-variant={variant}
-      data-card-root
     >
       {showHolo && <HoloOverlay />}
 
@@ -349,23 +329,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         subtypeIcons={subtypeIcons}
         stateLabel={stateLabel}
         actionStrip={stripElement}
-      />
-
-      <SymbolStrip
-        entity={entity}
-        identityChip1={identityChip1}
-        identityChip2={identityChip2}
-        playerCountDisplay={playerCountDisplay}
-        playTimeDisplay={playTimeDisplay}
-        gamesPlayed={gamesPlayed}
-        winRate={winRate}
-        winnerScore={winnerScore}
-        sessionDate={sessionDate}
-        conversationCount={conversationCount}
-        agentAccuracy={agentAccuracy}
-        linkedKbCount={linkedKbCount}
-        pageCount={pageCount}
-        chunkCount={chunkCount}
       />
 
       {/* Content area */}
@@ -596,20 +559,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
       ) : navigateTo && navigateTo.length > 0 ? (
         <CardNavigationFooter links={navigateTo} />
       ) : null}
-
-      {/* Bottom bar */}
-      <div
-        className="flex items-center justify-between px-2 shrink-0 bg-black/70 border-t border-white/5"
-        style={{ height: `${CARD_SECTION_HEIGHTS.bottomBar}px` }}
-      >
-        <span />
-        {bottomStatValue && (
-          <span className="text-[9px] text-white/60 shrink-0">
-            {bottomStatLabel ? `${bottomStatLabel} ` : ''}
-            {bottomStatValue}
-          </span>
-        )}
-      </div>
 
       {/* Drawer */}
       {entityId && drawerEntityType && (

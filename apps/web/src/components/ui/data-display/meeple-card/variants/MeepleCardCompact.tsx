@@ -15,15 +15,12 @@ import { cn } from '@/lib/utils';
 import { ExtraMeepleCardDrawer } from '../../extra-meeple-card/ExtraMeepleCardDrawer';
 import { BulkSelectCheckbox } from '../../meeple-card-features/BulkSelectCheckbox';
 import { CardAgentAction } from '../../meeple-card-features/CardAgentAction';
-import { SymbolStrip } from '../../meeple-card-features/SymbolStrip';
 import { EntityIndicator, MeepleCardSkeleton } from '../../meeple-card-parts';
 import {
   entityColors,
   DRAWER_ENTITY_TYPE_MAP,
   meepleCardVariants,
   contentVariants,
-  getCardFrameStyle,
-  CARD_SECTION_HEIGHTS,
 } from '../../meeple-card-styles';
 import { useCardTheme } from '../hooks/useCardTheme';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
@@ -73,21 +70,6 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
     onCreateAgent,
     navigateTo,
     stateLabel: _stateLabel,
-    identityChip1,
-    identityChip2,
-    playerCountDisplay,
-    playTimeDisplay,
-    gamesPlayed,
-    winRate,
-    winnerScore,
-    sessionDate,
-    conversationCount,
-    agentAccuracy,
-    linkedKbCount,
-    pageCount,
-    chunkCount,
-    bottomStatLabel,
-    bottomStatValue,
   } = props;
 
   const cardTheme = useCardTheme();
@@ -144,7 +126,6 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
       )}
       style={
         {
-          ...getCardFrameStyle('compact'),
           '--mc-entity-color': `hsl(${color})`,
           viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
         } as React.CSSProperties
@@ -166,7 +147,6 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
       data-variant={variant}
-      data-card-root
     >
       {selectable && (
         <BulkSelectCheckbox
@@ -182,23 +162,6 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
 
       {/* Compact variant: no cover image (matching original monolith behavior) */}
 
-      <SymbolStrip
-        entity={entity}
-        identityChip1={identityChip1}
-        identityChip2={identityChip2}
-        playerCountDisplay={playerCountDisplay}
-        playTimeDisplay={playTimeDisplay}
-        gamesPlayed={gamesPlayed}
-        winRate={winRate}
-        winnerScore={winnerScore}
-        sessionDate={sessionDate}
-        conversationCount={conversationCount}
-        agentAccuracy={agentAccuracy}
-        linkedKbCount={linkedKbCount}
-        pageCount={pageCount}
-        chunkCount={chunkCount}
-      />
-
       {/* Content area */}
       <div className={contentVariants({ variant })}>
         <CardActions
@@ -213,20 +176,6 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
         </h3>
 
         {subtitle && <p className="text-muted-foreground text-xs mb-0">{subtitle}</p>}
-      </div>
-
-      {/* Bottom bar */}
-      <div
-        className="flex items-center justify-between px-2 shrink-0 bg-black/70 border-t border-white/5"
-        style={{ height: `${CARD_SECTION_HEIGHTS.bottomBar}px` }}
-      >
-        <span />
-        {bottomStatValue && (
-          <span className="text-[9px] text-white/60 shrink-0">
-            {bottomStatLabel ? `${bottomStatLabel} ` : ''}
-            {bottomStatValue}
-          </span>
-        )}
       </div>
 
       {/* Agent action footer */}

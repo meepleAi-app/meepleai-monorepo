@@ -2,28 +2,25 @@
  * Session Creation Wizard
  *
  * Issue #5041 — Sessions Redesign Phase 1
- * Game Session Flow v2.0 — Task 14 (added phases step)
  *
- * 5-step wizard:
+ * 4-step wizard:
  *   1. Select game from library
  *   2. Configure scoring dimensions
  *   3. Add players (name, color, avatar)
- *   4. Configure phases (pre-loaded templates, optional)
- *   5. Review & Create
+ *   4. Review & Create
  *
  * Creates a LiveSession via liveSessionsClient.
  */
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   Dices,
-  Layers,
   Loader2,
   Plus,
   Search,
@@ -37,7 +34,6 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { trackSessionCreated } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
-import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import type {
   PlayerColor,
   CreateLiveSessionRequest,
@@ -60,11 +56,6 @@ interface PlayerEntry {
   id: string;
   displayName: string;
   color: PlayerColor;
-}
-
-interface WizardPhase {
-  localId: string;
-  phaseName: string;
 }
 
 const PLAYER_COLORS: { value: PlayerColor; label: string; className: string }[] = [
@@ -424,102 +415,18 @@ function AddPlayersStep({
   );
 }
 
-// ========== Step 4: Configure Phases ==========
-
-function ConfigurePhasesStep({
-  phases,
-  isLoading,
-  onAddPhase,
-  onRemovePhase,
-  onUpdatePhaseName,
-}: {
-  phases: WizardPhase[];
-  isLoading: boolean;
-  onAddPhase: () => void;
-  onRemovePhase: (localId: string) => void;
-  onUpdatePhaseName: (localId: string, name: string) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold font-quicksand">Configura le fasi</h2>
-        <p className="text-sm text-muted-foreground">
-          {phases.length > 0
-            ? 'Fasi pre-caricate dalle impostazioni del gioco. Puoi modificarle o saltare.'
-            : 'Aggiungi le fasi del turno (opzionale).'}
-        </p>
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <p className="text-sm text-muted-foreground">Caricamento fasi...</p>
-        </div>
-      ) : (
-        <>
-          {phases.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/60 p-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                Nessuna fase. Aggiungine una o procedi.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {phases.map((phase, idx) => (
-                <div
-                  key={phase.localId}
-                  className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2"
-                >
-                  <span className="text-xs font-mono text-muted-foreground w-5 shrink-0">
-                    {idx + 1}.
-                  </span>
-                  <Layers className="h-4 w-4 text-purple-400 shrink-0" />
-                  <Input
-                    value={phase.phaseName}
-                    onChange={e => onUpdatePhaseName(phase.localId, e.target.value)}
-                    placeholder={`Fase ${idx + 1}`}
-                    className="flex-1 h-8 text-sm"
-                    aria-label={`Nome fase ${idx + 1}`}
-                  />
-                  <button
-                    onClick={() => onRemovePhase(phase.localId)}
-                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                    aria-label={`Rimuovi fase ${idx + 1}`}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <Button variant="outline" size="sm" onClick={onAddPhase} className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            Aggiungi fase
-          </Button>
-        </>
-      )}
-
-      <p className="text-xs text-muted-foreground">
-        Puoi saltare questo passo — le fasi si possono configurare anche dopo.
-      </p>
-    </div>
-  );
-}
-
-// ========== Step 5: Review ==========
+// ========== Step 4: Review ==========
 
 function ReviewStep({
   gameName,
   selectedGame,
   dimensions,
   players,
-  phases,
 }: {
   gameName: string;
   selectedGame: GameOption | null;
   dimensions: ScoringDimension[];
   players: PlayerEntry[];
-  phases: WizardPhase[];
 }) {
   return (
     <div className="space-y-4">
@@ -579,27 +486,6 @@ function ReviewStep({
           ))}
         </div>
       </div>
-
-      {/* Phases */}
-      {phases.filter(p => p.phaseName.trim()).length > 0 && (
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
-            Fasi ({phases.filter(p => p.phaseName.trim()).length})
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {phases
-              .filter(p => p.phaseName.trim())
-              .map((phase, idx) => (
-                <span
-                  key={phase.localId}
-                  className="text-xs bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 rounded-full px-2.5 py-0.5"
-                >
-                  {idx + 1}. {phase.phaseName}
-                </span>
-              ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -622,40 +508,7 @@ export function SessionCreationWizard() {
   // Step 3: Players
   const [players, setPlayers] = useState<PlayerEntry[]>([]);
 
-  // Step 4: Phases
-  const [phases, setPhases] = useState<WizardPhase[]>([]);
-  const [isLoadingPhases, setIsLoadingPhases] = useState(false);
-
-  // Load phase templates when game is selected
-  useEffect(() => {
-    if (!selectedGame?.id) {
-      setPhases([]);
-      return;
-    }
-    setIsLoadingPhases(true);
-    api.games
-      .getPhaseTemplates(selectedGame.id)
-      .then((templates: PhaseTemplateDto[]) => {
-        const sorted = [...templates].sort((a, b) => a.phaseOrder - b.phaseOrder);
-        setPhases(sorted.map(t => ({ localId: t.id, phaseName: t.phaseName })));
-      })
-      .catch(() => setPhases([]))
-      .finally(() => setIsLoadingPhases(false));
-  }, [selectedGame?.id]);
-
-  const addPhase = useCallback(() => {
-    setPhases(prev => [...prev, { localId: `new-${Date.now()}`, phaseName: '' }]);
-  }, []);
-
-  const removePhase = useCallback((localId: string) => {
-    setPhases(prev => prev.filter(p => p.localId !== localId));
-  }, []);
-
-  const updatePhaseName = useCallback((localId: string, name: string) => {
-    setPhases(prev => prev.map(p => (p.localId === localId ? { ...p, phaseName: name } : p)));
-  }, []);
-
-  const totalSteps = 5;
+  const totalSteps = 4;
 
   const canProceed = (): boolean => {
     switch (step) {
@@ -666,8 +519,6 @@ export function SessionCreationWizard() {
       case 2:
         return players.length >= 1;
       case 3:
-        return true; // phases are optional
-      case 4:
         return true;
       default:
         return false;
@@ -696,18 +547,6 @@ export function SessionCreationWizard() {
         });
       }
 
-      // Configure phases if any (non-blocking)
-      const validPhases = phases.filter(p => p.phaseName.trim().length > 0);
-      if (validPhases.length > 0) {
-        try {
-          await api.liveSessions.configurePhases(sessionId, {
-            phaseNames: validPhases.map(p => p.phaseName.trim()),
-          });
-        } catch {
-          // Non-blocking — session can still be played without phases
-        }
-      }
-
       // Start the session
       await api.liveSessions.startSession(sessionId);
 
@@ -721,7 +560,7 @@ export function SessionCreationWizard() {
       setError(err instanceof Error ? err.message : 'Errore nella creazione della sessione');
       setIsCreating(false);
     }
-  }, [gameName, selectedGame, dimensions, players, phases, router]);
+  }, [gameName, selectedGame, dimensions, players, router]);
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -741,21 +580,11 @@ export function SessionCreationWizard() {
       )}
       {step === 2 && <AddPlayersStep players={players} onPlayersChange={setPlayers} />}
       {step === 3 && (
-        <ConfigurePhasesStep
-          phases={phases}
-          isLoading={isLoadingPhases}
-          onAddPhase={addPhase}
-          onRemovePhase={removePhase}
-          onUpdatePhaseName={updatePhaseName}
-        />
-      )}
-      {step === 4 && (
         <ReviewStep
           gameName={gameName}
           selectedGame={selectedGame}
           dimensions={dimensions}
           players={players}
-          phases={phases}
         />
       )}
 

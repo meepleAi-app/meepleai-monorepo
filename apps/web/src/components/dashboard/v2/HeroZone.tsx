@@ -1,0 +1,90 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
+
+import { cn } from '@/lib/utils';
+
+interface ActiveSession {
+  gameName: string;
+  duration: string;
+  sessionId: string;
+}
+
+interface HeroZoneProps {
+  userName: string;
+  activeSession?: ActiveSession;
+  className?: string;
+}
+
+function getTimeGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Buongiorno';
+  if (hour < 18) return 'Buon pomeriggio';
+  return 'Buonasera';
+}
+
+function getItalianDate(): string {
+  return new Date().toLocaleDateString('it-IT', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+// Fix #6: Compute date values after mount to avoid SSR/client hydration mismatch
+export function HeroZone({ userName, activeSession, className }: HeroZoneProps) {
+  const router = useRouter();
+  const [greeting, setGreeting] = useState('');
+  const [dateStr, setDateStr] = useState('');
+
+  useEffect(() => {
+    setGreeting(getTimeGreeting());
+    setDateStr(getItalianDate());
+  }, []);
+
+  if (activeSession) {
+    return (
+      <div
+        data-testid="hero-zone"
+        className={cn(
+          'rounded-2xl p-6 backdrop-blur-lg bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20',
+          className
+        )}
+      >
+        <p className="font-quicksand font-bold text-2xl text-foreground">
+          Hai una partita in corso: {activeSession.gameName}
+        </p>
+        <p data-testid="hero-date" className="text-muted-foreground text-sm mt-1 capitalize">
+          {activeSession.duration}
+        </p>
+        <button
+          className="mt-3 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
+          onClick={() => router.push(`/sessions/${activeSession.sessionId}`)}
+        >
+          Riprendi
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-testid="hero-zone"
+      className={cn(
+        'rounded-2xl px-7 py-6 backdrop-blur-lg bg-gradient-to-br from-[rgba(210,105,30,0.06)] to-[rgba(210,105,30,0.02)] border border-[rgba(210,105,30,0.10)]',
+        className
+      )}
+    >
+      <p className="font-quicksand font-bold text-2xl text-foreground">
+        {greeting ? `${greeting}, ` : ''}
+        {userName} 👋
+      </p>
+      <p data-testid="hero-date" className="text-muted-foreground text-sm mt-1 capitalize">
+        {dateStr}
+      </p>
+    </div>
+  );
+}

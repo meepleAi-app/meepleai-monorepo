@@ -66,9 +66,6 @@ internal static class UserLibraryCoreEndpoints
 
         // Ownership declaration endpoint (Ownership/RAG access feature)
         MapDeclareOwnershipEndpoint(group);
-
-        // Tier downgrade preview endpoint (Library Improvements)
-        MapGetLibraryForDowngradeEndpoint(group);
     }
 
     internal static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)
@@ -1034,18 +1031,23 @@ internal static class UserLibraryCoreEndpoints
             if (!authenticated) return error!;
 
             if (!TryGetUserId(context, session, out var userId))
+            {
                 return Results.Unauthorized();
+            }
 
-            var result = await mediator.Send(new GetLoanStatusQuery(userId, gameId), ct).ConfigureAwait(false);
+            var query = new GetLoanStatusQuery(userId, gameId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
             return result is null ? Results.NotFound() : Results.Ok(result);
         })
         .RequireAuthenticatedUser()
         .Produces<LoanStatusDto>(200)
-        .Produces(404)
         .Produces(401)
+        .Produces(404)
         .WithTags("Library")
-        .WithSummary("Get loan status for a game")
-        .WithDescription("Returns loan status (IsOnLoan, BorrowerInfo, LoanedSince) for a game in the user's library. Returns 404 if the game is not in the library.")
+        .WithName("GetLoanStatus")
+        .WithSummary("Get loan status of a game")
+        .WithDescription("Returns whether the game is currently on loan, the borrower info, and when it was loaned out. Returns 404 if the game is not in the user's library.")
         .WithOpenApi();
     }
 
@@ -1220,67 +1222,4 @@ internal static class UserLibraryCoreEndpoints
         .WithOpenApi();
     }
 
-    private static void MapGetLoanStatusEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/library/games/{gameId:guid}/loan-status", async (
-            Guid gameId,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var query = new GetLoanStatusQuery(userId, gameId);
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            return result is null ? Results.NotFound() : Results.Ok(result);
-        })
-        .RequireAuthenticatedUser()
-        .Produces<LoanStatusDto>(200)
-        .Produces(401)
-        .Produces(404)
-        .WithTags("Library")
-        .WithName("GetLoanStatus")
-        .WithSummary("Get loan status of a game")
-        .WithDescription("Returns whether the game is currently on loan, the borrower info, and when it was loaned out. Returns 404 if the game is not in the user's library.")
-        .WithOpenApi();
-    }
-
-    private static void MapGetLibraryForDowngradeEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/library/downgrade-preview", async (
-            [FromQuery] int newQuota,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var query = new GetLibraryForDowngradeQuery(userId, newQuota);
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            return Results.Ok(result);
-        })
-        .RequireAuthenticatedUser()
-        .Produces<LibraryForDowngradeDto>(200)
-        .Produces(400)
-        .Produces(401)
-        .WithTags("Library")
-        .WithName("GetLibraryForDowngrade")
-        .WithSummary("Preview library downgrade")
-        .WithDescription("Returns which games would be kept and which would need to be removed when downgrading to a lower library quota. Sorted by priority: favorites first, then most played.")
-        .WithOpenApi();
-    }
 }

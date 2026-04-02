@@ -291,6 +291,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
         services.AddScoped<IAdminRagStrategyRepository, AdminRagStrategyRepository>(); // Issue #5314: Admin strategy CRUD
         services.AddScoped<IModelCompatibilityRepository, ModelCompatibilityRepository>(); // Issue #5496: Model compatibility matrix + change log
+        services.AddScoped<IKbUserFeedbackRepository, KbUserFeedbackRepository>(); // KB-06: User feedback on KB chat responses
 
         // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
         services.AddScoped<IVectorStoreAdapter, PgVectorStoreAdapter>();

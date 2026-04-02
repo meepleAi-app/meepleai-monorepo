@@ -633,6 +633,7 @@ v1Api.MapDocumentCollectionEndpoints();
 // KnowledgeBase (RAG chat)
 v1Api.MapKnowledgeBaseEndpoints();
 v1Api.MapChatSessionEndpoints(); // Issue #3483: Chat session persistence endpoints
+v1Api.MapUserGameKbEndpoints(); // KB-06: User feedback on KB chat responses
 v1Api.MapModelEndpoints(); // Issue #3377: AI model configuration endpoints
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();

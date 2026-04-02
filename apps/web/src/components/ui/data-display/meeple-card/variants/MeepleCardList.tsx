@@ -228,6 +228,7 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
       data-variant={variant}
+      data-card-root
     >
       {selectable && (
         <BulkSelectCheckbox

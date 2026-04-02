@@ -602,7 +602,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         className="flex items-center justify-between px-2 shrink-0 bg-black/70 border-t border-white/5"
         style={{ height: `${CARD_SECTION_HEIGHTS.bottomBar}px` }}
       >
-        <span className="text-[9px] text-white/40 truncate">{subtitle}</span>
+        <span />
         {bottomStatValue && (
           <span className="text-[9px] text-white/60 shrink-0">
             {bottomStatLabel ? `${bottomStatLabel} ` : ''}

@@ -329,25 +329,24 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
         actionStrip={stripElement}
       />
 
-      <SymbolStrip
-        entity={entity}
-        identityChip1={identityChip1}
-        identityChip2={identityChip2}
-        playerCountDisplay={playerCountDisplay}
-        playTimeDisplay={playTimeDisplay}
-        gamesPlayed={gamesPlayed}
-        winRate={winRate}
-        winnerScore={winnerScore}
-        sessionDate={sessionDate}
-        conversationCount={conversationCount}
-        agentAccuracy={agentAccuracy}
-        linkedKbCount={linkedKbCount}
-        pageCount={pageCount}
-        chunkCount={chunkCount}
-      />
-
       {/* Content area (overlaid at bottom) */}
       <div className={contentVariants({ variant })}>
+        <SymbolStrip
+          entity={entity}
+          identityChip1={identityChip1}
+          identityChip2={identityChip2}
+          playerCountDisplay={playerCountDisplay}
+          playTimeDisplay={playTimeDisplay}
+          gamesPlayed={gamesPlayed}
+          winRate={winRate}
+          winnerScore={winnerScore}
+          sessionDate={sessionDate}
+          conversationCount={conversationCount}
+          agentAccuracy={agentAccuracy}
+          linkedKbCount={linkedKbCount}
+          pageCount={pageCount}
+          chunkCount={chunkCount}
+        />
         <CardActions
           variant={variant}
           entity={entity}

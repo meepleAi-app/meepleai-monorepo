@@ -23,7 +23,7 @@ import {
 interface DashboardFilters {
   search: string;
   category: string;
-  sort: 'alphabetical' | 'playCount';
+  sort: 'alphabetical' | 'playCount' | 'lastPlayed' | 'rating';
   page: number;
   pageSize: number;
 }
@@ -55,7 +55,6 @@ interface DashboardState {
   fetchGames: () => Promise<void>;
   fetchTrendingGames: (limit?: number) => Promise<void>;
   updateFilters: (filters: Partial<DashboardFilters>) => void;
-  loadMore: () => Promise<void>;
   reset: () => void;
 }
 
@@ -158,14 +157,6 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     }));
     // Re-fetch with new filters
     get().fetchGames();
-  },
-
-  loadMore: async () => {
-    const { filters: _filters } = get();
-    set(state => ({
-      filters: { ...state.filters, page: state.filters.page + 1 },
-    }));
-    await get().fetchGames();
   },
 
   reset: () => {

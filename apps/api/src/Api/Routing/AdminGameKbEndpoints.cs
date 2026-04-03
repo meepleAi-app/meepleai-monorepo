@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Application.Queries.GameKbStatus;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.RemoveDocumentFromKb;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.SetGameKbSettings;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminGameKbDocuments;
@@ -15,6 +16,7 @@ namespace Api.Routing;
 /// KB-02: Remove a document from a game's KB.
 /// KB-08: Paginated feedback review per-game.
 /// KB-10: Get/set per-game KB settings overrides.
+/// KB-GAMES: Overview dashboard with KB status per game.
 /// </summary>
 internal static class AdminGameKbEndpoints
 {
@@ -23,6 +25,15 @@ internal static class AdminGameKbEndpoints
         var g = group.MapGroup("/admin/kb/games")
             .WithTags("Admin", "KnowledgeBase")
             .AddEndpointFilter<RequireAdminSessionFilter>();
+
+        // KB-GAMES: GET /api/v1/admin/kb/games — overview di tutti i giochi con stato KB
+        g.MapGet("/", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator.Send(new GetGameKbStatusesQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetGameKbStatuses")
+        .WithSummary("Overview KB status per tutti i giochi (admin)");
 
         // KB-01: GET /api/v1/admin/kb/games/{gameId}/documents
         g.MapGet("/{gameId:guid}/documents", async (

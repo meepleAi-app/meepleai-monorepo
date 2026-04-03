@@ -7,10 +7,6 @@
  * - .storybook/preview.tsx (MSW Storybook addon)
  *
  * The existing __tests__/mocks/handlers/index.ts is NOT affected.
- *
- * TODO: add remaining domain handlers as they are implemented:
- *   library, shared-games, catalog, admin, sessions,
- *   game-nights, players, notifications, badges
  */
 
 import { adminHandlers } from './admin.handlers';
@@ -47,13 +43,14 @@ export const handlers = [
 export { authHandlers } from './auth.handlers';
 export { gamesHandlers } from './games.handlers';
 export { chatHandlers } from './chat.handlers';
+export { resetChatState } from './chat.handlers';
 export { documentsHandlers } from './documents.handlers';
 export { libraryHandlers } from './library.handlers';
 export { sharedGamesHandlers } from './shared-games.handlers';
 export { catalogHandlers } from './catalog.handlers';
 export { adminHandlers } from './admin.handlers';
-export { sessionsHandlers } from './sessions.handlers';
-export { gameNightsHandlers } from './game-nights.handlers';
-export { playersHandlers } from './players.handlers';
-export { notificationsHandlers } from './notifications.handlers';
-export { badgesHandlers } from './badges.handlers';
+export { sessionsHandlers, resetSessionsState } from './sessions.handlers';
+export { gameNightsHandlers, resetGameNightsState } from './game-nights.handlers';
+export { playersHandlers, resetPlayersState } from './players.handlers';
+export { notificationsHandlers, resetNotificationsState } from './notifications.handlers';
+export { badgesHandlers, resetBadgesState } from './badges.handlers';

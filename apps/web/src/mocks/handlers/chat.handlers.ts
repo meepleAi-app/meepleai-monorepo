@@ -9,15 +9,14 @@
 
 import { http, HttpResponse } from 'msw';
 
+import { createMockChat, createMockChatMessage, createMockAgent } from '../data/factories';
 import {
   createTokenEvent,
   createStateUpdateEvent,
   createCompleteEvent,
   createSSEResponse,
   type SSEOptions,
-} from '@/__tests__/fixtures/sse-test-helpers';
-
-import { createMockChat, createMockChatMessage, createMockAgent } from '../data/factories';
+} from '../data/sse-helpers';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 

@@ -89,3 +89,35 @@ export const playersHandlers = [
     return HttpResponse.json({ success: true });
   }),
 ];
+
+// Helper to reset player state between tests
+export const resetPlayersState = () => {
+  players.splice(
+    0,
+    players.length,
+    {
+      id: 'player-1',
+      displayName: 'Alice',
+      isActive: true,
+      gamesPlayed: 15,
+      totalWins: 8,
+      createdAt: '2024-01-10T10:00:00Z',
+    },
+    {
+      id: 'player-2',
+      displayName: 'Bob',
+      isActive: true,
+      gamesPlayed: 12,
+      totalWins: 5,
+      createdAt: '2024-01-15T10:00:00Z',
+    },
+    {
+      id: 'player-3',
+      displayName: 'Carol',
+      isActive: true,
+      gamesPlayed: 20,
+      totalWins: 11,
+      createdAt: '2024-02-01T10:00:00Z',
+    }
+  );
+};

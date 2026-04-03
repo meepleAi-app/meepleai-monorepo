@@ -5,6 +5,5 @@
  * Use src/mocks/node.ts for Node.js server setup (tests).
  */
 
-export { handlers } from './handlers';
 export * from './handlers';
 export * from './data/factories';

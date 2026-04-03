@@ -136,3 +136,20 @@ export const sessionsHandlers = [
     return HttpResponse.json({ success: true });
   }),
 ];
+
+// Helper to reset session state between tests
+export const resetSessionsState = () => {
+  sessions.splice(0, sessions.length, {
+    id: 'session-1',
+    sessionCode: 'ABC123',
+    gameId: 'demo-chess',
+    gameName: 'Chess',
+    status: 'Active',
+    participants: [
+      { id: 'p1', displayName: 'Alice', isOwner: true, totalScore: 0 },
+      { id: 'p2', displayName: 'Bob', isOwner: false, totalScore: 0 },
+    ],
+    notes: [],
+    createdAt: '2024-01-15T10:00:00Z',
+  });
+};

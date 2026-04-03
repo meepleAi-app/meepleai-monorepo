@@ -129,3 +129,24 @@ export const gameNightsHandlers = [
     return HttpResponse.json(item, { status: 201 });
   }),
 ];
+
+// Helper to reset game night state between tests
+export const resetGameNightsState = () => {
+  gameNights.splice(0, gameNights.length, {
+    id: 'gn-1',
+    title: 'Friday Game Night',
+    date: '2026-04-11T19:00:00Z',
+    location: 'Casa di Alice',
+    status: 'Planned',
+    organizerId: 'user-1',
+    participants: [
+      { id: 'gnp-1', userId: 'user-1', displayName: 'Alice', rsvpStatus: 'Accepted' },
+      { id: 'gnp-2', userId: 'user-2', displayName: 'Bob', rsvpStatus: 'Pending' },
+    ],
+    playlist: [
+      { id: 'pl-1', gameId: 'catan-1', gameName: 'Catan', order: 1 },
+      { id: 'pl-2', gameId: 'wingspan-1', gameName: 'Wingspan', order: 2 },
+    ],
+    createdAt: '2026-04-01T10:00:00Z',
+  });
+};

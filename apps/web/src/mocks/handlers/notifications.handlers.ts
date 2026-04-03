@@ -90,3 +90,38 @@ export const notificationsHandlers = [
     return HttpResponse.json(body);
   }),
 ];
+
+// Helper to reset notification state between tests
+export const resetNotificationsState = () => {
+  notifications.splice(
+    0,
+    notifications.length,
+    {
+      id: 'notif-1',
+      type: 'info',
+      title: 'Benvenuto',
+      message: 'Benvenuto su MeepleAI!',
+      isRead: false,
+      createdAt: '2024-01-15T10:00:00Z',
+      targetUrl: '/dashboard',
+    },
+    {
+      id: 'notif-2',
+      type: 'success',
+      title: 'Badge Ottenuto',
+      message: 'Hai ottenuto il badge Prima Partita!',
+      isRead: false,
+      createdAt: '2024-01-16T10:00:00Z',
+      targetUrl: '/badges',
+    },
+    {
+      id: 'notif-3',
+      type: 'info',
+      title: 'Invito Ricevuto',
+      message: 'Alice ti ha invitato a una Game Night',
+      isRead: true,
+      createdAt: '2024-01-17T10:00:00Z',
+      targetUrl: '/game-nights',
+    }
+  );
+};

@@ -351,6 +351,10 @@ export async function proxy(request: NextRequest) {
     sessionCookieValue
   ) {
     isAuthenticated = true;
+  } else if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true' && sessionCookieValue) {
+    // In mock mode, the MSW handler sets a fake session cookie on login.
+    // Trust its presence without backend validation (no real backend in this mode).
+    isAuthenticated = true;
   } else if (sessionCookieValue) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
   }

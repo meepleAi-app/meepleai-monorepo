@@ -21,6 +21,29 @@ import {
 
 const API_BASE = HANDLER_BASE;
 
+/**
+ * Build response headers that set mock session cookies.
+ * This mimics what the real backend does via WriteSessionCookie() / WriteUserRoleCookie().
+ * The proxy.ts middleware reads these cookies to determine authentication state.
+ */
+function mockAuthHeaders(role: string): Headers {
+  const headers = new Headers({ 'X-Correlation-Id': `test-correlation-${Date.now()}` });
+  headers.append(
+    'Set-Cookie',
+    `meepleai_session=mock-session-${role.toLowerCase()}; Path=/; SameSite=Lax`
+  );
+  headers.append('Set-Cookie', `meepleai_user_role=${role}; Path=/; SameSite=Lax`);
+  return headers;
+}
+
+/** Clear session cookies (logout) */
+function mockClearCookieHeaders(): Headers {
+  const headers = new Headers({ 'X-Correlation-Id': `test-correlation-${Date.now()}` });
+  headers.append('Set-Cookie', 'meepleai_session=; Path=/; Max-Age=0; SameSite=Lax');
+  headers.append('Set-Cookie', 'meepleai_user_role=; Path=/; Max-Age=0; SameSite=Lax');
+  return headers;
+}
+
 export const authHandlers = [
   // POST /api/v1/auth/register - User registration
   http.post(`${API_BASE}/api/v1/auth/register`, async ({ request }) => {
@@ -42,11 +65,7 @@ export const authHandlers = [
       role: 'User',
     });
 
-    return HttpResponse.json(authResponse, {
-      headers: {
-        'X-Correlation-Id': `test-correlation-${Date.now()}`,
-      },
-    });
+    return HttpResponse.json(authResponse, { headers: mockAuthHeaders('User') });
   }),
 
   // POST /api/v1/auth/login - User login
@@ -60,31 +79,24 @@ export const authHandlers = [
 
     // Return auth response based on email
     let authResponse;
+    let role: string;
     if (body.email.includes('admin')) {
       authResponse = mockAdminAuth();
+      role = 'Admin';
     } else if (body.email.includes('editor')) {
       authResponse = mockEditorAuth();
+      role = 'Editor';
     } else {
       authResponse = mockUserAuth();
+      role = 'User';
     }
 
-    return HttpResponse.json(authResponse, {
-      headers: {
-        'X-Correlation-Id': `test-correlation-${Date.now()}`,
-      },
-    });
+    return HttpResponse.json(authResponse, { headers: mockAuthHeaders(role) });
   }),
 
   // POST /api/v1/auth/logout - User logout
   http.post(`${API_BASE}/api/v1/auth/logout`, () => {
-    return HttpResponse.json(
-      { success: true },
-      {
-        headers: {
-          'X-Correlation-Id': `test-correlation-${Date.now()}`,
-        },
-      }
-    );
+    return HttpResponse.json({ success: true }, { headers: mockClearCookieHeaders() });
   }),
 
   // GET /api/v1/auth/me - Get current user
@@ -148,7 +160,7 @@ export const authHandlers = [
   }),
 
   http.get(`${API_BASE}/api/v1/auth/oauth/:provider/callback`, () => {
-    return HttpResponse.json(mockUserAuth());
+    return HttpResponse.json(mockUserAuth(), { headers: mockAuthHeaders('User') });
   }),
 
   // Error simulation handlers (for testing error scenarios)

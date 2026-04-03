@@ -39,6 +39,17 @@ export async function finalizeSession(sessionId: string): Promise<void> {
 }
 
 /**
+ * Roll dice in a session (fire-and-forget for audit/history)
+ * POST /api/v1/game-sessions/{sessionId}/dice
+ */
+export async function rollDice(sessionId: string, diceType: string, count: number): Promise<void> {
+  await apiClient.post<void>(`/api/v1/game-sessions/${encodeURIComponent(sessionId)}/dice`, {
+    diceType,
+    count,
+  });
+}
+
+/**
  * Update a participant's score in a session
  * PUT /api/v1/game-sessions/{sessionId}/scores
  */

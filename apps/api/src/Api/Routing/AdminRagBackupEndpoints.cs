@@ -1,7 +1,7 @@
+using Api.BoundedContexts.Administration.Application.Commands.DeleteRagSnapshot;
 using Api.BoundedContexts.Administration.Application.Commands.ExportRagData;
 using Api.BoundedContexts.Administration.Application.Commands.ImportRagData;
 using Api.BoundedContexts.Administration.Application.Queries.RagBackup;
-using Api.BoundedContexts.Administration.Application.Services;
 using Api.Filters;
 using MediatR;
 
@@ -99,14 +99,11 @@ internal static class AdminRagBackupEndpoints
 
     private static async Task<IResult> DeleteSnapshot(
         string id,
-        IRagBackupStorageService storage,
-        ILoggerFactory loggerFactory,
+        IMediator mediator,
         CancellationToken cancellationToken)
     {
-        await storage.DeleteSnapshotAsync(id, cancellationToken).ConfigureAwait(false);
-
-        loggerFactory.CreateLogger(nameof(AdminRagBackupEndpoints))
-            .LogInformation("Admin deleted RAG snapshot {SnapshotId}", id);
+        await mediator.Send(new DeleteRagSnapshotCommand { SnapshotId = id }, cancellationToken)
+            .ConfigureAwait(false);
 
         return Results.NoContent();
     }

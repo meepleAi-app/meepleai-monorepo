@@ -3,12 +3,16 @@
 /**
  * LibraryMobile - Mobile-first library page
  *
- * Phase 3, Task 4: Mobile library with grid layout, segmented tabs,
- * search bar, filter sheet, and catalog game import flow.
+ * Segmented control: Collezione (catalog games) / Privati (custom games) / Wishlist
  *
- * Note: BGG search was removed from user pages (restricted to admin only
- * due to BGG commercial use licensing). Users add games via the shared
- * catalog or manual entry through AddGameDrawer.
+ * Semantica segmenti:
+ *   Collezione → isPrivateGame=false, stato != Wishlist
+ *   Privati    → isPrivateGame=true (qualsiasi stato)
+ *   Wishlist   → currentState=Wishlist
+ *
+ * Il fetch carica tutti i giochi (no stateFilter) e il filtering è client-side.
+ *
+ * Nota: BGG search rimosso dalle pagine utente (licenza commerciale BGG).
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -21,7 +25,7 @@ import { SegmentedControl, type Segment } from '@/components/library/SegmentedCo
 import { MeepleCard, MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
-import type { GameStateType } from '@/lib/api/schemas/library.schemas';
+import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 // ── Segments ─────────────────────────────────────────────────────────────────
 
@@ -31,11 +35,20 @@ const SEGMENTS: Segment[] = [
   { id: 'wishlist', label: 'Wishlist' },
 ];
 
-const SEGMENT_STATE_MAP: Record<string, GameStateType[] | undefined> = {
-  collection: ['Owned'],
-  private: ['Nuovo', 'InPrestito'],
-  wishlist: ['Wishlist'],
-};
+// ── Client-side segment filter ────────────────────────────────────────────────
+
+export function filterBySegment(items: UserLibraryEntry[], segment: string): UserLibraryEntry[] {
+  switch (segment) {
+    case 'collection':
+      return items.filter(g => !g.isPrivateGame && g.currentState !== 'Wishlist');
+    case 'private':
+      return items.filter(g => g.isPrivateGame);
+    case 'wishlist':
+      return items.filter(g => g.currentState === 'Wishlist');
+    default:
+      return items;
+  }
+}
 
 // ── Default filters ──────────────────────────────────────────────────────────
 
@@ -56,6 +69,7 @@ export function LibraryMobile() {
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_FILTERS);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
+  const [pageSize, setPageSize] = useState(20);
 
   // ── Debounced search ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -63,38 +77,37 @@ export function LibraryMobile() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  // ── Segments with counts ─────────────────────────────────────────────────
+  // Reset pageSize when search or filters change
+  useEffect(() => {
+    setPageSize(20);
+  }, [debouncedSearch, filters, activeSegment]);
+
+  // ── Segments with counts from stats ──────────────────────────────────────
   const { data: stats } = useLibraryStats();
 
   const segmentsWithCounts: Segment[] = useMemo(() => {
     if (!stats) return SEGMENTS;
     return [
       { id: 'collection', label: 'Collezione', count: stats.ownedCount },
-      {
-        id: 'private',
-        label: 'Privati',
-        count: stats.nuovoCount + stats.inPrestitoCount,
-      },
+      { id: 'private', label: 'Privati' }, // stats API non espone privateGameCount
       { id: 'wishlist', label: 'Wishlist', count: stats.wishlistCount },
     ];
   }, [stats]);
 
-  // ── Build query params ───────────────────────────────────────────────────
-  const stateFilter = filters.state
-    ? [filters.state as GameStateType]
-    : SEGMENT_STATE_MAP[activeSegment];
-
+  // ── Fetch all games, filter client-side per segment ───────────────────────
   const { data, isLoading } = useLibrary({
     page: 1,
-    pageSize: 50,
+    pageSize,
     search: debouncedSearch || undefined,
-    stateFilter,
     sortBy: filters.sortBy,
     sortDescending: filters.sortBy === 'addedAt',
     favoritesOnly: filters.favoritesOnly,
+    // Nessun stateFilter: il filtering per segmento è client-side
   });
 
-  const games = data?.items ?? [];
+  const allGames = data?.items ?? [];
+
+  const games = useMemo(() => filterBySegment(allGames, activeSegment), [allGames, activeSegment]);
 
   // ── Subtitle text ────────────────────────────────────────────────────────
   const subtitle = stats
@@ -169,9 +182,9 @@ export function LibraryMobile() {
         {!isLoading && games.length === 0 && (
           <div className="flex flex-col items-center gap-4 py-16 text-center">
             <p className="text-sm text-[var(--gaming-text-secondary)]">
-              {debouncedSearch ? 'Nessun risultato trovato' : 'La tua libreria è vuota'}
+              {debouncedSearch ? 'Nessun risultato trovato' : 'Nessun gioco in questa sezione'}
             </p>
-            {!debouncedSearch && (
+            {!debouncedSearch && activeSegment !== 'wishlist' && (
               <button
                 type="button"
                 onClick={() => setAddDrawerOpen(true)}
@@ -203,6 +216,17 @@ export function LibraryMobile() {
             ))}
           </div>
         )}
+
+        {/* Paginazione: "Carica altri" quando ci sono più risultati server-side */}
+        {!isLoading && data?.hasNextPage && (
+          <button
+            type="button"
+            onClick={() => setPageSize(prev => prev + 20)}
+            className="w-full rounded-lg bg-white/5 px-4 py-3 text-sm font-medium text-[var(--gaming-text-secondary)] hover:bg-white/10 hover:text-[var(--gaming-text-primary)] transition-colors"
+          >
+            Carica altri
+          </button>
+        )}
       </div>
 
       {/* Filter bottom sheet */}
@@ -213,7 +237,7 @@ export function LibraryMobile() {
         onApply={handleApplyFilters}
       />
 
-      {/* Add game drawer (catalog search / manual entry) */}
+      {/* Add game drawer */}
       <AddGameDrawer open={addDrawerOpen} onClose={() => setAddDrawerOpen(false)} />
     </div>
   );

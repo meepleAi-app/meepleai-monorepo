@@ -95,8 +95,6 @@ public class OAuthIntegrationTests : IAsyncLifetime
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
-        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
-
         _serviceProvider = services.BuildServiceProvider();
 
         // Create DbContext instance

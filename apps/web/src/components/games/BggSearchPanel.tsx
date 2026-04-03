@@ -9,9 +9,10 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 
-import { Search, ChevronLeft, ChevronRight, Gamepad2 } from 'lucide-react';
+import { Plus, Loader2, Check, Search, ChevronLeft, ChevronRight, Gamepad2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -22,11 +23,63 @@ import type {
   ImportBggGameResponse,
 } from '@/lib/api/clients/gameNightBggClient';
 
-import { BggGameCard } from './BggGameCard';
-
 // ============================================================================
 // Types
 // ============================================================================
+
+interface BggImportCardProps {
+  /** BGG game summary from search results */
+  game: BggGameSummary;
+  /** Whether the import is currently in progress */
+  isImporting?: boolean;
+  /** Whether this game was already imported */
+  isImported?: boolean;
+  /** Handler for the "Add to Library" action */
+  onImport?: (bggId: number) => void;
+}
+
+function BggImportCard({ game, isImporting, isImported, onImport }: BggImportCardProps) {
+  const subtitle = game.yearPublished ? `(${game.yearPublished})` : undefined;
+
+  return (
+    <div className="relative" data-testid={`bgg-game-card-${game.bggId}`}>
+      <MeepleCard
+        entity="game"
+        variant="grid"
+        title={game.title}
+        subtitle={subtitle}
+        imageUrl={game.thumbnailUrl ?? undefined}
+      />
+      <div className="mt-2">
+        <Button
+          size="sm"
+          variant={isImported ? 'outline' : 'default'}
+          className="w-full font-nunito"
+          disabled={isImporting || isImported}
+          onClick={() => onImport?.(game.bggId)}
+          data-testid={`import-btn-${game.bggId}`}
+        >
+          {isImporting ? (
+            <>
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              Importing...
+            </>
+          ) : isImported ? (
+            <>
+              <Check className="mr-1.5 h-4 w-4" />
+              Added
+            </>
+          ) : (
+            <>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add to Library
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export interface BggSearchPanelProps {
   /** Callback fired after a successful import */
@@ -179,7 +232,7 @@ export function BggSearchPanel({ onImportSuccess }: BggSearchPanelProps) {
             data-testid="bgg-search-results"
           >
             {results.items.map((game: BggGameSummary) => (
-              <BggGameCard
+              <BggImportCard
                 key={game.bggId}
                 game={game}
                 isImporting={importingIds.has(game.bggId)}

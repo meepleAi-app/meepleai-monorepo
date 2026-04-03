@@ -67,6 +67,7 @@ import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
+import { buildLinkedEntities } from '@/lib/card-mappers';
 import { useViewTransition } from '@/lib/domain-hooks/useViewTransition';
 
 import { AgentDrawerSheet } from './AgentDrawerSheet';
@@ -451,21 +452,22 @@ export function MeepleLibraryGameCard({
         className={className}
         // KB status badge from real document data
         kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
-        // Navigation footer: open drawers instead of navigating
-        navigateTo={[
-          { entity: 'kb' as const, label: 'KB', onClick: () => setKbDrawerOpen(true) },
-          { entity: 'agent' as const, label: 'Agents', onClick: () => setAgentDrawerOpen(true) },
-          {
-            entity: 'chatSession' as const,
-            label: 'Chats',
-            onClick: () => setChatDrawerOpen(true),
-          },
-          {
-            entity: 'session' as const,
-            label: 'Sessions',
-            onClick: () => setSessionDrawerOpen(true),
-          },
-        ]}
+        // Navigation footer: mana pips for linked entities
+        linkedEntities={buildLinkedEntities({
+          agentCount: agentConfigured ? 1 : 0,
+          kbCount: game.kbCardCount,
+        })}
+        onManaPipClick={entityType => {
+          if (entityType === 'kb') {
+            setKbDrawerOpen(true);
+          } else if (entityType === 'agent') {
+            setAgentDrawerOpen(true);
+          } else if (entityType === 'chatSession') {
+            setChatDrawerOpen(true);
+          } else if (entityType === 'session') {
+            setSessionDrawerOpen(true);
+          }
+        }}
         // Issue #4777, #4999: Agent action footer
         hasAgent={agentConfigured}
         hasKb={game.hasKb}
@@ -474,7 +476,7 @@ export function MeepleLibraryGameCard({
         // Issue #4045: Quick actions + Info button
         entityQuickActions={entityQuickActions}
         showInfoButton
-        infoHref={`/library/games/${game.gameId}`}
+        entityId={game.gameId}
         infoTooltip="Vai al dettaglio"
         // Bulk selection
         selectable={selectionMode}

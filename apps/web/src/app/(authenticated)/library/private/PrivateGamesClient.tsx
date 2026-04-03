@@ -13,14 +13,20 @@ import { useCallback, useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AlertTriangle,
+  Calendar,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  Edit2,
+  Gamepad2,
   Loader2,
   Plus,
   Search,
+  Share2,
   SortAsc,
   SortDesc,
-  Gamepad2,
+  Trash2,
+  Users,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -31,7 +37,6 @@ import { type AddPrivateGameFormData } from '@/components/library/AddPrivateGame
 import { JourneyProgress } from '@/components/library/JourneyProgress';
 import { KbStatusBadge } from '@/components/library/KbStatusBadge';
 import { LibraryEmptyState } from '@/components/library/LibraryEmptyState';
-import { PrivateGameCard } from '@/components/library/PrivateGameCard';
 import { ProposeGameModal } from '@/components/library/ProposeGameModal';
 import {
   Card,
@@ -40,6 +45,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/data-display/card';
+import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -487,6 +493,56 @@ export default function PrivateGamesClient() {
         }}
       />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PrivateGameCard — inlined from the former PrivateGameCard.tsx wrapper
+// (refactor: remove thin wrapper, Task 12)
+// ---------------------------------------------------------------------------
+
+interface PrivateGameCardProps {
+  game: PrivateGameDto;
+  onEdit?: (game: PrivateGameDto) => void;
+  onDelete?: (gameId: string) => void;
+  onPropose?: (game: PrivateGameDto) => void;
+  onClick?: () => void;
+}
+
+function PrivateGameCard({ game, onEdit, onDelete, onPropose, onClick }: PrivateGameCardProps) {
+  const subtitle = [
+    `${game.minPlayers}-${game.maxPlayers} players`,
+    game.yearPublished ? `(${game.yearPublished})` : null,
+    game.playingTimeMinutes ? `${game.playingTimeMinutes} min` : null,
+  ]
+    .filter(Boolean)
+    .join(' \u00b7 ');
+
+  const metadata: MeepleCardMetadata[] = [
+    { icon: Users, label: `${game.minPlayers}-${game.maxPlayers}` },
+    ...(game.playingTimeMinutes ? [{ icon: Clock, label: `${game.playingTimeMinutes} min` }] : []),
+    ...(game.yearPublished ? [{ icon: Calendar, label: `${game.yearPublished}` }] : []),
+  ];
+
+  const entityQuickActions = [
+    ...(onEdit ? [{ icon: Edit2, label: 'Edit', onClick: () => onEdit(game) }] : []),
+    ...(onPropose ? [{ icon: Share2, label: 'Propose', onClick: () => onPropose(game) }] : []),
+    ...(onDelete ? [{ icon: Trash2, label: 'Delete', onClick: () => onDelete(game.id) }] : []),
+  ];
+
+  return (
+    <MeepleCard
+      entity="game"
+      variant="grid"
+      title={game.title}
+      subtitle={subtitle}
+      imageUrl={game.imageUrl || undefined}
+      badge="Private"
+      metadata={metadata}
+      onClick={onClick}
+      entityQuickActions={entityQuickActions.length > 0 ? entityQuickActions : undefined}
+      data-testid={`game-card-${game.id}`}
+    />
   );
 }
 

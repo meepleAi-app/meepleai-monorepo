@@ -35,12 +35,14 @@ import {
   WhiteboardTool,
 } from '@/components/session';
 import type { CounterToolConfig, Participant } from '@/components/session/types';
+import { CardDeckTool } from '@/components/toolkit';
 import { DiceRoller as ToolkitDiceRoller } from '@/components/toolkit/DiceRoller';
 import { Timer as ToolkitTimer } from '@/components/toolkit/Timer';
 import { useCounterTool } from '@/lib/domain-hooks/useCounterTool';
 import { useDiceRoller } from '@/lib/domain-hooks/useDiceRoller';
 import { useGameToolkit } from '@/lib/domain-hooks/useGameToolkit';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
+import { useSessionToolLog } from '@/lib/domain-hooks/useSessionToolLog';
 import { useTurnOrder } from '@/lib/domain-hooks/useTurnOrder';
 import { useWhiteboardTool } from '@/lib/domain-hooks/useWhiteboardTool';
 import { useSessionStore } from '@/lib/stores/session-store';
@@ -117,6 +119,8 @@ export function ActiveSessionPageContent() {
   if (!sessionId) {
     throw new Error('Session ID is required');
   }
+
+  const { logToolAction } = useSessionToolLog(sessionId);
 
   const {
     activeSession,
@@ -378,15 +382,76 @@ export function ActiveSessionPageContent() {
 
       // Custom dice → standalone DiceRoller widget
       if (activeTool.startsWith('custom-dice-')) {
-        return <ToolkitDiceRoller />;
+        const diceIdx = parseInt(activeTool.replace('custom-dice-', ''), 10);
+        const diceDto = toolkit.diceTools[diceIdx];
+        if (diceDto) {
+          const diceConfig = diceDto.customFaces?.length
+            ? { name: diceDto.name, customFaces: diceDto.customFaces, count: diceDto.quantity }
+            : {
+                name: diceDto.name,
+                sides: parseInt(diceDto.diceType.replace(/\D/g, ''), 10) || 6,
+                count: diceDto.quantity,
+              };
+          return (
+            <ToolkitDiceRoller
+              config={diceConfig}
+              onRoll={r =>
+                logToolAction(
+                  'dice',
+                  'roll',
+                  `${diceDto.name}: [${r.faces.join(', ')}] = ${r.total}`
+                )
+              }
+            />
+          );
+        }
       }
 
       // Custom timer → standalone Timer widget
       if (activeTool.startsWith('custom-timer-')) {
-        return <ToolkitTimer />;
+        const timerIdx = parseInt(activeTool.replace('custom-timer-', ''), 10);
+        const timerDto = toolkit.timerTools[timerIdx];
+        if (timerDto) {
+          const timerType =
+            timerDto.timerType === 'countup'
+              ? 'countup'
+              : timerDto.timerType === 'turn'
+                ? 'turn'
+                : 'countdown';
+          return (
+            <ToolkitTimer
+              name={timerDto.name}
+              defaultSeconds={timerDto.durationSeconds}
+              type={timerType}
+              onAction={(action, seconds) =>
+                logToolAction('timer', action, `${timerDto.name}: ${action} @ ${seconds}s`)
+              }
+            />
+          );
+        }
       }
 
-      // Card and other unimplemented types — placeholder
+      // Card tools → CardDeckTool
+      if (activeTool.startsWith('custom-card-')) {
+        const cardIdx = parseInt(activeTool.replace('custom-card-', ''), 10);
+        const cardDto = toolkit.cardTools[cardIdx];
+        if (cardDto) {
+          const cards = Array.from({ length: cardDto.cardCount }, (_, i) => String(i + 1));
+          return (
+            <CardDeckTool
+              deckId={`session-${sessionId}-card-${cardIdx}`}
+              name={cardDto.name}
+              cards={cards}
+              reshuffleOnEmpty={cardDto.allowReturnToDeck}
+              onAction={(action, result) =>
+                logToolAction('card', action, `${cardDto.name}: ${result}`)
+              }
+            />
+          );
+        }
+      }
+
+      // Other unimplemented types — placeholder
       const customTool = customTools.find(t => t.id === activeTool);
       if (customTool) {
         return <CustomToolPlaceholder label={customTool.label} />;

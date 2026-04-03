@@ -15,7 +15,7 @@ import { ArrowLeft, FileText, Calendar, HardDrive } from 'lucide-react';
 import Link from 'next/link';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { MeepleCard, type MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
@@ -39,11 +39,16 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
   const [loading, setLoading] = useState(true);
   const [error, _setError] = useState<string | null>(null);
 
-  const navigationLinks = useEntityNavigation('kb', {
+  const navLinks = useEntityNavigation('kb', {
     id: documentId,
     gameId: document?.gameId,
     agentId: document?.agentId,
   });
+  const navigationLinkedEntities = navLinks.map(l => ({ entityType: l.entity, count: 1 }));
+  const handleNavPipClick = (entityType: MeepleEntityType) => {
+    const link = navLinks.find(l => l.entity === entityType);
+    if (link?.href) window.location.href = link.href;
+  };
 
   const drawCard = useCardHand(s => s.drawCard);
 
@@ -123,7 +128,8 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
                 ? [{ icon: HardDrive, value: `${document.chunkCount} chunks` }]
                 : []),
             ]}
-            navigateTo={navigationLinks}
+            linkedEntities={navigationLinkedEntities}
+            onManaPipClick={handleNavPipClick}
           />
         </section>
 

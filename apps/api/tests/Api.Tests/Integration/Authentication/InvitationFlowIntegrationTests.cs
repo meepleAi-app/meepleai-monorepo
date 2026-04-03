@@ -87,7 +87,6 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
-        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IInvitationTokenRepository, InvitationTokenRepository>();
 
         // Register services needed by handlers

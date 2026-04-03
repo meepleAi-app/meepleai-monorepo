@@ -113,6 +113,11 @@ function cacheSessionValidation(cookieValue: string, valid: boolean) {
 }
 
 async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
+  // In mock mode there is no real backend — skip validation to avoid self-referential loops
+  if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true') {
+    return false;
+  }
+
   const cached = sessionValidationCache.get(cookieValue);
   if (cached && cached.expiresAt > Date.now()) {
     // Metrics: Cache hit
@@ -345,6 +350,10 @@ export async function proxy(request: NextRequest) {
     process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' &&
     sessionCookieValue
   ) {
+    isAuthenticated = true;
+  } else if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true' && sessionCookieValue) {
+    // In mock mode, the MSW handler sets a fake session cookie on login.
+    // Trust its presence without backend validation (no real backend in this mode).
     isAuthenticated = true;
   } else if (sessionCookieValue) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);

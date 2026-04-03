@@ -36,7 +36,7 @@ function GameList({ games }) {
             // New: Entity-specific quick actions
             entityQuickActions={actions.quickActions}
             showInfoButton
-            infoHref={`/games/${game.id}`}
+            entityId={game.id}
             infoTooltip="Vai al dettaglio"
           />
         );
@@ -120,7 +120,7 @@ interface MeepleCardProps {
   // Issue #4030: New action system
   entityQuickActions?: QuickAction[];  // From useEntityActions hook
   showInfoButton?: boolean;             // Enable info button
-  infoHref?: string;                    // Navigation target
+  entityId?: string;                    // Entity ID for drawer trigger
   infoTooltip?: string;                 // Tooltip text (default: "View details")
 }
 ```

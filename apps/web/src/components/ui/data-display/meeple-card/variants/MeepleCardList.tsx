@@ -20,7 +20,6 @@ import { AgentStatsDisplay } from '../../meeple-card-features/AgentStatsDisplay'
 import { AgentStatusBadge } from '../../meeple-card-features/AgentStatusBadge';
 import { BulkSelectCheckbox } from '../../meeple-card-features/BulkSelectCheckbox';
 import { CardAgentAction } from '../../meeple-card-features/CardAgentAction';
-import { CardNavigationFooter } from '../../meeple-card-features/CardNavigationFooter';
 import { ChatAgentInfo } from '../../meeple-card-features/ChatAgentInfo';
 import { ChatGameContext } from '../../meeple-card-features/ChatGameContext';
 import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
@@ -44,6 +43,7 @@ import {
   DRAWER_ENTITY_TYPE_MAP,
   meepleCardVariants,
   contentVariants,
+  getCardFrameStyle,
 } from '../../meeple-card-styles';
 import { useCardTheme } from '../hooks/useCardTheme';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
@@ -94,7 +94,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     entityQuickActions,
     showInfoButton,
     entityId,
-    infoHref,
     infoTooltip: _infoTooltip,
     tags,
     maxVisibleTags = 3,
@@ -109,7 +108,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     chatStats,
     chatPreview,
     unreadCount,
-    navigateTo,
     hasAgent,
     agentId,
     onCreateAgent,
@@ -145,10 +143,7 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const hasMobileActions =
-    hasQuickActions ||
-    !!entityQuickActions ||
-    showWishlistBtn ||
-    !!(showInfoButton && (entityId || infoHref));
+    hasQuickActions || !!entityQuickActions || showWishlistBtn || !!(showInfoButton && entityId);
 
   const {
     isMobile,
@@ -227,6 +222,7 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
       data-variant={variant}
+      data-card-root
     >
       {selectable && (
         <BulkSelectCheckbox
@@ -260,15 +256,24 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
         />
       )}
 
-      <CardCover
-        src={coverSrc}
-        alt={title}
-        variant={variant}
-        entity={entity}
-        customColor={customColor}
-        showEntityType
-        stateLabel={stateLabel}
-      />
+      <div
+        data-card-thumbnail
+        className="shrink-0 overflow-hidden"
+        style={{
+          ...getCardFrameStyle('list'),
+          borderRadius: '6px',
+        }}
+      >
+        <CardCover
+          src={coverSrc}
+          alt={title}
+          variant={variant}
+          entity={entity}
+          customColor={customColor}
+          showEntityType
+          stateLabel={stateLabel}
+        />
+      </div>
 
       {/* Content area */}
       <div className={contentVariants({ variant })}>
@@ -423,13 +428,11 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
           gameId={id}
           onCreateAgent={onCreateAgent}
           variant={variant}
-          hasNavFooter={!!(navigateTo && navigateTo.length > 0)}
+          hasNavFooter={false}
         />
       )}
 
       {/* Navigation footer */}
-      {navigateTo && navigateTo.length > 0 && <CardNavigationFooter links={navigateTo} />}
-
       {firstLinkPreview && linkCount !== undefined && linkCount > 0 && (
         <EntityLinkPreviewRow
           linkType={firstLinkPreview.linkType}

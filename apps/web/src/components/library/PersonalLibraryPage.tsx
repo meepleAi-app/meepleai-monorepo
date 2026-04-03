@@ -4,7 +4,7 @@
  * Gaming Immersive library layout with:
  * - LibraryPageHeader (title + count + CTA)
  * - LibraryHeroBanner (contextual: next session or discovery)
- * - Expanded filter chips (7 chips: Tutti, Recenti, Più giocati, Rating, 2-4p, <60min, Strategici)
+ * - Expanded filter chips (6 chips: Tutti, Recenti, Prima aggiunti, Rating, 2-4p, <60min)
  * - MeepleCard grid 4col (desktop) / list variant (mobile)
  * - Gaming immersive empty state
  * - Compact UsageWidget sidebar (desktop only)
@@ -19,10 +19,11 @@
 import { useMemo, useState } from 'react';
 
 import { Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { useLayoutResponsive } from '@/components/layout/LayoutProvider';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { FilterChipsRow } from '@/components/ui/FilterChipsRow';
 import { SectionBlock } from '@/components/ui/SectionBlock';
 import { ViewToggle } from '@/components/ui/ViewToggle';
@@ -41,11 +42,10 @@ import { UsageWidget } from './UsageWidget';
 const LIBRARY_FILTER_CHIPS = [
   { id: 'all', label: 'Tutti' },
   { id: 'recent', label: 'Recenti' },
-  { id: 'most-played', label: 'Meno recenti' },
+  { id: 'oldest', label: 'Prima aggiunti' },
   { id: 'rating', label: 'Rating \u2193' },
   { id: 'players-2-4', label: '2-4 giocatori' },
   { id: 'under-60', label: '< 60 min' },
-  { id: 'strategy', label: 'Strategici' },
 ];
 
 // ── Filter logic ────────────────────────────────────────────────────────────
@@ -56,6 +56,10 @@ function applyFilter(items: UserLibraryEntry[], filterId: string): UserLibraryEn
       return [...items].sort(
         (a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
       );
+    case 'oldest':
+      return [...items].sort(
+        (a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
+      );
     case 'rating':
       return [...items].sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0));
     case 'players-2-4':
@@ -64,15 +68,6 @@ function applyFilter(items: UserLibraryEntry[], filterId: string): UserLibraryEn
       );
     case 'under-60':
       return items.filter(g => g.playingTimeMinutes != null && g.playingTimeMinutes <= 60);
-    case 'most-played':
-      // playCount not yet on UserLibraryEntry DTO — sort by addedAt (oldest first = likely most played)
-      return [...items].sort(
-        (a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
-      );
-    case 'strategy':
-      // category/mechanics not yet on UserLibraryEntry DTO — requires backend GetUserGamesQuery filter
-      // For now, return all items (chip acts as no-op until backend wired)
-      return items;
     default:
       return items;
   }
@@ -80,11 +75,12 @@ function applyFilter(items: UserLibraryEntry[], filterId: string): UserLibraryEn
 
 // ── CTA card — "Crea gioco" at the end of the custom games section ──────────
 
-function CreateGameCtaCard() {
+export function CreateGameCtaCard() {
   const router = useRouter();
 
   return (
-    <div
+    <button
+      type="button"
       className={cn(
         'flex flex-col items-center justify-center gap-2',
         'w-full sm:w-[140px] flex-shrink-0 rounded-xl',
@@ -92,23 +88,15 @@ function CreateGameCtaCard() {
         'min-h-[80px] sm:min-h-[160px]',
         'cursor-pointer transition-all duration-200',
         'hover:border-[#58a6ff] hover:bg-[#1c2128]',
-        'focus:outline-none focus:ring-1 focus:ring-[#58a6ff]'
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#58a6ff]'
       )}
       onClick={() => router.push('/library/private/add')}
-      onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          router.push('/library/private/add');
-        }
-      }}
-      role="button"
-      tabIndex={0}
       aria-label="Crea un gioco personalizzato"
       data-testid="create-game-cta"
     >
       <Plus className="w-5 h-5 text-[#58a6ff]" aria-hidden="true" />
       <span className="text-[10px] font-medium text-[#58a6ff] text-center px-2">Crea gioco</span>
-    </div>
+    </button>
   );
 }
 
@@ -201,7 +189,7 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [activeFilter, setActiveFilter] = useState('all');
-  const { data, isLoading } = useLibrary();
+  const { data, isLoading, error } = useLibrary();
   const { isMobile } = useLayoutResponsive();
 
   // Mobile always shows list; desktop uses user-selected viewMode
@@ -231,13 +219,15 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
   const totalCount = data?.totalCount ?? 0;
 
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isEmpty = totalCount === 0 && !isLoading;
 
   // Trigger AddGameDrawer via URL param
   const handleAddGame = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('action', 'add');
-    router.push(url.pathname + url.search);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('action', 'add');
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   // Loading state
@@ -270,13 +260,25 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
     );
   }
 
+  // Error state
+  if (error) {
+    return (
+      <div className={cn('space-y-4', className)} data-testid="personal-library-page">
+        <Alert variant="destructive">
+          <AlertTitle>Errore nel caricamento</AlertTitle>
+          <AlertDescription>Impossibile caricare la libreria. Riprova più tardi.</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   // Full empty state — gaming immersive
   if (isEmpty) {
     return (
       <div className={cn('space-y-4', className)} data-testid="personal-library-page">
         <LibraryPageHeader gameCount={0} onAddGame={handleAddGame} />
         <LibraryEmptyState
-          onExploreCatalog={() => router.push('/library?tab=public')}
+          onExploreCatalog={() => router.push('/library?tab=catalogo')}
           onCreateCustom={() => router.push('/library/private/add')}
         />
       </div>

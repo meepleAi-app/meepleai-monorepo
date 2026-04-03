@@ -307,7 +307,7 @@ export const GameCarousel = React.memo(function GameCarousel({
                     // Issue #4040: Quick actions + Info button (only on center card)
                     entityQuickActions={isCenter ? centerEntityActions.quickActions : undefined}
                     showInfoButton={isCenter}
-                    infoHref={isCenter ? `/games/${game.id}` : undefined}
+                    entityId={isCenter ? game.id : undefined}
                     infoTooltip="Vai al dettaglio"
                   />
                 </div>

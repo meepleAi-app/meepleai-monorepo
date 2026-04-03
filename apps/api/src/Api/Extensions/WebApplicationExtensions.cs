@@ -139,12 +139,6 @@ internal static class WebApplicationExtensions
         // AUTH-03: Standard authentication middleware for ClaimsPrincipal
         app.UseAuthentication();
 
-        // API-01: API key authentication middleware (must be after UseAuthentication)
-        app.UseApiKeyAuthentication();
-
-        // Enforce hourly/daily quota on API keys once the principal has been set
-        app.UseMiddleware<ApiKeyQuotaEnforcementMiddleware>();
-
         // AUTH-03: Authorization middleware (must be after all authentication middleware)
         app.UseAuthorization();
 

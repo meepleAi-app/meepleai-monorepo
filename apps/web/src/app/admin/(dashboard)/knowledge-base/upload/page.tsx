@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 
 import { type Metadata } from 'next';
 
+import { KbIdempotencyGuard } from '@/components/admin/knowledge-base/kb-idempotency-guard';
 import { ProcessingQueue } from '@/components/admin/knowledge-base/processing-queue';
 import { UploadSettings } from '@/components/admin/knowledge-base/upload-settings';
 import { UploadZone } from '@/components/admin/knowledge-base/upload-zone';
@@ -37,6 +38,9 @@ export default async function UploadProcessPage({
           Upload and process documents for the knowledge base
         </p>
       </div>
+
+      {/* Idempotency guard — avvisa se il gioco ha già KB/snapshot */}
+      {gameId && <KbIdempotencyGuard gameId={gameId} />}
 
       {/* Upload Zone */}
       <Suspense fallback={<CardSkeleton height="h-[200px]" />}>

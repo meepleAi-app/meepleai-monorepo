@@ -144,26 +144,6 @@ internal static class CookieHelpers
         context.Response.Cookies.Delete(UserRoleCookieName, options);
     }
 
-    // API Key Cookie Methods
-
-    public static void WriteApiKeyCookie(HttpContext context, string apiKey, DateTime? expiresAt = null)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var options = CreateApiKeyCookieOptions(context, expiresAt);
-        const string apiKeyCookieName = "meeple_apikey";
-        context.Response.Cookies.Append(apiKeyCookieName, apiKey, options);
-    }
-
-    public static void RemoveApiKeyCookie(HttpContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var options = BuildApiKeyCookieOptions(context);
-        options.Expires = DateTimeOffset.UnixEpoch;
-
-        const string apiKeyCookieName = "meeple_apikey";
-        context.Response.Cookies.Delete(apiKeyCookieName, options);
-    }
-
     public static string GetSessionCookieName(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -241,54 +221,6 @@ internal static class CookieHelpers
         return context.RequestServices
             .GetRequiredService<IOptions<SessionCookieConfiguration>>()
             .Value;
-    }
-
-    private static CookieOptions CreateApiKeyCookieOptions(HttpContext context, DateTime? expiresAt)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var options = BuildApiKeyCookieOptions(context);
-        if (expiresAt.HasValue)
-        {
-            options.Expires = new DateTimeOffset(expiresAt.Value, TimeSpan.Zero);
-        }
-        else
-        {
-            // Default: API key cookie expires in 90 days
-            options.Expires = DateTimeOffset.UtcNow.AddDays(90);
-        }
-        return options;
-    }
-
-    private static CookieOptions BuildApiKeyCookieOptions(HttpContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var configuration = GetSessionCookieConfiguration(context);
-        var isHttps = context.Request.IsHttps;
-
-        if (!isHttps && configuration.UseForwardedProto &&
-            context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto) &&
-            forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
-        {
-            isHttps = true;
-        }
-
-        var secure = configuration.Secure ?? isHttps;
-        var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
-
-        var options = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = secure,
-            SameSite = SameSiteMode.Strict,
-            Path = path
-        };
-
-        if (!string.IsNullOrWhiteSpace(configuration.Domain))
-        {
-            options.Domain = configuration.Domain;
-        }
-
-        return options;
     }
 
 }

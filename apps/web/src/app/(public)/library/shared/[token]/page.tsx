@@ -15,14 +15,13 @@
 
 'use client';
 
-
-import { BookOpen, AlertTriangle, Star, Library, Clock } from 'lucide-react';
+import { BookOpen, AlertTriangle, Calendar, Star, Library, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
-import { SharedLibraryGameCard } from '@/components/library';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
+import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
@@ -33,11 +32,7 @@ export default function SharedLibraryPage() {
   const shareToken = params?.token as string;
 
   // Fetch shared library data
-  const {
-    data: sharedLibrary,
-    isLoading,
-    error,
-  } = useSharedLibrary(shareToken);
+  const { data: sharedLibrary, isLoading, error } = useSharedLibrary(shareToken);
 
   // Loading state
   if (isLoading) {
@@ -147,13 +142,25 @@ export default function SharedLibraryPage() {
         {/* Games Grid */}
         {sharedLibrary.games.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {sharedLibrary.games.map((game) => (
-              <SharedLibraryGameCard
-                key={game.gameId}
-                game={game}
-                showNotes={hasNotes}
-              />
-            ))}
+            {sharedLibrary.games.map(game => {
+              const metadata: MeepleCardMetadata[] = game.yearPublished
+                ? [{ icon: Calendar, label: `${game.yearPublished}` }]
+                : [];
+              return (
+                <MeepleCard
+                  key={game.gameId}
+                  entity="game"
+                  variant="grid"
+                  title={game.title}
+                  subtitle={game.publisher || undefined}
+                  imageUrl={game.imageUrl || undefined}
+                  badge={game.isFavorite ? 'Preferito' : undefined}
+                  metadata={metadata.length > 0 ? metadata : undefined}
+                  showPreview={hasNotes && !!game.notes}
+                  previewData={hasNotes && game.notes ? { description: game.notes } : undefined}
+                />
+              );
+            })}
           </div>
         ) : (
           <Card className="border-dashed">
@@ -172,9 +179,7 @@ export default function SharedLibraryPage() {
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="flex flex-col md:flex-row items-center justify-between gap-4 py-6">
               <div className="text-center md:text-left">
-                <h3 className="font-semibold text-lg mb-1">
-                  Vuoi creare la tua libreria?
-                </h3>
+                <h3 className="font-semibold text-lg mb-1">Vuoi creare la tua libreria?</h3>
                 <p className="text-muted-foreground">
                   Registrati gratuitamente e inizia a gestire la tua collezione di giochi da tavolo.
                 </p>

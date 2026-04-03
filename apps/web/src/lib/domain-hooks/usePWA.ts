@@ -131,8 +131,8 @@ export function usePWA(): UsePWAReturn {
     // Initialize offline storage
     initOfflineStorage().catch(console.error);
 
-    // Register service worker
-    if (supported) {
+    // Register service worker (skip in mock mode to avoid conflicting with MSW)
+    if (supported && process.env.NEXT_PUBLIC_MOCK_MODE !== 'true') {
       registerServiceWorker();
     }
 

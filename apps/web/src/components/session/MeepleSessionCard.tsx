@@ -41,8 +41,8 @@ import { Settings, Play, Pause, RefreshCw, UserPlus, LogOut, Download } from 'lu
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import type { SessionStatus } from '@/components/ui/data-display/meeple-card-features/session-types';
-import { getNavigationLinks } from '@/config/entity-navigation';
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
+import { buildSessionCardProps } from '@/lib/card-mappers';
 
 // ============================================================================
 // Types
@@ -192,6 +192,12 @@ export function MeepleSessionCard({
   ];
 
   // ============================================================================
+  // Mapper Props
+  // ============================================================================
+
+  const mapperProps = buildSessionCardProps(session);
+
+  // ============================================================================
   // Card Data
   // ============================================================================
 
@@ -217,13 +223,11 @@ export function MeepleSessionCard({
       // Issue #5003: Quick actions with conditional visibility by status and role
       entityQuickActions={entityQuickActions}
       showInfoButton
-      infoHref={`/sessions/${session.id}`}
+      entityId={session.id}
       infoTooltip="Vai alla sessione"
-      // Navigation footer: Game + Players + Agent + Chats links
-      navigateTo={getNavigationLinks('session', {
-        id: session.id,
-        gameId: session.gameId,
-      })}
+      // Navigation footer: linked entities and state label from mapper
+      linkedEntities={mapperProps.linkedEntities}
+      stateLabel={mapperProps.stateLabel}
       data-testid={`session-card-${session.id}`}
     />
   );

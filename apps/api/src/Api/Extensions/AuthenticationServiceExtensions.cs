@@ -70,15 +70,9 @@ internal static class AuthenticationServiceExtensions
     {
         // CODE-QUALITY: Centralized password hashing service (PBKDF2-HMAC-SHA256)
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
-        services.AddSingleton<ApiKeyCookieService>();
 
         // Core authentication - MIGRATED TO DDD/CQRS
         // AuthService removed - all auth operations now use MediatR handlers in BoundedContexts.Authentication
-
-        // API-01: API key authentication service
-        services.AddScoped<ApiKeyAuthenticationService>();
-
-        // API-04: API key management service
 
         // AUTH-06: OAuth services
         services.AddScoped<IEncryptionService, EncryptionService>();

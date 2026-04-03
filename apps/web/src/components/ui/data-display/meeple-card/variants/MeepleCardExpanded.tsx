@@ -64,7 +64,6 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
     entityQuickActions,
     showInfoButton,
     entityId,
-    infoHref,
     infoTooltip,
     id,
     stateLabel,
@@ -88,10 +87,7 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
   const showWishlistBtn = !!showWishlist && !hasQuickActions;
 
   const hasStripActions =
-    !!entityQuickActions ||
-    !!(showInfoButton && (entityId || infoHref)) ||
-    showWishlistBtn ||
-    hasQuickActions;
+    !!entityQuickActions || !!(showInfoButton && entityId) || showWishlistBtn || hasQuickActions;
 
   const stripElement = hasStripActions ? (
     <CardActionStrip
@@ -105,7 +101,6 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
       onWishlistToggle={onWishlistToggle}
       showInfoButton={showInfoButton}
       entityId={entityId}
-      infoHref={infoHref}
       infoTooltip={infoTooltip}
       drawerEntityType={drawerEntityType}
       onDrawerOpen={() => setDrawerOpen(true)}

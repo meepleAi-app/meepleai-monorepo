@@ -20,8 +20,6 @@ internal static class AuthenticationServiceExtensions
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
-        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
-        services.AddScoped<IApiKeyUsageLogRepository, ApiKeyUsageLogRepository>();
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
         services.AddScoped<IShareLinkRepository, ShareLinkRepository>(); // ISSUE-2052
         services.AddScoped<IInvitationTokenRepository, InvitationTokenRepository>(); // ISSUE-124

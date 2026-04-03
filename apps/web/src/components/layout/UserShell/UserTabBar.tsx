@@ -33,7 +33,7 @@ const TABS: TabConfig[] = [
   {
     id: 'library',
     label: 'Libreria',
-    href: '/library?tab=collection',
+    href: '/library',
     icon: '📚',
     isActive: p => p.startsWith('/library'),
   },

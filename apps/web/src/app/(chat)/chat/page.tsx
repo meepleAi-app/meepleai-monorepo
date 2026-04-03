@@ -117,7 +117,11 @@ function renderChatSessionCard(
     chatPreview: session.lastMessagePreview
       ? { lastMessage: session.lastMessagePreview, sender: 'agent' as const }
       : undefined,
-    navigateTo: navLinks,
+    linkedEntities: navLinks.map(l => ({ entityType: l.entity, count: 1 })),
+    onManaPipClick: entityType => {
+      const link = navLinks.find(l => l.entity === entityType);
+      if (link?.href) window.location.href = link.href;
+    },
   };
 }
 

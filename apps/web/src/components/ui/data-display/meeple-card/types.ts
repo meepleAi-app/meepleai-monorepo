@@ -9,8 +9,6 @@
 
 import type React from 'react';
 
-import type { ResolvedNavigationLink } from '@/config/entity-navigation';
-
 import type { EntityLinkType } from '../entity-link/entity-link-types';
 import type { SnapshotInfo } from '../extra-meeple-card/types';
 import type { ModelParameters } from '../meeple-card-features/AgentModelInfo';
@@ -210,12 +208,9 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   showInfoButton?: boolean;
   /**
    * Entity ID for drawer-based detail view (Issue #5025).
-   * When present, the "i" button opens ExtraMeepleCardDrawer instead of navigating.
-   * If absent, the button is not rendered (unless infoHref is set for backward compat).
+   * When present, the "i" button opens ExtraMeepleCardDrawer.
    */
   entityId?: string;
-  /** @deprecated Use entityId instead. Kept for backward compatibility. */
-  infoHref?: string;
   infoTooltip?: string;
 
   // ========== FEATURE: VERTICAL TAG STRIP (Issue #4181) ==========
@@ -255,12 +250,9 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
 
   // ========== NAVIGATION FOOTER (Epic #4688, Issue #4689) ==========
 
-  /** @deprecated Use linkedEntities instead. Kept for backward compatibility. */
-  navigateTo?: ResolvedNavigationLink[];
-
   // ========== MANA FEATURES ==========
 
-  /** Mana-linked entities shown in link footer. When provided, replaces navigateTo. */
+  /** Mana-linked entities shown in link footer. Renders ManaLinkFooter with entity-type pips. */
   linkedEntities?: LinkedEntityInfo[];
   /** Callback when a mana pip in the link footer is clicked */
   onManaPipClick?: (entityType: MeepleEntityType) => void;
@@ -366,6 +358,42 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   isTimeTravelMode?: boolean;
   /** Toggle time travel mode */
   onTimeTravelToggle?: (enabled: boolean) => void;
+
+  // ─── Symbol Strip — Identity Chips ─────────────────────────────────────
+  /** Primo chip identità (es. "Strategia", "Euro", "Worker Placement") */
+  identityChip1?: string;
+  /** Secondo chip identità (es. "Cooperativo", "Esperto") */
+  identityChip2?: string;
+
+  // ─── Symbol Strip — Metric Pills (entity-specific) ──────────────────────
+  // Game metrics
+  /** Es. "2-4" o "1-6" */
+  playerCountDisplay?: string;
+  /** Es. "45min" o "2h" */
+  playTimeDisplay?: string;
+
+  // Player metrics
+  gamesPlayed?: number;
+  /** Win rate 0-100 */
+  winRate?: number;
+
+  // Session metrics
+  winnerScore?: string;
+  sessionDate?: string;
+
+  // Agent metrics
+  conversationCount?: number;
+  /** Accuracy 0-100 */
+  agentAccuracy?: number;
+  linkedKbCount?: number;
+
+  // KnowledgeBase metrics
+  pageCount?: number;
+  chunkCount?: number;
+
+  // ─── Bottom Bar ──────────────────────────────────────────────────────────
+  bottomStatLabel?: string;
+  bottomStatValue?: string;
 }
 
 // ============================================================================

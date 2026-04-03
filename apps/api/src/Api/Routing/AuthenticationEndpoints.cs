@@ -18,8 +18,6 @@ using GetSessionStatusQuery = Api.BoundedContexts.Authentication.Application.Que
 using ExtendSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.ExtendSessionCommand;
 using RevokeSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.RevokeSessionCommand;
 using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserSessionsQuery;
-using LoginWithApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LoginWithApiKeyCommand;
-using LogoutApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutApiKeyCommand;
 using LogoutAllDevicesCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutAllDevicesCommand;
 using GetSessionByTokenHashQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionByTokenHashQuery;
 using AcceptInvitationCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.AcceptInvitationCommand;
@@ -32,7 +30,7 @@ namespace Api.Routing;
 
 /// <summary>
 /// Core authentication endpoints.
-/// Handles user registration, login, logout, API key authentication, and session management.
+/// Handles user registration, login, logout, and session management.
 ///
 /// Authentication pattern:
 /// - <c>RequireAdminSession()</c>: Custom extension that validates the session cookie and checks admin role
@@ -49,7 +47,6 @@ internal static class AuthenticationEndpoints
         MapRegisterEndpoint(group);
         MapLoginEndpoint(group);
         MapLogoutEndpoint(group);
-        MapApiKeyEndpoints(group);
         MapMeEndpoint(group);
 
         // Map session management endpoints
@@ -202,93 +199,10 @@ internal static class AuthenticationEndpoints
         });
     }
 
-    private static void MapApiKeyEndpoints(RouteGroupBuilder group)
-    {
-        group.MapPost("/auth/apikey/login", async (
-            ApiKeyLoginPayload payload,
-            HttpContext context,
-            IMediator mediator,
-            ApiKeyCookieService apiKeyCookieService,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            if (string.IsNullOrWhiteSpace(payload.ApiKey))
-            {
-                logger.LogWarning("API key login failed: API key is empty");
-                return Results.BadRequest(new { error = "API key is required" });
-            }
-
-            var command = new LoginWithApiKeyCommand(ApiKey: payload.ApiKey);
-
-            logger.LogInformation("API key login attempt");
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            var protectedApiKey = apiKeyCookieService.Protect(payload.ApiKey);
-            CookieHelpers.WriteApiKeyCookie(context, protectedApiKey);
-            logger.LogInformation("User {UserId} validated API key {ApiKeyId} and cookie issued", result.User.Id, result.ApiKeyId);
-
-            return Results.Json(new
-            {
-                user = result.User,
-                message = "API key verified. You can keep using the secure cookie or send Authorization: ApiKey <value> on API calls."
-            });
-        })
-        .WithName("LoginWithApiKey")
-        .WithTags("Authentication", "API Keys")
-        .WithSummary("Validate an API key")
-        .WithDescription(@"Authenticates an API key, stores it inside an httpOnly cookie for browsers, and returns the associated profile.
-Clients can also store the key securely and send it via the `Authorization: ApiKey {key}` header.")
-        .Produces(200)
-        .Produces(400)
-        .Produces(401);
-
-        group.MapPost("/auth/apikey/logout", async (
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            var command = new LogoutApiKeyCommand();
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            CookieHelpers.RemoveApiKeyCookie(context);
-            logger.LogInformation("API key cookie removed");
-
-            return Results.Json(new { ok = true, message = result.Message });
-        })
-        .WithName("LogoutApiKey")
-        .WithTags("Authentication", "API Keys")
-        .WithSummary("Logout API key authentication by removing httpOnly cookie")
-        .WithDescription("Removes the secure API key cookie so browsers no longer send it automatically. Use key management endpoints to revoke the key entirely.")
-        .Produces(200);
-    }
-
     private static void MapMeEndpoint(RouteGroupBuilder group)
     {
         group.MapGet("/auth/me", (HttpContext context) =>
         {
-            var authType = context.User.FindFirst("AuthType")?.Value;
-            if (string.Equals(authType, "ApiKey", StringComparison.Ordinal) && context.User.Identity?.IsAuthenticated is true)
-            {
-                var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                var email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-                var displayName = context.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-                var role = context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Results.Unauthorized();
-                }
-
-                if (string.IsNullOrEmpty(email))
-                {
-                    return Results.Unauthorized();
-                }
-
-                var user = new { id = userId, email, displayName = displayName ?? email, role = role ?? UserRole.User.ToString() };
-                return Results.Json(new { user, expiresAt = (DateTime?)null });
-            }
-
             var (authenticated, session, _) = context.TryGetActiveSession();
             if (authenticated)
             {

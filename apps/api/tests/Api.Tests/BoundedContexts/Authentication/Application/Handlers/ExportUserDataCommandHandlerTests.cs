@@ -26,7 +26,6 @@ public class ExportUserDataCommandHandlerTests
     private readonly Mock<INotificationRepository> _mockNotificationRepository;
     private readonly Mock<IUserAiConsentRepository> _mockAiConsentRepository;
     private readonly Mock<IConversationMemoryRepository> _mockConversationMemoryRepository;
-    private readonly Mock<IApiKeyRepository> _mockApiKeyRepository;
     private readonly Mock<ILogger<ExportUserDataCommandHandler>> _mockLogger;
     private readonly ExportUserDataCommandHandler _handler;
 
@@ -38,7 +37,6 @@ public class ExportUserDataCommandHandlerTests
         _mockNotificationRepository = new Mock<INotificationRepository>();
         _mockAiConsentRepository = new Mock<IUserAiConsentRepository>();
         _mockConversationMemoryRepository = new Mock<IConversationMemoryRepository>();
-        _mockApiKeyRepository = new Mock<IApiKeyRepository>();
         _mockLogger = new Mock<ILogger<ExportUserDataCommandHandler>>();
 
         _handler = new ExportUserDataCommandHandler(
@@ -48,7 +46,6 @@ public class ExportUserDataCommandHandlerTests
             _mockNotificationRepository.Object,
             _mockAiConsentRepository.Object,
             _mockConversationMemoryRepository.Object,
-            _mockApiKeyRepository.Object,
             _mockLogger.Object);
     }
 
@@ -173,9 +170,5 @@ public class ExportUserDataCommandHandlerTests
         _mockConversationMemoryRepository
             .Setup(r => r.CountByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(memoryCount);
-
-        _mockApiKeyRepository
-            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ApiKey>());
     }
 }

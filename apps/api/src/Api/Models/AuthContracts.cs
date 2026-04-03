@@ -96,12 +96,6 @@ internal class SessionManagementConfiguration
     public int AutoRevocationIntervalHours { get; set; } = 1;
 }
 
-// API Key authentication models
-/// <summary>
-/// API key login payload for browser-based API key authentication.
-/// </summary>
-internal record ApiKeyLoginPayload(string ApiKey);
-
 // AUTH-04: Password reset models
 internal record PasswordResetRequestPayload(string Email);
 internal record PasswordResetConfirmPayload(string Token, string NewPassword);

@@ -7,22 +7,38 @@ import { queueOperation, syncPendingOperations } from '@/lib/offline/toolkitDb';
 export function useOfflineToolkit(sessionId: string | null) {
   // SSR-safe: navigator doesn't exist on the server in Next.js App Router
   const isOnlineRef = useRef(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const isSyncingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleOnline = async () => {
       isOnlineRef.current = true;
-      if (!sessionId) return;
-
-      await syncPendingOperations(sessionId, async op => {
-        switch (op.type) {
-          case 'dice_roll':
-            await rollDice(sessionId, op.payload.diceType as string, op.payload.count as number);
-            break;
-          case 'score_update':
-            await updateScore(sessionId, op.payload.playerId as string, op.payload.score as number);
-            break;
-        }
-      });
+      if (!sessionId || isSyncingRef.current) return;
+      isSyncingRef.current = true;
+      try {
+        await syncPendingOperations(sessionId, async op => {
+          switch (op.type) {
+            case 'dice_roll':
+              await rollDice(sessionId, op.payload.diceType as string, op.payload.count as number);
+              break;
+            case 'score_update':
+              await updateScore(
+                sessionId,
+                op.payload.playerId as string,
+                op.payload.score as number
+              );
+              break;
+          }
+        });
+      } finally {
+        isSyncingRef.current = false;
+      }
     };
 
     const handleOffline = () => {
@@ -47,6 +63,7 @@ export function useOfflineToolkit(sessionId: string | null) {
         if (isOnlineRef.current) {
           // Online: fire-and-forget API call; queue on failure
           rollDice(sessionId, diceType, count).catch(() => {
+            if (!isMountedRef.current) return;
             void queueOperation({
               id: crypto.randomUUID(),
               sessionId,
@@ -79,6 +96,7 @@ export function useOfflineToolkit(sessionId: string | null) {
 
       if (isOnlineRef.current) {
         updateScore(sessionId, playerId, score).catch(() => {
+          if (!isMountedRef.current) return;
           void queueOperation({
             id: crypto.randomUUID(),
             sessionId,

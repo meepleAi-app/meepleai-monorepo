@@ -64,6 +64,30 @@ describe('useOfflineToolkit', () => {
     });
   });
 
+  it("offline mode: rollDice accoda l'operazione in IndexedDB", async () => {
+    const { queueOperation } = await import('@/lib/offline/toolkitDb');
+
+    const { result } = renderHook(() => useOfflineToolkit('sess-1'));
+
+    // Simulate going offline
+    act(() => {
+      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+      window.dispatchEvent(new Event('offline'));
+    });
+
+    await act(async () => {
+      await result.current.rollDice('D6', 2);
+    });
+
+    expect(queueOperation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: 'sess-1',
+        type: 'dice_roll',
+        payload: expect.objectContaining({ diceType: 'D6', count: 2 }),
+      })
+    );
+  });
+
   it('offline mode: updateScore queues the operation', async () => {
     const { queueOperation } = await import('@/lib/offline/toolkitDb');
 

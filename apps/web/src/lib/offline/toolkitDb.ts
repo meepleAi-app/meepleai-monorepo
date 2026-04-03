@@ -16,24 +16,34 @@ const STORE_NAME = 'pending-ops';
 const DB_VERSION = 1;
 
 let dbInstance: IDBPDatabase | null = null;
+let dbPromise: Promise<IDBPDatabase> | null = null;
 
-export async function openToolkitDb(): Promise<IDBPDatabase> {
-  if (dbInstance) return dbInstance;
-  dbInstance = await openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        store.createIndex('by-session', 'sessionId');
-        store.createIndex('by-synced', 'synced');
-      }
-    },
-  });
-  return dbInstance;
+export function openToolkitDb(): Promise<IDBPDatabase> {
+  if (dbInstance) return Promise.resolve(dbInstance);
+  if (!dbPromise) {
+    dbPromise = openDB(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          store.createIndex('by-session', 'sessionId');
+          store.createIndex('by-synced', 'synced');
+        }
+      },
+    }).then(db => {
+      dbInstance = db;
+      return db;
+    });
+  }
+  return dbPromise;
 }
 
 /** Reset the singleton — used in tests to isolate state between test cases. */
 export function resetDbInstance(): void {
+  if (dbInstance && typeof dbInstance.close === 'function') {
+    dbInstance.close();
+  }
   dbInstance = null;
+  dbPromise = null;
 }
 
 export async function queueOperation(op: PendingOperation): Promise<void> {

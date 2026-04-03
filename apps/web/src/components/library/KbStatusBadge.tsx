@@ -10,7 +10,7 @@
  * Usage:
  * ```tsx
  * <div className="relative">
- *   <PrivateGameCard game={game} ... />
+ *   <MeepleCard ... />
  *   <KbStatusBadge gameId={game.id} />
  * </div>
  * ```

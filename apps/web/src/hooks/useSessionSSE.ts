@@ -47,7 +47,7 @@ export function useSessionSSE(
   const onEventRef = useRef(onEvent);
   useEffect(() => {
     onEventRef.current = onEvent;
-  });
+  }, [onEvent]);
 
   const seenIdsRef = useRef(new Set<string>());
   const eventSourceRef = useRef<EventSource | null>(null);

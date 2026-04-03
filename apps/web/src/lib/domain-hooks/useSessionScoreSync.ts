@@ -7,16 +7,16 @@ import type { ActivityEvent } from '@/stores/session/types';
 /**
  * Interpreta gli eventi SSE di tipo score_update e li applica allo store.
  * Si integra con useSessionSSE esistente — passa handleSseEvent come callback.
+ *
+ * Note: addEvent is intentionally NOT called here. useSessionSSE already calls
+ * addEvent before firing onEvent, so calling it again would write every event
+ * to the activity feed twice.
  */
 export function useSessionScoreSync() {
   const updateScore = useSessionStore(s => s.updateScore);
-  const addEvent = useSessionStore(s => s.addEvent);
 
   const handleSseEvent = useCallback(
     (event: ActivityEvent) => {
-      // Sempre aggiunge all'activity feed
-      addEvent(event);
-
       switch (event.type) {
         case 'score_update': {
           const playerId = event.playerId;
@@ -28,7 +28,7 @@ export function useSessionScoreSync() {
         }
       }
     },
-    [updateScore, addEvent]
+    [updateScore]
   );
 
   return { handleSseEvent };

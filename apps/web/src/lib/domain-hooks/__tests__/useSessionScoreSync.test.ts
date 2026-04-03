@@ -30,5 +30,10 @@ describe('useSessionScoreSync', () => {
 
     const score = useSessionStore.getState().scores.find(s => s.playerId === 'p1');
     expect(score?.score).toBe(8);
+
+    // handleSseEvent no longer calls addEvent — useSessionSSE owns that responsibility.
+    // When called directly (not through useSessionSSE), the activity feed stays empty.
+    const events = useSessionStore.getState().events;
+    expect(events.length).toBe(0);
   });
 });

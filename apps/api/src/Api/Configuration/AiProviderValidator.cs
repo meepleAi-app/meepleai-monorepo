@@ -56,20 +56,19 @@ internal class AiProviderValidator : IValidateOptions<AiProviderSettings>
 
     private static void ValidateFallbackChain(AiProviderSettings options, List<string> errors)
     {
-        // Validation 3: FallbackChain providers must exist and be enabled
+        // Validation 3: FallbackChain providers must exist (but may be disabled — disabled providers are skipped at runtime)
         if (options.FallbackChain.Count > 0) // CA1860
         {
             foreach (var providerName in options.FallbackChain)
             {
                 // CA1854: Prefer TryGetValue
-                if (!options.Providers.TryGetValue(providerName, out var provider))
+                if (!options.Providers.TryGetValue(providerName, out _))
                 {
                     errors.Add($"FallbackChain provider '{providerName}' not found in AI:Providers");
                 }
-                else if (!provider.Enabled)
-                {
-                    errors.Add($"FallbackChain provider '{providerName}' is disabled (AI:Providers:{providerName}:Enabled = false)");
-                }
+                // Disabled providers in FallbackChain are valid — they are simply skipped at runtime.
+                // This allows environment-specific overrides (e.g. Ollama disabled on staging)
+                // without requiring FallbackChain to be redefined in every environment config.
             }
 
             // Validation 4: FallbackChain must not have duplicates

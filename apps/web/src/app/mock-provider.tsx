@@ -17,7 +17,24 @@ interface MockProviderProps {
   children: React.ReactNode;
 }
 
+/**
+ * Unregister any service workers that are not MSW's mockServiceWorker.js.
+ * This prevents the PWA sw.js from intercepting requests instead of MSW.
+ */
+async function unregisterConflictingSWs() {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  for (const reg of registrations) {
+    const swUrl =
+      reg.active?.scriptURL || reg.installing?.scriptURL || reg.waiting?.scriptURL || '';
+    if (!swUrl.includes('mockServiceWorker')) {
+      await reg.unregister();
+    }
+  }
+}
+
 async function initMocks(skipControllerCheck = false) {
+  await unregisterConflictingSWs();
   const { worker } = await import('@/mocks/browser');
   await worker.start({
     onUnhandledRequest: 'bypass', // Non bloccare richieste non gestite (es. font, next internals)

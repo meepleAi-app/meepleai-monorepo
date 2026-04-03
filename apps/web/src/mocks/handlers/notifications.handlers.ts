@@ -91,6 +91,31 @@ export const notificationsHandlers = [
     const body = await request.json();
     return HttpResponse.json(body);
   }),
+
+  http.get(`${API_BASE}/api/v1/notifications/unread-count`, () => {
+    return HttpResponse.json({
+      count: notifications.filter(n => !n.isRead).length,
+    });
+  }),
+
+  // SSE stream endpoint — returns a keep-alive stream in mock mode
+  http.get(`${API_BASE}/api/v1/notifications/stream`, () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        // Send a connected event so the client knows the SSE is alive
+        controller.enqueue(encoder.encode('event: connected\ndata: {}\n\n'));
+        // Keep the stream open (MSW will close it when the request is aborted)
+      },
+    });
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
+    });
+  }),
 ];
 
 // Helper to reset notification state between tests

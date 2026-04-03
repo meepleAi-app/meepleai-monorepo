@@ -103,23 +103,23 @@ vi.mock('@/components/library/AddPrivateGameForm', () => ({
 }));
 
 // Mock MeepleCard — PrivateGameCard is now inlined in PrivateGamesClient and renders via MeepleCard.
-// We expose the minimum surface needed by the integration tests: data-testid, title, and quickActions.
+// We expose the minimum surface needed by the integration tests: data-testid, title, and entityQuickActions.
 vi.mock('@/components/ui/data-display/meeple-card', () => ({
   MeepleCard: ({
     'data-testid': testId,
     title,
-    quickActions,
+    entityQuickActions,
   }: {
     'data-testid'?: string;
     title?: string;
-    quickActions?: Array<{ label: string; onClick: () => void }>;
+    entityQuickActions?: Array<{ label: string; onClick: () => void }>;
   }) => {
     // Derive game id from testId pattern "game-card-<id>" to build action test-ids
     const gameId = testId?.replace('game-card-', '') ?? '';
     return (
       <div data-testid={testId}>
         <span>{title}</span>
-        {quickActions?.map(action => (
+        {entityQuickActions?.map(action => (
           <button
             key={action.label}
             data-testid={`${action.label.toLowerCase()}-btn-${gameId}`}

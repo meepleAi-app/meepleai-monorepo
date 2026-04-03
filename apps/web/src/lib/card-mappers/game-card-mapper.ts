@@ -6,6 +6,10 @@ import { formatPlayTime } from './shared-utils';
 /**
  * Mappa un Game DTO alle props di base di MeepleCard.
  * Non include props di callback (actions, clicks) — quelle restano nell'adapter del componente.
+ *
+ * Nota: Il tipo `Game` non include `mechanics`/`categories` (quelli sono su `BggGameDetails`
+ * e `SharedGameDto`). Identity chips richiedono un DTO più ricco, da passare direttamente
+ * nell'adapter quando disponibile.
  */
 export function buildGameCardProps(game: Game): Partial<MeepleCardProps> {
   // playerCountDisplay

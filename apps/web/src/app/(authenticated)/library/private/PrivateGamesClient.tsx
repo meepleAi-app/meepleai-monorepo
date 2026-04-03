@@ -524,12 +524,10 @@ function PrivateGameCard({ game, onEdit, onDelete, onPropose, onClick }: Private
     ...(game.yearPublished ? [{ icon: Calendar, label: `${game.yearPublished}` }] : []),
   ];
 
-  const quickActions = [
+  const entityQuickActions = [
     ...(onEdit ? [{ icon: Edit2, label: 'Edit', onClick: () => onEdit(game) }] : []),
     ...(onPropose ? [{ icon: Share2, label: 'Propose', onClick: () => onPropose(game) }] : []),
-    ...(onDelete
-      ? [{ icon: Trash2, label: 'Delete', onClick: () => onDelete(game.id), destructive: true }]
-      : []),
+    ...(onDelete ? [{ icon: Trash2, label: 'Delete', onClick: () => onDelete(game.id) }] : []),
   ];
 
   return (
@@ -542,7 +540,7 @@ function PrivateGameCard({ game, onEdit, onDelete, onPropose, onClick }: Private
       badge="Private"
       metadata={metadata}
       onClick={onClick}
-      quickActions={quickActions.length > 0 ? quickActions : undefined}
+      entityQuickActions={entityQuickActions.length > 0 ? entityQuickActions : undefined}
       data-testid={`game-card-${game.id}`}
     />
   );

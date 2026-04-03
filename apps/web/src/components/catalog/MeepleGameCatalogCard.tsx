@@ -55,7 +55,6 @@ import {
 } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
 import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
-import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 import { useGameInLibraryStatus } from '@/hooks/queries';
 import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
 import { api } from '@/lib/api';
@@ -202,40 +201,32 @@ export function MeepleGameCatalogCard({
     staleTime: 2 * 60 * 1000,
   });
 
-  // Navigation footer: drawers when in library, link to detail page otherwise
-  const catalogNavLinks: ResolvedNavigationLink[] = useMemo(
+  // Navigation footer: drawers when in library, single kb link otherwise
+  const catalogLinkedEntities = useMemo(
     () =>
       inLibrary
         ? [
-            {
-              entity: 'kb' as MeepleEntityType,
-              label: 'KB',
-              onClick: () => setKbDrawerOpen(true),
-            },
-            {
-              entity: 'agent' as MeepleEntityType,
-              label: 'Agents',
-              onClick: () => setAgentDrawerOpen(true),
-            },
-            {
-              entity: 'chatSession' as MeepleEntityType,
-              label: 'Chats',
-              onClick: () => setChatDrawerOpen(true),
-            },
-            {
-              entity: 'session' as MeepleEntityType,
-              label: 'Sessions',
-              onClick: () => setSessionDrawerOpen(true),
-            },
+            { entityType: 'kb' as MeepleEntityType, count: 1 },
+            { entityType: 'agent' as MeepleEntityType, count: 1 },
+            { entityType: 'chatSession' as MeepleEntityType, count: 1 },
+            { entityType: 'session' as MeepleEntityType, count: 1 },
           ]
-        : [
-            {
-              entity: 'kb' as MeepleEntityType,
-              label: 'Regolamento',
-              href: `/library/games/${game.id}`,
-            },
-          ],
-    [game.id, inLibrary]
+        : [{ entityType: 'kb' as MeepleEntityType, count: 1 }],
+    [inLibrary]
+  );
+
+  const handleCatalogPipClick = useCallback(
+    (entityType: MeepleEntityType) => {
+      if (inLibrary) {
+        if (entityType === 'kb') setKbDrawerOpen(true);
+        else if (entityType === 'agent') setAgentDrawerOpen(true);
+        else if (entityType === 'chatSession') setChatDrawerOpen(true);
+        else if (entityType === 'session') setSessionDrawerOpen(true);
+      } else {
+        window.location.href = `/library/games/${game.id}`;
+      }
+    },
+    [inLibrary, game.id]
   );
 
   // Build metadata array
@@ -319,11 +310,12 @@ export function MeepleGameCatalogCard({
         flipTrigger="button"
         className={className}
         kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
-        navigateTo={catalogNavLinks}
+        linkedEntities={catalogLinkedEntities}
+        onManaPipClick={handleCatalogPipClick}
         data-testid={`catalog-game-card-${game.id}`}
         entityQuickActions={catalogQuickActions}
         showInfoButton
-        infoHref={`/library/games/${game.id}`}
+        entityId={game.id}
         infoTooltip="Vai al dettaglio"
       />
 

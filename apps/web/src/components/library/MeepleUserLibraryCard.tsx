@@ -30,11 +30,7 @@ import { useState, useCallback } from 'react';
 import { Clock, Play, RotateCcw, Share2, Trash2, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import {
-  MeepleCard,
-  type MeepleCardVariant,
-  type MeepleEntityType,
-} from '@/components/ui/data-display/meeple-card';
+import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
 import { useSharedGame } from '@/hooks/queries';
 import { useRemoveGameFromLibrary } from '@/hooks/queries';
@@ -150,25 +146,6 @@ export function MeepleUserLibraryCard({
 
   const badge = game.isOwned ? 'Owned' : game.inWishlist ? 'Wishlist' : undefined;
 
-  const drawerNavLinks = [
-    { entity: 'kb' as MeepleEntityType, label: 'KB', onClick: () => setKbDrawerOpen(true) },
-    {
-      entity: 'agent' as MeepleEntityType,
-      label: 'Agents',
-      onClick: () => setAgentDrawerOpen(true),
-    },
-    {
-      entity: 'chatSession' as MeepleEntityType,
-      label: 'Chats',
-      onClick: () => setChatDrawerOpen(true),
-    },
-    {
-      entity: 'session' as MeepleEntityType,
-      label: 'Sessions',
-      onClick: () => setSessionDrawerOpen(true),
-    },
-  ];
-
   return (
     <>
       <MeepleCard
@@ -187,10 +164,21 @@ export function MeepleUserLibraryCard({
         flipData={flipData}
         flipTrigger="button"
         onFlip={handleFlip}
-        navigateTo={drawerNavLinks}
+        linkedEntities={[
+          { entityType: 'kb', count: 1 },
+          { entityType: 'agent', count: 1 },
+          { entityType: 'chatSession', count: 1 },
+          { entityType: 'session', count: 1 },
+        ]}
+        onManaPipClick={entityType => {
+          if (entityType === 'kb') setKbDrawerOpen(true);
+          else if (entityType === 'agent') setAgentDrawerOpen(true);
+          else if (entityType === 'chatSession') setChatDrawerOpen(true);
+          else if (entityType === 'session') setSessionDrawerOpen(true);
+        }}
         entityQuickActions={quickActions}
         showInfoButton
-        infoHref={`/library/games/${game.id}`}
+        entityId={game.id}
         infoTooltip="Vai al dettaglio"
         className={className}
         data-testid={`library-game-card-${game.id}`}

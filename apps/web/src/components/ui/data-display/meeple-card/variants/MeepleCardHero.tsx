@@ -20,7 +20,6 @@ import { AgentStatsDisplay } from '../../meeple-card-features/AgentStatsDisplay'
 import { AgentStatusBadge } from '../../meeple-card-features/AgentStatusBadge';
 import { BulkSelectCheckbox } from '../../meeple-card-features/BulkSelectCheckbox';
 import { CardAgentAction } from '../../meeple-card-features/CardAgentAction';
-import { CardNavigationFooter } from '../../meeple-card-features/CardNavigationFooter';
 import { ChatAgentInfo } from '../../meeple-card-features/ChatAgentInfo';
 import { ChatGameContext } from '../../meeple-card-features/ChatGameContext';
 import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
@@ -94,7 +93,6 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
     entityQuickActions,
     showInfoButton,
     entityId,
-    infoHref,
     infoTooltip,
     tags,
     maxVisibleTags = 3,
@@ -109,7 +107,6 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
     chatStats,
     chatPreview,
     unreadCount,
-    navigateTo,
     hasAgent,
     agentId,
     onCreateAgent,
@@ -163,10 +160,7 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const hasMobileActions =
-    hasQuickActions ||
-    !!entityQuickActions ||
-    showWishlistBtn ||
-    !!(showInfoButton && (entityId || infoHref));
+    hasQuickActions || !!entityQuickActions || showWishlistBtn || !!(showInfoButton && entityId);
 
   const {
     isMobile,
@@ -209,10 +203,7 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
   const Component = isInteractive ? 'div' : 'article';
 
   const hasStripActions =
-    !!entityQuickActions ||
-    !!(showInfoButton && (entityId || infoHref)) ||
-    showWishlistBtn ||
-    hasQuickActions;
+    !!entityQuickActions || !!(showInfoButton && entityId) || showWishlistBtn || hasQuickActions;
 
   const stripElement = hasStripActions ? (
     <CardActionStrip
@@ -226,7 +217,6 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
       onWishlistToggle={onWishlistToggle}
       showInfoButton={showInfoButton}
       entityId={entityId}
-      infoHref={infoHref}
       infoTooltip={infoTooltip}
       drawerEntityType={drawerEntityType}
       onDrawerOpen={() => setDrawerOpen(true)}
@@ -525,11 +515,9 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
           gameId={id}
           onCreateAgent={onCreateAgent}
           variant={variant}
-          hasNavFooter={!!(navigateTo && navigateTo.length > 0)}
+          hasNavFooter={false}
         />
       )}
-
-      {navigateTo && navigateTo.length > 0 && <CardNavigationFooter links={navigateTo} />}
 
       {firstLinkPreview && linkCount !== undefined && linkCount > 0 && (
         <EntityLinkPreviewRow

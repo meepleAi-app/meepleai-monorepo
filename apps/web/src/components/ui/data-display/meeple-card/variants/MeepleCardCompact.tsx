@@ -65,13 +65,11 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
     entityQuickActions,
     showInfoButton,
     entityId,
-    infoHref,
     infoTooltip: _infoTooltip,
     unreadCount: _unreadCount,
     hasAgent,
     agentId,
     onCreateAgent,
-    navigateTo,
     stateLabel: _stateLabel,
     identityChip1,
     identityChip2,
@@ -101,10 +99,7 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const hasMobileActions =
-    hasQuickActions ||
-    !!entityQuickActions ||
-    showWishlistBtn ||
-    !!(showInfoButton && (entityId || infoHref));
+    hasQuickActions || !!entityQuickActions || showWishlistBtn || !!(showInfoButton && entityId);
 
   const { isMobile, handleMobileClick, cardRef } = useMobileInteraction({
     hasMobileActions,
@@ -237,7 +232,7 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
           gameId={id}
           onCreateAgent={onCreateAgent}
           variant={variant}
-          hasNavFooter={!!(navigateTo && navigateTo.length > 0)}
+          hasNavFooter={false}
         />
       )}
 

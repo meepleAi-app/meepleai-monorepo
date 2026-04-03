@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { createSession, finalizeSession } from '@/lib/api/clients/gameSessionsClient';
 import { ConflictError } from '@/lib/api/core/errors';
@@ -34,6 +34,7 @@ export function useGameNightOrchestrator(gameNightId: string): UseGameNightOrche
   >([]);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isStartingRef = useRef(false);
 
   const startGame = useCallback(
     async (payload: StartGamePayload) => {
@@ -74,37 +75,42 @@ export function useGameNightOrchestrator(gameNightId: string): UseGameNightOrche
 
   const startNextGame = useCallback(
     async (payload: StartGamePayload) => {
-      // Guard against double-tap: reuse isStarting from startGame
-      if (isStarting) return;
+      // Synchronous ref-based guard against double-tap (state updates are async)
+      if (isStartingRef.current) return;
+      isStartingRef.current = true;
 
-      // Read latest state atomically to avoid stale closure issues
-      // (SSE or other tabs may have updated the store between renders)
-      const currentState = useSessionStore.getState();
-      const currentSessionId = currentState.sessionId;
-      const currentGameTitle = currentState.gameTitle;
+      try {
+        // Read latest state atomically to avoid stale closure issues
+        // (SSE or other tabs may have updated the store between renders)
+        const currentState = useSessionStore.getState();
+        const currentSessionId = currentState.sessionId;
+        const currentGameTitle = currentState.gameTitle;
 
-      // 1. Finalizza sessione corrente (best-effort)
-      if (currentSessionId) {
-        try {
-          await finalizeSession(currentSessionId);
-          if (currentGameTitle) {
-            setCompletedGames(prev => [
-              ...prev,
-              { gameTitle: currentGameTitle, sessionId: currentSessionId },
-            ]);
+        // 1. Finalizza sessione corrente (best-effort)
+        if (currentSessionId) {
+          try {
+            await finalizeSession(currentSessionId);
+            if (currentGameTitle) {
+              setCompletedGames(prev => [
+                ...prev,
+                { gameTitle: currentGameTitle, sessionId: currentSessionId },
+              ]);
+            }
+          } catch {
+            // Continua comunque — la finalizzazione può essere ritentata
           }
-        } catch {
-          // Continua comunque — la finalizzazione può essere ritentata
         }
+
+        // 2. Reset store per il nuovo gioco
+        reset();
+
+        // 3. Avvia nuovo gioco
+        await startGame(payload);
+      } finally {
+        isStartingRef.current = false;
       }
-
-      // 2. Reset store per il nuovo gioco
-      reset();
-
-      // 3. Avvia nuovo gioco
-      await startGame(payload);
     },
-    [isStarting, reset, startGame]
+    [reset, startGame]
   );
 
   return { completedGames, isStarting, error, startGame, startNextGame };

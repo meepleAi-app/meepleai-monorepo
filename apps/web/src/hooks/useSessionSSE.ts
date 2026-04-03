@@ -92,6 +92,10 @@ export function useSessionSSE(
 
           if (seenIdsRef.current.has(parsed.id)) return;
           seenIdsRef.current.add(parsed.id);
+          if (seenIdsRef.current.size > 500) {
+            const oldest = seenIdsRef.current.keys().next().value;
+            if (oldest !== undefined) seenIdsRef.current.delete(oldest);
+          }
 
           addEventRef.current(parsed);
           onEventRef.current?.(parsed);

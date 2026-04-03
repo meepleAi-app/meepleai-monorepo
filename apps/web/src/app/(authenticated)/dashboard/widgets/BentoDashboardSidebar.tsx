@@ -7,10 +7,10 @@ import { cn } from '@/lib/utils';
 
 const SIDEBAR_NAV = [
   { icon: '🏠', label: 'Dashboard', href: '/dashboard' },
-  { icon: '📚', label: 'Libreria', href: '/library?tab=collection' },
+  { icon: '📚', label: 'Libreria', href: '/library' },
   { icon: '🎲', label: 'Sessioni', href: '/sessions' },
   { icon: '💬', label: 'Chat AI', href: '/chat' },
-  { icon: '📄', label: 'Regole KB', href: '/library?tab=private' },
+  { icon: '📄', label: 'Regole KB', href: '/library' },
   { icon: '👥', label: 'Giocatori', href: '/players' },
 ];
 

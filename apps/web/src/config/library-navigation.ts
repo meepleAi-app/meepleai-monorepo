@@ -76,6 +76,7 @@ export function getActiveLibraryTab(pathname: string, search?: string): string {
     ? new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('tab')
     : null;
 
+  if (tab === 'games') return 'games';
   if (tab === 'wishlist') return 'wishlist';
   if (tab === 'catalogo') return 'catalogo';
   return 'games';

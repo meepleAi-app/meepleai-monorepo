@@ -99,7 +99,7 @@ export function getNavigationLinks(): NavigationLinks {
     // ── Library ─────────────────────────────────────────────────────────────
     library: '/library',
     libraryGames: '/library', // personal games (default, Issue #5167)
-    libraryCollection: '/library?tab=collection', // shared catalog games (Issue #5167)
+    libraryCollection: '/library?tab=catalogo', // shared catalog games (Issue #5167)
     libraryWishlist: '/library?tab=wishlist',
     libraryPrivate: '/library', // @deprecated → use libraryGames
     libraryPrivateAdd: '/library?action=add', // @deprecated → use ?action=add drawer

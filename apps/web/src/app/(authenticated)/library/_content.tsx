@@ -9,7 +9,7 @@
  *
  * Tab routing:
  *   (default)           → La mia Libreria  → PersonalLibraryPage (vetrina layout)
- *   ?tab=public         → Catalogo Condiviso → placeholder (Task 10)
+ *   ?tab=catalogo       → Catalogo Condiviso → PublicLibraryClient
  *
  * Action routing:
  *   ?action=add         → AddGameDrawer opens (wizard: manual or from catalog)

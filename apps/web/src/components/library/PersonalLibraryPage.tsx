@@ -19,7 +19,7 @@
 import { useMemo, useState } from 'react';
 
 import { Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { useLayoutResponsive } from '@/components/layout/LayoutProvider';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
@@ -218,13 +218,15 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
   const totalCount = data?.totalCount ?? 0;
 
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isEmpty = totalCount === 0 && !isLoading;
 
   // Trigger AddGameDrawer via URL param
   const handleAddGame = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('action', 'add');
-    router.push(url.pathname + url.search);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('action', 'add');
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   // Loading state

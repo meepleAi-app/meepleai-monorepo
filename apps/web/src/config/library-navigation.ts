@@ -1,10 +1,17 @@
 /**
  * Library Section Navigation Configuration
  * Issue #5167 — Tab rename: Games (personal) / Collection (shared catalog)
- * Defines the library section sub-navigation tabs.
+ * Nav UX Simplification — riduzione a 3 tab con label italiane
+ *
+ * Tab ID mapping (nuovo → vecchio):
+ *   games    ← private  (personal library, default)
+ *   wishlist ← wishlist (unchanged)
+ *   catalogo ← collection (shared catalog, ex-"public")
+ *
+ * Alpha Mode: solo games + wishlist (catalogo nascosto)
  */
 
-import { type LucideIcon, BookOpenIcon, Gamepad2, Heart, SendHorizontal } from 'lucide-react';
+import { type LucideIcon, BookOpenIcon, Gamepad2, Heart } from 'lucide-react';
 
 /**
  * Tab definition for library section navigation
@@ -21,25 +28,17 @@ export interface LibraryTab {
 }
 
 /**
- * Library section tabs — query-param based navigation (Issue #5039)
- * Issue #5167 — renamed: Games (personal) / Collection (shared catalog, default)
+ * Library section tabs — query-param based navigation
  *
- * Tabs use ?tab= query params on /library instead of sub-routes.
- * Default (/library, no tab param) renders Collection (shared catalog).
- * Proposals tab added for inline share request management.
+ * Default (/library, no tab param) renders personal library ("I Miei Giochi").
+ * Alpha Mode: catalogo tab nascosto.
  */
 const _ALL_LIBRARY_TABS: LibraryTab[] = [
   {
-    id: 'collection',
-    label: 'Collection',
-    icon: BookOpenIcon,
-    href: '/library',
-  },
-  {
-    id: 'private',
-    label: 'Games',
+    id: 'games',
+    label: 'I Miei Giochi',
     icon: Gamepad2,
-    href: '/library?tab=private',
+    href: '/library',
   },
   {
     id: 'wishlist',
@@ -48,10 +47,10 @@ const _ALL_LIBRARY_TABS: LibraryTab[] = [
     href: '/library?tab=wishlist',
   },
   {
-    id: 'proposals',
-    label: 'Proposals',
-    icon: SendHorizontal,
-    href: '/library?tab=proposals',
+    id: 'catalogo',
+    label: 'Catalogo',
+    icon: BookOpenIcon,
+    href: '/library?tab=catalogo',
   },
 ];
 
@@ -59,7 +58,7 @@ const _ALL_LIBRARY_TABS: LibraryTab[] = [
 
 const isAlphaMode = process.env.NEXT_PUBLIC_ALPHA_MODE === 'true';
 
-const ALPHA_LIBRARY_TAB_IDS = new Set(['collection', 'private', 'wishlist']);
+const ALPHA_LIBRARY_TAB_IDS = new Set(['games', 'wishlist']);
 
 /** Library tabs — filtered by ALPHA_MODE when active */
 export const LIBRARY_TABS: LibraryTab[] = isAlphaMode
@@ -67,10 +66,9 @@ export const LIBRARY_TABS: LibraryTab[] = isAlphaMode
   : _ALL_LIBRARY_TABS;
 
 /**
- * Check if a pathname+search matches a library tab (Issue #5039)
- * Issue #5167 — updated for new tab structure (collection/private/wishlist)
+ * Determines the active tab ID from pathname + search params.
  *
- * Default (/library with no ?tab) → 'collection' (shared catalog).
+ * Default (/library with no ?tab) → 'games'.
  * Accepts full URL (pathname + search) or just pathname.
  */
 export function getActiveLibraryTab(pathname: string, search?: string): string {
@@ -78,9 +76,8 @@ export function getActiveLibraryTab(pathname: string, search?: string): string {
     ? new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('tab')
     : null;
 
-  if (tab === 'private') return 'private';
+  if (tab === 'games') return 'games';
   if (tab === 'wishlist') return 'wishlist';
-  if (tab === 'proposals') return 'proposals';
-  if (pathname === '/library') return 'collection';
-  return 'collection';
+  if (tab === 'catalogo') return 'catalogo';
+  return 'games';
 }

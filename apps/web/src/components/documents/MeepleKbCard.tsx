@@ -34,6 +34,7 @@ import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display
 import type { KbIndexingStatus } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+import { buildKbCardProps } from '@/lib/card-mappers';
 
 // ============================================================================
 // Types
@@ -101,6 +102,7 @@ export function MeepleKbCard({
   const documentStatus = mapDocumentStatus(document.processingStatus);
   const isProcessing = documentStatus === 'processing';
   const isIndexed = documentStatus === 'indexed';
+  const mapperProps = buildKbCardProps(document);
 
   // ============================================================================
   // Quick Actions Configuration
@@ -160,6 +162,10 @@ export function MeepleKbCard({
       title={document.fileName}
       subtitle={subtitle}
       documentStatus={documentStatus}
+      pageCount={mapperProps.pageCount}
+      identityChip1={mapperProps.identityChip1}
+      identityChip1Icon={mapperProps.identityChip1Icon}
+      stateLabel={mapperProps.stateLabel}
       className={className}
       onClick={() => (window.location.href = `/documents/${document.id}`)}
       // Issue #5001: Quick actions with conditional visibility

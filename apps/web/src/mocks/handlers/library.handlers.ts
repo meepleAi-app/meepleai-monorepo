@@ -4,7 +4,9 @@
  */
 import { http, HttpResponse } from 'msw';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+import { mockId, HANDLER_BASE } from '../data/factories';
+
+const API_BASE = HANDLER_BASE;
 
 interface LibraryItem {
   id: string;
@@ -20,8 +22,8 @@ interface LibraryItem {
 
 let libraryItems: LibraryItem[] = [
   {
-    id: 'lib-1',
-    gameId: 'catan-1',
+    id: mockId(201),
+    gameId: mockId(101),
     name: 'Catan',
     status: 'owned',
     rating: 8,
@@ -30,8 +32,8 @@ let libraryItems: LibraryItem[] = [
     lastPlayedAt: '2024-12-01T18:30:00Z',
   },
   {
-    id: 'lib-2',
-    gameId: 'ticket-1',
+    id: mockId(202),
+    gameId: mockId(102),
     name: 'Ticket to Ride',
     status: 'owned',
     rating: 9,
@@ -40,16 +42,16 @@ let libraryItems: LibraryItem[] = [
     lastPlayedAt: '2024-12-15T20:00:00Z',
   },
   {
-    id: 'lib-3',
-    gameId: 'wingspan-1',
+    id: mockId(203),
+    gameId: mockId(103),
     name: 'Wingspan',
     status: 'wishlist',
     playCount: 0,
     addedAt: '2024-06-10T09:00:00Z',
   },
   {
-    id: 'lib-4',
-    gameId: 'scythe-1',
+    id: mockId(204),
+    gameId: mockId(104),
     name: 'Scythe',
     status: 'want_to_play',
     playCount: 2,
@@ -105,7 +107,7 @@ export const libraryHandlers = [
       return HttpResponse.json({ error: 'Already in library' }, { status: 409 });
     }
     const newItem: LibraryItem = {
-      id: `lib-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       gameId: body.gameId,
       name: body.name,
       status: body.status,
@@ -147,8 +149,8 @@ export const libraryHandlers = [
 export const resetLibraryState = () => {
   libraryItems = [
     {
-      id: 'lib-1',
-      gameId: 'catan-1',
+      id: mockId(201),
+      gameId: mockId(101),
       name: 'Catan',
       status: 'owned',
       rating: 8,
@@ -157,8 +159,8 @@ export const resetLibraryState = () => {
       lastPlayedAt: '2024-12-01T18:30:00Z',
     },
     {
-      id: 'lib-2',
-      gameId: 'ticket-1',
+      id: mockId(202),
+      gameId: mockId(102),
       name: 'Ticket to Ride',
       status: 'owned',
       rating: 9,
@@ -167,16 +169,16 @@ export const resetLibraryState = () => {
       lastPlayedAt: '2024-12-15T20:00:00Z',
     },
     {
-      id: 'lib-3',
-      gameId: 'wingspan-1',
+      id: mockId(203),
+      gameId: mockId(103),
       name: 'Wingspan',
       status: 'wishlist',
       playCount: 0,
       addedAt: '2024-06-10T09:00:00Z',
     },
     {
-      id: 'lib-4',
-      gameId: 'scythe-1',
+      id: mockId(204),
+      gameId: mockId(104),
       name: 'Scythe',
       status: 'want_to_play',
       playCount: 2,

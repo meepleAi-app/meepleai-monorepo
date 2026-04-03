@@ -9,7 +9,13 @@
 
 import { http, HttpResponse } from 'msw';
 
-import { createMockChat, createMockChatMessage, createMockAgent } from '../data/factories';
+import {
+  createMockChat,
+  createMockChatMessage,
+  createMockAgent,
+  mockId,
+  HANDLER_BASE,
+} from '../data/factories';
 import {
   createTokenEvent,
   createStateUpdateEvent,
@@ -18,13 +24,13 @@ import {
   type SSEOptions,
 } from '../data/sse-helpers';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const API_BASE = HANDLER_BASE;
 
 // In-memory chat store
 let chats = [
   createMockChat({
-    id: 'chat-1',
-    gameId: 'demo-chess',
+    id: mockId(301),
+    gameId: mockId(101),
     gameName: 'Chess',
     messages: [
       createMockChatMessage({ role: 'user', content: 'How do knights move?' }),
@@ -64,7 +70,7 @@ export const chatHandlers = [
     const body = (await request.json()) as { gameId: string };
 
     const newChat = createMockChat({
-      id: `chat-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       gameId: body.gameId,
       messages: [],
     });
@@ -139,8 +145,8 @@ export const chatHandlers = [
   // GET /api/v1/agents - List agents
   http.get(`${API_BASE}/api/v1/agents`, () => {
     const agents = [
-      createMockAgent({ id: 'agent-1', name: 'Chess Expert', type: 'qa' }),
-      createMockAgent({ id: 'agent-2', name: 'TicTacToe Helper', type: 'qa' }),
+      createMockAgent({ id: mockId(501), name: 'Chess Expert', type: 'qa' }),
+      createMockAgent({ id: mockId(502), name: 'TicTacToe Helper', type: 'qa' }),
     ];
 
     return HttpResponse.json(agents, {
@@ -171,8 +177,8 @@ export const chatHandlers = [
 export const resetChatState = () => {
   chats = [
     createMockChat({
-      id: 'chat-1',
-      gameId: 'demo-chess',
+      id: mockId(301),
+      gameId: mockId(101),
       gameName: 'Chess',
       messages: [
         createMockChatMessage({ role: 'user', content: 'How do knights move?' }),

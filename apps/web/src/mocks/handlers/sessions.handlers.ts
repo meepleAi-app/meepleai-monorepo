@@ -4,7 +4,9 @@
  */
 import { http, HttpResponse } from 'msw';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+import { mockId, HANDLER_BASE } from '../data/factories';
+
+const API_BASE = HANDLER_BASE;
 
 interface SessionData {
   id: string;
@@ -20,14 +22,14 @@ interface SessionData {
 
 const sessions: SessionData[] = [
   {
-    id: 'session-1',
+    id: mockId(601),
     sessionCode: 'ABC123',
-    gameId: 'demo-chess',
+    gameId: mockId(101),
     gameName: 'Chess',
     status: 'Active',
     participants: [
-      { id: 'p1', displayName: 'Alice', isOwner: true, totalScore: 0 },
-      { id: 'p2', displayName: 'Bob', isOwner: false, totalScore: 0 },
+      { id: mockId(701), displayName: 'Alice', isOwner: true, totalScore: 0 },
+      { id: mockId(702), displayName: 'Bob', isOwner: false, totalScore: 0 },
     ],
     notes: [],
     createdAt: '2024-01-15T10:00:00Z',
@@ -57,7 +59,7 @@ export const sessionsHandlers = [
   http.post(`${API_BASE}/api/v1/sessions`, async ({ request }) => {
     const body = (await request.json()) as { gameId: string; gameName?: string };
     const newSession: SessionData = {
-      id: `session-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       sessionCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
       gameId: body.gameId,
       gameName: body.gameName,
@@ -100,7 +102,7 @@ export const sessionsHandlers = [
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     const body = (await request.json()) as { displayName: string };
     const participant = {
-      id: `p-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       displayName: body.displayName,
       isOwner: false,
       totalScore: 0,
@@ -140,14 +142,14 @@ export const sessionsHandlers = [
 // Helper to reset session state between tests
 export const resetSessionsState = () => {
   sessions.splice(0, sessions.length, {
-    id: 'session-1',
+    id: mockId(601),
     sessionCode: 'ABC123',
-    gameId: 'demo-chess',
+    gameId: mockId(101),
     gameName: 'Chess',
     status: 'Active',
     participants: [
-      { id: 'p1', displayName: 'Alice', isOwner: true, totalScore: 0 },
-      { id: 'p2', displayName: 'Bob', isOwner: false, totalScore: 0 },
+      { id: mockId(701), displayName: 'Alice', isOwner: true, totalScore: 0 },
+      { id: mockId(702), displayName: 'Bob', isOwner: false, totalScore: 0 },
     ],
     notes: [],
     createdAt: '2024-01-15T10:00:00Z',

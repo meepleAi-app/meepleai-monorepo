@@ -4,7 +4,9 @@
  */
 import { http, HttpResponse } from 'msw';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+import { mockId, HANDLER_BASE } from '../data/factories';
+
+const API_BASE = HANDLER_BASE;
 
 interface Badge {
   id: string;
@@ -20,7 +22,7 @@ interface Badge {
 
 const badges: Badge[] = [
   {
-    id: 'badge-1',
+    id: mockId(1201),
     name: 'Prima Partita',
     description: 'Gioca la tua prima partita',
     iconUrl: '/badges/first-game.png',
@@ -31,7 +33,7 @@ const badges: Badge[] = [
     category: 'Getting Started',
   },
   {
-    id: 'badge-2',
+    id: mockId(1202),
     name: 'Collezionista',
     description: 'Aggiungi 10 giochi alla libreria',
     iconUrl: '/badges/collector.png',
@@ -41,7 +43,7 @@ const badges: Badge[] = [
     category: 'Library',
   },
   {
-    id: 'badge-3',
+    id: mockId(1203),
     name: 'Organizzatore',
     description: 'Organizza 5 game night',
     iconUrl: '/badges/social.png',
@@ -60,9 +62,9 @@ export const badgesHandlers = [
   http.get(`${API_BASE}/api/v1/badges/leaderboard`, () => {
     return HttpResponse.json({
       items: [
-        { rank: 1, userId: 'user-3', displayName: 'Carol', badgeCount: 12 },
-        { rank: 2, userId: 'user-1', displayName: 'Alice', badgeCount: 8 },
-        { rank: 3, userId: 'user-2', displayName: 'Bob', badgeCount: 5 },
+        { rank: 1, userId: mockId(3), displayName: 'Carol', badgeCount: 12 },
+        { rank: 2, userId: mockId(1), displayName: 'Alice', badgeCount: 8 },
+        { rank: 3, userId: mockId(2), displayName: 'Bob', badgeCount: 5 },
       ],
       totalCount: 3,
     });
@@ -97,7 +99,7 @@ export const resetBadgesState = () => {
     0,
     badges.length,
     {
-      id: 'badge-1',
+      id: mockId(1201),
       name: 'Prima Partita',
       description: 'Gioca la tua prima partita',
       iconUrl: '/badges/first-game.png',
@@ -108,7 +110,7 @@ export const resetBadgesState = () => {
       category: 'Getting Started',
     },
     {
-      id: 'badge-2',
+      id: mockId(1202),
       name: 'Collezionista',
       description: 'Aggiungi 10 giochi alla libreria',
       iconUrl: '/badges/collector.png',
@@ -118,7 +120,7 @@ export const resetBadgesState = () => {
       category: 'Library',
     },
     {
-      id: 'badge-3',
+      id: mockId(1203),
       name: 'Organizzatore',
       description: 'Organizza 5 game night',
       iconUrl: '/badges/social.png',

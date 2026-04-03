@@ -4,7 +4,9 @@
  */
 import { http, HttpResponse } from 'msw';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+import { mockId, HANDLER_BASE } from '../data/factories';
+
+const API_BASE = HANDLER_BASE;
 
 interface Notification {
   id: string;
@@ -18,7 +20,7 @@ interface Notification {
 
 const notifications: Notification[] = [
   {
-    id: 'notif-1',
+    id: mockId(1101),
     type: 'info',
     title: 'Benvenuto',
     message: 'Benvenuto su MeepleAI!',
@@ -27,7 +29,7 @@ const notifications: Notification[] = [
     targetUrl: '/dashboard',
   },
   {
-    id: 'notif-2',
+    id: mockId(1102),
     type: 'success',
     title: 'Badge Ottenuto',
     message: 'Hai ottenuto il badge Prima Partita!',
@@ -36,7 +38,7 @@ const notifications: Notification[] = [
     targetUrl: '/badges',
   },
   {
-    id: 'notif-3',
+    id: mockId(1103),
     type: 'info',
     title: 'Invito Ricevuto',
     message: 'Alice ti ha invitato a una Game Night',
@@ -97,7 +99,7 @@ export const resetNotificationsState = () => {
     0,
     notifications.length,
     {
-      id: 'notif-1',
+      id: mockId(1101),
       type: 'info',
       title: 'Benvenuto',
       message: 'Benvenuto su MeepleAI!',
@@ -106,7 +108,7 @@ export const resetNotificationsState = () => {
       targetUrl: '/dashboard',
     },
     {
-      id: 'notif-2',
+      id: mockId(1102),
       type: 'success',
       title: 'Badge Ottenuto',
       message: 'Hai ottenuto il badge Prima Partita!',
@@ -115,7 +117,7 @@ export const resetNotificationsState = () => {
       targetUrl: '/badges',
     },
     {
-      id: 'notif-3',
+      id: mockId(1103),
       type: 'info',
       title: 'Invito Ricevuto',
       message: 'Alice ti ha invitato a una Game Night',

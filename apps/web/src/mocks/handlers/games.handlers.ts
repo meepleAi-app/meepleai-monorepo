@@ -14,15 +14,17 @@ import {
   createMockRuleSpec,
   mockChessGame,
   mockTicTacToeGame,
+  mockId,
+  HANDLER_BASE,
 } from '../data/factories';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const API_BASE = HANDLER_BASE;
 
 // In-memory game store for stateful testing
 let games = [
   mockChessGame(),
   mockTicTacToeGame(),
-  createMockGame({ id: 'game-3', title: 'Monopoly' }),
+  createMockGame({ id: mockId(103), title: 'Monopoly' }),
 ];
 
 export const gamesHandlers = [
@@ -56,7 +58,7 @@ export const gamesHandlers = [
     const body = (await request.json()) as { title: string };
 
     const newGame = createMockGame({
-      id: `game-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       title: body.title,
     });
 
@@ -160,6 +162,6 @@ export const resetGamesState = () => {
   games = [
     mockChessGame(),
     mockTicTacToeGame(),
-    createMockGame({ id: 'game-3', title: 'Monopoly' }),
+    createMockGame({ id: mockId(103), title: 'Monopoly' }),
   ];
 };

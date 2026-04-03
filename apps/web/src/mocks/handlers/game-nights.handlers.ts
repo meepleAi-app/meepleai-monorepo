@@ -4,7 +4,9 @@
  */
 import { http, HttpResponse } from 'msw';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+import { mockId, HANDLER_BASE } from '../data/factories';
+
+const API_BASE = HANDLER_BASE;
 
 interface GameNight {
   id: string;
@@ -25,19 +27,19 @@ interface GameNight {
 
 const gameNights: GameNight[] = [
   {
-    id: 'gn-1',
+    id: mockId(801),
     title: 'Friday Game Night',
     date: '2026-04-11T19:00:00Z',
     location: 'Casa di Alice',
     status: 'Planned',
-    organizerId: 'user-1',
+    organizerId: mockId(1),
     participants: [
-      { id: 'gnp-1', userId: 'user-1', displayName: 'Alice', rsvpStatus: 'Accepted' },
-      { id: 'gnp-2', userId: 'user-2', displayName: 'Bob', rsvpStatus: 'Pending' },
+      { id: mockId(901), userId: mockId(1), displayName: 'Alice', rsvpStatus: 'Accepted' },
+      { id: mockId(902), userId: mockId(2), displayName: 'Bob', rsvpStatus: 'Pending' },
     ],
     playlist: [
-      { id: 'pl-1', gameId: 'catan-1', gameName: 'Catan', order: 1 },
-      { id: 'pl-2', gameId: 'wingspan-1', gameName: 'Wingspan', order: 2 },
+      { id: mockId(1401), gameId: mockId(101), gameName: 'Catan', order: 1 },
+      { id: mockId(1402), gameId: mockId(103), gameName: 'Wingspan', order: 2 },
     ],
     createdAt: '2026-04-01T10:00:00Z',
   },
@@ -63,12 +65,12 @@ export const gameNightsHandlers = [
   http.post(`${API_BASE}/api/v1/game-nights`, async ({ request }) => {
     const body = (await request.json()) as { title: string; date: string; location?: string };
     const newNight: GameNight = {
-      id: `gn-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       title: body.title,
       date: body.date,
       location: body.location,
       status: 'Planned',
-      organizerId: 'user-1',
+      organizerId: mockId(1),
       participants: [],
       playlist: [],
       createdAt: new Date().toISOString(),
@@ -97,7 +99,7 @@ export const gameNightsHandlers = [
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     const body = (await request.json()) as { userId: string; displayName: string };
     const participant = {
-      id: `gnp-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       userId: body.userId,
       displayName: body.displayName,
       rsvpStatus: 'Pending' as const,
@@ -110,7 +112,7 @@ export const gameNightsHandlers = [
     const idx = gameNights.findIndex(n => n.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     const body = (await request.json()) as { status: 'Accepted' | 'Declined' };
-    const pIdx = gameNights[idx].participants.findIndex(p => p.userId === 'user-1');
+    const pIdx = gameNights[idx].participants.findIndex(p => p.userId === mockId(1));
     if (pIdx !== -1) gameNights[idx].participants[pIdx].rsvpStatus = body.status;
     return HttpResponse.json(gameNights[idx]);
   }),
@@ -120,7 +122,7 @@ export const gameNightsHandlers = [
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     const body = (await request.json()) as { gameId: string; gameName: string };
     const item = {
-      id: `pl-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       gameId: body.gameId,
       gameName: body.gameName,
       order: gameNights[idx].playlist.length + 1,
@@ -133,19 +135,19 @@ export const gameNightsHandlers = [
 // Helper to reset game night state between tests
 export const resetGameNightsState = () => {
   gameNights.splice(0, gameNights.length, {
-    id: 'gn-1',
+    id: mockId(801),
     title: 'Friday Game Night',
     date: '2026-04-11T19:00:00Z',
     location: 'Casa di Alice',
     status: 'Planned',
-    organizerId: 'user-1',
+    organizerId: mockId(1),
     participants: [
-      { id: 'gnp-1', userId: 'user-1', displayName: 'Alice', rsvpStatus: 'Accepted' },
-      { id: 'gnp-2', userId: 'user-2', displayName: 'Bob', rsvpStatus: 'Pending' },
+      { id: mockId(901), userId: mockId(1), displayName: 'Alice', rsvpStatus: 'Accepted' },
+      { id: mockId(902), userId: mockId(2), displayName: 'Bob', rsvpStatus: 'Pending' },
     ],
     playlist: [
-      { id: 'pl-1', gameId: 'catan-1', gameName: 'Catan', order: 1 },
-      { id: 'pl-2', gameId: 'wingspan-1', gameName: 'Wingspan', order: 2 },
+      { id: mockId(1401), gameId: mockId(101), gameName: 'Catan', order: 1 },
+      { id: mockId(1402), gameId: mockId(103), gameName: 'Wingspan', order: 2 },
     ],
     createdAt: '2026-04-01T10:00:00Z',
   });

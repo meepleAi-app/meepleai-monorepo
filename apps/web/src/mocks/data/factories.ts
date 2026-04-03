@@ -5,6 +5,25 @@
  * Used by both src/mocks/handlers/ (browser dev mode) and __tests__/ (tests).
  */
 
+/**
+ * Generate a deterministic, valid UUID v4 from a number.
+ * Pattern: a0eebc99-9c0b-4ef8-bb6d-<12 hex digits>
+ * Group 3 starts with '4' (version), group 4 starts with 'b' (variant) — both pass z.string().uuid().
+ */
+export const mockId = (n: number): string =>
+  `a0eebc99-9c0b-4ef8-bb6d-${n.toString(16).padStart(12, '0')}`;
+
+/**
+ * Base URL for MSW handlers.
+ * In mock mode (NEXT_PUBLIC_MOCK_MODE=true), browser fetches use relative paths (empty getApiBase())
+ * which resolve to http://localhost:3000. Handlers must match the same origin.
+ * NEXT_PUBLIC_MOCK_MODE is NOT in .env.local, so cross-env correctly overrides it.
+ */
+export const HANDLER_BASE =
+  process.env.NEXT_PUBLIC_MOCK_MODE === 'true'
+    ? 'http://localhost:3000'
+    : process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+
 // =============================================================================
 // AUTH FIXTURES
 // =============================================================================
@@ -14,6 +33,8 @@ export type MockUser = {
   email: string;
   displayName?: string | null;
   role: 'Admin' | 'Editor' | 'User';
+  onboardingCompleted?: boolean;
+  onboardingSkipped?: boolean;
 };
 
 export type MockAuthResponse = {
@@ -28,10 +49,12 @@ export type MockSessionStatusResponse = {
 };
 
 export const createMockUser = (overrides?: Partial<MockUser>): MockUser => ({
-  id: overrides?.id || 'user-1',
+  id: overrides?.id || mockId(1),
   email: overrides?.email || 'test@meepleai.dev',
   displayName: overrides?.displayName !== undefined ? overrides.displayName : 'Test User',
   role: overrides?.role || 'User',
+  onboardingCompleted: overrides?.onboardingCompleted ?? false,
+  onboardingSkipped: overrides?.onboardingSkipped ?? false,
 });
 
 export const createMockAuthResponse = (userOverrides?: Partial<MockUser>): MockAuthResponse => ({
@@ -41,7 +64,7 @@ export const createMockAuthResponse = (userOverrides?: Partial<MockUser>): MockA
 
 export const mockAdminAuth = (): MockAuthResponse =>
   createMockAuthResponse({
-    id: 'admin-1',
+    id: mockId(10),
     email: 'admin@meepleai.dev',
     displayName: 'Admin User',
     role: 'Admin',
@@ -49,7 +72,7 @@ export const mockAdminAuth = (): MockAuthResponse =>
 
 export const mockEditorAuth = (): MockAuthResponse =>
   createMockAuthResponse({
-    id: 'editor-1',
+    id: mockId(20),
     email: 'editor@meepleai.dev',
     displayName: 'Editor User',
     role: 'Editor',
@@ -57,7 +80,7 @@ export const mockEditorAuth = (): MockAuthResponse =>
 
 export const mockUserAuth = (): MockAuthResponse =>
   createMockAuthResponse({
-    id: 'user-1',
+    id: mockId(1),
     email: 'user@meepleai.dev',
     displayName: 'Regular User',
     role: 'User',
@@ -83,15 +106,15 @@ export type MockGame = {
 };
 
 export const createMockGame = (overrides?: Partial<MockGame>): MockGame => ({
-  id: overrides?.id || 'game-1',
+  id: overrides?.id || mockId(100),
   title: overrides?.title || 'Test Game',
   createdAt: overrides?.createdAt || new Date().toISOString(),
   updatedAt: overrides?.updatedAt,
 });
 
-export const mockChessGame = (): MockGame => createMockGame({ id: 'demo-chess', title: 'Chess' });
+export const mockChessGame = (): MockGame => createMockGame({ id: mockId(101), title: 'Chess' });
 export const mockTicTacToeGame = (): MockGame =>
-  createMockGame({ id: 'demo-tictactoe', title: 'Tic-Tac-Toe' });
+  createMockGame({ id: mockId(102), title: 'Tic-Tac-Toe' });
 
 // =============================================================================
 // RULESPEC FIXTURES

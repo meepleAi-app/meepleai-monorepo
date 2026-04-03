@@ -4,7 +4,9 @@
  */
 import { http, HttpResponse } from 'msw';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+import { HANDLER_BASE } from '../data/factories';
+
+const API_BASE = HANDLER_BASE;
 
 const categories = [
   { id: 'strategy', name: 'Strategy', count: 150 },

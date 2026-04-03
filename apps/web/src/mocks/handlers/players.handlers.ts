@@ -4,7 +4,9 @@
  */
 import { http, HttpResponse } from 'msw';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+import { mockId, HANDLER_BASE } from '../data/factories';
+
+const API_BASE = HANDLER_BASE;
 
 interface Player {
   id: string;
@@ -17,7 +19,7 @@ interface Player {
 
 const players: Player[] = [
   {
-    id: 'player-1',
+    id: mockId(1001),
     displayName: 'Alice',
     isActive: true,
     gamesPlayed: 15,
@@ -25,7 +27,7 @@ const players: Player[] = [
     createdAt: '2024-01-10T10:00:00Z',
   },
   {
-    id: 'player-2',
+    id: mockId(1002),
     displayName: 'Bob',
     isActive: true,
     gamesPlayed: 12,
@@ -33,7 +35,7 @@ const players: Player[] = [
     createdAt: '2024-01-15T10:00:00Z',
   },
   {
-    id: 'player-3',
+    id: mockId(1003),
     displayName: 'Carol',
     isActive: true,
     gamesPlayed: 20,
@@ -63,7 +65,7 @@ export const playersHandlers = [
   http.post(`${API_BASE}/api/v1/players`, async ({ request }) => {
     const body = (await request.json()) as { displayName: string };
     const newPlayer: Player = {
-      id: `player-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       displayName: body.displayName,
       isActive: true,
       gamesPlayed: 0,
@@ -96,7 +98,7 @@ export const resetPlayersState = () => {
     0,
     players.length,
     {
-      id: 'player-1',
+      id: mockId(1001),
       displayName: 'Alice',
       isActive: true,
       gamesPlayed: 15,
@@ -104,7 +106,7 @@ export const resetPlayersState = () => {
       createdAt: '2024-01-10T10:00:00Z',
     },
     {
-      id: 'player-2',
+      id: mockId(1002),
       displayName: 'Bob',
       isActive: true,
       gamesPlayed: 12,
@@ -112,7 +114,7 @@ export const resetPlayersState = () => {
       createdAt: '2024-01-15T10:00:00Z',
     },
     {
-      id: 'player-3',
+      id: mockId(1003),
       displayName: 'Carol',
       isActive: true,
       gamesPlayed: 20,

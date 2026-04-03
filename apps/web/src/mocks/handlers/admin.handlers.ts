@@ -5,7 +5,9 @@
  */
 import { http, HttpResponse } from 'msw';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+import { mockId, HANDLER_BASE } from '../data/factories';
+
+const API_BASE = HANDLER_BASE;
 
 const dashboardStats = {
   metrics: {
@@ -43,21 +45,21 @@ const dashboardStats = {
 const recentActivity = {
   events: [
     {
-      id: 'ev-1',
+      id: mockId(1701),
       type: 'user_registered',
       description: 'New user registered',
       timestamp: new Date(Date.now() - 60000).toISOString(),
       severity: 'info',
     },
     {
-      id: 'ev-2',
+      id: mockId(1702),
       type: 'pdf_processed',
       description: 'PDF processed successfully',
       timestamp: new Date(Date.now() - 120000).toISOString(),
       severity: 'success',
     },
     {
-      id: 'ev-3',
+      id: mockId(1703),
       type: 'api_error',
       description: 'API rate limit hit',
       timestamp: new Date(Date.now() - 300000).toISOString(),
@@ -97,7 +99,7 @@ export const adminHandlers = [
     const page = parseInt(url.searchParams.get('page') || '1');
     const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
     const users = Array.from({ length: 5 }, (_, i) => ({
-      id: `user-${i + 1}`,
+      id: mockId(i + 1),
       email: `user${i + 1}@meepleai.dev`,
       displayName: `User ${i + 1}`,
       role: i === 0 ? 'Admin' : 'User',

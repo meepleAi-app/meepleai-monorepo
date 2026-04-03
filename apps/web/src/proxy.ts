@@ -113,6 +113,11 @@ function cacheSessionValidation(cookieValue: string, valid: boolean) {
 }
 
 async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
+  // In mock mode there is no real backend — skip validation to avoid self-referential loops
+  if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true') {
+    return false;
+  }
+
   const cached = sessionValidationCache.get(cookieValue);
   if (cached && cached.expiresAt > Date.now()) {
     // Metrics: Cache hit

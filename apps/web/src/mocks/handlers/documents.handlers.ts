@@ -9,9 +9,9 @@
 
 import { http, HttpResponse } from 'msw';
 
-import { createMockPdfDocument, createMockPdfList } from '../data/factories';
+import { createMockPdfDocument, createMockPdfList, mockId, HANDLER_BASE } from '../data/factories';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const API_BASE = HANDLER_BASE;
 
 // In-memory document store
 let documents = createMockPdfList(3);
@@ -67,7 +67,7 @@ export const documentsHandlers = [
 
     // Create mock document
     const newDocument = createMockPdfDocument({
-      id: `pdf-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       fileName: file.name,
       fileSizeBytes: file.size,
       processingStatus: 'pending',
@@ -101,7 +101,7 @@ export const documentsHandlers = [
     }
 
     const newDocument = createMockPdfDocument({
-      id: `pdf-${Date.now()}`,
+      id: mockId(Math.floor(Math.random() * 9000) + 1000),
       fileName: file.name,
       fileSizeBytes: file.size,
       processingStatus: 'processing',

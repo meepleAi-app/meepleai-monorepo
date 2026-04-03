@@ -4,7 +4,9 @@
  */
 import { http, HttpResponse } from 'msw';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+import { mockId, HANDLER_BASE } from '../data/factories';
+
+const API_BASE = HANDLER_BASE;
 
 interface SharedGame {
   id: string;
@@ -26,7 +28,7 @@ interface SharedGame {
 
 const sharedGames: SharedGame[] = [
   {
-    id: 'sg-catan',
+    id: mockId(1501),
     bggId: 13,
     title: 'Catan',
     publisher: 'KOSMOS',
@@ -40,10 +42,10 @@ const sharedGames: SharedGame[] = [
       'https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__thumb/img/8a9HeqFydO7UnHoiF_nBoBEVCBU=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg',
     categories: [{ id: 'strategy', name: 'Strategy', slug: 'strategy' }],
     mechanics: [{ id: 'trading', name: 'Trading', slug: 'trading' }],
-    designers: [{ id: 'd1', name: 'Klaus Teuber' }],
+    designers: [{ id: mockId(1301), name: 'Klaus Teuber' }],
   },
   {
-    id: 'sg-wingspan',
+    id: mockId(1502),
     bggId: 266192,
     title: 'Wingspan',
     publisher: 'Stonemaier Games',
@@ -57,10 +59,10 @@ const sharedGames: SharedGame[] = [
       'https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__thumb/img/NP9UNiCAbTSM7nABLhEe5oNiWlI=/fit-in/200x150/filters:strip_icc()/pic4458123.jpg',
     categories: [{ id: 'family', name: 'Family', slug: 'family' }],
     mechanics: [{ id: 'engine-building', name: 'Engine Building', slug: 'engine-building' }],
-    designers: [{ id: 'd2', name: 'Elizabeth Hargrave' }],
+    designers: [{ id: mockId(1302), name: 'Elizabeth Hargrave' }],
   },
   {
-    id: 'sg-pandemic',
+    id: mockId(1503),
     bggId: 30549,
     title: 'Pandemic',
     publisher: 'Z-Man Games',
@@ -72,10 +74,10 @@ const sharedGames: SharedGame[] = [
     averageRating: 7.65,
     categories: [{ id: 'cooperative', name: 'Cooperative', slug: 'cooperative' }],
     mechanics: [{ id: 'hand-management', name: 'Hand Management', slug: 'hand-management' }],
-    designers: [{ id: 'd3', name: 'Matt Leacock' }],
+    designers: [{ id: mockId(1303), name: 'Matt Leacock' }],
   },
   {
-    id: 'sg-terraforming-mars',
+    id: mockId(1504),
     bggId: 167791,
     title: 'Terraforming Mars',
     publisher: 'FryxGames',
@@ -87,10 +89,10 @@ const sharedGames: SharedGame[] = [
     averageRating: 8.4,
     categories: [{ id: 'strategy', name: 'Strategy', slug: 'strategy' }],
     mechanics: [{ id: 'engine-building', name: 'Engine Building', slug: 'engine-building' }],
-    designers: [{ id: 'd4', name: 'Jacob Fryxelius' }],
+    designers: [{ id: mockId(1304), name: 'Jacob Fryxelius' }],
   },
   {
-    id: 'sg-spirit-island',
+    id: mockId(1505),
     bggId: 162886,
     title: 'Spirit Island',
     publisher: 'Greater Than Games',
@@ -102,7 +104,7 @@ const sharedGames: SharedGame[] = [
     averageRating: 8.5,
     categories: [{ id: 'cooperative', name: 'Cooperative', slug: 'cooperative' }],
     mechanics: [{ id: 'area-control', name: 'Area Control', slug: 'area-control' }],
-    designers: [{ id: 'd5', name: 'R. Eric Reuss' }],
+    designers: [{ id: mockId(1305), name: 'R. Eric Reuss' }],
   },
 ];
 

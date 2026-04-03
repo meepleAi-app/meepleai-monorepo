@@ -18,7 +18,7 @@ const CTA_MAP: Array<{ prefix: string; config: CtaConfig }> = [
   {
     prefix: '/library',
     config: {
-      label: '+ Aggiungi gioco',
+      label: 'Esplora Catalogo',
       href: '/catalog',
       gradient: 'from-orange-600 to-amber-500',
     },

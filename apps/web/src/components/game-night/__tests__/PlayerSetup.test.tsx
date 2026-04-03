@@ -298,10 +298,8 @@ describe('PlayerSetup — guest players', () => {
 
     await user.click(screen.getByRole('tab', { name: /ospite/i }));
 
-    // After switching to guest tab, the "Aggiungi" button (from guest tab) should be disabled
-    const buttons = screen.getAllByRole('button', { name: /aggiungi/i });
-    // The guest tab Aggiungi button is the one visible (app tab is hidden)
-    const guestAddButton = buttons.find(b => !b.closest('[data-state="inactive"]'));
-    expect(guestAddButton).toBeDisabled();
+    // Radix hides inactive TabsContent via the HTML `hidden` attribute.
+    // getByRole excludes hidden elements, so only the guest tab's button is returned.
+    expect(screen.getByRole('button', { name: /aggiungi/i })).toBeDisabled();
   });
 });

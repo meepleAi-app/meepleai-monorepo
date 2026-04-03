@@ -131,9 +131,12 @@ export function PlayerSetup({
   );
 
   // ── Guest player logic ──────────────────────────────────────────────────────
-  const isDuplicateGuest = existingPlayers.some(
-    p => p.displayName.toLowerCase() === guestName.trim().toLowerCase()
-  );
+  // Check against both existingPlayers (guest participants) and players (app users)
+  // to prevent name collisions across all session participants.
+  const guestNameNormalized = guestName.trim().toLowerCase();
+  const isDuplicateGuest =
+    existingPlayers.some(p => p.displayName.toLowerCase() === guestNameNormalized) ||
+    players.some(p => p.name.toLowerCase() === guestNameNormalized);
 
   const handleAddGuest = useCallback(() => {
     if (!guestName.trim() || isDuplicateGuest) return;

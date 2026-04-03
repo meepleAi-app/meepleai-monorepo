@@ -11,7 +11,10 @@ vi.mock('@/lib/api/clients/gameSessionsClient', () => ({
 }));
 
 describe('useGameNightOrchestrator', () => {
-  beforeEach(() => useSessionStore.getState().reset());
+  beforeEach(() => {
+    localStorage.clear();
+    useSessionStore.getState().reset();
+  });
 
   it('startGame crea una sessione e aggiorna lo store', async () => {
     const { result } = renderHook(() => useGameNightOrchestrator('night-1'));

@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 
 import { createSession, finalizeSession } from '@/lib/api/clients/gameSessionsClient';
+import { ConflictError } from '@/lib/api/core/errors';
 import { useSessionStore } from '@/stores/session/store';
 import type { SessionParticipant } from '@/stores/session/types';
 
@@ -25,8 +26,6 @@ interface UseGameNightOrchestrator {
 
 export function useGameNightOrchestrator(gameNightId: string): UseGameNightOrchestrator {
   // Granular selectors — avoids re-renders on unrelated store changes
-  const sessionId = useSessionStore(s => s.sessionId);
-  const gameTitle = useSessionStore(s => s.gameTitle);
   const startSession = useSessionStore(s => s.startSession);
   const reset = useSessionStore(s => s.reset);
 
@@ -58,10 +57,7 @@ export function useGameNightOrchestrator(gameNightId: string): UseGameNightOrche
           participants: payload.participants,
         });
       } catch (err: unknown) {
-        const status =
-          (err as { status?: number; statusCode?: number })?.status ??
-          (err as { status?: number; statusCode?: number })?.statusCode;
-        if (status === 409) {
+        if (err instanceof ConflictError) {
           setError(
             'Una partita è già attiva per questa serata. Finalizzala prima di iniziarne una nuova.'
           );
@@ -78,12 +74,24 @@ export function useGameNightOrchestrator(gameNightId: string): UseGameNightOrche
 
   const startNextGame = useCallback(
     async (payload: StartGamePayload) => {
+      // Guard against double-tap: reuse isStarting from startGame
+      if (isStarting) return;
+
+      // Read latest state atomically to avoid stale closure issues
+      // (SSE or other tabs may have updated the store between renders)
+      const currentState = useSessionStore.getState();
+      const currentSessionId = currentState.sessionId;
+      const currentGameTitle = currentState.gameTitle;
+
       // 1. Finalizza sessione corrente (best-effort)
-      if (sessionId) {
+      if (currentSessionId) {
         try {
-          await finalizeSession(sessionId);
-          if (gameTitle) {
-            setCompletedGames(prev => [...prev, { gameTitle, sessionId }]);
+          await finalizeSession(currentSessionId);
+          if (currentGameTitle) {
+            setCompletedGames(prev => [
+              ...prev,
+              { gameTitle: currentGameTitle, sessionId: currentSessionId },
+            ]);
           }
         } catch {
           // Continua comunque — la finalizzazione può essere ritentata
@@ -96,7 +104,7 @@ export function useGameNightOrchestrator(gameNightId: string): UseGameNightOrche
       // 3. Avvia nuovo gioco
       await startGame(payload);
     },
-    [sessionId, gameTitle, reset, startGame]
+    [isStarting, reset, startGame]
   );
 
   return { completedGames, isStarting, error, startGame, startNextGame };

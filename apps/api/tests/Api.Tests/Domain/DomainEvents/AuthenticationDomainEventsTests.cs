@@ -169,32 +169,6 @@ public class AuthenticationDomainEventsTests
     }
 
     [Fact]
-    public void ApiKeyRevoke_ShouldRaiseApiKeyRevokedEvent()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var (apiKey, _) = ApiKey.Create(
-            id: Guid.NewGuid(),
-            userId: userId,
-            keyName: "Test Key",
-            scopes: "read,write"
-        );
-
-        // Act
-        apiKey.Revoke(userId, "Security audit");
-
-        // Assert
-        apiKey.DomainEvents.Should().HaveCount(1);
-        var domainEvent = apiKey.DomainEvents.ElementAt(0);
-        domainEvent.Should().BeOfType<ApiKeyRevokedEvent>();
-
-        var apiKeyRevokedEvent = (ApiKeyRevokedEvent)domainEvent;
-        apiKeyRevokedEvent.ApiKeyId.Should().Be(apiKey.Id);
-        apiKeyRevokedEvent.UserId.Should().Be(userId);
-        apiKeyRevokedEvent.Reason.Should().Be("Security audit");
-    }
-
-    [Fact]
     public void SessionRevoke_ShouldRaiseSessionRevokedEvent()
     {
         // Arrange

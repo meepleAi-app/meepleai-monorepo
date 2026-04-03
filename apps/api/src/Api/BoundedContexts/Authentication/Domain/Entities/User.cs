@@ -80,10 +80,8 @@ public sealed class User : AggregateRoot<Guid>
 
     // Navigation properties (not part of domain model, for EF Core only)
     private readonly List<Session> _sessions = new();
-    private readonly List<ApiKey> _apiKeys = new();
     private readonly List<OAuthAccount> _oauthAccounts = new();
     public IReadOnlyCollection<Session> Sessions => _sessions.AsReadOnly();
-    public IReadOnlyCollection<ApiKey> ApiKeys => _apiKeys.AsReadOnly();
     public IReadOnlyCollection<OAuthAccount> OAuthAccounts => _oauthAccounts.AsReadOnly();
 
     /// <summary>

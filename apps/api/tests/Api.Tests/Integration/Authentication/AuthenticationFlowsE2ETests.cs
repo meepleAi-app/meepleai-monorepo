@@ -86,8 +86,6 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
-        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
-
         // Register password hashing
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
 

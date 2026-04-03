@@ -77,14 +77,13 @@ internal static class SessionValidationExtensions
                         value is SessionStatusDto session &&
                         session.IsValid &&
                         session.User != null;
-        var hasApiKey = context.User.Identity?.IsAuthenticated is true;
 
-        if (!hasSession && !hasApiKey)
+        if (!hasSession)
         {
             return (false, null, Results.Unauthorized());
         }
 
-        return (true, hasSession ? (SessionStatusDto)value! : null, null);
+        return (true, (SessionStatusDto)value!, null);
     }
 
     /// <summary>

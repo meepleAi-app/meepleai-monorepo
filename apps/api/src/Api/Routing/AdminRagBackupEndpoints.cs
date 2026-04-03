@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands.ExportRagData;
 using Api.BoundedContexts.Administration.Application.Commands.ImportRagData;
 using Api.BoundedContexts.Administration.Application.Queries.RagBackup;
+using Api.BoundedContexts.Administration.Application.Services;
 using Api.Filters;
 using MediatR;
 
@@ -33,6 +34,11 @@ internal static class AdminRagBackupEndpoints
         group.MapGet("/snapshots/{id}", GetSnapshot)
             .WithName("GetRagSnapshot")
             .WithSummary("Get download URL for a specific snapshot");
+
+        // DELETE /admin/rag-backup/snapshots/{id}
+        group.MapDelete("/snapshots/{id}", DeleteSnapshot)
+            .WithName("DeleteRagSnapshot")
+            .WithSummary("Delete a RAG backup snapshot from storage");
     }
 
     private static async Task<IResult> ExportRagData(
@@ -89,5 +95,19 @@ internal static class AdminRagBackupEndpoints
             return Results.NotFound(result);
 
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> DeleteSnapshot(
+        string id,
+        IRagBackupStorageService storage,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        await storage.DeleteSnapshotAsync(id, cancellationToken).ConfigureAwait(false);
+
+        loggerFactory.CreateLogger(nameof(AdminRagBackupEndpoints))
+            .LogInformation("Admin deleted RAG snapshot {SnapshotId}", id);
+
+        return Results.NoContent();
     }
 }

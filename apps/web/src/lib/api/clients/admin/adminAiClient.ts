@@ -40,6 +40,10 @@ import {
   VectorSemanticSearchResultSchema,
   ProcessingQueueResponseSchema,
   PdfListResultSchema,
+  GameKbStatusesSchema,
+  KbSnapshotListSchema,
+  KbExportResultSchema,
+  KbImportResultSchema,
   type BulkDeleteResult,
   type ReindexResponse,
   type MaintenanceResult,
@@ -50,6 +54,10 @@ import {
   type VectorSemanticSearchResult,
   type ProcessingQueueResponse,
   type PdfListResult,
+  type GameKbStatuses,
+  type KbSnapshotList,
+  type KbExportResult,
+  type KbImportResult,
 } from '../../schemas/admin-knowledge-base.schemas';
 import {
   type TierStrategyMatrixDto,
@@ -601,6 +609,47 @@ export function createAdminAiClient(http: HttpClient) {
       const result = await http.get(ADMIN_KB_ROUTES.vectorStats, VectorStatsSchema);
       if (!result) throw new Error('Failed to fetch vector stats');
       return result;
+    },
+
+    // ── KB Games Status (Admin KB Dashboard) ─────────────────────────────────
+
+    async getGameKbStatuses(): Promise<GameKbStatuses> {
+      const result = await http.get('/api/v1/admin/kb/games/', GameKbStatusesSchema);
+      return result ?? { items: [] };
+    },
+
+    // ── RAG Backup Snapshots ─────────────────────────────────────────────────
+
+    async listKbSnapshots(): Promise<KbSnapshotList> {
+      const result = await http.get('/api/v1/admin/rag-backup/snapshots', KbSnapshotListSchema);
+      return result ?? { snapshots: [], downloadUrl: null, error: null };
+    },
+
+    async exportKbSnapshot(gameId?: string, dryRun = false): Promise<KbExportResult> {
+      const params = new URLSearchParams({ dryRun: String(dryRun) });
+      if (gameId) params.set('gameId', gameId);
+      const result = await http.post(
+        `/api/v1/admin/rag-backup/export?${params}`,
+        {},
+        KbExportResultSchema
+      );
+      if (!result) throw new Error('Failed to export snapshot');
+      return result;
+    },
+
+    async importKbSnapshot(snapshotPath: string, reEmbed = false): Promise<KbImportResult> {
+      const params = new URLSearchParams({ snapshotPath, reEmbed: String(reEmbed) });
+      const result = await http.post(
+        `/api/v1/admin/rag-backup/import?${params}`,
+        {},
+        KbImportResultSchema
+      );
+      if (!result) throw new Error('Failed to import snapshot');
+      return result;
+    },
+
+    async deleteKbSnapshot(snapshotId: string): Promise<void> {
+      await http.delete(`/api/v1/admin/rag-backup/snapshots/${encodeURIComponent(snapshotId)}`);
     },
 
     async searchVectors(

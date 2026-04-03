@@ -368,13 +368,13 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         />
 
         {/* Title */}
-        <h3 className="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate">
+        <h3 className="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-white/90 truncate">
           {title}
         </h3>
 
         {/* Subtitle */}
         {subtitle && (
-          <p className="text-muted-foreground text-[0.7rem] sm:text-[0.78rem] mt-px mb-0.5 sm:mb-1 truncate">
+          <p className="text-white/55 text-[0.7rem] sm:text-[0.78rem] mt-px mb-0.5 sm:mb-1 truncate">
             {subtitle}
           </p>
         )}
@@ -424,7 +424,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
                 <AgentStatsDisplay
                   stats={agentStats}
                   layout="horizontal"
-                  className="text-muted-foreground"
+                  className="text-white/55"
                 />
               )}
             </div>
@@ -439,11 +439,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
               </div>
             )}
             {chatStats && (
-              <ChatStatsDisplay
-                stats={chatStats}
-                layout="horizontal"
-                className="text-muted-foreground"
-              />
+              <ChatStatsDisplay stats={chatStats} layout="horizontal" className="text-white/55" />
             )}
           </div>
         )}
@@ -493,9 +489,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         {entity === 'game' && worstKbStatus && (
           <div className="flex items-center gap-1.5 mb-2" data-testid="meeple-card-kb-badge">
             <KbStatusBadge status={worstKbStatus} size="sm" />
-            <span className="text-[10px] text-muted-foreground font-medium">
-              {kbCards!.length} KB
-            </span>
+            <span className="text-[10px] text-white/55 font-medium">{kbCards!.length} KB</span>
           </div>
         )}
 
@@ -517,8 +511,8 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           className={cn(
             'flex items-center justify-evenly gap-2',
             'px-3 py-2',
-            'border-t border-border',
-            'bg-muted/60 dark:bg-muted/40',
+            'border-t border-white/10',
+            'bg-black/30',
             !(linkedEntities && linkedEntities.length > 0) &&
               !(entity === 'game' && hasAgent !== undefined) &&
               'rounded-b-2xl'
@@ -542,7 +536,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
                 <button
                   key={index}
                   type="button"
-                  className="flex items-center gap-2 text-[0.78rem] font-semibold text-foreground/70 dark:text-[rgba(200,180,140,0.75)] cursor-pointer hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(200,180,140,0.85)] cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={e => {
                     e.stopPropagation();
                     item.onClick!();
@@ -555,7 +549,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             return (
               <span
                 key={index}
-                className="flex items-center gap-2 text-[0.78rem] font-semibold text-foreground/70 dark:text-[rgba(200,180,140,0.75)]"
+                className="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(200,180,140,0.85)]"
               >
                 {chipContent}
               </span>

@@ -48,23 +48,10 @@ export function EntityIndicator({
   className?: string;
 }) {
   const color = customColor || entityColors[entity].hsl;
-  const name = entityColors[entity].name;
 
-  // Hero/featured uses ribbon, others use left border
+  // Hero/featured uses left border accent only — ribbon removed
   if (variant === 'hero') {
-    return (
-      <span
-        className={cn(
-          'absolute top-4 right-[-2rem] z-20',
-          'py-1 px-10 text-xs font-bold uppercase tracking-wider',
-          'text-white shadow-md rotate-45',
-          className
-        )}
-        style={{ backgroundColor: `hsl(${color})` }}
-      >
-        {name}
-      </span>
-    );
+    return null;
   }
 
   if (variant === 'featured' || variant === 'grid') {
@@ -113,30 +100,12 @@ export const VerticalTagStack = React.memo(function VerticalTagStack({
   showStatusIcon?: boolean;
   badge?: string;
 }) {
-  const color = customColor || entityColors[entity].hsl;
-  const name = entityColors[entity].name;
-
   return (
     <TooltipProvider delayDuration={300}>
       <div
         className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
         data-testid="meeple-card-tag-stack"
       >
-        {/* Entity type badge (highest priority) */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              className="max-w-[60px] sm:max-w-[80px] truncate px-1.5 sm:px-2 py-px sm:py-0.5 text-[8px] sm:text-[9px] font-extrabold uppercase tracking-[0.04em] text-white rounded-[5px] sm:rounded-[6px] shadow-sm cursor-default"
-              style={{ backgroundColor: `hsl(${color})` }}
-            >
-              {name}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
-            {name}
-          </TooltipContent>
-        </Tooltip>
-
         {/* Status badge */}
         {status && (
           <StatusBadge status={status} showIcon={showStatusIcon} className="max-w-[80px]" />
@@ -146,7 +115,7 @@ export const VerticalTagStack = React.memo(function VerticalTagStack({
         {badge && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="max-w-[80px] truncate bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-muted-foreground border border-border/50 cursor-default">
+              <span className="max-w-[80px] truncate bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-white/80 border border-white/15 cursor-default">
                 {badge}
               </span>
             </TooltipTrigger>

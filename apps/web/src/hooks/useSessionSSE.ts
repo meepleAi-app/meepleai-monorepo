@@ -32,13 +32,22 @@ const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 // Hook
 // ============================================================================
 
-export function useSessionSSE(sessionId: string | null): void {
+export function useSessionSSE(
+  sessionId: string | null,
+  onEvent?: (event: ActivityEvent) => void
+): void {
   const addEvent = useSessionStore(s => s.addEvent);
   const addEventRef = useRef(addEvent);
 
   useEffect(() => {
     addEventRef.current = addEvent;
   }, [addEvent]);
+
+  // Stable ref for onEvent — avoids reconnecting SSE on every render
+  const onEventRef = useRef(onEvent);
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  });
 
   const seenIdsRef = useRef(new Set<string>());
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -85,6 +94,7 @@ export function useSessionSSE(sessionId: string | null): void {
           seenIdsRef.current.add(parsed.id);
 
           addEventRef.current(parsed);
+          onEventRef.current?.(parsed);
         } catch {
           // Ignore malformed messages
         }

@@ -5,18 +5,25 @@ import { useCallback, useEffect } from 'react';
 
 import { CollapsiblePanel } from '@/components/layout/CollapsiblePanel';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSessionSSE } from '@/hooks/useSessionSSE';
+import { useSessionScoreSync } from '@/lib/domain-hooks/useSessionScoreSync';
 
 interface LiveSessionLayoutProps {
   leftPanel: ReactNode;
   centerContent: ReactNode;
   rightPanel: ReactNode;
+  /** Optional sessionId — when provided, enables real-time score sync via SSE */
+  sessionId?: string | null;
 }
 
 export function LiveSessionLayout({
   leftPanel,
   centerContent,
   rightPanel,
+  sessionId = null,
 }: LiveSessionLayoutProps) {
+  const { handleSseEvent } = useSessionScoreSync();
+  useSessionSSE(sessionId, handleSseEvent);
   const [leftCollapsed, setLeftCollapsed] = useLocalStorage('session-left-collapsed', false);
   const [rightCollapsed, setRightCollapsed] = useLocalStorage('session-right-collapsed', false);
   const toggleLeft = useCallback(() => setLeftCollapsed((v: boolean) => !v), [setLeftCollapsed]);

@@ -77,6 +77,20 @@ function isStreamingResponse(response: Response): boolean {
 }
 
 async function proxyRequest(request: NextRequest, method: string) {
+  // In mock mode, MSW handles API requests client-side.
+  // If a request reaches this server-side route, MSW didn't intercept it.
+  // Return 501 (not retryable) so the error surfaces immediately without the
+  // exponential-backoff retry loop that 503 would trigger.
+  if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true') {
+    return NextResponse.json(
+      {
+        error:
+          'Mock mode: MSW did not intercept this request. Reload the page to re-activate the Service Worker.',
+      },
+      { status: 501 }
+    );
+  }
+
   try {
     const pathname = request.nextUrl.pathname;
     const apiPath = pathname;

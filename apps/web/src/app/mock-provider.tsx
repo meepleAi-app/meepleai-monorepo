@@ -17,11 +17,29 @@ interface MockProviderProps {
   children: React.ReactNode;
 }
 
-async function initMocks() {
+async function initMocks(skipControllerCheck = false) {
   const { worker } = await import('@/mocks/browser');
-  return worker.start({
+  await worker.start({
     onUnhandledRequest: 'bypass', // Non bloccare richieste non gestite (es. font, next internals)
   });
+
+  // MSW requires the Service Worker to control the current page.
+  // If controller is null, the SW was just registered for the first time and
+  // doesn't yet control this page (browser spec: newly-registered SWs only
+  // control pages opened after registration, unless clients.claim() is called).
+  // MSW's mockServiceWorker.js calls clients.claim() in the activate event,
+  // but there can be a race on first load. Reloading ensures full SW control.
+  // Skip this check on HMR restarts: the SW was already active before the restart
+  // and will reclaim the page without a full reload.
+  if (
+    !skipControllerCheck &&
+    typeof window !== 'undefined' &&
+    !navigator.serviceWorker.controller
+  ) {
+    window.location.reload();
+    // Never resolve: page is reloading, no need to unblock rendering
+    return new Promise<void>(() => {});
+  }
 }
 
 export function MockProvider({ children }: MockProviderProps) {
@@ -29,6 +47,21 @@ export function MockProvider({ children }: MockProviderProps) {
 
   useEffect(() => {
     initMocks().then(() => setReady(true));
+
+    // Re-initialize MSW after Turbopack/Webpack Fast Refresh replaces browser.ts
+    // or its handler dependencies. The old worker is stopped and this event is
+    // dispatched by the module.hot.dispose hook in browser.ts. By the time this
+    // handler runs, the new worker module has been evaluated and the dynamic
+    // import below will return the replacement worker instance.
+    function handleWorkerInvalidated() {
+      setReady(false);
+      initMocks(/* skipControllerCheck */ true).then(() => setReady(true));
+    }
+
+    window.addEventListener('msw:worker-invalidated', handleWorkerInvalidated);
+    return () => {
+      window.removeEventListener('msw:worker-invalidated', handleWorkerInvalidated);
+    };
   }, []);
 
   if (!ready) {

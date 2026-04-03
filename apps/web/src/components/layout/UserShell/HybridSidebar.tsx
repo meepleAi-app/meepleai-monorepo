@@ -11,15 +11,27 @@
  * - motion-reduce:transition-none for accessibility
  */
 
+import {
+  Bot,
+  Dices,
+  History,
+  LayoutDashboard,
+  Library,
+  Settings,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 import { useNavbarHeightStore } from '@/lib/stores/navbar-height-store';
 import { cn } from '@/lib/utils';
 
+import type { LucideIcon } from 'lucide-react';
+
 interface NavItem {
   label: string;
-  icon: string;
+  icon: LucideIcon;
   href: string;
   /** Match pathname prefix for active state (defaults to href) */
   activeMatch?: string;
@@ -36,28 +48,28 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Navigazione',
     items: [
-      { label: 'Dashboard', icon: '🏠', href: '/dashboard' },
+      { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
       {
         label: 'Libreria',
-        icon: '📚',
-        href: '/library?tab=collection',
+        icon: Library,
+        href: '/library',
         activeMatch: '/library',
       },
-      { label: 'Sessioni', icon: '🎲', href: '/sessions', activeMatch: '/sessions' },
-      { label: 'Giocatori', icon: '👥', href: '/players', activeMatch: '/players' },
-      { label: 'Storico partite', icon: '🕐', href: '/play-records', activeMatch: '/play-records' },
+      { label: 'Sessioni', icon: Dices, href: '/sessions', activeMatch: '/sessions' },
+      { label: 'Giocatori', icon: Users, href: '/players', activeMatch: '/players' },
+      { label: 'Storico', icon: History, href: '/play-records', activeMatch: '/play-records' },
     ],
   },
   {
     title: 'AI',
     items: [
-      { label: 'Chat RAG', icon: '✨', href: '/chat', activeMatch: '/chat' },
-      { label: 'Agenti', icon: '🤖', href: '/agents', activeMatch: '/agents' },
+      { label: 'Chat RAG', icon: Sparkles, href: '/chat', activeMatch: '/chat' },
+      { label: 'Agenti', icon: Bot, href: '/agents', activeMatch: '/agents' },
     ],
   },
 ];
 
-const BOTTOM_ITEMS: NavItem[] = [{ label: 'Impostazioni', icon: '⚙️', href: '/settings' }];
+const BOTTOM_ITEMS: NavItem[] = [{ label: 'Impostazioni', icon: Settings, href: '/settings' }];
 
 function useIsActive(item: NavItem): boolean {
   const pathname = usePathname();
@@ -82,6 +94,7 @@ function useIsActive(item: NavItem): boolean {
 
 function SidebarLink({ item }: { item: NavItem }) {
   const isActive = useIsActive(item);
+  const Icon = item.icon;
 
   return (
     <Link
@@ -97,9 +110,7 @@ function SidebarLink({ item }: { item: NavItem }) {
       aria-current={isActive ? 'page' : undefined}
     >
       <span className="flex items-center justify-center w-[34px] h-[34px] shrink-0">
-        <span className="text-xl leading-none" role="img" aria-label={item.label}>
-          {item.icon}
-        </span>
+        <Icon className="h-5 w-5" aria-hidden="true" />
       </span>
       <span
         className={cn(

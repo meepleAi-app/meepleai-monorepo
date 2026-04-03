@@ -8,6 +8,7 @@
  * - Assign roles: Host or Player
  * - Configure turn order via drag reorder (index-based)
  * - Color uniqueness enforcement
+ * - Guest player support (no app account required)
  */
 
 'use client';
@@ -17,9 +18,11 @@ import { useState, useCallback } from 'react';
 import { ArrowDown, ArrowUp, Crown, Plus, Trash2, User } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { cn } from '@/lib/utils';
+import type { SessionParticipant } from '@/stores/session/types';
 
 // ========== Types ==========
 
@@ -48,10 +51,20 @@ export const PLAYER_COLORS: { value: string; label: string; className: string }[
 interface PlayerSetupProps {
   players: SetupPlayer[];
   onPlayersChange: (players: SetupPlayer[]) => void;
+  /** Optional: called when a guest player is added via the "Ospite" tab */
+  onAddPlayer?: (participant: SessionParticipant) => void;
+  /** Optional: existing participants for duplicate-name check in guest tab */
+  existingPlayers?: SessionParticipant[];
 }
 
-export function PlayerSetup({ players, onPlayersChange }: PlayerSetupProps) {
+export function PlayerSetup({
+  players,
+  onPlayersChange,
+  onAddPlayer,
+  existingPlayers = [],
+}: PlayerSetupProps) {
   const [newName, setNewName] = useState('');
+  const [guestName, setGuestName] = useState('');
 
   const usedColors = players.map(p => p.color);
   const nextAvailableColor =
@@ -117,6 +130,22 @@ export function PlayerSetup({ players, onPlayersChange }: PlayerSetupProps) {
     [players, onPlayersChange]
   );
 
+  // ── Guest player logic ──────────────────────────────────────────────────────
+  const isDuplicateGuest = existingPlayers.some(
+    p => p.displayName.toLowerCase() === guestName.trim().toLowerCase()
+  );
+
+  const handleAddGuest = useCallback(() => {
+    if (!guestName.trim() || isDuplicateGuest) return;
+    onAddPlayer?.({
+      id: crypto.randomUUID(),
+      displayName: guestName.trim(),
+      isGuest: true,
+    });
+    setGuestName('');
+  }, [guestName, isDuplicateGuest, onAddPlayer]);
+  // ───────────────────────────────────────────────────────────────────────────
+
   return (
     <div className="space-y-4">
       <div>
@@ -126,135 +155,175 @@ export function PlayerSetup({ players, onPlayersChange }: PlayerSetupProps) {
         </p>
       </div>
 
-      {/* Player list */}
-      <div className="space-y-2" role="list" aria-label="Lista giocatori">
-        {players.map((player, index) => (
-          <div
-            key={player.id}
-            role="listitem"
-            className="flex items-center gap-2 rounded-lg border border-border bg-card p-3"
-          >
-            {/* Turn order controls */}
-            <div className="flex flex-col gap-0.5">
-              <button
-                type="button"
-                onClick={() => movePlayer(index, 'up')}
-                disabled={index === 0}
-                className="p-0.5 rounded hover:bg-muted disabled:opacity-30"
-                aria-label={`Sposta ${player.name} su`}
+      <Tabs defaultValue="app">
+        <TabsList>
+          <TabsTrigger value="app">Utente App</TabsTrigger>
+          <TabsTrigger value="guest">Ospite</TabsTrigger>
+        </TabsList>
+
+        {/* ── Tab: Utente App ─────────────────────────────────────────────── */}
+        <TabsContent value="app" className="space-y-4">
+          {/* Player list */}
+          <div className="space-y-2" role="list" aria-label="Lista giocatori">
+            {players.map((player, index) => (
+              <div
+                key={player.id}
+                role="listitem"
+                className="flex items-center gap-2 rounded-lg border border-border bg-card p-3"
               >
-                <ArrowUp className="h-3 w-3" />
-              </button>
-              <button
-                type="button"
-                onClick={() => movePlayer(index, 'down')}
-                disabled={index === players.length - 1}
-                className="p-0.5 rounded hover:bg-muted disabled:opacity-30"
-                aria-label={`Sposta ${player.name} giu`}
-              >
-                <ArrowDown className="h-3 w-3" />
-              </button>
-            </div>
-
-            {/* Turn number */}
-            <span className="text-xs text-muted-foreground w-4 text-center font-mono">
-              {index + 1}
-            </span>
-
-            {/* Color dot */}
-            <div
-              className={cn(
-                'h-8 w-8 rounded-full shrink-0',
-                PLAYER_COLORS.find(c => c.value === player.color)?.className ?? 'bg-gray-400'
-              )}
-            />
-
-            {/* Name */}
-            <span className="font-medium text-sm flex-1 truncate">{player.name}</span>
-
-            {/* Role badge */}
-            <button
-              type="button"
-              onClick={() => toggleRole(player.id)}
-              aria-label={`Ruolo di ${player.name}: ${player.role}`}
-            >
-              <Badge
-                variant={player.role === 'Host' ? 'default' : 'outline'}
-                className={cn(
-                  'cursor-pointer text-xs',
-                  player.role === 'Host' && 'bg-amber-500 hover:bg-amber-600'
-                )}
-              >
-                {player.role === 'Host' ? (
-                  <Crown className="h-3 w-3 mr-1" />
-                ) : (
-                  <User className="h-3 w-3 mr-1" />
-                )}
-                {player.role === 'Host' ? 'Host' : 'Player'}
-              </Badge>
-            </button>
-
-            {/* Color selector (compact) */}
-            <div className="flex gap-1">
-              {PLAYER_COLORS.filter(c => c.value === player.color || !usedColors.includes(c.value))
-                .slice(0, 4)
-                .map(c => (
+                {/* Turn order controls */}
+                <div className="flex flex-col gap-0.5">
                   <button
-                    key={c.value}
                     type="button"
-                    onClick={() => changeColor(player.id, c.value)}
-                    className={cn(
-                      'h-5 w-5 rounded-full transition-all',
-                      c.className,
-                      c.value === player.color && 'ring-2 ring-offset-1 ring-indigo-500'
-                    )}
-                    title={c.label}
-                    aria-label={`Colore ${c.label}`}
-                  />
-                ))}
-            </div>
+                    onClick={() => movePlayer(index, 'up')}
+                    disabled={index === 0}
+                    className="p-0.5 rounded hover:bg-muted disabled:opacity-30"
+                    aria-label={`Sposta ${player.name} su`}
+                  >
+                    <ArrowUp className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => movePlayer(index, 'down')}
+                    disabled={index === players.length - 1}
+                    className="p-0.5 rounded hover:bg-muted disabled:opacity-30"
+                    aria-label={`Sposta ${player.name} giu`}
+                  >
+                    <ArrowDown className="h-3 w-3" />
+                  </button>
+                </div>
 
-            {/* Remove */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => removePlayer(player.id)}
-              aria-label={`Rimuovi ${player.name}`}
-            >
-              <Trash2 className="h-4 w-4 text-muted-foreground" />
+                {/* Turn number */}
+                <span className="text-xs text-muted-foreground w-4 text-center font-mono">
+                  {index + 1}
+                </span>
+
+                {/* Color dot */}
+                <div
+                  className={cn(
+                    'h-8 w-8 rounded-full shrink-0',
+                    PLAYER_COLORS.find(c => c.value === player.color)?.className ?? 'bg-gray-400'
+                  )}
+                />
+
+                {/* Name */}
+                <span className="font-medium text-sm flex-1 truncate">{player.name}</span>
+
+                {/* Role badge */}
+                <button
+                  type="button"
+                  onClick={() => toggleRole(player.id)}
+                  aria-label={`Ruolo di ${player.name}: ${player.role}`}
+                >
+                  <Badge
+                    variant={player.role === 'Host' ? 'default' : 'outline'}
+                    className={cn(
+                      'cursor-pointer text-xs',
+                      player.role === 'Host' && 'bg-amber-500 hover:bg-amber-600'
+                    )}
+                  >
+                    {player.role === 'Host' ? (
+                      <Crown className="h-3 w-3 mr-1" />
+                    ) : (
+                      <User className="h-3 w-3 mr-1" />
+                    )}
+                    {player.role === 'Host' ? 'Host' : 'Player'}
+                  </Badge>
+                </button>
+
+                {/* Color selector (compact) */}
+                <div className="flex gap-1">
+                  {PLAYER_COLORS.filter(
+                    c => c.value === player.color || !usedColors.includes(c.value)
+                  )
+                    .slice(0, 4)
+                    .map(c => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        onClick={() => changeColor(player.id, c.value)}
+                        className={cn(
+                          'h-5 w-5 rounded-full transition-all',
+                          c.className,
+                          c.value === player.color && 'ring-2 ring-offset-1 ring-indigo-500'
+                        )}
+                        title={c.label}
+                        aria-label={`Colore ${c.label}`}
+                      />
+                    ))}
+                </div>
+
+                {/* Remove */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removePlayer(player.id)}
+                  aria-label={`Rimuovi ${player.name}`}
+                >
+                  <Trash2 className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {players.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nessun giocatore aggiunto. Aggiungi almeno un giocatore per continuare.
+            </p>
+          )}
+
+          {/* Add player */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="Nome giocatore"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              className="flex-1"
+              onKeyDown={e => e.key === 'Enter' && addPlayer()}
+              aria-label="Nome nuovo giocatore"
+            />
+            <Button variant="outline" onClick={addPlayer} disabled={!newName.trim()}>
+              <Plus className="h-4 w-4 mr-1" />
+              Aggiungi
             </Button>
           </div>
-        ))}
-      </div>
 
-      {players.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-4">
-          Nessun giocatore aggiunto. Aggiungi almeno un giocatore per continuare.
-        </p>
-      )}
+          {players.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              L&apos;ordine dei giocatori determina l&apos;ordine di turno. Usa le frecce per
+              riordinare.
+            </p>
+          )}
+        </TabsContent>
 
-      {/* Add player */}
-      <div className="flex gap-2">
-        <Input
-          placeholder="Nome giocatore"
-          value={newName}
-          onChange={e => setNewName(e.target.value)}
-          className="flex-1"
-          onKeyDown={e => e.key === 'Enter' && addPlayer()}
-          aria-label="Nome nuovo giocatore"
-        />
-        <Button variant="outline" onClick={addPlayer} disabled={!newName.trim()}>
-          <Plus className="h-4 w-4 mr-1" />
-          Aggiungi
-        </Button>
-      </div>
-
-      {players.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          L&apos;ordine dei giocatori determina l&apos;ordine di turno. Usa le frecce per
-          riordinare.
-        </p>
-      )}
+        {/* ── Tab: Ospite ─────────────────────────────────────────────────── */}
+        <TabsContent value="guest" className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Aggiungi un giocatore ospite senza account. Inserisci solo il nome.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Nome ospite"
+              value={guestName}
+              onChange={e => setGuestName(e.target.value)}
+              className="flex-1"
+              onKeyDown={e => e.key === 'Enter' && handleAddGuest()}
+              aria-label="Nome ospite"
+            />
+            <Button
+              variant="outline"
+              onClick={handleAddGuest}
+              disabled={!guestName.trim() || isDuplicateGuest}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Aggiungi
+            </Button>
+          </div>
+          {isDuplicateGuest && guestName.trim() && (
+            <p className="text-xs text-destructive">Esiste già un giocatore con questo nome.</p>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -52,9 +52,9 @@ export function GameNightPlanningLayout({
               {players.map(p => (
                 <div key={p.id} className="flex items-center gap-2 text-sm">
                   <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold">
-                    {p.name[0]}
+                    {p.displayName[0]}
                   </div>
-                  <span>{p.name}</span>
+                  <span>{p.displayName}</span>
                 </div>
               ))}
             </div>

@@ -41,11 +41,10 @@ import { UsageWidget } from './UsageWidget';
 const LIBRARY_FILTER_CHIPS = [
   { id: 'all', label: 'Tutti' },
   { id: 'recent', label: 'Recenti' },
-  { id: 'most-played', label: 'Meno recenti' },
+  { id: 'oldest', label: 'Prima aggiunti' },
   { id: 'rating', label: 'Rating \u2193' },
   { id: 'players-2-4', label: '2-4 giocatori' },
   { id: 'under-60', label: '< 60 min' },
-  { id: 'strategy', label: 'Strategici' },
 ];
 
 // ── Filter logic ────────────────────────────────────────────────────────────
@@ -56,6 +55,10 @@ function applyFilter(items: UserLibraryEntry[], filterId: string): UserLibraryEn
       return [...items].sort(
         (a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
       );
+    case 'oldest':
+      return [...items].sort(
+        (a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
+      );
     case 'rating':
       return [...items].sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0));
     case 'players-2-4':
@@ -64,15 +67,6 @@ function applyFilter(items: UserLibraryEntry[], filterId: string): UserLibraryEn
       );
     case 'under-60':
       return items.filter(g => g.playingTimeMinutes != null && g.playingTimeMinutes <= 60);
-    case 'most-played':
-      // playCount not yet on UserLibraryEntry DTO — sort by addedAt (oldest first = likely most played)
-      return [...items].sort(
-        (a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
-      );
-    case 'strategy':
-      // category/mechanics not yet on UserLibraryEntry DTO — requires backend GetUserGamesQuery filter
-      // For now, return all items (chip acts as no-op until backend wired)
-      return items;
     default:
       return items;
   }

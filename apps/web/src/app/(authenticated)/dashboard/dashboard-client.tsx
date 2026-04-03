@@ -5,17 +5,14 @@
  *
  * Desktop dashboard with:
  * - 12-column bento grid with variable-span widgets
- * - Live session, KPI stats, library, quick actions, leaderboard, trending
+ * - Live session, KPI stats, library, chat preview, leaderboard, trending
  */
 
 import { useEffect } from 'react';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import type { SessionSummaryDto, TrendingGameDto, UserGameDto } from '@/lib/api/dashboard-client';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 import { cn } from '@/lib/utils';
@@ -26,12 +23,11 @@ const C = {
   game: 'hsl(25,95%,45%)',
   player: 'hsl(262,83%,58%)',
   session: 'hsl(240,60%,55%)',
+  chat: 'hsl(220,80%,55%)',
   kb: 'hsl(174,60%,40%)',
   event: 'hsl(350,89%,60%)',
   agent: 'hsl(38,92%,50%)',
-  // Design system tokens (premium-gaming.css)
-  success: 'var(--gaming-accent-success)',
-  chat: 'var(--gaming-accent-info)',
+  success: 'hsl(142,70%,45%)',
 } as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -82,7 +78,6 @@ interface BentoWidgetProps {
   className?: string;
   children: React.ReactNode;
   onClick?: () => void;
-  'data-testid'?: string;
 }
 
 function BentoWidget({
@@ -94,12 +89,10 @@ function BentoWidget({
   className,
   children,
   onClick,
-  'data-testid': dataTestId,
 }: BentoWidgetProps) {
   const tc = tabletColSpan ?? Math.min(colSpan, 6);
   return (
     <div
-      data-testid={dataTestId}
       className={cn(
         // Responsive grid spans
         COL_SPAN[tc] ?? `col-span-${tc}`,
@@ -133,7 +126,7 @@ function BentoWidget({
 
 function WidgetLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-1.5">
+    <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-1.5">
       {children}
     </p>
   );
@@ -144,50 +137,23 @@ function WidgetLabel({ children }: { children: React.ReactNode }) {
 function LiveSessionWidget({
   session,
   isLoading,
-  error,
 }: {
   session: SessionSummaryDto | undefined;
   isLoading: boolean;
-  error?: string | null;
 }) {
   const router = useRouter();
 
   if (isLoading) {
     return (
-      <BentoWidget
-        colSpan={8}
-        rowSpan={2}
-        accentColor={C.success}
-        className="animate-pulse"
-        data-testid="widget-live-session"
-      >
+      <BentoWidget colSpan={8} rowSpan={2} accentColor={C.success} className="animate-pulse">
         <div className="h-full" />
-      </BentoWidget>
-    );
-  }
-
-  if (error) {
-    return (
-      <BentoWidget
-        colSpan={8}
-        rowSpan={2}
-        className="flex items-center gap-3 border-dashed"
-        data-testid="widget-live-session"
-      >
-        <span className="text-xl">⚠️</span>
-        <p className="text-sm text-muted-foreground">{error}</p>
       </BentoWidget>
     );
   }
 
   if (!session) {
     return (
-      <BentoWidget
-        colSpan={8}
-        rowSpan={2}
-        className="border-dashed flex items-center gap-4"
-        data-testid="widget-live-session"
-      >
+      <BentoWidget colSpan={8} rowSpan={2} className="border-dashed flex items-center gap-4">
         <div className="flex-1 min-w-0">
           <p className="font-quicksand font-bold text-base text-foreground">
             Nessuna sessione attiva
@@ -213,19 +179,18 @@ function LiveSessionWidget({
       colSpan={8}
       rowSpan={2}
       accentColor={C.success}
-      accentBg="color-mix(in srgb, var(--gaming-accent-success) 4%, transparent)"
+      accentBg="rgba(16,185,129,0.04)"
       className="flex flex-col justify-between"
       onClick={() => router.push(`/sessions/${session.id}`)}
-      data-testid="widget-live-session"
     >
       <div className="flex items-center justify-between mb-2">
         <WidgetLabel>Sessione Live</WidgetLabel>
         <span
-          className="inline-flex items-center gap-1.5 text-[11px] font-bold rounded-full px-2.5 py-0.5"
+          className="inline-flex items-center gap-1.5 text-[10px] font-bold rounded-full px-2.5 py-0.5"
           style={{
-            background: 'color-mix(in srgb, var(--gaming-accent-success) 12%, transparent)',
+            background: 'rgba(16,185,129,0.12)',
             color: C.success,
-            border: '1px solid color-mix(in srgb, var(--gaming-accent-success) 20%, transparent)',
+            border: '1px solid rgba(16,185,129,0.2)',
           }}
         >
           <span
@@ -241,13 +206,11 @@ function LiveSessionWidget({
           style={{ background: 'rgba(255,255,255,0.06)' }}
         >
           {session.gameImageUrl ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={session.gameImageUrl}
               alt={session.gameName}
-              width={44}
-              height={44}
               className="w-full h-full object-cover"
-              unoptimized
             />
           ) : (
             '🎲'
@@ -320,7 +283,7 @@ function KpiWidget({
       {badge && (
         <span
           className={cn(
-            'inline-block mt-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full',
+            'inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full',
             badgePositive
               ? 'bg-emerald-500/15 text-emerald-400'
               : 'bg-muted/60 text-muted-foreground'
@@ -329,7 +292,7 @@ function KpiWidget({
           {badge}
         </span>
       )}
-      {sub && !badge && <p className="text-[11px] text-muted-foreground mt-1">{sub}</p>}
+      {sub && !badge && <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>}
     </BentoWidget>
   );
 }
@@ -353,7 +316,6 @@ function LibraryWidget({
       rowSpan={4}
       className="flex flex-col gap-0"
       onClick={() => router.push('/library')}
-      data-testid="widget-library"
     >
       <WidgetLabel>La Tua Libreria</WidgetLabel>
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -381,13 +343,11 @@ function LibraryWidget({
               }}
             >
               {(game.thumbnailUrl ?? game.imageUrl) ? (
-                <Image
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
                   src={game.thumbnailUrl ?? game.imageUrl ?? ''}
                   alt={game.title}
-                  width={28}
-                  height={28}
                   className="w-7 h-7 rounded-md object-cover shrink-0"
-                  unoptimized
                 />
               ) : (
                 <div
@@ -402,7 +362,7 @@ function LibraryWidget({
               </span>
               {game.averageRating !== null && game.averageRating !== undefined && (
                 <span
-                  className="font-mono text-[11px] font-semibold shrink-0"
+                  className="font-mono text-[9px] font-semibold shrink-0"
                   style={{ color: C.game }}
                 >
                   ★ {game.averageRating.toFixed(1)}
@@ -412,75 +372,80 @@ function LibraryWidget({
           ))
         )}
       </div>
-      <p className="text-[11px] font-bold mt-2 pt-1" style={{ color: C.game }}>
+      <p className="text-[10px] font-bold mt-2 pt-1" style={{ color: C.game }}>
         Vedi tutti {totalCount} →
       </p>
     </BentoWidget>
   );
 }
 
-// ─── Quick Actions Widget (6×4) ───────────────────────────────────────────────
+// ─── Chat Preview Widget (6×4) ────────────────────────────────────────────────
 
-const QUICK_ACTIONS = [
-  {
-    icon: '🎲',
-    label: 'Nuova Partita',
-    sub: 'Registra una sessione',
-    href: '/sessions/new',
-    color: C.game,
-  },
-  {
-    icon: '💬',
-    label: 'Chat AI',
-    sub: 'Fai domande sulle regole',
-    href: '/chat',
-    color: C.chat,
-  },
-  {
-    icon: '📚',
-    label: 'Aggiungi Gioco',
-    sub: 'Cerca nel catalogo',
-    href: '/library?tab=collection',
-    color: C.kb,
-  },
-  {
-    icon: '📊',
-    label: 'Storico',
-    sub: 'Vedi tutte le partite',
-    href: '/sessions',
-    color: C.session,
-  },
-] as const;
-
-function QuickActionsWidget() {
+function ChatPreviewWidget() {
   const router = useRouter();
   return (
     <BentoWidget
       colSpan={6}
       rowSpan={4}
+      accentColor={C.chat}
       className="flex flex-col"
-      data-testid="widget-quick-actions"
+      onClick={() => router.push('/chat')}
     >
-      <WidgetLabel>Azioni Rapide</WidgetLabel>
-      <div className="flex-1 grid grid-cols-2 gap-2 mt-1">
-        {QUICK_ACTIONS.map(action => (
-          <button
-            key={action.href}
-            type="button"
-            onClick={() => router.push(action.href)}
-            className="flex flex-col items-start gap-1 rounded-xl p-3 border border-border/40 hover:border-border hover:bg-muted/20 transition-colors text-left"
-            style={{ borderLeft: `3px solid ${action.color}` }}
+      <div className="flex items-center justify-between mb-2">
+        <WidgetLabel>Chat AI</WidgetLabel>
+        <span
+          className="text-[9px] font-bold rounded-full px-2 py-0.5"
+          style={{ background: `${C.chat}20`, color: C.chat }}
+        >
+          Regole & Domande
+        </span>
+      </div>
+      <div className="flex-1 flex flex-col gap-1.5 overflow-hidden justify-end">
+        <div
+          className="self-end max-w-[80%] rounded-lg px-2.5 py-1.5 text-[11px]"
+          style={{ background: `${C.game}18`, border: `1px solid ${C.game}22` }}
+        >
+          Quante strade posso costruire?
+        </div>
+        <div
+          className="self-start max-w-[90%] rounded-lg px-2.5 py-1.5 text-[11px] text-muted-foreground"
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          Puoi costruire tutte le strade che vuoi, purché tu abbia le risorse.{' '}
+          <span
+            className="font-mono text-[8px] rounded px-1 py-0.5 cursor-pointer"
+            style={{ background: `${C.chat}18`, color: C.chat }}
           >
-            <span className="text-xl">{action.icon}</span>
-            <span
-              className="font-quicksand font-bold text-[13px] leading-tight"
-              style={{ color: action.color }}
-            >
-              {action.label}
-            </span>
-            <span className="text-[11px] text-muted-foreground leading-tight">{action.sub}</span>
-          </button>
-        ))}
+            p.8
+          </span>
+        </div>
+      </div>
+      <div
+        className="mt-auto pt-2 flex gap-1.5"
+        onClick={e => {
+          e.stopPropagation();
+          router.push('/chat');
+        }}
+      >
+        <div
+          className="flex-1 h-7 rounded-lg flex items-center px-2.5 text-[11px] text-muted-foreground/50"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          Fai una domanda…
+        </div>
+        <button
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-sm"
+          style={{ background: C.chat }}
+          aria-label="Vai alla chat"
+        >
+          ↑
+        </button>
       </div>
     </BentoWidget>
   );
@@ -505,17 +470,8 @@ function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
   const avatarColors = [C.game, C.player, C.event, C.session];
 
   return (
-    <BentoWidget
-      colSpan={6}
-      rowSpan={3}
-      accentColor={C.event}
-      className="flex flex-col"
-      data-testid="widget-leaderboard"
-    >
+    <BentoWidget colSpan={6} rowSpan={3} accentColor={C.event} className="flex flex-col">
       <WidgetLabel>Classifica Gruppo</WidgetLabel>
-      <p className="text-[11px] text-muted-foreground/60 font-mono -mt-1 mb-1.5">
-        basata sulle ultime partite
-      </p>
       <div className="flex-1 flex flex-col overflow-hidden">
         {sorted.length === 0 ? (
           <p className="text-[11px] text-muted-foreground mt-2">
@@ -529,7 +485,7 @@ function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
             >
               <span className="text-sm w-5 text-center shrink-0">{medals[i]}</span>
               <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+                className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
                 style={{ background: avatarColors[i] }}
               >
                 {name[0]?.toUpperCase()}
@@ -537,7 +493,7 @@ function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
               <span className="flex-1 font-quicksand font-semibold text-[11px] truncate">
                 {name}
               </span>
-              <span className="font-mono text-[11px] text-muted-foreground shrink-0">
+              <span className="font-mono text-[9px] text-muted-foreground shrink-0">
                 {wins} vitt.
               </span>
             </div>
@@ -559,9 +515,8 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
       accentColor={C.kb}
       className="flex flex-col"
       onClick={() => router.push('/games')}
-      data-testid="widget-trending"
     >
-      <WidgetLabel>Popolari su MeepleAI · 7 giorni</WidgetLabel>
+      <WidgetLabel>Popolari questa settimana</WidgetLabel>
       <div className="flex gap-3 mt-1 overflow-hidden">
         {isLoading
           ? Array.from({ length: 5 }).map((_, i) => (
@@ -580,13 +535,11 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
                 }}
               >
                 {game.thumbnailUrl ? (
-                  <Image
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
                     src={game.thumbnailUrl}
                     alt={game.title}
-                    width={36}
-                    height={48}
                     className="w-9 h-12 rounded-md object-cover group-hover/card:ring-1 group-hover/card:ring-primary transition-all"
-                    unoptimized
                   />
                 ) : (
                   <div
@@ -596,7 +549,7 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
                     🎲
                   </div>
                 )}
-                <span className="font-quicksand text-[11px] font-bold text-center w-9 truncate">
+                <span className="font-quicksand text-[8px] font-bold text-center w-9 truncate">
                   {game.title}
                 </span>
               </div>
@@ -606,51 +559,15 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
   );
 }
 
-// ─── Greeting Widget (12×1) ──────────────────────────────────────────────────
-
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Buongiorno';
-  if (h < 18) return 'Buon pomeriggio';
-  return 'Buonasera';
-}
-
-function GreetingWidget({ displayName }: { displayName?: string | null }) {
-  const greeting = getGreeting();
-  const name = displayName ?? '';
-  const today = new Date().toLocaleDateString('it-IT', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
-
-  return (
-    <BentoWidget
-      colSpan={12}
-      rowSpan={1}
-      className="flex items-center justify-between"
-      data-testid="widget-greeting"
-    >
-      <p className="font-quicksand font-extrabold text-base leading-none truncate">
-        {greeting}
-        {name ? `, ${name}` : ''}! 👋
-      </p>
-      <p className="text-[11px] text-muted-foreground shrink-0 capitalize">{today}</p>
-    </BentoWidget>
-  );
-}
-
 // ─── Dashboard Client ─────────────────────────────────────────────────────────
 
 export function DashboardClient() {
-  const { user } = useAuthUser();
   const {
     stats,
     isLoadingStats,
     fetchStats,
     recentSessions,
     isLoadingSessions,
-    sessionsError,
     fetchRecentSessions,
     updateFilters,
     games,
@@ -678,69 +595,60 @@ export function DashboardClient() {
 
   return (
     <div className="flex-1 overflow-y-auto p-3.5">
-      <ErrorBoundary componentName="DashboardClient">
-        <div
-          className="grid grid-cols-6 lg:grid-cols-12"
-          style={{ gridAutoRows: '60px', gap: '8px' }}
-        >
-          {/* Row 0: Greeting (12×1) */}
-          <GreetingWidget displayName={user?.displayName} />
+      <div
+        className="grid grid-cols-6 lg:grid-cols-12"
+        style={{ gridAutoRows: '60px', gap: '8px' }}
+      >
+        {/* Row 1-2: Live Session (8×2) + Partite (4×2) */}
+        <LiveSessionWidget session={latestSession} isLoading={isLoadingSessions} />
+        <KpiWidget
+          label="Partite (mese)"
+          value={isLoadingStats ? '…' : monthlyPlays}
+          badge={
+            playsChange !== null && playsChange !== undefined && playsChange !== 0
+              ? `${playsChange > 0 ? '+' : ''}${playsChange}%`
+              : undefined
+          }
+          badgePositive={(playsChange ?? 0) > 0}
+          accentColor={C.game}
+          colSpan={4}
+          tabletColSpan={6}
+          rowSpan={2}
+          href="/sessions"
+        />
 
-          {/* Row 1-2: Live Session (8×2) + Partite (4×2) */}
-          <LiveSessionWidget
-            session={latestSession}
-            isLoading={isLoadingSessions}
-            error={sessionsError}
-          />
-          <KpiWidget
-            label="Partite (mese)"
-            value={isLoadingStats ? '…' : monthlyPlays}
-            badge={
-              playsChange !== null && playsChange !== undefined && playsChange !== 0
-                ? `${playsChange > 0 ? '+' : ''}${playsChange}%`
-                : undefined
-            }
-            badgePositive={(playsChange ?? 0) > 0}
-            accentColor={C.game}
-            colSpan={4}
-            tabletColSpan={6}
-            rowSpan={2}
-            href="/sessions"
-          />
+        {/* Row 3-6: Library (6×4) + Ore (3×2) + Giochi (3×2) */}
+        <LibraryWidget
+          games={games}
+          totalCount={totalGamesCount || totalGames}
+          isLoading={isLoadingGames}
+        />
+        <KpiWidget
+          label="Ore sett."
+          value={isLoadingStats ? '…' : weeklyHours}
+          sub="questa settimana"
+          accentColor={C.session}
+          colSpan={3}
+          rowSpan={2}
+        />
+        <KpiWidget
+          label="Giochi in lib."
+          value={isLoadingStats ? '…' : totalGames}
+          accentColor={C.event}
+          colSpan={3}
+          rowSpan={2}
+          href="/library"
+        />
 
-          {/* Row 3-6: Library (6×4) + Ore (3×2) + Giochi (3×2) */}
-          <LibraryWidget
-            games={games}
-            totalCount={totalGamesCount || totalGames}
-            isLoading={isLoadingGames}
-          />
-          <KpiWidget
-            label="Ore sett."
-            value={isLoadingStats ? '…' : weeklyHours}
-            sub="questa settimana"
-            accentColor={C.session}
-            colSpan={3}
-            rowSpan={2}
-          />
-          <KpiWidget
-            label="Giochi in lib."
-            value={isLoadingStats ? '…' : totalGames}
-            accentColor={C.event}
-            colSpan={3}
-            rowSpan={2}
-            href="/library"
-          />
+        {/* Row 5-8: Chat AI (6×4) */}
+        <ChatPreviewWidget />
 
-          {/* Row 5-8: Quick Actions (6×4) */}
-          <QuickActionsWidget />
+        {/* Row 7-9: Leaderboard (6×3) */}
+        <LeaderboardWidget sessions={recentSessions} />
 
-          {/* Row 7-9: Leaderboard (6×3) */}
-          <LeaderboardWidget sessions={recentSessions} />
-
-          {/* Row 9-10: Trending (6×2) */}
-          <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
-        </div>
-      </ErrorBoundary>
+        {/* Row 9-10: Trending (6×2) */}
+        <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
+      </div>
     </div>
   );
 }

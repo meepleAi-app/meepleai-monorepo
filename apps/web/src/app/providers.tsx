@@ -31,6 +31,14 @@ import { hydrateApiKey } from '@/lib/api/core/apiKeyStore';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
+// Dynamic import per evitare che MockProvider sia incluso nel bundle di produzione
+const MockProvider =
+  process.env.NEXT_PUBLIC_MOCK_MODE === 'true'
+    ? (require('./mock-provider').MockProvider as React.ComponentType<{
+        children: React.ReactNode;
+      }>)
+    : null;
+
 interface AppProvidersProps {
   children: ReactNode;
 }
@@ -144,7 +152,7 @@ function AppContent({ children }: { children: ReactNode }) {
  * - Accessibility features
  */
 export function AppProviders({ children }: AppProvidersProps) {
-  return (
+  const providers = (
     <IntlProvider>
       <ThemeProvider>
         <QueryProvider>
@@ -168,4 +176,10 @@ export function AppProviders({ children }: AppProvidersProps) {
       </ThemeProvider>
     </IntlProvider>
   );
+
+  if (MockProvider) {
+    return <MockProvider>{providers}</MockProvider>;
+  }
+
+  return providers;
 }

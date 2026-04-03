@@ -8,6 +8,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initialize, mswLoader } from 'msw-storybook-addon';
 import { ThemeProvider } from 'next-themes';
 
+import { handlers } from '../src/mocks/handlers';
+
 import '../src/styles/globals.css'; // Import Tailwind CSS
 import { AuthContext } from '../src/components/auth/AuthProvider';
 import { TooltipProvider } from '../src/components/ui/overlays/tooltip';
@@ -75,6 +77,9 @@ const AllProviders = ({ children }: { children: React.ReactNode }) => {
 const preview: Preview = {
   loaders: [mswLoader],
   parameters: {
+    msw: {
+      handlers,
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,
@@ -106,7 +111,7 @@ const preview: Preview = {
       },
       defaultTheme: 'light',
     }),
-    (Story) => (
+    Story => (
       <AllProviders>
         <Story />
       </AllProviders>

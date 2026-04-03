@@ -4,7 +4,7 @@
  * Gaming Immersive library layout with:
  * - LibraryPageHeader (title + count + CTA)
  * - LibraryHeroBanner (contextual: next session or discovery)
- * - Expanded filter chips (7 chips: Tutti, Recenti, Più giocati, Rating, 2-4p, <60min, Strategici)
+ * - Expanded filter chips (6 chips: Tutti, Recenti, Prima aggiunti, Rating, 2-4p, <60min)
  * - MeepleCard grid 4col (desktop) / list variant (mobile)
  * - Gaming immersive empty state
  * - Compact UsageWidget sidebar (desktop only)

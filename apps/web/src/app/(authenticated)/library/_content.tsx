@@ -95,7 +95,7 @@ export function LibraryContent() {
       {/* Tab content — PersonalLibraryPage now includes its own sidebar */}
       {tab === 'wishlist' ? (
         <WishlistPageClient />
-      ) : tab === 'public' ? (
+      ) : tab === 'catalogo' ? (
         <PublicLibraryPageClient />
       ) : (
         <PersonalLibraryPageClient />

@@ -23,6 +23,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { useLayoutResponsive } from '@/components/layout/LayoutProvider';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { FilterChipsRow } from '@/components/ui/FilterChipsRow';
 import { SectionBlock } from '@/components/ui/SectionBlock';
 import { ViewToggle } from '@/components/ui/ViewToggle';
@@ -188,7 +189,7 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [activeFilter, setActiveFilter] = useState('all');
-  const { data, isLoading } = useLibrary();
+  const { data, isLoading, error } = useLibrary();
   const { isMobile } = useLayoutResponsive();
 
   // Mobile always shows list; desktop uses user-selected viewMode
@@ -255,6 +256,18 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
             <div key={i} className="h-[280px] rounded-xl bg-muted animate-pulse" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className={cn('space-y-4', className)} data-testid="personal-library-page">
+        <Alert variant="destructive">
+          <AlertTitle>Errore nel caricamento</AlertTitle>
+          <AlertDescription>Impossibile caricare la libreria. Riprova più tardi.</AlertDescription>
+        </Alert>
       </div>
     );
   }

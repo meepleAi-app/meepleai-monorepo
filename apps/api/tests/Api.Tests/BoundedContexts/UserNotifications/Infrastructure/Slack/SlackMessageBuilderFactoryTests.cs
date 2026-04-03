@@ -85,8 +85,8 @@ public sealed class SlackMessageBuilderFactoryTests
             new ISlackMessageBuilder[] { new BadgeSlackBuilder() },
             fallback);
 
-        // Act — NewComment has no specific builder
-        var builder = factory.GetBuilder(NotificationType.NewComment);
+        // Act — SharedLinkAccessed has no specific builder, falls back to generic
+        var builder = factory.GetBuilder(NotificationType.SharedLinkAccessed);
 
         // Assert
         builder.Should().BeSameAs(fallback);
@@ -103,7 +103,7 @@ public sealed class SlackMessageBuilderFactoryTests
             fallback);
 
         // Act
-        var builder = factory.GetBuilder(NotificationType.AdminCircuitBreakerStateChanged);
+        var builder = factory.GetBuilder(NotificationType.AdminSystemHealthAlert);
 
         // Assert
         builder.Should().BeSameAs(adminBuilder);
@@ -120,7 +120,7 @@ public sealed class SlackMessageBuilderFactoryTests
             fallback);
 
         // Act
-        var builder = factory.GetBuilder(NotificationType.PdfUploadCompleted);
+        var builder = factory.GetBuilder(NotificationType.DocumentReady);
 
         // Assert
         builder.Should().BeSameAs(pdfBuilder);

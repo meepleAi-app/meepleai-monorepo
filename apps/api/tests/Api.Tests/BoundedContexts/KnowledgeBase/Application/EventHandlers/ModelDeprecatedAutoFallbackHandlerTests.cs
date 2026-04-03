@@ -163,7 +163,7 @@ public sealed class ModelDeprecatedAutoFallbackHandlerTests : IDisposable
         _capturedNotifications.Should().ContainSingle();
         var notification = _capturedNotifications[0];
         notification.UserId.Should().Be(adminId);
-        notification.Type.Should().Be(NotificationType.AdminModelAutoFallback);
+        notification.Type.Should().Be(NotificationType.AdminModelStatusChanged);
         notification.Severity.Should().Be(NotificationSeverity.Warning);
         notification.Title.Should().Contain("Auto-Fallback");
         notification.Title.Should().Contain("deprecated-model");

@@ -20,8 +20,7 @@ internal sealed class GameNightSlackBuilder : ISlackMessageBuilder
     {
         return type == NotificationType.GameNightInvitation
             || type == NotificationType.GameNightRsvpReceived
-            || type == NotificationType.GameNightReminder24h
-            || type == NotificationType.GameNightReminder1h
+            || type == NotificationType.GameNightReminder
             || type == NotificationType.GameNightCancelled;
     }
 

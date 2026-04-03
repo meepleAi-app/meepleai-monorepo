@@ -55,7 +55,7 @@ public sealed class VectorDocumentReadyNotificationHandlerTests
 
         _dispatcher.Verify(d => d.DispatchAsync(
             It.Is<NotificationMessage>(m =>
-                m.Type == NotificationType.ProcessingJobCompleted &&
+                m.Type == NotificationType.DocumentReady &&
                 m.RecipientUserId == _userId &&
                 m.DeepLinkPath == $"/library/games/{_gameId}/agent" &&
                 m.Payload is PdfProcessingPayload),

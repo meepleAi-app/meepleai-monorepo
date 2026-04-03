@@ -22,7 +22,6 @@ import {
   AlertTriangle,
   XCircle,
   FileCheck,
-  MessageSquare,
   Link as LinkIcon,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -61,10 +60,10 @@ export function NotificationItem({ notification }: NotificationItemProps) {
 
   // Check if PDF-related notification (Issue #4217)
   const isPdfNotification =
-    notification.type === 'pdf_upload_completed' || notification.type === 'processing_failed';
+    notification.type === 'document_ready' || notification.type === 'document_processing_failed';
 
   // Check if KB indexing complete notification (Issue #4947)
-  const isKbReady = notification.type === 'processing_job_completed';
+  const isKbReady = notification.type === 'document_ready';
 
   return (
     <button
@@ -91,7 +90,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
             {/* New: PdfStatusBadge for PDF notifications (Issue #4217) */}
             {isPdfNotification && (
               <PdfStatusBadge
-                state={notification.type === 'pdf_upload_completed' ? 'ready' : 'failed'}
+                state={notification.type === 'document_ready' ? 'ready' : 'failed'}
                 variant="compact"
                 showIcon={false}
               />
@@ -155,16 +154,14 @@ function getSeverityConfig(severity: string): {
 
 function getTypeIcon(type: string): React.ComponentType<{ className?: string }> {
   switch (type) {
-    case 'pdf_upload_completed':
+    case 'document_ready':
     case 'rule_spec_generated':
       return FileCheck;
-    case 'new_comment':
-      return MessageSquare;
     case 'shared_link_accessed':
       return LinkIcon;
-    case 'processing_failed':
+    case 'document_processing_failed':
       return XCircle;
-    case 'processing_job_completed':
+    case 'agent_ready':
       return Bot;
     case 'game_night_invitation':
     case 'game_night_rsvp_received':
@@ -188,7 +185,7 @@ export function getNotificationDeepLink(notification: NotificationDto): string |
     const meta = JSON.parse(notification.metadata) as Record<string, unknown>;
 
     switch (notification.type) {
-      case 'pdf_upload_completed': {
+      case 'document_ready': {
         const privateGameId = meta.privateGameId as string | undefined;
         if (privateGameId) {
           return `/library/private/${privateGameId}`;

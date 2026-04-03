@@ -134,7 +134,7 @@ internal sealed class ModelDeprecatedAutoFallbackHandler
                     var n = new Notification(
                         id: Guid.NewGuid(),
                         userId: adminId,
-                        type: NotificationType.AdminModelAutoFallback,
+                        type: NotificationType.AdminModelStatusChanged,
                         severity: NotificationSeverity.Warning,
                         title: title,
                         message: message,

@@ -81,7 +81,7 @@ internal sealed class CircuitBreakerStateChangedEventHandler
                 var n = new Notification(
                     id: Guid.NewGuid(),
                     userId: adminId,
-                    type: NotificationType.AdminCircuitBreakerStateChanged,
+                    type: NotificationType.AdminSystemHealthAlert,
                     severity: severity,
                     title: title,
                     message: notification.Reason,

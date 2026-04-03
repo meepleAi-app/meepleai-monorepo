@@ -201,13 +201,6 @@ export const DifferentSeverities: Story = {
           message: 'Your PDF has been processed',
         }),
         createMockNotification({
-          id: '2',
-          severity: 'info',
-          title: 'New Comment',
-          message: 'Someone commented on your shared link',
-          type: 'new_comment',
-        }),
-        createMockNotification({
           id: '3',
           severity: 'warning',
           title: 'Low Quality PDF',

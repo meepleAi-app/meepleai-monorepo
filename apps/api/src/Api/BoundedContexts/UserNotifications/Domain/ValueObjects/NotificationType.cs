@@ -10,10 +10,9 @@ internal sealed class NotificationType : ValueObject
 {
     public string Value { get; }
 
-    public static readonly NotificationType PdfUploadCompleted = new("pdf_upload_completed");
+    public static readonly NotificationType DocumentReady = new("document_ready");
     public static readonly NotificationType RuleSpecGenerated = new("rule_spec_generated");
-    public static readonly NotificationType ProcessingFailed = new("processing_failed");
-    public static readonly NotificationType NewComment = new("new_comment");
+    public static readonly NotificationType DocumentProcessingFailed = new("document_processing_failed");
     public static readonly NotificationType SharedLinkAccessed = new("shared_link_accessed");
 
     // ISSUE-2739: Share request notification types
@@ -48,36 +47,22 @@ internal sealed class NotificationType : ValueObject
     public static readonly NotificationType GameProposalInReview = new("game_proposal_in_review");
     public static readonly NotificationType GameProposalKbMerged = new("game_proposal_kb_merged");
 
-    // ISSUE-4736: Processing job notification types
-    public static readonly NotificationType ProcessingJobCompleted = new("processing_job_completed");
-    public static readonly NotificationType ProcessingJobFailed = new("processing_job_failed");
+    // ISSUE-4736: Processing job notification types (merged into DocumentReady / DocumentProcessingFailed)
 
-    // ISSUE-5009: Agent linked to shared game notification
-    public static readonly NotificationType AgentLinked = new("agent_linked");
+    // ISSUE-5009: Agent ready notification (merged agent_linked + agent_auto_created)
+    public static readonly NotificationType AgentReady = new("agent_ready");
 
-    // Game Night Improvvisata: Agent auto-created when PDF rulebook is processed
-    public static readonly NotificationType AgentAutoCreated = new("agent_auto_created");
-
-    // ISSUE-5084: OpenRouter RPM threshold alert (admin)
-    public static readonly NotificationType AdminOpenRouterRpmAlert = new("admin_openrouter_rpm_alert");
-
-    // ISSUE-5085: OpenRouter daily budget alert (admin)
-    public static readonly NotificationType AdminOpenRouterBudgetAlert = new("admin_openrouter_budget_alert");
-
-    // ISSUE-5086: Circuit breaker state change alert (admin)
-    public static readonly NotificationType AdminCircuitBreakerStateChanged = new("admin_circuit_breaker_state_changed");
+    // ISSUE-5084/5085: OpenRouter threshold alert — RPM and budget (admin)
+    public static readonly NotificationType AdminOpenRouterThresholdAlert = new("admin_openrouter_threshold_alert");
 
     // ISSUE-5085: Daily OpenRouter usage digest sent at 08:00 UTC (admin)
     public static readonly NotificationType AdminOpenRouterDailySummary = new("admin_openrouter_daily_summary");
 
-    // ISSUE-5477: Redis rate-limiting subsystem degradation alert (admin)
-    public static readonly NotificationType AdminRedisRateLimitingDegraded = new("admin_redis_rate_limiting_degraded");
+    // ISSUE-5086/5477: System health alert — circuit breaker + Redis rate-limiting (admin)
+    public static readonly NotificationType AdminSystemHealthAlert = new("admin_system_health_alert");
 
-    // ISSUE-5499: LLM model deprecated/unavailable alert (admin)
-    public static readonly NotificationType AdminModelDeprecated = new("admin_model_deprecated");
-
-    // ISSUE-5501: Auto-fallback activated when model deprecated (admin)
-    public static readonly NotificationType AdminModelAutoFallback = new("admin_model_auto_fallback");
+    // ISSUE-5499/5501: Model status changed — deprecated + auto-fallback (admin)
+    public static readonly NotificationType AdminModelStatusChanged = new("admin_model_status_changed");
 
     // Admin notification for new access request (invite-only registration)
     public static readonly NotificationType AdminAccessRequestCreated = new("admin_access_request_created");
@@ -91,8 +76,7 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-44/47: Game night notification types
     public static readonly NotificationType GameNightInvitation = new("game_night_invitation");
     public static readonly NotificationType GameNightRsvpReceived = new("game_night_rsvp_received");
-    public static readonly NotificationType GameNightReminder24h = new("game_night_reminder_24h");
-    public static readonly NotificationType GameNightReminder1h = new("game_night_reminder_1h");
+    public static readonly NotificationType GameNightReminder = new("game_night_reminder");
     public static readonly NotificationType GameNightCancelled = new("game_night_cancelled");
 
     // GDPR Art. 17: Account deletion confirmation
@@ -109,13 +93,12 @@ internal sealed class NotificationType : ValueObject
         Value = value;
     }
 
-    public bool IsPdfUploadCompleted => string.Equals(Value, PdfUploadCompleted.Value, StringComparison.Ordinal);
+    public bool IsDocumentReady => string.Equals(Value, DocumentReady.Value, StringComparison.Ordinal);
     public bool IsRuleSpecGenerated => string.Equals(Value, RuleSpecGenerated.Value, StringComparison.Ordinal);
-    public bool IsProcessingFailed => string.Equals(Value, ProcessingFailed.Value, StringComparison.Ordinal);
+    public bool IsDocumentProcessingFailed => string.Equals(Value, DocumentProcessingFailed.Value, StringComparison.Ordinal);
     public bool IsGameNightInvitation => string.Equals(Value, GameNightInvitation.Value, StringComparison.Ordinal);
     public bool IsGameNightRsvpReceived => string.Equals(Value, GameNightRsvpReceived.Value, StringComparison.Ordinal);
-    public bool IsGameNightReminder24h => string.Equals(Value, GameNightReminder24h.Value, StringComparison.Ordinal);
-    public bool IsGameNightReminder1h => string.Equals(Value, GameNightReminder1h.Value, StringComparison.Ordinal);
+    public bool IsGameNightReminder => string.Equals(Value, GameNightReminder.Value, StringComparison.Ordinal);
     public bool IsGameNightCancelled => string.Equals(Value, GameNightCancelled.Value, StringComparison.Ordinal);
 
     protected override IEnumerable<object?> GetEqualityComponents()
@@ -134,10 +117,10 @@ internal sealed class NotificationType : ValueObject
         var normalized = value.ToLowerInvariant();
         return normalized switch
         {
-            "pdf_upload_completed" => PdfUploadCompleted,
+            // Current types
+            "document_ready" => DocumentReady,
             "rule_spec_generated" => RuleSpecGenerated,
-            "processing_failed" => ProcessingFailed,
-            "new_comment" => NewComment,
+            "document_processing_failed" => DocumentProcessingFailed,
             "shared_link_accessed" => SharedLinkAccessed,
             "share_request_created" => ShareRequestCreated,
             "share_request_approved" => ShareRequestApproved,
@@ -155,28 +138,36 @@ internal sealed class NotificationType : ValueObject
             "session_terminated" => SessionTerminated,
             "game_proposal_in_review" => GameProposalInReview,
             "game_proposal_kb_merged" => GameProposalKbMerged,
-            "processing_job_completed" => ProcessingJobCompleted,
-            "processing_job_failed" => ProcessingJobFailed,
-            "agent_linked" => AgentLinked,
-            "agent_auto_created" => AgentAutoCreated,
-            "admin_openrouter_rpm_alert" => AdminOpenRouterRpmAlert,
-            "admin_openrouter_budget_alert" => AdminOpenRouterBudgetAlert,
-            "admin_circuit_breaker_state_changed" => AdminCircuitBreakerStateChanged,
+            "agent_ready" => AgentReady,
+            "admin_openrouter_threshold_alert" => AdminOpenRouterThresholdAlert,
             "admin_openrouter_daily_summary" => AdminOpenRouterDailySummary,
-            "admin_redis_rate_limiting_degraded" => AdminRedisRateLimitingDegraded,
-            "admin_model_deprecated" => AdminModelDeprecated,
-            "admin_model_auto_fallback" => AdminModelAutoFallback,
+            "admin_system_health_alert" => AdminSystemHealthAlert,
+            "admin_model_status_changed" => AdminModelStatusChanged,
             "gdpr_account_deleted" => GdprAccountDeleted,
             "gdpr_data_export_ready" => GdprDataExportReady,
             "gdpr_ai_consent_updated" => GdprAiConsentUpdated,
             "game_night_invitation" => GameNightInvitation,
             "game_night_rsvp_received" => GameNightRsvpReceived,
-            "game_night_reminder_24h" => GameNightReminder24h,
-            "game_night_reminder_1h" => GameNightReminder1h,
+            "game_night_reminder" => GameNightReminder,
             "game_night_cancelled" => GameNightCancelled,
             "admin_access_request_created" => AdminAccessRequestCreated,
             "admin_manual_notification" => AdminManualNotification,
             "admin_pdf_processing_started" => AdminPdfProcessingStarted,
+            // Legacy aliases — old type strings from DB or older clients map to new types
+            "pdf_upload_completed" => DocumentReady,
+            "processing_job_completed" => DocumentReady,
+            "processing_failed" => DocumentProcessingFailed,
+            "processing_job_failed" => DocumentProcessingFailed,
+            "agent_linked" => AgentReady,
+            "agent_auto_created" => AgentReady,
+            "admin_openrouter_rpm_alert" => AdminOpenRouterThresholdAlert,
+            "admin_openrouter_budget_alert" => AdminOpenRouterThresholdAlert,
+            "admin_circuit_breaker_state_changed" => AdminSystemHealthAlert,
+            "admin_redis_rate_limiting_degraded" => AdminSystemHealthAlert,
+            "admin_model_deprecated" => AdminModelStatusChanged,
+            "admin_model_auto_fallback" => AdminModelStatusChanged,
+            "game_night_reminder_24h" => GameNightReminder,
+            "game_night_reminder_1h" => GameNightReminder,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

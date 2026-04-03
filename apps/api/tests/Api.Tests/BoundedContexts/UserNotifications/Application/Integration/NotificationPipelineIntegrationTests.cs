@@ -73,7 +73,7 @@ public sealed class NotificationPipelineIntegrationTests
         // Assert: dispatcher called with correct notification type and payload
         _dispatcher.Verify(d => d.DispatchAsync(
             It.Is<NotificationMessage>(m =>
-                m.Type == NotificationType.PdfUploadCompleted &&
+                m.Type == NotificationType.DocumentReady &&
                 m.RecipientUserId == _userId &&
                 m.Payload != null &&
                 ((PdfProcessingPayload)m.Payload).FileName == TestFileName &&
@@ -101,7 +101,7 @@ public sealed class NotificationPipelineIntegrationTests
         // Assert: failed notification dispatched
         _dispatcher.Verify(d => d.DispatchAsync(
             It.Is<NotificationMessage>(m =>
-                m.Type == NotificationType.ProcessingFailed &&
+                m.Type == NotificationType.DocumentProcessingFailed &&
                 m.RecipientUserId == _userId &&
                 m.Payload != null &&
                 ((PdfProcessingPayload)m.Payload).Status.Contains("Connection timeout")),
@@ -122,7 +122,7 @@ public sealed class NotificationPipelineIntegrationTests
         // Assert: retry notification dispatched
         _dispatcher.Verify(d => d.DispatchAsync(
             It.Is<NotificationMessage>(m =>
-                m.Type == NotificationType.PdfUploadCompleted &&
+                m.Type == NotificationType.DocumentReady &&
                 m.RecipientUserId == _userId &&
                 m.Payload != null &&
                 ((PdfProcessingPayload)m.Payload).Status.Contains("Retry #2")),

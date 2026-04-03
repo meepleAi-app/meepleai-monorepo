@@ -38,7 +38,7 @@ internal sealed class NotifyAgentReadyHandler : INotificationHandler<AgentAutoCr
 
             await _dispatcher.DispatchAsync(new NotificationMessage
             {
-                Type = NotificationType.AgentAutoCreated,
+                Type = NotificationType.AgentReady,
                 RecipientUserId = notification.UserId,
                 Payload = new GenericPayload(
                     $"Agente per {gameName} pronto!",

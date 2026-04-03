@@ -43,7 +43,7 @@ internal class PdfNotificationEventHandler :
 
         await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            Type = NotificationType.PdfUploadCompleted,
+            Type = NotificationType.DocumentReady,
             RecipientUserId = evt.UploadedByUserId,
             Payload = new PdfProcessingPayload(
                 evt.PdfDocumentId,
@@ -66,7 +66,7 @@ internal class PdfNotificationEventHandler :
 
         await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            Type = NotificationType.ProcessingFailed,
+            Type = NotificationType.DocumentProcessingFailed,
             RecipientUserId = evt.UploadedByUserId,
             Payload = new PdfProcessingPayload(
                 evt.PdfDocumentId,
@@ -89,7 +89,7 @@ internal class PdfNotificationEventHandler :
 
         await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            Type = NotificationType.PdfUploadCompleted,
+            Type = NotificationType.DocumentReady,
             RecipientUserId = evt.UploadedByUserId,
             Payload = new PdfProcessingPayload(
                 evt.PdfDocumentId,

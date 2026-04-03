@@ -24,7 +24,6 @@ import {
   Info,
   AlertTriangle,
   XCircle,
-  MessageSquare,
   Link as LinkIcon,
   ChevronRight,
   Settings,
@@ -223,7 +222,7 @@ function NotificationCenterItem({ notification, isUnread, onClose }: Notificatio
   const router = useRouter();
   const markAsRead = useNotificationStore(state => state.markAsRead);
 
-  const isKbReady = notification.type === 'processing_job_completed';
+  const isKbReady = notification.type === 'document_ready';
 
   const handleClick = () => {
     if (!notification.isRead) {
@@ -328,24 +327,20 @@ function getSeverityConfig(severity: string): {
 
 function getTypeIcon(type: string): React.ComponentType<{ className?: string }> {
   switch (type) {
-    case 'pdf_upload_completed':
+    case 'document_ready':
     case 'rule_spec_generated':
-    case 'processing_job_completed':
-    case 'processing_job_failed':
       return FileCheck;
-    case 'new_comment':
-      return MessageSquare;
+    case 'document_processing_failed':
+      return XCircle;
     case 'shared_link_accessed':
     case 'share_request_created':
     case 'share_request_approved':
     case 'share_request_rejected':
     case 'share_request_changes_requested':
       return LinkIcon;
-    case 'processing_failed':
-      return XCircle;
     case 'badge_earned':
       return Trophy;
-    case 'agent_linked':
+    case 'agent_ready':
       return Bot;
     case 'rate_limit_approaching':
     case 'rate_limit_reached':
@@ -355,10 +350,10 @@ function getTypeIcon(type: string): React.ComponentType<{ className?: string }> 
     case 'session_terminated':
       return Clock;
     case 'admin_openrouter_daily_summary':
-    case 'admin_openrouter_rpm_alert':
-    case 'admin_openrouter_budget_alert':
+    case 'admin_openrouter_threshold_alert':
       return BarChart3;
-    case 'admin_circuit_breaker_state_changed':
+    case 'admin_system_health_alert':
+    case 'admin_model_status_changed':
     case 'admin_new_share_request':
     case 'admin_shared_game_submitted':
       return Shield;

@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { logger } from '@/lib/logger';
 import { useSessionToolLog } from '../useSessionToolLog';
 
 describe('useSessionToolLog', () => {
@@ -37,6 +38,7 @@ describe('useSessionToolLog', () => {
   });
 
   it('does not throw when fetch rejects', async () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')));
     const { result } = renderHook(() => useSessionToolLog('sess-abc'));
 
@@ -47,6 +49,29 @@ describe('useSessionToolLog', () => {
     ).not.toThrow();
 
     await Promise.resolve();
+    await Promise.resolve();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[useSessionToolLog]'),
+      expect.any(Object)
+    );
+  });
+
+  it('warns when server returns non-OK status', async () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 } as Response));
+    const { result } = renderHook(() => useSessionToolLog('sess-abc'));
+
+    act(() => {
+      result.current.logToolAction('dice', 'roll', 'D6 → 3');
+    });
+
+    await Promise.resolve();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[useSessionToolLog]'),
+      expect.objectContaining({ metadata: { status: 401 } })
+    );
   });
 
   it('encodes sessionId in URL', async () => {

@@ -12,6 +12,8 @@
 
 import { useCallback } from 'react';
 
+import { logger } from '@/lib/logger';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? '';
 
 export interface UseSessionToolLogResult {
@@ -31,10 +33,19 @@ export function useSessionToolLog(sessionId: string): UseSessionToolLogResult {
           payload: JSON.stringify({ toolType, action, result }),
           source: 'toolkit',
         }),
-      }).catch((err: unknown) => {
-        // Fire-and-forget: swallow network errors silently
-        console.warn('[useSessionToolLog] failed to log tool action', err);
-      });
+      })
+        .then(res => {
+          if (!res.ok) {
+            logger.warn('[useSessionToolLog] server rejected tool event', {
+              metadata: { status: res.status },
+            });
+          }
+        })
+        .catch((err: unknown) => {
+          logger.warn('[useSessionToolLog] failed to log tool action', {
+            metadata: { error: String(err) },
+          });
+        });
     },
     [sessionId]
   );

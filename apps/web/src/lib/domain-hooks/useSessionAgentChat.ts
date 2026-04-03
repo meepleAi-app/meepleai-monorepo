@@ -33,6 +33,8 @@ export function useSessionAgentChat(gameSessionId: string, agentSessionId: strin
   const [streamingContent, setStreamingContent] = useState('');
   const threadIdRef = useRef<string | undefined>(undefined);
   const abortRef = useRef<AbortController | null>(null);
+  // Ref-based guard prevents double-submit race regardless of stale closure timing
+  const isLoadingRef = useRef(false);
 
   // Granular selectors — avoid re-renders on unrelated store changes
   const gameId = useSessionStore(s => s.gameId);
@@ -42,8 +44,9 @@ export function useSessionAgentChat(gameSessionId: string, agentSessionId: strin
 
   const ask = useCallback(
     async (question: string) => {
-      if (!question.trim() || isLoading) return;
+      if (!question.trim() || isLoadingRef.current) return;
 
+      isLoadingRef.current = true;
       setIsLoading(true);
       setError(null);
       setStreamingContent('');
@@ -90,36 +93,54 @@ export function useSessionAgentChat(gameSessionId: string, agentSessionId: strin
           throw new Error(`Errore ${response.status}`);
         }
 
-        const reader = response.body!.getReader();
+        if (!response.body) {
+          throw new Error('Response body is null');
+        }
+
+        const reader = response.body.getReader();
+
+        // Ensure reader lock is released when the request is aborted
+        abortRef.current.signal.addEventListener('abort', () => {
+          void reader.cancel();
+        });
+
         const decoder = new TextDecoder();
         let accumulated = '';
+        // Buffer incomplete SSE lines across chunk boundaries
+        let lineBuffer = '';
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+            lineBuffer += decoder.decode(value, { stream: true });
+            const lines = lineBuffer.split('\n');
+            // Keep the last (potentially incomplete) line in the buffer
+            lineBuffer = lines.pop() ?? '';
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const payload = JSON.parse(line.slice(6)) as {
-                  type: string;
-                  content?: string;
-                  threadId?: string;
-                };
-                if (payload.type === 'token' && payload.content) {
-                  accumulated += payload.content;
-                  setStreamingContent(accumulated);
-                } else if (payload.type === 'complete' && payload.threadId) {
-                  threadIdRef.current = payload.threadId;
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const payload = JSON.parse(line.slice(6)) as {
+                    type: string;
+                    content?: string;
+                    threadId?: string;
+                  };
+                  if (payload.type === 'token' && payload.content) {
+                    accumulated += payload.content;
+                    setStreamingContent(accumulated);
+                  } else if (payload.type === 'complete' && payload.threadId) {
+                    threadIdRef.current = payload.threadId;
+                  }
+                } catch {
+                  // Ignore non-JSON lines (keep-alive, comments, etc.)
                 }
-              } catch {
-                // Ignore non-JSON lines (keep-alive, comments, etc.)
               }
             }
           }
+        } finally {
+          reader.releaseLock();
         }
 
         const assistantMsg: ChatMessage = {
@@ -135,11 +156,12 @@ export function useSessionAgentChat(gameSessionId: string, agentSessionId: strin
           setError("L'agente non è disponibile. Controlla la connessione.");
         }
       } finally {
+        isLoadingRef.current = false;
         setIsLoading(false);
       }
     },
-
-    [gameSessionId, agentSessionId, gameId, gameTitle, participants, currentTurn, isLoading]
+    // Removed `isLoading` — guard now uses isLoadingRef to avoid stale closure race
+    [gameSessionId, agentSessionId, gameId, gameTitle, participants, currentTurn]
   );
 
   const stop = useCallback(() => {

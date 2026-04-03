@@ -398,10 +398,17 @@ function AgentChatPanel({ gameSessionId, agentSessionId }: AgentChatPanelProps) 
     [isLoading, handleSend]
   );
 
-  // Auto-scroll to bottom when new content arrives
+  // Auto-scroll to bottom when new content arrives.
+  // ScrollArea renders a Radix Viewport as the scrollable element (overflow: auto),
+  // while the Root element (overflow: hidden) is not scrollable — query the viewport.
   useEffect(() => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+      const viewport = scrollAreaRef.current.querySelector(
+        '[data-radix-scroll-area-viewport]'
+      ) as HTMLElement | null;
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
     }
   }, [messages, streamingContent]);
 

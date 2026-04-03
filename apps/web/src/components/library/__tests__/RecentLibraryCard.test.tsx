@@ -87,9 +87,7 @@ describe('RecentLibraryCard', () => {
     it('passes game title', () => {
       render(<RecentLibraryCard game={mockGameComplete} />);
 
-      expect(mockMeepleCard).toHaveBeenCalledWith(
-        expect.objectContaining({ title: 'Azul' })
-      );
+      expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Azul' }));
     });
 
     it('passes imageUrl when available', () => {
@@ -103,21 +101,7 @@ describe('RecentLibraryCard', () => {
     it('passes undefined imageUrl when null', () => {
       render(<RecentLibraryCard game={mockGameMinimal} />);
 
-      expect(mockMeepleCard).toHaveBeenCalledWith(
-        expect.objectContaining({ imageUrl: undefined })
-      );
-    });
-
-    it('passes info button props for library navigation', () => {
-      render(<RecentLibraryCard game={mockGameComplete} />);
-
-      expect(mockMeepleCard).toHaveBeenCalledWith(
-        expect.objectContaining({
-          showInfoButton: true,
-          infoHref: '/library',
-          infoTooltip: 'Gestisci',
-        })
-      );
+      expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ imageUrl: undefined }));
     });
   });
 
@@ -125,17 +109,13 @@ describe('RecentLibraryCard', () => {
     it('shows "Preferito" badge when isFavorite is true', () => {
       render(<RecentLibraryCard game={mockGameComplete} />);
 
-      expect(mockMeepleCard).toHaveBeenCalledWith(
-        expect.objectContaining({ badge: 'Preferito' })
-      );
+      expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ badge: 'Preferito' }));
     });
 
     it('does not show badge when isFavorite is false', () => {
       render(<RecentLibraryCard game={mockGameMinimal} />);
 
-      expect(mockMeepleCard).toHaveBeenCalledWith(
-        expect.objectContaining({ badge: undefined })
-      );
+      expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ badge: undefined }));
     });
   });
 

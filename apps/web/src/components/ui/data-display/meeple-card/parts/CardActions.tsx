@@ -41,7 +41,6 @@ export interface CardActionStripProps {
   onWishlistToggle?: (id: string, isWishlisted: boolean) => void;
   showInfoButton?: boolean;
   entityId?: string;
-  infoHref?: string;
   infoTooltip?: string;
   drawerEntityType?: DrawerEntityType;
   onDrawerOpen?: () => void;
@@ -60,7 +59,6 @@ export function CardActionStrip({
   onWishlistToggle,
   showInfoButton,
   entityId,
-  infoHref,
   infoTooltip,
   drawerEntityType,
   onDrawerOpen,
@@ -104,17 +102,6 @@ export function CardActionStrip({
       <MeepleCardInfoButton
         key="info-drawer"
         onClick={onDrawerOpen}
-        entityType={entity}
-        customColor={customColor}
-        tooltip={infoTooltip}
-        size="sm"
-      />
-    );
-  } else if (showInfoButton && infoHref && !entityId) {
-    items.push(
-      <MeepleCardInfoButton
-        key="info-link"
-        href={infoHref}
         entityType={entity}
         customColor={customColor}
         tooltip={infoTooltip}

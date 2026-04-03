@@ -20,7 +20,6 @@ import { AgentStatsDisplay } from '../../meeple-card-features/AgentStatsDisplay'
 import { AgentStatusBadge } from '../../meeple-card-features/AgentStatusBadge';
 import { BulkSelectCheckbox } from '../../meeple-card-features/BulkSelectCheckbox';
 import { CardAgentAction } from '../../meeple-card-features/CardAgentAction';
-import { CardNavigationFooter } from '../../meeple-card-features/CardNavigationFooter';
 import { ChatAgentInfo } from '../../meeple-card-features/ChatAgentInfo';
 import { ChatGameContext } from '../../meeple-card-features/ChatGameContext';
 import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
@@ -95,7 +94,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     entityQuickActions,
     showInfoButton,
     entityId,
-    infoHref,
     infoTooltip: _infoTooltip,
     tags,
     maxVisibleTags = 3,
@@ -110,7 +108,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     chatStats,
     chatPreview,
     unreadCount,
-    navigateTo,
     hasAgent,
     agentId,
     onCreateAgent,
@@ -146,10 +143,7 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const hasMobileActions =
-    hasQuickActions ||
-    !!entityQuickActions ||
-    showWishlistBtn ||
-    !!(showInfoButton && (entityId || infoHref));
+    hasQuickActions || !!entityQuickActions || showWishlistBtn || !!(showInfoButton && entityId);
 
   const {
     isMobile,
@@ -434,13 +428,11 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
           gameId={id}
           onCreateAgent={onCreateAgent}
           variant={variant}
-          hasNavFooter={!!(navigateTo && navigateTo.length > 0)}
+          hasNavFooter={false}
         />
       )}
 
       {/* Navigation footer */}
-      {navigateTo && navigateTo.length > 0 && <CardNavigationFooter links={navigateTo} />}
-
       {firstLinkPreview && linkCount !== undefined && linkCount > 0 && (
         <EntityLinkPreviewRow
           linkType={firstLinkPreview.linkType}

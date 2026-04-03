@@ -80,11 +80,6 @@ export function MeeplePlayerCard({
   onInvite,
   className,
 }: MeeplePlayerCardProps) {
-  // Compute profile href based on player type
-  const profileHref = isMeepleAiUser && player.userId
-    ? `/users/${player.userId}`
-    : `/players/${player.id}`;
-
   // ============================================================================
   // Quick Actions Configuration
   // ============================================================================
@@ -130,10 +125,19 @@ export function MeeplePlayerCard({
       // Issue #5004: Quick actions with conditional visibility
       entityQuickActions={entityQuickActions}
       showInfoButton
-      infoHref={profileHref}
+      entityId={player.id}
       infoTooltip="Vai al profilo"
       // Navigation footer
-      navigateTo={getNavigationLinks('player', { id: player.id })}
+      linkedEntities={getNavigationLinks('player', { id: player.id }).map(l => ({
+        entityType: l.entity,
+        count: 1,
+      }))}
+      onManaPipClick={entityType => {
+        const link = getNavigationLinks('player', { id: player.id }).find(
+          l => l.entity === entityType
+        );
+        if (link?.href) window.location.href = link.href;
+      }}
       data-testid={`player-card-${player.id}`}
     />
   );
@@ -142,11 +146,7 @@ export function MeeplePlayerCard({
 /**
  * MeeplePlayerCard Skeleton for loading state
  */
-export function MeeplePlayerCardSkeleton({
-  variant = 'grid',
-}: {
-  variant?: MeepleCardVariant;
-}) {
+export function MeeplePlayerCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant }) {
   return (
     <MeepleCard
       entity="player"

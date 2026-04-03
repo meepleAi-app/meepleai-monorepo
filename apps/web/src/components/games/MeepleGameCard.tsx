@@ -151,10 +151,27 @@ export function MeepleGameCard({
         // Issue #4041: Quick actions + Info button
         entityQuickActions={entityActions.quickActions}
         showInfoButton
-        infoHref={`/games/${game.id}`}
+        entityId={game.id}
         infoTooltip="Vai al dettaglio"
         // Epic #4688: Navigation footer — only for authenticated users
-        navigateTo={user ? getNavigationLinks('game', { id: game.id }) : undefined}
+        linkedEntities={
+          user
+            ? getNavigationLinks('game', { id: game.id }).map(l => ({
+                entityType: l.entity,
+                count: 1,
+              }))
+            : undefined
+        }
+        onManaPipClick={
+          user
+            ? entityType => {
+                const link = getNavigationLinks('game', { id: game.id }).find(
+                  l => l.entity === entityType
+                );
+                if (link?.href) window.location.href = link.href;
+              }
+            : undefined
+        }
         // Issue #4777, #4999: Agent action footer
         // Catalog context: show "Aggiungi" CTA via !hasKb + onAddToCollection
         hasAgent={false}

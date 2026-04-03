@@ -34,7 +34,11 @@ function renderPlayerCard(player: PlayerListItem): Omit<MeepleCardProps, 'entity
     title: player.displayName,
     subtitle: player.gameName,
     metadata: [{ icon: Gamepad2, value: `${player.playCount} partite` }],
-    navigateTo: navLinks,
+    linkedEntities: navLinks.map(l => ({ entityType: l.entity, count: 1 })),
+    onManaPipClick: entityType => {
+      const link = navLinks.find(l => l.entity === entityType);
+      if (link?.href) window.location.href = link.href;
+    },
   };
 }
 

@@ -21,7 +21,6 @@ import { AgentStatsDisplay } from '../../meeple-card-features/AgentStatsDisplay'
 import { AgentStatusBadge } from '../../meeple-card-features/AgentStatusBadge';
 import { BulkSelectCheckbox } from '../../meeple-card-features/BulkSelectCheckbox';
 import { CardAgentAction } from '../../meeple-card-features/CardAgentAction';
-import { CardNavigationFooter } from '../../meeple-card-features/CardNavigationFooter';
 import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
 import { ChatStatusBadge } from '../../meeple-card-features/ChatStatusBadge';
 import { ChatUnreadBadge } from '../../meeple-card-features/ChatUnreadBadge';
@@ -93,7 +92,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     entityQuickActions,
     showInfoButton,
     entityId,
-    infoHref,
     infoTooltip,
     tags,
     maxVisibleTags = 3,
@@ -106,7 +104,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     chatStats,
     chatPreview: _chatPreview,
     unreadCount,
-    navigateTo,
     hasAgent,
     agentId,
     onCreateAgent,
@@ -182,10 +179,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
   );
 
   const hasMobileActions =
-    hasQuickActions ||
-    !!entityQuickActions ||
-    showWishlistBtn ||
-    !!(showInfoButton && (entityId || infoHref));
+    hasQuickActions || !!entityQuickActions || showWishlistBtn || !!(showInfoButton && entityId);
 
   const {
     isMobile,
@@ -231,10 +225,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
   const Component = isInteractive ? 'div' : 'article';
 
   const hasStripActions =
-    !!entityQuickActions ||
-    !!(showInfoButton && (entityId || infoHref)) ||
-    showWishlistBtn ||
-    hasQuickActions;
+    !!entityQuickActions || !!(showInfoButton && entityId) || showWishlistBtn || hasQuickActions;
 
   const stripElement = hasStripActions ? (
     <CardActionStrip
@@ -248,7 +239,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
       onWishlistToggle={onWishlistToggle}
       showInfoButton={showInfoButton}
       entityId={entityId}
-      infoHref={infoHref}
       infoTooltip={infoTooltip}
       drawerEntityType={drawerEntityType}
       onDrawerOpen={() => setDrawerOpen(true)}
@@ -530,7 +520,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             'border-t border-border',
             'bg-muted/60 dark:bg-muted/40',
             !(linkedEntities && linkedEntities.length > 0) &&
-              !(navigateTo && navigateTo.length > 0) &&
               !(entity === 'game' && hasAgent !== undefined) &&
               'rounded-b-2xl'
           )}
@@ -583,19 +572,14 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           gameId={id}
           onCreateAgent={onCreateAgent}
           variant={variant}
-          hasNavFooter={
-            !!(linkedEntities && linkedEntities.length > 0) ||
-            !!(navigateTo && navigateTo.length > 0)
-          }
+          hasNavFooter={!!(linkedEntities && linkedEntities.length > 0)}
         />
       )}
 
       {/* Navigation footer */}
-      {linkedEntities && linkedEntities.length > 0 ? (
+      {linkedEntities && linkedEntities.length > 0 && (
         <ManaLinkFooter linkedEntities={linkedEntities} onPipClick={handleManaPipClick} />
-      ) : navigateTo && navigateTo.length > 0 ? (
-        <CardNavigationFooter links={navigateTo} />
-      ) : null}
+      )}
 
       {/* Bottom bar */}
       <div

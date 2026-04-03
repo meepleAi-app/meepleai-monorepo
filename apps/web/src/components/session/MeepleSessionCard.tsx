@@ -217,13 +217,20 @@ export function MeepleSessionCard({
       // Issue #5003: Quick actions with conditional visibility by status and role
       entityQuickActions={entityQuickActions}
       showInfoButton
-      infoHref={`/sessions/${session.id}`}
+      entityId={session.id}
       infoTooltip="Vai alla sessione"
       // Navigation footer: Game + Players + Agent + Chats links
-      navigateTo={getNavigationLinks('session', {
+      linkedEntities={getNavigationLinks('session', {
         id: session.id,
         gameId: session.gameId,
-      })}
+      }).map(l => ({ entityType: l.entity, count: 1 }))}
+      onManaPipClick={entityType => {
+        const link = getNavigationLinks('session', {
+          id: session.id,
+          gameId: session.gameId,
+        }).find(l => l.entity === entityType);
+        if (link?.href) window.location.href = link.href;
+      }}
       data-testid={`session-card-${session.id}`}
     />
   );

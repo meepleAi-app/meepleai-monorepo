@@ -59,10 +59,19 @@ function AgentCard({
         { value: `${agent.invocationCount} uses`, label: 'Usage' },
         { value: agent.strategyName, label: 'Strategy' },
       ]}
-      navigateTo={getNavigationLinks('agent', { id: agent.id })}
+      linkedEntities={getNavigationLinks('agent', { id: agent.id }).map(l => ({
+        entityType: l.entity,
+        count: 1,
+      }))}
+      onManaPipClick={entityType => {
+        const link = getNavigationLinks('agent', { id: agent.id }).find(
+          l => l.entity === entityType
+        );
+        if (link?.href) window.location.href = link.href;
+      }}
       entityQuickActions={entityActions.quickActions}
       showInfoButton
-      infoHref={`/agents/${agent.id}`}
+      entityId={agent.id}
       infoTooltip="Dettagli agent"
       onClick={onClick}
     />

@@ -42,7 +42,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
 import { Button } from '@/components/ui/primitives/button';
-import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 import { sharedGamesKeys } from '@/hooks/queries';
 import { api } from '@/lib/api';
 import type { SharedGame } from '@/lib/api';
@@ -144,14 +143,6 @@ function AdminGameCard({
     },
   ];
 
-  const navigateTo: ResolvedNavigationLink[] = [
-    {
-      entity: 'kb',
-      label: 'Info',
-      onClick: () => onOpenExtraCard(game.id),
-    },
-  ];
-
   return (
     <MeepleCard
       id={game.id}
@@ -166,9 +157,10 @@ function AdminGameCard({
       badge={STATUS_LABELS[game.status]}
       onClick={() => router.push(`/admin/shared-games/${game.id}`)}
       entityQuickActions={quickActions}
-      navigateTo={navigateTo}
+      linkedEntities={[{ entityType: 'kb', count: 1 }]}
+      onManaPipClick={() => onOpenExtraCard(game.id)}
       showInfoButton
-      infoHref={`/admin/shared-games/${game.id}`}
+      entityId={game.id}
       infoTooltip="Dettaglio admin"
       data-testid={`admin-game-card-${game.id}`}
     />

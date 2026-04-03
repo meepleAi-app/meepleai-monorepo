@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * MeepleCard Showcase — pagina di sviluppo
  *
@@ -18,6 +20,7 @@ import { useState } from 'react';
 import { BookOpen, Heart, Play, Star, Trash2, Users } from 'lucide-react';
 
 import { MeepleCard, MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card';
+import { useSafeColorScheme } from '@/contexts/ColorSchemeContext';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -74,7 +77,25 @@ const QUICK_ACTIONS = [
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function MeepleCardShowcasePage() {
+function ThemeToggle() {
+  const colorScheme = useSafeColorScheme();
+  const isGaming = colorScheme?.currentTheme.id.startsWith('gaming') ?? false;
+  return (
+    <button
+      type="button"
+      onClick={() => colorScheme?.setTheme(isGaming ? 'default' : 'gaming-dark')}
+      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all border ${
+        isGaming
+          ? 'bg-[rgba(200,150,58,0.15)] border-[rgba(200,150,58,0.5)] text-[#edd9b0]'
+          : 'bg-muted border-border text-foreground'
+      }`}
+    >
+      {isGaming ? '🃏 Gaming MTG' : '⬜ Default'} — clicca per cambiare
+    </button>
+  );
+}
+
+function MeepleCardShowcaseContent() {
   const [wishlisted, setWishlisted] = useState(false);
   const [selected, setSelected] = useState(false);
   const [flipped, setFlipped] = useState(false);
@@ -91,6 +112,9 @@ export default function MeepleCardShowcasePage() {
           Componente universale con frame <strong>Warm Heritage MTG</strong> — bordo dorato doppio,
           sfondo scuro, proporzione 5:7 (200×280px). 6 varianti, 16 tipi di entità.
         </p>
+        <div className="mt-4">
+          <ThemeToggle />
+        </div>
       </div>
 
       <div className="px-6 py-10 space-y-16 max-w-7xl mx-auto">
@@ -783,7 +807,9 @@ export default function MeepleCardShowcasePage() {
                 agentAccuracy={97}
                 capabilities={['rag', 'vision']}
                 identityChip1="RAG"
+                identityChip1Icon="🔍"
                 identityChip2="Vision"
+                identityChip2Icon="👁️"
               />
             </div>
             <div>
@@ -798,6 +824,7 @@ export default function MeepleCardShowcasePage() {
                 conversationCount={340}
                 agentAccuracy={88}
                 identityChip1="Tracciamento"
+                identityChip1Icon="📊"
               />
             </div>
             <div>
@@ -865,6 +892,28 @@ export default function MeepleCardShowcasePage() {
                 onAddToCollection={() => alert('Aggiungi a libreria')}
               />
             </div>
+            <div>
+              <Label>linkedEntities — ManaLinkFooter</Label>
+              <MeepleCard
+                entity="game"
+                variant="grid"
+                title="Pandemic Legacy"
+                imageUrl="https://picsum.photos/seed/pandemic-legacy/400/300"
+                rating={4.9}
+                ratingMax={5}
+                identityChip1="Cooperativo"
+                identityChip1Icon="🤝"
+                identityChip2="Legacy"
+                identityChip2Icon="📜"
+                playerCountDisplay="2-4"
+                playTimeDisplay="60m"
+                linkedEntities={[
+                  { entityType: 'agent', count: 2 },
+                  { entityType: 'kb', count: 5 },
+                  { entityType: 'session', count: 12 },
+                ]}
+              />
+            </div>
           </CardRow>
         </Section>
       </div>
@@ -875,4 +924,8 @@ export default function MeepleCardShowcasePage() {
       </div>
     </div>
   );
+}
+
+export default function MeepleCardShowcasePage() {
+  return <MeepleCardShowcaseContent />;
 }

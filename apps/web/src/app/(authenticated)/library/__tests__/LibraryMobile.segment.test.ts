@@ -1,19 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { filterBySegment } from '../library-mobile';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
-
-// Logica di filtering per segmenti mobile (post-fix)
-function filterBySegment(items: UserLibraryEntry[], segment: string): UserLibraryEntry[] {
-  switch (segment) {
-    case 'collection':
-      return items.filter(g => !g.isPrivateGame && g.currentState !== 'Wishlist');
-    case 'private':
-      return items.filter(g => g.isPrivateGame);
-    case 'wishlist':
-      return items.filter(g => g.currentState === 'Wishlist');
-    default:
-      return items;
-  }
-}
 
 const makeEntry = (overrides: Partial<UserLibraryEntry> = {}): UserLibraryEntry => ({
   id: 'e1',

@@ -37,7 +37,7 @@ const SEGMENTS: Segment[] = [
 
 // ── Client-side segment filter ────────────────────────────────────────────────
 
-function filterBySegment(items: UserLibraryEntry[], segment: string): UserLibraryEntry[] {
+export function filterBySegment(items: UserLibraryEntry[], segment: string): UserLibraryEntry[] {
   switch (segment) {
     case 'collection':
       return items.filter(g => !g.isPrivateGame && g.currentState !== 'Wishlist');

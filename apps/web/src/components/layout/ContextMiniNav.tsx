@@ -32,6 +32,7 @@ export function ContextMiniNav({ tabs, activeTab, onTabChange, className }: Cont
         {tabs.map(tab => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onTabChange(tab.id)}
             className={cn(
               'px-4 py-1.5 rounded-md font-body font-semibold text-sm transition-all',

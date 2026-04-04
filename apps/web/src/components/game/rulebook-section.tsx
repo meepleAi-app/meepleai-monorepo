@@ -18,7 +18,7 @@
 
 import { useRef } from 'react';
 
-import { MessageSquare, RefreshCw, Trash2, Upload } from 'lucide-react';
+import { Loader2, MessageSquare, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useRulebookUpload } from '@/lib/domain-hooks/use-rulebook-upload';
@@ -111,7 +111,10 @@ export function RulebookSection({
               <div className="flex flex-col gap-0.5 min-w-0">
                 <span className="truncate text-sm font-medium">{rulebook.fileName}</span>
                 {rulebook.kbStatus === 'processing' && (
-                  <span className="text-xs text-muted-foreground">In elaborazione...</span>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                    In elaborazione...
+                  </span>
                 )}
                 {rulebook.kbStatus === 'ready' && (
                   <span className="text-xs text-green-600 dark:text-green-400">Pronto</span>

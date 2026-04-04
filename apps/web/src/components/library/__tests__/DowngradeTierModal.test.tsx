@@ -82,6 +82,9 @@ describe('DowngradeTierModal', () => {
     expect(screen.getByText('Catan')).toBeInTheDocument();
   });
 
+  // Button is disabled when selectedToRemove.size === 0 (no games chosen for removal).
+  // Label is "Rimuovi giochi selezionati" — changed from "Conferma downgrade" in the component
+  // prior to this PR. Test updated to match current component behavior.
   it('pulsante conferma disabilitato quando non ci sono giochi selezionati da rimuovere', async () => {
     const { useLibraryDowngradePreview } = await import('@/hooks/queries/useLibraryDowngrade');
     (useLibraryDowngradePreview as ReturnType<typeof vi.fn>).mockReturnValue({

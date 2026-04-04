@@ -574,6 +574,7 @@
   --text-inverse: hsl(var(--primary-foreground));
 
   --font-display: var(--font-quicksand, var(--font-sans));
+  --font-heading: var(--font-quicksand), system-ui, sans-serif;
   --font-body: var(--font-nunito, var(--font-sans));
   --font-size-xs: var(--text-xs);
   --font-size-sm: var(--text-sm);
@@ -657,6 +658,7 @@
   --text-inverse: hsl(var(--primary-foreground));
 
   --font-display: var(--font-quicksand, var(--font-sans));
+  --font-heading: var(--font-quicksand), system-ui, sans-serif;
   --font-body: var(--font-nunito, var(--font-sans));
   --font-size-xs: var(--text-xs);
   --font-size-sm: var(--text-sm);

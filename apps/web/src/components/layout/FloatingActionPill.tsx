@@ -134,34 +134,45 @@ export function FloatingActionPill({
         <div className="fixed bottom-0 left-0 right-0 z-[45] h-16 bg-card border-t border-border/50 px-4 pb-[env(safe-area-inset-bottom)]">
           <div className="h-full flex items-center justify-around">
             <button
+              type="button"
+              aria-label="Apri chat AI"
               onClick={onAiChat}
               className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Bot className="w-5 h-5" />
+              <Bot className="w-5 h-5" aria-hidden="true" />
               <span className="text-[10px] font-body font-semibold">AI</span>
             </button>
             <button
+              type="button"
+              aria-label={isFavorited ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
               onClick={onFavorite}
               className={cn(
                 'flex flex-col items-center gap-1 transition-colors',
                 isFavorited ? 'text-entity-event' : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <Heart className={cn('w-5 h-5', isFavorited && 'fill-entity-event')} />
+              <Heart
+                className={cn('w-5 h-5', isFavorited && 'fill-entity-event')}
+                aria-hidden="true"
+              />
               <span className="text-[10px] font-body font-semibold">Preferiti</span>
             </button>
             <button
+              type="button"
+              aria-label="Condividi"
               onClick={onShare}
               className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Share2 className="w-5 h-5" />
+              <Share2 className="w-5 h-5" aria-hidden="true" />
               <span className="text-[10px] font-body font-semibold">Condividi</span>
             </button>
             <button
+              type="button"
+              aria-label="Altre opzioni"
               onClick={onMore}
               className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <MoreHorizontal className="w-5 h-5" />
+              <MoreHorizontal className="w-5 h-5" aria-hidden="true" />
               <span className="text-[10px] font-body font-semibold">Altro</span>
             </button>
           </div>

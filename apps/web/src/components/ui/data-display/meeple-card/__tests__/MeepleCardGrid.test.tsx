@@ -37,7 +37,7 @@ describe('MeepleCardGrid — Warm Heritage MTG', () => {
   });
 
   it('renderizza il bottom bar quando bottomStatValue è definito', () => {
-    render(
+    const { container } = render(
       <MeepleCardGrid
         entity="game"
         title="Wingspan"
@@ -45,9 +45,8 @@ describe('MeepleCardGrid — Warm Heritage MTG', () => {
         bottomStatValue="42"
       />
     );
-    expect(document.querySelector('[data-testid="meeple-card-bottom-bar"]')).toBeInTheDocument();
-    expect(document.querySelector('[data-testid="meeple-card-bottom-bar"]')).toHaveTextContent(
-      '42'
-    );
+    const bar = container.querySelector('[data-testid="meeple-card-bottom-bar"]');
+    expect(bar).toBeInTheDocument();
+    expect(bar).toHaveTextContent('42');
   });
 });

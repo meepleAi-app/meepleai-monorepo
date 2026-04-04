@@ -43,6 +43,10 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         var correlationId = Guid.NewGuid();
 
         // 1. Always create in-app notification
+        var metadataJson = message.Metadata is not null
+            ? System.Text.Json.JsonSerializer.Serialize(message.Metadata)
+            : null;
+
         var notification = new Notification(
             id: Guid.NewGuid(),
             userId: message.RecipientUserId,
@@ -51,6 +55,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             title: message.Payload.GetType().Name,
             message: message.Payload.ToString() ?? string.Empty,
             link: message.DeepLinkPath,
+            metadata: metadataJson,
             correlationId: correlationId);
 
         await _notificationRepository.AddAsync(notification, ct).ConfigureAwait(false);
@@ -178,13 +183,13 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
     /// </summary>
     private static bool IsEmailEnabledForType(NotificationPreferences prefs, NotificationType type)
     {
-        if (type == NotificationType.PdfUploadCompleted || type == NotificationType.RuleSpecGenerated)
+        if (type == NotificationType.DocumentReady || type == NotificationType.RuleSpecGenerated)
             return prefs.EmailOnDocumentReady;
-        if (type == NotificationType.ProcessingFailed)
+        if (type == NotificationType.DocumentProcessingFailed)
             return prefs.EmailOnDocumentFailed;
         if (type == NotificationType.GameNightInvitation || type == NotificationType.GameNightRsvpReceived)
             return prefs.EmailOnGameNightInvitation;
-        if (type == NotificationType.GameNightReminder24h || type == NotificationType.GameNightReminder1h)
+        if (type == NotificationType.GameNightReminder)
             return prefs.EmailOnGameNightReminder;
 
         // Default: send email for types not explicitly configured
@@ -196,9 +201,9 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
     /// </summary>
     private static bool IsSlackEnabledForType(NotificationPreferences prefs, NotificationType type)
     {
-        if (type == NotificationType.PdfUploadCompleted || type == NotificationType.RuleSpecGenerated)
+        if (type == NotificationType.DocumentReady || type == NotificationType.RuleSpecGenerated)
             return prefs.SlackOnDocumentReady;
-        if (type == NotificationType.ProcessingFailed)
+        if (type == NotificationType.DocumentProcessingFailed)
             return prefs.SlackOnDocumentFailed;
         if (type == NotificationType.ShareRequestCreated)
             return prefs.SlackOnShareRequestCreated;
@@ -208,7 +213,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             return prefs.SlackOnBadgeEarned;
         if (type == NotificationType.GameNightInvitation || type == NotificationType.GameNightRsvpReceived)
             return prefs.SlackOnGameNightInvitation;
-        if (type == NotificationType.GameNightReminder24h || type == NotificationType.GameNightReminder1h)
+        if (type == NotificationType.GameNightReminder)
             return prefs.SlackOnGameNightReminder;
 
         // Default: send Slack for types not explicitly configured

@@ -9,7 +9,8 @@ export type ActivityEventType =
   | 'audio_note'
   | 'turn_change'
   | 'pause_resume'
-  | 'session_start';
+  | 'session_start'
+  | 'card_draw';
 
 export interface ActivityEvent {
   id: string;
@@ -22,4 +23,19 @@ export interface ActivityEvent {
 export interface PlayerScore {
   playerId: string;
   score: number;
+}
+
+export interface SessionParticipant {
+  id: string;
+  displayName: string;
+  isGuest: boolean;
+  userId?: string;
+  avatarUrl?: string;
+}
+
+export interface StartSessionPayload {
+  sessionId: string;
+  gameId: string;
+  gameTitle: string;
+  participants: SessionParticipant[];
 }

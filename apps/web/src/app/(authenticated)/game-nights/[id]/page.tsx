@@ -56,7 +56,7 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
     if (rsvps) {
       rsvps
         .filter(r => r.status === 'Accepted')
-        .forEach(r => addPlayer({ id: r.userId, name: r.userName }));
+        .forEach(r => addPlayer({ id: r.userId, displayName: r.userName, isGuest: false }));
     }
     // Populate selected games from event.gameIds matched against catalog
     if (catalogData?.items && event.gameIds.length > 0) {

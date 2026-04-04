@@ -1,11 +1,15 @@
 'use client';
 
 /**
- * RulesExplainer — Progressive rules presentation for table explanations.
+ * RulesExplainer — Progressive rules presentation + AI agent chat for game night.
  * Issue #5584: Rules Explainer progressive presentation.
+ * Game Night Flow: AI agent Q&A wired via useSessionAgentChat.
  *
  * Presents rulebook analysis data in navigable sections optimized for
  * reading aloud to table companions during game night.
+ *
+ * When agentSessionId + gameSessionId are provided, renders an AI chat panel
+ * that allows real-time rule questions answered by the session agent.
  *
  * Sections:
  * 1. Summary — 30-second overview
@@ -38,8 +42,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import type { RulebookAnalysisDto } from '@/lib/api/schemas/shared-games.schemas';
+import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
 
 // ============================================================================
 // Types
@@ -52,6 +59,17 @@ export interface RulesExplainerProps {
   gameTitle?: string;
   /** Optional: show the explanation timer (default: true) */
   showTimer?: boolean;
+  /**
+   * Optional: game session ID for AI agent chat.
+   * When provided together with agentSessionId, renders an AI Q&A panel.
+   * Endpoint: POST /api/v1/game-sessions/{gameSessionId}/agent/chat
+   */
+  gameSessionId?: string;
+  /**
+   * Optional: agent session ID for AI agent chat.
+   * Returned by the LaunchSessionAgent endpoint.
+   */
+  agentSessionId?: string;
 }
 
 type SectionId = 'summary' | 'mechanics' | 'phases' | 'victory' | 'resources' | 'faq';
@@ -349,6 +367,123 @@ function FaqSection({ analysis }: { analysis: RulebookAnalysisDto }) {
 }
 
 // ============================================================================
+// Agent Chat Panel
+// ============================================================================
+
+interface AgentChatPanelProps {
+  gameSessionId: string;
+  agentSessionId: string;
+}
+
+function AgentChatPanel({ gameSessionId, agentSessionId }: AgentChatPanelProps) {
+  const [input, setInput] = useState('');
+  const { messages, isLoading, error, streamingContent, ask, stop } = useSessionAgentChat(
+    gameSessionId,
+    agentSessionId
+  );
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const handleSend = useCallback(() => {
+    if (!input.trim() || isLoading) return;
+    void ask(input);
+    setInput('');
+  }, [input, isLoading, ask]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && !isLoading) {
+        handleSend();
+      }
+    },
+    [isLoading, handleSend]
+  );
+
+  // Auto-scroll to bottom when new content arrives.
+  // ScrollArea renders a Radix Viewport as the scrollable element (overflow: auto),
+  // while the Root element (overflow: hidden) is not scrollable — query the viewport.
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector(
+        '[data-radix-scroll-area-viewport]'
+      ) as HTMLElement | null;
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
+    }
+  }, [messages, streamingContent]);
+
+  return (
+    <Card data-testid="agent-chat-panel">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <HelpCircle className="h-5 w-5 text-primary" />
+          Chiedi all&apos;assistente
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <ScrollArea className="h-48 rounded-md border p-3" ref={scrollAreaRef}>
+          {messages.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center mt-6">
+              Fai una domanda sulle regole del gioco
+            </p>
+          )}
+          {messages.map(msg => (
+            <div
+              key={msg.id}
+              className={`mb-2 text-sm ${msg.role === 'user' ? 'text-right' : 'text-left'}`}
+            >
+              <span
+                className={`inline-block px-3 py-1.5 rounded-lg max-w-[90%] ${
+                  msg.role === 'user'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-foreground'
+                }`}
+              >
+                {msg.content}
+              </span>
+            </div>
+          ))}
+          {streamingContent && (
+            <div className="mb-2 text-sm text-left">
+              <span className="inline-block px-3 py-1.5 rounded-lg bg-muted text-foreground max-w-[90%]">
+                {streamingContent}
+                <span className="animate-pulse">▌</span>
+              </span>
+            </div>
+          )}
+          {error && <p className="text-sm text-destructive text-center mt-2">{error}</p>}
+        </ScrollArea>
+
+        <div className="flex gap-2">
+          <Input
+            placeholder="Es: Come funziona il turno?"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading}
+            className="flex-1"
+          />
+          {isLoading ? (
+            <Button variant="outline" size="sm" onClick={stop} aria-label="Interrompi risposta">
+              Stop
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={handleSend}
+              disabled={!input.trim()}
+              aria-label="Invia domanda"
+            >
+              Chiedi
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
 // Timer Hook
 // ============================================================================
 
@@ -424,7 +559,13 @@ function SectionContent({
 // Main Component
 // ============================================================================
 
-export function RulesExplainer({ analysis, gameTitle, showTimer = true }: RulesExplainerProps) {
+export function RulesExplainer({
+  analysis,
+  gameTitle,
+  showTimer = true,
+  gameSessionId,
+  agentSessionId,
+}: RulesExplainerProps) {
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const timer = useExplanationTimer();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -605,6 +746,11 @@ export function RulesExplainer({ analysis, gameTitle, showTimer = true }: RulesE
           <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
+
+      {/* AI Agent Chat — only when agent session is active */}
+      {gameSessionId && agentSessionId && (
+        <AgentChatPanel gameSessionId={gameSessionId} agentSessionId={agentSessionId} />
+      )}
     </div>
   );
 }

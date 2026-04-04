@@ -35,7 +35,7 @@ internal sealed class VectorDocumentReadyNotificationHandler
 
         await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            Type = NotificationType.ProcessingJobCompleted,
+            Type = NotificationType.DocumentReady,
             RecipientUserId = userId,
             Payload = new PdfProcessingPayload(
                 Guid.Empty,

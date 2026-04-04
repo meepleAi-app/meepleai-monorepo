@@ -332,3 +332,63 @@ export const RecentLlmRequestsDtoSchema = z.object({
 });
 
 export type RecentLlmRequestsDto = z.infer<typeof RecentLlmRequestsDtoSchema>;
+
+// ─── KB Games Status (Admin KB Dashboard) ────────────────────────────────────
+
+export const GameKbStatusItemSchema = z.object({
+  gameId: z.string().uuid(),
+  gameName: z.string(),
+  kbStatus: z.enum(['complete', 'partial', 'none']),
+  documentCount: z.number(),
+  totalChunks: z.number(),
+  latestIndexedAt: z.string().nullable(),
+  hasAutoBackup: z.boolean(),
+});
+
+export const GameKbStatusesSchema = z.object({
+  items: z.array(GameKbStatusItemSchema),
+});
+
+export type GameKbStatusItem = z.infer<typeof GameKbStatusItemSchema>;
+export type GameKbStatuses = z.infer<typeof GameKbStatusesSchema>;
+
+// ─── RAG Backup Snapshots ────────────────────────────────────────────────────
+
+export const KbSnapshotInfoSchema = z.object({
+  id: z.string(),
+  exportedAt: z.string().nullable(),
+  totalDocuments: z.number().nullable(),
+  totalChunks: z.number().nullable(),
+});
+
+export const KbSnapshotListSchema = z.object({
+  snapshots: z.array(KbSnapshotInfoSchema).nullable(),
+  downloadUrl: z.string().nullable().optional(),
+  error: z.string().nullable().optional(),
+});
+
+export const KbExportResultSchema = z.object({
+  totalDocuments: z.number(),
+  totalChunks: z.number(),
+  totalEmbeddings: z.number(),
+  skipped: z.number(),
+  failed: z.number(),
+  isDryRun: z.boolean(),
+  snapshotId: z.string(),
+  errors: z.array(z.string()),
+});
+
+export const KbImportResultSchema = z.object({
+  totalDocuments: z.number(),
+  imported: z.number(),
+  skipped: z.number(),
+  failed: z.number(),
+  reEmbedded: z.number(),
+  warnings: z.array(z.string()),
+  errors: z.array(z.string()),
+});
+
+export type KbSnapshotInfo = z.infer<typeof KbSnapshotInfoSchema>;
+export type KbSnapshotList = z.infer<typeof KbSnapshotListSchema>;
+export type KbExportResult = z.infer<typeof KbExportResultSchema>;
+export type KbImportResult = z.infer<typeof KbImportResultSchema>;

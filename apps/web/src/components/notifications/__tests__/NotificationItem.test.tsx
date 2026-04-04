@@ -50,7 +50,7 @@ function createNotification(overrides: Partial<NotificationDto> = {}): Notificat
   return {
     id: '00000000-0000-0000-0000-000000000001',
     userId: '00000000-0000-0000-0000-000000000002',
-    type: 'pdf_upload_completed',
+    type: 'document_ready',
     severity: 'success',
     title: 'PDF Ready',
     message: 'Short message',
@@ -198,16 +198,19 @@ describe('NotificationItem', () => {
     expect(screen.getByText('Upload Complete')).toBeInTheDocument();
   });
 
-  it('should show PdfStatusBadge for pdf_upload_completed type', () => {
-    const notification = createNotification({ type: 'pdf_upload_completed' });
+  it('should show PdfStatusBadge for document_ready type', () => {
+    const notification = createNotification({ type: 'document_ready' });
 
     render(<NotificationItem notification={notification} />);
 
     expect(screen.getByTestId('pdf-status-badge')).toHaveTextContent('ready');
   });
 
-  it('should show PdfStatusBadge for processing_failed type', () => {
-    const notification = createNotification({ type: 'processing_failed', severity: 'error' });
+  it('should show PdfStatusBadge for document_processing_failed type', () => {
+    const notification = createNotification({
+      type: 'document_processing_failed',
+      severity: 'error',
+    });
 
     render(<NotificationItem notification={notification} />);
 

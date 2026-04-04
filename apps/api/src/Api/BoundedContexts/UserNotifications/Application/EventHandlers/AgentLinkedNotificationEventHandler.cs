@@ -63,7 +63,7 @@ internal sealed class AgentLinkedNotificationEventHandler : INotificationHandler
             {
                 await _dispatcher.DispatchAsync(new NotificationMessage
                 {
-                    Type = NotificationType.AgentLinked,
+                    Type = NotificationType.AgentReady,
                     RecipientUserId = adminId,
                     Payload = new GenericPayload(
                         "Agent Linked",

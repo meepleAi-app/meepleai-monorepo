@@ -45,15 +45,18 @@ internal class UnsubscribeEmailCommandHandler : ICommandHandler<UnsubscribeEmail
         // Disable email for the specific notification type (GDPR: granular opt-out)
         switch (command.NotificationType)
         {
-            case "pdf_upload_completed":
             case "document_ready":
+            case "pdf_upload_completed":
+            case "processing_job_completed":
                 preferences.UpdateEmailPreferences(
                     onReady: false,
                     onFailed: preferences.EmailOnDocumentFailed,
                     onRetry: preferences.EmailOnRetryAvailable);
                 break;
 
+            case "document_processing_failed":
             case "processing_failed":
+            case "processing_job_failed":
             case "document_failed":
                 preferences.UpdateEmailPreferences(
                     onReady: preferences.EmailOnDocumentReady,

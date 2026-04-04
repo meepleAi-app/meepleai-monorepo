@@ -2,7 +2,7 @@
  * Notification Deep Link Tests
  *
  * Tests for getNotificationDeepLink utility:
- * - pdf_upload_completed → /library/private/{privateGameId}
+ * - document_ready → /library/private/{privateGameId}
  * - Missing metadata returns null
  * - Invalid JSON metadata returns null
  * - Unknown notification types return null
@@ -22,7 +22,7 @@ function createNotification(overrides: Partial<NotificationDto> = {}): Notificat
   return {
     id: '00000000-0000-0000-0000-000000000001',
     userId: '00000000-0000-0000-0000-000000000002',
-    type: 'pdf_upload_completed',
+    type: 'document_ready',
     severity: 'success',
     title: 'PDF Ready',
     message: 'Your PDF has been processed',
@@ -40,9 +40,9 @@ function createNotification(overrides: Partial<NotificationDto> = {}): Notificat
 // ============================================================================
 
 describe('getNotificationDeepLink', () => {
-  it('generates correct href for PdfUploadCompleted notification with privateGameId', () => {
+  it('generates correct href for DocumentReady notification with privateGameId', () => {
     const notification = createNotification({
-      type: 'pdf_upload_completed',
+      type: 'document_ready',
       metadata: JSON.stringify({ privateGameId: 'game-1' }),
     });
 
@@ -53,7 +53,7 @@ describe('getNotificationDeepLink', () => {
 
   it('returns null when metadata is null', () => {
     const notification = createNotification({
-      type: 'pdf_upload_completed',
+      type: 'document_ready',
       metadata: null,
     });
 
@@ -62,7 +62,7 @@ describe('getNotificationDeepLink', () => {
 
   it('returns null when metadata has no privateGameId', () => {
     const notification = createNotification({
-      type: 'pdf_upload_completed',
+      type: 'document_ready',
       metadata: JSON.stringify({ someOtherField: 'value' }),
     });
 
@@ -71,7 +71,7 @@ describe('getNotificationDeepLink', () => {
 
   it('returns null for invalid JSON metadata', () => {
     const notification = createNotification({
-      type: 'pdf_upload_completed',
+      type: 'document_ready',
       metadata: 'not-json',
     });
 
@@ -90,7 +90,7 @@ describe('getNotificationDeepLink', () => {
   it('handles UUID-style privateGameId correctly', () => {
     const uuid = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
     const notification = createNotification({
-      type: 'pdf_upload_completed',
+      type: 'document_ready',
       metadata: JSON.stringify({ privateGameId: uuid }),
     });
 

@@ -198,8 +198,11 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         var resolvedCitations = await _copyrightTierResolver.ResolveAsync(
             assembled.Citations, command.UserId, cancellationToken).ConfigureAwait(false);
 
-        // Inject AgentMemory context (house rules, group preferences, notes) into system prompt
-        var systemPrompt = assembled.SystemPrompt;
+        // Inject GameSessionContext prefix (game title, players, language) into system prompt
+        var contextPrefix = command.GameContext?.ToSystemPromptEnrichment() ?? string.Empty;
+        var systemPrompt = string.IsNullOrEmpty(contextPrefix)
+            ? assembled.SystemPrompt
+            : $"{contextPrefix}\n\n{assembled.SystemPrompt}";
         var liveSession = await _liveSessionRepository
             .GetByIdAsync(agentSession.GameSessionId, cancellationToken)
             .ConfigureAwait(false);

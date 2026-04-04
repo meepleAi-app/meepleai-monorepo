@@ -13,5 +13,6 @@ internal record ChatWithSessionAgentCommand(
     Guid AgentSessionId,
     string UserQuestion,
     Guid UserId,
+    GameSessionContext? GameContext = null,
     Guid? ChatThreadId = null
 ) : IStreamingQuery<RagStreamingEvent>;

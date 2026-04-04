@@ -17,10 +17,9 @@ public sealed class NotificationTypeTests
     public void StaticInstances_HaveCorrectValues()
     {
         // Assert
-        NotificationType.PdfUploadCompleted.Value.Should().Be("pdf_upload_completed");
+        NotificationType.DocumentReady.Value.Should().Be("document_ready");
         NotificationType.RuleSpecGenerated.Value.Should().Be("rule_spec_generated");
-        NotificationType.ProcessingFailed.Value.Should().Be("processing_failed");
-        NotificationType.NewComment.Value.Should().Be("new_comment");
+        NotificationType.DocumentProcessingFailed.Value.Should().Be("document_processing_failed");
         NotificationType.SharedLinkAccessed.Value.Should().Be("shared_link_accessed");
     }
 
@@ -65,16 +64,27 @@ public sealed class NotificationTypeTests
     #region FromString Tests
 
     [Theory]
-    [InlineData("pdf_upload_completed")]
-    [InlineData("PDF_UPLOAD_COMPLETED")]
-    [InlineData("Pdf_Upload_Completed")]
-    public void FromString_WithPdfUploadCompleted_ReturnsSameInstance(string value)
+    [InlineData("document_ready")]
+    [InlineData("DOCUMENT_READY")]
+    public void FromString_WithDocumentReady_ReturnsSameInstance(string value)
     {
         // Act
         var result = NotificationType.FromString(value);
 
         // Assert
-        result.Should().Be(NotificationType.PdfUploadCompleted);
+        result.Should().Be(NotificationType.DocumentReady);
+    }
+
+    [Theory]
+    [InlineData("pdf_upload_completed")]
+    [InlineData("processing_job_completed")]
+    public void FromString_WithLegacyDocumentReadyAliases_ReturnsDocumentReady(string value)
+    {
+        // Act
+        var result = NotificationType.FromString(value);
+
+        // Assert — legacy aliases map to DocumentReady
+        result.Should().Be(NotificationType.DocumentReady);
     }
 
     [Theory]
@@ -90,25 +100,27 @@ public sealed class NotificationTypeTests
     }
 
     [Theory]
-    [InlineData("processing_failed")]
-    [InlineData("PROCESSING_FAILED")]
-    public void FromString_WithProcessingFailed_ReturnsSameInstance(string value)
+    [InlineData("document_processing_failed")]
+    [InlineData("DOCUMENT_PROCESSING_FAILED")]
+    public void FromString_WithDocumentProcessingFailed_ReturnsSameInstance(string value)
     {
         // Act
         var result = NotificationType.FromString(value);
 
         // Assert
-        result.Should().Be(NotificationType.ProcessingFailed);
+        result.Should().Be(NotificationType.DocumentProcessingFailed);
     }
 
-    [Fact]
-    public void FromString_WithNewComment_ReturnsSameInstance()
+    [Theory]
+    [InlineData("processing_failed")]
+    [InlineData("processing_job_failed")]
+    public void FromString_WithLegacyDocumentProcessingFailedAliases_ReturnsDocumentProcessingFailed(string value)
     {
         // Act
-        var result = NotificationType.FromString("new_comment");
+        var result = NotificationType.FromString(value);
 
-        // Assert
-        result.Should().Be(NotificationType.NewComment);
+        // Assert — legacy aliases map to DocumentProcessingFailed
+        result.Should().Be(NotificationType.DocumentProcessingFailed);
     }
 
     [Fact]
@@ -188,18 +200,18 @@ public sealed class NotificationTypeTests
     #region Boolean Property Tests
 
     [Fact]
-    public void IsPdfUploadCompleted_WhenPdfUploadCompleted_ReturnsTrue()
+    public void IsDocumentReady_WhenDocumentReady_ReturnsTrue()
     {
         // Assert
-        NotificationType.PdfUploadCompleted.IsPdfUploadCompleted.Should().BeTrue();
+        NotificationType.DocumentReady.IsDocumentReady.Should().BeTrue();
     }
 
     [Fact]
-    public void IsPdfUploadCompleted_WhenOtherType_ReturnsFalse()
+    public void IsDocumentReady_WhenOtherType_ReturnsFalse()
     {
         // Assert
-        NotificationType.ProcessingFailed.IsPdfUploadCompleted.Should().BeFalse();
-        NotificationType.NewComment.IsPdfUploadCompleted.Should().BeFalse();
+        NotificationType.DocumentProcessingFailed.IsDocumentReady.Should().BeFalse();
+        NotificationType.SharedLinkAccessed.IsDocumentReady.Should().BeFalse();
     }
 
     [Fact]
@@ -213,23 +225,23 @@ public sealed class NotificationTypeTests
     public void IsRuleSpecGenerated_WhenOtherType_ReturnsFalse()
     {
         // Assert
-        NotificationType.PdfUploadCompleted.IsRuleSpecGenerated.Should().BeFalse();
-        NotificationType.ProcessingFailed.IsRuleSpecGenerated.Should().BeFalse();
+        NotificationType.DocumentReady.IsRuleSpecGenerated.Should().BeFalse();
+        NotificationType.DocumentProcessingFailed.IsRuleSpecGenerated.Should().BeFalse();
     }
 
     [Fact]
-    public void IsProcessingFailed_WhenProcessingFailed_ReturnsTrue()
+    public void IsDocumentProcessingFailed_WhenDocumentProcessingFailed_ReturnsTrue()
     {
         // Assert
-        NotificationType.ProcessingFailed.IsProcessingFailed.Should().BeTrue();
+        NotificationType.DocumentProcessingFailed.IsDocumentProcessingFailed.Should().BeTrue();
     }
 
     [Fact]
-    public void IsProcessingFailed_WhenOtherType_ReturnsFalse()
+    public void IsDocumentProcessingFailed_WhenOtherType_ReturnsFalse()
     {
         // Assert
-        NotificationType.PdfUploadCompleted.IsProcessingFailed.Should().BeFalse();
-        NotificationType.RuleSpecGenerated.IsProcessingFailed.Should().BeFalse();
+        NotificationType.DocumentReady.IsDocumentProcessingFailed.Should().BeFalse();
+        NotificationType.RuleSpecGenerated.IsDocumentProcessingFailed.Should().BeFalse();
     }
 
     #endregion
@@ -240,8 +252,8 @@ public sealed class NotificationTypeTests
     public void Equals_WithSameType_ReturnsTrue()
     {
         // Arrange
-        var type1 = NotificationType.PdfUploadCompleted;
-        var type2 = NotificationType.PdfUploadCompleted;
+        var type1 = NotificationType.DocumentReady;
+        var type2 = NotificationType.DocumentReady;
 
         // Act & Assert
         type1.Should().Be(type2);
@@ -251,8 +263,8 @@ public sealed class NotificationTypeTests
     public void Equals_WithDifferentTypes_ReturnsFalse()
     {
         // Arrange
-        var type1 = NotificationType.PdfUploadCompleted;
-        var type2 = NotificationType.ProcessingFailed;
+        var type1 = NotificationType.DocumentReady;
+        var type2 = NotificationType.DocumentProcessingFailed;
 
         // Act & Assert
         type1.Should().NotBe(type2);
@@ -262,8 +274,8 @@ public sealed class NotificationTypeTests
     public void GetHashCode_SameTypes_ReturnsSameHash()
     {
         // Arrange
-        var type1 = NotificationType.PdfUploadCompleted;
-        var type2 = NotificationType.PdfUploadCompleted;
+        var type1 = NotificationType.DocumentReady;
+        var type2 = NotificationType.DocumentReady;
 
         // Act & Assert
         type1.GetHashCode().Should().Be(type2.GetHashCode());
@@ -277,8 +289,8 @@ public sealed class NotificationTypeTests
     public void ToString_ReturnsValue()
     {
         // Assert
-        NotificationType.PdfUploadCompleted.ToString().Should().Be("pdf_upload_completed");
-        NotificationType.ProcessingFailed.ToString().Should().Be("processing_failed");
+        NotificationType.DocumentReady.ToString().Should().Be("document_ready");
+        NotificationType.DocumentProcessingFailed.ToString().Should().Be("document_processing_failed");
         NotificationType.BadgeEarned.ToString().Should().Be("badge_earned");
     }
 

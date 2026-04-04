@@ -28,7 +28,7 @@ public sealed class GenericSlackBuilderTests
     public void CanHandle_AlwaysReturnsFalse()
     {
         // The generic builder is the fallback — never selected via CanHandle
-        _sut.CanHandle(NotificationType.NewComment).Should().BeFalse();
+        _sut.CanHandle(NotificationType.SharedLinkAccessed).Should().BeFalse();
         _sut.CanHandle(NotificationType.ShareRequestCreated).Should().BeFalse();
     }
 

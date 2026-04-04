@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 
@@ -301,6 +302,11 @@ internal static class AdminUserTierEndpoints
                 userId, request.NewRole, session.User.Id);
 
             return Results.Ok(result);
+        }
+        catch (ForbiddenException ex)
+        {
+            logger.LogWarning(ex, "Forbidden role change attempt for user {UserId}", userId);
+            return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
         }
         catch (DomainException ex)
         {

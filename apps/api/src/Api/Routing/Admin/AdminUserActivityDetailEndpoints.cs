@@ -20,7 +20,6 @@ internal static class AdminUserActivityDetailEndpoints
         MapUserDetailEndpoint(group);
         MapUserRoleHistoryEndpoint(group);
         MapUserQuickActionsEndpoints(group);
-        MapUserRoleChangeEndpoint(group);
         MapUserImpersonateEndpoint(group);
         MapEndImpersonationEndpoint(group);
     }
@@ -142,28 +141,6 @@ internal static class AdminUserActivityDetailEndpoints
 
 **Issue**: #2890 - User Detail Modal/Page")
             .Produces(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status403Forbidden)
-            .Produces(StatusCodes.Status404NotFound);
-    }
-
-    private static void MapUserRoleChangeEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPut("/admin/users/{userId:guid}/role", HandleChangeUserRole)
-            .RequireAdminSession()
-            .WithName("ChangeUserRole")
-            .WithTags("Admin", "Users")
-            .WithSummary("Change a single user's role")
-            .WithDescription(@"Change a user's role. Automatically audited via [AuditableAction].
-
-**Authorization**: Admin session required
-
-**Valid Roles**: Admin, Editor, User
-
-**Optional**: Reason field (max 500 chars) for audit trail
-
-**Issue**: #124 - Admin Infrastructure Panel")
-            .Produces<Api.Models.UserDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound);
@@ -305,37 +282,6 @@ internal static class AdminUserActivityDetailEndpoints
             session.User.Id, history.Count, userId);
 
         return Results.Ok(history);
-    }
-
-    private static async Task<IResult> HandleChangeUserRole(
-        Guid userId,
-        ChangeUserRoleRequest request,
-        HttpContext context,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        var (authorized, session, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
-        logger.LogInformation("Admin {AdminId} changing role for user {UserId} to {NewRole}, reason: {Reason}",
-            session!.User!.Id, userId, request.NewRole, request.Reason ?? "(none)");
-
-        try
-        {
-            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole, request.Reason, session!.User!.Role);
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            logger.LogInformation("Role changed for user {UserId} to {NewRole} by admin {AdminId}",
-                userId, request.NewRole, session.User.Id);
-
-            return Results.Ok(result);
-        }
-        catch (DomainException ex)
-        {
-            logger.LogWarning(ex, "Failed to change role for user {UserId}", userId);
-            return Results.BadRequest(new { error = ex.Message });
-        }
     }
 
     private static async Task<IResult> HandleResetUserPassword(

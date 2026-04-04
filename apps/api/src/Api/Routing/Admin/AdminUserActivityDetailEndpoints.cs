@@ -323,7 +323,7 @@ internal static class AdminUserActivityDetailEndpoints
 
         try
         {
-            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole, request.Reason);
+            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole, request.Reason, session!.User!.Role);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Role changed for user {UserId} to {NewRole} by admin {AdminId}",

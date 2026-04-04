@@ -55,9 +55,16 @@ internal sealed class ImpersonateUserCommandHandler
             throw new NotFoundException($"Admin user with ID '{command.AdminUserId}' not found");
         }
 
-        if (!string.Equals(adminUser.Role.Value, "admin", StringComparison.OrdinalIgnoreCase))
+        // Accept Admin (level 3) or SuperAdmin (level 4) as valid callers
+        var adminLevel = adminUser.Role.Value.ToLowerInvariant() switch
         {
-            throw new ConflictException("Only admins can impersonate users");
+            "admin" => 3,
+            "superadmin" => 4,
+            _ => 0
+        };
+        if (adminLevel < 3)
+        {
+            throw new ConflictException("Only admins or SuperAdmins can impersonate users");
         }
 
         // Verify target user exists

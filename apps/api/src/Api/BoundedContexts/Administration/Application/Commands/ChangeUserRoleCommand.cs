@@ -17,5 +17,5 @@ internal record ChangeUserRoleCommand(
     string UserId,
     string NewRole,
     string? Reason = null,
-    string AdminRole = "admin"
+    string AdminRole = "user"
 ) : ICommand<UserDto>;

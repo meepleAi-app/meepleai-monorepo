@@ -114,8 +114,8 @@ internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordRes
 #pragma warning restore S125
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error resetting password for user {UserId}", userId);
-                    errors.Add($"User {userId}: password reset failed due to an internal error.");
+                    _logger.LogError(ex, "Failed to reset password for user {UserId}", userId);
+                    errors.Add($"Cannot reset password for user {userId}");
                 }
 #pragma warning restore CA1031
             }

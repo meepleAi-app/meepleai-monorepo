@@ -43,7 +43,8 @@ internal static class AdminUserBulkEndpoints
         .WithSummary("Change role for multiple users")
         .Produces<BulkOperationResult>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status401Unauthorized);
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
 
         group.MapPost("/admin/users/bulk/import", HandleBulkImportUsers)
         .WithName("BulkImportUsers")
@@ -164,14 +165,22 @@ internal static class AdminUserBulkEndpoints
         logger.LogInformation("Admin {AdminId} initiating bulk role change for {Count} users to role {Role}",
             session!.User!.Id, request.UserIds.Count, request.NewRole);
 
-        var command = new BulkRoleChangeCommand(
-            request.UserIds,
-            request.NewRole,
-            session.User!.Id
-        );
+        try
+        {
+            var command = new BulkRoleChangeCommand(
+                request.UserIds,
+                request.NewRole,
+                session.User!.Id
+            );
 
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (ForbiddenException ex)
+        {
+            logger.LogWarning(ex, "Forbidden: bulk role change denied for {AdminId}", session.User!.Id);
+            return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+        }
     }
 
     private static async Task<IResult> HandleBulkImportUsers(

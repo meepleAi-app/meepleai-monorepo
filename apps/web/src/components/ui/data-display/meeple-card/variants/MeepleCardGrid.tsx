@@ -534,7 +534,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             if (item.onClick) {
               return (
                 <button
-                  key={index}
+                  key={item.label ?? item.value ?? String(index)}
                   type="button"
                   className="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(200,180,140,0.85)] cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={e => {
@@ -548,7 +548,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             }
             return (
               <span
-                key={index}
+                key={item.label ?? item.value ?? String(index)}
                 className="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(200,180,140,0.85)]"
               >
                 {chipContent}

@@ -168,6 +168,7 @@ internal sealed class NotificationType : ValueObject
             "admin_model_auto_fallback" => AdminModelStatusChanged,
             "game_night_reminder_24h" => GameNightReminder,
             "game_night_reminder_1h" => GameNightReminder,
+            "new_comment" => SharedLinkAccessed,   // legacy: comment feature removed
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

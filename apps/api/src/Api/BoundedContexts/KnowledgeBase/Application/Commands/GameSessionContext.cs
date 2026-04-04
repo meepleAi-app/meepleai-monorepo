@@ -12,23 +12,36 @@ internal record GameSessionContext
     public int CurrentTurn { get; init; }
     public string ResponseLanguage { get; init; }
 
-    public GameSessionContext(
-        Guid GameId,
-        string GameTitle,
-        IReadOnlyList<string> Players,
-        int CurrentTurn,
-        string ResponseLanguage = "it")
+    private GameSessionContext(
+        Guid gameId,
+        string gameTitle,
+        IReadOnlyList<string> players,
+        int currentTurn,
+        string responseLanguage)
     {
-        if (string.IsNullOrWhiteSpace(GameTitle))
-            throw new ArgumentException("GameTitle e' obbligatorio.", nameof(GameTitle));
-        if (Players == null || Players.Count == 0)
-            throw new ArgumentException("Almeno un giocatore e' richiesto.", nameof(Players));
+        GameId = gameId;
+        GameTitle = gameTitle;
+        Players = players;
+        CurrentTurn = currentTurn;
+        ResponseLanguage = responseLanguage;
+    }
 
-        this.GameId = GameId;
-        this.GameTitle = GameTitle;
-        this.Players = Players;
-        this.CurrentTurn = CurrentTurn;
-        this.ResponseLanguage = ResponseLanguage;
+    /// <summary>
+    /// Factory method that validates and creates a <see cref="GameSessionContext"/>.
+    /// </summary>
+    public static GameSessionContext Create(
+        Guid gameId,
+        string gameTitle,
+        IReadOnlyList<string> players,
+        int currentTurn,
+        string responseLanguage = "it")
+    {
+        if (string.IsNullOrWhiteSpace(gameTitle))
+            throw new ArgumentException("GameTitle e' obbligatorio.", nameof(gameTitle));
+        if (players == null || players.Count == 0)
+            throw new ArgumentException("Almeno un giocatore e' richiesto.", nameof(players));
+
+        return new GameSessionContext(gameId, gameTitle, players, currentTurn, responseLanguage);
     }
 
     public string ToSystemPromptEnrichment()

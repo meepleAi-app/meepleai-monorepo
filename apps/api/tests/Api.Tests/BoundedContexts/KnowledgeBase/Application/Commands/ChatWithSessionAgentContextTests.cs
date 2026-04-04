@@ -12,12 +12,12 @@ public class ChatWithSessionAgentContextTests
     [Fact]
     public void GameSessionContext_BuildsSystemPromptEnrichment_WithAllPlayers()
     {
-        var ctx = new GameSessionContext(
-            GameId: Guid.NewGuid(),
-            GameTitle: "Catan",
-            Players: ["Marco", "Luca", "Sara (ospite)"],
-            CurrentTurn: 3,
-            ResponseLanguage: "it"
+        var ctx = GameSessionContext.Create(
+            gameId: Guid.NewGuid(),
+            gameTitle: "Catan",
+            players: ["Marco", "Luca", "Sara (ospite)"],
+            currentTurn: 3,
+            responseLanguage: "it"
         );
 
         var prompt = ctx.ToSystemPromptEnrichment();
@@ -33,13 +33,13 @@ public class ChatWithSessionAgentContextTests
     public void GameSessionContext_WithMissingGameTitle_ThrowsArgumentException()
     {
         Assert.Throws<ArgumentException>(() =>
-            new GameSessionContext(Guid.NewGuid(), "", ["Player1"], 1, "it"));
+            GameSessionContext.Create(Guid.NewGuid(), "", ["Player1"], 1, "it"));
     }
 
     [Fact]
     public void GameSessionContext_DefaultLanguage_IsItalian()
     {
-        var ctx = new GameSessionContext(Guid.NewGuid(), "Dixit", ["A", "B"], 1);
+        var ctx = GameSessionContext.Create(Guid.NewGuid(), "Dixit", ["A", "B"], 1);
         Assert.Equal("it", ctx.ResponseLanguage);
     }
 }

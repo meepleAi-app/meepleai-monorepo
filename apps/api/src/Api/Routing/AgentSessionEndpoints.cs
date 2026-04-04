@@ -111,7 +111,7 @@ internal static class AgentSessionEndpoints
     {
         var userId = httpContext.User.GetUserId();
 
-        var gameContext = request.GameContext is null ? null : new GameSessionContext(
+        var gameContext = request.GameContext is null ? null : GameSessionContext.Create(
             request.GameContext.GameId,
             request.GameContext.GameTitle,
             request.GameContext.Players,

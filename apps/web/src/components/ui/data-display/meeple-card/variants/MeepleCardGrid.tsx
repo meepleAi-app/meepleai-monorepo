@@ -148,6 +148,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     chunkCount,
     bottomStatLabel,
     bottomStatValue,
+    isInteractive: isInteractiveProp = true,
   } = props;
 
   const cardTheme = useCardTheme();
@@ -196,7 +197,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
   const supportsViewTransition =
     typeof document !== 'undefined' && 'startViewTransition' in document;
 
-  const isInteractive = !!onClick && !(actions.length > 0);
+  const isInteractive = isInteractiveProp && !!onClick && !(actions.length > 0);
 
   const handleDesktopClick = () => {
     if (flippable) return;

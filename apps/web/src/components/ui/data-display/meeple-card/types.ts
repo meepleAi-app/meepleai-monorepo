@@ -127,6 +127,12 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   customColor?: string;
   /** Click handler for card */
   onClick?: () => void;
+  /**
+   * Abilita comportamento interattivo (onClick, keyboard nav, role="button") su desktop.
+   * Su mobile il tap handler è gestito separatamente da useMobileInteraction.
+   * @default true — disabilitare in contesti di sola lettura desktop (preview, print)
+   */
+  isInteractive?: boolean;
   /** Loading state */
   loading?: boolean;
   /** Additional CSS classes */

@@ -150,7 +150,7 @@ public class MultiAgentRoutingE2ETests
     }
 
     [Fact]
-    public void ConcurrentClassifications_20Parallel_NoRaceConditions()
+    public async Task ConcurrentClassifications_20Parallel_NoRaceConditions()
     {
         var queries = new string[20];
         for (var i = 0; i < 20; i++)
@@ -166,7 +166,7 @@ public class MultiAgentRoutingE2ETests
 
         var tasks = queries.Select(q => Task.Run(() => _classifier.ClassifyQuery(q)));
 
-        var results = Task.WhenAll(tasks).Result;
+        var results = await Task.WhenAll(tasks);
 
         results.Should().HaveCount(20);
         results.Should().AllSatisfy(r =>

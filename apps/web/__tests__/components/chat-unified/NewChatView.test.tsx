@@ -39,8 +39,18 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -143,13 +153,65 @@ const mockLibraryResponse = {
 };
 
 const mockAgents = [
-  { id: 'agent-tutor', name: 'Tutor', type: 'qa', strategyName: 'rag', strategyParameters: {}, isActive: true, createdAt: '2026-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: true },
-  { id: 'agent-arbitro', name: 'Arbitro', type: 'rules', strategyName: 'rag', strategyParameters: {}, isActive: true, createdAt: '2026-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: true },
+  {
+    id: 'agent-tutor',
+    name: 'Tutor',
+    type: 'qa',
+    strategyName: 'rag',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00Z',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: true,
+  },
+  {
+    id: 'agent-arbitro',
+    name: 'Arbitro',
+    type: 'rules',
+    strategyName: 'rag',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00Z',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: true,
+  },
 ];
 
 const mockCustomAgents = [
-  { id: 'custom-1', name: 'My RAG Agent', type: 'RAG', strategyName: 'rag', strategyParameters: {}, isActive: true, createdAt: '2026-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: false, gameId: 'pg-1', createdByUserId: 'user-1' },
-  { id: 'custom-2', name: 'Expert Agent', type: 'RAG', strategyName: 'rag', strategyParameters: {}, isActive: true, createdAt: '2026-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: false, gameId: 'pg-1', createdByUserId: 'user-1' },
+  {
+    id: 'custom-1',
+    name: 'My RAG Agent',
+    type: 'RAG',
+    strategyName: 'rag',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00Z',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: false,
+    gameId: 'pg-1',
+    createdByUserId: 'user-1',
+  },
+  {
+    id: 'custom-2',
+    name: 'Expert Agent',
+    type: 'RAG',
+    strategyName: 'rag',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00Z',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: false,
+    gameId: 'pg-1',
+    createdByUserId: 'user-1',
+  },
 ];
 
 const mockThread = {
@@ -205,8 +267,14 @@ describe('NewChatView', () => {
       });
 
       // Private tab is selected
-      expect(screen.getByTestId(CHAT_TEST_IDS.tabPrivateGames)).toHaveAttribute('aria-selected', 'true');
-      expect(screen.getByTestId(CHAT_TEST_IDS.tabSharedGames)).toHaveAttribute('aria-selected', 'false');
+      expect(screen.getByTestId(CHAT_TEST_IDS.tabPrivateGames)).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      expect(screen.getByTestId(CHAT_TEST_IDS.tabSharedGames)).toHaveAttribute(
+        'aria-selected',
+        'false'
+      );
     });
 
     it('shows private games on mount', async () => {
@@ -480,13 +548,15 @@ describe('NewChatView', () => {
   // ---------- Data loading ----------
 
   describe('Data loading', () => {
-    it('loads private games and agents in parallel on mount', async () => {
+    it('loads private games on mount', async () => {
       await renderNewChatView();
 
       await waitFor(() => {
         expect(api.library.getPrivateGames).toHaveBeenCalledWith({ pageSize: 100 });
-        expect(api.agents.getAvailable).toHaveBeenCalled();
       });
+
+      // PR #217 removed system agent lookup — getAvailable is NOT called on mount
+      expect(api.agents.getAvailable).not.toHaveBeenCalled();
 
       // getAll (old shared catalog) should NOT be called
       expect(api.games?.getAll).not.toHaveBeenCalled?.();

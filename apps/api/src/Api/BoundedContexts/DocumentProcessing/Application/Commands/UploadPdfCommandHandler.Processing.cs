@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Models;
 using Api.Observability;
 using Api.Services;
@@ -451,7 +452,7 @@ internal partial class UploadPdfCommandHandler
     }
 
     /// <summary>
-    /// Indexes document chunks in Qdrant vector store and PostgreSQL for hybrid search.
+    /// Indexes document chunks in pgvector and PostgreSQL for hybrid search.
     /// </summary>
     private async Task IndexInVectorStoreAsync(
         string pdfId,
@@ -470,16 +471,19 @@ internal partial class UploadPdfCommandHandler
 
         var indexingStopwatch = Stopwatch.StartNew();
 
-        // Vector store (Qdrant) has been removed — skip vector indexing.
-        indexingStopwatch.Stop();
-
-        RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
-
-        // Update vector document with chunk count (no Qdrant indexing)
+        // Update vector document with chunk count
         await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
         await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);
+
+        // Persist embeddings to pgvector
+        var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
+        var modelName = embeddingService.GetModelName();
+        await SaveEmbeddingsToPgVectorAsync(pdfId, pdfDoc, allDocumentChunks, embeddings, db, modelName, cancellationToken).ConfigureAwait(false);
+
+        indexingStopwatch.Stop();
+        RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
     }
 
     /// <summary>
@@ -562,6 +566,80 @@ internal partial class UploadPdfCommandHandler
 
         _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
             textChunkEntities.Count, pdfId);
+    }
+
+    /// <summary>
+    /// Persists embeddings to the pgvector_embeddings table for semantic search.
+    /// Replaces the removed Qdrant indexing path.
+    /// </summary>
+    private async Task SaveEmbeddingsToPgVectorAsync(
+        string pdfId,
+        PdfDocumentEntity pdfDoc,
+        List<DocumentChunkInput> chunks,
+        List<float[]> embeddings,
+        MeepleAiDbContext db,
+        string modelName,
+        CancellationToken cancellationToken)
+    {
+        var pdfGuid = Guid.Parse(pdfId);
+        var gameId = pdfDoc.PrivateGameId ?? pdfDoc.GameId ?? Guid.Empty;
+        var language = pdfDoc.Language ?? "en";
+
+        // Find VectorDocument for this PDF
+        var vectorDoc = await db.VectorDocuments
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (vectorDoc == null)
+        {
+            _logger.LogError("❌ [PG-VECTOR] VectorDocument not found for PDF {PdfId} — skip pgvector indexing", pdfId);
+            return;
+        }
+
+        // Remove existing embeddings (re-index scenario)
+        var existing = await db.PgVectorEmbeddings
+            .Where(e => e.VectorDocumentId == vectorDoc.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (existing.Count > 0)
+        {
+            db.PgVectorEmbeddings.RemoveRange(existing);
+            _logger.LogInformation("🗑️ [PG-VECTOR] Removed {Count} existing embeddings for {PdfId}", existing.Count, pdfId);
+        }
+
+        // Save in batches of 500
+        const int saveBatchSize = 500;
+        var batchCount = (int)Math.Ceiling((double)chunks.Count / saveBatchSize);
+
+        for (var batchIdx = 0; batchIdx < batchCount; batchIdx++)
+        {
+            var skip = batchIdx * saveBatchSize;
+            var batchChunks = chunks.Skip(skip).Take(saveBatchSize).ToList();
+            var batchEmbeddings = embeddings.Skip(skip).Take(saveBatchSize).ToList();
+
+            var entities = batchChunks.Select((chunk, i) => new PgVectorEmbeddingEntity
+            {
+                Id = Guid.NewGuid(),
+                VectorDocumentId = vectorDoc.Id,
+                GameId = gameId,
+                TextContent = chunk.Text,
+                Vector = new Pgvector.Vector(batchEmbeddings[i]),
+                Model = modelName,
+                ChunkIndex = skip + i,
+                PageNumber = Math.Max(1, chunk.Page),
+                Lang = language,
+                CreatedAt = DateTimeOffset.UtcNow
+            }).ToList();
+
+            await db.PgVectorEmbeddings.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("💾 [PG-VECTOR] Saved batch {Idx}/{Total}: {Count} embeddings for PDF {PdfId}",
+                batchIdx + 1, batchCount, entities.Count, pdfId);
+        }
+
+        _logger.LogInformation("✅ [PG-VECTOR] Completed pgvector indexing for PDF {PdfId}: {Total} embeddings saved",
+            pdfId, chunks.Count);
     }
 
     /// <summary>

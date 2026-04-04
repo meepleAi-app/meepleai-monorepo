@@ -40,6 +40,8 @@ public class AskQuestionQueryHandlerSecurityTests
     private readonly Mock<ILogger<AskQuestionQueryHandler>> _mockLogger;
     private readonly Mock<IHybridSearchService> _mockHybridSearchService;
     private readonly Mock<RrfFusionDomainService> _mockRrfService;
+    private readonly Mock<ISemanticResponseCache> _mockResponseCache;
+    private readonly Mock<IEmbeddingService> _mockAskEmbeddingService;
     private readonly AskQuestionQueryHandler _handler;
 
     public AskQuestionQueryHandlerSecurityTests()
@@ -120,6 +122,20 @@ public class AskQuestionQueryHandlerSecurityTests
         _mockPromptTemplateService = new Mock<IPromptTemplateService>();
         _mockValidationPipeline = new Mock<IRagValidationPipelineService>();
         _mockLogger = new Mock<ILogger<AskQuestionQueryHandler>>();
+
+        // P1-5: Mock semantic cache (always returns null — cache miss) and embedding service
+        _mockResponseCache = new Mock<ISemanticResponseCache>();
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CachedRagResponse?)null);
+        _mockAskEmbeddingService = new Mock<IEmbeddingService>();
+        _mockAskEmbeddingService
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult
+            {
+                Success = true,
+                Embeddings = new List<float[]> { new float[768] }
+            });
 
         // ISSUE-977: Setup validation pipeline mock to return a valid result (all 5 layers)
         _mockValidationPipeline
@@ -204,6 +220,8 @@ public class AskQuestionQueryHandlerSecurityTests
             CreatePermissiveRagAccessServiceMock(),
             Mock.Of<IRagQualityTracker>(),
             new QueryComplexityAnalyzer(),
+            _mockResponseCache.Object,
+            _mockAskEmbeddingService.Object,
             _mockLogger.Object);
     }
 

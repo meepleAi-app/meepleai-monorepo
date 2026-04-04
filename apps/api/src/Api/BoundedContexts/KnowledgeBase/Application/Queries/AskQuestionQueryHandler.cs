@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.Services;
@@ -42,6 +43,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IRagAccessService _ragAccessService;
     private readonly IRagQualityTracker _qualityTracker;
     private readonly QueryComplexityAnalyzer _complexityAnalyzer;
+    private readonly ISemanticResponseCache _responseCache;
+    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     public AskQuestionQueryHandler(
@@ -56,6 +59,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IRagAccessService ragAccessService,
         IRagQualityTracker qualityTracker,
         QueryComplexityAnalyzer complexityAnalyzer,
+        ISemanticResponseCache responseCache,
+        IEmbeddingService embeddingService,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
@@ -69,6 +74,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _qualityTracker = qualityTracker ?? throw new ArgumentNullException(nameof(qualityTracker));
         _complexityAnalyzer = complexityAnalyzer ?? throw new ArgumentNullException(nameof(complexityAnalyzer));
+        _responseCache = responseCache ?? throw new ArgumentNullException(nameof(responseCache));
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -104,6 +111,64 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogInformation(
             "[AskQuestionHandler] ENTRY - Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
             query.GameId, query.Question);
+
+        // P1-5: Semantic cache lookup — generate query vector and check for a cached response
+        float[]? queryVector = null;
+        if (!query.BypassCache)
+        {
+            try
+            {
+                var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(
+                    query.Question, query.Language, cancellationToken).ConfigureAwait(false);
+                if (embeddingResult.Success && embeddingResult.Embeddings.Count > 0)
+                {
+                    queryVector = embeddingResult.ToFloatArray();
+                    var cached = await _responseCache.TryGetAsync(
+                        query.GameId, queryVector, cancellationToken).ConfigureAwait(false);
+                    if (cached != null)
+                    {
+                        _logger.LogInformation(
+                            "[AskQuestionHandler] Cache hit for game {GameId} — serving cached response",
+                            query.GameId);
+                        var cacheMetrics = new RagQueryMetrics(
+                            ThreadId: query.ThreadId,
+                            GameId: query.GameId,
+                            QueryLength: query.Question.Length,
+                            ChunksRetrieved: 0,
+                            ChunksUsed: 0,
+                            CitationsCount: cached.Citations.Count,
+                            Strategy: $"cache|tier:{queryRoutingTier}",
+                            ModelUsed: cached.ModelUsed,
+                            LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                            CacheHit: true,
+                            NoRelevantContext: false);
+                        await _qualityTracker.TrackQueryAsync(cacheMetrics, cancellationToken)
+                            .ConfigureAwait(false);
+                        return new QaResponseDto(
+                            Answer: cached.Answer,
+                            Sources: [],
+                            SearchConfidence: 0,
+                            LlmConfidence: 0,
+                            OverallConfidence: 0,
+                            IsLowQuality: false,
+                            Citations: cached.Citations
+                                .Select((c, i) => new CitationDto(
+                                    DocumentId: string.Empty,
+                                    PageNumber: i + 1,
+                                    Snippet: c,
+                                    RelevanceScore: 0))
+                                .ToList());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "[AskQuestionHandler] Semantic cache check failed for game {GameId} — proceeding without cache",
+                    query.GameId);
+            }
+        }
 
         // Step 0: Check if documents are still being processed
         var (allReady, processingCount, totalCount) = await CheckDocumentsReadyAsync(
@@ -207,6 +272,23 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogInformation(
             "[AskQuestionHandler] COMPLETE - AskQuestionQuery completed: OverallConfidence={Confidence}, IsLowQuality={IsLowQuality}",
             response.OverallConfidence, response.IsLowQuality);
+
+        // P1-5: Store successful response in semantic cache for future queries
+        if (!query.BypassCache && queryVector != null)
+        {
+            var citationTexts = response.Citations?
+                .Select(c => c.Snippet)
+                .ToList() ?? [];
+            await _responseCache.SetAsync(
+                query.GameId,
+                queryVector,
+                new CachedRagResponse(
+                    response.Answer,
+                    citationTexts,
+                    llmResult.Cost.ModelId ?? "unknown",
+                    DateTimeOffset.UtcNow),
+                cancellationToken).ConfigureAwait(false);
+        }
 
         var successMetrics = new RagQueryMetrics(
             ThreadId: query.ThreadId,

@@ -412,6 +412,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-3494: Multi-Tier Cache Service (Singleton for L1 in-memory cache consistency)
         services.AddSingleton<IMultiTierCache, MultiTierCache>();
+
+        // P1-5: Semantic response cache — Redis-backed cosine-similarity cache (24h TTL, 0.95 threshold)
+        services.AddSingleton<ISemanticResponseCache, SemanticResponseCache>();
     }
 
     private static void AddBackgroundJobServices(IServiceCollection services, IConfiguration? configuration)

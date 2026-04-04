@@ -37,7 +37,7 @@ public sealed class HttpEmbeddingProviderLanguageTests
             Model = "intfloat/multilingual-e5-base",
             Dimensions = 2
         };
-        var provider = new HttpEmbeddingProvider(
+        IEmbeddingProvider provider = new HttpEmbeddingProvider(
             httpClient,
             NullLogger<HttpEmbeddingProvider>.Instance,
             config);

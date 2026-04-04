@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders.Pr
 /// Calls Python microservice (embedding-service) to avoid OOM in API container.
 /// Implements batch processing natively via HTTP calls.
 /// </summary>
-internal sealed class HttpEmbeddingProvider : EmbeddingProviderBase
+internal sealed class HttpEmbeddingProvider : EmbeddingProviderBase, IEmbeddingProvider
 {
     private readonly string _serviceUrl;
     private readonly string _modelName;
@@ -119,10 +119,10 @@ internal sealed class HttpEmbeddingProvider : EmbeddingProviderBase
         }
     }
 
-    public async Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(
+    async Task<EmbeddingProviderResult> IEmbeddingProvider.GenerateBatchEmbeddingsAsync(
         IReadOnlyList<string> texts,
         string language,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (texts == null || texts.Count == 0)
         {

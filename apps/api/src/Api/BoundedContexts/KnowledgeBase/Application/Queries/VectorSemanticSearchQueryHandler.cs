@@ -16,7 +16,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 internal sealed class VectorSemanticSearchQueryHandler
     : IQueryHandler<VectorSemanticSearchQuery, VectorSemanticSearchResultDto>
 {
-    private const double DefaultMinScore = 0.0;
+    private const double DefaultMinScore = 0.35;
 
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;

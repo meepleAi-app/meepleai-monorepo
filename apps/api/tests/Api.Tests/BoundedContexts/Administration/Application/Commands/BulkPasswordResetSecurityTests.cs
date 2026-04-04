@@ -74,6 +74,7 @@ public class BulkPasswordResetSecurityTests
 
         result.Should().NotBeNull();
         result.TotalRequested.Should().Be(100);
+        result.SuccessCount.Should().Be(100);
     }
 
     [Fact]
@@ -114,6 +115,26 @@ public class BulkPasswordResetSecurityTests
 
         await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.DomainException>()
             .WithMessage("*maximum limit*");
+    }
+
+    [Fact]
+    public async Task Handle_RequesterNotFound_ThrowsForbiddenException()
+    {
+        // Arrange — requesterId doesn't exist in DB
+        var requesterId = Guid.NewGuid();
+        var userIds = new List<Guid> { Guid.NewGuid() };
+
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        var command = new BulkPasswordResetCommand(userIds, "SecurePassword123!", requesterId);
+
+        // Act
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<ForbiddenException>()
+            .WithMessage("*not found*");
     }
 
     private static User CreateTestUser(Guid id, string email, string role = "user")

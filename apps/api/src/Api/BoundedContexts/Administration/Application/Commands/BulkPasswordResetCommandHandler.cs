@@ -67,17 +67,6 @@ internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordRes
             throw new DomainException("Password must be at least 8 characters long");
         }
 
-        // ADM-004: Role-based batch size limit — load requester role
-        var requester = await _userRepository.GetByIdAsync(command.RequesterId, cancellationToken)
-            .ConfigureAwait(false);
-        if (requester is not null)
-        {
-            var allowedBulkSize = MaxBulkSizeByRole.GetValueOrDefault(requester.Role.Value, 100);
-            if (distinctUserIds.Count > allowedBulkSize)
-                throw new ForbiddenException(
-                    $"Bulk password reset of {distinctUserIds.Count} users exceeds your role limit of {allowedBulkSize}. Contact a SuperAdmin for larger operations.");
-        }
-
         _logger.LogInformation("Admin {RequesterId} initiating bulk password reset for {Count} users",
             command.RequesterId, distinctUserIds.Count);
 
@@ -86,6 +75,17 @@ internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordRes
 
         try
         {
+            // ADM-004: Role-based batch size limit — load requester role
+            var requester = await _userRepository.GetByIdAsync(command.RequesterId, cancellationToken)
+                .ConfigureAwait(false);
+            if (requester is null)
+                throw new ForbiddenException("Requester not found or unauthorized.");
+
+            var allowedBulkSize = MaxBulkSizeByRole.GetValueOrDefault(requester.Role.Value, 100);
+            if (distinctUserIds.Count > allowedBulkSize)
+                throw new ForbiddenException(
+                    $"Bulk password reset of {distinctUserIds.Count} users exceeds your role limit of {allowedBulkSize}. Contact a SuperAdmin for larger operations.");
+
             // Create password hash once (same for all users)
             var newPasswordHash = PasswordHash.Create(command.NewPassword);
 

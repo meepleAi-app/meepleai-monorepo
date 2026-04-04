@@ -36,8 +36,9 @@ vi.mock('@/hooks/queries/useModels', () => ({
         name: 'GPT-4o',
         provider: 'OpenAI',
         tier: 'Premium',
-        costPer1kInputTokens: 0.005,
-        costPer1kOutputTokens: 0.015,
+        // cost formula: costPer1kInputTokens * 2 + costPer1kOutputTokens * 1 = 0.005
+        costPer1kInputTokens: 0.001,
+        costPer1kOutputTokens: 0.003,
         maxTokens: 128000,
         supportsStreaming: true,
       },

@@ -179,7 +179,7 @@ internal static class AdminUserActivityDetailEndpoints
             .WithSummary("Impersonate user for debugging (SuperAdmin only, ADM-003)")
             .WithDescription(@"Create session as another user for debugging purposes.
 
-**Authorization**: Admin session required
+**Authorization**: SuperAdmin session required
 
 **Security**:
 - ⚠️ HIGH RISK: Creates full user session

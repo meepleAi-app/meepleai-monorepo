@@ -106,8 +106,12 @@ public class ImpersonateUserCommandHandlerTests
         var adminId = Guid.NewGuid();
         var targetId = Guid.NewGuid();
 
+        var adminUser = CreateTestUser(adminId, "admin@test.com", "admin");
         var targetAdmin = CreateTestUser(targetId, "admin2@test.com", "admin");
 
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(adminId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(adminUser);
         _mockUserRepository
             .Setup(r => r.GetByIdAsync(targetId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(targetAdmin);
@@ -129,8 +133,12 @@ public class ImpersonateUserCommandHandlerTests
         var adminId = Guid.NewGuid();
         var targetId = Guid.NewGuid();
 
+        var adminUser = CreateTestUser(adminId, "admin@test.com", "admin");
         var targetSuperAdmin = CreateTestUser(targetId, "superadmin@test.com", "superadmin");
 
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(adminId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(adminUser);
         _mockUserRepository
             .Setup(r => r.GetByIdAsync(targetId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(targetSuperAdmin);
@@ -146,12 +154,45 @@ public class ImpersonateUserCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_TargetIsSuspended_ThrowsConflictException()
+    {
+        // Arrange
+        var adminId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+
+        var adminUser = CreateTestUser(adminId, "admin@test.com", "admin");
+        var suspendedUser = CreateTestUser(targetId, "suspended@test.com", "user");
+        suspendedUser.Suspend("Suspended for testing");
+
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(adminId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(adminUser);
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(targetId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(suspendedUser);
+
+        var command = new ImpersonateUserCommand(targetId, adminId, "Debugging suspended user account");
+
+        // Act
+        var act = async () => await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<ConflictException>()
+            .WithMessage($"*{targetId}*");
+    }
+
+    [Fact]
     public async Task Handle_TargetUserNotFound_ThrowsNotFoundException()
     {
         // Arrange
         var adminId = Guid.NewGuid();
         var targetId = Guid.NewGuid();
 
+        var adminUser = CreateTestUser(adminId, "admin@test.com", "admin");
+
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(adminId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(adminUser);
         _mockUserRepository
             .Setup(r => r.GetByIdAsync(targetId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);

@@ -23,8 +23,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaResponseDto>
 {
     private const string DefaultSystemPrompt =
-        "You are MeepleAI, a helpful board game assistant. Answer using only the provided context. "
-        + "Cite page numbers, stay concise, and say \"I don't know\" when the context is insufficient.";
+        "You are MeepleAI, a precise board game rules assistant. " +
+        "Answer ONLY using the provided rulebook context. " +
+        "For each claim you make, it MUST be directly supported by the context provided. " +
+        "If the context does not contain the answer, respond EXACTLY with: " +
+        "'This information is not available in the provided rulebook.' " +
+        "Never invent rules, game mechanics, or examples not present in the context. " +
+        "Always cite the page number in brackets, e.g. [Page 3].";
 
     private readonly SearchQueryHandler _searchQueryHandler;
     private readonly QualityTrackingDomainService _qualityTrackingService;
@@ -35,6 +40,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly IRagValidationPipelineService _validationPipeline;
     private readonly IRagAccessService _ragAccessService;
+    private readonly IRagQualityTracker _qualityTracker;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     public AskQuestionQueryHandler(
@@ -47,6 +53,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IPromptTemplateService promptTemplateService,
         IRagValidationPipelineService validationPipeline,
         IRagAccessService ragAccessService,
+        IRagQualityTracker qualityTracker,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
@@ -58,6 +65,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _validationPipeline = validationPipeline ?? throw new ArgumentNullException(nameof(validationPipeline));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
+        _qualityTracker = qualityTracker ?? throw new ArgumentNullException(nameof(qualityTracker));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -66,6 +74,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
+
+        var startTime = DateTime.UtcNow;
 
         // RAG access enforcement
         if (query.UserId.HasValue)
@@ -110,6 +120,34 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         sw1.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 1 DONE: Vector search completed in {ElapsedMs}ms - {ResultCount} results, confidence: {Confidence}",
             sw1.ElapsedMilliseconds, searchResults.Count, searchConfidence.Value);
+
+        // No-context early exit: skip LLM call when vector search returned no results
+        if (searchResults.Count == 0)
+        {
+            _logger.LogInformation("[AskQuestionHandler] No search results found, returning early without LLM call");
+            var noContextMetrics = new RagQueryMetrics(
+                ThreadId: query.ThreadId,
+                GameId: query.GameId,
+                QueryLength: query.Question.Length,
+                ChunksRetrieved: 0,
+                ChunksUsed: 0,
+                CitationsCount: 0,
+                Strategy: query.SearchMode ?? "hybrid",
+                ModelUsed: "none",
+                LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                CacheHit: false,
+                NoRelevantContext: true);
+            await _qualityTracker.TrackQueryAsync(noContextMetrics, cancellationToken).ConfigureAwait(false);
+
+            return new QaResponseDto(
+                Answer: "This information is not available in the provided rulebook.",
+                Sources: [],
+                SearchConfidence: 0,
+                LlmConfidence: 0,
+                OverallConfidence: 0,
+                IsLowQuality: true,
+                Citations: []);
+        }
 
         // Step 2: Load chat thread context if ThreadId provided
         _logger.LogDebug("[AskQuestionHandler] Step 2: Loading chat history context...");
@@ -156,6 +194,20 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogInformation(
             "[AskQuestionHandler] COMPLETE - AskQuestionQuery completed: OverallConfidence={Confidence}, IsLowQuality={IsLowQuality}",
             response.OverallConfidence, response.IsLowQuality);
+
+        var successMetrics = new RagQueryMetrics(
+            ThreadId: query.ThreadId,
+            GameId: query.GameId,
+            QueryLength: query.Question.Length,
+            ChunksRetrieved: searchResults.Count,
+            ChunksUsed: searchResults.Count,
+            CitationsCount: response.Citations?.Count ?? 0,
+            Strategy: query.SearchMode ?? "hybrid",
+            ModelUsed: "unknown",
+            LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
+            CacheHit: false,
+            NoRelevantContext: false);
+        await _qualityTracker.TrackQueryAsync(successMetrics, cancellationToken).ConfigureAwait(false);
 
         return response;
     }

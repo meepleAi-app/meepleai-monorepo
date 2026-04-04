@@ -471,16 +471,16 @@ internal partial class UploadPdfCommandHandler
 
         var indexingStopwatch = Stopwatch.StartNew();
 
-        // Update vector document with chunk count
-        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
-
-        // Save text chunks to PostgreSQL for hybrid search (FTS)
+        // Save text chunks to PostgreSQL for hybrid search (FTS) — non-blocking, can proceed independently
         await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);
 
-        // Persist embeddings to pgvector
+        // Persist embeddings to pgvector — critical path; must succeed before marking VectorDocument complete
         var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
         var modelName = embeddingService.GetModelName();
         await SaveEmbeddingsToPgVectorAsync(pdfId, pdfDoc, allDocumentChunks, embeddings, db, modelName, cancellationToken).ConfigureAwait(false);
+
+        // Update vector document with chunk count — marked complete AFTER embeddings are persisted
+        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
 
         indexingStopwatch.Stop();
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
@@ -547,11 +547,12 @@ internal partial class UploadPdfCommandHandler
         }
 
         // Create TextChunkEntity for each document chunk (for FTS)
+        var textChunkGameId = pdfDoc.PrivateGameId ?? pdfDoc.GameId ?? Guid.Empty;
         var textChunkEntities = allDocumentChunks
             .Select((chunk, index) => new TextChunkEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = pdfDoc.GameId,
+                GameId = textChunkGameId,
                 PdfDocumentId = pdfGuid,
                 Content = chunk.Text,
                 ChunkIndex = index,
@@ -592,8 +593,8 @@ internal partial class UploadPdfCommandHandler
 
         if (vectorDoc == null)
         {
-            _logger.LogError("❌ [PG-VECTOR] VectorDocument not found for PDF {PdfId} — skip pgvector indexing", pdfId);
-            return;
+            throw new InvalidOperationException(
+                $"VectorDocument not found for PDF {pdfId} — cannot persist pgvector embeddings");
         }
 
         // Remove existing embeddings (re-index scenario)

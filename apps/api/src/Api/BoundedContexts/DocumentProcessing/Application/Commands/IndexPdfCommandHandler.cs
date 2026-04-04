@@ -80,7 +80,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // Step 3: Update VectorDocument status
             // For private PDFs GameId is null — fall back to PrivateGameId so vectors are scoped
             // to the correct private game rather than collapsed under Guid.Empty.
-            var effectiveGameId = pdf.GameId ?? pdf.PrivateGameId ?? Guid.Empty;
+            var effectiveGameId = pdf.PrivateGameId ?? pdf.GameId ?? Guid.Empty;
             var indexingSuccess = await IndexChunksInVectorStoreAsync(
                 pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)

@@ -8,7 +8,7 @@
  * @see https://nextjs.org/docs/app/building-your-application/routing/layouts-and-pages
  */
 
-import { Quicksand, Inter } from 'next/font/google';
+import { Quicksand, Nunito } from 'next/font/google';
 
 import { AppProviders } from './providers';
 
@@ -27,10 +27,10 @@ const quicksand = Quicksand({
   display: 'swap',
 });
 
-const inter = Inter({
+const nunito = Nunito({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-inter',
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-nunito',
   display: 'swap',
 });
 
@@ -66,7 +66,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it" suppressHydrationWarning>
-      <body className={`${quicksand.variable} ${inter.variable}`} suppressHydrationWarning>
+      <body className={`${quicksand.variable} ${nunito.variable}`} suppressHydrationWarning>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

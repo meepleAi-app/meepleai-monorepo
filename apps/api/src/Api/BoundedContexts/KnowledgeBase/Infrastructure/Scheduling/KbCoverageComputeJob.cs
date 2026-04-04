@@ -204,8 +204,8 @@ internal sealed class KbCoverageComputeJob : IJob
         int score = 0;
 
         if (hasRulebook) score += 50;
-        if (hasFaq)      score += 15;
-        if (hasErrata)   score += 5;
+        if (hasFaq) score += 15;
+        if (hasErrata) score += 5;
 
         // Chunk density: saturates at 200 completed chunks
         if (totalChunks > 0)
@@ -225,6 +225,6 @@ internal sealed class KbCoverageComputeJob : IJob
         >= 75 => "Complete",
         >= 50 => "Standard",
         >= 25 => "Basic",
-        _     => "None"
+        _ => "None"
     };
 }

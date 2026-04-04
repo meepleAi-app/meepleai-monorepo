@@ -49,7 +49,7 @@ describe('LibraryHeroBanner', () => {
     render(<LibraryHeroBanner />);
 
     const link = screen.getByRole('link', { name: /Esplora Catalogo/i });
-    expect(link).toHaveAttribute('href', '/library?tab=public');
+    expect(link).toHaveAttribute('href', '/library?tab=catalogo');
   });
 
   it('has correct aria-label on region', () => {

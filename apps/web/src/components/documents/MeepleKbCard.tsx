@@ -164,7 +164,6 @@ export function MeepleKbCard({
       documentStatus={documentStatus}
       pageCount={mapperProps.pageCount}
       identityChip1={mapperProps.identityChip1}
-      identityChip1Icon={mapperProps.identityChip1Icon}
       stateLabel={mapperProps.stateLabel}
       className={className}
       onClick={() => (window.location.href = `/documents/${document.id}`)}

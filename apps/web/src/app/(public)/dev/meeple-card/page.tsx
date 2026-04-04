@@ -807,9 +807,7 @@ function MeepleCardShowcaseContent() {
                 agentAccuracy={97}
                 capabilities={['rag', 'vision']}
                 identityChip1="RAG"
-                identityChip1Icon="🔍"
                 identityChip2="Vision"
-                identityChip2Icon="👁️"
               />
             </div>
             <div>
@@ -824,7 +822,6 @@ function MeepleCardShowcaseContent() {
                 conversationCount={340}
                 agentAccuracy={88}
                 identityChip1="Tracciamento"
-                identityChip1Icon="📊"
               />
             </div>
             <div>
@@ -902,9 +899,7 @@ function MeepleCardShowcaseContent() {
                 rating={4.9}
                 ratingMax={5}
                 identityChip1="Cooperativo"
-                identityChip1Icon="🤝"
                 identityChip2="Legacy"
-                identityChip2Icon="📜"
                 playerCountDisplay="2-4"
                 playTimeDisplay="60m"
                 linkedEntities={[

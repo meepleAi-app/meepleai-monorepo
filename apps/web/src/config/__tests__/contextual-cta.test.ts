@@ -5,14 +5,14 @@ describe('getCtaForPathname', () => {
   it('returns library CTA for /library', () => {
     const cta = getCtaForPathname('/library');
     expect(cta).not.toBeNull();
-    expect(cta!.label).toBe('+ Aggiungi gioco');
+    expect(cta!.label).toBe('Esplora Catalogo');
     expect(cta!.href).toBe('/catalog');
   });
 
   it('returns library CTA for /library/some-game-id', () => {
     const cta = getCtaForPathname('/library/abc-123');
     expect(cta).not.toBeNull();
-    expect(cta!.label).toBe('+ Aggiungi gioco');
+    expect(cta!.label).toBe('Esplora Catalogo');
   });
 
   it('returns sessions CTA for /sessions', () => {

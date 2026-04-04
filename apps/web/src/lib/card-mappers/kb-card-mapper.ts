@@ -10,7 +10,6 @@ export function buildKbCardProps(document: PdfDocumentDto): Partial<MeepleCardPr
   return {
     pageCount: document.pageCount ?? undefined,
     identityChip1: 'PDF',
-    identityChip1Icon: '\uD83D\uDCC4', // 📄
     stateLabel: processingStateToLabel(document.processingState),
   };
 }

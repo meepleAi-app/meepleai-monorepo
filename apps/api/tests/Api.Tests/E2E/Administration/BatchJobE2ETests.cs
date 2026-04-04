@@ -26,15 +26,13 @@ public sealed class BatchJobE2ETests : E2ETestBase
     {
         // Authenticate as admin for all tests
         var adminEmail = $"admin_{Guid.NewGuid():N}@example.com";
-        var (token, _) = await RegisterUserAsync(adminEmail, "AdminPass123!", "Test Admin");
+        var (token, userId) = await RegisterUserAsync(adminEmail, "AdminPass123!", "Test Admin");
 
-        // Set admin role in database
-        var user = await DbContext.Users.FindAsync(Guid.Parse(await GetUserIdFromTokenAsync(token)));
+        // Set admin role directly on the persistence entity
+        var user = await DbContext.Users.FindAsync(userId);
         if (user != null)
         {
-            // Use reflection to set role (Role is a value object with private setter)
-            var roleProperty = user.GetType().GetProperty("Role");
-            roleProperty?.SetValue(user, Api.SharedKernel.Domain.ValueObjects.Role.Admin);
+            user.Role = "admin";
             await DbContext.SaveChangesAsync();
         }
 
@@ -484,13 +482,6 @@ public sealed class BatchJobE2ETests : E2ETestBase
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<CreateBatchJobResponse>();
         return result!.JobId;
-    }
-
-    private async Task<string> GetUserIdFromTokenAsync(string token)
-    {
-        // Simple token parsing - in real scenario would decode JWT
-        // For test purposes, we can query the session
-        return Guid.NewGuid().ToString(); // Placeholder
     }
 
     #endregion

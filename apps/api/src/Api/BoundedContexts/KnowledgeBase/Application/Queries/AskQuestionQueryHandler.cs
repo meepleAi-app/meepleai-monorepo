@@ -85,6 +85,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug(
             "[AskQuestionHandler] QueryComplexityAnalyzer: Question={Question}, RoutingTier={RoutingTier}",
             query.Question, queryRoutingTier);
+#pragma warning disable S1135, MA0026 // Deferred: requires ILlmService per-call model-override support (not yet available)
+        // TODO: Pass queryRoutingTier to ILlmService for model selection when per-call model-override support is available.
+        // Currently the tier is captured in RagQueryMetrics.Strategy for observability only.
+#pragma warning restore S1135, MA0026
 
         // RAG access enforcement
         if (query.UserId.HasValue)

@@ -35,14 +35,33 @@ internal sealed class QueryComplexityAnalyzer
         if (query.Length > 200) return QueryRoutingTier.High;
 
         // Keywords indicating high complexity
-        if (HighComplexityKeywords.Any(k => lower.Contains(k, StringComparison.OrdinalIgnoreCase)))
+        if (HighComplexityKeywords.Any(k => ContainsWordOrPhrase(lower, k)))
             return QueryRoutingTier.High;
 
         // Short queries starting with low-complexity prefixes
         if (LowComplexityPrefixes.Any(k => lower.StartsWith(k, StringComparison.OrdinalIgnoreCase))
-            && query.Split(' ').Length <= 6)
+            && lower.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length <= 6)
             return QueryRoutingTier.Low;
 
         return QueryRoutingTier.Medium;
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="lower"/> contains <paramref name="keyword"/> as a whole word or phrase.
+    /// Multi-word phrases use a simple substring match (already specific enough).
+    /// Single words are matched on word boundaries to avoid false positives
+    /// (e.g., "why" inside "anyway", "strategy" inside "overstrategy").
+    /// </summary>
+    private static bool ContainsWordOrPhrase(string lower, string keyword)
+    {
+        // For multi-word phrases, use Contains directly (already specific enough)
+        if (keyword.Contains(' ')) return lower.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+        // For single words, match on word boundary (preceded/followed by non-letter or string boundary)
+        var padded = " " + lower + " ";
+        return padded.Contains(" " + keyword + " ", StringComparison.OrdinalIgnoreCase)
+            || padded.Contains(" " + keyword + "?", StringComparison.OrdinalIgnoreCase)
+            || padded.Contains(" " + keyword + "!", StringComparison.OrdinalIgnoreCase)
+            || padded.Contains(" " + keyword + ",", StringComparison.OrdinalIgnoreCase)
+            || padded.Contains(" " + keyword + ".", StringComparison.OrdinalIgnoreCase);
     }
 }

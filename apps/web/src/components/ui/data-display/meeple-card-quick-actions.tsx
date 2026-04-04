@@ -151,7 +151,7 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
 
                 {/* Entity-colored hover glow */}
                 <span
-                  className="absolute inset-0 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+                  className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                   style={{
                     boxShadow: `0 0 0 2px hsl(${entityColor})`,
                   }}

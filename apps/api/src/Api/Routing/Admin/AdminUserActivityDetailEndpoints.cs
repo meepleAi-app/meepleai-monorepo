@@ -173,7 +173,7 @@ internal static class AdminUserActivityDetailEndpoints
     {
         // Impersonate user (admin only) - Issue #2890
         group.MapPost("/admin/users/{userId:guid}/impersonate", HandleImpersonateUser)
-            .RequireAdminSession()
+            .RequireAuthorization("RequireSuperAdmin")
             .WithName("ImpersonateUser")
             .WithTags("Admin", "Users", "Debug")
             .WithSummary("Impersonate user for debugging (SuperAdmin only, ADM-003)")

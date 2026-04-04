@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Api.Tests.Unit.KnowledgeBase;
 
-public sealed class QueryComplexityAnalyzerTests
+internal sealed class QueryComplexityAnalyzerTests
 {
     private readonly QueryComplexityAnalyzer _analyzer = new();
 

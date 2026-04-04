@@ -54,5 +54,5 @@ internal class DelegatingHandlerStub(Func<HttpRequestMessage, Task<HttpResponseM
     : DelegatingHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(
-        HttpRequestMessage request, CancellationToken ct) => handler(request);
+        HttpRequestMessage request, CancellationToken cancellationToken) => handler(request);
 }

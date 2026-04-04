@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -30,6 +31,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     private readonly IndexingSettings _indexingSettings;
     private readonly ILogger<IndexPdfCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly ISemanticResponseCache _semanticCache;
 
     public IndexPdfCommandHandler(
         MeepleAiDbContext db,
@@ -37,6 +39,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         IEmbeddingService embeddingService,
         ILogger<IndexPdfCommandHandler> logger,
         IOptions<IndexingSettings> indexingSettings,
+        ISemanticResponseCache semanticCache,
         TimeProvider? timeProvider = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -44,6 +47,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _indexingSettings = indexingSettings?.Value ?? throw new ArgumentNullException(nameof(indexingSettings));
+        _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -97,6 +101,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Invalidate semantic response cache so stale answers are not served after re-index
+            await _semanticCache.InvalidateGameAsync(effectiveGameId, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully indexed PDF {PdfId}: {ChunkCount} chunks, {TotalChars} characters",
                 pdfId, documentChunks!.Count, pdf.ExtractedText!.Length);

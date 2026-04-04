@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// Drives LLM model selection in the RAG pipeline (P1-4 cost optimization).
 /// Low → fast/free model; High → premium model; ~40% estimated cost reduction.
 /// </summary>
-public enum QueryRoutingTier { Low, Medium, High }
+internal enum QueryRoutingTier { Low, Medium, High }
 
 /// <summary>
 /// Analyzes query text heuristically to determine a routing tier for LLM model selection.

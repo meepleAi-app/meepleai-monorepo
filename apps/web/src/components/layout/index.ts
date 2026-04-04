@@ -21,3 +21,8 @@ export { Layout, PageHeader, PageContent, EmptyState, LoadingState } from './Lay
 export { toast } from './Toast';
 export { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 export { CommandPalette } from './CommandPalette';
+
+// v0app layout system (3-tier)
+export { ContextMiniNav } from './ContextMiniNav';
+export type { MiniNavTab } from './ContextMiniNav';
+export { FloatingActionPill } from './FloatingActionPill';

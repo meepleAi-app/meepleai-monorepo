@@ -87,10 +87,10 @@ describe('ActivityTable', () => {
     expect(screen.getByText('Error')).toBeInTheDocument();
   });
 
-  it('shows system when no user name', async () => {
+  it('shows "Sistema" when no user name', async () => {
     renderWithQuery(<ActivityTable />);
 
-    expect(await screen.findByText('System')).toBeInTheDocument();
+    expect(await screen.findByText('Sistema')).toBeInTheDocument();
   });
 
   it('formats timestamps correctly', async () => {

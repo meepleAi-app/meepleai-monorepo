@@ -1,6 +1,17 @@
 'use client';
 
-import { Dice5, Bot, Trophy, Camera, FileText, Mic, RefreshCw, Pause, Play } from 'lucide-react';
+import {
+  Dice5,
+  Bot,
+  Trophy,
+  Camera,
+  FileText,
+  Mic,
+  RefreshCw,
+  Pause,
+  Play,
+  Layers,
+} from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import type { ActivityEvent, ActivityEventType } from '@/stores/session';
@@ -18,6 +29,7 @@ const EVENT_CONFIG: Record<ActivityEventType, { icon: LucideIcon; color: string;
     turn_change: { icon: RefreshCw, color: 'text-gray-500', label: 'Turno' },
     pause_resume: { icon: Pause, color: 'text-yellow-500', label: 'Pausa' },
     session_start: { icon: Play, color: 'text-green-500', label: 'Inizio' },
+    card_draw: { icon: Layers, color: 'text-indigo-500', label: 'Carta pescata' },
   };
 
 interface ActivityFeedEventProps {

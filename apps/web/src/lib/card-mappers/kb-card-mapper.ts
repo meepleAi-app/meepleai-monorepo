@@ -9,7 +9,7 @@ import { processingStateToLabel } from './shared-utils';
 export function buildKbCardProps(document: PdfDocumentDto): Partial<MeepleCardProps> {
   return {
     pageCount: document.pageCount ?? undefined,
-    identityChip1: '📄 PDF',
+    identityChip1: 'PDF',
     stateLabel: processingStateToLabel(document.processingState),
   };
 }

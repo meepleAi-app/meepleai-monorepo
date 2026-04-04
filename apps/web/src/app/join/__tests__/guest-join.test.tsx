@@ -47,6 +47,12 @@ vi.mock('@/components/session/live/ScoreBoard', () => ({
   ),
 }));
 
+vi.mock('@/lib/api/core/secureStorage', () => ({
+  encrypt: (value: string) => Promise.resolve(value),
+  decrypt: (value: string) => Promise.resolve(value),
+  clearEncryptionKey: () => undefined,
+}));
+
 import { GuestJoinView } from '../[inviteToken]/GuestJoinView';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

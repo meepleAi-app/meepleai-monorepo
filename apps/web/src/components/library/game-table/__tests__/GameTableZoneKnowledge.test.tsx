@@ -2,7 +2,8 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { GameTableZoneKnowledge } from '../GameTableZoneKnowledge';
 
@@ -147,7 +148,7 @@ describe('GameTableZoneKnowledge', () => {
   });
 
   it('renders KB doc items with file names', () => {
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     const items = screen.getAllByTestId('kb-doc-item');
     expect(items).toHaveLength(2);
@@ -156,13 +157,13 @@ describe('GameTableZoneKnowledge', () => {
   });
 
   it('renders document count', () => {
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     expect(screen.getByTestId('doc-count')).toHaveTextContent('2');
   });
 
   it('renders document status badges', () => {
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     const badges = screen.getAllByTestId('doc-status-badge');
     expect(badges).toHaveLength(2);
@@ -171,41 +172,41 @@ describe('GameTableZoneKnowledge', () => {
   });
 
   it('renders upload PDF button', () => {
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     const btn = screen.getByTestId('upload-pdf-btn');
     expect(btn).toHaveTextContent('Carica PDF');
   });
 
   it('navigates to upload-pdf action on upload button click', () => {
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     screen.getByTestId('upload-pdf-btn').click();
     expect(mockRouterPush).toHaveBeenCalledWith('/library/g-1?action=upload-pdf');
   });
 
   it('renders chat thread preview when agent exists', () => {
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     expect(screen.getByTestId('last-thread-preview')).toHaveTextContent('Come si gioca?');
   });
 
   it('renders open chat button when agent exists', () => {
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     const btn = screen.getByTestId('open-chat-btn');
     expect(btn).toHaveTextContent('Apri chat');
   });
 
   it('calls drawer open with resolved agentId on chat button click', () => {
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     screen.getByTestId('open-chat-btn').click();
     expect(mockDrawerOpen).toHaveBeenCalledWith({ type: 'chat', agentId: 'agent-1' });
   });
 
   it('renders agent status indicator when agent exists', () => {
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     expect(screen.getByTestId('agent-status-badge')).toBeInTheDocument();
     expect(screen.getByTestId('agent-status-badge')).toHaveTextContent('active');
@@ -214,7 +215,7 @@ describe('GameTableZoneKnowledge', () => {
   it('hides chat and agent sections when no agent exists', () => {
     mockUseGameAgents.mockReturnValue({ data: [], isLoading: false });
 
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     expect(screen.queryByTestId('chat-preview-section')).not.toBeInTheDocument();
     expect(screen.queryByTestId('agent-status-section')).not.toBeInTheDocument();
@@ -239,7 +240,7 @@ describe('GameTableZoneKnowledge — loading state', () => {
       isLoading: true,
     });
 
-    render(<GameTableZoneKnowledge gameId="g-1" />);
+    renderWithQuery(<GameTableZoneKnowledge gameId="g-1" />);
 
     expect(screen.getAllByTestId('doc-skeleton')).toHaveLength(2);
   });

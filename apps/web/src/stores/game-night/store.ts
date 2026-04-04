@@ -2,14 +2,16 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
-import type { GameNightSummary, GameNightPlayer, GameNightGame, TimelineSlot } from './types';
+import type { SessionParticipant } from '@/stores/session/types';
+
+import type { GameNightSummary, GameNightGame, TimelineSlot } from './types';
 
 interface GameNightState {
   gameNights: GameNightSummary[];
   selectedId: string | null;
   isLoading: boolean;
   error: string | null;
-  players: GameNightPlayer[];
+  players: SessionParticipant[];
   selectedGames: GameNightGame[];
   timeline: TimelineSlot[];
 
@@ -17,7 +19,7 @@ interface GameNightState {
   selectGameNight: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  addPlayer: (player: GameNightPlayer) => void;
+  addPlayer: (player: SessionParticipant) => void;
   removePlayer: (playerId: string) => void;
   addGame: (game: GameNightGame) => void;
   removeGame: (gameId: string) => void;
@@ -30,7 +32,7 @@ const initialState = {
   selectedId: null as string | null,
   isLoading: false,
   error: null as string | null,
-  players: [] as GameNightPlayer[],
+  players: [] as SessionParticipant[],
   selectedGames: [] as GameNightGame[],
   timeline: [] as TimelineSlot[],
 };

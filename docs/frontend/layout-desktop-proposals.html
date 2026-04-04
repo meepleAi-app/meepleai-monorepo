@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleAI — Desktop Layout Proposals</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Nunito:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg-base: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-card: #263347;
+    --bg-card-hover: #2d3d54;
+    --brand: hsl(25, 95%, 45%);
+    --brand-dim: hsl(25, 95%, 38%);
+    --brand-glow: hsla(25, 95%, 45%, 0.25);
+    --muted: #64748b;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --border: rgba(255,255,255,0.07);
+    --shadow-warm: 0 4px 20px rgba(180,130,80,0.12);
+    --font-heading: 'Quicksand', sans-serif;
+    --font-body: 'Nunito', sans-serif;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #070d1a;
+    color: var(--text);
+    font-family: var(--font-body);
+    padding: 32px 24px 80px;
+  }
+
+  h1 {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--brand);
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-bottom: 48px;
+  }
+
+  /* ─── Section headers ─── */
+  .section-label {
+    font-family: var(--font-heading);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    margin-top: 56px;
+  }
+
+  .proposal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-bottom: 64px;
+  }
+
+  .proposal-grid.three-col {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  /* ─── Device frame ─── */
+  .device {
+    background: var(--bg-base);
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1.5px solid var(--border);
+    box-shadow: var(--shadow-warm);
+    position: relative;
+  }
+
+  .device-label {
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .device-label .badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    background: var(--brand-dim);
+    color: white;
+  }
+
+  .device-label .badge.current {
+    background: #1e293b;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  .device-label .badge.new {
+    background: hsl(262,83%,40%);
+  }
+
+  .pros-cons {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .pros-cons .pro { color: #4ade80; }
+  .pros-cons .con { color: #f87171; }
+
+  /* ─── Shared UI elements ─── */
+  .navbar {
+    background: rgba(15,23,42,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 16px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, hsl(262,83%,58%), hsl(262,83%,40%));
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .logo span { color: var(--brand); }
+
+  .nav-links {
+    display: flex;
+    gap: 4px;
+    margin-left: 8px;
+    flex: 1;
+  }
+
+  .nav-link {
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .nav-link.active {
+    color: var(--text);
+    background: rgba(255,255,255,0.06);
+  }
+
+  .search-bar {
+    flex: 1;
+    max-width: 240px;
+    height: 32px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--brand-dim), hsl(25,95%,60%));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  /* ─── MiniNav (sub-navigation) ─── */
+  .mini-nav {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .mini-tab {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .mini-tab.active {
+    color: var(--brand);
+    background: var(--brand-glow);
+  }
+
+  /* ─── Content area ─── */
+  .content {
+    padding: 20px 16px;
+    min-height: 240px;
+  }
+
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .game-cover {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, hsl(25,95%,30%), hsl(25,60%,20%));
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 2px solid hsl(25,95%,35%);
+  }
+
+  .game-info h2 {
+    font-family: var(--font-heading);
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .game-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 8px;
+  }
+
+  .meta-pill {
+    background: rgba(255,255,255,0.06);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* cards grid */
+  .cards-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .mini-card {
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-dim);
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .mini-card strong {
+    display: block;
+    font-weight: 700;
+    color: var(--text);
+    font-size: 13px;
+    margin-bottom: 2px;
+  }
+
+  /* ─── Action buttons ─── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--brand);
+    color: white;
+  }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  /* ─── PROPOSAL SPECIFIC ─── */
+
+  /* === MOBILE (reference) === */
+  .mobile-frame {
+    max-width: 320px;
+    margin: 0 auto;
+  }
+
+  .mobile-frame .navbar {
+    justify-content: space-between;
+    padding: 0 12px;
+  }
+
+  .mobile-fab {
+    position: absolute;
+    bottom: 68px;
+    right: 12px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--brand);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 4px 20px var(--brand-glow);
+    z-index: 5;
+  }
+
+  .mobile-breadcrumb {
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .mobile-actionbar {
+    background: rgba(15,23,42,0.97);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    padding: 8px 4px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+
+  .mobile-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 8px;
+  }
+
+  .mobile-action .icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .mobile-action .label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-dim);
+  }
+
+  .mobile-action.primary .icon { filter: drop-shadow(0 0 6px var(--brand)); }
+  .mobile-action.primary .label { color: var(--brand); }
+
+  /* === OPTION A: Inline Header Actions === */
+  .inline-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .inline-actions .btn-primary { background: var(--brand); }
+
+  /* === OPTION B: Sticky Toolbar below Navbar === */
+  .context-toolbar {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .breadcrumb-toolbar {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+  }
+
+  .breadcrumb-toolbar .sep {
+    color: rgba(255,255,255,0.15);
+    font-size: 14px;
+  }
+
+  .breadcrumb-toolbar .current-page {
+    color: var(--text);
+  }
+
+  /* === OPTION C: Floating Glassmorphism Pill === */
+  .glass-pill-wrap {
+    position: relative;
+    min-height: 300px;
+  }
+
+  .glass-pill {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30, 41, 59, 0.85);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 40px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+    white-space: nowrap;
+  }
+
+  .pill-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+
+  .pill-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--text-dim);
+  }
+
+  .pill-btn.primary {
+    background: var(--brand);
+    color: white;
+    padding: 5px 14px;
+  }
+
+  .pill-btn:not(.primary):hover {
+    background: rgba(255,255,255,0.07);
+  }
+
+  .pill-context {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    padding: 0 4px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* === OPTION D: Sidebar Actions Panel === */
+  .sidebar-layout {
+    display: flex;
+    height: 100%;
+  }
+
+  .sidebar-actions {
+    width: 52px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-action {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 16px;
+  }
+
+  .sidebar-action.primary {
+    background: var(--brand-glow);
+    color: var(--brand);
+  }
+
+  .sidebar-action .s-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  .sidebar-content {
+    flex: 1;
+    padding: 16px;
+    overflow: hidden;
+  }
+
+  /* divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+  }
+
+  /* comparison table */
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+
+  .comparison-table th {
+    font-family: var(--font-heading);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .comparison-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text-dim);
+    vertical-align: top;
+  }
+
+  .comparison-table td:first-child {
+    color: var(--text);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .comparison-table tr:last-child td { border-bottom: none; }
+
+  .check { color: #4ade80; }
+  .cross { color: #f87171; }
+  .warn { color: #fbbf24; }
+
+  .rec-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--brand-glow);
+    color: var(--brand);
+    border: 1px solid var(--brand-dim);
+    margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>🎲 MeepleAI — Desktop Layout Proposals</h1>
+<p class="subtitle">Confronto tra opzioni per azioni contestuali su desktop · Mobile come riferimento fisso</p>
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-label">Riferimento — Layout Mobile (esistente, approvato)</div>
+
+<div style="max-width:320px">
+  <div class="device mobile-frame" style="position:relative">
+    <!-- Navbar mobile -->
+    <div class="navbar" style="justify-content:space-between;padding:0 12px">
+      <span style="font-size:18px">☰</span>
+      <div class="logo"><div class="logo-icon">♟</div> Meeple<span>Ai</span></div>
+      <span style="font-size:16px;color:var(--text-dim)">🔍</span>
+    </div>
+    <!-- Content -->
+    <div class="content" style="padding:14px 12px;min-height:200px">
+      <div class="page-header">
+        <div class="game-cover">🎲</div>
+        <div class="game-info">
+          <h2>Settlers of Catan</h2>
+          <div class="game-meta">
+            <span class="meta-pill">3–4 giocatori</span>
+            <span class="meta-pill">90 min</span>
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="cards-row">
+        <div class="mini-card"><strong>42</strong>sessioni</div>
+        <div class="mini-card"><strong>7.8</strong>rating</div>
+        <div class="mini-card"><strong>3</strong>PDF</div>
+      </div>
+    </div>
+    <!-- FAB -->
+    <div class="mobile-fab">▶️</div>
+    <!-- Breadcrumb -->
+    <div class="mobile-breadcrumb">🎲 Settlers of Catan</div>
+    <!-- ActionBar -->
+    <div class="mobile-actionbar">
+      <div class="mobile-action primary">
+        <span class="icon">▶️</span>
+        <span class="label">Gioca</span>
+      </div>
+      <div class="mobile-action">
+        <span class="icon">🤖</span>
+        <span class="label">AI</span>
+      </div>
+      <div class="mobile-action">
+        <span class="icon">❤️</span>
+        <span class="label">Wishlist</span>
+      </div>
+      <div class="mobile-action">
+        <span class="icon">⋮</span>
+        <span class="label">Altro</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-label" style="margin-top:64px">Proposta A — Azioni inline nell'header della pagina</div>
+<div style="font-size:12px;color:var(--text-dim);margin-bottom:16px">Le azioni contestuali vivono accanto al titolo del contenuto. Nessun chrome aggiuntivo.</div>
+
+<div class="proposal-grid">
+  <div>
+    <div class="device-label">Desktop <span class="badge new">Proposta A</span></div>
+    <div class="device">
+      <div class="navbar">
+        <div class="logo"><div class="logo-icon">♟</div> Meeple<span>Ai</span></div>
+        <div class="nav-links">
+          <div class="nav-link active">Libreria</div>
+          <div class="nav-link">Catalogo</div>
+          <div class="nav-link">Sessioni</div>
+        </div>
+        <div class="search-bar">🔍 <span>Cerca giochi…</span></div>
+        <div class="avatar">M</div>
+      </div>
+      <!-- MiniNav tabs -->
+      <div class="mini-nav">
+        <div class="mini-tab active">Panoramica</div>
+        <div class="mini-tab">Sessioni</div>
+        <div class="mini-tab">Documenti</div>
+        <div class="mini-tab">Statistiche</div>
+      </div>
+      <div class="content">
+        <div class="page-header">
+          <div class="game-cover">🎲</div>
+          <div class="game-info" style="flex:1">
+            <h2>Settlers of Catan</h2>
+            <div class="game-meta" style="margin-bottom:10px">
+              <span class="meta-pill">3–4 giocatori</span>
+              <span class="meta-pill">90 min</span>
+              <span class="meta-pill">★ 7.8</span>
+            </div>
+            <!-- INLINE ACTIONS -->
+            <div class="inline-actions">
+              <button class="btn btn-primary">▶️ Nuova sessione</button>
+              <button class="btn btn-secondary">🤖 Chiedi AI</button>
+              <button class="btn btn-ghost">❤️</button>
+              <button class="btn btn-ghost">📤</button>
+              <button class="btn btn-ghost">⋯</button>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="cards-row">
+          <div class="mini-card"><strong>42</strong>sessioni totali</div>
+          <div class="mini-card"><strong>6h 20m</strong>ultima sessione</div>
+          <div class="mini-card"><strong>3</strong>PDF caricati</div>
+          <div class="mini-card"><strong>Mario</strong>più vittorie</div>
+        </div>
+      </div>
+    </div>
+    <div class="pros-cons">
+      <div class="pro">✓ Nessun chrome aggiuntivo, più spazio contenuto</div>
+      <div class="pro">✓ Le azioni sono sempre vicine a ciò che descrivono</div>
+      <div class="pro">✓ Pattern familiare (GitHub, Notion, Linear)</div>
+      <div class="con">✗ Le azioni spariscono scrollando verso il basso</div>
+      <div class="con">✗ Layout meno consistente tra pagine diverse</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="device-label">Mobile <span class="badge current">Riferimento</span></div>
+    <div class="device" style="max-width:260px">
+      <div class="navbar" style="justify-content:space-between;padding:0 10px">
+        <span style="font-size:16px">☰</span>
+        <div class="logo" style="font-size:14px"><div class="logo-icon" style="width:22px;height:22px;font-size:11px">♟</div> Meeple<span>Ai</span></div>
+        <span style="font-size:14px;color:var(--text-dim)">🔍</span>
+      </div>
+      <div class="content" style="padding:12px 10px;min-height:160px">
+        <div class="page-header" style="gap:10px">
+          <div class="game-cover" style="width:48px;height:48px;font-size:18px">🎲</div>
+          <div class="game-info">
+            <h2 style="font-size:14px">Settlers of Catan</h2>
+            <div class="game-meta" style="font-size:10px">
+              <span class="meta-pill">3–4p</span>
+              <span class="meta-pill">90m</span>
+            </div>
+          </div>
+        </div>
+        <div class="divider" style="margin:10px 0"></div>
+        <div class="cards-row" style="gap:6px">
+          <div class="mini-card" style="padding:7px 8px;font-size:11px"><strong style="font-size:12px">42</strong>sessioni</div>
+          <div class="mini-card" style="padding:7px 8px;font-size:11px"><strong style="font-size:12px">7.8</strong>rating</div>
+        </div>
+      </div>
+      <div style="position:relative;height:8px"></div>
+      <div style="position:relative">
+        <div style="position:absolute;right:10px;bottom:56px;width:40px;height:40px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 4px 16px var(--brand-glow)">▶️</div>
+      </div>
+      <div class="mobile-breadcrumb" style="padding:5px 10px;font-size:10px">🎲 Settlers of Catan</div>
+      <div class="mobile-actionbar" style="padding:6px 0">
+        <div class="mobile-action primary" style="padding:3px 6px"><span class="icon" style="font-size:15px">▶️</span><span class="label" style="font-size:8px">Gioca</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">🤖</span><span class="label" style="font-size:8px">AI</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">❤️</span><span class="label" style="font-size:8px">Wishlist</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">⋮</span><span class="label" style="font-size:8px">Altro</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-label">Proposta B — Sticky Toolbar contestuale (sotto navbar)</div>
+<div style="font-size:12px;color:var(--text-dim);margin-bottom:16px">Una barra aggiuntiva sotto la TopNavbar mostra breadcrumb + azioni. Rimane visibile anche scrollando.</div>
+
+<div class="proposal-grid">
+  <div>
+    <div class="device-label">Desktop <span class="badge new">Proposta B</span></div>
+    <div class="device">
+      <div class="navbar">
+        <div class="logo"><div class="logo-icon">♟</div> Meeple<span>Ai</span></div>
+        <div class="nav-links">
+          <div class="nav-link active">Libreria</div>
+          <div class="nav-link">Catalogo</div>
+          <div class="nav-link">Sessioni</div>
+        </div>
+        <div class="search-bar">🔍 <span>Cerca giochi…</span></div>
+        <div class="avatar">M</div>
+      </div>
+      <!-- CONTEXT TOOLBAR -->
+      <div class="context-toolbar">
+        <div class="breadcrumb-toolbar">
+          <span>Libreria</span>
+          <span class="sep">›</span>
+          <span class="current-page">🎲 Settlers of Catan</span>
+        </div>
+        <button class="btn btn-primary" style="padding:5px 12px;font-size:12px">▶️ Nuova sessione</button>
+        <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px">🤖 AI</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:12px">❤️</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:12px">⋯</button>
+      </div>
+      <!-- MiniNav tabs -->
+      <div class="mini-nav" style="height:36px">
+        <div class="mini-tab active">Panoramica</div>
+        <div class="mini-tab">Sessioni</div>
+        <div class="mini-tab">Documenti</div>
+        <div class="mini-tab">Statistiche</div>
+      </div>
+      <div class="content" style="min-height:160px">
+        <div class="page-header">
+          <div class="game-cover">🎲</div>
+          <div class="game-info">
+            <h2>Settlers of Catan</h2>
+            <div class="game-meta">
+              <span class="meta-pill">3–4 giocatori</span>
+              <span class="meta-pill">90 min</span>
+              <span class="meta-pill">★ 7.8</span>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="cards-row">
+          <div class="mini-card"><strong>42</strong>sessioni totali</div>
+          <div class="mini-card"><strong>6h 20m</strong>ultima sessione</div>
+          <div class="mini-card"><strong>3</strong>PDF caricati</div>
+          <div class="mini-card"><strong>Mario</strong>più vittorie</div>
+        </div>
+      </div>
+    </div>
+    <div class="pros-cons">
+      <div class="pro">✓ Azioni sempre visibili, anche scrollando</div>
+      <div class="pro">✓ Breadcrumb integrato = navigazione + contesto in un colpo</div>
+      <div class="pro">✓ Consistente tra tutte le pagine</div>
+      <div class="con">✗ Tre barre orizzontali in cima (navbar + toolbar + mini-nav) = pesante</div>
+      <div class="con">✗ Poco spazio verticale rimane per il contenuto</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="device-label">Mobile <span class="badge current">Riferimento</span></div>
+    <div class="device" style="max-width:260px">
+      <div class="navbar" style="justify-content:space-between;padding:0 10px">
+        <span>☰</span>
+        <div class="logo" style="font-size:14px"><div class="logo-icon" style="width:22px;height:22px;font-size:11px">♟</div> Meeple<span>Ai</span></div>
+        <span style="color:var(--text-dim)">🔍</span>
+      </div>
+      <div class="content" style="padding:12px 10px;min-height:180px">
+        <div class="page-header" style="gap:10px">
+          <div class="game-cover" style="width:48px;height:48px;font-size:18px">🎲</div>
+          <div class="game-info">
+            <h2 style="font-size:14px">Settlers of Catan</h2>
+            <div class="game-meta" style="font-size:10px">
+              <span class="meta-pill">3–4p</span><span class="meta-pill">90m</span>
+            </div>
+          </div>
+        </div>
+        <div class="divider" style="margin:10px 0"></div>
+        <div class="cards-row" style="gap:6px">
+          <div class="mini-card" style="padding:7px 8px;font-size:10px"><strong>42</strong>sessioni</div>
+          <div class="mini-card" style="padding:7px 8px;font-size:10px"><strong>7.8</strong>rating</div>
+          <div class="mini-card" style="padding:7px 8px;font-size:10px"><strong>3</strong>PDF</div>
+        </div>
+      </div>
+      <div class="mobile-breadcrumb" style="padding:5px 10px;font-size:10px">🎲 Settlers of Catan</div>
+      <div class="mobile-actionbar" style="padding:6px 0">
+        <div class="mobile-action primary" style="padding:3px 6px"><span class="icon" style="font-size:15px">▶️</span><span class="label" style="font-size:8px">Gioca</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">🤖</span><span class="label" style="font-size:8px">AI</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">❤️</span><span class="label" style="font-size:8px">Wishlist</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">⋮</span><span class="label" style="font-size:8px">Altro</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-label">Proposta C — Floating Glassmorphism Pill (come mobile ma su desktop)</div>
+<div style="font-size:12px;color:var(--text-dim);margin-bottom:16px">Una pill fluttuante con backdrop blur, centrata in basso. Stessa filosofia del FAB mobile ma più ricca.</div>
+
+<div class="proposal-grid">
+  <div>
+    <div class="device-label">Desktop <span class="badge new">Proposta C</span> <span class="rec-badge">★ Più vicino al mobile</span></div>
+    <div class="device">
+      <div class="navbar">
+        <div class="logo"><div class="logo-icon">♟</div> Meeple<span>Ai</span></div>
+        <div class="nav-links">
+          <div class="nav-link active">Libreria</div>
+          <div class="nav-link">Catalogo</div>
+          <div class="nav-link">Sessioni</div>
+        </div>
+        <div class="search-bar">🔍 <span>Cerca giochi…</span></div>
+        <div class="avatar">M</div>
+      </div>
+      <div class="mini-nav">
+        <div class="mini-tab active">Panoramica</div>
+        <div class="mini-tab">Sessioni</div>
+        <div class="mini-tab">Documenti</div>
+      </div>
+      <div class="glass-pill-wrap content" style="padding-bottom:64px;min-height:220px">
+        <div class="page-header">
+          <div class="game-cover">🎲</div>
+          <div class="game-info">
+            <h2>Settlers of Catan</h2>
+            <div class="game-meta">
+              <span class="meta-pill">3–4 giocatori</span>
+              <span class="meta-pill">90 min</span>
+              <span class="meta-pill">★ 7.8</span>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="cards-row">
+          <div class="mini-card"><strong>42</strong>sessioni totali</div>
+          <div class="mini-card"><strong>6h 20m</strong>ultima</div>
+          <div class="mini-card"><strong>3</strong>PDF</div>
+          <div class="mini-card"><strong>Mario</strong>vittorie</div>
+        </div>
+
+        <!-- FLOATING PILL -->
+        <div class="glass-pill">
+          <div class="pill-context">🎲 <span>Settlers of Catan</span></div>
+          <div class="pill-divider"></div>
+          <button class="pill-btn primary">▶️ Nuova sessione</button>
+          <button class="pill-btn">🤖 AI</button>
+          <button class="pill-btn">❤️</button>
+          <button class="pill-btn">📤</button>
+          <button class="pill-btn">⋯</button>
+        </div>
+      </div>
+    </div>
+    <div class="pros-cons">
+      <div class="pro">✓ Continuità visiva con il FAB mobile (stessa metafora)</div>
+      <div class="pro">✓ Non occupa spazio fisso — il contenuto respira</div>
+      <div class="pro">✓ Look distintivo e moderno (glassmorphism)</div>
+      <div class="con">✗ Può coprire contenuto in pagine con scrolling</div>
+      <div class="con">✗ Posizionamento fisso = meno flessibile su layout complessi</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="device-label">Mobile <span class="badge current">Riferimento</span></div>
+    <div class="device" style="max-width:260px">
+      <div class="navbar" style="justify-content:space-between;padding:0 10px">
+        <span>☰</span>
+        <div class="logo" style="font-size:14px"><div class="logo-icon" style="width:22px;height:22px;font-size:11px">♟</div> Meeple<span>Ai</span></div>
+        <span style="color:var(--text-dim)">🔍</span>
+      </div>
+      <div class="content" style="padding:12px 10px;min-height:180px">
+        <div class="page-header" style="gap:10px">
+          <div class="game-cover" style="width:48px;height:48px;font-size:18px">🎲</div>
+          <div class="game-info">
+            <h2 style="font-size:14px">Settlers of Catan</h2>
+            <div class="game-meta" style="font-size:10px">
+              <span class="meta-pill">3–4p</span><span class="meta-pill">90m</span>
+            </div>
+          </div>
+        </div>
+        <div class="divider" style="margin:10px 0"></div>
+        <div class="cards-row" style="gap:6px">
+          <div class="mini-card" style="padding:7px 8px;font-size:10px"><strong>42</strong>sessioni</div>
+          <div class="mini-card" style="padding:7px 8px;font-size:10px"><strong>7.8</strong>rating</div>
+        </div>
+      </div>
+      <div class="mobile-breadcrumb" style="padding:5px 10px;font-size:10px">🎲 Settlers of Catan</div>
+      <div class="mobile-actionbar" style="padding:6px 0">
+        <div class="mobile-action primary" style="padding:3px 6px"><span class="icon" style="font-size:15px">▶️</span><span class="label" style="font-size:8px">Gioca</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">🤖</span><span class="label" style="font-size:8px">AI</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">❤️</span><span class="label" style="font-size:8px">Wishlist</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">⋮</span><span class="label" style="font-size:8px">Altro</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-label">Proposta D — Vertical Sidebar Actions (icone a sinistra)</div>
+<div style="font-size:12px;color:var(--text-dim);margin-bottom:16px">Le azioni primarie vivono in una sidebar verticale sinistra compatta. Pattern comune in editor e dashboard.</div>
+
+<div class="proposal-grid">
+  <div>
+    <div class="device-label">Desktop <span class="badge new">Proposta D</span></div>
+    <div class="device">
+      <div class="navbar">
+        <div class="logo"><div class="logo-icon">♟</div> Meeple<span>Ai</span></div>
+        <div class="nav-links">
+          <div class="nav-link active">Libreria</div>
+          <div class="nav-link">Catalogo</div>
+          <div class="nav-link">Sessioni</div>
+        </div>
+        <div class="search-bar">🔍 <span>Cerca giochi…</span></div>
+        <div class="avatar">M</div>
+      </div>
+      <div class="sidebar-layout">
+        <!-- SIDEBAR ACTIONS -->
+        <div class="sidebar-actions">
+          <div class="sidebar-action primary">
+            <span>▶️</span>
+            <span class="s-label">Gioca</span>
+          </div>
+          <div class="sidebar-action">
+            <span>🤖</span>
+            <span class="s-label">AI</span>
+          </div>
+          <div class="sidebar-action">
+            <span>❤️</span>
+            <span class="s-label">Save</span>
+          </div>
+          <div class="sidebar-action">
+            <span>📤</span>
+            <span class="s-label">Share</span>
+          </div>
+          <div style="margin-top:auto">
+            <div class="sidebar-action">
+              <span>⋯</span>
+              <span class="s-label">Altro</span>
+            </div>
+          </div>
+        </div>
+        <!-- CONTENT -->
+        <div class="sidebar-content">
+          <div class="mini-nav" style="margin:-16px -16px 16px;padding-left:12px">
+            <div class="mini-tab active">Panoramica</div>
+            <div class="mini-tab">Sessioni</div>
+            <div class="mini-tab">Documenti</div>
+          </div>
+          <div class="page-header" style="gap:10px">
+            <div class="game-cover" style="width:52px;height:52px">🎲</div>
+            <div class="game-info">
+              <h2 style="font-size:15px">Settlers of Catan</h2>
+              <div class="game-meta">
+                <span class="meta-pill">3–4 giocatori</span>
+                <span class="meta-pill">★ 7.8</span>
+              </div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="cards-row" style="gap:6px">
+            <div class="mini-card" style="font-size:11px"><strong>42</strong>sessioni</div>
+            <div class="mini-card" style="font-size:11px"><strong>3</strong>PDF</div>
+            <div class="mini-card" style="font-size:11px"><strong>Mario</strong>top</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pros-cons">
+      <div class="pro">✓ Azioni sempre visibili, anche con scroll lungo</div>
+      <div class="pro">✓ Pattern consolidato (VS Code, Figma, Linear)</div>
+      <div class="con">✗ Riduce lo spazio orizzontale del contenuto</div>
+      <div class="con">✗ Molto distante dalla metafora mobile</div>
+      <div class="con">✗ Poco adatto a pagine semplici con poche azioni</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="device-label">Mobile <span class="badge current">Riferimento</span></div>
+    <div class="device" style="max-width:260px">
+      <div class="navbar" style="justify-content:space-between;padding:0 10px">
+        <span>☰</span>
+        <div class="logo" style="font-size:14px"><div class="logo-icon" style="width:22px;height:22px;font-size:11px">♟</div> Meeple<span>Ai</span></div>
+        <span style="color:var(--text-dim)">🔍</span>
+      </div>
+      <div class="content" style="padding:12px 10px;min-height:180px">
+        <div class="page-header" style="gap:10px">
+          <div class="game-cover" style="width:48px;height:48px;font-size:18px">🎲</div>
+          <div class="game-info">
+            <h2 style="font-size:14px">Settlers of Catan</h2>
+            <div class="game-meta" style="font-size:10px">
+              <span class="meta-pill">3–4p</span><span class="meta-pill">90m</span>
+            </div>
+          </div>
+        </div>
+        <div class="divider" style="margin:10px 0"></div>
+        <div class="cards-row" style="gap:6px">
+          <div class="mini-card" style="padding:7px 8px;font-size:10px"><strong>42</strong>sessioni</div>
+          <div class="mini-card" style="padding:7px 8px;font-size:10px"><strong>7.8</strong>rating</div>
+        </div>
+      </div>
+      <div class="mobile-breadcrumb" style="padding:5px 10px;font-size:10px">🎲 Settlers of Catan</div>
+      <div class="mobile-actionbar" style="padding:6px 0">
+        <div class="mobile-action primary" style="padding:3px 6px"><span class="icon" style="font-size:15px">▶️</span><span class="label" style="font-size:8px">Gioca</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">🤖</span><span class="label" style="font-size:8px">AI</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">❤️</span><span class="label" style="font-size:8px">Wishlist</span></div>
+        <div class="mobile-action" style="padding:3px 6px"><span class="icon" style="font-size:15px">⋮</span><span class="label" style="font-size:8px">Altro</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<div class="section-label">Riepilogo comparativo</div>
+<div class="device" style="padding:0;overflow:visible">
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Criterio</th>
+        <th>A — Inline</th>
+        <th>B — Toolbar</th>
+        <th>C — Glass Pill</th>
+        <th>D — Sidebar</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Azioni visibili scrollando</td>
+        <td><span class="cross">✗ No</span></td>
+        <td><span class="check">✓ Sì</span></td>
+        <td><span class="check">✓ Sì</span></td>
+        <td><span class="check">✓ Sì</span></td>
+      </tr>
+      <tr>
+        <td>Spazio contenuto</td>
+        <td><span class="check">✓ Massimo</span></td>
+        <td><span class="cross">✗ Ridotto (3 barre)</span></td>
+        <td><span class="check">✓ Buono</span></td>
+        <td><span class="warn">~ Ridotto orizzontale</span></td>
+      </tr>
+      <tr>
+        <td>Continuità con mobile</td>
+        <td><span class="warn">~ Parziale</span></td>
+        <td><span class="warn">~ Parziale</span></td>
+        <td><span class="check">✓ Alta (stessa metafora)</span></td>
+        <td><span class="cross">✗ Bassa</span></td>
+      </tr>
+      <tr>
+        <td>Consistenza tra pagine</td>
+        <td><span class="cross">✗ Dipende dal layout</span></td>
+        <td><span class="check">✓ Alta</span></td>
+        <td><span class="check">✓ Alta</span></td>
+        <td><span class="check">✓ Alta</span></td>
+      </tr>
+      <tr>
+        <td>Familiare agli utenti</td>
+        <td><span class="check">✓ Molto (GitHub/Notion)</span></td>
+        <td><span class="check">✓ Sì</span></td>
+        <td><span class="warn">~ Nuovo ma intuitivo</span></td>
+        <td><span class="check">✓ (VS Code/Figma)</span></td>
+      </tr>
+      <tr>
+        <td>Adatto a sessione attiva</td>
+        <td><span class="cross">✗ Azioni spariscono</span></td>
+        <td><span class="check">✓ Sì</span></td>
+        <td><span class="check">✓ Sì</span></td>
+        <td><span class="check">✓ Sì</span></td>
+      </tr>
+      <tr>
+        <td>Implementazione</td>
+        <td><span class="check">✓ Semplice</span></td>
+        <td><span class="warn">~ Media</span></td>
+        <td><span class="warn">~ Media</span></td>
+        <td><span class="warn">~ Media</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<p style="margin-top:24px;font-size:13px;color:var(--text-dim);line-height:1.7">
+  <strong style="color:var(--text)">Note</strong>: Il mockup usa la pagina <em>Game Detail</em> come test case perché ha il set di azioni più ricco.
+  Pagine semplici (es. Lista libreria) funzionano bene con qualsiasi opzione.
+  Le pagine con contenuto lungo (es. Sessione attiva) premiano le opzioni B/C/D dove le azioni rimangono visibili.
+</p>
+
+</body>
+</html>

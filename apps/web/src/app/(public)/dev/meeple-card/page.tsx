@@ -806,8 +806,8 @@ function MeepleCardShowcaseContent() {
                 conversationCount={1240}
                 agentAccuracy={97}
                 capabilities={['rag', 'vision']}
-                identityChip1="🔍 RAG"
-                identityChip2="👁️ Vision"
+                identityChip1="RAG"
+                identityChip2="Vision"
               />
             </div>
             <div>
@@ -821,7 +821,7 @@ function MeepleCardShowcaseContent() {
                 agentModel={{ modelName: 'gpt-4o-mini' }}
                 conversationCount={340}
                 agentAccuracy={88}
-                identityChip1="📊 Tracciamento"
+                identityChip1="Tracciamento"
               />
             </div>
             <div>
@@ -898,8 +898,8 @@ function MeepleCardShowcaseContent() {
                 imageUrl="https://picsum.photos/seed/pandemic-legacy/400/300"
                 rating={4.9}
                 ratingMax={5}
-                identityChip1="🤝 Cooperativo"
-                identityChip2="📜 Legacy"
+                identityChip1="Cooperativo"
+                identityChip2="Legacy"
                 playerCountDisplay="2-4"
                 playTimeDisplay="60m"
                 linkedEntities={[

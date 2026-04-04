@@ -53,7 +53,7 @@ public sealed class ProcessingJobNotificationEventHandlerTests
 
         _dispatcher.Verify(d => d.DispatchAsync(
             It.Is<NotificationMessage>(m =>
-                m.Type == NotificationType.ProcessingJobCompleted &&
+                m.Type == NotificationType.DocumentReady &&
                 m.RecipientUserId == _userId),
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -83,7 +83,7 @@ public sealed class ProcessingJobNotificationEventHandlerTests
 
         _dispatcher.Verify(d => d.DispatchAsync(
             It.Is<NotificationMessage>(m =>
-                m.Type == NotificationType.ProcessingJobFailed &&
+                m.Type == NotificationType.DocumentProcessingFailed &&
                 m.RecipientUserId == _userId),
             It.IsAny<CancellationToken>()), Times.Once);
     }

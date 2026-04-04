@@ -582,8 +582,8 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      : $${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set in storage.secret'};
-      : $${MINIO_ROOT_PASSWORD:?'MINIO_ROOT_PASSWORD must be set in storage.secret'};
+      : $${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set in storage.secret — refusing to use insecure defaults'};
+      : $${MINIO_ROOT_PASSWORD:?'MINIO_ROOT_PASSWORD must be set in storage.secret — refusing to use insecure defaults'};
       mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
       mc mb myminio/meepleai-uploads --ignore-existing;
       echo 'Bucket meepleai-uploads ready';

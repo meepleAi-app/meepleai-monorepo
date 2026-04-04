@@ -25,7 +25,7 @@ public sealed class NotificationTests
         var notification = new Notification(
             id,
             userId,
-            NotificationType.PdfUploadCompleted,
+            NotificationType.DocumentReady,
             NotificationSeverity.Success,
             "Upload Complete",
             "Your PDF has been processed successfully");
@@ -33,7 +33,7 @@ public sealed class NotificationTests
         // Assert
         notification.Id.Should().Be(id);
         notification.UserId.Should().Be(userId);
-        notification.Type.Should().Be(NotificationType.PdfUploadCompleted);
+        notification.Type.Should().Be(NotificationType.DocumentReady);
         notification.Severity.Should().Be(NotificationSeverity.Success);
         notification.Title.Should().Be("Upload Complete");
         notification.Message.Should().Be("Your PDF has been processed successfully");
@@ -92,7 +92,7 @@ public sealed class NotificationTests
         var action = () => new Notification(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            NotificationType.NewComment,
+            NotificationType.SharedLinkAccessed,
             null!,
             "Title",
             "Message");
@@ -108,7 +108,7 @@ public sealed class NotificationTests
         var action = () => new Notification(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            NotificationType.ProcessingFailed,
+            NotificationType.DocumentProcessingFailed,
             NotificationSeverity.Error,
             "",
             "Message");
@@ -126,7 +126,7 @@ public sealed class NotificationTests
         var action = () => new Notification(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            NotificationType.ProcessingFailed,
+            NotificationType.DocumentProcessingFailed,
             NotificationSeverity.Error,
             "   ",
             "Message");
@@ -485,7 +485,7 @@ public sealed class NotificationTests
         return new Notification(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            NotificationType.PdfUploadCompleted,
+            NotificationType.DocumentReady,
             NotificationSeverity.Success,
             "Test Notification",
             "This is a test notification message");

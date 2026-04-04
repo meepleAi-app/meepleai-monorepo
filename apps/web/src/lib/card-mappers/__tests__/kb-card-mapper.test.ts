@@ -44,11 +44,6 @@ describe('buildKbCardProps', () => {
     expect(props.identityChip1).toBe('PDF');
   });
 
-  it('sets identityChip1Icon to document emoji', () => {
-    const props = buildKbCardProps(baseDoc);
-    expect(props.identityChip1Icon).toBe('\uD83D\uDCC4'); // 📄
-  });
-
   it('builds stateLabel for Completed state', () => {
     const props = buildKbCardProps(baseDoc);
     expect(props.stateLabel).toEqual({ text: 'Indicizzato', variant: 'success' });

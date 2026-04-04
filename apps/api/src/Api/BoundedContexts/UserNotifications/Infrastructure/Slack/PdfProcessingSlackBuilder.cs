@@ -20,10 +20,8 @@ internal sealed class PdfProcessingSlackBuilder : ISlackMessageBuilder
 
     public bool CanHandle(NotificationType type)
     {
-        return type == NotificationType.PdfUploadCompleted
-            || type == NotificationType.ProcessingFailed
-            || type == NotificationType.ProcessingJobCompleted
-            || type == NotificationType.ProcessingJobFailed;
+        return type == NotificationType.DocumentReady
+            || type == NotificationType.DocumentProcessingFailed;
     }
 
     public object BuildMessage(INotificationPayload payload, string? deepLinkPath)

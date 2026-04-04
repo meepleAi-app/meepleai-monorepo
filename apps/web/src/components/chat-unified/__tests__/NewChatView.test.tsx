@@ -396,7 +396,7 @@ describe('NewChatView — Full Mode', () => {
       expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('priv-1'))).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Consiglia un gioco')).toBeInTheDocument();
+    expect(screen.getByText('Ho una domanda sulle regole')).toBeInTheDocument();
 
     await user.click(screen.getByTestId(CHAT_TEST_IDS.gameCard('priv-1')));
 

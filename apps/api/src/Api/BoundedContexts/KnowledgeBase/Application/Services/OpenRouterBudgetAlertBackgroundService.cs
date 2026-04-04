@@ -186,7 +186,7 @@ internal sealed class OpenRouterBudgetAlertBackgroundService : BackgroundService
             var n = new Notification(
                 id: Guid.NewGuid(),
                 userId: adminId,
-                type: NotificationType.AdminOpenRouterBudgetAlert,
+                type: NotificationType.AdminOpenRouterThresholdAlert,
                 severity: severity,
                 title: title,
                 message: message,

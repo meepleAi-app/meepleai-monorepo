@@ -23,10 +23,12 @@ internal class GetLoanStatusQueryHandler : IQueryHandler<GetLoanStatusQuery, Loa
 
         if (entry is null) return null;
 
+        var isOnLoan = entry.CurrentState.Value == GameStateType.InPrestito;
+
         return new LoanStatusDto(
-            IsOnLoan: entry.CurrentState.Value == GameStateType.InPrestito,
+            IsOnLoan: isOnLoan,
             BorrowerInfo: entry.CurrentState.StateNotes,
-            LoanedSince: entry.CurrentState.ChangedAt
+            LoanedSince: isOnLoan ? entry.CurrentState.ChangedAt : null
         );
     }
 }

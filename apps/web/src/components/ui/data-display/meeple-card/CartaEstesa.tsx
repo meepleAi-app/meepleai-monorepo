@@ -4,6 +4,27 @@ import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
 
+import type { MeepleEntityType } from './types';
+
+const ENTITY_FALLBACK_ICON: Record<MeepleEntityType, string> = {
+  game: '🎲',
+  player: '♟',
+  session: '⏳',
+  agent: '⚡',
+  kb: '📜',
+  chatSession: '💬',
+  event: '✦',
+  toolkit: '🛠',
+  tool: '🔧',
+  collection: '📦',
+  group: '👥',
+  location: '📍',
+  expansion: '➕',
+  achievement: '🏆',
+  note: '📝',
+  custom: '🎲',
+};
+
 interface CartaEstesaStat {
   label: string;
   value: string;
@@ -15,6 +36,8 @@ interface CartaEstesaProps {
   subtitle?: string;
   imageUrl?: string;
   rating?: number;
+  /** Tipo di entità — usato per l'icona di fallback */
+  entity?: MeepleEntityType;
   entityColor: string; // HSL without wrapper
   stats?: CartaEstesaStat[];
   tags?: string[];
@@ -29,6 +52,7 @@ export function CartaEstesa({
   subtitle,
   imageUrl,
   rating,
+  entity = 'game',
   entityColor,
   stats,
   tags,
@@ -37,6 +61,7 @@ export function CartaEstesa({
   children,
   className,
 }: CartaEstesaProps) {
+  const fallbackIcon = ENTITY_FALLBACK_ICON[entity];
   return (
     <div
       data-testid="carta-estesa"
@@ -57,7 +82,9 @@ export function CartaEstesa({
               background: `linear-gradient(135deg, hsl(${entityColor}), hsl(${entityColor} / 0.7))`,
             }}
           >
-            <span className="text-5xl opacity-30">🎲</span>
+            <span data-testid="carta-estesa-entity-icon" className="text-5xl opacity-30">
+              {fallbackIcon}
+            </span>
           </div>
         )}
         {/* Gradient overlay */}

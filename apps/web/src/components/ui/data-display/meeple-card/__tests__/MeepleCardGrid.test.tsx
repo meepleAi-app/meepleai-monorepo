@@ -29,4 +29,40 @@ describe('MeepleCardGrid — Warm Heritage MTG', () => {
     );
     expect(document.querySelector('[data-symbol-strip]')).toBeInTheDocument();
   });
+
+  it('non renderizza il bottom bar quando bottomStatValue è undefined', () => {
+    const { container } = render(<MeepleCardGrid entity="game" title="Wingspan" />);
+    const bottomBar = container.querySelector('[data-testid="meeple-card-bottom-bar"]');
+    expect(bottomBar).not.toBeInTheDocument();
+  });
+
+  it('renderizza il bottom bar quando bottomStatValue è definito', () => {
+    const { container } = render(
+      <MeepleCardGrid
+        entity="game"
+        title="Wingspan"
+        bottomStatLabel="Partite"
+        bottomStatValue="42"
+      />
+    );
+    const bar = container.querySelector('[data-testid="meeple-card-bottom-bar"]');
+    expect(bar).toBeInTheDocument();
+    expect(bar).toHaveTextContent('42');
+  });
+
+  it('non imposta viewTransitionName quando entityId non è definito', () => {
+    render(<MeepleCardGrid entity="game" title="Test" />);
+    const card = document.querySelector('[data-card-root]') as HTMLElement | null;
+    expect(card?.style.viewTransitionName).toBeFalsy();
+  });
+
+  it('non va in errore quando entityId è definito (jsdom non supporta startViewTransition)', () => {
+    // In jsdom: 'startViewTransition' is not in document → supportsViewTransition = false
+    // The card renders without viewTransitionName set
+    render(<MeepleCardGrid entity="game" title="Test" entityId="abc-123" />);
+    const card = document.querySelector('[data-card-root]') as HTMLElement | null;
+    expect(card).toBeInTheDocument();
+    // viewTransitionName should be falsy in jsdom (no startViewTransition support)
+    expect(card?.style.viewTransitionName).toBeFalsy();
+  });
 });

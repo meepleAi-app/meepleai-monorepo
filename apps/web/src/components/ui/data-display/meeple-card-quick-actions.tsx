@@ -111,6 +111,7 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
                 className={cn(
                   // Base styles
                   buttonSize,
+                  'group',
                   'rounded-full flex items-center justify-center',
                   'border border-white/50',
                   'bg-white/80 backdrop-blur-[8px]',
@@ -130,23 +131,27 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
                   transitionDelay: `${delay}ms`,
                   // Entity-colored focus ring
                   ['--tw-ring-color' as string]: `hsl(${entityColor})`,
+                  // Entity-colored icon on hover
+                  ['--hover-color' as string]: `hsl(${entityColor})`,
                 }}
                 aria-label={
                   action.disabled && action.disabledTooltip ? action.disabledTooltip : action.label
                 }
               >
                 <Icon
-                  className={cn(iconSize, 'stroke-slate-600 transition-colors duration-200')}
+                  className={cn(
+                    iconSize,
+                    'transition-colors duration-200',
+                    !action.disabled
+                      ? 'text-slate-600 group-hover:text-[var(--hover-color)]'
+                      : 'stroke-slate-600 opacity-50'
+                  )}
                   strokeWidth={2}
-                  style={{
-                    // Entity-colored icon on hover
-                    ['--hover-color' as string]: `hsl(${entityColor})`,
-                  }}
                 />
 
                 {/* Entity-colored hover glow */}
                 <span
-                  className="absolute inset-0 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+                  className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                   style={{
                     boxShadow: `0 0 0 2px hsl(${entityColor})`,
                   }}

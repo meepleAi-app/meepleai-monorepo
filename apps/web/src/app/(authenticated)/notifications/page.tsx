@@ -32,11 +32,9 @@ type TabValue = 'all' | 'unread';
 
 const TYPE_LABELS: Record<NotificationType | 'all', string> = {
   all: 'Tutti',
-  pdf_upload_completed: 'PDF completati',
+  document_ready: 'Documenti pronti',
   rule_spec_generated: 'Regole generate',
-  processing_failed: 'Errori',
-  processing_job_completed: 'KB pronta',
-  new_comment: 'Commenti',
+  document_processing_failed: 'Errori elaborazione',
   shared_link_accessed: 'Link condivisi',
 };
 

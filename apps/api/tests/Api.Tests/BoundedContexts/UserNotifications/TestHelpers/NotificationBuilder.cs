@@ -10,7 +10,7 @@ internal class NotificationBuilder
 {
     private Guid _id = Guid.NewGuid();
     private Guid _userId = Guid.NewGuid();
-    private NotificationType _type = NotificationType.PdfUploadCompleted;
+    private NotificationType _type = NotificationType.DocumentReady;
     private NotificationSeverity _severity = NotificationSeverity.Success;
     private string _title = "Test Notification";
     private string _message = "This is a test notification message.";

@@ -88,8 +88,8 @@ export function EntityIndicator({
  * with compact sizing (80px max), truncation, and hover tooltips.
  */
 export const VerticalTagStack = React.memo(function VerticalTagStack({
-  entity,
-  customColor,
+  entity: _entity,
+  customColor: _customColor,
   status,
   showStatusIcon,
   badge,

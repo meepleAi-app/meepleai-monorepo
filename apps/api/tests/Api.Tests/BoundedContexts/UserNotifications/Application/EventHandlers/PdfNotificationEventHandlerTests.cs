@@ -48,7 +48,7 @@ public sealed class PdfNotificationEventHandlerTests
 
         _dispatcher.Verify(d => d.DispatchAsync(
             It.Is<NotificationMessage>(m =>
-                m.Type == NotificationType.PdfUploadCompleted &&
+                m.Type == NotificationType.DocumentReady &&
                 m.RecipientUserId == _userId &&
                 m.Payload is PdfProcessingPayload),
             It.IsAny<CancellationToken>()), Times.Once);
@@ -75,7 +75,7 @@ public sealed class PdfNotificationEventHandlerTests
         await _sut.Handle(evt, CancellationToken.None);
 
         _dispatcher.Verify(d => d.DispatchAsync(
-            It.Is<NotificationMessage>(m => m.Type == NotificationType.ProcessingFailed && m.RecipientUserId == _userId),
+            It.Is<NotificationMessage>(m => m.Type == NotificationType.DocumentProcessingFailed && m.RecipientUserId == _userId),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -90,7 +90,7 @@ public sealed class PdfNotificationEventHandlerTests
         await _sut.Handle(evt, CancellationToken.None);
 
         _dispatcher.Verify(d => d.DispatchAsync(
-            It.Is<NotificationMessage>(m => m.Type == NotificationType.PdfUploadCompleted && m.RecipientUserId == _userId),
+            It.Is<NotificationMessage>(m => m.Type == NotificationType.DocumentReady && m.RecipientUserId == _userId),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

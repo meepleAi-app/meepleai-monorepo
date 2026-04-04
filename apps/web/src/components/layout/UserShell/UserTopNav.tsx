@@ -50,8 +50,8 @@ export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProp
         'sticky top-0 z-40',
         'h-[52px]',
         'flex items-center justify-between px-4',
-        'bg-background/90 backdrop-blur-xl',
-        'border-b border-border/40'
+        'bg-background/95 backdrop-blur-md',
+        'border-b border-border/50'
       )}
       data-testid="user-top-nav"
     >
@@ -108,7 +108,7 @@ export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProp
             ))}
           </nav>
         ) : (
-          <span className="font-medium text-muted-foreground font-quicksand truncate">
+          <span className="font-medium text-muted-foreground font-heading truncate">
             {sectionTitle}
           </span>
         )}

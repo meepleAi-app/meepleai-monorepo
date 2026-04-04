@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "UserLibrary")]
-public class GetLibraryForDowngradeQueryHandlerTests : IDisposable
+public sealed class GetLibraryForDowngradeQueryHandlerTests : IDisposable
 {
     private readonly Mock<IUserLibraryRepository> _mockRepository;
     private readonly MeepleAiDbContext _db;

@@ -12,7 +12,7 @@ describe('ContextualCTA', () => {
   it('renders library CTA link on /library', () => {
     vi.mocked(usePathname).mockReturnValue('/library');
     render(<ContextualCTA />);
-    const link = screen.getByRole('link', { name: /aggiungi gioco/i });
+    const link = screen.getByRole('link', { name: /esplora catalogo/i });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '/catalog');
   });

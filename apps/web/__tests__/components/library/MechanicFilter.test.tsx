@@ -74,7 +74,7 @@ describe('MechanicFilter', () => {
     expect(screen.getByText('unknown-mechanic')).toBeInTheDocument();
   });
 
-  it('renders all 15 known mechanics', () => {
+  it('renders all 15 known mechanics after expanding', () => {
     const allMechanics = [
       'engine-building',
       'area-control',
@@ -93,6 +93,11 @@ describe('MechanicFilter', () => {
       'social-deduction',
     ];
     render(<MechanicFilter mechanics={allMechanics} selected={[]} onSelect={vi.fn()} />);
-    expect(screen.getAllByRole('button')).toHaveLength(15);
+    // Initially only MAX_VISIBLE (5) mechanic buttons + 1 expand toggle = 6
+    // Click expand to reveal all 15 mechanics
+    const toggleButton = screen.getByTestId('mechanic-toggle');
+    fireEvent.click(toggleButton);
+    // After expand: 15 mechanic buttons + 1 collapse toggle = 16
+    expect(screen.getAllByRole('button')).toHaveLength(16);
   });
 });

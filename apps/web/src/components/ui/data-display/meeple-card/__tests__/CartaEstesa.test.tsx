@@ -53,4 +53,25 @@ describe('CartaEstesa', () => {
     const card = screen.getByTestId('carta-estesa');
     expect(card).toHaveClass('rounded-[20px]');
   });
+
+  it('mostra l\'icona di fallback corretta per l\'entity type "player"', () => {
+    render(<CartaEstesa title="Luigi Rossi" entityColor="262 83% 58%" entity="player" />);
+    expect(document.querySelector('[data-testid="carta-estesa-entity-icon"]')).toHaveTextContent(
+      '♟'
+    );
+  });
+
+  it('mostra 🎲 di default per entity type "game"', () => {
+    render(<CartaEstesa title="Wingspan" entityColor="25 95% 45%" entity="game" />);
+    expect(document.querySelector('[data-testid="carta-estesa-entity-icon"]')).toHaveTextContent(
+      '🎲'
+    );
+  });
+
+  it('mostra 🎲 di default quando entity non è specificato', () => {
+    render(<CartaEstesa title="Test" entityColor="25 95% 45%" />);
+    expect(document.querySelector('[data-testid="carta-estesa-entity-icon"]')).toHaveTextContent(
+      '🎲'
+    );
+  });
 });

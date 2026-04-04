@@ -69,7 +69,7 @@ public sealed class NotifyAgentReadyHandlerTests
         // Assert
         _dispatcher.Verify(d => d.DispatchAsync(
             It.Is<NotificationMessage>(m =>
-                m.Type == NotificationType.AgentAutoCreated),
+                m.Type == NotificationType.AgentReady),
             It.IsAny<CancellationToken>()),
             Times.Once);
     }

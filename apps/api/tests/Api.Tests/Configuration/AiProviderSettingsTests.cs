@@ -128,9 +128,12 @@ public class AiProviderSettingsTests
     }
 
     [Fact]
-    public void Validate_FallbackChainProviderDisabled_ReturnsFailure()
+    public void Validate_FallbackChainProviderDisabled_IsValid()
     {
         // Arrange
+        // Disabled providers in FallbackChain are valid — they are skipped at runtime.
+        // This allows env-specific overrides (e.g. Ollama disabled on staging) without
+        // redefining FallbackChain in every environment config (relaxed in commit 2614b5a34).
         var settings = new AiProviderSettings
         {
             Providers = new Dictionary<string, ProviderConfig>
@@ -145,8 +148,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        result.Succeeded.Should().BeFalse();
-        result.Failures!.Should().Contain(f => f.Contains("FallbackChain provider 'OpenRouter' is disabled"));
+        result.Succeeded.Should().BeTrue();
     }
 
     [Fact]
@@ -366,10 +368,9 @@ public class AiProviderSettingsTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        result.Failures!.Count().Should().BeGreaterThanOrEqualTo(5);
+        result.Failures!.Count().Should().BeGreaterThanOrEqualTo(4);
         result.Failures!.Should().Contain(f => f.Contains("PreferredProvider 'NonExistent' not found"));
         result.Failures!.Should().Contain(f => f.Contains("BaseUrl is empty"));
-        result.Failures!.Should().Contain(f => f.Contains("FallbackChain provider 'OpenRouter' is disabled"));
         result.Failures!.Should().Contain(f => f.Contains("duplicate providers"));
         result.Failures!.Should().Contain(f => f.Contains("FailureThreshold must be positive"));
     }

@@ -148,6 +148,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     chunkCount,
     bottomStatLabel,
     bottomStatValue,
+    isInteractive: isInteractiveProp = true,
   } = props;
 
   const cardTheme = useCardTheme();
@@ -193,7 +194,10 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     onClick,
   });
 
-  const isInteractive = !!onClick && !(actions.length > 0);
+  const supportsViewTransition =
+    typeof document !== 'undefined' && 'startViewTransition' in document;
+
+  const isInteractive = isInteractiveProp && !!onClick && !(actions.length > 0);
 
   const handleDesktopClick = () => {
     if (flippable) return;
@@ -265,7 +269,8 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           ...getCardFrameStyle('grid'),
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
-          viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
+          viewTransitionName:
+            supportsViewTransition && entityId ? `meeple-card-${entityId}` : undefined,
         } as React.CSSProperties
       }
       onClick={handleCardClick}
@@ -534,7 +539,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             if (item.onClick) {
               return (
                 <button
-                  key={index}
+                  key={item.label ?? item.value ?? String(index)}
                   type="button"
                   className="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(200,180,140,0.85)] cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={e => {
@@ -548,7 +553,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             }
             return (
               <span
-                key={index}
+                key={item.label ?? item.value ?? String(index)}
                 className="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(200,180,140,0.85)]"
               >
                 {chipContent}
@@ -575,19 +580,19 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         <ManaLinkFooter linkedEntities={linkedEntities} onPipClick={handleManaPipClick} />
       )}
 
-      {/* Bottom bar */}
-      <div
-        className="flex items-center justify-between px-2 shrink-0 bg-black/70 border-t border-white/5"
-        style={{ height: `${CARD_SECTION_HEIGHTS.bottomBar}px` }}
-      >
-        <span />
-        {bottomStatValue && (
+      {/* Bottom bar — solo se ha contenuto */}
+      {bottomStatValue && (
+        <div
+          data-testid="meeple-card-bottom-bar"
+          className="flex items-center justify-end px-2 shrink-0 bg-black/70 border-t border-white/5"
+          style={{ height: `${CARD_SECTION_HEIGHTS.bottomBar}px` }}
+        >
           <span className="text-[9px] text-white/60 shrink-0">
             {bottomStatLabel ? `${bottomStatLabel} ` : ''}
             {bottomStatValue}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Drawer */}
       {entityId && drawerEntityType && (

@@ -344,6 +344,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // E4-3: Session query budget — Redis-backed per-session AI query tracking
         services.AddScoped<ISessionQueryBudgetService, SessionQueryBudgetService>();
+
+        // RAG Pipeline Hardening P1-2: per-query metrics logging to rag_quality_logs table
+        services.AddScoped<IRagQualityTracker, RagQualityTracker>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)

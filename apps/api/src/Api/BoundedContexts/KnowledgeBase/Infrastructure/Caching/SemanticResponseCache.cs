@@ -19,11 +19,16 @@ internal sealed class SemanticResponseCache(
         {
             var db = redis.GetDatabase();
             var server = redis.GetServer(redis.GetEndPoints()[0]);
-            var keys = server.Keys(pattern: $"rag:cache:{gameId}:*").ToList();
+            // server.Keys() is synchronous and blocks a thread-pool thread — wrap in Task.Run to avoid starvation on hot query path
+            var keys = await Task.Run(() => server.Keys(pattern: $"rag:cache:{gameId}:*").ToList(), ct)
+                .ConfigureAwait(false);
 
-            foreach (var key in keys)
+            // Pipeline all StringGetAsync calls to avoid serial round-trips per key
+            var fetchTasks = keys.Select(key => db.StringGetAsync(key)).ToList();
+            var jsons = await Task.WhenAll(fetchTasks).ConfigureAwait(false);
+
+            foreach (var json in jsons)
             {
-                var json = await db.StringGetAsync(key).ConfigureAwait(false);
                 if (!json.HasValue) continue;
 
                 var entry = JsonSerializer.Deserialize<CacheEntry>(json.ToString());
@@ -69,7 +74,9 @@ internal sealed class SemanticResponseCache(
         try
         {
             var server = redis.GetServer(redis.GetEndPoints()[0]);
-            var keys = server.Keys(pattern: $"rag:cache:{gameId}:*").ToArray();
+            // server.Keys() is synchronous — wrap in Task.Run to avoid blocking a thread-pool thread
+            var keys = await Task.Run(() => server.Keys(pattern: $"rag:cache:{gameId}:*").ToArray(), ct)
+                .ConfigureAwait(false);
             if (keys.Length > 0)
             {
                 var db = redis.GetDatabase();
@@ -85,7 +92,7 @@ internal sealed class SemanticResponseCache(
         }
     }
 
-    private static float CosineSimilarity(float[] a, float[] b)
+    internal static float CosineSimilarity(float[] a, float[] b)
     {
         if (a.Length != b.Length) return 0f;
         float dot = 0, normA = 0, normB = 0;

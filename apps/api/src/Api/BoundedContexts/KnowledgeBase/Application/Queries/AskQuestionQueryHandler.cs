@@ -113,6 +113,11 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             query.GameId, query.Question);
 
         // P1-5: Semantic cache lookup — generate query vector and check for a cached response
+        // NOTE: The query embedding is computed here for semantic cache lookup.
+        // SearchQueryHandler also computes an embedding independently for vector search (architectural boundary).
+#pragma warning disable S1135, MA0026 // Deferred: requires SearchQueryHandler signature change to accept pre-computed vector
+        // TODO: Pass queryVector to SearchQueryHandler to eliminate the duplicate embedding call.
+#pragma warning restore S1135, MA0026
         float[]? queryVector = null;
         if (!query.BypassCache)
         {
@@ -274,7 +279,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             response.OverallConfidence, response.IsLowQuality);
 
         // P1-5: Store successful response in semantic cache for future queries
-        if (!query.BypassCache && queryVector != null)
+        // Don't cache low-quality or no-context responses to avoid polluting the cache
+        if (!query.BypassCache && queryVector != null && !IsLowQualityResponse(response))
         {
             var citationTexts = response.Citations?
                 .Select(c => c.Snippet)
@@ -503,6 +509,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             ValidationResult: validationResult
         );
     }
+
+    private static bool IsLowQualityResponse(QaResponseDto response) =>
+        response.IsLowQuality ||
+        string.Equals(response.Answer, "This information is not available in the provided rulebook.", StringComparison.Ordinal);
 
     private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? documentIds, CancellationToken ct)

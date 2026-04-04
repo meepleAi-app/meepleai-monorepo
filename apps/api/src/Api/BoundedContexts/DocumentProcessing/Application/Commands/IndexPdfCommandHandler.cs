@@ -18,8 +18,8 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// 2. Validate extraction status
 /// 3. Chunk extracted text
 /// 4. Generate embeddings
-/// 5. Index to Qdrant
-/// 6. Update PDF document status
+/// 5. Persist embeddings to pgvector + update VectorDocument status
+/// 6. Save text chunks to PostgreSQL for hybrid search
 /// </summary>
 internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingResultDto>
 {
@@ -76,16 +76,16 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 return await MarkIndexingFailedAsync(vectorDoc!, chunkingError!, chunkErrorCode!.Value, cancellationToken).ConfigureAwait(false);
             }
 
-            // Step 3: Index in Qdrant and update VectorDocument
+            // Step 3: Update VectorDocument status
             // For private PDFs GameId is null — fall back to PrivateGameId so vectors are scoped
             // to the correct private game rather than collapsed under Guid.Empty.
             var effectiveGameId = pdf.GameId ?? pdf.PrivateGameId ?? Guid.Empty;
-            var indexingSuccess = await IndexChunksInVectorStoreAsync(
+            var indexingSuccess = await UpdateVectorDocumentStatusAsync(
                 pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)
             {
                 pdf.ProcessingState = "Failed";
-                return await MarkIndexingFailedAsync(vectorDoc!, "Qdrant indexing failed", PdfIndexingErrorCode.QdrantIndexingFailed, cancellationToken).ConfigureAwait(false);
+                return await MarkIndexingFailedAsync(vectorDoc!, "Vector indexing failed", PdfIndexingErrorCode.VectorIndexingFailed, cancellationToken).ConfigureAwait(false);
             }
 
             // Step 4: Save text chunks to PostgreSQL for hybrid search
@@ -108,12 +108,12 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
         // SERVICE BOUNDARY PATTERN: Error state management for complex multi-system operation
-        // PDF indexing involves multiple external systems (Qdrant, DB, file system) that must maintain consistency
+        // PDF indexing involves multiple external systems (pgvector, DB, file system) that must maintain consistency
 #pragma warning restore S125
         catch (Exception ex)
         {
             // ERROR STATE MANAGEMENT: Top-level catch ensures graceful failure handling
-            // Rationale: PDF indexing involves multiple external systems (Qdrant, DB, file system).
+            // Rationale: PDF indexing involves multiple external systems (pgvector, DB, file system).
             // Any unhandled error should be captured, logged, and persisted as a failed indexing
             // attempt rather than throwing to the caller. This maintains data consistency and
             // provides operators with debugging context via the indexing_error field.
@@ -284,9 +284,10 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     }
 
     /// <summary>
-    /// Indexes document chunks in Qdrant and updates VectorDocument.
+    /// Updates VectorDocument status to "completed" after embedding generation.
+    /// Embeddings are persisted via pgvector in <see cref="SaveTextChunksToPostgresAsync"/>.
     /// </summary>
-    private Task<bool> IndexChunksInVectorStoreAsync(
+    private Task<bool> UpdateVectorDocumentStatusAsync(
         string pdfId,
         string gameId,
         string extractedText,
@@ -294,9 +295,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         VectorDocumentEntity vectorDoc,
         CancellationToken cancellationToken)
     {
-        // Vector store (Qdrant) has been removed — skip vector indexing.
-        // Update VectorDocumentEntity to "completed" for tracking.
-        _logger.LogInformation("Skipping Qdrant indexing (removed) for PDF {PdfId}, {ChunkCount} chunks",
+        _logger.LogInformation("Updating VectorDocument status for PDF {PdfId}, {ChunkCount} chunks",
             pdfId, documentChunks.Count);
 
         vectorDoc.IndexingStatus = "completed";

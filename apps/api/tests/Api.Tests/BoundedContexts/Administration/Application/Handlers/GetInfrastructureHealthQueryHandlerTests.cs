@@ -79,12 +79,12 @@ public class GetInfrastructureHealthQueryHandlerTests
         {
             new("postgres", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(50)),
             new("redis", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(30)),
-            new("qdrant", HealthState.Degraded, "Slow response", DateTime.UtcNow, TimeSpan.FromMilliseconds(800)),
-            new("qdrant-collection", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100))
+            new("embedding", HealthState.Degraded, "Slow response", DateTime.UtcNow, TimeSpan.FromMilliseconds(800)),
+            new("n8n", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100))
         };
 
         var overallHealth = new OverallHealthStatus(
-            HealthState.Degraded, // Degraded because qdrant is degraded
+            HealthState.Degraded, // Degraded because embedding is degraded
             4,
             3,
             1,
@@ -124,7 +124,7 @@ public class GetInfrastructureHealthQueryHandlerTests
         {
             new("postgres", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(50)),
             new("redis", HealthState.Unhealthy, "Connection refused", DateTime.UtcNow, TimeSpan.FromSeconds(5)),
-            new("qdrant", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100))
+            new("embedding", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100))
         };
 
         var overallHealth = new OverallHealthStatus(
@@ -379,7 +379,7 @@ public class GetInfrastructureHealthQueryHandlerTests
         {
             new("postgres", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(50)),
             new("redis", HealthState.Degraded, "High memory usage", DateTime.UtcNow, TimeSpan.FromMilliseconds(150)),
-            new("qdrant", HealthState.Unhealthy, "Connection failed", DateTime.UtcNow, TimeSpan.FromSeconds(5))
+            new("embedding", HealthState.Unhealthy, "Connection failed", DateTime.UtcNow, TimeSpan.FromSeconds(5))
         };
 
         var overallHealth = new OverallHealthStatus(
@@ -413,7 +413,7 @@ public class GetInfrastructureHealthQueryHandlerTests
         degradedService.State.Should().Be("Degraded");
         degradedService.ErrorMessage.Should().Be("High memory usage");
 
-        var unhealthyService = result.Services.First(s => s.ServiceName == "qdrant");
+        var unhealthyService = result.Services.First(s => s.ServiceName == "embedding");
         unhealthyService.State.Should().Be("Unhealthy");
         unhealthyService.ErrorMessage.Should().Be("Connection failed");
     }
@@ -428,8 +428,8 @@ public class GetInfrastructureHealthQueryHandlerTests
         {
             new("postgres", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(50)),
             new("redis", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(30)),
-            new("qdrant", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100)),
-            new("qdrant-collection", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(80))
+            new("embedding", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100)),
+            new("n8n", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(80))
         };
 
         var overallHealth = new OverallHealthStatus(

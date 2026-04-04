@@ -82,13 +82,8 @@ export default defineConfig({
       '**/.__tests__/fixtures/**',
       // Issue #1951: Exclude flaky performance tests in CI
       ...(process.env.CI ? ['**/*.performance.test.{ts,tsx}'] : []),
-      // Issue #3026: Temporarily exclude failing tests for coverage generation
-      '__tests__/components/agent/AgentConfigModal.test.tsx',
-      '__tests__/hooks/useAgentConfigModal.test.ts',
-      'src/hooks/__tests__/useAgentConfigModal.test.ts',
-      'src/app/editor/dashboard/__tests__/client.test.tsx',
-      'src/lib/hooks/__tests__/useStreamingChatWithReconnect.test.ts',
-      // Issue #3026: A11y tests fixed - assertions updated to match Radix UI primitives
+      // Issue #3026: AgentConfigModal uses describe.skip() internally — no config exclusion needed.
+      // Other previously excluded files (useAgentConfigModal, client.test, useStreamingChat) no longer exist.
       // Exclude specific utility files by name (not their test counterparts)
       // These are helper utilities, not test files
       '**/__tests__/utils/async-test-helpers.{ts,tsx}',

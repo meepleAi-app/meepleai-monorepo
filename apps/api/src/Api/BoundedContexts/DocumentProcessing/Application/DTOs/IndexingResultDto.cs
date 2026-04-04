@@ -43,6 +43,6 @@ public enum PdfIndexingErrorCode
     TextExtractionRequired,
     ChunkingFailed,
     EmbeddingFailed,
-    QdrantIndexingFailed,
+    VectorIndexingFailed,
     UnexpectedError
 }

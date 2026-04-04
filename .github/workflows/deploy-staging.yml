@@ -521,7 +521,7 @@ jobs:
 
           # Verify critical services from health response
           FAIL=0
-          for SERVICE in postgres redis qdrant; do
+          for SERVICE in postgres redis; do
             STATUS=$(echo "$HEALTH" | jq -r ".checks[] | select(.name==\"$SERVICE\") | .status" 2>/dev/null || true)
             if [ "$STATUS" = "Healthy" ]; then
               echo "✅ $SERVICE: Healthy"

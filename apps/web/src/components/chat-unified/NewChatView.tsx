@@ -26,7 +26,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { trackRulesChatStarted } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
-import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import type { PrivateGameDto } from '@/lib/api/schemas/private-games.schemas';
 import { cn } from '@/lib/utils';
@@ -423,7 +422,6 @@ export function NewChatView() {
   const [isLoadingSharedGames, setIsLoadingSharedGames] = useState(false);
   const [sharedGamesLoaded, setSharedGamesLoaded] = useState(false);
 
-  const [agents, setAgents] = useState<AgentDto[]>([]);
   const [customAgents, setCustomAgents] = useState<CustomAgent[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(directGameId);
   const [selectedAgentType, setSelectedAgentType] = useState<string | null>(
@@ -452,12 +450,8 @@ export function NewChatView() {
     async function loadData() {
       setIsLoadingPrivateGames(true);
       try {
-        const [privateResponse, agentsResponse] = await Promise.all([
-          api.library.getPrivateGames({ pageSize: 100 }),
-          api.agents.getAvailable(),
-        ]);
+        const privateResponse = await api.library.getPrivateGames({ pageSize: 100 });
         setPrivateGames((privateResponse.items ?? []).map(privateGameToGame));
-        setAgents(agentsResponse ?? []);
       } catch {
         setError('Errore nel caricamento dei dati');
       } finally {
@@ -591,9 +585,8 @@ export function NewChatView() {
     if (customAgents.length > 0) {
       return customAgents[0].id;
     }
-    // Fall back to first available system agent
-    return agents[0]?.id;
-  }, [customAgents, agents]);
+    return undefined;
+  }, [customAgents]);
 
   // Get selected game name for quick-start (search both lists)
   const selectedGame = useMemo(
@@ -651,7 +644,7 @@ export function NewChatView() {
     [handleStartChat]
   );
 
-  const hasAgentAvailable = agents.length > 0 || customAgents.length > 0;
+  const hasAgentAvailable = DEFAULT_AGENTS.length > 0 || customAgents.length > 0;
   const canStart =
     hasAgentAvailable && (selectedAgentType !== null || selectedCustomAgentId !== null);
 

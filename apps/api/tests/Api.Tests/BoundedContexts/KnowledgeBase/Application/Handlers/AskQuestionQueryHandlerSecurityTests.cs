@@ -38,6 +38,10 @@ public class AskQuestionQueryHandlerSecurityTests
     private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
     private readonly Mock<IRagValidationPipelineService> _mockValidationPipeline;
     private readonly Mock<ILogger<AskQuestionQueryHandler>> _mockLogger;
+    private readonly Mock<IHybridSearchService> _mockHybridSearchService;
+    private readonly Mock<RrfFusionDomainService> _mockRrfService;
+    private readonly Mock<ISemanticResponseCache> _mockResponseCache;
+    private readonly Mock<IEmbeddingService> _mockAskEmbeddingService;
     private readonly AskQuestionQueryHandler _handler;
 
     public AskQuestionQueryHandlerSecurityTests()
@@ -45,9 +49,9 @@ public class AskQuestionQueryHandlerSecurityTests
         // Create real SearchQueryHandler with mocked dependencies
         var mockEmbeddingRepo = new Mock<IEmbeddingRepository>();
         var mockVectorSearchService = new Mock<VectorSearchDomainService>();
-        var mockRrfService = new Mock<RrfFusionDomainService>();
+        _mockRrfService = new Mock<RrfFusionDomainService>();
         var mockEmbeddingService = new Mock<IEmbeddingService>();
-        var mockHybridSearchService = new Mock<IHybridSearchService>();
+        _mockHybridSearchService = new Mock<IHybridSearchService>();
         var mockSearchLogger = new Mock<ILogger<SearchQueryHandler>>();
 
         // Setup IEmbeddingService to return valid EmbeddingResult
@@ -83,13 +87,13 @@ public class AskQuestionQueryHandlerSecurityTests
             .Setup(v => v.Search(It.IsAny<Vector>(), It.IsAny<List<Embedding>>(), It.IsAny<int>(), It.IsAny<double>()))
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>()); // Return empty list
 
-        // Setup RRF Fusion domain service
-        mockRrfService
+        // Setup RRF Fusion domain service (default: empty results)
+        _mockRrfService
             .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>()))
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>()); // Return empty list
 
         // Setup IHybridSearchService to return empty results by default
-        mockHybridSearchService
+        _mockHybridSearchService
             .Setup(h => h.SearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<Guid>(),
@@ -104,9 +108,9 @@ public class AskQuestionQueryHandlerSecurityTests
         _searchHandler = new SearchQueryHandler(
             mockEmbeddingRepo.Object,
             mockVectorSearchService.Object,
-            mockRrfService.Object,
+            _mockRrfService.Object,
             mockEmbeddingService.Object,
-            mockHybridSearchService.Object,
+            _mockHybridSearchService.Object,
             CreatePermissiveRagAccessServiceMock(),
             mockSearchLogger.Object);
 
@@ -118,6 +122,20 @@ public class AskQuestionQueryHandlerSecurityTests
         _mockPromptTemplateService = new Mock<IPromptTemplateService>();
         _mockValidationPipeline = new Mock<IRagValidationPipelineService>();
         _mockLogger = new Mock<ILogger<AskQuestionQueryHandler>>();
+
+        // P1-5: Mock semantic cache (always returns null — cache miss) and embedding service
+        _mockResponseCache = new Mock<ISemanticResponseCache>();
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CachedRagResponse?)null);
+        _mockAskEmbeddingService = new Mock<IEmbeddingService>();
+        _mockAskEmbeddingService
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult
+            {
+                Success = true,
+                Embeddings = new List<float[]> { new float[768] }
+            });
 
         // ISSUE-977: Setup validation pipeline mock to return a valid result (all 5 layers)
         _mockValidationPipeline
@@ -200,6 +218,10 @@ public class AskQuestionQueryHandlerSecurityTests
             _mockPromptTemplateService.Object,
             _mockValidationPipeline.Object,
             CreatePermissiveRagAccessServiceMock(),
+            Mock.Of<IRagQualityTracker>(),
+            new QueryComplexityAnalyzer(),
+            _mockResponseCache.Object,
+            _mockAskEmbeddingService.Object,
             _mockLogger.Object);
     }
 
@@ -216,6 +238,7 @@ public class AskQuestionQueryHandlerSecurityTests
         thread.AddAssistantMessage("Previous answer");
 
         SetupDefaultMocks(gameId);
+        SetupSearchWithOneResult(gameId);
 
         _mockThreadRepository
             .Setup(r => r.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
@@ -275,6 +298,7 @@ public class AskQuestionQueryHandlerSecurityTests
         thread.AddAssistantMessage("Sensitive game 1 answer");
 
         SetupDefaultMocks(gameId2);
+        SetupSearchWithOneResult(gameId2);
 
         _mockThreadRepository
             .Setup(r => r.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
@@ -329,6 +353,7 @@ public class AskQuestionQueryHandlerSecurityTests
         thread.AddAssistantMessage("General answer");
 
         SetupDefaultMocks(gameId);
+        SetupSearchWithOneResult(gameId);
 
         _mockThreadRepository
             .Setup(r => r.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
@@ -478,6 +503,32 @@ public class AskQuestionQueryHandlerSecurityTests
         _mockPromptTemplateService
             .Setup(s => s.GetActivePromptAsync("rag-system-prompt", It.IsAny<CancellationToken>()))
             .ReturnsAsync("Test system prompt");
+    }
+
+    /// <summary>
+    /// Configures RrfFusionDomainService to return one result, so the handler proceeds past
+    /// the no-context early exit and reaches chat history loading (Step 2).
+    /// Required for tests that verify chat-history-related behavior.
+    /// </summary>
+    private void SetupSearchWithOneResult(Guid gameId)
+    {
+        var oneResult = new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>
+        {
+            new(
+                id: Guid.NewGuid(),
+                vectorDocumentId: Guid.NewGuid(),
+                textContent: "Sample rulebook text for testing.",
+                pageNumber: 1,
+                relevanceScore: new Confidence(0.85),
+                rank: 1,
+                searchMethod: "hybrid")
+        };
+        _mockRrfService
+            .Setup(r => r.FuseResults(
+                It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
+                It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
+                It.IsAny<int>()))
+            .Returns(oneResult);
     }
 
     private static IRagAccessService CreatePermissiveRagAccessServiceMock()

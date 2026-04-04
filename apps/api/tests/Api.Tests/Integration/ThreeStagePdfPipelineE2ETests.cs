@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.Services;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +34,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     private readonly IConfiguration _configuration;
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IOptions<PdfProcessingOptions> _options;
+    private readonly ITextChunkingService _chunkingService;
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Test PDF paths (relative to bin/Debug/net9.0/)
@@ -50,6 +52,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
             LargePdfThresholdBytes = 52428800,
             UseTempFileForLargePdfs = true
         });
+        _chunkingService = Mock.Of<ITextChunkingService>();
     }
 
     public async ValueTask InitializeAsync()
@@ -81,7 +84,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var stage2 = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, name: "SmolDocling");
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, name: "Docnet");
 
-        var orchestrator = new EnhancedPdfProcessingOrchestrator(stage1, stage2, stage3, _logger, _configuration, _options);
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -112,7 +115,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var stage2 = new FakeExtractor(success: true, quality: ExtractionQuality.High, name: "SmolDocling");
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, name: "Docnet");
 
-        var orchestrator = new EnhancedPdfProcessingOrchestrator(stage1, stage2, stage3, _logger, _configuration, _options);
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -142,7 +145,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var stage2 = new FakeExtractor(success: false, name: "SmolDocling", errorMsg: "Circuit breaker open");
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Medium, name: "Docnet");
 
-        var orchestrator = new EnhancedPdfProcessingOrchestrator(stage1, stage2, stage3, _logger, _configuration, _options);
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -171,7 +174,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var stage2 = new FakeExtractor(success: true, quality: ExtractionQuality.High, name: "SmolDocling"); // 0.85 ≥ 0.70
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, name: "Docnet");
 
-        var orchestrator = new EnhancedPdfProcessingOrchestrator(stage1, stage2, stage3, _logger, _configuration, _options);
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -200,7 +203,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var stage2 = new FakeExtractor(success: false, name: "SmolDocling", errorMsg: "GPU unavailable");
         var stage3 = new FakeExtractor(success: false, name: "Docnet", errorMsg: "Corrupted PDF");
 
-        var orchestrator = new EnhancedPdfProcessingOrchestrator(stage1, stage2, stage3, _logger, _configuration, _options);
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -264,7 +267,8 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
             docnetExtractor,
             _logger,
             _configuration,
-            _options);
+            _options,
+            _chunkingService);
 
         // Measure P95 latency over 10 iterations (reduced from 20 for test speed)
         const int iterations = 10;

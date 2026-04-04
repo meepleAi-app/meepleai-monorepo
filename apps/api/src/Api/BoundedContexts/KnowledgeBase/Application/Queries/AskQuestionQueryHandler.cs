@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.Services;
@@ -23,8 +24,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaResponseDto>
 {
     private const string DefaultSystemPrompt =
-        "You are MeepleAI, a helpful board game assistant. Answer using only the provided context. "
-        + "Cite page numbers, stay concise, and say \"I don't know\" when the context is insufficient.";
+        "You are MeepleAI, a precise board game rules assistant. " +
+        "Answer ONLY using the provided rulebook context. " +
+        "For each claim you make, it MUST be directly supported by the context provided. " +
+        "If the context does not contain the answer, respond EXACTLY with: " +
+        "'This information is not available in the provided rulebook.' " +
+        "Never invent rules, game mechanics, or examples not present in the context. " +
+        "Always cite the page number in brackets, e.g. [Page 3].";
 
     private readonly SearchQueryHandler _searchQueryHandler;
     private readonly QualityTrackingDomainService _qualityTrackingService;
@@ -35,6 +41,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly IRagValidationPipelineService _validationPipeline;
     private readonly IRagAccessService _ragAccessService;
+    private readonly IRagQualityTracker _qualityTracker;
+    private readonly QueryComplexityAnalyzer _complexityAnalyzer;
+    private readonly ISemanticResponseCache _responseCache;
+    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     public AskQuestionQueryHandler(
@@ -47,6 +57,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IPromptTemplateService promptTemplateService,
         IRagValidationPipelineService validationPipeline,
         IRagAccessService ragAccessService,
+        IRagQualityTracker qualityTracker,
+        QueryComplexityAnalyzer complexityAnalyzer,
+        ISemanticResponseCache responseCache,
+        IEmbeddingService embeddingService,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
@@ -58,6 +72,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _validationPipeline = validationPipeline ?? throw new ArgumentNullException(nameof(validationPipeline));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
+        _qualityTracker = qualityTracker ?? throw new ArgumentNullException(nameof(qualityTracker));
+        _complexityAnalyzer = complexityAnalyzer ?? throw new ArgumentNullException(nameof(complexityAnalyzer));
+        _responseCache = responseCache ?? throw new ArgumentNullException(nameof(responseCache));
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -66,6 +84,18 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
+
+        var startTime = DateTime.UtcNow;
+
+        // P1-4: Analyze query complexity for intelligent LLM model routing (~40% cost reduction)
+        var queryRoutingTier = _complexityAnalyzer.Analyze(query.Question);
+        _logger.LogDebug(
+            "[AskQuestionHandler] QueryComplexityAnalyzer: Question={Question}, RoutingTier={RoutingTier}",
+            query.Question, queryRoutingTier);
+#pragma warning disable S1135, MA0026 // Deferred: requires ILlmService per-call model-override support (not yet available)
+        // TODO: Pass queryRoutingTier to ILlmService for model selection when per-call model-override support is available.
+        // Currently the tier is captured in RagQueryMetrics.Strategy for observability only.
+#pragma warning restore S1135, MA0026
 
         // RAG access enforcement
         if (query.UserId.HasValue)
@@ -81,6 +111,69 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogInformation(
             "[AskQuestionHandler] ENTRY - Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
             query.GameId, query.Question);
+
+        // P1-5: Semantic cache lookup — generate query vector and check for a cached response
+        // NOTE: The query embedding is computed here for semantic cache lookup.
+        // SearchQueryHandler also computes an embedding independently for vector search (architectural boundary).
+#pragma warning disable S1135, MA0026 // Deferred: requires SearchQueryHandler signature change to accept pre-computed vector
+        // TODO: Pass queryVector to SearchQueryHandler to eliminate the duplicate embedding call.
+#pragma warning restore S1135, MA0026
+        float[]? queryVector = null;
+        if (!query.BypassCache)
+        {
+            try
+            {
+                var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(
+                    query.Question, query.Language, cancellationToken).ConfigureAwait(false);
+                if (embeddingResult.Success && embeddingResult.Embeddings.Count > 0)
+                {
+                    queryVector = embeddingResult.ToFloatArray();
+                    var cached = await _responseCache.TryGetAsync(
+                        query.GameId, queryVector, cancellationToken).ConfigureAwait(false);
+                    if (cached != null)
+                    {
+                        _logger.LogInformation(
+                            "[AskQuestionHandler] Cache hit for game {GameId} — serving cached response",
+                            query.GameId);
+                        var cacheMetrics = new RagQueryMetrics(
+                            ThreadId: query.ThreadId,
+                            GameId: query.GameId,
+                            QueryLength: query.Question.Length,
+                            ChunksRetrieved: 0,
+                            ChunksUsed: 0,
+                            CitationsCount: cached.Citations.Count,
+                            Strategy: $"cache|tier:{queryRoutingTier}",
+                            ModelUsed: cached.ModelUsed,
+                            LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                            CacheHit: true,
+                            NoRelevantContext: false);
+                        await _qualityTracker.TrackQueryAsync(cacheMetrics, cancellationToken)
+                            .ConfigureAwait(false);
+                        return new QaResponseDto(
+                            Answer: cached.Answer,
+                            Sources: [],
+                            SearchConfidence: 0,
+                            LlmConfidence: 0,
+                            OverallConfidence: 0,
+                            IsLowQuality: false,
+                            Citations: cached.Citations
+                                .Select((c, i) => new CitationDto(
+                                    DocumentId: string.Empty,
+                                    PageNumber: i + 1,
+                                    Snippet: c,
+                                    RelevanceScore: 0))
+                                .ToList());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "[AskQuestionHandler] Semantic cache check failed for game {GameId} — proceeding without cache",
+                    query.GameId);
+            }
+        }
 
         // Step 0: Check if documents are still being processed
         var (allReady, processingCount, totalCount) = await CheckDocumentsReadyAsync(
@@ -111,6 +204,34 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogInformation("[AskQuestionHandler] Step 1 DONE: Vector search completed in {ElapsedMs}ms - {ResultCount} results, confidence: {Confidence}",
             sw1.ElapsedMilliseconds, searchResults.Count, searchConfidence.Value);
 
+        // No-context early exit: skip LLM call when vector search returned no results
+        if (searchResults.Count == 0)
+        {
+            _logger.LogInformation("[AskQuestionHandler] No search results found, returning early without LLM call");
+            var noContextMetrics = new RagQueryMetrics(
+                ThreadId: query.ThreadId,
+                GameId: query.GameId,
+                QueryLength: query.Question.Length,
+                ChunksRetrieved: 0,
+                ChunksUsed: 0,
+                CitationsCount: 0,
+                Strategy: $"{query.SearchMode ?? "hybrid"}|tier:{queryRoutingTier}",
+                ModelUsed: "none",
+                LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                CacheHit: false,
+                NoRelevantContext: true);
+            await _qualityTracker.TrackQueryAsync(noContextMetrics, cancellationToken).ConfigureAwait(false);
+
+            return new QaResponseDto(
+                Answer: "This information is not available in the provided rulebook.",
+                Sources: [],
+                SearchConfidence: 0,
+                LlmConfidence: 0,
+                OverallConfidence: 0,
+                IsLowQuality: true,
+                Citations: []);
+        }
+
         // Step 2: Load chat thread context if ThreadId provided
         _logger.LogDebug("[AskQuestionHandler] Step 2: Loading chat history context...");
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
@@ -137,7 +258,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         // Step 4: Generate answer with LLM and record metrics
         _logger.LogDebug("[AskQuestionHandler] Step 4: Generating LLM answer...");
         var sw4 = System.Diagnostics.Stopwatch.StartNew();
-        var (llmResponse, _) = await GenerateLlmAnswerAndRecordMetricsAsync(
+        var (llmResponse, llmResult) = await GenerateLlmAnswerAndRecordMetricsAsync(
             systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
         sw4.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 4 DONE: LLM generation completed in {ElapsedMs}ms - Response: {ResponseLength} chars",
@@ -156,6 +277,38 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogInformation(
             "[AskQuestionHandler] COMPLETE - AskQuestionQuery completed: OverallConfidence={Confidence}, IsLowQuality={IsLowQuality}",
             response.OverallConfidence, response.IsLowQuality);
+
+        // P1-5: Store successful response in semantic cache for future queries
+        // Don't cache low-quality or no-context responses to avoid polluting the cache
+        if (!query.BypassCache && queryVector != null && !IsLowQualityResponse(response))
+        {
+            var citationTexts = response.Citations?
+                .Select(c => c.Snippet)
+                .ToList() ?? [];
+            await _responseCache.SetAsync(
+                query.GameId,
+                queryVector,
+                new CachedRagResponse(
+                    response.Answer,
+                    citationTexts,
+                    llmResult.Cost.ModelId ?? "unknown",
+                    DateTimeOffset.UtcNow),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        var successMetrics = new RagQueryMetrics(
+            ThreadId: query.ThreadId,
+            GameId: query.GameId,
+            QueryLength: query.Question.Length,
+            ChunksRetrieved: searchResults.Count,
+            ChunksUsed: searchResults.Count, // currently equal to ChunksRetrieved — all retrieved chunks are passed to LLM context
+            CitationsCount: response.Citations?.Count ?? 0,
+            Strategy: $"{query.SearchMode ?? "hybrid"}|tier:{queryRoutingTier}",
+            ModelUsed: llmResult.Cost.ModelId ?? "unknown",
+            LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
+            CacheHit: false,
+            NoRelevantContext: false);
+        await _qualityTracker.TrackQueryAsync(successMetrics, cancellationToken).ConfigureAwait(false);
 
         return response;
     }
@@ -356,6 +509,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             ValidationResult: validationResult
         );
     }
+
+    private static bool IsLowQualityResponse(QaResponseDto response) =>
+        response.IsLowQuality ||
+        string.Equals(response.Answer, "This information is not available in the provided rulebook.", StringComparison.Ordinal);
 
     private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? documentIds, CancellationToken ct)

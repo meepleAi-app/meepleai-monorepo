@@ -41,4 +41,10 @@ internal static class ChunkingConstants
     /// Used for estimating token count from character count.
     /// </summary>
     public const double CharsPerToken = 4.0;
+
+    /// <summary>
+    /// Maximum characters per chunk for embedding models (1800).
+    /// E5-base supports 512 tokens * ~4 chars/token = 2048, with a safety buffer applied.
+    /// </summary>
+    public const int MaxEmbeddingChars = 1800;
 }

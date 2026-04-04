@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -64,7 +65,8 @@ public class IndexPdfCommandHandlerTests
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
-            indexingSettingsMock.Object);
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         // Assert
         handler.Should().NotBeNull();
@@ -85,6 +87,7 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
             timeProvider);
 
         // Assert
@@ -105,6 +108,7 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
             null);
 
         // Assert
@@ -257,7 +261,8 @@ public class IndexPdfCommandHandlerTests
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
-            indexingSettingsMock.Object);
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -319,7 +324,8 @@ public class IndexPdfCommandHandlerTests
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
-            indexingSettingsMock.Object);
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -378,7 +384,8 @@ public class IndexPdfCommandHandlerTests
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
-            indexingSettingsMock.Object);
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -419,7 +426,8 @@ public class IndexPdfCommandHandlerTests
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
-            indexingSettingsMock.Object);
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -475,7 +483,8 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            loggerMock.Object, indexingSettingsMock.Object);
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -510,7 +519,8 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            loggerMock.Object, indexingSettingsMock.Object);
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -545,7 +555,8 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            loggerMock.Object, indexingSettingsMock.Object);
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);

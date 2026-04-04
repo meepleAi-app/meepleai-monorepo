@@ -471,16 +471,16 @@ internal partial class UploadPdfCommandHandler
 
         var indexingStopwatch = Stopwatch.StartNew();
 
+        // Create/update VectorDocument row FIRST so SaveEmbeddingsToPgVectorAsync can find it by PdfDocumentId
+        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
+
         // Save text chunks to PostgreSQL for hybrid search (FTS) — non-blocking, can proceed independently
         await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);
 
-        // Persist embeddings to pgvector — critical path; must succeed before marking VectorDocument complete
+        // Persist embeddings to pgvector — critical path; VectorDocument row is guaranteed to exist above
         var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
         var modelName = embeddingService.GetModelName();
         await SaveEmbeddingsToPgVectorAsync(pdfId, pdfDoc, allDocumentChunks, embeddings, db, modelName, cancellationToken).ConfigureAwait(false);
-
-        // Update vector document with chunk count — marked complete AFTER embeddings are persisted
-        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
 
         indexingStopwatch.Stop();
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);

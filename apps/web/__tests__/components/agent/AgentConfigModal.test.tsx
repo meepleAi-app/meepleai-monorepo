@@ -26,6 +26,38 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
   },
 }));
+// Mock useAvailableModels so GPT-4o is immediately available on mount
+// (React Query is async; the effect that pre-selects the model runs synchronously)
+vi.mock('@/hooks/queries/useModels', () => ({
+  useAvailableModels: vi.fn(() => ({
+    data: [
+      {
+        id: 'gpt-4o',
+        name: 'GPT-4o',
+        provider: 'OpenAI',
+        tier: 'Premium',
+        costPer1kInputTokens: 0.005,
+        costPer1kOutputTokens: 0.015,
+        maxTokens: 128000,
+        supportsStreaming: true,
+      },
+      {
+        id: 'gpt-4o-mini',
+        name: 'GPT-4o Mini',
+        provider: 'OpenAI',
+        tier: 'Standard',
+        costPer1kInputTokens: 0.0002,
+        costPer1kOutputTokens: 0.0006,
+        maxTokens: 128000,
+        supportsStreaming: true,
+      },
+    ],
+    isLoading: false,
+    error: null,
+  })),
+  useAgentConfiguration: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateAgentConfiguration: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+}));
 
 // Test data
 const mockTypologies = [
@@ -68,31 +100,6 @@ const mockQuota = {
   userTier: 'premium',
 };
 
-const mockModels = [
-  {
-    id: 'gpt-4o',
-    name: 'GPT-4o',
-    provider: 'OpenAI',
-    tier: 'Premium',
-    costPer1kInputTokens: 0.005,
-    costPer1kOutputTokens: 0.015,
-    maxTokens: 128000,
-    supportsStreaming: true,
-    description: 'Most capable GPT-4o model',
-  },
-  {
-    id: 'gpt-4o-mini',
-    name: 'GPT-4o Mini',
-    provider: 'OpenAI',
-    tier: 'Standard',
-    costPer1kInputTokens: 0.0002,
-    costPer1kOutputTokens: 0.0006,
-    maxTokens: 128000,
-    supportsStreaming: true,
-    description: 'Affordable and capable',
-  },
-];
-
 // Wrapper with QueryClient
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -114,7 +121,6 @@ describe('AgentConfigModal', () => {
 
     vi.mocked(api.agents.getTypologies).mockResolvedValue(mockTypologies);
     vi.mocked(api.sessions.getQuota).mockResolvedValue(mockQuota);
-    vi.mocked(api.agents.getModels).mockResolvedValue(mockModels);
   });
 
   it('should render trigger button', () => {

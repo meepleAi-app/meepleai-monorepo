@@ -193,6 +193,9 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     onClick,
   });
 
+  const supportsViewTransition =
+    typeof document !== 'undefined' && 'startViewTransition' in document;
+
   const isInteractive = !!onClick && !(actions.length > 0);
 
   const handleDesktopClick = () => {
@@ -265,7 +268,8 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           ...getCardFrameStyle('grid'),
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
-          viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
+          viewTransitionName:
+            supportsViewTransition && entityId ? `meeple-card-${entityId}` : undefined,
         } as React.CSSProperties
       }
       onClick={handleCardClick}

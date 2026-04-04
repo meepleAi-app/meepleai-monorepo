@@ -37,4 +37,24 @@ describe('MeepleCardQuickActions', () => {
     render(<MeepleCardQuickActions actions={hiddenActions} entityType="game" />);
     expect(screen.queryByRole('button', { name: 'Modifica' })).not.toBeInTheDocument();
   });
+
+  it("usa il label dell'azione come aria-label accessibile", () => {
+    const actionsIT = [{ icon: Pencil, label: 'Modifica gioco', onClick: vi.fn() }];
+    render(<MeepleCardQuickActions actions={actionsIT} entityType="game" />);
+    expect(screen.getByRole('button', { name: 'Modifica gioco' })).toBeInTheDocument();
+  });
+
+  it("usa disabledTooltip come aria-label quando l'azione è disabilitata", () => {
+    const disabledActions = [
+      {
+        icon: Pencil,
+        label: 'Modifica',
+        onClick: vi.fn(),
+        disabled: true,
+        disabledTooltip: 'Accedi per modificare',
+      },
+    ];
+    render(<MeepleCardQuickActions actions={disabledActions} entityType="game" />);
+    expect(screen.getByRole('button', { name: 'Accedi per modificare' })).toBeInTheDocument();
+  });
 });

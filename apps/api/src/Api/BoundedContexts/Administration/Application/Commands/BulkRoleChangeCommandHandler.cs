@@ -108,16 +108,24 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
         {
             var superAdminCount = await _userRepository.CountByRoleAsync(
                 "superadmin", cancellationToken).ConfigureAwait(false);
-            var superAdminsInBatch = 0;
-            foreach (var uid in distinctUserIds)
+
+            // Fast path: if batch size < total SuperAdmins, even demoting every SuperAdmin in the
+            // batch still leaves at least one outside it. No further checks needed.
+            if (superAdminCount <= distinctUserIds.Count)
             {
-                var u = await _userRepository.GetByIdAsync(uid, cancellationToken).ConfigureAwait(false);
-                if (u?.Role.Value.Equals("superadmin", StringComparison.OrdinalIgnoreCase) == true)
-                    superAdminsInBatch++;
+                // Conservative path: batch is large enough to potentially demote all SuperAdmins.
+                // Count SuperAdmins in the batch to determine actual impact.
+                var superAdminsInBatch = 0;
+                foreach (var uid in distinctUserIds)
+                {
+                    var u = await _userRepository.GetByIdAsync(uid, cancellationToken).ConfigureAwait(false);
+                    if (u?.Role.Value.Equals("superadmin", StringComparison.OrdinalIgnoreCase) == true)
+                        superAdminsInBatch++;
+                }
+                if (superAdminCount - superAdminsInBatch < 1)
+                    throw new ForbiddenException(
+                        "Bulk operation would demote all SuperAdmins. The system requires at least one SuperAdmin.");
             }
-            if (superAdminCount - superAdminsInBatch < 1)
-                throw new ForbiddenException(
-                    "Bulk operation would demote all SuperAdmins. The system requires at least one SuperAdmin.");
         }
 
         _logger.LogInformation("Admin {RequesterId} initiating bulk role change for {Count} users to role {Role}",
@@ -178,6 +186,10 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
                 FailedCount: errors.Count,
                 Errors: errors
             );
+        }
+        catch (ForbiddenException)
+        {
+            throw; // preserve HTTP 403 semantics — do not wrap in DomainException
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out

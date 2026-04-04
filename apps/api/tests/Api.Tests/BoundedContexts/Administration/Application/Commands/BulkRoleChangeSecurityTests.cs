@@ -92,21 +92,24 @@ public class BulkRoleChangeSecurityTests
     [Fact]
     public async Task Handle_BulkDemotesLastSuperAdmin_ThrowsForbiddenException()
     {
-        // SuperAdmin bulk-changes a batch that includes the only other SuperAdmin: blocked
+        // Admin bulk-changes a batch that includes the only SuperAdmin: blocked.
+        // System state: 1 SuperAdmin total (the target). Requester is Admin (not SuperAdmin),
+        // so CountByRoleAsync(1) accurately reflects the real system count.
+        // Guard: superAdminCount(1) - superAdminsInBatch(1) = 0 < 1 → ForbiddenException.
         var requesterId = Guid.NewGuid();
-        var requester = CreateTestUser(requesterId, "superadmin1@test.com", "superadmin");
+        var requester = CreateTestUser(requesterId, "admin1@test.com", "admin");
         var targetSuperAdminId = Guid.NewGuid();
-        var targetSuperAdmin = CreateTestUser(targetSuperAdminId, "superadmin2@test.com", "superadmin");
+        var targetSuperAdmin = CreateTestUser(targetSuperAdminId, "superadmin1@test.com", "superadmin");
 
         _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(requester);
         _mockUserRepository.Setup(r => r.GetByIdAsync(targetSuperAdminId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(targetSuperAdmin);
-        // Only 1 total superadmin (the target) — requester is SuperAdmin but separate
+        // 1 total SuperAdmin in the system — the target being demoted
         _mockUserRepository.Setup(r => r.CountByRoleAsync("superadmin", It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        var command = new BulkRoleChangeCommand(new List<Guid> { targetSuperAdminId }, "admin", requesterId);
+        var command = new BulkRoleChangeCommand(new List<Guid> { targetSuperAdminId }, "editor", requesterId);
 
         var act = () => _handler.Handle(command, CancellationToken.None);
 

@@ -575,19 +575,19 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         <ManaLinkFooter linkedEntities={linkedEntities} onPipClick={handleManaPipClick} />
       )}
 
-      {/* Bottom bar */}
-      <div
-        className="flex items-center justify-between px-2 shrink-0 bg-black/70 border-t border-white/5"
-        style={{ height: `${CARD_SECTION_HEIGHTS.bottomBar}px` }}
-      >
-        <span />
-        {bottomStatValue && (
+      {/* Bottom bar — solo se ha contenuto */}
+      {bottomStatValue && (
+        <div
+          data-testid="meeple-card-bottom-bar"
+          className="flex items-center justify-end px-2 shrink-0 bg-black/70 border-t border-white/5"
+          style={{ height: `${CARD_SECTION_HEIGHTS.bottomBar}px` }}
+        >
           <span className="text-[9px] text-white/60 shrink-0">
             {bottomStatLabel ? `${bottomStatLabel} ` : ''}
             {bottomStatValue}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Drawer */}
       {entityId && drawerEntityType && (

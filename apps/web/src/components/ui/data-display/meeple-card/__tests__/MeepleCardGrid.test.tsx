@@ -29,4 +29,25 @@ describe('MeepleCardGrid — Warm Heritage MTG', () => {
     );
     expect(document.querySelector('[data-symbol-strip]')).toBeInTheDocument();
   });
+
+  it('non renderizza il bottom bar quando bottomStatValue è undefined', () => {
+    const { container } = render(<MeepleCardGrid entity="game" title="Wingspan" />);
+    const bottomBar = container.querySelector('[data-testid="meeple-card-bottom-bar"]');
+    expect(bottomBar).not.toBeInTheDocument();
+  });
+
+  it('renderizza il bottom bar quando bottomStatValue è definito', () => {
+    render(
+      <MeepleCardGrid
+        entity="game"
+        title="Wingspan"
+        bottomStatLabel="Partite"
+        bottomStatValue="42"
+      />
+    );
+    expect(document.querySelector('[data-testid="meeple-card-bottom-bar"]')).toBeInTheDocument();
+    expect(document.querySelector('[data-testid="meeple-card-bottom-bar"]')).toHaveTextContent(
+      '42'
+    );
+  });
 });

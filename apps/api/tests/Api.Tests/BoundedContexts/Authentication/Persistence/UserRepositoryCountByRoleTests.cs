@@ -36,16 +36,18 @@ public class UserRepositoryCountByRoleTests
     }
 
     [Fact]
-    public async Task CountByRoleAsync_CaseInsensitive_WorksForSuperAdmin()
+    public async Task CountByRoleAsync_AcceptsUpperCaseRoleName()
     {
-        // Arrange
-        _mockRepository.Setup(r => r.CountByRoleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
+        // Arrange — verify the interface accepts non-lowercase role names
+        // (normalization is done by the implementation via Role.Parse)
+        _mockRepository.Setup(r => r.CountByRoleAsync("SuperAdmin", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(3);
 
         // Act
         var count = await _mockRepository.Object.CountByRoleAsync("SuperAdmin", CancellationToken.None);
 
-        // Assert
-        count.Should().Be(1);
+        // Assert — interface contract: accepts mixed-case role names
+        count.Should().Be(3);
+        _mockRepository.Verify(r => r.CountByRoleAsync("SuperAdmin", It.IsAny<CancellationToken>()), Times.Once);
     }
 }

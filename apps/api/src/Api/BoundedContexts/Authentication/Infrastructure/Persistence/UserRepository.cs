@@ -377,10 +377,10 @@ public class UserRepository : RepositoryBase, IUserRepository
 
     public async Task<int> CountByRoleAsync(string roleName, CancellationToken cancellationToken = default)
     {
-        var roleValue = roleName.ToLowerInvariant();
+        var role = Role.Parse(roleName); // validates role name and normalizes to lowercase
         return await DbContext.Users
             .AsNoTracking()
-            .CountAsync(u => u.Role == roleValue, cancellationToken)
+            .CountAsync(u => u.Role == role.Value, cancellationToken)
             .ConfigureAwait(false);
     }
 

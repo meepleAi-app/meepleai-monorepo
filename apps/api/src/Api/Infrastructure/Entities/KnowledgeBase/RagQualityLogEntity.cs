@@ -4,11 +4,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Api.Infrastructure.Entities.KnowledgeBase;
 
 [Table("rag_quality_logs")]
-public class RagQualityLogEntity
+internal sealed class RagQualityLogEntity
 {
     [Key]
     [Column("id")]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
 
     [Column("thread_id")]
     public Guid? ThreadId { get; set; }
@@ -57,5 +57,5 @@ public class RagQualityLogEntity
     public bool NoRelevantContext { get; set; }
 
     [Column("created_at")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
 }

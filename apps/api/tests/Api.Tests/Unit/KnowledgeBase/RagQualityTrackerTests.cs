@@ -65,6 +65,7 @@ public sealed class RagQualityTrackerTests
 
         // Assert
         Assert.Equal(1, db.RagQualityLogs.Count());
+        Assert.Equal(metrics.LatencyMs, db.RagQualityLogs.Single().LatencyMs);
     }
 
     [Fact]

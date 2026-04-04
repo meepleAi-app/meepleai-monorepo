@@ -14,7 +14,6 @@
       - xUnit1051: CancellationToken usage (best practice, not required for correctness)
       - xUnit2012: Assert.True for collections (FluentAssertions preferred)
       - xUnit2002: Assert.NotNull on value types (DateTime)
-      - xUnit1031: Blocking task operations (test synchronization contexts)
       - EF1002: SQL injection (test code uses parameterized table names safely)
       - CA1707: Remove underscores from member names (test naming convention)
       - CA1711: Rename type so that it does not end in 'Base' (test base classes)
@@ -25,7 +24,7 @@
       Tracked in: BGAI-083 - Phase 1A Bug Fixes
       - CS0060: Inconsistent accessibility (public test classes inherit from internal base)
     -->
-    <NoWarn>$(NoWarn);xUnit1000;xUnit1051;xUnit2012;xUnit2002;xUnit1031;EF1002;CA1707;CA1711;CA2007;CA2000;CS0060;MA0001;MA0002;MA0003;MA0004;MA0005;MA0006;MA0007;MA0048;MA0011;MA0051;MA0074;S101;S1450;S1481;S1501;S2234;S2325;S2925;S3626;S3981;S6608;S6562;S1172;S3878;S6966;S108;S1854;MA0132;MA0015;MA0158</NoWarn>
+    <NoWarn>$(NoWarn);xUnit1000;xUnit1051;xUnit2012;xUnit2002;EF1002;CA1707;CA1711;CA2007;CA2000;CS0060;MA0001;MA0002;MA0003;MA0004;MA0005;MA0006;MA0007;MA0048;MA0011;MA0051;MA0074;S101;S1450;S1481;S1501;S2234;S2325;S2925;S3626;S3981;S6608;S6562;S1172;S3878;S6966;S108;S1854;MA0132;MA0015;MA0158</NoWarn>
   </PropertyGroup>
   <!-- Specify Docnet runtime for Linux when running in CI -->
   <PropertyGroup Condition="'$(CI)' == 'true'">

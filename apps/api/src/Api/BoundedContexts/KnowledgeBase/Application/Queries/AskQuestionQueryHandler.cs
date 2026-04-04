@@ -41,6 +41,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IRagValidationPipelineService _validationPipeline;
     private readonly IRagAccessService _ragAccessService;
     private readonly IRagQualityTracker _qualityTracker;
+    private readonly QueryComplexityAnalyzer _complexityAnalyzer;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     public AskQuestionQueryHandler(
@@ -54,6 +55,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IRagValidationPipelineService validationPipeline,
         IRagAccessService ragAccessService,
         IRagQualityTracker qualityTracker,
+        QueryComplexityAnalyzer complexityAnalyzer,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
@@ -66,6 +68,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _validationPipeline = validationPipeline ?? throw new ArgumentNullException(nameof(validationPipeline));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _qualityTracker = qualityTracker ?? throw new ArgumentNullException(nameof(qualityTracker));
+        _complexityAnalyzer = complexityAnalyzer ?? throw new ArgumentNullException(nameof(complexityAnalyzer));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -76,6 +79,12 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         ArgumentNullException.ThrowIfNull(query);
 
         var startTime = DateTime.UtcNow;
+
+        // P1-4: Analyze query complexity for intelligent LLM model routing (~40% cost reduction)
+        var queryRoutingTier = _complexityAnalyzer.Analyze(query.Question);
+        _logger.LogDebug(
+            "[AskQuestionHandler] QueryComplexityAnalyzer: Question={Question}, RoutingTier={RoutingTier}",
+            query.Question, queryRoutingTier);
 
         // RAG access enforcement
         if (query.UserId.HasValue)
@@ -132,7 +141,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                 ChunksRetrieved: 0,
                 ChunksUsed: 0,
                 CitationsCount: 0,
-                Strategy: query.SearchMode ?? "hybrid",
+                Strategy: $"{query.SearchMode ?? "hybrid"}|tier:{queryRoutingTier}",
                 ModelUsed: "none",
                 LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
                 CacheHit: false,
@@ -202,7 +211,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             ChunksRetrieved: searchResults.Count,
             ChunksUsed: searchResults.Count, // currently equal to ChunksRetrieved — all retrieved chunks are passed to LLM context
             CitationsCount: response.Citations?.Count ?? 0,
-            Strategy: query.SearchMode ?? "hybrid",
+            Strategy: $"{query.SearchMode ?? "hybrid"}|tier:{queryRoutingTier}",
             ModelUsed: llmResult.Cost.ModelId ?? "unknown",
             LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
             CacheHit: false,

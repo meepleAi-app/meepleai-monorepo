@@ -347,6 +347,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // RAG Pipeline Hardening P1-2: per-query metrics logging to rag_quality_logs table
         services.AddScoped<IRagQualityTracker, RagQualityTracker>();
+
+        // RAG Pipeline Hardening P1-4: heuristic query complexity analyzer for LLM model routing
+        services.AddSingleton<QueryComplexityAnalyzer>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)

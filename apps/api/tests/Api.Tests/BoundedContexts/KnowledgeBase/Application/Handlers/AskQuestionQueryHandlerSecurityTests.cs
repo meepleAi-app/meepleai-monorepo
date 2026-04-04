@@ -203,6 +203,7 @@ public class AskQuestionQueryHandlerSecurityTests
             _mockValidationPipeline.Object,
             CreatePermissiveRagAccessServiceMock(),
             Mock.Of<IRagQualityTracker>(),
+            new QueryComplexityAnalyzer(),
             _mockLogger.Object);
     }
 

@@ -27,9 +27,15 @@ internal static class AdminUserBulkEndpoints
         .WithName("BulkPasswordReset")
         .WithTags("Admin")
         .WithSummary("Reset passwords for multiple users")
+        .WithDescription(@"**Authorization**: SuperAdmin session required (ADM-003: elevated from Admin — high-risk operation).
+
+**Limits (ADM-004)**:
+- SuperAdmin: max 1000 users per request
+- Admin role: max 100 users per request")
         .Produces<BulkOperationResult>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status401Unauthorized);
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
 
         group.MapPost("/admin/users/bulk/role-change", HandleBulkRoleChange)
         .WithName("BulkRoleChange")
@@ -121,20 +127,28 @@ internal static class AdminUserBulkEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        var (authorized, session, error) = context.RequireAdminSession();
+        var (authorized, session, error) = context.RequireSuperAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} initiating bulk password reset for {Count} users",
+        logger.LogInformation("SuperAdmin {AdminId} initiating bulk password reset for {Count} users",
             session!.User!.Id, request.UserIds.Count);
 
-        var command = new BulkPasswordResetCommand(
-            request.UserIds,
-            request.NewPassword,
-            session.User!.Id
-        );
+        try
+        {
+            var command = new BulkPasswordResetCommand(
+                request.UserIds,
+                request.NewPassword,
+                session.User!.Id
+            );
 
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (ForbiddenException ex)
+        {
+            logger.LogWarning(ex, "Forbidden: bulk password reset denied for {AdminId}", session.User!.Id);
+            return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+        }
     }
 
     private static async Task<IResult> HandleBulkRoleChange(

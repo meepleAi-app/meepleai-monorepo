@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
@@ -17,6 +18,13 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordResetCommand, BulkOperationResult>
 {
     private const int MaxBulkSize = 1000;
+
+    // ADM-004: Role-based batch size limits for password reset
+    private static readonly Dictionary<string, int> MaxBulkSizeByRole = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "superadmin", 1000 },
+        { "admin", 100 },
+    };
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BulkPasswordResetCommandHandler> _logger;
@@ -57,6 +65,17 @@ internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordRes
         if (string.IsNullOrWhiteSpace(command.NewPassword) || command.NewPassword.Length < 8)
         {
             throw new DomainException("Password must be at least 8 characters long");
+        }
+
+        // ADM-004: Role-based batch size limit — load requester role
+        var requester = await _userRepository.GetByIdAsync(command.RequesterId, cancellationToken)
+            .ConfigureAwait(false);
+        if (requester is not null)
+        {
+            var allowedBulkSize = MaxBulkSizeByRole.GetValueOrDefault(requester.Role.Value, 100);
+            if (distinctUserIds.Count > allowedBulkSize)
+                throw new ForbiddenException(
+                    $"Bulk password reset of {distinctUserIds.Count} users exceeds your role limit of {allowedBulkSize}. Contact a SuperAdmin for larger operations.");
         }
 
         _logger.LogInformation("Admin {RequesterId} initiating bulk password reset for {Count} users",
@@ -119,6 +138,10 @@ internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordRes
                 FailedCount: errors.Count,
                 Errors: errors
             );
+        }
+        catch (ForbiddenException)
+        {
+            throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out

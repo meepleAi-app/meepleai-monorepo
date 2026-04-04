@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
@@ -22,11 +23,13 @@ public class LargePdfStreamingTests
 {
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IConfiguration _configuration;
+    private readonly ITextChunkingService _chunkingService;
 
     public LargePdfStreamingTests()
     {
         _logger = Mock.Of<ILogger<EnhancedPdfProcessingOrchestrator>>();
         _configuration = new ConfigurationBuilder().Build();
+        _chunkingService = Mock.Of<ITextChunkingService>();
     }
 
     [Fact]
@@ -44,7 +47,7 @@ public class LargePdfStreamingTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreateTestPdfStream(PdfUploadTestConstants.FileSizes.TestMaxBytes); // 10 MB
 
@@ -72,7 +75,7 @@ public class LargePdfStreamingTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreateTestPdfStream(60 * 1024 * 1024); // 60 MB
 
@@ -101,7 +104,7 @@ public class LargePdfStreamingTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreateTestPdfStream(60 * 1024 * 1024); // 60 MB
 
@@ -136,7 +139,7 @@ public class LargePdfStreamingTests
         var stage3 = new FakePagedExtractor(success: true, chunks: chunks);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreateTestPdfStream(75 * 1024 * 1024); // 75 MB
 
@@ -164,7 +167,7 @@ public class LargePdfStreamingTests
         var stage3 = new FakeExtractor(success: true, quality: ExtractionQuality.Low, text: "Fallback content");
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreateTestPdfStream(100 * 1024 * 1024); // 100 MB
 
@@ -195,7 +198,7 @@ public class LargePdfStreamingTests
         var stage3 = new FakeExtractor(success: true);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreateTestPdfStream(size);
 
@@ -224,7 +227,7 @@ public class LargePdfStreamingTests
         var stage3 = new FakeExtractor(success: true);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreateTestPdfStream(size);
 

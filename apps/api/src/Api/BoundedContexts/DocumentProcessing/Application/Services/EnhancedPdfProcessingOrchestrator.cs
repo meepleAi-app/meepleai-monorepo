@@ -4,7 +4,9 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Helpers;
+using Api.Constants;
 using Api.Observability;
+using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -28,6 +30,7 @@ internal class EnhancedPdfProcessingOrchestrator
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IConfiguration _configuration;
     private readonly PdfProcessingOptions _options;
+    private readonly ITextChunkingService _chunkingService;
 
     // Quality thresholds from ADR-003
     private const double Stage1QualityThreshold = 0.80; // Unstructured acceptance threshold
@@ -44,7 +47,8 @@ internal class EnhancedPdfProcessingOrchestrator
         [FromKeyedServices(DocumentProcessingServiceExtensions.PdfExtractorKeys.Docnet)] IPdfTextExtractor docnetExtractor,
         ILogger<EnhancedPdfProcessingOrchestrator> logger,
         IConfiguration configuration,
-        IOptions<PdfProcessingOptions> options)
+        IOptions<PdfProcessingOptions> options,
+        ITextChunkingService chunkingService)
     {
         _unstructuredExtractor = unstructuredExtractor;
         _smolDoclingExtractor = smolDoclingExtractor;
@@ -52,6 +56,7 @@ internal class EnhancedPdfProcessingOrchestrator
         _logger = logger;
         _configuration = configuration;
         _options = options.Value;
+        _chunkingService = chunkingService;
     }
     /// <summary>
     /// BGAI-087: Loads PDF data using size-based strategy (memory vs temp file)
@@ -208,9 +213,16 @@ internal class EnhancedPdfProcessingOrchestrator
             2, "SmolDocling", _smolDoclingExtractor, pdfData,
             Stage2QualityThreshold, enableOcrFallback, requestId, cancellationToken).ConfigureAwait(false);
 
-        return stage2Result != null
-            ? CreateEnhancedPagedResult(stage2Result, 2, "SmolDocling", TimeSpan.Zero, requestId)
-            : null;
+        if (stage2Result == null)
+            return null;
+
+        // Split oversized page chunks before returning Stage 2 result.
+        // SmolDocling produces one chunk per page; dense pages can exceed MaxEmbeddingChars (1800),
+        // causing silent truncation during E5-base embedding (512 tokens × ~4 chars/token).
+        var splitChunks = SplitOversizedPageChunks(stage2Result.PageChunks);
+        stage2Result = stage2Result with { PageChunks = splitChunks };
+
+        return CreateEnhancedPagedResult(stage2Result, 2, "SmolDocling", TimeSpan.Zero, requestId);
     }
 
     /// <summary>
@@ -701,6 +713,43 @@ internal class EnhancedPdfProcessingOrchestrator
 #pragma warning restore CA1031
         });
     }
+    /// <summary>
+    /// Splits PageTextChunks that exceed MaxEmbeddingChars into sub-chunks.
+    /// SmolDocling produces one chunk per page; dense pages exceed E5-base token limit.
+    /// </summary>
+    private IList<PageTextChunk> SplitOversizedPageChunks(IList<PageTextChunk> pageChunks)
+    {
+        var result = new List<PageTextChunk>();
+        foreach (var chunk in pageChunks)
+        {
+            if (chunk.IsEmpty || chunk.CharCount <= ChunkingConstants.MaxEmbeddingChars)
+            {
+                result.Add(chunk);
+                continue;
+            }
+
+            // Split with TextChunkingService
+            var subChunks = _chunkingService.ChunkText(
+                chunk.Text,
+                chunkSize: ChunkingConstants.MaxEmbeddingChars,
+                overlap: ChunkingConstants.DefaultChunkOverlap);
+
+            foreach (var sub in subChunks)
+            {
+                result.Add(new PageTextChunk(
+                    PageNumber: chunk.PageNumber,
+                    Text: sub.Text,
+                    CharStartIndex: chunk.CharStartIndex + sub.CharStart,
+                    CharEndIndex: chunk.CharStartIndex + sub.CharEnd));
+            }
+
+            _logger.LogDebug(
+                "📄 [SMOL-SPLIT] Page {Page}: {OrigLen} chars → {SubCount} sub-chunks",
+                chunk.PageNumber, chunk.CharCount, subChunks.Count);
+        }
+        return result;
+    }
+
     /// <summary>
     /// BGAI-087: Handles PDF data with automatic cleanup for temp files
     /// Supports both in-memory (byte[]) and temp file storage strategies

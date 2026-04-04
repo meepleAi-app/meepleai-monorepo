@@ -61,12 +61,15 @@ internal sealed class ImpersonateUserCommandHandler
             throw new ConflictException($"Cannot impersonate suspended user '{command.TargetUserId}'");
         }
 
-        // Prevent impersonation of other admins (Issue #3349)
-        if (string.Equals(targetUser.Role.Value, "admin", StringComparison.OrdinalIgnoreCase))
+        // Prevent impersonation of admin or superadmin users (ADM-001 + ADM-003)
+        // Extended from Issue #3349 to also cover SuperAdmin
+        if (string.Equals(targetUser.Role.Value, "admin", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(targetUser.Role.Value, "superadmin", StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogWarning("⚠️ SECURITY: Admin {AdminId} attempted to impersonate another admin {TargetUserId}",
-                command.AdminUserId, command.TargetUserId);
-            throw new ConflictException("Cannot impersonate other administrators");
+            _logger.LogWarning(
+                "⚠️ SECURITY: Admin {AdminId} attempted to impersonate privileged user {TargetUserId} (role: {Role})",
+                command.AdminUserId, command.TargetUserId, targetUser.Role.Value);
+            throw new ForbiddenException("Cannot impersonate admin or SuperAdmin users");
         }
 
         // Verify admin exists and has admin role
@@ -104,6 +107,7 @@ internal sealed class ImpersonateUserCommandHandler
             {
                 targetUserId = command.TargetUserId,
                 targetEmail = targetUser.Email.Value,
+                reason = command.Reason,
                 sessionToken = sessionResponse.SessionToken[..Math.Min(16, sessionResponse.SessionToken.Length)] + "...",
                 expiresAt = sessionResponse.ExpiresAt
             }),

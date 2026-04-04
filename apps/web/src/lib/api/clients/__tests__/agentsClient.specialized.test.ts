@@ -142,4 +142,135 @@ describe('agentsClient - Specialized (Issue #2309)', () => {
       ).rejects.toThrow('Game not found');
     });
   });
+
+  describe('chat (SSE)', () => {
+    const agentId = 'agent-sse-1';
+    const threadId = '11111111-1111-1111-1111-111111111111';
+
+    function makeSseResponse(events: object[]): Response {
+      const lines = events.map(e => `data: ${JSON.stringify(e)}\n\n`).join('');
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(lines));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+    }
+
+    beforeEach(() => {
+      vi.stubGlobal('fetch', vi.fn());
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('should send message without chatThreadId', async () => {
+      const events = [
+        {
+          type: 'stateUpdate',
+          data: { state: 'Processing...' },
+          timestamp: new Date().toISOString(),
+        },
+        { type: 'token', data: { token: 'Hello' }, timestamp: new Date().toISOString() },
+        { type: 'complete', data: { totalTokens: 10 }, timestamp: new Date().toISOString() },
+      ];
+      vi.mocked(fetch).mockResolvedValueOnce(makeSseResponse(events));
+
+      const results: object[] = [];
+      for await (const event of agentsClient.chat(agentId, 'What are the rules?')) {
+        results.push(event);
+      }
+
+      expect(fetch).toHaveBeenCalledWith(
+        `/api/v1/agents/${agentId}/chat`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ message: 'What are the rules?' }),
+        })
+      );
+      expect(results).toHaveLength(3);
+      expect(results[0]).toMatchObject({ type: 'stateUpdate' });
+      expect(results[2]).toMatchObject({ type: 'complete' });
+    });
+
+    it('should send chatThreadId for multi-turn conversations', async () => {
+      const events = [
+        { type: 'token', data: { token: 'Yes' }, timestamp: new Date().toISOString() },
+        { type: 'complete', data: { totalTokens: 5 }, timestamp: new Date().toISOString() },
+      ];
+      vi.mocked(fetch).mockResolvedValueOnce(makeSseResponse(events));
+
+      const results: object[] = [];
+      for await (const event of agentsClient.chat(agentId, 'Follow-up question', {
+        chatThreadId: threadId,
+      })) {
+        results.push(event);
+      }
+
+      expect(fetch).toHaveBeenCalledWith(
+        `/api/v1/agents/${agentId}/chat`,
+        expect.objectContaining({
+          body: JSON.stringify({ message: 'Follow-up question', chatThreadId: threadId }),
+        })
+      );
+      expect(results).toHaveLength(2);
+    });
+
+    it('should not include chatThreadId in body when not provided', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(
+        makeSseResponse([
+          { type: 'complete', data: { totalTokens: 1 }, timestamp: new Date().toISOString() },
+        ])
+      );
+
+      for await (const _ of agentsClient.chat(agentId, 'test')) {
+        /* drain */
+      }
+
+      const body = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string);
+      expect(body).not.toHaveProperty('chatThreadId');
+    });
+
+    it('should throw on non-ok HTTP response', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(null, { status: 503, statusText: 'Service Unavailable' })
+      );
+
+      await expect(async () => {
+        for await (const _ of agentsClient.chat(agentId, 'test')) {
+          /* drain */
+        }
+      }).rejects.toThrow('Chat failed: Service Unavailable');
+    });
+
+    it('should abort stream when signal fires', async () => {
+      const controller = new AbortController();
+      const slowStream = new ReadableStream({
+        start() {
+          // Never enqueues — simulates a hanging connection
+        },
+        cancel() {
+          /* no-op */
+        },
+      });
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(slowStream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+      );
+
+      controller.abort();
+
+      const results: object[] = [];
+      for await (const event of agentsClient.chat(agentId, 'test', { signal: controller.signal })) {
+        results.push(event);
+      }
+
+      // Aborted immediately — no events yielded
+      expect(results).toHaveLength(0);
+    });
+  });
 });

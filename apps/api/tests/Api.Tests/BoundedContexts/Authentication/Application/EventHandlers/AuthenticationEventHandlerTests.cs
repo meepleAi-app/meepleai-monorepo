@@ -13,82 +13,11 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.EventHandlers;
 
 /// <summary>
 /// Unit tests for Authentication domain event handlers.
-/// Issue #2645: Event handler tests for ApiKeyRevoked, EmailChanged, OAuth events.
+/// Issue #2645: Event handler tests for EmailChanged, OAuth events.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class AuthenticationEventHandlerTests
 {
-    #region ApiKeyRevokedEventHandler Tests
-
-    [Fact]
-    public async Task ApiKeyRevokedEventHandler_Handle_CreatesAuditLog()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<ApiKeyRevokedEventHandler>>();
-        var handler = new ApiKeyRevokedEventHandler(dbContext, logger.Object);
-
-        var apiKeyId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var reason = "Security compromise suspected";
-        var @event = new ApiKeyRevokedEvent(apiKeyId, userId, reason);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.FirstOrDefault(a => a.Action.Contains("ApiKeyRevokedEvent"));
-        auditLog.Should().NotBeNull();
-        auditLog.UserId.Should().Be(userId);
-        auditLog.Details.Should().Contain("ApiKeyRevoked");
-        auditLog.Details.Should().Contain(apiKeyId.ToString());
-    }
-
-    [Fact]
-    public async Task ApiKeyRevokedEventHandler_Handle_WithNullReason_CreatesAuditLog()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<ApiKeyRevokedEventHandler>>();
-        var handler = new ApiKeyRevokedEventHandler(dbContext, logger.Object);
-
-        var @event = new ApiKeyRevokedEvent(Guid.NewGuid(), Guid.NewGuid(), null);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.FirstOrDefault();
-        auditLog.Should().NotBeNull();
-        auditLog.Result.Should().Be("Success");
-    }
-
-    [Fact]
-    public async Task ApiKeyRevokedEventHandler_Handle_LogsEventInformation()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<ApiKeyRevokedEventHandler>>();
-        var handler = new ApiKeyRevokedEventHandler(dbContext, logger.Object);
-
-        var @event = new ApiKeyRevokedEvent(Guid.NewGuid(), Guid.NewGuid(), "Test reason");
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        logger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Handling domain event")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
-    }
-
-    #endregion
-
     #region EmailChangedEventHandler Tests
 
     [Fact]
@@ -380,49 +309,4 @@ public class AuthenticationEventHandlerTests
 
     #endregion
 
-    #region Error Handling Tests
-
-    [Fact]
-    public async Task EventHandler_Handle_ThrowsOnDbContextError()
-    {
-        // Arrange - Use disposed context to simulate error
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<ApiKeyRevokedEventHandler>>();
-        var handler = new ApiKeyRevokedEventHandler(dbContext, logger.Object);
-
-        await dbContext.DisposeAsync();
-
-        var @event = new ApiKeyRevokedEvent(Guid.NewGuid(), Guid.NewGuid(), "Test");
-
-        // Act & Assert
-        var act = () =>
-            handler.Handle(@event, CancellationToken.None);
-        await act.Should().ThrowAsync<ObjectDisposedException>();
-    }
-
-    [Fact]
-    public void EventHandler_Constructor_ThrowsOnNullDbContext()
-    {
-        // Arrange
-        var logger = new Mock<ILogger<ApiKeyRevokedEventHandler>>();
-
-        // Act & Assert
-        var act = () =>
-            new ApiKeyRevokedEventHandler(null!, logger.Object);
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void EventHandler_Constructor_ThrowsOnNullLogger()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-
-        // Act & Assert
-        var act = () =>
-            new ApiKeyRevokedEventHandler(dbContext, null!);
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    #endregion
 }

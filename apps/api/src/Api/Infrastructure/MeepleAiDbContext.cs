@@ -45,8 +45,6 @@ public class MeepleAiDbContext : DbContext
 
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<UserSessionEntity> UserSessions => Set<UserSessionEntity>();
-    public DbSet<ApiKeyEntity> ApiKeys => Set<ApiKeyEntity>();
-    public DbSet<ApiKeyUsageLogEntity> ApiKeyUsageLogs => Set<ApiKeyUsageLogEntity>(); // ISSUE-904: API Key usage tracking
     public DbSet<OAuthAccountEntity> OAuthAccounts => Set<OAuthAccountEntity>(); // AUTH-06
     public DbSet<GameEntity> Games => Set<GameEntity>();
     public DbSet<GameSessionEntity> GameSessions => Set<GameSessionEntity>(); // DDD-PHASE2: GameSession aggregate
@@ -298,7 +296,6 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.OAuthAccount>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.User>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.Session>();
-        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ApiKey>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ShareLink>(); // ISSUE-2052
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.AccessRequest>(); // ISSUE-124: Access request domain entity
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.InvitationToken>(); // Admin Invitation Flow: domain aggregate

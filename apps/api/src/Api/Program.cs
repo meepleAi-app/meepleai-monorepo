@@ -669,7 +669,6 @@ if (!isAlphaMode)
     v1Api.MapUserAiConsentEndpoints(); // Issue #5512: GDPR AI consent
     v1Api.MapUserLlmDataEndpoints(); // Issue #5509: GDPR right to erasure for LLM data
     v1Api.MapUserUsageEndpoints(); // E2-2: User tier usage endpoint
-    v1Api.MapApiKeyEndpoints();            // API key management
     v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and management
 
     // Game Management extended

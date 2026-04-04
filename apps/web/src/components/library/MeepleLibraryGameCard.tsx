@@ -67,6 +67,7 @@ import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
+import { buildLinkedEntities } from '@/lib/card-mappers';
 import { useViewTransition } from '@/lib/domain-hooks/useViewTransition';
 
 import { AgentDrawerSheet } from './AgentDrawerSheet';
@@ -451,18 +452,21 @@ export function MeepleLibraryGameCard({
         className={className}
         // KB status badge from real document data
         kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
-        // Navigation footer: open drawers instead of navigating
-        linkedEntities={[
-          { entityType: 'kb', count: 1 },
-          { entityType: 'agent', count: 1 },
-          { entityType: 'chatSession', count: 1 },
-          { entityType: 'session', count: 1 },
-        ]}
+        // Navigation footer: mana pips for linked entities
+        linkedEntities={buildLinkedEntities({
+          agentCount: agentConfigured ? 1 : 0,
+          kbCount: game.kbCardCount,
+        })}
         onManaPipClick={entityType => {
-          if (entityType === 'kb') setKbDrawerOpen(true);
-          else if (entityType === 'agent') setAgentDrawerOpen(true);
-          else if (entityType === 'chatSession') setChatDrawerOpen(true);
-          else if (entityType === 'session') setSessionDrawerOpen(true);
+          if (entityType === 'kb') {
+            setKbDrawerOpen(true);
+          } else if (entityType === 'agent') {
+            setAgentDrawerOpen(true);
+          } else if (entityType === 'chatSession') {
+            setChatDrawerOpen(true);
+          } else if (entityType === 'session') {
+            setSessionDrawerOpen(true);
+          }
         }}
         // Issue #4777, #4999: Agent action footer
         hasAgent={agentConfigured}

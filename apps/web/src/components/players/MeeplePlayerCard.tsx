@@ -36,6 +36,7 @@ import { Settings, UserPlus } from 'lucide-react';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import type { SessionPlayer } from '@/lib/api/schemas/play-records.schemas';
+import { buildPlayerCardProps } from '@/lib/card-mappers';
 
 // ============================================================================
 // Types
@@ -80,6 +81,13 @@ export function MeeplePlayerCard({
   onInvite,
   className,
 }: MeeplePlayerCardProps) {
+  // Map player to card props for consistency
+  const mapperProps = buildPlayerCardProps(player);
+
+  // Compute profile href based on player type
+  const profileHref =
+    isMeepleAiUser && player.userId ? `/users/${player.userId}` : `/players/${player.id}`;
+
   // ============================================================================
   // Quick Actions Configuration
   // ============================================================================
@@ -118,7 +126,7 @@ export function MeeplePlayerCard({
       id={player.id}
       entity="player"
       variant={variant}
-      title={player.displayName}
+      title={mapperProps.title ?? player.displayName}
       subtitle={subtitle}
       className={className}
       onClick={onClick ? () => onClick(player.id) : undefined}

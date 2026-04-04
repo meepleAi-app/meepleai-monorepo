@@ -8,6 +8,8 @@ import {
   ArrowRightIcon,
   CpuIcon,
   ThumbsUpIcon,
+  GamepadIcon,
+  ArchiveIcon,
 } from 'lucide-react';
 import { type Metadata } from 'next';
 import Link from 'next/link';
@@ -91,6 +93,24 @@ const sections = [
     href: '/admin/knowledge-base/feedback',
     color: 'from-rose-500 to-pink-600',
     stats: 'View feedback',
+  },
+  {
+    title: 'KB per Gioco',
+    description:
+      'Panoramica dello stato della Knowledge Base per ogni gioco: documenti indicizzati, chunk count, e stato backup automatico',
+    icon: GamepadIcon,
+    href: '/admin/knowledge-base/games',
+    color: 'from-teal-500 to-cyan-600',
+    stats: 'Vedi stati',
+  },
+  {
+    title: 'Snapshot RAG',
+    description:
+      'Gestisci i backup della Knowledge Base. Ripristina uno snapshot per evitare di rielaborare i PDF — risparmia tempo e risorse',
+    icon: ArchiveIcon,
+    href: '/admin/knowledge-base/snapshots',
+    color: 'from-indigo-500 to-purple-600',
+    stats: 'Gestisci snapshot',
   },
 ];
 

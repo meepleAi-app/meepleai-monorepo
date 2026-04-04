@@ -21,7 +21,9 @@ export const worker = setupWorker(...handlers);
 // causing all subsequent fetch calls to reach the proxy route instead of MSW.
 if (typeof window !== 'undefined') {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const hot = (module as any).hot as { accept(): void; dispose(fn: () => void): void } | undefined;
+  const hot = (typeof module !== 'undefined' ? (module as any).hot : undefined) as
+    | { accept(): void; dispose(fn: () => void): void }
+    | undefined;
 
   if (hot) {
     hot.dispose(() => {

@@ -78,11 +78,11 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8025/api/v1/messages && nc -z localhost 1025"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/live || exit 1"]
+      interval: 30s
+      timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 60s
     networks:
       - meepleai
     deploy:
@@ -105,11 +105,11 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "mc ready local || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - meepleai
     deploy:
@@ -120,30 +120,6 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
-
-  minio-init:
-    image: minio/mc:RELEASE.2024-11-17T19-35-25Z
-    container_name: meepleai-minio-init
-    profiles: [storage]
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD:-minioadmin123};
-      mc mb myminio/meepleai-uploads --ignore-existing;
-      echo 'Bucket meepleai-uploads ready';
-      "
-    networks:
-      - meepleai
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
 
   # ---------------------------------------------------------------------------
   # AI services (profile: ai)
@@ -606,8 +582,8 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      : ${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set in storage.secret — refusing to use insecure defaults'};
-      : ${MINIO_ROOT_PASSWORD:?'MINIO_ROOT_PASSWORD must be set in storage.secret — refusing to use insecure defaults'};
+      : $${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set in storage.secret'};
+      : $${MINIO_ROOT_PASSWORD:?'MINIO_ROOT_PASSWORD must be set in storage.secret'};
       mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
       mc mb myminio/meepleai-uploads --ignore-existing;
       echo 'Bucket meepleai-uploads ready';

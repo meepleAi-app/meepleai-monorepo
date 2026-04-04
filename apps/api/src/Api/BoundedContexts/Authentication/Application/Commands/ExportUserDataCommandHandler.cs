@@ -21,7 +21,6 @@ internal sealed class ExportUserDataCommandHandler
     private readonly INotificationRepository _notificationRepository;
     private readonly IUserAiConsentRepository _aiConsentRepository;
     private readonly IConversationMemoryRepository _conversationMemoryRepository;
-    private readonly IApiKeyRepository _apiKeyRepository;
     private readonly ILogger<ExportUserDataCommandHandler> _logger;
 
     public ExportUserDataCommandHandler(
@@ -31,7 +30,6 @@ internal sealed class ExportUserDataCommandHandler
         INotificationRepository notificationRepository,
         IUserAiConsentRepository aiConsentRepository,
         IConversationMemoryRepository conversationMemoryRepository,
-        IApiKeyRepository apiKeyRepository,
         ILogger<ExportUserDataCommandHandler> logger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
@@ -40,7 +38,6 @@ internal sealed class ExportUserDataCommandHandler
         _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
         _aiConsentRepository = aiConsentRepository ?? throw new ArgumentNullException(nameof(aiConsentRepository));
         _conversationMemoryRepository = conversationMemoryRepository ?? throw new ArgumentNullException(nameof(conversationMemoryRepository));
-        _apiKeyRepository = apiKeyRepository ?? throw new ArgumentNullException(nameof(apiKeyRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -58,16 +55,14 @@ internal sealed class ExportUserDataCommandHandler
         var notificationsTask = _notificationRepository.GetByUserIdAsync(command.UserId, unreadOnly: false, limit: 10000, cancellationToken: cancellationToken);
         var aiConsentTask = _aiConsentRepository.GetByUserIdAsync(command.UserId, cancellationToken);
         var memoryCountTask = _conversationMemoryRepository.CountByUserIdAsync(command.UserId, cancellationToken);
-        var apiKeysTask = _apiKeyRepository.GetByUserIdAsync(command.UserId, cancellationToken);
 
-        await Task.WhenAll(libraryTask, chatThreadsTask, notificationsTask, aiConsentTask, memoryCountTask, apiKeysTask).ConfigureAwait(false);
+        await Task.WhenAll(libraryTask, chatThreadsTask, notificationsTask, aiConsentTask, memoryCountTask).ConfigureAwait(false);
 
         var library = await libraryTask.ConfigureAwait(false);
         var chatThreads = await chatThreadsTask.ConfigureAwait(false);
         var notifications = await notificationsTask.ConfigureAwait(false);
         var aiConsent = await aiConsentTask.ConfigureAwait(false);
         var memoryCount = await memoryCountTask.ConfigureAwait(false);
-        var apiKeys = await apiKeysTask.ConfigureAwait(false);
 
         // Map to export DTOs
         var profile = new ExportedUserProfile(
@@ -118,8 +113,7 @@ internal sealed class ExportUserDataCommandHandler
             TotalLibraryGames: library.Count,
             TotalChatThreads: chatThreads.Count,
             TotalNotifications: notifications.Count,
-            TotalConversationMemories: memoryCount,
-            TotalApiKeys: apiKeys.Count);
+            TotalConversationMemories: memoryCount);
 
         _logger.LogInformation(
             "GDPR Art.20: Data export completed for UserId={UserId}. Library={Library}, Threads={Threads}, Notifications={Notifications}",

@@ -15,13 +15,13 @@
 
 'use client';
 
-import { BookOpen, AlertTriangle, Star, Library, Clock } from 'lucide-react';
+import { BookOpen, AlertTriangle, Calendar, Star, Library, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
-import { SharedLibraryGameCard } from '@/components/library';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
+import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
@@ -142,9 +142,25 @@ export default function SharedLibraryPage() {
         {/* Games Grid */}
         {sharedLibrary.games.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {sharedLibrary.games.map(game => (
-              <SharedLibraryGameCard key={game.gameId} game={game} showNotes={hasNotes} />
-            ))}
+            {sharedLibrary.games.map(game => {
+              const metadata: MeepleCardMetadata[] = game.yearPublished
+                ? [{ icon: Calendar, label: `${game.yearPublished}` }]
+                : [];
+              return (
+                <MeepleCard
+                  key={game.gameId}
+                  entity="game"
+                  variant="grid"
+                  title={game.title}
+                  subtitle={game.publisher || undefined}
+                  imageUrl={game.imageUrl || undefined}
+                  badge={game.isFavorite ? 'Preferito' : undefined}
+                  metadata={metadata.length > 0 ? metadata : undefined}
+                  showPreview={hasNotes && !!game.notes}
+                  previewData={hasNotes && game.notes ? { description: game.notes } : undefined}
+                />
+              );
+            })}
           </div>
         ) : (
           <Card className="border-dashed">

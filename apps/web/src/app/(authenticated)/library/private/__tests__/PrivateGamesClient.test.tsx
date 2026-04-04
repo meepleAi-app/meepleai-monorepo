@@ -102,31 +102,35 @@ vi.mock('@/components/library/AddPrivateGameForm', () => ({
   AddPrivateGameForm: () => <div data-testid="add-private-game-form" />,
 }));
 
-// Mock PrivateGameCard
-vi.mock('@/components/library/PrivateGameCard', () => ({
-  PrivateGameCard: ({
-    game,
-    onEdit,
-    onDelete,
+// Mock MeepleCard — PrivateGameCard is now inlined in PrivateGamesClient and renders via MeepleCard.
+// We expose the minimum surface needed by the integration tests: data-testid, title, and entityQuickActions.
+vi.mock('@/components/ui/data-display/meeple-card', () => ({
+  MeepleCard: ({
+    'data-testid': testId,
+    title,
+    entityQuickActions,
   }: {
-    game: PrivateGameDto;
-    onEdit?: (game: PrivateGameDto) => void;
-    onDelete?: (gameId: string) => void;
-  }) => (
-    <div data-testid={`game-card-${game.id}`}>
-      <span>{game.title}</span>
-      {onEdit && (
-        <button data-testid={`edit-btn-${game.id}`} onClick={() => onEdit(game)}>
-          Edit
-        </button>
-      )}
-      {onDelete && (
-        <button data-testid={`delete-btn-${game.id}`} onClick={() => onDelete(game.id)}>
-          Delete
-        </button>
-      )}
-    </div>
-  ),
+    'data-testid'?: string;
+    title?: string;
+    entityQuickActions?: Array<{ label: string; onClick: () => void }>;
+  }) => {
+    // Derive game id from testId pattern "game-card-<id>" to build action test-ids
+    const gameId = testId?.replace('game-card-', '') ?? '';
+    return (
+      <div data-testid={testId}>
+        <span>{title}</span>
+        {entityQuickActions?.map(action => (
+          <button
+            key={action.label}
+            data-testid={`${action.label.toLowerCase()}-btn-${gameId}`}
+            onClick={action.onClick}
+          >
+            {action.label}
+          </button>
+        ))}
+      </div>
+    );
+  },
 }));
 
 const mockGetPrivateGames = api.library.getPrivateGames as Mock;

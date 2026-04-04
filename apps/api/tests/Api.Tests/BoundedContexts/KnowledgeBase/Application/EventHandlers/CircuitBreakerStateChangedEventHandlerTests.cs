@@ -111,7 +111,7 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
 
         captured.Should().NotBeNull();
         captured!.Severity.Should().Be(expectedSeverity);
-        captured.Type.Should().Be(NotificationType.AdminCircuitBreakerStateChanged);
+        captured.Type.Should().Be(NotificationType.AdminSystemHealthAlert);
         captured.Link.Should().Be("/admin/agents/usage");
     }
 

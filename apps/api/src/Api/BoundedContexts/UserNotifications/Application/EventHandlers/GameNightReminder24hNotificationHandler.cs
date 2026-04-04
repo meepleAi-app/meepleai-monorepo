@@ -52,14 +52,15 @@ internal sealed class GameNightReminder24hNotificationHandler : INotificationHan
                 {
                     await _dispatcher.DispatchAsync(new NotificationMessage
                     {
-                        Type = NotificationType.GameNightReminder24h,
+                        Type = NotificationType.GameNightReminder,
                         RecipientUserId = rsvp.UserId,
                         Payload = new GameNightPayload(
                             notification.GameNightEventId,
                             notification.Title,
                             notification.ScheduledAt.UtcDateTime,
                             string.Empty),
-                        DeepLinkPath = $"/game-nights/{notification.GameNightEventId}"
+                        DeepLinkPath = $"/game-nights/{notification.GameNightEventId}",
+                        Metadata = new { hours_before = 24 }
                     }, cancellationToken).ConfigureAwait(false);
                 }
 #pragma warning disable CA1031

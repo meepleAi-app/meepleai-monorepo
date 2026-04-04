@@ -119,7 +119,7 @@ public sealed class ModelDeprecatedNotificationHandlerTests : IDisposable
         _capturedNotifications.Should().HaveCount(2);
 
         var notification = _capturedNotifications.First(n => n.UserId == admin1);
-        notification.Type.Should().Be(NotificationType.AdminModelDeprecated);
+        notification.Type.Should().Be(NotificationType.AdminModelStatusChanged);
         notification.Severity.Should().Be(NotificationSeverity.Warning);
         notification.Title.Should().Contain("meta-llama/llama-3.3-70b-instruct:free");
         notification.Message.Should().Contain("BALANCED");

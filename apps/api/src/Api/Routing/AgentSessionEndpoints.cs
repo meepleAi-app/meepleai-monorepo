@@ -111,10 +111,19 @@ internal static class AgentSessionEndpoints
     {
         var userId = httpContext.User.GetUserId();
 
+        var gameContext = request.GameContext is null ? null : GameSessionContext.Create(
+            request.GameContext.GameId,
+            request.GameContext.GameTitle,
+            request.GameContext.Players,
+            request.GameContext.CurrentTurn,
+            request.GameContext.ResponseLanguage
+        );
+
         var command = new ChatWithSessionAgentCommand(
             AgentSessionId: request.AgentSessionId,
             UserQuestion: request.UserQuestion,
             UserId: userId,
+            GameContext: gameContext,
             ChatThreadId: request.ChatThreadId
         );
 
@@ -212,7 +221,15 @@ internal record LaunchSessionAgentResponse(Guid AgentSessionId);
 internal record ChatWithSessionAgentRequest(
     Guid AgentSessionId,
     string UserQuestion,
-    Guid? ChatThreadId = null);
+    Guid? ChatThreadId = null,
+    GameSessionContextRequest? GameContext = null);
+
+internal record GameSessionContextRequest(
+    Guid GameId,
+    string GameTitle,
+    IReadOnlyList<string> Players,
+    int CurrentTurn,
+    string ResponseLanguage = "it");
 
 internal record UpdateAgentSessionStateRequest(
     Guid AgentSessionId,

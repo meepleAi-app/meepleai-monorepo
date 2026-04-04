@@ -161,7 +161,7 @@ internal sealed class OpenRouterRpmAlertBackgroundService : BackgroundService
             var n = new Notification(
                 id: Guid.NewGuid(),
                 userId: adminId,
-                type: NotificationType.AdminOpenRouterRpmAlert,
+                type: NotificationType.AdminOpenRouterThresholdAlert,
                 severity: severity,
                 title: $"OpenRouter RPM alert — {utilisationPercent:F0}% of limit used",
                 message: message,

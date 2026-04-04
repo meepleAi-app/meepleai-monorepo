@@ -62,7 +62,7 @@ function createNotification(overrides: Partial<NotificationDto> = {}): Notificat
   return {
     id: crypto.randomUUID(),
     userId: '00000000-0000-0000-0000-000000000001',
-    type: 'pdf_upload_completed',
+    type: 'document_ready',
     severity: 'success',
     title: 'PDF Ready',
     message: 'Your PDF has been processed successfully',
@@ -157,9 +157,9 @@ describe('NotificationsPage', () => {
   it('should filter by notification type when type chips are clicked', async () => {
     const user = userEvent.setup();
     const notifications = [
-      createNotification({ title: 'PDF done', type: 'pdf_upload_completed' }),
-      createNotification({ title: 'New comment', type: 'new_comment' }),
-      createNotification({ title: 'Error occurred', type: 'processing_failed' }),
+      createNotification({ title: 'PDF done', type: 'document_ready' }),
+      createNotification({ title: 'Link accessed', type: 'shared_link_accessed' }),
+      createNotification({ title: 'Error occurred', type: 'document_processing_failed' }),
     ];
     setupStore({ notifications, unreadCount: 3 });
 
@@ -167,15 +167,15 @@ describe('NotificationsPage', () => {
 
     // All visible initially
     expect(screen.getByText(/PDF done/)).toBeInTheDocument();
-    expect(screen.getByText(/New comment/)).toBeInTheDocument();
+    expect(screen.getByText(/Link accessed/)).toBeInTheDocument();
     expect(screen.getByText(/Error occurred/)).toBeInTheDocument();
 
-    // Click "Commenti" filter chip
-    await user.click(screen.getByText('Commenti'));
+    // Click "Link condivisi" filter chip
+    await user.click(screen.getByText('Link condivisi'));
 
-    // Only comment notification visible
+    // Only shared link notification visible
     expect(screen.queryByText(/PDF done/)).not.toBeInTheDocument();
-    expect(screen.getByText(/New comment/)).toBeInTheDocument();
+    expect(screen.getByText(/Link accessed/)).toBeInTheDocument();
     expect(screen.queryByText(/Error occurred/)).not.toBeInTheDocument();
   });
 
@@ -293,13 +293,13 @@ describe('NotificationsPage', () => {
 
   it('should show type-specific empty state when filter has no results', async () => {
     const user = userEvent.setup();
-    const notifications = [createNotification({ type: 'pdf_upload_completed' })];
+    const notifications = [createNotification({ type: 'document_ready' })];
     setupStore({ notifications, unreadCount: 1 });
 
     render(<NotificationsPage />);
 
     // Click a type filter that has no matching notifications
-    await user.click(screen.getByText('Commenti'));
+    await user.click(screen.getByText('Link condivisi'));
 
     expect(screen.getByText('Nessuna notifica di questo tipo')).toBeInTheDocument();
   });
@@ -310,10 +310,9 @@ describe('NotificationsPage', () => {
     render(<NotificationsPage />);
 
     expect(screen.getByText('Tutti')).toBeInTheDocument();
-    expect(screen.getByText('PDF completati')).toBeInTheDocument();
+    expect(screen.getByText('Documenti pronti')).toBeInTheDocument();
     expect(screen.getByText('Regole generate')).toBeInTheDocument();
-    expect(screen.getByText('Errori')).toBeInTheDocument();
-    expect(screen.getByText('Commenti')).toBeInTheDocument();
+    expect(screen.getByText('Errori elaborazione')).toBeInTheDocument();
     expect(screen.getByText('Link condivisi')).toBeInTheDocument();
   });
 

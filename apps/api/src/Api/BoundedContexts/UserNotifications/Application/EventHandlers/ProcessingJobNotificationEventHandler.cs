@@ -47,7 +47,7 @@ internal class ProcessingJobNotificationEventHandler :
 
         await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            Type = NotificationType.ProcessingJobCompleted,
+            Type = NotificationType.DocumentReady,
             RecipientUserId = evt.UserId,
             Payload = new PdfProcessingPayload(
                 evt.PdfDocumentId,
@@ -74,7 +74,7 @@ internal class ProcessingJobNotificationEventHandler :
         // Notify the uploader
         await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            Type = NotificationType.ProcessingJobFailed,
+            Type = NotificationType.DocumentProcessingFailed,
             RecipientUserId = evt.UserId,
             Payload = new PdfProcessingPayload(
                 evt.PdfDocumentId,
@@ -107,7 +107,7 @@ internal class ProcessingJobNotificationEventHandler :
 
                 await _dispatcher.DispatchAsync(new NotificationMessage
                 {
-                    Type = NotificationType.ProcessingJobFailed,
+                    Type = NotificationType.DocumentProcessingFailed,
                     RecipientUserId = admin.Id,
                     Payload = new PdfProcessingPayload(
                         Guid.Empty,

@@ -23,7 +23,7 @@ public class NotificationQueueItemTests
         return NotificationQueueItem.Create(
             channelType ?? NotificationChannelType.SlackUser,
             nullRecipient ? null : (recipientUserId ?? DefaultRecipientUserId),
-            notificationType ?? NotificationType.PdfUploadCompleted,
+            notificationType ?? NotificationType.DocumentReady,
             payload ?? new GenericPayload("Test", "Body"),
             slackChannelTarget,
             slackTeamId);
@@ -70,7 +70,7 @@ public class NotificationQueueItemTests
             NotificationQueueItem.Create(
                 null!,
                 Guid.NewGuid(),
-                NotificationType.PdfUploadCompleted,
+                NotificationType.DocumentReady,
                 new GenericPayload("Test", "Body"));
         act.Should().Throw<ArgumentNullException>();
     }
@@ -94,7 +94,7 @@ public class NotificationQueueItemTests
             NotificationQueueItem.Create(
                 NotificationChannelType.SlackUser,
                 Guid.NewGuid(),
-                NotificationType.PdfUploadCompleted,
+                NotificationType.DocumentReady,
                 null!);
         act3.Should().Throw<ArgumentNullException>();
     }
@@ -319,12 +319,12 @@ public class NotificationQueueItemTests
         // Act
         var item = CreateDefaultItem(
             channelType: NotificationChannelType.SlackUser,
-            notificationType: NotificationType.PdfUploadCompleted,
+            notificationType: NotificationType.DocumentReady,
             payload: payload);
 
         // Assert
         item.ChannelType.Should().Be(NotificationChannelType.SlackUser);
-        item.NotificationType.Should().Be(NotificationType.PdfUploadCompleted);
+        item.NotificationType.Should().Be(NotificationType.DocumentReady);
         item.Payload.Should().BeOfType<PdfProcessingPayload>();
     }
 }

@@ -17,13 +17,10 @@ internal sealed class AdminAlertSlackBuilder : ISlackMessageBuilder
             || type == NotificationType.AdminStaleShareRequests
             || type == NotificationType.AdminReviewLockExpiring
             || type == NotificationType.AdminSharedGameSubmitted
-            || type == NotificationType.AdminOpenRouterRpmAlert
-            || type == NotificationType.AdminOpenRouterBudgetAlert
-            || type == NotificationType.AdminCircuitBreakerStateChanged
+            || type == NotificationType.AdminOpenRouterThresholdAlert
             || type == NotificationType.AdminOpenRouterDailySummary
-            || type == NotificationType.AdminRedisRateLimitingDegraded
-            || type == NotificationType.AdminModelDeprecated
-            || type == NotificationType.AdminModelAutoFallback;
+            || type == NotificationType.AdminSystemHealthAlert
+            || type == NotificationType.AdminModelStatusChanged;
     }
 
     public object BuildMessage(INotificationPayload payload, string? deepLinkPath)

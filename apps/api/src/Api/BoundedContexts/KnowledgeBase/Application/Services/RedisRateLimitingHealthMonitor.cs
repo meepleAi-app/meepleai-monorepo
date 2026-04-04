@@ -217,7 +217,7 @@ internal sealed class RedisRateLimitingHealthMonitor : BackgroundService
                 var n = new Notification(
                     id: Guid.NewGuid(),
                     userId: adminId,
-                    type: NotificationType.AdminRedisRateLimitingDegraded,
+                    type: NotificationType.AdminSystemHealthAlert,
                     severity: severity,
                     title: title,
                     message: message,

@@ -84,8 +84,8 @@ export function MeeplePlayerCard({
   // Map player to card props for consistency
   const mapperProps = buildPlayerCardProps(player);
 
-  // Compute profile href based on player type
-  const profileHref =
+  // Compute profile href based on player type (unused until navigation wiring)
+  const _profileHref =
     isMeepleAiUser && player.userId ? `/users/${player.userId}` : `/players/${player.id}`;
 
   // ============================================================================

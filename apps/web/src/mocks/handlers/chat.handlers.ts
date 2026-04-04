@@ -105,7 +105,7 @@ export const chatHandlers = [
 
   // POST /api/v1/knowledge-base/ask - SSE streaming endpoint (CRITICAL)
   http.post(`${API_BASE}/api/v1/knowledge-base/ask`, async ({ request }) => {
-    const body = (await request.json()) as { question: string; gameId: string };
+    const _body = (await request.json()) as { question: string; gameId: string };
 
     // Build SSE events using centralized helpers (Issue #1495)
     const events: string[] = [];

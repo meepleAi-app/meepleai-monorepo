@@ -81,7 +81,7 @@ internal sealed class ModelDeprecatedNotificationHandler
                 var n = new Notification(
                     id: Guid.NewGuid(),
                     userId: adminId,
-                    type: NotificationType.AdminModelDeprecated,
+                    type: NotificationType.AdminModelStatusChanged,
                     severity: NotificationSeverity.Warning,
                     title: title,
                     message: message,

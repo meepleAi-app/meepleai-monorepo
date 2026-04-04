@@ -11,6 +11,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 
 import { PlayerSetup, type SetupPlayer } from '../PlayerSetup';
@@ -202,5 +203,103 @@ describe('PlayerSetup', () => {
     render(<PlayerSetup players={players} onPlayersChange={vi.fn()} />);
 
     expect(screen.getByText(/ordine dei giocatori/i)).toBeInTheDocument();
+  });
+});
+
+describe('PlayerSetup — guest players', () => {
+  it('permette di aggiungere un ospite inserendo solo il nome', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(
+      <PlayerSetup
+        players={[]}
+        onPlayersChange={vi.fn()}
+        onAddPlayer={onAdd}
+        existingPlayers={[]}
+      />
+    );
+
+    await user.click(screen.getByRole('tab', { name: /ospite/i }));
+
+    const input = screen.getByPlaceholderText(/nome ospite/i);
+    await user.type(input, 'Luca');
+
+    await user.click(screen.getByRole('button', { name: /aggiungi/i }));
+
+    expect(onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ displayName: 'Luca', isGuest: true })
+    );
+  });
+
+  it('resetta il campo nome dopo aver aggiunto un ospite', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(
+      <PlayerSetup
+        players={[]}
+        onPlayersChange={vi.fn()}
+        onAddPlayer={onAdd}
+        existingPlayers={[]}
+      />
+    );
+
+    await user.click(screen.getByRole('tab', { name: /ospite/i }));
+
+    const input = screen.getByPlaceholderText(/nome ospite/i);
+    await user.type(input, 'Luca');
+    await user.click(screen.getByRole('button', { name: /aggiungi/i }));
+
+    expect(input).toHaveValue('');
+  });
+
+  it('non permette nomi ospite duplicati', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(
+      <PlayerSetup
+        players={[]}
+        onPlayersChange={vi.fn()}
+        onAddPlayer={onAdd}
+        existingPlayers={[{ id: 'g1', displayName: 'Luca', isGuest: true }]}
+      />
+    );
+
+    await user.click(screen.getByRole('tab', { name: /ospite/i }));
+
+    const input = screen.getByPlaceholderText(/nome ospite/i);
+    await user.type(input, 'Luca');
+
+    expect(screen.getByRole('button', { name: /aggiungi/i })).toBeDisabled();
+  });
+
+  it('il confronto nomi ospite duplicati è case-insensitive', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(
+      <PlayerSetup
+        players={[]}
+        onPlayersChange={vi.fn()}
+        onAddPlayer={onAdd}
+        existingPlayers={[{ id: 'g1', displayName: 'luca', isGuest: true }]}
+      />
+    );
+
+    await user.click(screen.getByRole('tab', { name: /ospite/i }));
+
+    const input = screen.getByPlaceholderText(/nome ospite/i);
+    await user.type(input, 'LUCA');
+
+    expect(screen.getByRole('button', { name: /aggiungi/i })).toBeDisabled();
+  });
+
+  it('il bottone aggiungi è disabilitato con nome vuoto', async () => {
+    const user = userEvent.setup();
+    render(<PlayerSetup players={[]} onPlayersChange={vi.fn()} existingPlayers={[]} />);
+
+    await user.click(screen.getByRole('tab', { name: /ospite/i }));
+
+    // Radix hides inactive TabsContent via the HTML `hidden` attribute.
+    // getByRole excludes hidden elements, so only the guest tab's button is returned.
+    expect(screen.getByRole('button', { name: /aggiungi/i })).toBeDisabled();
   });
 });

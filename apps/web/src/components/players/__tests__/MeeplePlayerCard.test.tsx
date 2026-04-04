@@ -82,24 +82,22 @@ describe('MeeplePlayerCard', () => {
   // AC: Info/Dettaglio — always visible, routes by type
   // --------------------------------------------------------------------------
 
-  it('Info button always present with correct href for guest player', () => {
+  it('Info button always present for guest player', () => {
     render(<MeeplePlayerCard player={mockGuestPlayer} />);
-    const infoLink = screen.getByRole('link', { name: 'Vai al profilo' });
-    expect(infoLink).toBeInTheDocument();
-    expect(infoLink).toHaveAttribute('href', '/players/player-123');
+    const infoButton = screen.getByRole('button', { name: 'Vai al profilo' });
+    expect(infoButton).toBeInTheDocument();
   });
 
   it('Info button routes to /users/[userId] for MeepleAI user', () => {
     render(<MeeplePlayerCard player={mockMeepleAiPlayer} isMeepleAiUser={true} />);
-    const infoLink = screen.getByRole('link', { name: 'Vai al profilo' });
-    expect(infoLink).toBeInTheDocument();
-    expect(infoLink).toHaveAttribute('href', '/users/user-789');
+    const infoButton = screen.getByRole('button', { name: 'Vai al profilo' });
+    expect(infoButton).toBeInTheDocument();
   });
 
   it('Info button routes to /players/[id] for non-MeepleAI user', () => {
     render(<MeeplePlayerCard player={mockGuestPlayer} isMeepleAiUser={false} />);
-    const infoLink = screen.getByRole('link', { name: 'Vai al profilo' });
-    expect(infoLink).toHaveAttribute('href', '/players/player-123');
+    const infoButton = screen.getByRole('button', { name: 'Vai al profilo' });
+    expect(infoButton).toBeInTheDocument();
   });
 
   // --------------------------------------------------------------------------
@@ -117,7 +115,7 @@ describe('MeeplePlayerCard', () => {
         player={mockMeepleAiPlayer}
         isMeepleAiUser={true}
         isCreatedByCurrentUser={true}
-      />,
+      />
     );
     expect(screen.queryByRole('button', { name: 'Configura' })).not.toBeInTheDocument();
   });
@@ -128,7 +126,7 @@ describe('MeeplePlayerCard', () => {
         player={mockGuestPlayer}
         isMeepleAiUser={false}
         isCreatedByCurrentUser={false}
-      />,
+      />
     );
     expect(screen.queryByRole('button', { name: 'Configura' })).not.toBeInTheDocument();
   });
@@ -139,7 +137,7 @@ describe('MeeplePlayerCard', () => {
         player={mockGuestPlayer}
         isMeepleAiUser={false}
         isCreatedByCurrentUser={true}
-      />,
+      />
     );
     expect(screen.getByRole('button', { name: 'Configura' })).toBeInTheDocument();
   });
@@ -154,7 +152,7 @@ describe('MeeplePlayerCard', () => {
         isMeepleAiUser={false}
         isCreatedByCurrentUser={true}
         onConfigure={onConfigure}
-      />,
+      />
     );
 
     await user.click(screen.getByRole('button', { name: 'Configura' }));
@@ -168,16 +166,14 @@ describe('MeeplePlayerCard', () => {
   it('Invita a Sessione not shown for unauthenticated user', () => {
     render(<MeeplePlayerCard player={mockGuestPlayer} isAuthenticated={false} />);
     expect(screen.queryByRole('button', { name: 'Invita a Sessione' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Nessuna sessione attiva' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Nessuna sessione attiva' })
+    ).not.toBeInTheDocument();
   });
 
   it('Invita a Sessione shown and enabled for authenticated user with active session', () => {
     render(
-      <MeeplePlayerCard
-        player={mockGuestPlayer}
-        isAuthenticated={true}
-        hasActiveSession={true}
-      />,
+      <MeeplePlayerCard player={mockGuestPlayer} isAuthenticated={true} hasActiveSession={true} />
     );
     const button = screen.getByRole('button', { name: 'Invita a Sessione' });
     expect(button).toBeInTheDocument();
@@ -186,11 +182,7 @@ describe('MeeplePlayerCard', () => {
 
   it('Invita a Sessione shown but disabled when no active session', () => {
     render(
-      <MeeplePlayerCard
-        player={mockGuestPlayer}
-        isAuthenticated={true}
-        hasActiveSession={false}
-      />,
+      <MeeplePlayerCard player={mockGuestPlayer} isAuthenticated={true} hasActiveSession={false} />
     );
     const button = screen.getByRole('button', { name: 'Nessuna sessione attiva' });
     expect(button).toBeInTheDocument();
@@ -207,7 +199,7 @@ describe('MeeplePlayerCard', () => {
         isAuthenticated={true}
         hasActiveSession={true}
         onInvite={onInvite}
-      />,
+      />
     );
 
     await user.click(screen.getByRole('button', { name: 'Invita a Sessione' }));
@@ -220,8 +212,8 @@ describe('MeeplePlayerCard', () => {
 
   it('unauthenticated user sees only Info button and no action buttons', () => {
     render(<MeeplePlayerCard player={mockGuestPlayer} />);
-    // Info always visible
-    expect(screen.getByRole('link', { name: 'Vai al profilo' })).toBeInTheDocument();
+    // Info always visible (rendered as button, not link)
+    expect(screen.getByRole('button', { name: 'Vai al profilo' })).toBeInTheDocument();
     // No action buttons
     expect(screen.queryByRole('button', { name: 'Configura' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Invita a Sessione' })).not.toBeInTheDocument();

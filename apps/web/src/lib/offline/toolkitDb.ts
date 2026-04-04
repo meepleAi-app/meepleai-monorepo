@@ -22,19 +22,19 @@ export function openToolkitDb(): Promise<IDBPDatabase> {
   if (dbInstance) return Promise.resolve(dbInstance);
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      upgrade(db: IDBPDatabase) {
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
           store.createIndex('by-session', 'sessionId');
           store.createIndex('by-synced', 'synced');
         }
       },
-    }).then(db => {
+    }).then((db: IDBPDatabase) => {
       dbInstance = db;
       return db;
     });
   }
-  return dbPromise;
+  return dbPromise!;
 }
 
 /** Reset the singleton — used in tests to isolate state between test cases. */

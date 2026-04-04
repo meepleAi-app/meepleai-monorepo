@@ -22,6 +22,13 @@ import type { PaginatedLibraryResponse } from '@/lib/api/schemas/library.schemas
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 vi.mock('@/hooks/queries/useCatalogTrending', () => ({
   useCatalogTrending: vi.fn(),
 }));
@@ -304,7 +311,7 @@ describe('PublicLibraryPage', () => {
     } as ReturnType<typeof useSharedGames>);
 
     render(<PublicLibraryPage />);
-    expect(screen.getByTestId('in-library-badge')).toBeInTheDocument();
+    expect(screen.getByTestId('status-badge-owned')).toBeInTheDocument();
   });
 
   it('shows add button for games not in library', () => {
@@ -314,7 +321,7 @@ describe('PublicLibraryPage', () => {
     } as ReturnType<typeof useSharedGames>);
 
     render(<PublicLibraryPage />);
-    expect(screen.getByTestId('add-button')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /aggiungi/i })).toBeInTheDocument();
   });
 
   it('calls addToLibrary when add button is clicked', () => {
@@ -325,10 +332,10 @@ describe('PublicLibraryPage', () => {
 
     render(<PublicLibraryPage />);
 
-    const addBtn = screen.getByTestId('add-button');
+    const addBtn = screen.getByRole('button', { name: /aggiungi/i });
     fireEvent.click(addBtn);
 
-    expect(defaultMutate).toHaveBeenCalledWith({ gameId: 'catalog-1' });
+    expect(defaultMutate).toHaveBeenCalledWith({ gameId: 'catalog-1' }, expect.any(Object));
   });
 
   // --------------------------------------------------------------------------
@@ -347,6 +354,11 @@ describe('PublicLibraryPage', () => {
     render(<PublicLibraryPage />);
 
     expect(screen.getByTestId('mechanic-filter-row')).toBeInTheDocument();
+
+    // Open the popover to reveal mechanic list items
+    const trigger = screen.getByRole('button', { name: /filtra per meccanica/i });
+    fireEvent.click(trigger);
+
     expect(screen.getByText('Deck Building')).toBeInTheDocument();
     expect(screen.getByText('Cooperativo')).toBeInTheDocument();
   });

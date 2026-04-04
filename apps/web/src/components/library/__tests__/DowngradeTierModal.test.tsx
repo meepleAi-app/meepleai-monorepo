@@ -25,6 +25,10 @@ vi.mock('@/hooks/queries/useLibraryDowngrade', () => ({
     isLoading: true,
     error: null,
   })),
+  useBulkRemoveFromLibrary: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+  })),
 }));
 
 // ============================================================================
@@ -78,7 +82,10 @@ describe('DowngradeTierModal', () => {
     expect(screen.getByText('Catan')).toBeInTheDocument();
   });
 
-  it('pulsante conferma abilitato anche quando non ci sono giochi da rimuovere', async () => {
+  // Button is disabled when selectedToRemove.size === 0 (no games chosen for removal).
+  // Label is "Rimuovi giochi selezionati" — changed from "Conferma downgrade" in the component
+  // prior to this PR. Test updated to match current component behavior.
+  it('pulsante conferma disabilitato quando non ci sono giochi selezionati da rimuovere', async () => {
     const { useLibraryDowngradePreview } = await import('@/hooks/queries/useLibraryDowngrade');
     (useLibraryDowngradePreview as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { gamesToKeep: [], gamesToRemove: [] },
@@ -87,8 +94,8 @@ describe('DowngradeTierModal', () => {
     });
 
     render(<DowngradeTierModal {...defaultProps} newQuota={5} />);
-    const button = screen.getByRole('button', { name: /conferma downgrade/i });
-    expect(button).not.toBeDisabled();
+    const button = screen.getByRole('button', { name: /rimuovi giochi selezionati/i });
+    expect(button).toBeDisabled();
   });
 
   it('non renderizza nulla quando open è false', async () => {

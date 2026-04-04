@@ -20,7 +20,7 @@ describe('HybridSidebar', () => {
     expect(screen.getByRole('link', { name: /libreria/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /sessioni/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /giocatori/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /storico partite/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /storico/i })).toBeInTheDocument();
   });
 
   it('renders AI section items', () => {
@@ -74,9 +74,12 @@ describe('HybridSidebar', () => {
     expect(screen.getByTestId('hybrid-sidebar')).toBeInTheDocument();
   });
 
-  it('renders emoji icons instead of SVG icons', () => {
+  it('renders SVG icons with aria-hidden', () => {
     render(<HybridSidebar />);
     const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
-    expect(within(dashboardLink).getByRole('img')).toBeInTheDocument();
+    // Icon SVGs are rendered with aria-hidden="true" (not role="img")
+    const svg = dashboardLink.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+    expect(svg).toHaveAttribute('aria-hidden', 'true');
   });
 });

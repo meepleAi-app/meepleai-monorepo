@@ -475,6 +475,23 @@
   --color-meeple-dark: hsl(0 0% 18%);
   --color-meeple-border: hsl(30 12% 90%);
   --color-meeple-light-orange: hsl(30 100% 94%);
+
+  /* Entity color utilities (v0app design system) */
+  --color-entity-game:    hsl(var(--e-game));
+  --color-entity-player:  hsl(var(--e-player));
+  --color-entity-session: hsl(var(--e-session));
+  --color-entity-agent:   hsl(var(--e-agent));
+  --color-entity-kb:      hsl(var(--e-document));
+  --color-entity-chat:    hsl(var(--e-chat));
+  --color-entity-event:   hsl(var(--e-event));
+
+  /* Font family utilities */
+  --font-heading: var(--font-quicksand), system-ui, sans-serif;
+  --font-body: var(--font-nunito), system-ui, sans-serif;
+
+  /* Warm shadow utilities */
+  --shadow-warm: 0 4px 20px rgba(180, 130, 80, 0.12);
+  --shadow-warm-lg: 0 8px 32px rgba(180, 130, 80, 0.15);
 }
 
 :root {
@@ -557,7 +574,8 @@
   --text-inverse: hsl(var(--primary-foreground));
 
   --font-display: var(--font-quicksand, var(--font-sans));
-  --font-body: var(--font-inter, var(--font-sans));
+  --font-heading: var(--font-quicksand), system-ui, sans-serif;
+  --font-body: var(--font-nunito, var(--font-sans));
   --font-size-xs: var(--text-xs);
   --font-size-sm: var(--text-sm);
   --font-size-base: var(--text-base);
@@ -640,7 +658,8 @@
   --text-inverse: hsl(var(--primary-foreground));
 
   --font-display: var(--font-quicksand, var(--font-sans));
-  --font-body: var(--font-inter, var(--font-sans));
+  --font-heading: var(--font-quicksand), system-ui, sans-serif;
+  --font-body: var(--font-nunito, var(--font-sans));
   --font-size-xs: var(--text-xs);
   --font-size-sm: var(--text-sm);
   --font-size-base: var(--text-base);

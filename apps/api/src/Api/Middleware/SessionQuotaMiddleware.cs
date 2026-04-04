@@ -31,24 +31,29 @@ internal class SessionQuotaMiddleware
 
     public async Task InvokeAsync(HttpContext context, ISessionQuotaService quotaService)
     {
+        // Run quota enforcement logic in isolation — _next is called exactly once, outside the try/catch.
+        // This prevents the catch from intercepting downstream exceptions and causing double-invocation.
+        await ApplyQuotaHeadersAsync(context, quotaService).ConfigureAwait(false);
+        await _next(context).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Evaluates session quota and adds observability headers if sessions were terminated.
+    /// No-ops on any error (fail-open). Never calls _next.
+    /// </summary>
+    private async Task ApplyQuotaHeadersAsync(HttpContext context, ISessionQuotaService quotaService)
+    {
         try
         {
             // Filter: Only apply to session creation endpoints
             if (!IsSessionCreationRequest(context))
-            {
-                await _next(context).ConfigureAwait(false);
                 return;
-            }
 
             // Extract user identity from active session
             var (authenticated, session, _) = context.TryGetActiveSession();
 
             if (!authenticated || session?.User is null)
-            {
-                // Unauthenticated request - let authentication middleware handle
-                await _next(context).ConfigureAwait(false);
                 return;
-            }
 
             var user = session.User;
 
@@ -78,9 +83,6 @@ internal class SessionQuotaMiddleware
                     user.Id,
                     string.Join(", ", result.TerminatedSessionIds));
             }
-
-            // Continue to endpoint (quota is now ensured)
-            await _next(context).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -90,7 +92,6 @@ internal class SessionQuotaMiddleware
             // Trade-off: Temporary quota bypass vs complete system unavailability
             _logger.LogWarning(ex,
                 "Session quota middleware encountered an error; allowing request (fail-open)");
-            await _next(context).ConfigureAwait(false);
         }
 #pragma warning restore CA1031
     }

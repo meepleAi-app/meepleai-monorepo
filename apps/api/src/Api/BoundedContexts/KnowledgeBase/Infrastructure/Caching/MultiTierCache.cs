@@ -10,14 +10,14 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 
 /// <summary>
 /// ISSUE-3494: Multi-tier cache implementation for context retrieval optimization.
-/// 3-tier strategy: In-Memory (μs) → Redis (ms) → Qdrant (100ms+).
+/// 3-tier strategy: In-Memory (μs) → Redis (ms) → Vector store (100ms+).
 /// Provides automatic cache promotion, adaptive TTL, and metrics tracking.
 /// </summary>
 internal sealed class MultiTierCache : IMultiTierCache, IDisposable
 {
     private readonly LruCache<string, CachedItem> _l1Cache;
     private readonly IHybridCacheService _l2Cache;
-    // L3 (Qdrant) removed - will be re-added with IServiceScopeFactory when vector caching is implemented
+    // L3 (vector store) not yet implemented — metrics tracked but always empty
     private readonly IRedisFrequencyTracker _frequencyTracker;
     private readonly ICacheMetricsRecorder _metricsRecorder;
     private readonly MultiTierCacheConfiguration _config;
@@ -122,7 +122,7 @@ internal sealed class MultiTierCache : IMultiTierCache, IDisposable
                 Interlocked.Increment(ref _l2Misses);
             }
 
-            // L3 (Qdrant) is not used for direct key-value lookups
+            // L3 (vector store) is not used for direct key-value lookups
             // It's for semantic/vector search which is handled separately
             await _metricsRecorder.RecordCacheMissAsync("get", "all_tiers").ConfigureAwait(false);
 
@@ -367,11 +367,11 @@ internal sealed class MultiTierCache : IMultiTierCache, IDisposable
                 EntryCount = 0, // Redis entry count requires additional tracking
                 AverageLatencyMs = 0 // Would require separate tracking
             },
-            L3Qdrant = new TierMetrics
+            L3Vector = new TierMetrics
             {
                 Hits = Interlocked.Read(ref _l3Hits),
                 Misses = Interlocked.Read(ref _l3Misses),
-                EntryCount = 0, // Qdrant entry count requires API call
+                EntryCount = 0,
                 AverageLatencyMs = 0
             },
             TotalPromotions = Interlocked.Read(ref _promotions),

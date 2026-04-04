@@ -143,7 +143,7 @@ public sealed class AdministrationDomainModelsTests
     {
         // Act
         var status = new ServiceHealthStatus(
-            ServiceName: "qdrant",
+            ServiceName: "embedding",
             State: HealthState.Degraded,
             ErrorMessage: "High latency detected",
             CheckedAt: DateTime.UtcNow,
@@ -156,7 +156,7 @@ public sealed class AdministrationDomainModelsTests
     [Theory]
     [InlineData("postgres")]
     [InlineData("redis")]
-    [InlineData("qdrant")]
+    [InlineData("embedding")]
     [InlineData("n8n")]
     [InlineData("prometheus")]
     public void ServiceHealthStatus_AcceptsAllServiceNames(string serviceName)
@@ -330,7 +330,7 @@ public sealed class AdministrationDomainModelsTests
         {
             new("postgres", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(50)),
             new("redis", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(10)),
-            new("qdrant", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100))
+            new("embedding", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100))
         };
 
         var metrics = new PrometheusMetricsSummary(

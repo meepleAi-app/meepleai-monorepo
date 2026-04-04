@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// <summary>
 /// Tests for IndexPdfCommandHandler.
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
-/// Tests PDF text indexing workflow (chunking, embedding, Qdrant indexing).
+/// Tests PDF text indexing workflow (chunking, embedding, pgvector indexing).
 /// NOTE: Complex orchestrator with many dependencies - focused on construction and validation.
 /// RESOLVED: Issue #1690 - Integration tests added in IndexPdfIntegrationTests.cs.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
@@ -196,23 +196,23 @@ public class IndexPdfCommandHandlerTests
     }
 
     [Fact]
-    public void IndexingResultDto_CreateFailure_WithQdrantIndexingFailure()
+    public void IndexingResultDto_CreateFailure_WithVectorIndexingFailure()
     {
         // Act
         var result = IndexingResultDto.CreateFailure(
-            "Qdrant indexing failed",
-            PdfIndexingErrorCode.QdrantIndexingFailed);
+            "Vector indexing failed",
+            PdfIndexingErrorCode.VectorIndexingFailed);
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorCode.Should().Be(PdfIndexingErrorCode.QdrantIndexingFailed);
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.VectorIndexingFailed);
     }
     [Theory]
     [InlineData(PdfIndexingErrorCode.PdfNotFound)]
     [InlineData(PdfIndexingErrorCode.TextExtractionRequired)]
     [InlineData(PdfIndexingErrorCode.ChunkingFailed)]
     [InlineData(PdfIndexingErrorCode.EmbeddingFailed)]
-    [InlineData(PdfIndexingErrorCode.QdrantIndexingFailed)]
+    [InlineData(PdfIndexingErrorCode.VectorIndexingFailed)]
     [InlineData(PdfIndexingErrorCode.UnexpectedError)]
     public void PdfIndexingErrorCode_AllValuesAreValid(PdfIndexingErrorCode errorCode)
     {
@@ -613,7 +613,7 @@ public class IndexPdfCommandHandlerTests
 #pragma warning restore CA5394
     }
 
-    // NOTE: Full workflow tests (text chunking, embedding generation, Qdrant indexing)
+    // NOTE: Full workflow tests (text chunking, embedding generation, pgvector indexing)
     // should be in integration test suite due to DbContext and multi-service complexity.
     // See integration-tests.yml workflow.
 }

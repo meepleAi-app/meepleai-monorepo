@@ -10,8 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core implementation of IEmbeddingRepository.
-/// Note: Embeddings are stored in Qdrant, not PostgreSQL.
-/// This repository coordinates between domain layer and Qdrant adapter.
+/// Embeddings are stored in PostgreSQL via pgvector (IVectorStoreAdapter → PgVectorStoreAdapter).
 /// </summary>
 internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
 {
@@ -28,9 +27,8 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
 
     public async Task<Embedding?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        // Note: Qdrant doesn't support direct ID lookup in current implementation
-        // Would need to enhance QdrantService with GetPointById method
-        // For now, return null as this is rarely used
+        // Direct lookup by embedding ID is not used — pgvector search is vector-based
+        // Return null; callers rely on SearchByVectorAsync for retrieval
         return await Task.FromResult<Embedding?>(null).ConfigureAwait(false);
     }
 
@@ -38,9 +36,8 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
         Guid vectorDocumentId,
         CancellationToken cancellationToken = default)
     {
-        // Note: Current QdrantService doesn't support filtering by vector document ID
-        // Would need to add filter capability to SearchAsync
-        // For now, return empty list
+        // Filtering embeddings by VectorDocument ID is not exposed via IVectorStoreAdapter
+        // Use SearchByVectorAsync for actual retrieval
         return await Task.FromResult(new List<Embedding>()).ConfigureAwait(false);
     }
 
@@ -48,9 +45,8 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
         Guid gameId,
         CancellationToken cancellationToken = default)
     {
-        // Note: This would require a full scan of Qdrant with gameId filter
-        // Not efficient and not supported by current QdrantService
-        // Use SearchByVectorAsync with broad query instead
+        // Bulk retrieval by gameId is not exposed via IVectorStoreAdapter
+        // Use SearchByVectorAsync for similarity-based retrieval
         return await Task.FromResult(new List<Embedding>()).ConfigureAwait(false);
     }
 
@@ -62,7 +58,7 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
         IReadOnlyList<Guid>? documentIds = null,
         CancellationToken cancellationToken = default)
     {
-        // Delegate to Qdrant adapter for vector similarity search
+        // Delegate to pgvector adapter for vector similarity search
         // Issue #2051: Pass documentIds for filtering
         return await _vectorStore.SearchAsync(
             gameId,
@@ -77,7 +73,7 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
         List<Embedding> embeddings,
         CancellationToken cancellationToken = default)
     {
-        // Delegate to Qdrant adapter for batch insertion
+        // Delegate to pgvector adapter for batch insertion
         await _vectorStore.IndexBatchAsync(embeddings, cancellationToken).ConfigureAwait(false);
     }
 
@@ -85,7 +81,7 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
         Guid vectorDocumentId,
         CancellationToken cancellationToken = default)
     {
-        // Delegate to Qdrant adapter for deletion
+        // Delegate to pgvector adapter for deletion
         await _vectorStore.DeleteByVectorDocumentIdAsync(vectorDocumentId, cancellationToken).ConfigureAwait(false);
     }
 

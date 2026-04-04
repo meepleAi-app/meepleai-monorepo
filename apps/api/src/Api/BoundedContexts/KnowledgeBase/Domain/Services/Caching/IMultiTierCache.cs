@@ -4,14 +4,14 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Caching;
 
 /// <summary>
 /// ISSUE-3494: Multi-tier cache interface for context retrieval optimization.
-/// 3-tier strategy: In-Memory (μs) → Redis (ms) → Qdrant (100ms+).
+/// 3-tier strategy: In-Memory (μs) → Redis (ms) → Vector store (100ms+).
 /// Target: >80% cache hit rate for frequent rules and context elements.
 /// </summary>
 internal interface IMultiTierCache
 {
     /// <summary>
     /// Gets a cached value from the fastest available tier with automatic promotion.
-    /// Lookup order: L1 (memory) → L2 (Redis) → L3 (Qdrant).
+    /// Lookup order: L1 (memory) → L2 (Redis) → L3 (vector store).
     /// On cache hit from L2/L3, promotes value to faster tiers.
     /// </summary>
     /// <typeparam name="T">Type of cached value</typeparam>
@@ -50,7 +50,7 @@ internal interface IMultiTierCache
     /// <param name="key">Cache key</param>
     /// <param name="gameId">Game ID for context</param>
     /// <param name="value">Value to cache</param>
-    /// <param name="embedding">Optional embedding for L3 (Qdrant) storage</param>
+    /// <param name="embedding">Optional embedding for L3 (vector store) storage</param>
     /// <param name="tags">Optional tags for cache invalidation</param>
     /// <param name="cancellationToken">Cancellation token</param>
     Task SetAsync<T>(
@@ -154,9 +154,9 @@ internal enum CacheTier
     L2Redis = 2,
 
     /// <summary>
-    /// L3: Qdrant vector database (100ms+ latency).
+    /// L3: Vector store / pgvector (100ms+ latency).
     /// </summary>
-    L3Qdrant = 3,
+    L3Vector = 3,
 
     /// <summary>
     /// Value was created by factory (cache miss on all tiers).
@@ -180,9 +180,9 @@ internal class MultiTierCacheMetrics
     public required TierMetrics L2Redis { get; init; }
 
     /// <summary>
-    /// L3 (Qdrant) cache statistics.
+    /// L3 (vector store) cache statistics.
     /// </summary>
-    public required TierMetrics L3Qdrant { get; init; }
+    public required TierMetrics L3Vector { get; init; }
 
     /// <summary>
     /// Overall hit rate across all tiers (0-100).
@@ -192,7 +192,7 @@ internal class MultiTierCacheMetrics
     {
         get
         {
-            var totalHits = L1Memory.Hits + L2Redis.Hits + L3Qdrant.Hits;
+            var totalHits = L1Memory.Hits + L2Redis.Hits + L3Vector.Hits;
             var totalMisses = L1Memory.Misses; // Only count final misses
             var total = totalHits + totalMisses;
             return total > 0 ? (totalHits * 100.0) / total : 0;

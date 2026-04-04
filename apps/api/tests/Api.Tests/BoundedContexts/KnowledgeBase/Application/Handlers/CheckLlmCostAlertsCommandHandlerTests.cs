@@ -67,7 +67,7 @@ public class CheckLlmCostAlertsCommandHandlerTests
     [Fact]
     public async Task Handle_DailyCostExceedsThreshold_SendsDailyAlert()
     {
-        // $101 daily cost — exceeds the $100 threshold
+        // $101 daily cost — exceeds the $100 threshold; weekly/monthly return 0 to isolate the daily path
         _mockCostLogRepository
             .Setup(r => r.GetDailyCostAsync(It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(101m);
@@ -86,5 +86,55 @@ public class CheckLlmCostAlertsCommandHandlerTests
                 "LLM_COST_THRESHOLD", It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<IDictionary<string, object>>(), It.IsAny<CancellationToken>()),
             Times.Once);
+        _mockAlertingService.Verify(
+            s => s.SendAlertAsync(
+                It.Is<string>(t => t != "LLM_COST_THRESHOLD"), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WeeklyCostExceedsThreshold_SendsWeeklyAlert()
+    {
+        // $501 weekly cost — exceeds the $500 threshold; daily returns 0 to isolate the weekly path
+        _mockCostLogRepository
+            .Setup(r => r.GetDailyCostAsync(It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0m);
+        _mockCostLogRepository
+            .Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(501m);
+
+        var result = await _handler.Handle(new CheckLlmCostAlertsCommand(), TestContext.Current.CancellationToken);
+
+        result.Success.Should().BeTrue();
+        _mockAlertingService.Verify(
+            s => s.SendAlertAsync(
+                "LLM_WEEKLY_COST_THRESHOLD", It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>(), It.IsAny<CancellationToken>()),
+            Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task Handle_MonthlyCostProjectionExceedsThreshold_SendsMonthlyAlert()
+    {
+        // Daily cost 0 so daily alert does not fire.
+        // GetTotalCostAsync returns a high month-to-date cost that projects over $3000.
+        // The projection is: (monthCost / daysElapsed) * daysInMonth.
+        // We use 10000m so that even on the last day of the month (31/31) * 10000 = 10000 > 3000.
+        _mockCostLogRepository
+            .Setup(r => r.GetDailyCostAsync(It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0m);
+        _mockCostLogRepository
+            .Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(10000m);
+
+        var result = await _handler.Handle(new CheckLlmCostAlertsCommand(), TestContext.Current.CancellationToken);
+
+        result.Success.Should().BeTrue();
+        _mockAlertingService.Verify(
+            s => s.SendAlertAsync(
+                "LLM_MONTHLY_COST_PROJECTION", It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>(), It.IsAny<CancellationToken>()),
+            Times.AtLeastOnce);
     }
 }

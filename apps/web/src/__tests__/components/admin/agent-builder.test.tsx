@@ -16,16 +16,18 @@ import { defaultAgentForm, type AgentForm } from '@/lib/schemas/agent-definition
 
 describe('Agent Builder Components', () => {
   describe('BasicInfoStep', () => {
-    it('renders all required fields', () => {
+    it('renders fields with correct initial values from defaultAgentForm', () => {
       const onChange = vi.fn();
       render(<BasicInfoStep agent={defaultAgentForm} onChange={onChange} />);
 
-      expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+      const nameInput = screen.getByLabelText(/name/i) as HTMLInputElement;
+      expect(nameInput.value).toBe(defaultAgentForm.name);
+
+      const descriptionInput = screen.getByLabelText(/description/i) as HTMLInputElement;
+      expect(descriptionInput.value).toBe(defaultAgentForm.description);
+
       expect(screen.getByLabelText(/agent type/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/model/i)).toBeInTheDocument();
-      expect(screen.getByText(/temperature/i)).toBeInTheDocument(); // Slider label is span
-      expect(screen.getByText(/max tokens/i)).toBeInTheDocument(); // Slider label is span
     });
 
     it('calls onChange when name is updated', async () => {

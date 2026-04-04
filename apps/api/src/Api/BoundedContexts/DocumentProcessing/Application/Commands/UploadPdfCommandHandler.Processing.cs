@@ -356,7 +356,8 @@ internal partial class UploadPdfCommandHandler
             _logger.LogInformation("📦 [BATCH-EMBED] Processing batch {Current}/{Total}: {ChunkCount} chunks",
                 batchIndex + 1, batchCount, batchTexts.Count);
 
-            var batchResult = await embeddingService.GenerateEmbeddingsAsync(batchTexts).ConfigureAwait(false);
+            var batchResult = await embeddingService.GenerateEmbeddingsAsync(
+                batchTexts, pdfDoc.Language ?? "en").ConfigureAwait(false);
 
             if (!batchResult.Success)
             {

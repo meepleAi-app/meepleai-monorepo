@@ -46,6 +46,16 @@ internal interface IEmbeddingProvider
     Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Generate embeddings with explicit language hint.
+    /// Default implementation ignores language; override in language-aware providers.
+    /// </summary>
+    Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(
+        IReadOnlyList<string> texts,
+        string language,
+        CancellationToken cancellationToken = default)
+        => GenerateBatchEmbeddingsAsync(texts, cancellationToken); // default: ignores language
+
+    /// <summary>
     /// Check if the provider is healthy and available
     /// </summary>
     Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default);

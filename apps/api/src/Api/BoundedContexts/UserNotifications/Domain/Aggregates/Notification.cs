@@ -19,6 +19,7 @@ internal sealed class Notification : AggregateRoot<Guid>
     public bool IsRead { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? ReadAt { get; private set; }
+    public Guid? CorrelationId { get; private set; }
 
 #pragma warning disable CS8618
     private Notification() : base() { }
@@ -35,6 +36,7 @@ internal sealed class Notification : AggregateRoot<Guid>
     /// <param name="message">Detailed notification message</param>
     /// <param name="link">Optional deep-link target (e.g., /chat/thread-id)</param>
     /// <param name="metadata">Optional JSON metadata for additional context</param>
+    /// <param name="correlationId">Optional correlation ID for cross-channel tracking</param>
     public Notification(
         Guid id,
         Guid userId,
@@ -43,7 +45,8 @@ internal sealed class Notification : AggregateRoot<Guid>
         string title,
         string message,
         string? link = null,
-        string? metadata = null)
+        string? metadata = null,
+        Guid? correlationId = null)
         : base(id)
     {
         UserId = userId;
@@ -55,6 +58,7 @@ internal sealed class Notification : AggregateRoot<Guid>
         Message = !string.IsNullOrWhiteSpace(message) ? message : throw new ArgumentException("Message cannot be empty", nameof(message));
         Link = link;
         Metadata = metadata;
+        CorrelationId = correlationId;
         IsRead = false;
         CreatedAt = DateTime.UtcNow;
         ReadAt = null;

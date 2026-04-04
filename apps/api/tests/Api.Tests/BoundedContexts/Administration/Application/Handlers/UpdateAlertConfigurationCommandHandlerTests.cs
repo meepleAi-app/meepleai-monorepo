@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertConfiguration;
-using Api.BoundedContexts.Administration.Application.Handlers.AlertConfiguration;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertConfigurations;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.Tests.Constants;
@@ -219,8 +218,9 @@ public class UpdateAlertConfigurationCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentException>();
 
         _mockRepository.Verify(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -232,8 +232,9 @@ public class UpdateAlertConfigurationCommandHandlerTests
         UpdateAlertConfigurationCommand? command = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(command!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
 
         _mockRepository.Verify(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -242,15 +243,17 @@ public class UpdateAlertConfigurationCommandHandlerTests
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UpdateAlertConfigurationCommandHandler(null!, _mockLogger.Object));
+        var act = () =>
+            new UpdateAlertConfigurationCommandHandler(null!, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new UpdateAlertConfigurationCommandHandler(_mockRepository.Object, null!));
+        var act = () =>
+            new UpdateAlertConfigurationCommandHandler(_mockRepository.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

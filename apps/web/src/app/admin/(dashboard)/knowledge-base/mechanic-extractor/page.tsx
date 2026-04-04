@@ -26,7 +26,6 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
-import { useSetNavConfig } from '@/hooks/useSetNavConfig';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { createSharedGamesClient } from '@/lib/api/clients/sharedGamesClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
@@ -50,7 +49,7 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]['id'];
 
-function getNotesKey(section: SectionId): keyof MechanicDraftDto {
+function _getNotesKey(section: SectionId): keyof MechanicDraftDto {
   return `${section}Notes` as keyof MechanicDraftDto;
 }
 
@@ -59,7 +58,6 @@ function getDraftKey(section: SectionId): keyof MechanicDraftDto {
 }
 
 export default function MechanicExtractorPage() {
-  const setNavConfig = useSetNavConfig();
   const queryClient = useQueryClient();
 
   // Game+PDF selection state
@@ -82,21 +80,6 @@ export default function MechanicExtractorPage() {
 
   // PDF viewer ref
   const pdfUrl = selectedPdfId ? `/api/v1/documents/${selectedPdfId}/download` : '';
-
-  // NavConfig
-  useEffect(() => {
-    setNavConfig({
-      miniNav: [
-        { id: 'kb', label: 'Knowledge Base', href: '/admin/knowledge-base' },
-        {
-          id: 'extractor',
-          label: 'Mechanic Extractor',
-          href: '/admin/knowledge-base/mechanic-extractor',
-        },
-      ],
-      actionBar: [],
-    });
-  }, [setNavConfig]);
 
   // Fetch shared games for selection
   const { data: gamesData } = useQuery({

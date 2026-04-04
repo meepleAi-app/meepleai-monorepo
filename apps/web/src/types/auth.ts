@@ -11,6 +11,8 @@ export interface AuthUser {
   email: string;
   displayName?: string | null;
   role: string;
+  onboardingCompleted?: boolean; // Issue #323
+  onboardingSkipped?: boolean; // Issue #323
 }
 
 /**
@@ -32,13 +34,14 @@ export interface SessionStatusResponse {
 
 /**
  * User roles for authorization (Issue #3690: Added SuperAdmin)
+ * Canonical lowercase format matching backend Role.cs (ToLowerInvariant)
  */
-export type UserRole = 'SuperAdmin' | 'Admin' | 'Editor' | 'User';
+export type UserRole = 'superadmin' | 'admin' | 'editor' | 'user';
 
 /**
  * Helper to check if user has required role
  */
-export function hasRole(user: AuthUser | null, requiredRole: UserRole): boolean {
+export function hasRole(user: AuthUser | null, requiredRole: UserRole | string): boolean {
   if (!user) return false;
   const role = user.role.toLowerCase();
   const required = requiredRole.toLowerCase();

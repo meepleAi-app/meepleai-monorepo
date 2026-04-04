@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Authentication.Domain.Entities;
@@ -22,7 +22,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers.Integrat
 /// Tests audit logging with real database persistence.
 /// Issue #2886: Verify audit log entries are persisted correctly.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class UnsuspendUserCommandHandlerIntegrationTests : IAsyncLifetime
 {

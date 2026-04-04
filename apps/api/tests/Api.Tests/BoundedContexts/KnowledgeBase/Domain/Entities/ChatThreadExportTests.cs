@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -28,20 +29,20 @@ public class ChatThreadExportTests
         var exported = thread.Export(ExportFormat.Json);
 
         // Assert
-        Assert.NotNull(exported);
-        Assert.Equal(ExportFormat.Json, exported.Format);
-        Assert.Equal("application/json", exported.ContentType);
-        Assert.Equal("json", exported.FileExtension);
-        Assert.False(string.IsNullOrWhiteSpace(exported.Content));
+        exported.Should().NotBeNull();
+        exported.Format.Should().Be(ExportFormat.Json);
+        exported.ContentType.Should().Be("application/json");
+        exported.FileExtension.Should().Be("json");
+        string.IsNullOrWhiteSpace(exported.Content).Should().BeFalse();
 
         // Verify JSON structure
-        Assert.Contains("\"id\":", exported.Content);
-        Assert.Contains("\"userId\":", exported.Content);
-        Assert.Contains("\"gameId\":", exported.Content);
-        Assert.Contains("\"title\": \"Test Chat\"", exported.Content);
-        Assert.Contains("\"messages\":", exported.Content);
-        Assert.Contains("\"role\": \"user\"", exported.Content);
-        Assert.Contains("\"role\": \"assistant\"", exported.Content);
+        exported.Content.Should().Contain("\"id\":");
+        exported.Content.Should().Contain("\"userId\":");
+        exported.Content.Should().Contain("\"gameId\":");
+        exported.Content.Should().Contain("\"title\": \"Test Chat\"");
+        exported.Content.Should().Contain("\"messages\":");
+        exported.Content.Should().Contain("\"role\": \"user\"");
+        exported.Content.Should().Contain("\"role\": \"assistant\"");
     }
 
     [Fact]
@@ -60,20 +61,20 @@ public class ChatThreadExportTests
         var exported = thread.Export(ExportFormat.Markdown);
 
         // Assert
-        Assert.NotNull(exported);
-        Assert.Equal(ExportFormat.Markdown, exported.Format);
-        Assert.Equal("text/markdown", exported.ContentType);
-        Assert.Equal("md", exported.FileExtension);
-        Assert.False(string.IsNullOrWhiteSpace(exported.Content));
+        exported.Should().NotBeNull();
+        exported.Format.Should().Be(ExportFormat.Markdown);
+        exported.ContentType.Should().Be("text/markdown");
+        exported.FileExtension.Should().Be("md");
+        string.IsNullOrWhiteSpace(exported.Content).Should().BeFalse();
 
         // Verify Markdown structure
-        Assert.Contains("# Epic Battle", exported.Content);
-        Assert.Contains("**Created:**", exported.Content);
-        Assert.Contains("**Messages:**", exported.Content);
-        Assert.Contains("## 👤 User", exported.Content);
-        Assert.Contains("## 🤖 Assistant", exported.Content);
-        Assert.Contains("What are the combat rules?", exported.Content);
-        Assert.Contains("Combat uses dice rolls...", exported.Content);
+        exported.Content.Should().Contain("# Epic Battle");
+        exported.Content.Should().Contain("**Created:**");
+        exported.Content.Should().Contain("**Messages:**");
+        exported.Content.Should().Contain("## 👤 User");
+        exported.Content.Should().Contain("## 🤖 Assistant");
+        exported.Content.Should().Contain("What are the combat rules?");
+        exported.Content.Should().Contain("Combat uses dice rolls...");
     }
 
     [Fact]
@@ -89,8 +90,8 @@ public class ChatThreadExportTests
         var exportedMd = thread.Export(ExportFormat.Markdown);
 
         // Assert
-        Assert.Contains("\"messages\": []", exportedJson.Content);
-        Assert.Contains("*No messages in this conversation.*", exportedMd.Content);
+        exportedJson.Content.Should().Contain("\"messages\": []");
+        exportedMd.Content.Should().Contain("*No messages in this conversation.*");
     }
 
     [Fact]
@@ -106,8 +107,8 @@ public class ChatThreadExportTests
         var exportedMd = thread.Export(ExportFormat.Markdown);
 
         // Assert
-        Assert.Contains("\"title\": \"Untitled Chat\"", exportedJson.Content);
-        Assert.Contains("# Untitled Chat", exportedMd.Content);
+        exportedJson.Content.Should().Contain("\"title\": \"Untitled Chat\"");
+        exportedMd.Content.Should().Contain("# Untitled Chat");
     }
 
     [Fact]
@@ -124,8 +125,8 @@ public class ChatThreadExportTests
         var exported = thread.Export(ExportFormat.Json);
 
         // Assert
-        Assert.NotNull(exported);
-        Assert.Contains("\"status\": \"closed\"", exported.Content);
+        exported.Should().NotBeNull();
+        exported.Content.Should().Contain("\"status\": \"closed\"");
     }
 
     [Fact]
@@ -137,8 +138,9 @@ public class ChatThreadExportTests
         var thread = new ChatThread(threadId, userId);
 
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            thread.Export((ExportFormat)999));
+        Action act = () =>
+            thread.Export((ExportFormat)999);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -164,9 +166,9 @@ public class ChatThreadExportTests
         var msg2Index = content.IndexOf("Message 2", StringComparison.Ordinal);
         var resp2Index = content.IndexOf("Response 2", StringComparison.Ordinal);
 
-        Assert.True(msg1Index < resp1Index);
-        Assert.True(resp1Index < msg2Index);
-        Assert.True(msg2Index < resp2Index);
+        (msg1Index < resp1Index).Should().BeTrue();
+        (resp1Index < msg2Index).Should().BeTrue();
+        (msg2Index < resp2Index).Should().BeTrue();
     }
 
     [Fact]
@@ -183,8 +185,8 @@ public class ChatThreadExportTests
         var afterExport = DateTime.UtcNow;
 
         // Assert
-        Assert.True(exported.ExportedAt >= beforeExport);
-        Assert.True(exported.ExportedAt <= afterExport);
+        (exported.ExportedAt >= beforeExport).Should().BeTrue();
+        (exported.ExportedAt <= afterExport).Should().BeTrue();
     }
 }
 

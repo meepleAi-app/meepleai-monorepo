@@ -1,12 +1,52 @@
 #!/bin/sh
 # Pre-push hook for MeepleAI
-# Build verification only - tests are delegated to CI
+# Build verification + branch protection - tests are delegated to CI
 
 echo "🚀 Running pre-push checks..."
 
 # Get the current branch name
 CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
 echo "📌 Pushing from branch: $CURRENT_BRANCH"
+
+# ============================================
+# Protected Branch Safety (delete & force-push)
+# ============================================
+
+PROTECTED_BRANCHES="main main-staging main-dev backend-dev frontend-dev"
+
+# Read stdin: pre-push hook receives lines of "local_ref local_sha remote_ref remote_sha"
+while read local_ref local_sha remote_ref remote_sha; do
+  # Extract branch name from remote ref
+  remote_branch="${remote_ref#refs/heads/}"
+
+  for protected in $PROTECTED_BRANCHES; do
+    if [ "$remote_branch" = "$protected" ]; then
+
+      # Block deletion (local_sha is all zeros)
+      if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+        echo ""
+        echo "🛑 BLOCKED: Cannot delete protected branch '$protected'"
+        echo "   Protected branches: $PROTECTED_BRANCHES"
+        echo ""
+        exit 1
+      fi
+
+      # Block force-push (detect non-fast-forward)
+      if [ "$remote_sha" != "0000000000000000000000000000000000000000" ]; then
+        merge_base=$(git merge-base "$local_sha" "$remote_sha" 2>/dev/null)
+        if [ "$merge_base" != "$remote_sha" ]; then
+          echo ""
+          echo "🛑 BLOCKED: Cannot force-push to protected branch '$protected'"
+          echo "   Protected branches: $PROTECTED_BRANCHES"
+          echo "   Use a PR to merge changes instead."
+          echo ""
+          exit 1
+        fi
+      fi
+
+    fi
+  done
+done
 
 # ============================================
 # Branch Warnings

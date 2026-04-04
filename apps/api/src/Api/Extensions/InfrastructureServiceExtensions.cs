@@ -1,10 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Extensions.Http;
+using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
+using Api.Infrastructure.Http;
 using Api.Services;
 using Api.Configuration;
 using Api.Models;
@@ -26,6 +30,11 @@ internal static class InfrastructureServiceExtensions
         services.AddHttpClients(configuration);
         services.AddTimeProvider();
         services.AddBackgroundServices();
+
+        // Prevent unhandled background service exceptions from crashing the host.
+        // Safety net for schema mismatches (integration mode) or transient DB failures.
+        services.Configure<HostOptions>(options =>
+            options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
         services.AddStorageServices(); // Issue #2732: Storage services
 
         return services;
@@ -49,17 +58,17 @@ internal static class InfrastructureServiceExtensions
         {
             // SEC-03: Debug block removed (Issue #2152 resolved). Connection string must never be logged.
 
-            // Issue #2152: Try SecretsHelper FIRST (reads POSTGRES_* vars)
+            // SEC-708: Explicit connection string takes highest priority (allows SSL Mode, extra params)
+            var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
+
+            // Issue #2152: Try SecretsHelper (reads POSTGRES_* vars) as fallback
             var secretsHelperResult = SecretsHelper.BuildPostgresConnectionString(configuration);
 
-            // SEC-708: Build connection string from Docker Secrets if available
-            var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
-            var connectionString = secretsHelperResult != null
-                ? secretsHelperResult
-                : (envVarConnectionString
-                    ?? configuration["ConnectionStrings__Postgres"]
-                    ?? configuration.GetConnectionString("Postgres")
-                    ?? throw new InvalidOperationException("No PostgreSQL connection string configured"));
+            var connectionString = envVarConnectionString
+                ?? secretsHelperResult
+                ?? configuration["ConnectionStrings__Postgres"]
+                ?? configuration.GetConnectionString("Postgres")
+                ?? throw new InvalidOperationException("No PostgreSQL connection string configured");
 
             // PERF-09: Optimize Postgres connection pooling for better throughput
             services.AddDbContext<MeepleAiDbContext>(options =>
@@ -235,6 +244,7 @@ internal static class InfrastructureServiceExtensions
             var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
+        .AddServiceCallLogging("Ollama")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(2), // Recycle connections every 2 min
@@ -259,11 +269,10 @@ internal static class InfrastructureServiceExtensions
         .AddTransientHttpErrorPolicy(policy =>
             policy.WaitAndRetryAsync(3, retryAttempt =>
                 TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
-        // Issue #2520: Circuit breaker policy (5 failures → open for 30s)
-        .AddTransientHttpErrorPolicy(policy =>
-            policy.CircuitBreakerAsync(
-                handledEventsAllowedBeforeBreaking: 5,
-                durationOfBreak: TimeSpan.FromSeconds(30)))
+        // Issue #2520: Circuit breaker policy (5 failures → open for 30s), wired to tracker
+        .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+            "OpenRouter", sp.GetService<ICircuitBreakerStateTracker>()))
+        .AddServiceCallLogging("OpenRouter")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -281,6 +290,7 @@ internal static class InfrastructureServiceExtensions
             var timeoutSeconds = configuration.GetValue<int>("Embedding:TimeoutSeconds", 60);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
+        .AddServiceCallLogging("HuggingFace")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -298,8 +308,9 @@ internal static class InfrastructureServiceExtensions
                 ?? "http://embedding-service:8000";
 #pragma warning restore S1075
             client.BaseAddress = new Uri(serviceUrl);
-            client.Timeout = TimeSpan.FromSeconds(60);
+            client.Timeout = TimeSpan.FromSeconds(300);
         })
+        .AddServiceCallLogging("EmbeddingService")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -335,10 +346,9 @@ internal static class InfrastructureServiceExtensions
         .AddTransientHttpErrorPolicy(policy =>
             policy.WaitAndRetryAsync(3, retryAttempt =>
                 TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
-        .AddTransientHttpErrorPolicy(policy =>
-            policy.CircuitBreakerAsync(
-                handledEventsAllowedBeforeBreaking: 5,
-                durationOfBreak: TimeSpan.FromSeconds(30)))
+        .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+            "BggApi", sp.GetService<ICircuitBreakerStateTracker>()))
+        .AddServiceCallLogging("BggApi")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -362,6 +372,7 @@ internal static class InfrastructureServiceExtensions
                 client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bggTokenForClient}");
             }
         })
+        .AddServiceCallLogging("BggApi")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -374,6 +385,32 @@ internal static class InfrastructureServiceExtensions
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
 
         return services;
+    }
+
+    private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy(
+        string? serviceName = null, ICircuitBreakerStateTracker? tracker = null)
+    {
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: 5,
+                durationOfBreak: TimeSpan.FromSeconds(30),
+                onBreak: (outcome, _) =>
+                {
+                    tracker?.RecordBreak(serviceName ?? "Unknown",
+                        outcome.Exception?.Message ?? outcome.Result?.ReasonPhrase);
+                },
+                onReset: () => tracker?.RecordReset(serviceName ?? "Unknown"),
+                onHalfOpen: () => tracker?.RecordHalfOpen(serviceName ?? "Unknown"));
+    }
+
+    internal static IHttpClientBuilder AddServiceCallLogging(this IHttpClientBuilder builder, string serviceName)
+    {
+        return builder.AddHttpMessageHandler(sp =>
+            new ServiceCallLoggingHandler(
+                sp,
+                serviceName,
+                sp.GetRequiredService<ILogger<ServiceCallLoggingHandler>>()));
     }
 
     private static IServiceCollection AddTimeProvider(this IServiceCollection services)
@@ -395,6 +432,13 @@ internal static class InfrastructureServiceExtensions
         services.AddScoped<Infrastructure.Services.IBggImportQueueService, Infrastructure.Services.BggImportQueueService>();
         services.AddHostedService<Infrastructure.BackgroundServices.BggImportQueueBackgroundService>();
 
+        // Admin Invitation Flow: background services for invitation lifecycle
+        services.AddHostedService<Infrastructure.BackgroundServices.InvitationCleanupService>();
+        services.AddHostedService<Infrastructure.BackgroundServices.GameSuggestionProcessorService>();
+
+        // Issue #3695: Daily database metrics snapshots for growth tracking
+        services.AddHostedService<Infrastructure.BackgroundServices.DatabaseMetricsSnapshotService>();
+
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>
         {
@@ -403,7 +447,8 @@ internal static class InfrastructureServiceExtensions
         })
         .AddTransientHttpErrorPolicy(policy =>
             policy.WaitAndRetryAsync(2, retryAttempt =>
-                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
+                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
+        .AddServiceCallLogging("Infisical");
 
         // ISSUE-3499: Orchestration service client for Tutor agent
         services.AddHttpClient("OrchestrationService", client =>
@@ -413,6 +458,7 @@ internal static class InfrastructureServiceExtensions
 #pragma warning restore S1075
             client.Timeout = TimeSpan.FromSeconds(10);
         })
+        .AddServiceCallLogging("OrchestrationService")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),

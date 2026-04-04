@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Helpers;
 using Api.Infrastructure.Security;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
@@ -155,6 +156,8 @@ internal class OllamaLlmClient : ILlmClient
         string userPrompt,
         CancellationToken ct)
     {
+        // CodeQL: cs/cleartext-storage-of-sensitive-information — response body is read for
+        // deserialization and error logging (masked via DataMasking.MaskResponseBody). Suppressing as by-design.
         var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
@@ -238,6 +241,7 @@ internal class OllamaLlmClient : ILlmClient
 
             if (!response.IsSuccessStatusCode)
             {
+                // CodeQL: cs/cleartext-storage-of-sensitive-information — error body is masked before logging
                 var errorBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger.LogError("Ollama streaming API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(errorBody));
                 response.Dispose();
@@ -304,7 +308,7 @@ internal class OllamaLlmClient : ILlmClient
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogWarning(ex, "Failed to parse Ollama streaming chunk: {Data}", line);
+                    _logger.LogWarning(ex, "Failed to parse Ollama streaming chunk: {Data}", LogSanitizer.Sanitize(line));
                     continue;
                 }
 

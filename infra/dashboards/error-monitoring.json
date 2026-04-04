@@ -843,11 +843,11 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "up{job=\"qdrant\"}",
+          "expr": "up{job=\"postgresql\"}",
           "refId": "A"
         }
       ],
-      "title": "Qdrant Status",
+      "title": "pgvector (PostgreSQL) Status",
       "type": "stat"
     }
   ],

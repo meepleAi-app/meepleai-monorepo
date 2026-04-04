@@ -37,8 +37,8 @@ vi.mock('@/hooks/useAuthUser', () => ({
 
 // Mock notification store
 const mockFetchUnreadCount = vi.fn();
-vi.mock('@/store/notification/store', () => ({
-  useNotificationStore: vi.fn((selector) => {
+vi.mock('@/stores/notification/store', () => ({
+  useNotificationStore: vi.fn(selector => {
     const state = {
       unreadCount: 5,
       fetchUnreadCount: mockFetchUnreadCount,

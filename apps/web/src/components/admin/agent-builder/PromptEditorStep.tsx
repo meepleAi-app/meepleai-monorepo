@@ -10,7 +10,6 @@ import { useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { Plus, Trash2 } from 'lucide-react';
 
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Select,
@@ -18,7 +17,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Label } from '@/components/ui/primitives/label';
 import type { AgentForm, PromptTemplate } from '@/lib/schemas/agent-definition-schema';
 
 interface PromptEditorStepProps {
@@ -61,7 +61,7 @@ export function PromptEditorStep({ agent, onChange }: PromptEditorStepProps) {
       <div className="flex items-center justify-between">
         <Label>System Prompts ({agent.prompts.length}/20)</Label>
         <div className="flex gap-2">
-          <Select onValueChange={(role) => addPrompt(role as 'system' | 'user' | 'assistant')}>
+          <Select onValueChange={role => addPrompt(role as 'system' | 'user' | 'assistant')}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Add prompt..." />
             </SelectTrigger>
@@ -91,7 +91,10 @@ export function PromptEditorStep({ agent, onChange }: PromptEditorStepProps) {
 
       {/* Prompt Tabs */}
       {agent.prompts.length > 0 && (
-        <Tabs value={String(activePromptIndex)} onValueChange={(v) => setActivePromptIndex(Number(v))}>
+        <Tabs
+          value={String(activePromptIndex)}
+          onValueChange={v => setActivePromptIndex(Number(v))}
+        >
           <TabsList className="w-full justify-start overflow-x-auto">
             {agent.prompts.map((prompt, index) => (
               <TabsTrigger key={index} value={String(index)} className="relative group">
@@ -99,7 +102,7 @@ export function PromptEditorStep({ agent, onChange }: PromptEditorStepProps) {
                 {index > 0 && (
                   <button
                     type="button"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       removePrompt(index);
                     }}
@@ -146,7 +149,7 @@ export function PromptEditorStep({ agent, onChange }: PromptEditorStepProps) {
                     language="markdown"
                     theme="vs-dark"
                     value={prompt.content}
-                    onChange={(value) => updatePrompt(index, { content: value || '' })}
+                    onChange={value => updatePrompt(index, { content: value || '' })}
                     options={{
                       minimap: { enabled: false },
                       fontSize: 14,

@@ -3,6 +3,7 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.Services;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.Services;
+using Api.SharedKernel.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
@@ -23,6 +24,7 @@ internal static class SystemConfigurationServiceExtensions
         services.AddScoped<IRateLimitConfigRepository, RateLimitConfigRepository>(); // Issue #2730: Rate limit config
         services.AddScoped<IUserRateLimitOverrideRepository, UserRateLimitOverrideRepository>(); // Issue #2730: User overrides
         services.AddScoped<IFeatureFlagRepository, FeatureFlagRepository>();
+        services.AddScoped<IUserPreferencesRepository, UserPreferencesRepository>();
 
         // Register domain services
         services.AddScoped<ConfigurationValidator>();
@@ -37,6 +39,12 @@ internal static class SystemConfigurationServiceExtensions
         // Issue #2596: LLM tier routing service (Singleton - uses IServiceScopeFactory for DB access)
         // Registered as Singleton for use by HybridAdaptiveRoutingStrategy
         services.AddSingleton<ILlmTierRoutingService, LlmTierRoutingService>();
+
+        // Game Night Improvvisata: Tier enforcement with Redis atomic counters
+        services.AddScoped<ITierEnforcementService, TierEnforcementService>();
+
+        // Phase 6: Read-only user projection for BC isolation (avoids cross-BC IUserRepository dependency)
+        services.AddScoped<IUserProfileReadService, UserProfileReadService>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

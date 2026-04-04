@@ -1,7 +1,6 @@
 # OPS-02: Grafana Datasources Configuration
 # Auto-provisions Prometheus data source
-# Jaeger datasource removed - replaced by HyperDX unified observability (Issue #1564)
-# For traces, use HyperDX UI at http://localhost:8180
+# Jaeger datasource removed (Issue #1564) - using Prometheus for metrics only
 
 apiVersion: 1
 
@@ -19,5 +18,3 @@ datasources:
       httpMethod: 'POST'
     version: 1
 
-  # HyperDX provides traces, logs, and session replay at http://localhost:8180
-  # Manual datasource configuration available in HyperDX documentation if needed

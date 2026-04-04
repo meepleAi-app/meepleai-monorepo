@@ -6,11 +6,7 @@
  * Applies PublicLayout to all pages in (public) group:
  * - / (home)
  * - /games
- * - /dashboard
- * - /settings
- * - /sessions
- * - /giochi
- * - /board-game-ai
+ * - /about, /contact, /faq, /terms, /privacy, /cookies
  *
  * Features:
  * - UnifiedHeader with user context (internally managed)

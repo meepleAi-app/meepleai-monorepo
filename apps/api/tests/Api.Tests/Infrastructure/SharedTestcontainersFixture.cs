@@ -741,8 +741,14 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 builder.Database = databaseName;
                 builder.Timeout = 60; // Increase timeout to 60s for long-running integration tests
                 builder.CommandTimeout = 60;
-                builder.MaxPoolSize = 50; // Increase pool size to handle concurrent test execution
-                builder.MinPoolSize = 5;
+                // CI: max_connections=100 (can't change in GH Actions service containers).
+                // MaxPoolSize=2 + ClearAllPools() in teardown prevents accumulation.
+                var isExternalPostgres = !string.IsNullOrWhiteSpace(
+                    Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvPostgresConnectionString));
+                builder.MaxPoolSize = isExternalPostgres ? 2 : 5;
+                builder.MinPoolSize = 0;
+                builder.ConnectionIdleLifetime = isExternalPostgres ? 5 : 30;
+                builder.ConnectionPruningInterval = isExternalPostgres ? 3 : 10;
 
                 // Issue #2577: Log successful database creation with timing
                 var duration = (DateTime.UtcNow - startTime).TotalSeconds;
@@ -812,6 +818,10 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 #pragma warning restore CA2100
                 var terminatedCount = await terminateCmd.ExecuteNonQueryAsync();
 
+                // Clear all Npgsql connection pools to release connections back to PostgreSQL.
+                // Prevents "too many clients" exhaustion in CI (max_connections=100).
+                NpgsqlConnection.ClearAllPools();
+
                 // Issue #2706: Brief delay to allow terminated connections to fully close
                 // This prevents race conditions where drop runs before connections are fully terminated
                 // Issue #2920: Use centralized configuration
@@ -861,11 +871,22 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         var db = redis.GetDatabase();
 
         var server = redis.GetServer(redis.GetEndPoints()[0]);
-        var keys = server.Keys(pattern: keyPrefix).ToArray();
 
-        if (keys.Length > 0)
+        // Use async SCAN to avoid synchronous timeout (RedisTimeoutException on SCAN)
+        var batch = new List<RedisKey>();
+        await foreach (var key in server.KeysAsync(pattern: keyPrefix))
         {
-            await db.KeyDeleteAsync(keys);
+            batch.Add(key);
+            if (batch.Count >= 100)
+            {
+                await db.KeyDeleteAsync(batch.ToArray()).ConfigureAwait(false);
+                batch.Clear();
+            }
+        }
+
+        if (batch.Count > 0)
+        {
+            await db.KeyDeleteAsync(batch.ToArray()).ConfigureAwait(false);
         }
 
         await redis.CloseAsync();
@@ -911,7 +932,8 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 
 /// <summary>
 /// Collection definition for shared Testcontainers.
-/// All integration tests should use this collection to share container instances.
+/// Legacy collection - kept for backward compatibility.
+/// New tests should use one of the parallel group collections below.
 /// </summary>
 [CollectionDefinition("SharedTestcontainers")]
 public class SharedTestcontainersCollectionDefinition : ICollectionFixture<SharedTestcontainersFixture>
@@ -920,3 +942,29 @@ public class SharedTestcontainersCollectionDefinition : ICollectionFixture<Share
     // to be the place to apply [CollectionFixture<>] and all the
     // ICollectionFixture<> interfaces.
 }
+
+/// <summary>
+/// Parallel collection groups for integration tests.
+/// Issue #CI-Optimization: Split SharedTestcontainers into 4 parallel groups
+/// to enable concurrent execution while maintaining per-group sequential safety.
+///
+/// In CI, the fixture uses external services (env vars) so multiple fixture instances
+/// share the same PostgreSQL/Redis. Each test class creates an isolated database
+/// (unique name per class), making parallel execution safe.
+///
+/// Group A: KnowledgeBase + DocumentProcessing (~41 classes)
+/// Group B: Authentication + Integration root tests (~42 classes)
+/// Group C: SharedGameCatalog + GameManagement + UserLibrary + SessionTracking (~39 classes)
+/// Group D: Administration + WorkflowIntegration + SystemConfiguration + misc (~42 classes)
+/// </summary>
+[CollectionDefinition("Integration-GroupA")]
+public class IntegrationGroupACollection : ICollectionFixture<SharedTestcontainersFixture> { }
+
+[CollectionDefinition("Integration-GroupB")]
+public class IntegrationGroupBCollection : ICollectionFixture<SharedTestcontainersFixture> { }
+
+[CollectionDefinition("Integration-GroupC")]
+public class IntegrationGroupCCollection : ICollectionFixture<SharedTestcontainersFixture> { }
+
+[CollectionDefinition("Integration-GroupD")]
+public class IntegrationGroupDCollection : ICollectionFixture<SharedTestcontainersFixture> { }

@@ -2,6 +2,8 @@ using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Middleware.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -12,24 +14,23 @@ namespace Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 /// Repository implementation for ProposalMigration aggregate.
 /// Issue #3666: Phase 5 - Migration Choice Flow.
 /// </summary>
-public sealed class ProposalMigrationRepository : IProposalMigrationRepository
+public sealed class ProposalMigrationRepository : RepositoryBase, IProposalMigrationRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public ProposalMigrationRepository(MeepleAiDbContext context)
+    public ProposalMigrationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task AddAsync(ProposalMigration migration, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(migration);
-        await _context.Set<ProposalMigrationEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.Set<ProposalMigrationEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<ProposalMigration?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.Set<ProposalMigrationEntity>()
+        var entity = await DbContext.Set<ProposalMigrationEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Id == id, cancellationToken).ConfigureAwait(false);
 
@@ -38,7 +39,7 @@ public sealed class ProposalMigrationRepository : IProposalMigrationRepository
 
     public async Task<List<ProposalMigration>> GetPendingByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var entities = await _context.Set<ProposalMigrationEntity>()
+        var entities = await DbContext.Set<ProposalMigrationEntity>()
             .AsNoTracking()
             .Where(m => m.UserId == userId && m.Choice == (int)PostApprovalMigrationChoice.Pending)
             .OrderByDescending(m => m.CreatedAt)
@@ -49,7 +50,7 @@ public sealed class ProposalMigrationRepository : IProposalMigrationRepository
 
     public async Task<ProposalMigration?> GetByShareRequestIdAsync(Guid shareRequestId, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.Set<ProposalMigrationEntity>()
+        var entity = await DbContext.Set<ProposalMigrationEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.ShareRequestId == shareRequestId, cancellationToken).ConfigureAwait(false);
 
@@ -61,7 +62,7 @@ public sealed class ProposalMigrationRepository : IProposalMigrationRepository
         var entity = MapToEntity(migration);
 
         // Issue #3531: Check if entity is already tracked to avoid InvalidOperationException
-        var existingEntry = _context.ChangeTracker.Entries<ProposalMigrationEntity>()
+        var existingEntry = DbContext.ChangeTracker.Entries<ProposalMigrationEntity>()
             .FirstOrDefault(e => e.Entity.Id == entity.Id);
 
         if (existingEntry != null)
@@ -70,7 +71,7 @@ public sealed class ProposalMigrationRepository : IProposalMigrationRepository
         }
         else
         {
-            _context.Set<ProposalMigrationEntity>().Update(entity);
+            DbContext.Set<ProposalMigrationEntity>().Update(entity);
         }
 
         return Task.CompletedTask;

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SystemConfiguration;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,15 +12,17 @@ namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 /// Issue #5498: EF Core repository for LLM system configuration.
 /// Single-row pattern — uses FirstOrDefault for reads, upsert for writes.
 /// </summary>
-public sealed class EfLlmSystemConfigRepository : ILlmSystemConfigRepository
+public sealed class EfLlmSystemConfigRepository : RepositoryBase, ILlmSystemConfigRepository
 {
-    private readonly MeepleAiDbContext _db;
 
-    public EfLlmSystemConfigRepository(MeepleAiDbContext db) => _db = db;
+    public EfLlmSystemConfigRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
+    {
+    }
 
     public async Task<LlmSystemConfig?> GetCurrentAsync(CancellationToken ct = default)
     {
-        var entity = await _db.LlmSystemConfigs
+        var entity = await DbContext.LlmSystemConfigs
             .AsNoTracking()
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
@@ -28,7 +32,7 @@ public sealed class EfLlmSystemConfigRepository : ILlmSystemConfigRepository
 
     public async Task UpsertAsync(LlmSystemConfig config, CancellationToken ct = default)
     {
-        var existing = await _db.LlmSystemConfigs
+        var existing = await DbContext.LlmSystemConfigs
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
 
@@ -45,10 +49,10 @@ public sealed class EfLlmSystemConfigRepository : ILlmSystemConfigRepository
         }
         else
         {
-            _db.LlmSystemConfigs.Add(MapToEntity(config));
+            DbContext.LlmSystemConfigs.Add(MapToEntity(config));
         }
 
-        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 
     private static LlmSystemConfig MapToDomain(LlmSystemConfigEntity entity)

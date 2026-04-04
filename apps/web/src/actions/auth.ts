@@ -165,7 +165,7 @@ export async function registerAction(
       email,
       password,
       displayName: displayName || undefined,
-      role: 'User', // Default role
+      role: 'user', // Default role (lowercase, matching backend Role.cs)
     });
 
     return {

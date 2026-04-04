@@ -9,6 +9,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -79,16 +80,16 @@ public class SubmitSharedGameForApprovalCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedGame);
-        Assert.Equal(GameStatus.PendingApproval, capturedGame.Status);
-        Assert.Equal(submitterId, capturedGame.ModifiedBy);
-        Assert.NotNull(capturedGame.ModifiedAt);
+        capturedGame.Should().NotBeNull();
+        capturedGame.Status.Should().Be(GameStatus.PendingApproval);
+        capturedGame.ModifiedBy.Should().Be(submitterId);
+        capturedGame.ModifiedAt.Should().NotBeNull();
 
         // Verify domain event raised
-        Assert.Equal(2, capturedGame.DomainEvents.Count);
-        var submitEvent = Assert.IsType<SharedGameSubmittedForApprovalEvent>(capturedGame.DomainEvents.Last());
-        Assert.Equal(game.Id, submitEvent.GameId);
-        Assert.Equal(submitterId, submitEvent.SubmittedBy);
+        capturedGame.DomainEvents.Count.Should().Be(2);
+        var submitEvent = capturedGame.DomainEvents.Last().Should().BeOfType<SharedGameSubmittedForApprovalEvent>().Subject;
+        submitEvent.GameId.Should().Be(game.Id);
+        submitEvent.SubmittedBy.Should().Be(submitterId);
     }
 
     [Fact]
@@ -102,8 +103,8 @@ public class SubmitSharedGameForApprovalCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -118,8 +119,8 @@ public class SubmitSharedGameForApprovalCommandHandlerTests
             .ReturnsAsync(game);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     private static SharedGame CreatePendingApprovalGame()

@@ -358,7 +358,7 @@ if ($ChangeVisibility) {
             Write-Info "Changing repository visibility to private..."
 
             # Use GitHub CLI to change visibility
-            $repo = "DegrassiAaron/meepleai-monorepo"
+            $repo = "meepleAi-app/meepleai-monorepo"
             gh repo edit $repo --visibility private
 
             if ($LASTEXITCODE -eq 0) {
@@ -395,7 +395,7 @@ Write-Host "  Cost: $(if ($Strategy -eq "semgrep") { "$0/month" } elseif ($Strat
 
 Write-Host "`nNext Steps:" -ForegroundColor White
 if (-not $DryRun) {
-    Write-Host "  1. Review and merge PR: https://github.com/DegrassiAaron/meepleai-monorepo/pulls" -ForegroundColor Gray
+    Write-Host "  1. Review and merge PR: https://github.com/meepleAi-app/meepleai-monorepo/pulls" -ForegroundColor Gray
     Write-Host "  2. Test CI/CD workflows (create test PR)" -ForegroundColor Gray
     if (-not $ChangeVisibility) {
         Write-Host "  3. Change repository visibility: Settings → Danger Zone → Change visibility" -ForegroundColor Gray

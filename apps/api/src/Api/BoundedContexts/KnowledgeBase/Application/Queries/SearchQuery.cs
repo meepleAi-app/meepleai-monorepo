@@ -14,5 +14,7 @@ internal record SearchQuery(
     double MinScore = 0.55, // Adjusted for mxbai-embed-large
     string SearchMode = "hybrid", // "vector", "keyword", "hybrid"
     string Language = "en",
-    IReadOnlyList<Guid>? DocumentIds = null // Issue #2051: Filter by document IDs (null = all)
+    IReadOnlyList<Guid>? DocumentIds = null, // Issue #2051: Filter by document IDs (null = all)
+    Guid? UserId = null,
+    string? UserRole = null
 ) : IQuery<List<SearchResultDto>>;

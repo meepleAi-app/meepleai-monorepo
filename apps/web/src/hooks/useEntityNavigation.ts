@@ -25,7 +25,7 @@ import {
  *
  * ```tsx
  * const links = useEntityNavigation('game', { id: game.id });
- * // → [{ entity: 'document', label: 'KB', href: '/games/123/knowledge-base' }, …]
+ * // → [{ entity: 'kb', label: 'KB', href: '/games/123/knowledge-base' }, …]
  * ```
  */
 export function useEntityNavigation(

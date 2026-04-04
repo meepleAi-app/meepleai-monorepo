@@ -162,9 +162,9 @@ find . -name "*.svg" | wc -l  # Should show 43
 ## 📚 Related Documentation
 
 - [Bounded Context Complete Docs](../): Full API references for each context
-- [Architecture ADRs](../../01-architecture/adr/): Architectural Decision Records
-- [CQRS Pattern](../../02-development/coding-standards.md): Implementation guidelines
-- [Domain Events](../../01-architecture/domain-events.md): Event catalog
+- [Architecture ADRs](../../architecture/adr/): Architectural Decision Records
+- [CQRS Pattern](../../development/coding-standards.md): Implementation guidelines
+- [Domain Events](../../architecture/domain-events.md): Event catalog
 
 ## 🔄 Maintenance
 

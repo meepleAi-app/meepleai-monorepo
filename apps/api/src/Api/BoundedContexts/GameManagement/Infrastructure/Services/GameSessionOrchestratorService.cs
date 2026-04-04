@@ -156,10 +156,36 @@ internal sealed class GameSessionOrchestratorService : IGameSessionOrchestratorS
 
         try
         {
-            // Single batch query instead of N+1 per-game lookups (Issue #5578)
-            return await _vectorDocumentRepository
+            // Try batch query first (Issue #5578) — avoids N+1 per-game lookups
+            var result = await _vectorDocumentRepository
                 .GetGameIdsWithDocumentsAsync(allGameIds, ct)
                 .ConfigureAwait(false);
+
+            if (result is { Count: > 0 })
+                return result;
+
+            // Fallback to per-game lookups when batch returns null/empty
+            // (resilient against partial repository implementations)
+            var gameIdsWithDocs = new List<Guid>();
+            foreach (var gameId in allGameIds)
+            {
+                try
+                {
+                    var docs = await _vectorDocumentRepository
+                        .GetByGameIdAsync(gameId, ct)
+                        .ConfigureAwait(false);
+
+                    if (docs is { Count: > 0 })
+                        gameIdsWithDocs.Add(gameId);
+                }
+                catch (Exception perGameEx)
+                {
+                    _logger.LogWarning(perGameEx,
+                        "Failed to check KB docs for game {GameId}. Skipping.", gameId);
+                }
+            }
+
+            return gameIdsWithDocs;
         }
         catch (Exception ex)
         {

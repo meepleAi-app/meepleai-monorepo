@@ -2,6 +2,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,13 +13,12 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// Repository implementation for GameAnalyticsEvent entity.
 /// Issue #3918: Catalog Trending Analytics Service
 /// </summary>
-internal sealed class GameAnalyticsEventRepository : IGameAnalyticsEventRepository
+internal sealed class GameAnalyticsEventRepository : RepositoryBase, IGameAnalyticsEventRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public GameAnalyticsEventRepository(MeepleAiDbContext context)
+    public GameAnalyticsEventRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task AddAsync(GameAnalyticsEvent analyticsEvent, CancellationToken cancellationToken = default)
@@ -25,13 +26,13 @@ internal sealed class GameAnalyticsEventRepository : IGameAnalyticsEventReposito
         ArgumentNullException.ThrowIfNull(analyticsEvent);
 
         var entity = MapToEntity(analyticsEvent);
-        _context.Set<GameAnalyticsEventEntity>().Add(entity);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        DbContext.Set<GameAnalyticsEventEntity>().Add(entity);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<List<GameAnalyticsEvent>> GetEventsSinceAsync(DateTime since, CancellationToken cancellationToken = default)
     {
-        var entities = await _context.Set<GameAnalyticsEventEntity>()
+        var entities = await DbContext.Set<GameAnalyticsEventEntity>()
             .AsNoTracking()
             .Where(e => e.Timestamp >= since)
             .OrderByDescending(e => e.Timestamp)

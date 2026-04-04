@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import type { PrivateGameDto } from '@/lib/api/schemas/private-games.schemas';
+import { logger } from '@/lib/logger';
 
 export interface ProposeGameModalProps {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export function ProposeGameModal({ isOpen, onClose, game, onPropose }: ProposeGa
       setNotes('');
       onClose();
     } catch (error) {
-      console.error('Propose error:', error);
+      logger.error('Propose error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -65,7 +66,7 @@ export function ProposeGameModal({ isOpen, onClose, game, onPropose }: ProposeGa
             <Textarea
               id="notes"
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={e => setNotes(e.target.value)}
               placeholder="Any additional information for the review team..."
               rows={4}
               disabled={isSubmitting}

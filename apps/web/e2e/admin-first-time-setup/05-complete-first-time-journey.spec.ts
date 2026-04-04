@@ -74,7 +74,7 @@ test.describe('Complete First-Time Journey', () => {
 
     // Submit and wait for response
     const loginPromise = page.waitForResponse(
-      (res) => res.url().includes('/api/v1/auth/login') && res.status() === 200,
+      res => res.url().includes('/api/v1/auth/login') && res.status() === 200,
       { timeout: 15000 }
     );
 
@@ -139,7 +139,7 @@ test.describe('Complete First-Time Journey', () => {
 
     // Click upload and wait for response
     const uploadPromise = page.waitForResponse(
-      (res) =>
+      res =>
         res.url().includes('/api/v1/documents') && (res.status() === 200 || res.status() === 201),
       { timeout: 30000 }
     );
@@ -194,8 +194,10 @@ test.describe('Complete First-Time Journey', () => {
     const processingIndicator = page.locator(
       'text=/Processing|Elaborazione|Loading/i, [data-testid="processing"]'
     );
-    const isProcessing =
-      await processingIndicator.first().isVisible({ timeout: 5000 }).catch(() => false);
+    const isProcessing = await processingIndicator
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
 
     if (isProcessing) {
       console.log('    🔄 PDF processing started...');
@@ -213,8 +215,10 @@ test.describe('Complete First-Time Journey', () => {
 
     // Wait for chat creation
     const chatCreatedIndicator = page.locator('text=/Chat creata|Chat created|Ready/i');
-    const chatCreated =
-      await chatCreatedIndicator.first().isVisible({ timeout: 30000 }).catch(() => false);
+    const chatCreated = await chatCreatedIndicator
+      .first()
+      .isVisible({ timeout: 30000 })
+      .catch(() => false);
 
     if (chatCreated) {
       console.log('    ✅ Chat thread created');
@@ -261,7 +265,7 @@ test.describe('Complete First-Time Journey', () => {
       const sendButton = page.locator('button:has-text("Send"), button[type="submit"]');
       if (await sendButton.isVisible({ timeout: 3000 }).catch(() => false)) {
         const messagePromise = page.waitForResponse(
-          (res) => res.url().includes('/api/v1/chat/messages'),
+          res => res.url().includes('/api/v1/chat/messages'),
           { timeout: 20000 }
         );
 
@@ -300,7 +304,7 @@ test.describe('Complete First-Time Journey', () => {
     console.log('  ✅ Administration context accessible');
 
     // GameManagement
-    await page.goto('/games');
+    await page.goto('/library');
     await expect(page.locator('h1, [data-testid="page-title"]')).toBeVisible({ timeout: 10000 });
     const gamesResponse = await request.get('/api/v1/shared-games');
     expect(gamesResponse.ok()).toBe(true);
@@ -322,7 +326,7 @@ test.describe('Complete First-Time Journey', () => {
     console.log('🎯 PHASE 5: Verifying Success State...');
 
     // Verify game catalog shows games
-    await page.goto('/games');
+    await page.goto('/library');
     const gameCards = page.locator('[data-testid*="game"], .game-card, article');
     const gameCount = await gameCards.count();
     expect(gameCount).toBeGreaterThan(0);

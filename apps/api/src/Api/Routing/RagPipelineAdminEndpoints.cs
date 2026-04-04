@@ -2,6 +2,8 @@ using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Commands.RagPipeline;
 using Api.BoundedContexts.Administration.Application.Queries.RagPipeline;
 using Api.Extensions;
+using Api.Helpers;
+using Api.Middleware;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -118,7 +120,7 @@ internal static class RagPipelineAdminEndpoints
                 "Admin {AdminId} created RAG pipeline strategy {StrategyId}: {Name}",
                 session.User.Id,
                 result.Id,
-                result.Name);
+                LogSanitizer.Sanitize(result.Name));
 
             return Results.Created($"/api/v1/admin/rag-pipeline/strategies/{result.Id}", result);
         })
@@ -158,7 +160,7 @@ internal static class RagPipelineAdminEndpoints
                 "Admin {AdminId} updated RAG pipeline strategy {StrategyId}: {Name}",
                 session.User.Id,
                 result.Id,
-                result.Name);
+                LogSanitizer.Sanitize(result.Name));
 
             return Results.Ok(result);
         })
@@ -283,7 +285,7 @@ internal static class RagPipelineAdminEndpoints
                 "Admin {AdminId} imported RAG pipeline strategy {StrategyId}: {Name}",
                 session.User.Id,
                 result.Id,
-                result.Name);
+                LogSanitizer.Sanitize(result.Name));
 
             return Results.Created($"/api/v1/admin/rag-pipeline/strategies/{result.Id}", result);
         })
@@ -322,7 +324,7 @@ internal static class RagPipelineAdminEndpoints
             logger.LogInformation(
                 "Admin {AdminId} testing RAG pipeline: query='{Query}'",
                 session!.User!.Id,
-                request.TestQuery);
+                LogValueSanitizer.Sanitize(request.TestQuery));
 
             // Execute test command to get event stream
             IAsyncEnumerable<RagPipelineTestEvent> eventStream;

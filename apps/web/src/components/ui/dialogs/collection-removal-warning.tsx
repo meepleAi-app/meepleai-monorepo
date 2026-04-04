@@ -12,14 +12,7 @@
 
 import React from 'react';
 
-import {
-  Bot,
-  CheckSquare,
-  FileText,
-  MessageSquare,
-  Play,
-  Tag,
-} from 'lucide-react';
+import { Bot, CheckSquare, FileText, MessageSquare, Play, Tag } from 'lucide-react';
 
 import {
   Dialog,
@@ -30,7 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import type { AssociatedData } from '@/hooks/use-collection-actions';
+import type { AssociatedData } from '@/hooks/useCollectionActions';
 
 // ============================================================================
 // Types
@@ -150,9 +143,7 @@ export function CollectionRemovalWarning({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span className="text-2xl">⚠️</span>
-            <span>
-              Rimuovi &quot;{entityName}&quot; dalla Collezione
-            </span>
+            <span>Rimuovi &quot;{entityName}&quot; dalla Collezione</span>
           </DialogTitle>
           <DialogDescription className="text-base">
             Questa azione rimuoverà il {entityType} e tutti i dati collegati:
@@ -177,10 +168,7 @@ export function CollectionRemovalWarning({
           <Button variant="outline" onClick={onCancel}>
             Annulla
           </Button>
-          <Button
-            variant="destructive"
-            onClick={onConfirm}
-          >
+          <Button variant="destructive" onClick={onConfirm}>
             Rimuovi Definitivamente
           </Button>
         </DialogFooter>

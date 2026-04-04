@@ -9,20 +9,23 @@ public class UnstructuredHealthCheck : IHealthCheck
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<UnstructuredHealthCheck> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public UnstructuredHealthCheck(
         IConfiguration configuration,
-        ILogger<UnstructuredHealthCheck> logger)
+        ILogger<UnstructuredHealthCheck> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        var unstructuredUrl = _configuration["PdfProcessing:UnstructuredApiUrl"];
+        var unstructuredUrl = _configuration["PdfProcessing:Extractor:Unstructured:ApiUrl"];
         if (string.IsNullOrWhiteSpace(unstructuredUrl))
         {
             return HealthCheckResult.Degraded("Unstructured API not configured");
@@ -30,12 +33,13 @@ public class UnstructuredHealthCheck : IHealthCheck
 
         try
         {
-            using var client = new HttpClient { BaseAddress = new Uri(unstructuredUrl) };
+            using var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(unstructuredUrl);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 
-            // Unstructured API health endpoint
-            var response = await client.GetAsync("/general/v0/general", cts.Token).ConfigureAwait(false);
+            // Unstructured service health endpoint
+            var response = await client.GetAsync("/health", cts.Token).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode
                 ? HealthCheckResult.Healthy("Unstructured API is accessible")

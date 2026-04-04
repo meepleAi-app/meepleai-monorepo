@@ -17,9 +17,9 @@
 ### Related Epics
 | Epic | Description | Link |
 |------|-------------|------|
-| **Epic 1** | Dashboard Hub Core (MVP) | [#3901](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3901) |
-| **Epic 2** | AI Insights & Recommendations | [#3902](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3902) |
-| **Epic 3** | Gamification & Advanced Features | [#3906](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3906) |
+| **Epic 1** | Dashboard Hub Core (MVP) | [#3901](https://github.com/meepleAi-app/meepleai-monorepo/issues/3901) |
+| **Epic 2** | AI Insights & Recommendations | [#3902](https://github.com/meepleAi-app/meepleai-monorepo/issues/3902) |
+| **Epic 3** | Gamification & Advanced Features | [#3906](https://github.com/meepleAi-app/meepleai-monorepo/issues/3906) |
 
 ---
 
@@ -265,10 +265,10 @@ apps/web/src/app/(authenticated)/dashboard/
 ## 🔗 External References
 
 ### GitHub Issues
-- [Epic #3901 - Dashboard Hub Core (MVP)](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3901)
-- [Issue #2617 - Active Sessions Widget](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2617)
-- [Issue #2445 - Library Quota Section](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2445)
-- [Issue #2612 - Recent Activity Feed](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2612)
+- [Epic #3901 - Dashboard Hub Core (MVP)](https://github.com/meepleAi-app/meepleai-monorepo/issues/3901)
+- [Issue #2617 - Active Sessions Widget](https://github.com/meepleAi-app/meepleai-monorepo/issues/2617)
+- [Issue #2445 - Library Quota Section](https://github.com/meepleAi-app/meepleai-monorepo/issues/2445)
+- [Issue #2612 - Recent Activity Feed](https://github.com/meepleAi-app/meepleai-monorepo/issues/2612)
 
 ### Design References
 - GitHub Dashboard Activity Feed
@@ -296,6 +296,6 @@ apps/web/src/app/(authenticated)/dashboard/
 ---
 
 **Last Updated**: 2026-02-09
-**Epic**: [#3901](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3901)
+**Epic**: [#3901](https://github.com/meepleAi-app/meepleai-monorepo/issues/3901)
 **Status**: Planning Phase
 **Next Review**: Sprint Planning N+1

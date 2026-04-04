@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.TestHelpers;
 
@@ -72,7 +73,7 @@ internal static class AdminUserFactory
             DisplayName = adminDisplayName
         });
 
-        Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var adminCookie = registerResponse.Headers.GetValues("Set-Cookie").First();
 
         // Step 2: Update role to "Admin" directly in DB

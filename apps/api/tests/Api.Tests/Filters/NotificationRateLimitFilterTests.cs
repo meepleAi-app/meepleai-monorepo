@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Security.Claims;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -41,7 +42,7 @@ public class NotificationRateLimitFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
     }
 
@@ -68,7 +69,7 @@ public class NotificationRateLimitFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Once);
     }
 
@@ -91,12 +92,12 @@ public class NotificationRateLimitFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
 
         // Verify headers were set
-        Assert.True(context.HttpContext.Response.Headers.ContainsKey("Retry-After"));
-        Assert.Equal("45", context.HttpContext.Response.Headers["Retry-After"].ToString());
+        context.HttpContext.Response.Headers.ContainsKey("Retry-After").Should().BeTrue();
+        context.HttpContext.Response.Headers["Retry-After"].ToString().Should().Be("45");
     }
 
     [Fact]
@@ -124,7 +125,7 @@ public class NotificationRateLimitFilterTests
         await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal($"notifications:{userId}", capturedKey);
+        capturedKey.Should().Be($"notifications:{userId}");
     }
 
     [Fact]
@@ -152,7 +153,7 @@ public class NotificationRateLimitFilterTests
         await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal($"notifications:{userId}", capturedKey);
+        capturedKey.Should().Be($"notifications:{userId}");
     }
 
     [Fact]
@@ -184,8 +185,8 @@ public class NotificationRateLimitFilterTests
         await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert - 10 requests per minute
-        Assert.Equal(NotificationRateLimitFilter.DefaultMaxRequests, capturedMaxTokens);
-        Assert.Equal(NotificationRateLimitFilter.DefaultRefillRate, capturedRefillRate);
+        capturedMaxTokens.Should().Be(NotificationRateLimitFilter.DefaultMaxRequests);
+        capturedRefillRate.Should().Be(NotificationRateLimitFilter.DefaultRefillRate);
     }
 
     [Fact]
@@ -210,15 +211,15 @@ public class NotificationRateLimitFilterTests
         await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert - Headers should be set for observability
-        Assert.Equal("10", context.HttpContext.Response.Headers["X-RateLimit-Limit"].ToString());
-        Assert.Equal("7", context.HttpContext.Response.Headers["X-RateLimit-Remaining"].ToString());
+        context.HttpContext.Response.Headers["X-RateLimit-Limit"].ToString().Should().Be("10");
+        context.HttpContext.Response.Headers["X-RateLimit-Remaining"].ToString().Should().Be("7");
     }
 
     [Fact]
     public void DefaultMaxRequests_Is10()
     {
         // Assert - Issue #2155 requirement: 10 requests per minute
-        Assert.Equal(10, NotificationRateLimitFilter.DefaultMaxRequests);
+        NotificationRateLimitFilter.DefaultMaxRequests.Should().Be(10);
     }
 
     [Fact]
@@ -226,7 +227,7 @@ public class NotificationRateLimitFilterTests
     {
         // Assert - 10 tokens per minute = 10/60 tokens per second
         const double expectedRate = 10.0 / 60.0;
-        Assert.Equal(expectedRate, NotificationRateLimitFilter.DefaultRefillRate, precision: 5);
+        NotificationRateLimitFilter.DefaultRefillRate.Should().BeApproximately(expectedRate, precision: 5);
     }
 
     private EndpointFilterInvocationContext CreateFilterContext(

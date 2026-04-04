@@ -68,7 +68,7 @@
 
 - [ ] **Structured Logging with Correlation IDs**
   - Verify logs include `CorrelationId` (TraceIdentifier)
-  - Test: Make request, check HyperDX for correlation
+  - Test: Make request, check logs for correlation
 
 - [ ] **Prometheus Metrics Exposed**
   - GET /metrics accessible

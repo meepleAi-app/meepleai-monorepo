@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe action config Record access */
 /**
  * ActionGrid Component - Generic Quick Actions Grid
  *
@@ -156,10 +155,7 @@ function ActionGridSkeleton({ columns = 3, className }: { columns?: number; clas
       data-testid="action-grid-skeleton"
     >
       {Array.from({ length: 6 }).map((_, index) => (
-        <div
-          key={`skeleton-${index}`}
-          className="flex items-center gap-3 p-3 border rounded-lg"
-        >
+        <div key={`skeleton-${index}`} className="flex items-center gap-3 p-3 border rounded-lg">
           <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
           <div className="flex-1 space-y-1">
             <Skeleton className="h-4 w-24" />
@@ -181,10 +177,7 @@ function ActionGridContent({
   className,
 }: Pick<ActionGridProps, 'actions' | 'badges' | 'columns' | 'className'>) {
   return (
-    <div
-      className={cn('grid gap-3', columnClasses[columns], className)}
-      data-testid="action-grid"
-    >
+    <div className={cn('grid gap-3', columnClasses[columns], className)} data-testid="action-grid">
       {actions.map(action => {
         const Icon = action.icon;
         const variant = action.variant || 'default';
@@ -195,9 +188,7 @@ function ActionGridContent({
         const linkHoverClass = gradient
           ? 'hover:border-orange-500 hover:shadow-md'
           : variantStyles[variant];
-        const iconClass = gradient
-          ? gradientStyles[gradient]
-          : iconVariantStyles[variant];
+        const iconClass = gradient ? gradientStyles[gradient] : iconVariantStyles[variant];
 
         return (
           <Link
@@ -297,5 +288,7 @@ export function ActionGrid({
     );
   }
 
-  return <ActionGridContent actions={actions} badges={badges} columns={columns} className={className} />;
+  return (
+    <ActionGridContent actions={actions} badges={badges} columns={columns} className={className} />
+  );
 }

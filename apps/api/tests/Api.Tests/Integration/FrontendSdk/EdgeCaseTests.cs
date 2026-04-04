@@ -159,7 +159,7 @@ public class EdgeCaseTests : IAsyncLifetime
         catch (OperationCanceledException)
         {
             // Expected - connection interrupted
-            Assert.True(true, "Streaming connection cancelled as expected");
+            true.Should().BeTrue("Streaming connection cancelled as expected");
         }
 
         // Assert - API should handle cancellation without crashes
@@ -437,12 +437,12 @@ public class EdgeCaseTests : IAsyncLifetime
         {
             await task;
             // If request completed before cancellation, that's also valid
-            Assert.True(true, "Request completed before cancellation");
+            true.Should().BeTrue("Request completed before cancellation");
         }
         catch (OperationCanceledException)
         {
             // Expected if cancellation succeeded
-            Assert.True(true, "Request cancelled as expected");
+            true.Should().BeTrue("Request cancelled as expected");
         }
 
         // API should cleanup resources when client cancels

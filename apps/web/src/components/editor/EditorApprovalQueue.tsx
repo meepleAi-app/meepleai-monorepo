@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { BulkActionBar, type BulkAction } from '@/components/admin/BulkActionBar';
 import { api } from '@/lib/api';
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
+import { logger } from '@/lib/logger';
 
 import { BulkRejectDialog } from './BulkRejectDialog';
 import { EditorApprovalQueueItem } from './EditorApprovalQueueItem';
@@ -82,7 +83,7 @@ export function EditorApprovalQueue({
 
   // Selection handlers
   const toggleSelection = useCallback((gameId: string) => {
-    setSelectedIds((prev) => {
+    setSelectedIds(prev => {
       const next = new Set(prev);
       if (next.has(gameId)) {
         next.delete(gameId);
@@ -107,12 +108,12 @@ export function EditorApprovalQueue({
     try {
       // Execute approvals in parallel
       const results = await Promise.allSettled(
-        selectedGames.map((gameId) => api.sharedGames.approvePublication(gameId))
+        selectedGames.map(gameId => api.sharedGames.approvePublication(gameId))
       );
 
       // Count successes and failures
-      const successCount = results.filter((r) => r.status === 'fulfilled').length;
-      const failureCount = results.filter((r) => r.status === 'rejected').length;
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const failureCount = results.filter(r => r.status === 'rejected').length;
 
       // Show notifications
       if (successCount > 0) {
@@ -131,8 +132,8 @@ export function EditorApprovalQueue({
       clearSelection();
       onBulkComplete?.();
     } catch (error) {
-      toast.error('Errore durante l\'approvazione multipla');
-      console.error('Bulk approve error:', error);
+      toast.error("Errore durante l'approvazione multipla");
+      logger.error('Bulk approve error:', error);
     } finally {
       setIsBulkApproving(false);
     }
@@ -149,12 +150,12 @@ export function EditorApprovalQueue({
       try {
         // Execute rejections in parallel
         const results = await Promise.allSettled(
-          selectedGames.map((gameId) => api.sharedGames.rejectPublication(gameId, reason))
+          selectedGames.map(gameId => api.sharedGames.rejectPublication(gameId, reason))
         );
 
         // Count successes and failures
-        const successCount = results.filter((r) => r.status === 'fulfilled').length;
-        const failureCount = results.filter((r) => r.status === 'rejected').length;
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failureCount = results.filter(r => r.status === 'rejected').length;
 
         // Show notifications
         if (successCount > 0) {
@@ -175,7 +176,7 @@ export function EditorApprovalQueue({
         onBulkComplete?.();
       } catch (error) {
         toast.error('Errore durante il rifiuto multiplo');
-        console.error('Bulk reject error:', error);
+        logger.error('Bulk reject error:', error);
       } finally {
         setIsBulkRejecting(false);
       }
@@ -210,7 +211,7 @@ export function EditorApprovalQueue({
       <div className={className} data-testid={testId}>
         {/* Queue Items */}
         <div className="space-y-3">
-          {games.map((game) => (
+          {games.map(game => (
             <EditorApprovalQueueItem
               key={game.id}
               game={game}

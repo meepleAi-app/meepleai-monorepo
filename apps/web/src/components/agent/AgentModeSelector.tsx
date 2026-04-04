@@ -6,15 +6,26 @@
  * - Strategy Advisor: Suggests optimal moves during gameplay
  * - Setup Assistant: Helps with game setup and initial state
  *
- * @see https://github.com/DegrassiAaron/meepleai-monorepo/issues/2413
+ * @see https://github.com/meepleAi-app/meepleai-monorepo/issues/2413
  */
 
 'use client';
 
 import { BookOpenCheck, Target, Settings } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { cn } from '@/lib/utils';

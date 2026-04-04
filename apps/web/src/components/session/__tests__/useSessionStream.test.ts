@@ -6,8 +6,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { useSessionStream } from '@/lib/hooks/useSessionStream';
-import type { ConnectionStatus } from '@/lib/hooks/useSessionStream';
+import { useSessionStream } from '@/lib/domain-hooks/useSessionStream';
+import type { ConnectionStatus } from '@/lib/domain-hooks/useSessionStream';
 
 // Mock EventSource
 class MockEventSource {
@@ -75,7 +75,8 @@ const originalEventSource = globalThis.EventSource;
 
 beforeEach(() => {
   MockEventSource.reset();
-  (globalThis as unknown as Record<string, unknown>).EventSource = MockEventSource as unknown as typeof EventSource;
+  (globalThis as unknown as Record<string, unknown>).EventSource =
+    MockEventSource as unknown as typeof EventSource;
   vi.useFakeTimers();
 });
 
@@ -168,9 +169,7 @@ describe('useSessionStream', () => {
 
   it('should call onPlayerJoined for player join events', () => {
     const onPlayerJoined = vi.fn();
-    renderHook(() =>
-      useSessionStream('session-123', { onPlayerJoined })
-    );
+    renderHook(() => useSessionStream('session-123', { onPlayerJoined }));
 
     act(() => {
       MockEventSource.latest.simulateOpen();
@@ -200,9 +199,7 @@ describe('useSessionStream', () => {
 
   it('should call onScoreUpdated for score events', () => {
     const onScoreUpdated = vi.fn();
-    renderHook(() =>
-      useSessionStream('session-123', { onScoreUpdated })
-    );
+    renderHook(() => useSessionStream('session-123', { onScoreUpdated }));
 
     act(() => {
       MockEventSource.latest.simulateOpen();
@@ -221,16 +218,12 @@ describe('useSessionStream', () => {
       });
     });
 
-    expect(onScoreUpdated).toHaveBeenCalledWith(
-      expect.objectContaining({ newScore: 42 })
-    );
+    expect(onScoreUpdated).toHaveBeenCalledWith(expect.objectContaining({ newScore: 42 }));
   });
 
   it('should call onRoleChanged for role change events', () => {
     const onRoleChanged = vi.fn();
-    renderHook(() =>
-      useSessionStream('session-123', { onRoleChanged })
-    );
+    renderHook(() => useSessionStream('session-123', { onRoleChanged }));
 
     act(() => {
       MockEventSource.latest.simulateOpen();

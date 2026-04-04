@@ -15,7 +15,7 @@ test.describe('Epic #2: Agent System', () => {
    * Issue #4085: Chat UI Base Component
    */
   test('Agent - Complete chat flow with streaming response', async ({ page }) => {
-    await page.goto('/games/azul'); // Example game
+    await page.goto('/library/games/azul'); // Example game
 
     // Start chat
     const chatButton = page.locator('[data-testid="start-agent-chat"]');
@@ -180,7 +180,7 @@ test.describe('Epic #2: Agent System', () => {
    * Issue #4092: Game Page Agent Section
    */
   test('Agent - Game detail page agent section integration', async ({ page }) => {
-    await page.goto('/games/azul');
+    await page.goto('/library/games/azul');
 
     const agentSection = page.locator('[data-testid="game-agent-section"]');
     await expect(agentSection).toBeVisible();
@@ -219,7 +219,7 @@ test.describe('Epic #2: Agent System', () => {
    * Issue #4082: Backend Multi-Agent per Game Support
    */
   test('Agent - Multi-agent orchestration query', async ({ page }) => {
-    await page.goto('/games/azul');
+    await page.goto('/library/games/azul');
 
     // Start multi-agent chat
     const chatInput = page.locator('[data-testid="chat-input"]');
@@ -262,7 +262,7 @@ test.describe('Epic #2: Agent System', () => {
    * Issue #4094: POC Strategy Implementation
    */
   test('Agent - Default POC strategy applied correctly', async ({ page }) => {
-    await page.goto('/games/simple-game'); // Game without custom strategy
+    await page.goto('/library/games/simple-game'); // Game without custom strategy
 
     // Start chat with POC strategy
     await page.click('[data-testid="start-agent-chat"]');
@@ -297,7 +297,7 @@ test.describe('Epic #2: Agent System', () => {
    * Issue #4096: Chat Context (KB Integration)
    */
   test('Agent - Knowledge base context loaded in chat', async ({ page }) => {
-    await page.goto('/games/azul');
+    await page.goto('/library/games/azul');
     await page.click('[data-testid="start-agent-chat"]');
 
     // Ask question requiring KB

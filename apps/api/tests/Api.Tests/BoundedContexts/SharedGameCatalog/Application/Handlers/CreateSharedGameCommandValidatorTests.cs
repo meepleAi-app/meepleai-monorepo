@@ -129,4 +129,71 @@ public class CreateSharedGameCommandValidatorTests
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.CreatedBy);
     }
+
+    // ── Metadata list field tests ────────────────────────────────────────────
+
+    private static CreateSharedGameCommand CreateValidCommand() =>
+        new("Catan", 1995, "Trade and build", 3, 4, 90, 10,
+            2.5m, 7.5m, "https://example.com/image.jpg", "https://example.com/thumb.jpg",
+            null, Guid.NewGuid(), null);
+
+    [Fact]
+    public void Should_Pass_When_Categories_Is_Null()
+    {
+        var command = CreateValidCommand() with { Categories = null };
+        var result = _validator.TestValidate(command);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Should_Pass_When_Categories_Has_Valid_Items()
+    {
+        var command = CreateValidCommand() with { Categories = ["Strategy", "Euro"] };
+        var result = _validator.TestValidate(command);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Should_Fail_When_Categories_Exceeds_Max_Items()
+    {
+        var categories = Enumerable.Range(1, 51).Select(i => $"Category{i}").ToList();
+        var command = CreateValidCommand() with { Categories = categories };
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor(x => x.Categories);
+    }
+
+    [Fact]
+    public void Should_Fail_When_Categories_Contains_Empty_String()
+    {
+        var command = CreateValidCommand() with { Categories = ["Strategy", ""] };
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor("Categories[1]");
+    }
+
+    [Fact]
+    public void Should_Fail_When_Mechanics_Exceeds_Max_Items()
+    {
+        var mechanics = Enumerable.Range(1, 51).Select(i => $"Mechanic{i}").ToList();
+        var command = CreateValidCommand() with { Mechanics = mechanics };
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor(x => x.Mechanics);
+    }
+
+    [Fact]
+    public void Should_Fail_When_Designers_Exceeds_Max_Items()
+    {
+        var designers = Enumerable.Range(1, 21).Select(i => $"Designer{i}").ToList();
+        var command = CreateValidCommand() with { Designers = designers };
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor(x => x.Designers);
+    }
+
+    [Fact]
+    public void Should_Fail_When_Publishers_Exceeds_Max_Items()
+    {
+        var publishers = Enumerable.Range(1, 21).Select(i => $"Publisher{i}").ToList();
+        var command = CreateValidCommand() with { Publishers = publishers };
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor(x => x.Publishers);
+    }
 }

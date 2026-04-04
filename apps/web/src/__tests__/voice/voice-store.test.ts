@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { DEFAULT_VOICE_PREFERENCES } from '@/lib/voice/types';
-import { useVoicePreferencesStore } from '@/store/voice/store';
+import { useVoicePreferencesStore } from '@/stores/voice/store';
 
 describe('useVoicePreferencesStore', () => {
   beforeEach(() => {

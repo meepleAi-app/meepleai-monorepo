@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe status badge config Record access */
 import React from 'react';
 
 import { FileText, RotateCw } from 'lucide-react';
@@ -82,7 +81,16 @@ export const PdfTableRow = React.memo(function PdfTableRow({
   // Map status string to PdfState (Issue #4217)
   const getPdfState = (status?: string | null): PdfState | null => {
     const statusLower = status?.toLowerCase();
-    const validStates: PdfState[] = ['pending', 'uploading', 'extracting', 'chunking', 'embedding', 'indexing', 'ready', 'failed'];
+    const validStates: PdfState[] = [
+      'pending',
+      'uploading',
+      'extracting',
+      'chunking',
+      'embedding',
+      'indexing',
+      'ready',
+      'failed',
+    ];
     if (statusLower === 'completed') return 'ready';
     return validStates.find(s => s === statusLower) || null;
   };

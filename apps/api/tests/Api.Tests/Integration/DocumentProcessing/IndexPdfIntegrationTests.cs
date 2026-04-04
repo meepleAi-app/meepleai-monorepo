@@ -3,7 +3,8 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
-using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
@@ -48,7 +49,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Coverage Target: ≥90% for IndexPdfCommandHandler
 /// Execution Time Target: <20s
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class IndexPdfIntegrationTests : IAsyncLifetime
@@ -95,27 +96,11 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         var qdrantPort = _qdrantContainer.GetMappedPublicPort(6333);
         var qdrantUrl = $"http://localhost:{qdrantPort}";
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Register domain event infrastructure
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-        // Register MediatR
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(IndexPdfCommandHandler).Assembly));
 
         // Register the handler explicitly for test access
         services.AddScoped<IndexPdfCommandHandler>();
@@ -247,15 +232,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             });
         services.AddSingleton<IEmbeddingService>(embeddingMock.Object);
 
-        // Mock Qdrant service (success by default)
-        var qdrantMock = new Mock<IQdrantService>();
-        qdrantMock.Setup(q => q.IndexDocumentChunksAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<DocumentChunk>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IndexResult { Success = true, ErrorMessage = null, IndexedCount = 0 });
-        qdrantMock.Setup(q => q.DeleteDocumentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        services.AddSingleton<IQdrantService>(qdrantMock.Object);
-
         // ISSUE-3197: Register IndexingSettings for batch processing configuration
         var indexingSettings = new IndexingSettings { EmbeddingBatchSize = 100 };
         services.AddSingleton(Options.Create(indexingSettings));
@@ -313,7 +289,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             FilePath = $"/test/{name}",
             FileSizeBytes = 1024,
             UploadedAt = DateTime.UtcNow,
-            ProcessingStatus = status,
             PageCount = 10,
             ExtractedText = extractedText ?? "This is test extracted text.\n\nIt has multiple paragraphs.\n\nEach paragraph will become a chunk during indexing."
         };
@@ -467,7 +442,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             _serviceProvider!.GetRequiredService<ITextChunkingService>(),
             embeddingMock.Object,
-            _serviceProvider!.GetRequiredService<IQdrantService>(),
             _serviceProvider!.GetRequiredService<ILogger<IndexPdfCommandHandler>>(),
             CreateIndexingSettings()
         );
@@ -507,40 +481,7 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         vectorDoc!.IndexingStatus.Should().Be("completed");
     }
 
-    [Fact]
-    public async Task IndexPdfWithQdrantFailure_ReturnsQdrantIndexingFailed()
-    {
-        // Arrange
-        await ResetDatabaseAsync();
-        var text = "Test text for Qdrant failure.";
-        var pdfId = await CreateTestPdfAsync("QdrantFail.pdf", text, "completed");
-
-        // Create handler with failing Qdrant service
-        var qdrantMock = new Mock<IQdrantService>();
-        qdrantMock.Setup(q => q.IndexDocumentChunksAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<DocumentChunk>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IndexResult { Success = false, ErrorMessage = "Qdrant connection failed", IndexedCount = 0 });
-
-        var handler = new IndexPdfCommandHandler(
-            _dbContext!,
-            _serviceProvider!.GetRequiredService<ITextChunkingService>(),
-            _serviceProvider!.GetRequiredService<IEmbeddingService>(),
-            qdrantMock.Object,
-            _serviceProvider!.GetRequiredService<ILogger<IndexPdfCommandHandler>>(),
-            CreateIndexingSettings()
-        );
-
-        var command = new IndexPdfCommand(pdfId.ToString());
-
-        // Act
-        var result = await handler.Handle(command, TestCancellationToken);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Success.Should().BeFalse();
-        result.ErrorCode.Should().Be(PdfIndexingErrorCode.QdrantIndexingFailed);
-        result.ErrorMessage.Should().Contain("Qdrant indexing failed");
-    }
+    // IndexPdfWithQdrantFailure_ReturnsQdrantIndexingFailed removed — IQdrantService no longer exists
     [Fact]
     public async Task IndexLargePdf_HandlesChunkingCorrectly()
     {

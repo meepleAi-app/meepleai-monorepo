@@ -15,5 +15,6 @@ internal record NotificationDto(
     string? Metadata,
     bool IsRead,
     DateTime CreatedAt,
-    DateTime? ReadAt
+    DateTime? ReadAt,
+    Guid? CorrelationId = null
 );

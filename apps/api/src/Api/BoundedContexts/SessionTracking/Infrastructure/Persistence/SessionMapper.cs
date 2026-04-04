@@ -344,3 +344,88 @@ internal static class SessionNoteMapper
             entity.DeletedAt);
     }
 }
+
+
+/// <summary>
+/// Maps between SessionCheckpoint domain entity and SessionCheckpointEntity persistence entity.
+/// Issue #278 - Session Checkpoint / Deep Save
+/// </summary>
+internal static class SessionCheckpointMapper
+{
+    public static SessionCheckpointEntity ToEntity(SessionCheckpoint domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+        return new SessionCheckpointEntity
+        {
+            Id = domain.Id,
+            SessionId = domain.SessionId,
+            Name = domain.Name,
+            Timestamp = domain.CreatedAt,
+            SnapshotData = domain.SnapshotData,
+            DiaryEventCount = domain.DiaryEventCount,
+            CreatedBy = domain.CreatedBy,
+            IsDeleted = domain.IsDeleted,
+            DeletedAt = domain.DeletedAt
+        };
+    }
+
+    public static SessionCheckpoint ToDomain(SessionCheckpointEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        var checkpoint = (SessionCheckpoint)Activator.CreateInstance(typeof(SessionCheckpoint), true)!;
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.Id))!.SetValue(checkpoint, entity.Id);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.SessionId))!.SetValue(checkpoint, entity.SessionId);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.Name))!.SetValue(checkpoint, entity.Name);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.CreatedAt))!.SetValue(checkpoint, entity.Timestamp);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.SnapshotData))!.SetValue(checkpoint, entity.SnapshotData);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.DiaryEventCount))!.SetValue(checkpoint, entity.DiaryEventCount);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.CreatedBy))!.SetValue(checkpoint, entity.CreatedBy.GetValueOrDefault());
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.IsDeleted))!.SetValue(checkpoint, entity.IsDeleted);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.DeletedAt))!.SetValue(checkpoint, entity.DeletedAt);
+        return checkpoint;
+    }
+}
+
+/// <summary>
+/// Maps between SessionEvent domain entity and SessionEventEntity persistence entity.
+/// Issue #276 - Session Diary / Timeline
+/// </summary>
+internal static class SessionEventMapper
+{
+    public static SessionEventEntity ToEntity(SessionEvent domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+
+        return new SessionEventEntity
+        {
+            Id = domain.Id,
+            SessionId = domain.SessionId,
+            EventType = domain.EventType,
+            Timestamp = domain.Timestamp,
+            Payload = domain.Payload,
+            CreatedBy = domain.CreatedBy,
+            Source = domain.Source,
+            IsDeleted = domain.IsDeleted,
+            DeletedAt = domain.DeletedAt
+        };
+    }
+
+    public static SessionEvent ToDomain(SessionEventEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        var sessionEvent = (SessionEvent)Activator.CreateInstance(typeof(SessionEvent), true)!;
+
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.Id))!.SetValue(sessionEvent, entity.Id);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.SessionId))!.SetValue(sessionEvent, entity.SessionId);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.EventType))!.SetValue(sessionEvent, entity.EventType);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.Timestamp))!.SetValue(sessionEvent, entity.Timestamp);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.Payload))!.SetValue(sessionEvent, entity.Payload);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.CreatedBy))!.SetValue(sessionEvent, entity.CreatedBy);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.Source))!.SetValue(sessionEvent, entity.Source);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.IsDeleted))!.SetValue(sessionEvent, entity.IsDeleted);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.DeletedAt))!.SetValue(sessionEvent, entity.DeletedAt);
+
+        return sessionEvent;
+    }
+}

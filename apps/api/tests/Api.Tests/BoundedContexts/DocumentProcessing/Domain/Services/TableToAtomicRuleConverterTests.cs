@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.Services.Pdf;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
@@ -33,12 +34,12 @@ public class TableToAtomicRuleConverterTests
         var rules = _converter.ConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.NotNull(rules);
-        Assert.Equal(2, rules.Count);
-        Assert.Contains("[Table on page 1]", rules[0]);
-        Assert.Contains("Action: Move", rules[0]);
-        Assert.Contains("Cost: 1", rules[0]);
-        Assert.Contains("Effect: Move player 1 space", rules[0]);
+        rules.Should().NotBeNull();
+        rules.Count.Should().Be(2);
+        rules[0].Should().Contain("[Table on page 1]");
+        rules[0].Should().Contain("Action: Move");
+        rules[0].Should().Contain("Cost: 1");
+        rules[0].Should().Contain("Effect: Move player 1 space");
     }
 
     [Fact]
@@ -59,8 +60,8 @@ public class TableToAtomicRuleConverterTests
         var rules = _converter.ConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.NotNull(rules);
-        Assert.Empty(rules);
+        rules.Should().NotBeNull();
+        rules.Should().BeEmpty();
     }
 
     [Fact]
@@ -78,8 +79,8 @@ public class TableToAtomicRuleConverterTests
         var rules = _converter.ConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.NotNull(rules);
-        Assert.Empty(rules);
+        rules.Should().NotBeNull();
+        rules.Should().BeEmpty();
     }
 
     [Fact]
@@ -101,10 +102,10 @@ public class TableToAtomicRuleConverterTests
         var rules = _converter.ConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.NotNull(rules);
-        Assert.Equal(2, rules.Count);
-        Assert.DoesNotContain("Cost:", rules[0]); // Empty cost skipped
-        Assert.DoesNotContain("Effect:", rules[1]); // Whitespace effect skipped
+        rules.Should().NotBeNull();
+        rules.Count.Should().Be(2);
+        rules[0].Should().NotContain("Cost:"); // Empty cost skipped
+        rules[1].Should().NotContain("Effect:"); // Whitespace effect skipped
     }
 
     [Fact]
@@ -126,10 +127,10 @@ public class TableToAtomicRuleConverterTests
         var rules = _converter.ConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.NotNull(rules);
-        Assert.Equal(2, rules.Count);
-        Assert.DoesNotContain("Effect:", rules[0]); // Missing column not included
-        Assert.DoesNotContain("Extra", rules[1]); // Extra column ignored
+        rules.Should().NotBeNull();
+        rules.Count.Should().Be(2);
+        rules[0].Should().NotContain("Effect:"); // Missing column not included
+        rules[1].Should().NotContain("Extra"); // Extra column ignored
     }
 
     [Fact]
@@ -150,9 +151,9 @@ public class TableToAtomicRuleConverterTests
         var rules = _converter.ConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.NotNull(rules);
-        Assert.Single(rules);
-        Assert.Matches(@"\[Table on page \d+\] Name: .+; Type: .+; Value: .+", rules[0]);
+        rules.Should().NotBeNull();
+        rules.Should().ContainSingle();
+        rules[0].Should().MatchRegex(@"\[Table on page \d+\] Name: .+; Type: .+; Value: .+");
     }
 
     [Fact]
@@ -173,9 +174,9 @@ public class TableToAtomicRuleConverterTests
         var rules = _converter.ConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.NotNull(rules);
-        Assert.Single(rules);
-        Assert.Contains("[Table on page 42]", rules[0]);
+        rules.Should().NotBeNull();
+        rules.Should().ContainSingle();
+        rules[0].Should().Contain("[Table on page 42]");
     }
     [Fact]
     public void IsHeaderRow_WithExplicitHeaderKeyword_ReturnsTrue()
@@ -187,7 +188,7 @@ public class TableToAtomicRuleConverterTests
         var isHeader = _converter.IsHeaderRow(row);
 
         // Assert
-        Assert.True(isHeader);
+        isHeader.Should().BeTrue();
     }
 
     [Fact]
@@ -200,7 +201,7 @@ public class TableToAtomicRuleConverterTests
         var isHeader = _converter.IsHeaderRow(row);
 
         // Assert
-        Assert.True(isHeader);
+        isHeader.Should().BeTrue();
     }
 
     [Fact]
@@ -213,7 +214,7 @@ public class TableToAtomicRuleConverterTests
         var isHeader = _converter.IsHeaderRow(row);
 
         // Assert
-        Assert.True(isHeader);
+        isHeader.Should().BeTrue();
     }
 
     [Fact]
@@ -230,7 +231,7 @@ public class TableToAtomicRuleConverterTests
         var isHeader = _converter.IsHeaderRow(row);
 
         // Assert
-        Assert.False(isHeader);
+        isHeader.Should().BeFalse();
     }
 
     [Fact]
@@ -243,7 +244,7 @@ public class TableToAtomicRuleConverterTests
         var isHeader = _converter.IsHeaderRow(row!);
 
         // Assert
-        Assert.False(isHeader);
+        isHeader.Should().BeFalse();
     }
 
     [Fact]
@@ -256,7 +257,7 @@ public class TableToAtomicRuleConverterTests
         var isHeader = _converter.IsHeaderRow(row);
 
         // Assert
-        Assert.False(isHeader);
+        isHeader.Should().BeFalse();
     }
     [Fact]
     public void CategorizeAtomicRule_WithSetupTerms_ReturnsSetupCategory()
@@ -268,7 +269,7 @@ public class TableToAtomicRuleConverterTests
         var category = _converter.CategorizeAtomicRule(rule);
 
         // Assert
-        Assert.Equal("Setup", category);
+        category.Should().Be("Setup");
     }
 
     [Fact]
@@ -281,7 +282,7 @@ public class TableToAtomicRuleConverterTests
         var category = _converter.CategorizeAtomicRule(rule);
 
         // Assert
-        Assert.Equal("Action", category);
+        category.Should().Be("Action");
     }
 
     [Fact]
@@ -294,7 +295,7 @@ public class TableToAtomicRuleConverterTests
         var category = _converter.CategorizeAtomicRule(rule);
 
         // Assert
-        Assert.Equal("Scoring", category);
+        category.Should().Be("Scoring");
     }
 
     [Fact]
@@ -307,7 +308,7 @@ public class TableToAtomicRuleConverterTests
         var category = _converter.CategorizeAtomicRule(rule);
 
         // Assert
-        Assert.Equal("EndGame", category);
+        category.Should().Be("EndGame");
     }
 
     [Fact]
@@ -320,7 +321,7 @@ public class TableToAtomicRuleConverterTests
         var category = _converter.CategorizeAtomicRule(rule);
 
         // Assert
-        Assert.Equal("Components", category);
+        category.Should().Be("Components");
     }
 
     [Fact]
@@ -333,7 +334,7 @@ public class TableToAtomicRuleConverterTests
         var category = _converter.CategorizeAtomicRule(rule);
 
         // Assert
-        Assert.Equal("General", category);
+        category.Should().Be("General");
     }
 
     [Fact]
@@ -345,9 +346,9 @@ public class TableToAtomicRuleConverterTests
         var category3 = _converter.CategorizeAtomicRule("   ");
 
         // Assert
-        Assert.Equal("Unknown", category1);
-        Assert.Equal("Unknown", category2);
-        Assert.Equal("Unknown", category3);
+        category1.Should().Be("Unknown");
+        category2.Should().Be("Unknown");
+        category3.Should().Be("Unknown");
     }
 
     [Fact]
@@ -364,9 +365,9 @@ public class TableToAtomicRuleConverterTests
         var category3 = _converter.CategorizeAtomicRule(rule3);
 
         // Assert
-        Assert.Equal("Action", category1);
-        Assert.Equal("Action", category2);
-        Assert.Equal("Action", category3);
+        category1.Should().Be("Action");
+        category2.Should().Be("Action");
+        category3.Should().Be("Action");
     }
     [Fact]
     public void ConvertTableToAtomicRules_WithComplexTableData_PreservesBusinnessLogic()
@@ -388,11 +389,11 @@ public class TableToAtomicRuleConverterTests
         var rules = _converter.ConvertTableToAtomicRules(table);
 
         // Assert: Verify business logic preservation
-        Assert.Equal(3, rules.Count);
-        Assert.All(rules, rule => Assert.Contains("[Table on page 7]", rule));
-        Assert.All(rules, rule => Assert.Contains("Phase:", rule));
-        Assert.All(rules, rule => Assert.Contains("Actions Available:", rule));
-        Assert.All(rules, rule => Assert.Contains("Player Count: 2-4", rule));
+        rules.Count.Should().Be(3);
+        rules.Should().AllSatisfy(rule => rule.Should().Contain("[Table on page 7]"));
+        rules.Should().AllSatisfy(rule => rule.Should().Contain("Phase:"));
+        rules.Should().AllSatisfy(rule => rule.Should().Contain("Actions Available:"));
+        rules.Should().AllSatisfy(rule => rule.Should().Contain("Player Count: 2-4"));
     }
 
     [Fact]
@@ -415,9 +416,9 @@ public class TableToAtomicRuleConverterTests
         var rules = _converter.ConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.Equal(2, rules.Count);
-        Assert.Contains("⚔️", rules[0]);
-        Assert.Contains("🛡️", rules[1]);
-        Assert.Contains("&", rules[1]); // Special characters preserved
+        rules.Count.Should().Be(2);
+        rules[0].Should().Contain("⚔️");
+        rules[1].Should().Contain("🛡️");
+        rules[1].Should().Contain("&"); // Special characters preserved
     }
 }

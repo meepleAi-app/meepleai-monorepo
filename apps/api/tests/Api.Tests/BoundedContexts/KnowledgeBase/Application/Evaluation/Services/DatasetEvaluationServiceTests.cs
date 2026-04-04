@@ -5,6 +5,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
@@ -58,16 +59,18 @@ public class DatasetEvaluationServiceTests
     public void Constructor_WithNullRagService_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new DatasetEvaluationService(null!, _mockLogger.Object));
+        Action act = () =>
+            new DatasetEvaluationService(null!, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new DatasetEvaluationService(_mockRagService.Object, null!));
+        Action act = () =>
+            new DatasetEvaluationService(_mockRagService.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void CalculateRecallAtK_WithAllRelevantInTopK_ReturnsOne()
@@ -80,7 +83,7 @@ public class DatasetEvaluationServiceTests
         var recall = _service.CalculateRecallAtK(retrieved, relevant, k: 5);
 
         // Assert
-        Assert.Equal(1.0, recall);
+        recall.Should().Be(1.0);
     }
 
     [Fact]
@@ -94,7 +97,7 @@ public class DatasetEvaluationServiceTests
         var recall = _service.CalculateRecallAtK(retrieved, relevant, k: 5);
 
         // Assert
-        Assert.Equal(0.5, recall); // 2 out of 4 relevant
+        recall.Should().Be(0.5); // 2 out of 4 relevant
     }
 
     [Fact]
@@ -108,7 +111,7 @@ public class DatasetEvaluationServiceTests
         var recall = _service.CalculateRecallAtK(retrieved, relevant, k: 3);
 
         // Assert
-        Assert.Equal(0.0, recall);
+        recall.Should().Be(0.0);
     }
 
     [Fact]
@@ -122,7 +125,7 @@ public class DatasetEvaluationServiceTests
         var recall = _service.CalculateRecallAtK(retrieved, relevant, k: 5);
 
         // Assert
-        Assert.Equal(1.0, recall); // Perfect recall when nothing to find
+        recall.Should().Be(1.0); // Perfect recall when nothing to find
     }
 
     [Fact]
@@ -136,7 +139,7 @@ public class DatasetEvaluationServiceTests
         var recall = _service.CalculateRecallAtK(retrieved, relevant, k: 5);
 
         // Assert
-        Assert.Equal(0.0, recall);
+        recall.Should().Be(0.0);
     }
 
     [Fact]
@@ -150,7 +153,7 @@ public class DatasetEvaluationServiceTests
         var recall = _service.CalculateRecallAtK(retrieved, relevant, k: 5);
 
         // Assert
-        Assert.Equal(1.0, recall);
+        recall.Should().Be(1.0);
     }
     [Fact]
     public void CalculateNdcgAtK_WithPerfectRanking_ReturnsOne()
@@ -163,7 +166,7 @@ public class DatasetEvaluationServiceTests
         var ndcg = _service.CalculateNdcgAtK(retrieved, relevant, k: 5);
 
         // Assert
-        Assert.Equal(1.0, ndcg, precision: 3);
+        ndcg.Should().BeApproximately(1.0, precision: 3);
     }
 
     [Fact]
@@ -177,7 +180,7 @@ public class DatasetEvaluationServiceTests
         var ndcg = _service.CalculateNdcgAtK(retrieved, relevant, k: 3);
 
         // Assert
-        Assert.Equal(0.0, ndcg);
+        ndcg.Should().Be(0.0);
     }
 
     [Fact]
@@ -192,7 +195,7 @@ public class DatasetEvaluationServiceTests
 
         // Assert - Returns 0 because there's nothing to find (special case handled)
         // Actually the implementation returns dcg/idealDcg, with idealDcg=0 returns 0
-        Assert.True(ndcg >= 0.0 && ndcg <= 1.0);
+        (ndcg >= 0.0 && ndcg <= 1.0).Should().BeTrue();
     }
 
     [Fact]
@@ -208,7 +211,7 @@ public class DatasetEvaluationServiceTests
         var worstNdcg = _service.CalculateNdcgAtK(worstRanking, relevant, k: 5);
 
         // Assert
-        Assert.True(perfectNdcg > worstNdcg);
+        (perfectNdcg > worstNdcg).Should().BeTrue();
     }
     [Fact]
     public void CalculateMrr_WithFirstPositionRelevant_ReturnsOne()
@@ -221,7 +224,7 @@ public class DatasetEvaluationServiceTests
         var mrr = _service.CalculateMrr(retrieved, relevant);
 
         // Assert
-        Assert.Equal(1.0, mrr);
+        mrr.Should().Be(1.0);
     }
 
     [Fact]
@@ -235,7 +238,7 @@ public class DatasetEvaluationServiceTests
         var mrr = _service.CalculateMrr(retrieved, relevant);
 
         // Assert
-        Assert.Equal(0.5, mrr);
+        mrr.Should().Be(0.5);
     }
 
     [Fact]
@@ -249,7 +252,7 @@ public class DatasetEvaluationServiceTests
         var mrr = _service.CalculateMrr(retrieved, relevant);
 
         // Assert
-        Assert.Equal(1.0 / 3.0, mrr, precision: 5);
+        mrr.Should().BeApproximately(1.0 / 3.0, precision: 5);
     }
 
     [Fact]
@@ -263,7 +266,7 @@ public class DatasetEvaluationServiceTests
         var mrr = _service.CalculateMrr(retrieved, relevant);
 
         // Assert
-        Assert.Equal(0.0, mrr);
+        mrr.Should().Be(0.0);
     }
 
     [Fact]
@@ -277,7 +280,7 @@ public class DatasetEvaluationServiceTests
         var mrr = _service.CalculateMrr(retrieved, relevant);
 
         // Assert
-        Assert.Equal(1.0, mrr); // Perfect MRR when nothing to find
+        mrr.Should().Be(1.0); // Perfect MRR when nothing to find
     }
 
     [Fact]
@@ -291,7 +294,7 @@ public class DatasetEvaluationServiceTests
         var mrr = _service.CalculateMrr(retrieved, relevant);
 
         // Assert
-        Assert.Equal(1.0, mrr);
+        mrr.Should().Be(1.0);
     }
     [Fact]
     public void ComputeMetrics_WithEmptyResults_ReturnsEmptyMetrics()
@@ -303,11 +306,11 @@ public class DatasetEvaluationServiceTests
         var metrics = _service.ComputeMetrics(results);
 
         // Assert
-        Assert.Equal(0, metrics.SampleCount);
-        Assert.Equal(0.0, metrics.RecallAt5);
-        Assert.Equal(0.0, metrics.RecallAt10);
-        Assert.Equal(0.0, metrics.NdcgAt10);
-        Assert.Equal(0.0, metrics.Mrr);
+        metrics.SampleCount.Should().Be(0);
+        metrics.RecallAt5.Should().Be(0.0);
+        metrics.RecallAt10.Should().Be(0.0);
+        metrics.NdcgAt10.Should().Be(0.0);
+        metrics.Mrr.Should().Be(0.0);
     }
 
     [Fact]
@@ -348,11 +351,11 @@ public class DatasetEvaluationServiceTests
         var metrics = _service.ComputeMetrics(results);
 
         // Assert
-        Assert.Equal(2, metrics.SampleCount);
-        Assert.Equal(0.5, metrics.RecallAt5, precision: 5); // (1 + 0) / 2
-        Assert.Equal(1.0, metrics.RecallAt10, precision: 5); // (1 + 1) / 2
-        Assert.Equal(0.75, metrics.Mrr, precision: 5); // (1.0 + 0.5) / 2
-        Assert.Equal(0.85, metrics.AnswerCorrectness, precision: 5); // (0.9 + 0.8) / 2
+        metrics.SampleCount.Should().Be(2);
+        metrics.RecallAt5.Should().BeApproximately(0.5, 0.00001); // (1 + 0) / 2
+        metrics.RecallAt10.Should().BeApproximately(1.0, 0.00001); // (1 + 1) / 2
+        metrics.Mrr.Should().BeApproximately(0.75, 0.00001); // (1.0 + 0.5) / 2
+        metrics.AnswerCorrectness.Should().BeApproximately(0.85, 0.00001); // (0.9 + 0.8) / 2
     }
 
     [Fact]
@@ -385,7 +388,7 @@ public class DatasetEvaluationServiceTests
         var metrics = _service.ComputeMetrics(results);
 
         // Assert
-        Assert.Equal(1, metrics.SampleCount); // Only successful sample counted
+        metrics.SampleCount.Should().Be(1); // Only successful sample counted
     }
 
     [Fact]
@@ -404,8 +407,8 @@ public class DatasetEvaluationServiceTests
         var metrics = _service.ComputeMetrics(results);
 
         // Assert
-        Assert.True(metrics.P95LatencyMs >= 950); // Should be around 950
-        Assert.True(metrics.P95LatencyMs <= 1000);
+        (metrics.P95LatencyMs >= 950).Should().BeTrue(); // Should be around 950
+        (metrics.P95LatencyMs <= 1000).Should().BeTrue();
     }
     [Fact]
     public async Task EvaluateSampleAsync_WithSuccessfulRagResponse_ReturnsResult()
@@ -436,13 +439,13 @@ public class DatasetEvaluationServiceTests
         var result = await _service.EvaluateSampleAsync(sample, options);
 
         // Assert
-        Assert.Equal(sample.Id, result.SampleId);
-        Assert.Equal(sample.Question, result.Question);
-        Assert.Equal(sample.ExpectedAnswer, result.ExpectedAnswer);
-        Assert.Equal("Generated answer", result.GeneratedAnswer);
-        Assert.True(result.LatencyMs > 0);
-        Assert.True(result.IsSuccess);
-        Assert.Null(result.ErrorMessage);
+        result.SampleId.Should().Be(sample.Id);
+        result.Question.Should().Be(sample.Question);
+        result.ExpectedAnswer.Should().Be(sample.ExpectedAnswer);
+        result.GeneratedAnswer.Should().Be("Generated answer");
+        (result.LatencyMs > 0).Should().BeTrue();
+        result.IsSuccess.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -467,10 +470,10 @@ public class DatasetEvaluationServiceTests
         var result = await _service.EvaluateSampleAsync(sample, options);
 
         // Assert
-        Assert.Equal(sample.Id, result.SampleId);
-        Assert.False(result.IsSuccess);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("RAG service unavailable", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.SampleId.Should().Be(sample.Id);
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("RAG service unavailable");
     }
 
     [Fact]
@@ -480,8 +483,9 @@ public class DatasetEvaluationServiceTests
         var options = new EvaluationOptions { Configuration = "baseline" };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.EvaluateSampleAsync(null!, options));
+        Func<Task> act = () =>
+            _service.EvaluateSampleAsync(null!, options);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
     [Fact]
     public async Task EvaluateDatasetAsync_EvaluatesAllSamples()
@@ -509,10 +513,10 @@ public class DatasetEvaluationServiceTests
         var result = await _service.EvaluateDatasetAsync(dataset, options);
 
         // Assert
-        Assert.Equal("Test", result.DatasetName);
-        Assert.Equal("baseline", result.Configuration);
-        Assert.Equal(5, result.SampleResults.Count);
-        Assert.NotNull(result.Metrics);
+        result.DatasetName.Should().Be("Test");
+        result.Configuration.Should().Be("baseline");
+        result.SampleResults.Count.Should().Be(5);
+        result.Metrics.Should().NotBeNull();
     }
 
     [Fact]
@@ -545,7 +549,7 @@ public class DatasetEvaluationServiceTests
         var result = await _service.EvaluateDatasetAsync(dataset, options);
 
         // Assert
-        Assert.Equal(3, result.SampleResults.Count);
+        result.SampleResults.Count.Should().Be(3);
     }
 
     [Fact]
@@ -585,7 +589,7 @@ public class DatasetEvaluationServiceTests
         var result = await _service.EvaluateDatasetAsync(dataset, options, cts.Token);
 
         // Assert
-        Assert.True(result.SampleResults.Count < 100);
+        (result.SampleResults.Count < 100).Should().BeTrue();
     }
 
     [Fact]
@@ -595,8 +599,9 @@ public class DatasetEvaluationServiceTests
         var options = new EvaluationOptions { Configuration = "baseline" };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.EvaluateDatasetAsync(null!, options));
+        Func<Task> act = () =>
+            _service.EvaluateDatasetAsync(null!, options);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -606,7 +611,8 @@ public class DatasetEvaluationServiceTests
         var dataset = EvaluationDataset.Create("Test", "Test dataset");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.EvaluateDatasetAsync(dataset, null!));
+        Func<Task> act = () =>
+            _service.EvaluateDatasetAsync(dataset, null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

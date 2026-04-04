@@ -691,8 +691,8 @@ curl -X POST http://localhost:8080/api/v1/documents/upload \
 
 - [Interactive API Explorer (Scalar)](http://localhost:8080/scalar/v1)
 - [OpenAPI Specification](http://localhost:8080/openapi/v1.json)
-- [Authentication Guide](../02-development/README.md#authentication)
-- [Rate Limiting Details](../01-architecture/adr/adr-020-rate-limiting.md)
+- [Authentication Guide](../development/README.md#authentication)
+- [Rate Limiting Details](../architecture/adr/adr-020-rate-limiting.md)
 
 ---
 

@@ -1,0 +1,1367 @@
+{
+  "T-236": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:16:12.046135"
+  },
+  "T-001": {
+    "status": "FAIL",
+    "note": "Login failed at about:blank: Locator.fill: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"input",
+    "time": "2026-03-14T10:17:14.148726"
+  },
+  "T-002": {
+    "status": "SKIP",
+    "note": "Already logged in, login form not shown",
+    "time": "2026-03-14T10:18:21.546835"
+  },
+  "T-003": {
+    "status": "FAIL",
+    "note": "Google OAuth button not found",
+    "time": "2026-03-14T10:18:23.949387"
+  },
+  "T-006": {
+    "status": "FAIL",
+    "note": "Register tab not found",
+    "time": "2026-03-14T10:18:24.210098"
+  },
+  "T-008": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:18:28.322791"
+  },
+  "T-015": {
+    "status": "FAIL",
+    "note": "No TabBar/bottom nav found",
+    "time": "2026-03-14T10:18:32.693504"
+  },
+  "T-026": {
+    "status": "FAIL",
+    "note": "No sticky navbar",
+    "time": "2026-03-14T10:18:32.695503"
+  },
+  "T-033": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:18:37.057951"
+  },
+  "T-042": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:18:41.422602"
+  },
+  "T-043": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:18:45.784356"
+  },
+  "T-044": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:18:50.149892"
+  },
+  "T-047": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:18:54.508850"
+  },
+  "T-049": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:18:58.875982"
+  },
+  "T-063": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:03.237454"
+  },
+  "T-064": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:07.607844"
+  },
+  "T-073": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:11.970164"
+  },
+  "T-077": {
+    "status": "FAIL",
+    "note": "No search input on discover",
+    "time": "2026-03-14T10:19:14.325617"
+  },
+  "T-083": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:16.586978"
+  },
+  "T-096": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:18.681830"
+  },
+  "T-102": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:20.959274"
+  },
+  "T-097": {
+    "status": "SKIP",
+    "note": "SSE streaming needs manual AI interaction",
+    "time": "2026-03-14T10:19:20.959274"
+  },
+  "T-098": {
+    "status": "SKIP",
+    "note": "SSE streaming needs manual AI interaction",
+    "time": "2026-03-14T10:19:20.959274"
+  },
+  "T-126": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:23.049651"
+  },
+  "T-135": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:25.322672"
+  },
+  "T-136": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:27.417627"
+  },
+  "T-137": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:29.693005"
+  },
+  "T-138": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:31.782172"
+  },
+  "T-148": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:34.050519"
+  },
+  "T-149": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:36.139371"
+  },
+  "T-162": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:38.408158"
+  },
+  "T-163": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:40.508876"
+  },
+  "T-166": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:42.772273"
+  },
+  "T-167": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:44.876433"
+  },
+  "T-172": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:47.134969"
+  },
+  "T-185": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:49.239207"
+  },
+  "T-187": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:51.492225"
+  },
+  "T-186": {
+    "status": "SKIP",
+    "note": "Slide-in panel needs interactive test",
+    "time": "2026-03-14T10:19:51.492225"
+  },
+  "T-211": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:53.594799"
+  },
+  "T-212": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:55.851555"
+  },
+  "T-217": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:19:57.957667"
+  },
+  "T-254": {
+    "status": "PASS",
+    "note": "Load time: 0.2s (target <3s)",
+    "time": "2026-03-14T10:19:58.208303"
+  },
+  "T-266": {
+    "status": "PASS",
+    "note": "No horizontal overflow on any page",
+    "time": "2026-03-14T10:20:07.377409"
+  },
+  "T-004": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:09.623433"
+  },
+  "T-005": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:11.746246"
+  },
+  "T-007": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:13.986230"
+  },
+  "T-009": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:16.107134"
+  },
+  "T-010": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:18.366634"
+  },
+  "T-011": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:20.470870"
+  },
+  "T-013": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:22.731216"
+  },
+  "T-012": {
+    "status": "SKIP",
+    "note": "Logout needs menu interaction test",
+    "time": "2026-03-14T10:20:22.824206"
+  },
+  "T-016": {
+    "status": "SKIP",
+    "note": "Tab highlight needs visual inspection",
+    "time": "2026-03-14T10:20:25.076795"
+  },
+  "T-017": {
+    "status": "SKIP",
+    "note": "Desktop viewport test - not applicable to mobile test",
+    "time": "2026-03-14T10:20:25.076795"
+  },
+  "T-018": {
+    "status": "SKIP",
+    "note": "Safe area needs real device",
+    "time": "2026-03-14T10:20:25.076795"
+  },
+  "T-019": {
+    "status": "SKIP",
+    "note": "Guest mode needs unauthenticated session",
+    "time": "2026-03-14T10:20:25.076795"
+  },
+  "T-020": {
+    "status": "FAIL",
+    "note": "No FAB element found",
+    "time": "2026-03-14T10:20:25.185777"
+  },
+  "T-021": {
+    "status": "SKIP",
+    "note": "FAB scroll hide needs interaction",
+    "time": "2026-03-14T10:20:25.185777"
+  },
+  "T-022": {
+    "status": "SKIP",
+    "note": "FAB scroll show needs interaction",
+    "time": "2026-03-14T10:20:25.186548"
+  },
+  "T-023": {
+    "status": "SKIP",
+    "note": "FAB keyboard hide needs interaction",
+    "time": "2026-03-14T10:20:25.186548"
+  },
+  "T-024": {
+    "status": "SKIP",
+    "note": "FAB long-press needs interaction",
+    "time": "2026-03-14T10:20:25.186548"
+  },
+  "T-025": {
+    "status": "SKIP",
+    "note": "FAB position needs visual inspection",
+    "time": "2026-03-14T10:20:25.186548"
+  },
+  "T-027": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:29.441238"
+  },
+  "T-028": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:33.801224"
+  },
+  "T-029": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:38.163731"
+  },
+  "T-030": {
+    "status": "SKIP",
+    "note": "Breadcrumb needs deep navigation",
+    "time": "2026-03-14T10:20:38.163731"
+  },
+  "T-031": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:42.534682"
+  },
+  "T-032": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:46.901817"
+  },
+  "T-034": {
+    "status": "SKIP",
+    "note": "Session stats widget needs data",
+    "time": "2026-03-14T10:20:49.257607"
+  },
+  "T-035": {
+    "status": "SKIP",
+    "note": "Recent activity needs data",
+    "time": "2026-03-14T10:20:49.257607"
+  },
+  "T-036": {
+    "status": "SKIP",
+    "note": "Library summary needs data",
+    "time": "2026-03-14T10:20:49.257607"
+  },
+  "T-037": {
+    "status": "SKIP",
+    "note": "AI usage meter needs data",
+    "time": "2026-03-14T10:20:49.257607"
+  },
+  "T-045": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:51.533018"
+  },
+  "T-046": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:53.620660"
+  },
+  "T-048": {
+    "status": "SKIP",
+    "note": "Remove game needs existing game",
+    "time": "2026-03-14T10:20:53.620660"
+  },
+  "T-050": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:55.893205"
+  },
+  "T-051": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:20:57.988048"
+  },
+  "T-052": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:00.261688"
+  },
+  "T-055": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:02.345845"
+  },
+  "T-056": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:04.640407"
+  },
+  "T-057": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:06.712686"
+  },
+  "T-060": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:08.999557"
+  },
+  "T-061": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:11.070394"
+  },
+  "T-065": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:13.360049"
+  },
+  "T-066": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:15.431250"
+  },
+  "T-067": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:17.725305"
+  },
+  "T-068": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:19.794958"
+  },
+  "T-069": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:22.087365"
+  },
+  "T-070": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:24.159115"
+  },
+  "T-072": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:26.448151"
+  },
+  "T-074": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:28.526602"
+  },
+  "T-075": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:30.819597"
+  },
+  "T-076": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:32.906506"
+  },
+  "T-078": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:35.184421"
+  },
+  "T-079": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:37.291654"
+  },
+  "T-080": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:39.544871"
+  },
+  "T-081": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:41.652408"
+  },
+  "T-082": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:43.906139"
+  },
+  "T-084": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:46.011151"
+  },
+  "T-085": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:48.274872"
+  },
+  "T-086": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:50.382442"
+  },
+  "T-087": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:52.640586"
+  },
+  "T-088": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:54.745718"
+  },
+  "T-091": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:57.008406"
+  },
+  "T-092": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:21:59.116382"
+  },
+  "T-093": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:01.376172"
+  },
+  "T-094": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:03.483025"
+  },
+  "T-095": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:05.756048"
+  },
+  "T-099": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:07.848426"
+  },
+  "T-100": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:10.127204"
+  },
+  "T-101": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:12.212428"
+  },
+  "T-103": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:14.489933"
+  },
+  "T-104": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:16.583123"
+  },
+  "T-106": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:18.860986"
+  },
+  "T-112": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:20.943099"
+  },
+  "T-113": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:23.230314"
+  },
+  "T-114": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:25.300554"
+  },
+  "T-116": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:27.611506"
+  },
+  "T-117": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:29.666078"
+  },
+  "T-118": {
+    "status": "SKIP",
+    "note": "Voice input needs real microphone",
+    "time": "2026-03-14T10:22:29.666078"
+  },
+  "T-119": {
+    "status": "SKIP",
+    "note": "Voice EN needs real microphone",
+    "time": "2026-03-14T10:22:29.666078"
+  },
+  "T-120": {
+    "status": "SKIP",
+    "note": "Interim results needs real microphone",
+    "time": "2026-03-14T10:22:29.666078"
+  },
+  "T-122": {
+    "status": "SKIP",
+    "note": "Mic permission needs real device",
+    "time": "2026-03-14T10:22:29.666078"
+  },
+  "T-127": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:31.978350"
+  },
+  "T-128": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:34.035353"
+  },
+  "T-129": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:36.348003"
+  },
+  "T-130": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:38.407845"
+  },
+  "T-131": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:40.703546"
+  },
+  "T-139": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:42.791780"
+  },
+  "T-140": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:45.059151"
+  },
+  "T-141": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:47.145332"
+  },
+  "T-142": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:49.411259"
+  },
+  "T-143": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:51.516314"
+  },
+  "T-144": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:53.772118"
+  },
+  "T-145": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:55.877907"
+  },
+  "T-146": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:22:58.142233"
+  },
+  "T-147": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:00.251975"
+  },
+  "T-150": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:02.513970"
+  },
+  "T-151": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:04.617837"
+  },
+  "T-152": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:06.884230"
+  },
+  "T-153": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:08.990563"
+  },
+  "T-154": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:11.253414"
+  },
+  "T-155": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:13.361548"
+  },
+  "T-156": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:15.614855"
+  },
+  "T-161": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:17.718660"
+  },
+  "T-164": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:19.981564"
+  },
+  "T-165": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:22.089353"
+  },
+  "T-168": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:24.352585"
+  },
+  "T-169": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:26.460652"
+  },
+  "T-170": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:28.719760"
+  },
+  "T-171": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:30.824685"
+  },
+  "T-173": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:33.086810"
+  },
+  "T-178": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:35.189580"
+  },
+  "T-179": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:37.448447"
+  },
+  "T-180": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:39.554323"
+  },
+  "T-181": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:41.814536"
+  },
+  "T-183": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:43.914175"
+  },
+  "T-184": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:46.184833"
+  },
+  "T-188": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:48.272532"
+  },
+  "T-189": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:50.546348"
+  },
+  "T-190": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:52.638332"
+  },
+  "T-191": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:54.911708"
+  },
+  "T-194": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:57.002592"
+  },
+  "T-195": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:23:59.274695"
+  },
+  "T-196": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:01.364440"
+  },
+  "T-197": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:03.638495"
+  },
+  "T-198": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:05.723996"
+  },
+  "T-199": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:07.990337"
+  },
+  "T-201": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:10.097789"
+  },
+  "T-202": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:12.354845"
+  },
+  "T-203": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:14.451213"
+  },
+  "T-204": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:16.708669"
+  },
+  "T-205": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:18.816818"
+  },
+  "T-206": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:21.073954"
+  },
+  "T-207": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:23.172082"
+  },
+  "T-208": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:25.447343"
+  },
+  "T-209": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:27.539797"
+  },
+  "T-213": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:29.814112"
+  },
+  "T-214": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:31.899382"
+  },
+  "T-215": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:34.169261"
+  },
+  "T-216": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:36.261130"
+  },
+  "T-218": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:38.528163"
+  },
+  "T-219": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:40.626681"
+  },
+  "T-220": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:42.889833"
+  },
+  "T-221": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:44.998263"
+  },
+  "T-226": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:47.256864"
+  },
+  "T-227": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:49.366680"
+  },
+  "T-228": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:51.628452"
+  },
+  "T-229": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:53.736801"
+  },
+  "T-232": {
+    "status": "SKIP",
+    "note": "Offline page needs network disconnect",
+    "time": "2026-03-14T10:24:53.736801"
+  },
+  "T-233": {
+    "status": "SKIP",
+    "note": "IndexedDB offline actions needs disconnect",
+    "time": "2026-03-14T10:24:53.736801"
+  },
+  "T-234": {
+    "status": "SKIP",
+    "note": "Sync needs reconnect test",
+    "time": "2026-03-14T10:24:53.736801"
+  },
+  "T-240": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:55.986611"
+  },
+  "T-241": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:24:58.102428"
+  },
+  "T-243": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:00.349820"
+  },
+  "T-244": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:02.476284"
+  },
+  "T-245": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:04.694777"
+  },
+  "T-247": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:06.846355"
+  },
+  "T-251": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:09.062647"
+  },
+  "T-252": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:11.217395"
+  },
+  "T-253": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:13.416134"
+  },
+  "T-255": {
+    "status": "PASS",
+    "note": "5 pages in 4.8s",
+    "time": "2026-03-14T10:25:18.259691"
+  },
+  "T-256": {
+    "status": "SKIP",
+    "note": "Scroll performance needs 50+ items",
+    "time": "2026-03-14T10:25:18.259691"
+  },
+  "T-257": {
+    "status": "SKIP",
+    "note": "Lazy loading needs visual inspection",
+    "time": "2026-03-14T10:25:18.259691"
+  },
+  "T-258": {
+    "status": "SKIP",
+    "note": "SSE stability needs 5+ min test",
+    "time": "2026-03-14T10:25:18.259691"
+  },
+  "T-259": {
+    "status": "SKIP",
+    "note": "Memory usage needs 10+ min test",
+    "time": "2026-03-14T10:25:18.259691"
+  },
+  "T-260": {
+    "status": "PASS",
+    "note": "All 0 targets >= 44px",
+    "time": "2026-03-14T10:25:20.461491"
+  },
+  "T-261": {
+    "status": "SKIP",
+    "note": "Contrast check needs automated tool",
+    "time": "2026-03-14T10:25:20.461491"
+  },
+  "T-262": {
+    "status": "SKIP",
+    "note": "Browser zoom 200% needs viewport change",
+    "time": "2026-03-14T10:25:20.461491"
+  },
+  "T-263": {
+    "status": "SKIP",
+    "note": "OS font size needs device setting",
+    "time": "2026-03-14T10:25:20.461491"
+  },
+  "T-267": {
+    "status": "FAIL",
+    "note": "Error: Page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3",
+    "time": "2026-03-14T10:25:22.893683"
+  },
+  "T-268": {
+    "status": "SKIP",
+    "note": "Rotation data preservation needs device",
+    "time": "2026-03-14T10:25:22.938818"
+  },
+  "T-269": {
+    "status": "SKIP",
+    "note": "Keyboard layout needs touch keyboard",
+    "time": "2026-03-14T10:25:22.938818"
+  },
+  "T-270": {
+    "status": "SKIP",
+    "note": "Notch safe area needs real device",
+    "time": "2026-03-14T10:25:22.938818"
+  },
+  "T-014": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:27.306511"
+  },
+  "T-038": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:31.668179"
+  },
+  "T-039": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:36.026686"
+  },
+  "T-040": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:40.396711"
+  },
+  "T-041": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:44.764344"
+  },
+  "T-053": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:49.138327"
+  },
+  "T-054": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:53.506151"
+  },
+  "T-058": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:25:57.883708"
+  },
+  "T-059": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:02.248271"
+  },
+  "T-062": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:06.315926"
+  },
+  "T-071": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:10.688211"
+  },
+  "T-089": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:15.053024"
+  },
+  "T-090": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:19.429630"
+  },
+  "T-105": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:23.801614"
+  },
+  "T-107": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:28.174863"
+  },
+  "T-108": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:32.535111"
+  },
+  "T-109": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:36.907876"
+  },
+  "T-110": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:41.272296"
+  },
+  "T-111": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:45.640916"
+  },
+  "T-115": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:49.995220"
+  },
+  "T-121": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:54.365525"
+  },
+  "T-123": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:26:58.734293"
+  },
+  "T-124": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:03.105371"
+  },
+  "T-125": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:07.463952"
+  },
+  "T-132": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:11.833053"
+  },
+  "T-133": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:16.192687"
+  },
+  "T-134": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:20.563606"
+  },
+  "T-157": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:24.926500"
+  },
+  "T-158": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:29.282616"
+  },
+  "T-159": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:33.655952"
+  },
+  "T-160": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:38.012114"
+  },
+  "T-174": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:42.380928"
+  },
+  "T-175": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:46.746728"
+  },
+  "T-176": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:51.116634"
+  },
+  "T-177": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:55.490553"
+  },
+  "T-182": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:27:59.862742"
+  },
+  "T-192": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:04.236102"
+  },
+  "T-193": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:08.610204"
+  },
+  "T-200": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:12.974121"
+  },
+  "T-210": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:17.338588"
+  },
+  "T-222": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:21.705611"
+  },
+  "T-223": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:26.079838"
+  },
+  "T-224": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:30.449291"
+  },
+  "T-225": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:34.818987"
+  },
+  "T-230": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:39.189892"
+  },
+  "T-231": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:43.561327"
+  },
+  "T-235": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:47.931670"
+  },
+  "T-237": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:52.303597"
+  },
+  "T-238": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:28:56.679588"
+  },
+  "T-239": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:01.038501"
+  },
+  "T-242": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:05.407853"
+  },
+  "T-246": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:09.759898"
+  },
+  "T-248": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:14.125436"
+  },
+  "T-249": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:18.481491"
+  },
+  "T-250": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:22.853478"
+  },
+  "T-264": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:27.211881"
+  },
+  "T-265": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:31.585004"
+  },
+  "T-271": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:35.947035"
+  },
+  "T-272": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:40.314396"
+  },
+  "T-273": {
+    "status": "FAIL",
+    "note": "Error: 'bool' object has no attribute 'status'",
+    "time": "2026-03-14T10:29:44.670215"
+  }
+}

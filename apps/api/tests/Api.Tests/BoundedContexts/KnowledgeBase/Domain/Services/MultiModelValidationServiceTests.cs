@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -41,7 +42,7 @@ public class MultiModelValidationServiceTests
     public void ConsensusThreshold_Returns090()
     {
         // Act & Assert
-        Assert.Equal(0.90, _service.ConsensusThreshold);
+        _service.ConsensusThreshold.Should().Be(0.90);
     }
 
     [Fact]
@@ -54,7 +55,7 @@ public class MultiModelValidationServiceTests
         var similarity = _service.CalculateSimilarity(text, text);
 
         // Assert
-        Assert.Equal(1.0, similarity, precision: 2);
+        similarity.Should().BeApproximately(1.0, 0.01);
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class MultiModelValidationServiceTests
         var similarity = _service.CalculateSimilarity(text1, text2);
 
         // Assert - Cosine similarity considers term frequency, should be high for nearly identical word sets
-        Assert.True(similarity >= 0.80, $"Expected cosine similarity ≥0.80 for highly similar texts, got {similarity:F3}");
+        (similarity >= 0.80).Should().BeTrue($"Expected cosine similarity ≥0.80 for highly similar texts, got {similarity:F3}");
     }
 
     [Fact]
@@ -82,7 +83,7 @@ public class MultiModelValidationServiceTests
         var similarity = _service.CalculateSimilarity(text1, text2);
 
         // Assert - Texts with different vocabulary should have low cosine similarity
-        Assert.True(similarity < 0.50, $"Expected similarity <0.50, got {similarity:F3}");
+        (similarity < 0.50).Should().BeTrue($"Expected similarity <0.50, got {similarity:F3}");
     }
 
     [Fact]
@@ -97,9 +98,9 @@ public class MultiModelValidationServiceTests
         var similarity3 = _service.CalculateSimilarity("", "");
 
         // Assert
-        Assert.Equal(0.0, similarity1);
-        Assert.Equal(0.0, similarity2);
-        Assert.Equal(0.0, similarity3);
+        similarity1.Should().Be(0.0);
+        similarity2.Should().Be(0.0);
+        similarity3.Should().Be(0.0);
     }
 
     [Fact]
@@ -118,14 +119,14 @@ public class MultiModelValidationServiceTests
         var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.HasConsensus);
-        Assert.True(result.SimilarityScore >= 0.90, $"Expected similarity ≥0.90, got {result.SimilarityScore:F3}");
-        Assert.Equal(0.90, result.RequiredThreshold);
-        Assert.Equal(ConsensusSeverity.High, result.Severity);
-        Assert.NotNull(result.ConsensusResponse);
-        Assert.Equal(gpt4Response, result.ConsensusResponse); // GPT-4 response used as primary
-        Assert.True(result.Gpt4Response.IsSuccess);
-        Assert.True(result.ClaudeResponse.IsSuccess);
+        result.HasConsensus.Should().BeTrue();
+        (result.SimilarityScore >= 0.90).Should().BeTrue($"Expected similarity ≥0.90, got {result.SimilarityScore:F3}");
+        result.RequiredThreshold.Should().Be(0.90);
+        result.Severity.Should().Be(ConsensusSeverity.High);
+        result.ConsensusResponse.Should().NotBeNull();
+        result.ConsensusResponse.Should().Be(gpt4Response); // GPT-4 response used as primary
+        result.Gpt4Response.IsSuccess.Should().BeTrue();
+        result.ClaudeResponse.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -147,20 +148,20 @@ public class MultiModelValidationServiceTests
         // With cosine similarity, semantically similar texts may score high
         if (result.SimilarityScore >= 0.90)
         {
-            Assert.True(result.HasConsensus);
-            Assert.Equal(ConsensusSeverity.High, result.Severity);
-            Assert.NotNull(result.ConsensusResponse);
+            result.HasConsensus.Should().BeTrue();
+            result.Severity.Should().Be(ConsensusSeverity.High);
+            result.ConsensusResponse.Should().NotBeNull();
         }
         else if (result.SimilarityScore >= 0.70)
         {
-            Assert.False(result.HasConsensus);
-            Assert.Equal(ConsensusSeverity.Moderate, result.Severity);
-            Assert.Null(result.ConsensusResponse);
+            result.HasConsensus.Should().BeFalse();
+            result.Severity.Should().Be(ConsensusSeverity.Moderate);
+            result.ConsensusResponse.Should().BeNull();
         }
         else
         {
-            Assert.False(result.HasConsensus);
-            Assert.Null(result.ConsensusResponse);
+            result.HasConsensus.Should().BeFalse();
+            result.ConsensusResponse.Should().BeNull();
         }
     }
 
@@ -180,9 +181,9 @@ public class MultiModelValidationServiceTests
         var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.HasConsensus);
-        Assert.True(result.SimilarityScore < 0.90);
-        Assert.Null(result.ConsensusResponse);
+        result.HasConsensus.Should().BeFalse();
+        (result.SimilarityScore < 0.90).Should().BeTrue();
+        result.ConsensusResponse.Should().BeNull();
     }
 
     [Fact]
@@ -217,11 +218,11 @@ public class MultiModelValidationServiceTests
         var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.HasConsensus);
-        Assert.Equal(ConsensusSeverity.Error, result.Severity);
-        Assert.False(result.Gpt4Response.IsSuccess);
-        Assert.True(result.ClaudeResponse.IsSuccess);
-        Assert.Contains("GPT-4 failed", result.Message, StringComparison.OrdinalIgnoreCase);
+        result.HasConsensus.Should().BeFalse();
+        result.Severity.Should().Be(ConsensusSeverity.Error);
+        result.Gpt4Response.IsSuccess.Should().BeFalse();
+        result.ClaudeResponse.IsSuccess.Should().BeTrue();
+        result.Message.Should().ContainEquivalentOf("GPT-4 failed");
     }
 
     [Fact]
@@ -256,11 +257,11 @@ public class MultiModelValidationServiceTests
         var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.HasConsensus);
-        Assert.Equal(ConsensusSeverity.Error, result.Severity);
-        Assert.True(result.Gpt4Response.IsSuccess);
-        Assert.False(result.ClaudeResponse.IsSuccess);
-        Assert.Contains("Claude failed", result.Message, StringComparison.OrdinalIgnoreCase);
+        result.HasConsensus.Should().BeFalse();
+        result.Severity.Should().Be(ConsensusSeverity.Error);
+        result.Gpt4Response.IsSuccess.Should().BeTrue();
+        result.ClaudeResponse.IsSuccess.Should().BeFalse();
+        result.Message.Should().ContainEquivalentOf("Claude failed");
     }
 
     [Fact]
@@ -285,11 +286,11 @@ public class MultiModelValidationServiceTests
         var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.HasConsensus);
-        Assert.Equal(ConsensusSeverity.Error, result.Severity);
-        Assert.False(result.Gpt4Response.IsSuccess);
-        Assert.False(result.ClaudeResponse.IsSuccess);
-        Assert.Contains("Both models failed", result.Message, StringComparison.OrdinalIgnoreCase);
+        result.HasConsensus.Should().BeFalse();
+        result.Severity.Should().Be(ConsensusSeverity.Error);
+        result.Gpt4Response.IsSuccess.Should().BeFalse();
+        result.ClaudeResponse.IsSuccess.Should().BeFalse();
+        result.Message.Should().ContainEquivalentOf("Both models failed");
     }
 
     [Fact]
@@ -303,9 +304,9 @@ public class MultiModelValidationServiceTests
         var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.HasConsensus);
-        Assert.Equal(ConsensusSeverity.Error, result.Severity);
-        Assert.Contains("empty", result.Message, StringComparison.OrdinalIgnoreCase);
+        result.HasConsensus.Should().BeFalse();
+        result.Severity.Should().Be(ConsensusSeverity.Error);
+        result.Message.Should().ContainEquivalentOf("empty");
     }
 
     [Fact]
@@ -319,7 +320,7 @@ public class MultiModelValidationServiceTests
         var similarity = _service.CalculateSimilarity(text1, text2);
 
         // Assert - Cosine similarity with TF-IDF should be nearly identical for case variants
-        Assert.True(similarity >= 0.99, $"Expected case-insensitive cosine similarity ≥0.99, got {similarity:F3}");
+        (similarity >= 0.99).Should().BeTrue($"Expected case-insensitive cosine similarity ≥0.99, got {similarity:F3}");
     }
 
     [Fact]
@@ -333,7 +334,7 @@ public class MultiModelValidationServiceTests
         var similarity = _service.CalculateSimilarity(text1, text2);
 
         // Assert - Cosine similarity should handle punctuation normalization
-        Assert.True(similarity >= 0.99, $"Expected punctuation-agnostic cosine similarity ≥0.99, got {similarity:F3}");
+        (similarity >= 0.99).Should().BeTrue($"Expected punctuation-agnostic cosine similarity ≥0.99, got {similarity:F3}");
     }
 
     [Fact]
@@ -355,8 +356,8 @@ public class MultiModelValidationServiceTests
             .ThrowsAsync(new OperationCanceledException());
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: cts));
+        Func<Task> act = () => _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: cts);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]
@@ -403,10 +404,10 @@ public class MultiModelValidationServiceTests
         var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert - Both models should be called (parallel execution)
-        Assert.True(gpt4Called, "GPT-4 should have been called");
-        Assert.True(claudeCalled, "Claude should have been called");
-        Assert.True(result.Gpt4Response.IsSuccess);
-        Assert.True(result.ClaudeResponse.IsSuccess);
+        gpt4Called.Should().BeTrue("GPT-4 should have been called");
+        claudeCalled.Should().BeTrue("Claude should have been called");
+        result.Gpt4Response.IsSuccess.Should().BeTrue();
+        result.ClaudeResponse.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -424,15 +425,15 @@ public class MultiModelValidationServiceTests
         var result = await _service.ValidateWithConsensusAsync(systemPrompt, userPrompt, cancellationToken: TestCancellationToken);
 
         // Assert - Performance metrics should be recorded
-        Assert.True(result.TotalDurationMs >= 0, "Total duration should be non-negative");
-        Assert.True(result.Gpt4Response.DurationMs >= 0, "GPT-4 duration should be non-negative");
-        Assert.True(result.ClaudeResponse.DurationMs >= 0, "Claude duration should be non-negative");
+        (result.TotalDurationMs >= 0).Should().BeTrue("Total duration should be non-negative");
+        (result.Gpt4Response.DurationMs >= 0).Should().BeTrue("GPT-4 duration should be non-negative");
+        (result.ClaudeResponse.DurationMs >= 0).Should().BeTrue("Claude duration should be non-negative");
 
         // Verify response details are captured
-        Assert.Equal(Gpt4Model, result.Gpt4Response.ModelId);
-        Assert.Equal(ClaudeModel, result.ClaudeResponse.ModelId);
-        Assert.NotNull(result.Gpt4Response.Usage);
-        Assert.NotNull(result.ClaudeResponse.Usage);
+        result.Gpt4Response.ModelId.Should().Be(Gpt4Model);
+        result.ClaudeResponse.ModelId.Should().Be(ClaudeModel);
+        result.Gpt4Response.Usage.Should().NotBeNull();
+        result.ClaudeResponse.Usage.Should().NotBeNull();
     }
 
     [Fact]
@@ -469,26 +470,26 @@ public class MultiModelValidationServiceTests
         // Assert - Verify severity levels
         if (resultHigh.SimilarityScore >= 0.90)
         {
-            Assert.Equal(ConsensusSeverity.High, resultHigh.Severity);
-            Assert.True(resultHigh.HasConsensus);
+            resultHigh.Severity.Should().Be(ConsensusSeverity.High);
+            resultHigh.HasConsensus.Should().BeTrue();
         }
 
         if (resultModerate.SimilarityScore >= 0.70 && resultModerate.SimilarityScore < 0.90)
         {
-            Assert.Equal(ConsensusSeverity.Moderate, resultModerate.Severity);
-            Assert.False(resultModerate.HasConsensus);
+            resultModerate.Severity.Should().Be(ConsensusSeverity.Moderate);
+            resultModerate.HasConsensus.Should().BeFalse();
         }
 
         if (resultLow.SimilarityScore >= 0.50 && resultLow.SimilarityScore < 0.70)
         {
-            Assert.Equal(ConsensusSeverity.Low, resultLow.Severity);
-            Assert.False(resultLow.HasConsensus);
+            resultLow.Severity.Should().Be(ConsensusSeverity.Low);
+            resultLow.HasConsensus.Should().BeFalse();
         }
 
         if (resultNone.SimilarityScore < 0.50)
         {
-            Assert.Equal(ConsensusSeverity.None, resultNone.Severity);
-            Assert.False(resultNone.HasConsensus);
+            resultNone.Severity.Should().Be(ConsensusSeverity.None);
+            resultNone.HasConsensus.Should().BeFalse();
         }
     }
 
@@ -506,10 +507,10 @@ public class MultiModelValidationServiceTests
             "What are the chess piece movements?", cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.HasConsensus);
-        Assert.Equal(ConsensusSeverity.Error, result.Severity);
-        Assert.Contains("GPT-4", result.Message);
-        Assert.Contains("empty or whitespace-only response", result.Message);
+        result.HasConsensus.Should().BeFalse();
+        result.Severity.Should().Be(ConsensusSeverity.Error);
+        result.Message.Should().Contain("GPT-4");
+        result.Message.Should().Contain("empty or whitespace-only response");
     }
 
     [Fact]
@@ -524,10 +525,10 @@ public class MultiModelValidationServiceTests
             "What are the chess piece movements?", cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.HasConsensus);
-        Assert.Equal(ConsensusSeverity.Error, result.Severity);
-        Assert.Contains("Claude", result.Message);
-        Assert.Contains("empty or whitespace-only response", result.Message);
+        result.HasConsensus.Should().BeFalse();
+        result.Severity.Should().Be(ConsensusSeverity.Error);
+        result.Message.Should().Contain("Claude");
+        result.Message.Should().Contain("empty or whitespace-only response");
     }
 
     [Fact]
@@ -542,10 +543,10 @@ public class MultiModelValidationServiceTests
             "What are the chess piece movements?", cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.HasConsensus);
-        Assert.Equal(ConsensusSeverity.Error, result.Severity);
-        Assert.Contains("GPT-4", result.Message);
-        Assert.Contains("empty or whitespace-only response", result.Message);
+        result.HasConsensus.Should().BeFalse();
+        result.Severity.Should().Be(ConsensusSeverity.Error);
+        result.Message.Should().Contain("GPT-4");
+        result.Message.Should().Contain("empty or whitespace-only response");
     }
 
     [Fact]
@@ -560,10 +561,10 @@ public class MultiModelValidationServiceTests
             "What are the chess piece movements?", cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.HasConsensus);
-        Assert.Equal(ConsensusSeverity.Error, result.Severity);
-        Assert.Contains("Claude", result.Message);
-        Assert.Contains("empty or whitespace-only response", result.Message);
+        result.HasConsensus.Should().BeFalse();
+        result.Severity.Should().Be(ConsensusSeverity.Error);
+        result.Message.Should().Contain("Claude");
+        result.Message.Should().Contain("empty or whitespace-only response");
     }
 
     [Fact]
@@ -578,9 +579,9 @@ public class MultiModelValidationServiceTests
             "What are the chess piece movements?", cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.HasConsensus);
-        Assert.Equal(ConsensusSeverity.Error, result.Severity);
-        Assert.Contains("empty or whitespace-only response", result.Message);
+        result.HasConsensus.Should().BeFalse();
+        result.Severity.Should().Be(ConsensusSeverity.Error);
+        result.Message.Should().Contain("empty or whitespace-only response");
     }
 
     /// <summary>

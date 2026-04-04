@@ -3,6 +3,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -11,16 +13,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Repository implementation for LLM cost log persistence
 /// ISSUE-960: BGAI-018 - Cost tracking database operations
 /// </summary>
-public class LlmCostLogRepository : ILlmCostLogRepository
+public class LlmCostLogRepository : RepositoryBase, ILlmCostLogRepository
 {
-    private readonly MeepleAiDbContext _context;
     private readonly ILogger<LlmCostLogRepository> _logger;
 
     public LlmCostLogRepository(
         MeepleAiDbContext context,
+        IDomainEventCollector eventCollector,
         ILogger<LlmCostLogRepository> logger)
+        : base(context, eventCollector)
     {
-        _context = context;
         _logger = logger;
     }
 
@@ -62,8 +64,8 @@ public class LlmCostLogRepository : ILlmCostLogRepository
             RequestSource = source.ToString()
         };
 
-        _context.LlmCostLogs.Add(entity);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        DbContext.LlmCostLogs.Add(entity);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogDebug(
             "Logged LLM cost: {Provider}/{Model} - {Tokens} tokens = ${Cost:F6} (user: {UserId}, role: {Role})",
@@ -73,7 +75,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
     /// <inheritdoc/>
     public async Task<decimal> GetTotalCostAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default)
     {
-        return await _context.LlmCostLogs
+        return await DbContext.LlmCostLogs
             .Where(x => x.RequestDate >= startDate && x.RequestDate <= endDate)
             .SumAsync(x => x.TotalCost, cancellationToken).ConfigureAwait(false);
     }
@@ -84,7 +86,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
         DateOnly endDate,
         CancellationToken cancellationToken = default)
     {
-        return await _context.LlmCostLogs
+        return await DbContext.LlmCostLogs
             .Where(x => x.RequestDate >= startDate && x.RequestDate <= endDate)
             .GroupBy(x => x.Provider)
             .Select(g => new { Provider = g.Key, TotalCost = g.Sum(x => x.TotalCost) })
@@ -97,7 +99,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
         DateOnly endDate,
         CancellationToken cancellationToken = default)
     {
-        return await _context.LlmCostLogs
+        return await DbContext.LlmCostLogs
             .Where(x => x.RequestDate >= startDate && x.RequestDate <= endDate)
             .GroupBy(x => x.UserRole)
             .Select(g => new { Role = g.Key, TotalCost = g.Sum(x => x.TotalCost) })
@@ -111,7 +113,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
         DateOnly endDate,
         CancellationToken cancellationToken = default)
     {
-        return await _context.LlmCostLogs
+        return await DbContext.LlmCostLogs
             .Where(x => x.UserId == userId && x.RequestDate >= startDate && x.RequestDate <= endDate)
             .SumAsync(x => x.TotalCost, cancellationToken).ConfigureAwait(false);
     }
@@ -119,7 +121,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
     /// <inheritdoc/>
     public async Task<decimal> GetDailyCostAsync(DateOnly date, CancellationToken cancellationToken = default)
     {
-        return await _context.LlmCostLogs
+        return await DbContext.LlmCostLogs
             .Where(x => x.RequestDate == date)
             .SumAsync(x => x.TotalCost, cancellationToken).ConfigureAwait(false);
     }

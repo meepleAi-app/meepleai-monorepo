@@ -7,8 +7,7 @@
  * Issue #2139: Testing Dashboard Export Functionality
  */
 
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { logger } from '@/lib/logger';
 
 /**
  * Testing metrics data structure for export
@@ -241,6 +240,12 @@ export async function exportTestingMetricsToPDF(
   }
 
   try {
+    // Lazy-load heavy PDF libraries on demand (~150KB removed from initial bundle)
+    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ]);
+
     // Capture the element as canvas
     const canvas = await html2canvas(element, {
       scale: 2, // Higher quality
@@ -275,7 +280,7 @@ export async function exportTestingMetricsToPDF(
     const defaultFilename = `testing-dashboard-${new Date().toISOString().split('T')[0]}.pdf`;
     pdf.save(filename || defaultFilename);
   } catch (error) {
-    console.error('PDF export failed:', error);
+    logger.error('PDF export failed:', error);
     throw new Error('Failed to generate PDF. Please try again.');
   }
 }

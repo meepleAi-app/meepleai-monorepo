@@ -20,7 +20,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 /// ISSUE-3494: Integration tests for MultiTierCache with real Redis.
 /// Tests L1+L2 integration, cache promotion, adaptive TTL, and warming.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "3494")]
 public sealed class MultiTierCacheIntegrationTests : IAsyncLifetime

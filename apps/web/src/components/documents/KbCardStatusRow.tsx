@@ -26,8 +26,8 @@ import { memo } from 'react';
 
 import { RefreshCw, FileText } from 'lucide-react';
 
-import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
-import type { DocumentIndexingStatus } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import type { KbIndexingStatus } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 import { cn } from '@/lib/utils';
 
@@ -52,9 +52,9 @@ export interface KbCardStatusRowProps {
 
 /**
  * Map PdfDocumentDto.processingState (backend PdfProcessingState enum) →
- * DocumentIndexingStatus (frontend 4-state union used by DocumentStatusBadge).
+ * KbIndexingStatus (frontend 4-state union used by KbStatusBadge).
  */
-function mapProcessingState(state: string): DocumentIndexingStatus {
+function mapProcessingState(state: string): KbIndexingStatus {
   switch (state) {
     case 'Ready':
       return 'indexed';
@@ -66,6 +66,10 @@ function mapProcessingState(state: string): DocumentIndexingStatus {
     case 'Indexing':
     case 'Uploading':
       return 'processing';
+    case 'Pending':
+    case 'Queued':
+      // Pending/Queued = waiting to start, not yet actively processing
+      return 'none';
     default:
       return 'none';
   }
@@ -106,7 +110,7 @@ export const KbCardStatusRow = memo(function KbCardStatusRow({
           {document.fileName}
         </span>
 
-        <DocumentStatusBadge status={status} size="sm" />
+        <KbStatusBadge status={status} size="sm" />
 
         {/* Retry button */}
         {canRetry && (

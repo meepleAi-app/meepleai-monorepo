@@ -42,7 +42,7 @@ async function createGameFromWizard(bggId: number): Promise<CreateGameFromWizard
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: 'Game creation failed' }));
     if (res.status === 409) {
-      throw new Error(error.detail || 'A game with this BGG ID already exists');
+      throw new Error(error.detail || 'Un gioco con questo ID esiste già');
     }
     throw new Error(error.detail || error.message || 'Failed to create game');
   }
@@ -82,11 +82,11 @@ export function useCreateGameFromWizard() {
 
   return useMutation<CreateGameFromWizardResult, Error, number>({
     mutationFn: createGameFromWizard,
-    onSuccess: (data) => {
+    onSuccess: data => {
       toast.success(`Game "${data.title}" created successfully`);
       queryClient.invalidateQueries({ queryKey: ['sharedGames'] });
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || 'Failed to create game');
     },
   });
@@ -99,7 +99,7 @@ export function useLaunchAdminPdfProcessing() {
     onSuccess: () => {
       toast.success('PDF processing launched with admin priority');
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message || 'Failed to launch processing');
     },
   });

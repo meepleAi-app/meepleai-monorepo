@@ -61,7 +61,8 @@ internal sealed class GetPendingApprovalGamesQueryHandler : IRequestHandler<GetP
                 g.ThumbnailUrl,
                 (GameStatus)g.Status,
                 g.CreatedAt,
-                g.ModifiedAt))
+                g.ModifiedAt,
+                g.IsRagPublic))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

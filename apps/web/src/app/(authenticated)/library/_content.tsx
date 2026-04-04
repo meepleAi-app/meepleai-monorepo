@@ -8,9 +8,8 @@
  * Issue #5168 — AddGameDrawer (right-side Sheet for adding games)
  *
  * Tab routing:
- *   (default)           → Collection  → CollectionPageClient (shared catalog games)
- *   ?tab=private        → Games tab   → GamesPageClient    (personal private games)
- *   ?tab=wishlist       → Wishlist    → WishlistPageClient
+ *   (default)           → La mia Libreria  → PersonalLibraryPage (vetrina layout)
+ *   ?tab=catalogo       → Catalogo Condiviso → PublicLibraryClient
  *
  * Action routing:
  *   ?action=add         → AddGameDrawer opens (wizard: manual or from catalog)
@@ -20,10 +19,13 @@
  * See: apps/web/src/app/(chat)/chat/new/page.tsx for same pattern.
  */
 
+import { useEffect } from 'react';
+
 import dynamicImport from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useCardHand } from '@/stores/use-card-hand';
 
 import { AddGameDrawerController } from './AddGameDrawer';
 
@@ -45,47 +47,58 @@ export function LibraryLoadingSkeleton() {
 
 // ── Dynamic imports (ssr: false avoids DOMMatrix / framer-motion issues) ─────
 
-// Default tab: personal games (Issue #5167 — was PrivateGamesClient)
-const GamesPageClient = dynamicImport(() => import('./private/PrivateGamesClient'), {
+// Default tab: personal library vetrina (Issue #5167 rework)
+const PersonalLibraryPageClient = dynamicImport(
+  () =>
+    import('@/components/library/PersonalLibraryPage').then(mod => ({
+      default: mod.PersonalLibraryPage,
+    })),
+  {
+    ssr: false,
+    loading: () => <LibraryLoadingSkeleton />,
+  }
+);
+
+// Public catalog tab: shared catalog browse (Task 10 — placeholder)
+const PublicLibraryPageClient = dynamicImport(() => import('./public/PublicLibraryClient'), {
   ssr: false,
   loading: () => <LibraryLoadingSkeleton />,
 });
 
-// Collection tab: shared catalog games (Issue #5167 — was LibraryPageClient)
-const CollectionPageClient = dynamicImport(() => import('./CollectionPageClient'), {
-  ssr: false,
-  loading: () => <LibraryLoadingSkeleton />,
-});
-
-// Import WishlistPage directly — it is a clean client component (no LibraryNavTabs)
-const WishlistPageClient = dynamicImport(() => import('./wishlist/page'), {
-  ssr: false,
-  loading: () => <LibraryLoadingSkeleton />,
-});
-
-// Proposals tab: user's game proposals to shared catalog
-const ProposalsPageClient = dynamicImport(() => import('./proposals/MyProposalsClient'), {
-  ssr: false,
-  loading: () => <LibraryLoadingSkeleton />,
-});
+// Wishlist tab: user's wishlist (US-10)
+const WishlistPageClient = dynamicImport(
+  () => import('./wishlist/page').then(mod => ({ default: mod.default })),
+  {
+    ssr: false,
+    loading: () => <LibraryLoadingSkeleton />,
+  }
+);
 
 // ── Tab switcher + drawer controller ──────────────────────────────────────────
 
 export function LibraryContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
+  const { drawCard } = useCardHand();
+
+  useEffect(() => {
+    drawCard({
+      id: 'section-library',
+      entity: 'game',
+      title: 'Library',
+      href: '/library',
+    });
+  }, [drawCard]);
 
   return (
     <>
-      {/* Tab content */}
-      {tab === 'proposals' ? (
-        <ProposalsPageClient />
-      ) : tab === 'private' ? (
-        <GamesPageClient />
-      ) : tab === 'wishlist' ? (
+      {/* Tab content — PersonalLibraryPage now includes its own sidebar */}
+      {tab === 'wishlist' ? (
         <WishlistPageClient />
+      ) : tab === 'catalogo' ? (
+        <PublicLibraryPageClient />
       ) : (
-        <CollectionPageClient />
+        <PersonalLibraryPageClient />
       )}
 
       {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}

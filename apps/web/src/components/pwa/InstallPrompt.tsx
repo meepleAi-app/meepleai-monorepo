@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { usePWA } from '@/lib/hooks/usePWA';
+import { usePWA } from '@/lib/domain-hooks/usePWA';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -104,11 +104,7 @@ export function InstallPrompt({
     if (!canInstall) return null;
 
     return (
-      <Button
-        onClick={handleInstall}
-        disabled={installing}
-        className={cn('gap-2', className)}
-      >
+      <Button onClick={handleInstall} disabled={installing} className={cn('gap-2', className)}>
         <Download className={cn('h-4 w-4', installing && 'animate-bounce')} />
         {installing ? 'Installing...' : 'Install App'}
       </Button>
@@ -125,10 +121,7 @@ export function InstallPrompt({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ type: 'spring', damping: 25 }}
-            className={cn(
-              'fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md',
-              className
-            )}
+            className={cn('fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md', className)}
           >
             <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/90 to-primary/80 p-4 text-primary-foreground shadow-xl backdrop-blur-sm">
               {/* Close button */}
@@ -179,16 +172,14 @@ export function InstallPrompt({
 
   // Dialog variant
   return (
-    <Dialog open={showPrompt} onOpenChange={(open) => !open && handleDismiss()}>
+    <Dialog open={showPrompt} onOpenChange={open => !open && handleDismiss()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             Install MeepleAI
           </DialogTitle>
-          <DialogDescription>
-            Get the full app experience with offline support
-          </DialogDescription>
+          <DialogDescription>Get the full app experience with offline support</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -242,9 +233,7 @@ function Feature({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex-shrink-0 rounded-full bg-primary/10 p-2 text-primary">
-        {icon}
-      </div>
+      <div className="flex-shrink-0 rounded-full bg-primary/10 p-2 text-primary">{icon}</div>
       <div>
         <h4 className="text-sm font-medium">{title}</h4>
         <p className="text-xs text-muted-foreground">{description}</p>

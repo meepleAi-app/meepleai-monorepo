@@ -1,5 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.ToolState;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,18 +12,17 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// Maps between domain ToolState entity and ToolStateEntity persistence model.
 /// Issue #4754: ToolState Entity + Toolkit ↔ Session Integration.
 /// </summary>
-internal class ToolStateRepository : IToolStateRepository
+internal class ToolStateRepository : RepositoryBase, IToolStateRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
 
-    public ToolStateRepository(MeepleAiDbContext dbContext)
+    public ToolStateRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<ToolState?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.ToolStates
+        var entity = await DbContext.ToolStates
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -31,7 +32,7 @@ internal class ToolStateRepository : IToolStateRepository
 
     public async Task<IReadOnlyList<ToolState>> GetBySessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.ToolStates
+        var entities = await DbContext.ToolStates
             .AsNoTracking()
             .Where(t => t.SessionId == sessionId)
             .OrderBy(t => t.ToolName)
@@ -43,7 +44,7 @@ internal class ToolStateRepository : IToolStateRepository
 
     public async Task<ToolState?> GetBySessionAndToolNameAsync(Guid sessionId, string toolName, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.ToolStates
+        var entity = await DbContext.ToolStates
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.SessionId == sessionId && t.ToolName == toolName, cancellationToken)
             .ConfigureAwait(false);
@@ -54,13 +55,13 @@ internal class ToolStateRepository : IToolStateRepository
     public async Task AddAsync(ToolState toolState, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(toolState);
-        await _dbContext.ToolStates.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.ToolStates.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task AddRangeAsync(IEnumerable<ToolState> toolStates, CancellationToken cancellationToken = default)
     {
         var entities = toolStates.Select(MapToPersistence).ToList();
-        await _dbContext.ToolStates.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
+        await DbContext.ToolStates.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(ToolState toolState, CancellationToken cancellationToken = default)
@@ -68,13 +69,13 @@ internal class ToolStateRepository : IToolStateRepository
         var entity = MapToPersistence(toolState);
 
         // Detach existing tracked entity to avoid conflicts
-        var tracked = _dbContext.ChangeTracker.Entries<ToolStateEntity>()
+        var tracked = DbContext.ChangeTracker.Entries<ToolStateEntity>()
             .FirstOrDefault(e => e.Entity.Id == entity.Id);
 
         if (tracked != null)
             tracked.State = EntityState.Detached;
 
-        _dbContext.ToolStates.Update(entity);
+        DbContext.ToolStates.Update(entity);
         return Task.CompletedTask;
     }
 

@@ -21,7 +21,5 @@ export * from './meeple-card';
 export * from './meeple-card-quick-actions';
 export * from './meeple-card-info-button';
 
-// MeepleGameCard removed (#3842) - Use MeepleCard core or MeepleGameCatalogCard adapter
-
 // GameCarousel - Immersive 3D carousel for browsing games
 export * from './game-carousel';

@@ -102,31 +102,35 @@ vi.mock('@/components/library/AddPrivateGameForm', () => ({
   AddPrivateGameForm: () => <div data-testid="add-private-game-form" />,
 }));
 
-// Mock PrivateGameCard
-vi.mock('@/components/library/PrivateGameCard', () => ({
-  PrivateGameCard: ({
-    game,
-    onEdit,
-    onDelete,
+// Mock MeepleCard — PrivateGameCard is now inlined in PrivateGamesClient and renders via MeepleCard.
+// We expose the minimum surface needed by the integration tests: data-testid, title, and entityQuickActions.
+vi.mock('@/components/ui/data-display/meeple-card', () => ({
+  MeepleCard: ({
+    'data-testid': testId,
+    title,
+    entityQuickActions,
   }: {
-    game: PrivateGameDto;
-    onEdit?: (game: PrivateGameDto) => void;
-    onDelete?: (gameId: string) => void;
-  }) => (
-    <div data-testid={`game-card-${game.id}`}>
-      <span>{game.title}</span>
-      {onEdit && (
-        <button data-testid={`edit-btn-${game.id}`} onClick={() => onEdit(game)}>
-          Edit
-        </button>
-      )}
-      {onDelete && (
-        <button data-testid={`delete-btn-${game.id}`} onClick={() => onDelete(game.id)}>
-          Delete
-        </button>
-      )}
-    </div>
-  ),
+    'data-testid'?: string;
+    title?: string;
+    entityQuickActions?: Array<{ label: string; onClick: () => void }>;
+  }) => {
+    // Derive game id from testId pattern "game-card-<id>" to build action test-ids
+    const gameId = testId?.replace('game-card-', '') ?? '';
+    return (
+      <div data-testid={testId}>
+        <span>{title}</span>
+        {entityQuickActions?.map(action => (
+          <button
+            key={action.label}
+            data-testid={`${action.label.toLowerCase()}-btn-${gameId}`}
+            onClick={action.onClick}
+          >
+            {action.label}
+          </button>
+        ))}
+      </div>
+    );
+  },
 }));
 
 const mockGetPrivateGames = api.library.getPrivateGames as Mock;
@@ -250,9 +254,9 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId(LIBRARY_TEST_IDS.emptyState)).toBeInTheDocument();
       });
 
-      expect(screen.getByText(testI18nT('privateGames.noGamesYet'))).toBeInTheDocument();
-      expect(screen.getByText(testI18nT('privateGames.emptyStateDescription'))).toBeInTheDocument();
-      expect(screen.getByText(testI18nT('privateGames.addFirstGame'))).toBeInTheDocument();
+      // Immersive empty state (Layout Redesign) uses hardcoded Italian strings
+      expect(screen.getByText(/la tua collezione ti aspetta/i)).toBeInTheDocument();
+      expect(screen.getByText(/esplora il catalogo/i)).toBeInTheDocument();
     });
 
     it('should show search empty state when search has no results', async () => {
@@ -530,10 +534,9 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId(LIBRARY_TEST_IDS.emptyState)).toBeInTheDocument();
       });
 
-      // LibraryEmptyState renders the CTA as a <Link> (→ <a href>), not router.push
-      // Issue #5167: CTA now opens the AddGameDrawer via ?action=add query param
-      const addLink = screen.getByText(testI18nT('privateGames.addFirstGame')).closest('a');
-      expect(addLink).toHaveAttribute('href', '/library?action=add');
+      // Immersive empty state (Layout Redesign) uses quick-start action cards (buttons)
+      // instead of Link elements. The "Esplora il Catalogo" card is the primary CTA.
+      expect(screen.getByText(/esplora il catalogo/i)).toBeInTheDocument();
     });
   });
 

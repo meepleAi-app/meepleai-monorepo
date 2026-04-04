@@ -265,7 +265,7 @@ git commit -m "chore(vscode): Configure Git hooks skip for IDE commits"
 ## 📖 Related Documentation
 
 - [Development Guide](./README.md) - Git workflow
-- [Testing Guide](../05-testing/README.md) - Pre-commit tests
+- [Testing Guide](../testing/README.md) - Pre-commit tests
 - [Git Workflow](../../CLAUDE.md#git-workflow) - Branching strategy
 
 ---

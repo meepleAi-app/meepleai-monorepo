@@ -21,7 +21,7 @@ import { useState, useCallback } from 'react';
 
 import { ArrowLeft, ArrowRight, Loader2, Play } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WizardSteps } from '@/components/wizard';
 import { useGameAnalysis, useGameExpansions } from '@/hooks/queries';

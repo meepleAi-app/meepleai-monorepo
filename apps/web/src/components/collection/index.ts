@@ -6,7 +6,8 @@
  */
 
 // Main Dashboard
-export { CollectionDashboard, type CollectionDashboardProps, type ViewMode, type SortOption } from './CollectionDashboard';
+export { CollectionDashboard, type CollectionDashboardProps } from './CollectionDashboard';
+export { type ViewMode, type SortOption } from './CollectionToolbar';
 
 // Grid and Display
 // CollectionGrid removed in Issue #3894 - superseded by EntityListView

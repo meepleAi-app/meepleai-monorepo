@@ -7,13 +7,20 @@
 
 import { z } from 'zod';
 
-import { type HttpClient } from '../core/httpClient';
+import { type HttpClient, downloadFile, getApiBase } from '../core/httpClient';
 import {
   agentDefinitionDtoSchema,
   kbCardDtoSchema,
   type AgentDefinitionDto,
   type KbCardDto,
 } from '../schemas/agent-definitions.schemas';
+import { GameRagReadinessSchema, type GameRagReadiness } from '../schemas/rag-setup.schemas';
+import {
+  SeedingGameListSchema,
+  BggQueueStatusSchema,
+  type SeedingGameList,
+  type BggQueueStatus,
+} from '../schemas/seeding.schemas';
 import {
   SharedGameDetailSchema,
   PagedSharedGamesSchema,
@@ -56,6 +63,88 @@ import {
   type RulebookAnalysisDto,
 } from '../schemas/shared-games.schemas';
 
+// ========== Recently Processed Documents ==========
+
+export const RecentlyProcessedDocumentSchema = z.object({
+  pdfDocumentId: z.string(),
+  jobId: z.string().nullable(),
+  fileName: z.string(),
+  processingState: z.string(),
+  timestamp: z.string(),
+  errorCategory: z.string().nullable(),
+  canRetry: z.boolean(),
+  sharedGameId: z.string(),
+  gameName: z.string(),
+  thumbnailUrl: z.string().nullable(),
+});
+
+export type RecentlyProcessedDocument = z.infer<typeof RecentlyProcessedDocumentSchema>;
+
+// ========== Wizard Types ==========
+
+export interface WizardGameMetadata {
+  title?: string | null;
+  year?: number | null;
+  minPlayers?: number | null;
+  maxPlayers?: number | null;
+  playingTime?: number | null;
+  minAge?: number | null;
+  description?: string | null;
+  confidenceScore: number;
+}
+
+export interface WizardBggSuggestion {
+  bggId: number;
+  name: string;
+  yearPublished?: number | null;
+  thumbnailUrl?: string | null;
+  type: string;
+}
+
+export interface WizardPdfPreview {
+  extractedMetadata: WizardGameMetadata;
+  bggSuggestions: WizardBggSuggestion[];
+  hasDuplicateWarning: boolean;
+  duplicateTitles: string[];
+  extractionConfidence: number;
+  meetsQualityThreshold: boolean;
+}
+
+export type WizardBggSearchResult = WizardBggSuggestion;
+
+export interface WizardBggGameDetails {
+  bggId: number;
+  name: string;
+  description?: string | null;
+  yearPublished?: number | null;
+  minPlayers?: number | null;
+  maxPlayers?: number | null;
+  playingTime?: number | null;
+  minPlayTime?: number | null;
+  maxPlayTime?: number | null;
+  minAge?: number | null;
+  averageRating?: number | null;
+  bayesAverageRating?: number | null;
+  usersRated?: number | null;
+  averageWeight?: number | null;
+  thumbnailUrl?: string | null;
+  imageUrl?: string | null;
+  categories: string[];
+  mechanics: string[];
+  designers: string[];
+  publishers: string[];
+}
+
+export interface WizardCreateGameResult {
+  gameId: string;
+  approvalStatus: string;
+  qualityScore: number;
+  duplicateWarning: boolean;
+  duplicateTitles: string[];
+  bggEnrichmentApplied: boolean;
+  enrichedWithBggId?: number | null;
+}
+
 export interface CreateSharedGamesClientParams {
   httpClient: HttpClient;
 }
@@ -90,7 +179,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
     async search(params: SearchSharedGamesParams = {}): Promise<PagedSharedGames> {
       const queryParams = new URLSearchParams();
 
-      if (params.searchTerm) queryParams.set('searchTerm', params.searchTerm);
+      if (params.searchTerm) queryParams.set('search', params.searchTerm);
       if (params.categoryIds) queryParams.set('categoryIds', params.categoryIds);
       if (params.mechanicIds) queryParams.set('mechanicIds', params.mechanicIds);
       if (params.minPlayers !== undefined)
@@ -100,7 +189,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       if (params.maxPlayingTime !== undefined)
         queryParams.set('maxPlayingTime', params.maxPlayingTime.toString());
       if (params.status !== undefined) queryParams.set('status', params.status.toString());
-      if (params.page !== undefined) queryParams.set('page', params.page.toString());
+      if (params.page !== undefined) queryParams.set('pageNumber', params.page.toString());
       if (params.pageSize !== undefined) queryParams.set('pageSize', params.pageSize.toString());
       if (params.sortBy) queryParams.set('sortBy', params.sortBy);
       if (params.sortDescending !== undefined)
@@ -120,6 +209,9 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      * @returns Game details or null if not found
      */
     async getById(id: string): Promise<SharedGameDetail | null> {
+      if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        return null;
+      }
       return httpClient.get(`/api/v1/shared-games/${id}`, SharedGameDetailSchema);
     },
 
@@ -158,12 +250,20 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      * @returns Paginated list of shared games (all statuses)
      */
     async getAll(
-      params: { status?: number; page?: number; pageSize?: number } = {}
+      params: {
+        status?: string;
+        search?: string;
+        page?: number;
+        pageSize?: number;
+        categoryId?: string;
+      } = {}
     ): Promise<PagedSharedGames> {
       const queryParams = new URLSearchParams();
 
-      if (params.status !== undefined) queryParams.set('status', params.status.toString());
-      if (params.page !== undefined) queryParams.set('page', params.page.toString());
+      if (params.status !== undefined) queryParams.set('status', params.status);
+      if (params.search) queryParams.set('search', params.search);
+      if (params.categoryId) queryParams.set('categoryId', params.categoryId);
+      if (params.page !== undefined) queryParams.set('pageNumber', params.page.toString());
       if (params.pageSize !== undefined) queryParams.set('pageSize', params.pageSize.toString());
 
       const queryString = queryParams.toString();
@@ -664,9 +764,13 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       const formData = new FormData();
       formData.append('file', file);
 
-      const WizardUploadResultSchema = z.object({
-        documentId: z.string(),
-        fileName: z.string(),
+      // Backend returns TempPdfUploadResult: { success, fileId, filePath, fileSizeBytes, errorMessage }
+      const BackendResultSchema = z.object({
+        success: z.boolean(),
+        fileId: z.string().nullable(),
+        filePath: z.string().nullable(),
+        fileSizeBytes: z.number(),
+        errorMessage: z.string().nullable().optional(),
       });
 
       // Use XMLHttpRequest for progress tracking
@@ -684,22 +788,170 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               const response = JSON.parse(xhr.responseText);
-              const validated = WizardUploadResultSchema.parse(response);
-              resolve(validated);
+              const validated = BackendResultSchema.parse(response);
+
+              if (!validated.success || !validated.fileId) {
+                reject(new Error(validated.errorMessage ?? 'Upload failed'));
+                return;
+              }
+
+              // Map backend fields to frontend expected shape
+              resolve({
+                documentId: validated.fileId,
+                fileName: file.name,
+              });
             } catch (_error) {
               reject(new Error('Invalid response format'));
             }
           } else {
-            reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+            try {
+              const errorBody = JSON.parse(xhr.responseText);
+              reject(
+                new Error(errorBody.error ?? `Upload failed: ${xhr.status} ${xhr.statusText}`)
+              );
+            } catch {
+              reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+            }
           }
         });
 
         xhr.addEventListener('error', () => reject(new Error('Network error')));
         xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
-        xhr.open('POST', '/api/v1/admin/games/wizard/upload-pdf');
+        xhr.open('POST', '/api/v1/admin/shared-games/wizard/upload-pdf');
         xhr.send(formData);
       });
+    },
+
+    // ========== PDF Wizard Preview & BGG ==========
+
+    /**
+     * Get PDF preview with extracted metadata and BGG suggestions (ADMIN/EDITOR)
+     * GET /api/v1/admin/shared-games/wizard/pdf/preview?filePath=...
+     *
+     * Step 2: Extracts game metadata from uploaded PDF, fetches BGG match suggestions,
+     * and checks for duplicate games by title.
+     */
+    async wizardGetPreview(filePath: string): Promise<WizardPdfPreview | null> {
+      const BggSuggestionSchema = z.object({
+        bggId: z.number(),
+        name: z.string(),
+        yearPublished: z.number().nullable().optional(),
+        thumbnailUrl: z.string().nullable().optional(),
+        type: z.string(),
+      });
+
+      const GameMetadataSchema = z.object({
+        title: z.string().nullable().optional(),
+        year: z.number().nullable().optional(),
+        minPlayers: z.number().nullable().optional(),
+        maxPlayers: z.number().nullable().optional(),
+        playingTime: z.number().nullable().optional(),
+        minAge: z.number().nullable().optional(),
+        description: z.string().nullable().optional(),
+        confidenceScore: z.number(),
+      });
+
+      const PreviewSchema = z.object({
+        extractedMetadata: GameMetadataSchema,
+        bggSuggestions: z.array(BggSuggestionSchema),
+        hasDuplicateWarning: z.boolean(),
+        duplicateTitles: z.array(z.string()),
+        extractionConfidence: z.number(),
+        meetsQualityThreshold: z.boolean(),
+      });
+
+      return httpClient.get(
+        `/api/v1/admin/shared-games/wizard/pdf/preview?filePath=${encodeURIComponent(filePath)}`,
+        PreviewSchema
+      );
+    },
+
+    /**
+     * Search BGG games by title (ADMIN/EDITOR)
+     * GET /api/v1/admin/shared-games/wizard/bgg/search?query=...&exact=...
+     *
+     * Step 3a: Searches BoardGameGeek API for games matching the query.
+     */
+    async wizardBggSearch(
+      query: string,
+      exact: boolean = false
+    ): Promise<WizardBggSearchResult[] | null> {
+      const BggSearchResultSchema = z.object({
+        bggId: z.number(),
+        name: z.string(),
+        yearPublished: z.number().nullable().optional(),
+        thumbnailUrl: z.string().nullable().optional(),
+        type: z.string(),
+      });
+
+      return httpClient.get(
+        `/api/v1/admin/shared-games/wizard/bgg/search?query=${encodeURIComponent(query)}&exact=${exact}`,
+        z.array(BggSearchResultSchema)
+      );
+    },
+
+    /**
+     * Get BGG game details by ID (ADMIN/EDITOR)
+     * GET /api/v1/admin/shared-games/wizard/bgg/{bggId}
+     *
+     * Step 3b: Fetches detailed game information from BoardGameGeek API.
+     */
+    async wizardBggDetails(bggId: number): Promise<WizardBggGameDetails | null> {
+      const BggGameDetailsSchema = z.object({
+        bggId: z.number(),
+        name: z.string(),
+        description: z.string().nullable().optional(),
+        yearPublished: z.number().nullable().optional(),
+        minPlayers: z.number().nullable().optional(),
+        maxPlayers: z.number().nullable().optional(),
+        playingTime: z.number().nullable().optional(),
+        minPlayTime: z.number().nullable().optional(),
+        maxPlayTime: z.number().nullable().optional(),
+        minAge: z.number().nullable().optional(),
+        averageRating: z.number().nullable().optional(),
+        bayesAverageRating: z.number().nullable().optional(),
+        usersRated: z.number().nullable().optional(),
+        averageWeight: z.number().nullable().optional(),
+        thumbnailUrl: z.string().nullable().optional(),
+        imageUrl: z.string().nullable().optional(),
+        categories: z.array(z.string()),
+        mechanics: z.array(z.string()),
+        designers: z.array(z.string()),
+        publishers: z.array(z.string()),
+      });
+
+      return httpClient.get(`/api/v1/admin/shared-games/wizard/bgg/${bggId}`, BggGameDetailsSchema);
+    },
+
+    // ========== PDF Wizard Create Game ==========
+
+    /**
+     * Create SharedGame from wizard data (ADMIN/EDITOR)
+     * POST /api/v1/admin/shared-games/wizard/create
+     *
+     * Final wizard step: creates game from extracted metadata + optional BGG enrichment.
+     */
+    async wizardCreateGame(request: {
+      pdfDocumentId: string;
+      extractedTitle: string;
+      minPlayers?: number | null;
+      maxPlayers?: number | null;
+      playingTimeMinutes?: number | null;
+      minAge?: number | null;
+      selectedBggId?: number | null;
+    }): Promise<WizardCreateGameResult> {
+      const ResultSchema = z.object({
+        gameId: z.string(),
+        approvalStatus: z.string(),
+        qualityScore: z.number(),
+        duplicateWarning: z.boolean(),
+        duplicateTitles: z.array(z.string()),
+        bggEnrichmentApplied: z.boolean(),
+        enrichedWithBggId: z.number().nullable().optional(),
+      });
+
+      return httpClient.post('/api/v1/admin/shared-games/wizard/create', request, ResultSchema);
     },
 
     // ========== AI Agent Linking (Issue #4924 + #4926) ==========
@@ -755,6 +1007,26 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         ? `/api/v1/admin/shared-games/${gameId}/kb-cards?status=${encodeURIComponent(status)}`
         : `/api/v1/admin/shared-games/${gameId}/kb-cards`;
       const result = await httpClient.get(path, kbCardDtoSchema.array());
+      return result ?? [];
+    },
+
+    // ========== User-Facing Document Access ==========
+
+    /**
+     * Get active documents for a shared game (Authenticated user)
+     * GET /api/v1/shared-games/{gameId}/documents
+     *
+     * Returns only active documents. Access requires the game to be RAG-public
+     * or the user to have the game in their library.
+     *
+     * @param gameId - Game UUID
+     * @returns List of active documents (may be empty if access is denied)
+     */
+    async getDocumentsForUser(gameId: string): Promise<SharedGameDocument[]> {
+      const result = await httpClient.get(
+        `/api/v1/shared-games/${gameId}/documents`,
+        z.array(SharedGameDocumentSchema)
+      );
       return result ?? [];
     },
 
@@ -831,6 +1103,138 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         xhr.open('POST', `/api/v1/admin/shared-games/${gameId}/documents/upload`);
         xhr.send(formData);
       });
+    },
+
+    // ========== Distinct Metadata (for autocomplete) ==========
+
+    /**
+     * Get distinct categories, mechanics, designers, and publishers (ADMIN/EDITOR)
+     *
+     * Used to populate autocomplete inputs when creating or editing shared games.
+     *
+     * @returns Object with sorted distinct name arrays for each metadata type
+     */
+    async getDistinctMetadata(): Promise<{
+      categories: string[];
+      mechanics: string[];
+      designers: string[];
+      publishers: string[];
+    }> {
+      const DistinctMetadataSchema = z.object({
+        categories: z.array(z.string()),
+        mechanics: z.array(z.string()),
+        designers: z.array(z.string()),
+        publishers: z.array(z.string()),
+      });
+      const result = await httpClient.get(
+        '/api/v1/admin/shared-games/metadata/distinct',
+        DistinctMetadataSchema
+      );
+      return result ?? { categories: [], mechanics: [], designers: [], publishers: [] };
+    },
+
+    // ========== RAG Readiness ==========
+
+    /** Get cross-BC RAG readiness status for a shared game (Admin only) */
+    async getGameRagReadiness(gameId: string): Promise<GameRagReadiness | null> {
+      return httpClient.get(
+        `/api/v1/admin/shared-games/${gameId}/rag-readiness`,
+        GameRagReadinessSchema
+      );
+    },
+
+    // ========== Recently Processed Documents ==========
+
+    /**
+     * Get recently processed PDF documents across all shared games (ADMIN)
+     * GET /api/v1/admin/shared-games/recently-processed?limit={limit}
+     *
+     * @param limit - Max number of results (default 10)
+     * @returns List of recently processed documents
+     */
+    async getRecentlyProcessed(limit = 10): Promise<RecentlyProcessedDocument[]> {
+      const result = await httpClient.get(
+        `/api/v1/admin/shared-games/recently-processed?limit=${limit}`,
+        z.array(RecentlyProcessedDocumentSchema)
+      );
+      return result ?? [];
+    },
+
+    // ========== Seeding & Enrichment (BGG queue) ==========
+
+    /**
+     * Get seeding status for all shared games (ADMIN ONLY)
+     * GET /api/v1/admin/shared-games/seeding-status
+     *
+     * Returns all games with their GameDataStatus for seeding progress tracking.
+     *
+     * @returns List of games with seeding status
+     */
+    async getSeedingStatus(): Promise<SeedingGameList> {
+      const result = await httpClient.get(
+        '/api/v1/admin/shared-games/seeding-status',
+        SeedingGameListSchema
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get BGG import queue status (ADMIN ONLY)
+     * GET /api/v1/admin/bgg-queue/status
+     */
+    async getBggQueueStatus(): Promise<BggQueueStatus> {
+      const result = await httpClient.get('/api/v1/admin/bgg-queue/status', BggQueueStatusSchema);
+      return result ?? { totalQueued: 0, totalProcessing: 0, items: [] };
+    },
+
+    /**
+     * Enqueue a batch of BGG IDs for enrichment (ADMIN ONLY)
+     * POST /api/v1/admin/bgg-queue/batch
+     *
+     * @param bggIds - Array of BoardGameGeek IDs to enqueue
+     */
+    async enqueueBggEnrichment(bggIds: number[]): Promise<void> {
+      await httpClient.post('/api/v1/admin/bgg-queue/batch', { bggIds });
+    },
+
+    /**
+     * Re-enqueue failed BGG games for enrichment (ADMIN ONLY)
+     * POST /api/v1/admin/bgg-queue/batch
+     * Reuses batch endpoint — failed games are accepted for re-queue.
+     */
+    async retryBggEnrichment(bggIds: number[]): Promise<void> {
+      await httpClient.post('/api/v1/admin/bgg-queue/batch', { bggIds });
+    },
+
+    /**
+     * Download the seeding tracking export as an Excel file (ADMIN ONLY)
+     * GET /api/v1/admin/shared-games/tracking-export
+     *
+     * Uses raw fetch because httpClient.get() parses JSON; blob download requires
+     * the raw response body.
+     */
+    async downloadTrackingExport(): Promise<void> {
+      const path = '/api/v1/admin/shared-games/tracking-export';
+      const response = await fetch(`${getApiBase()}${path}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+      }
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `seeding-tracking-${Date.now()}.xlsx`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match?.[1]) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+
+      const blob = await response.blob();
+      downloadFile(blob, filename);
     },
   };
 }

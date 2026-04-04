@@ -212,20 +212,19 @@ import {
 
 ## 💻 Demo Page
 
-**Route**: `/toolkit/demo` (authenticated)
+**Route**: `/toolkit-demo` (authenticated)
 
 **Features**:
-- Live interactive demo with all 4 components
-- Mock data for 7 Wonders game session
-- Real-time score updates with animations
-- Responsive layout demonstration
-- Design system documentation panel
+- Live interactive demo with all toolkit v2 tools (TurnOrder, Whiteboard, Counter, Dice, Scoreboard)
+- Mock data for Catan game session
+- ToolRail navigation between tools
+- Full-screen layout (escapes AuthenticatedLayout sidebar)
 
 **Run Demo**:
 ```bash
 cd apps/web
 pnpm dev
-# Navigate to http://localhost:3000/toolkit/demo
+# Navigate to http://localhost:3000/toolkit-demo
 ```
 
 ---

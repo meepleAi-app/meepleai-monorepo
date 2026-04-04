@@ -6,27 +6,23 @@ using Api.Services.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDeleteResult>
 {
     private readonly MeepleAiDbContext _db;
-    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IBlobStorageService _blobStorageService;
     private readonly IAiResponseCacheService _cacheService;
     private readonly ILogger<DeletePdfCommandHandler> _logger;
 
     public DeletePdfCommandHandler(
         MeepleAiDbContext db,
-        IServiceScopeFactory scopeFactory,
         IBlobStorageService blobStorageService,
         IAiResponseCacheService cacheService,
         ILogger<DeletePdfCommandHandler> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -110,40 +106,6 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
         _db.VectorDocuments.Remove(vectorDoc);
         _logger.LogInformation("Removed vector document for PDF {PdfId}", pdfId);
-
-        // Delete vectors from Qdrant
-        try
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var qdrantService = scope.ServiceProvider.GetService<IQdrantService>();
-
-            if (qdrantService != null)
-            {
-                var deleteResult = await qdrantService.DeleteDocumentAsync(pdfId, cancellationToken).ConfigureAwait(false);
-                if (!deleteResult)
-                {
-                    _logger.LogWarning("Failed to delete vectors from Qdrant for PDF {PdfId}", pdfId);
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogWarning(ex, "Invalid operation deleting vectors from Qdrant for PDF {PdfId}", pdfId);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Qdrant vector deletion is best-effort cleanup;
-        // failures must not block PDF metadata deletion.
-#pragma warning restore S125
-        catch (Exception ex)
-#pragma warning restore CA1031
-        {
-            _logger.LogWarning(ex, "Unexpected error deleting vectors from Qdrant for PDF {PdfId}", pdfId);
-        }
     }
 
     /// <summary>

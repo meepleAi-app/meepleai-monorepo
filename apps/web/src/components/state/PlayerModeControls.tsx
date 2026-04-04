@@ -18,10 +18,22 @@ import { useState, useCallback } from 'react';
 
 import { Brain, Check, HelpCircle, Lightbulb, Sparkles, X } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
-import { usePlayerAISuggestion } from '@/lib/hooks/usePlayerAISuggestion';
+import { usePlayerAISuggestion } from '@/lib/domain-hooks/usePlayerAISuggestion';
+import { logger } from '@/lib/logger';
 
 import { PlayerModeHelpModal } from './PlayerModeHelpModal';
 import { PlayerModeTour } from './PlayerModeTour';
@@ -109,15 +121,12 @@ export function PlayerModeControls({
   const [userQuery, _setUserQuery] = useState(query || '');
 
   // Memoize callbacks to prevent hook recreation
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSuggestionReceived = useCallback((suggestion: any, confidence: number) => {
-    // eslint-disable-next-line no-console
-    console.log('Received suggestion:', suggestion, 'Confidence:', confidence);
+  const handleSuggestionReceived = useCallback((suggestion: unknown, confidence: number) => {
+    logger.debug(`Received suggestion: ${JSON.stringify(suggestion)} Confidence: ${confidence}`);
   }, []);
 
   const handleSuggestionApplied = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (suggestion: any) => {
+    (suggestion: { action: string; rationale: string }) => {
       if (onSuggestionApplied) {
         onSuggestionApplied({
           action: suggestion.action,
@@ -135,7 +144,7 @@ export function PlayerModeControls({
   }, [onSuggestionIgnored]);
 
   const handleError = useCallback((error: string) => {
-    console.error('Suggestion error:', error);
+    logger.error(`Suggestion error: ${error}`);
   }, []);
 
   const [suggestionState, suggestionControls] = usePlayerAISuggestion({

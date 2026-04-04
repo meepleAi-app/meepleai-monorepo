@@ -10,7 +10,7 @@ import { useState, useCallback } from 'react';
 
 import { Camera, Plus } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 import { PhotoUploadModal, type SessionAttachmentDto } from './PhotoUploadModal';
 import { SessionPhotoGallery } from './SessionPhotoGallery';

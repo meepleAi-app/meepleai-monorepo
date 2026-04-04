@@ -7,7 +7,7 @@
  * Pages Covered:
  * 1. Landing Page (/)
  * 2. Games Catalog (/board-game-ai/games)
- * 3. Game Detail (/giochi/[id])
+ * 3. Game Detail (/library/games/[id])
  * 4. Dashboard (/dashboard)
  * 5. Library (/library)
  * 6. Settings (/settings)
@@ -39,10 +39,12 @@ function createAxeBuilder(page: Parameters<typeof AxeBuilder>[0]['page']) {
 function formatViolations(violations: Awaited<ReturnType<AxeBuilder['analyze']>>['violations']) {
   if (violations.length === 0) return 'No violations';
 
-  return violations.map(v => {
-    const nodes = v.nodes.map(n => `  - ${n.html.substring(0, 100)}...`).join('\n');
-    return `[${v.impact}] ${v.id}: ${v.help}\n${nodes}`;
-  }).join('\n\n');
+  return violations
+    .map(v => {
+      const nodes = v.nodes.map(n => `  - ${n.html.substring(0, 100)}...`).join('\n');
+      return `[${v.impact}] ${v.id}: ${v.help}\n${nodes}`;
+    })
+    .join('\n\n');
 }
 
 // ============================================================================
@@ -72,8 +74,8 @@ test.describe('Accessibility - Public Pages (Light Mode)', () => {
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
 
-  test('Games Catalog (/games) - light mode @a11y', async ({ page }) => {
-    await page.goto('/games');
+  test('Library (/library) - light mode @a11y', async ({ page }) => {
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const results = await createAxeBuilder(page).analyze();
@@ -182,9 +184,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page })
-      .withTags(['cat.color'])
-      .analyze();
+    const results = await new AxeBuilder({ page }).withTags(['cat.color']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
@@ -194,9 +194,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page })
-      .withTags(['cat.color'])
-      .analyze();
+    const results = await new AxeBuilder({ page }).withTags(['cat.color']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
@@ -206,9 +204,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
     await page.goto('/board-game-ai/games');
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page })
-      .withTags(['cat.color'])
-      .analyze();
+    const results = await new AxeBuilder({ page }).withTags(['cat.color']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
@@ -219,9 +215,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
 
-    const results = await new AxeBuilder({ page })
-      .withTags(['cat.color'])
-      .analyze();
+    const results = await new AxeBuilder({ page }).withTags(['cat.color']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
@@ -232,14 +226,16 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
 // ============================================================================
 
 test.describe('Accessibility - Keyboard Navigation', () => {
-  test('Landing Page - all interactive elements are keyboard accessible @a11y', async ({ page }) => {
+  test('Landing Page - all interactive elements are keyboard accessible @a11y', async ({
+    page,
+  }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
     // Test Tab navigation
-    const focusableElements = await page.locator(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    ).all();
+    const focusableElements = await page
+      .locator('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+      .all();
 
     // Verify at least some focusable elements exist
     expect(focusableElements.length).toBeGreaterThan(0);
@@ -299,14 +295,16 @@ test.describe('Accessibility - Focus Indicators', () => {
       const hasVisibleFocus = await buttons[0].evaluate(el => {
         const styles = window.getComputedStyle(el);
         // Check for outline or ring styles
-        return styles.outline !== 'none' ||
-               styles.boxShadow !== 'none' ||
-               el.classList.contains('focus-visible:ring-2') ||
-               el.classList.contains('focus:ring-2');
+        return (
+          styles.outline !== 'none' ||
+          styles.boxShadow !== 'none' ||
+          el.classList.contains('focus-visible:ring-2') ||
+          el.classList.contains('focus:ring-2')
+        );
       });
 
       // At minimum, the button should have some focus styling class
-      const classes = await buttons[0].getAttribute('class') || '';
+      const classes = (await buttons[0].getAttribute('class')) || '';
       const hasFocusClass = classes.includes('focus') || hasVisibleFocus;
       expect(hasFocusClass).toBe(true);
     }
@@ -349,9 +347,7 @@ test.describe('Accessibility - ARIA and Semantic HTML', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
 
-    const results = await new AxeBuilder({ page })
-      .withTags(['cat.forms'])
-      .analyze();
+    const results = await new AxeBuilder({ page }).withTags(['cat.forms']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
@@ -360,9 +356,7 @@ test.describe('Accessibility - ARIA and Semantic HTML', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page })
-      .withTags(['cat.text-alternatives'])
-      .analyze();
+    const results = await new AxeBuilder({ page }).withTags(['cat.text-alternatives']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
@@ -371,9 +365,7 @@ test.describe('Accessibility - ARIA and Semantic HTML', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page })
-      .withTags(['cat.name-role-value'])
-      .analyze();
+    const results = await new AxeBuilder({ page }).withTags(['cat.name-role-value']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
@@ -423,7 +415,7 @@ test.describe('Accessibility - Comprehensive Audit', () => {
   const publicPages = [
     { name: 'Landing Page', url: '/' },
     { name: 'Games Catalog', url: '/board-game-ai/games' },
-    { name: 'Games List', url: '/games' },
+    { name: 'Library', url: '/library' },
     { name: 'Login', url: '/login' },
     { name: 'Register', url: '/register' },
     { name: 'About', url: '/about' },
@@ -433,7 +425,9 @@ test.describe('Accessibility - Comprehensive Audit', () => {
   ];
 
   for (const pageConfig of publicPages) {
-    test(`${pageConfig.name} (${pageConfig.url}) - full WCAG 2.1 AA audit @a11y`, async ({ page }) => {
+    test(`${pageConfig.name} (${pageConfig.url}) - full WCAG 2.1 AA audit @a11y`, async ({
+      page,
+    }) => {
       await page.goto(pageConfig.url);
       await page.waitForLoadState('networkidle');
 

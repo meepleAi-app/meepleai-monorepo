@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MeepleAI — Mobile Card Layout Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS (from meepleai design-tokens.css)
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg: #faf8f5;
+  --bg-card: rgba(255,255,255,0.92);
+  --bg-dark: #1e1914;
+  --bg-muted: #f1ede8;
+  --text: #1a1a2e;
+  --text-sec: #64748b;
+  --text-muted: #94a3b8;
+  --border: rgba(0,0,0,0.07);
+  --border-light: rgba(0,0,0,0.04);
+
+  --shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.06), 0 1px 2px rgba(180,130,80,0.04);
+  --shadow-warm-md: 0 4px 12px rgba(180,130,80,0.08), 0 2px 4px rgba(180,130,80,0.04);
+  --shadow-warm-lg: 0 10px 30px rgba(180,130,80,0.12), 0 4px 8px rgba(180,130,80,0.06);
+  --shadow-warm-xl: 0 20px 50px rgba(180,130,80,0.16), 0 8px 16px rgba(180,130,80,0.08);
+  --shadow-warm-2xl: 0 25px 60px rgba(180,130,80,0.2), 0 12px 24px rgba(180,130,80,0.1);
+
+  /* Entity Colors HSL */
+  --e-game-h: 25; --e-game-s: 95%; --e-game-l: 45%;
+  --e-player-h: 262; --e-player-s: 83%; --e-player-l: 58%;
+  --e-session-h: 240; --e-session-s: 60%; --e-session-l: 55%;
+  --e-agent-h: 38; --e-agent-s: 92%; --e-agent-l: 50%;
+  --e-doc-h: 210; --e-doc-s: 40%; --e-doc-l: 55%;
+  --e-chat-h: 220; --e-chat-s: 80%; --e-chat-l: 55%;
+  --e-event-h: 350; --e-event-s: 89%; --e-event-l: 60%;
+
+  --phone-w: 390px;
+  --phone-h: 844px;
+  --nav-h: 56px;
+  --search-h: 48px;
+  --action-h: 72px;
+  --hand-w: 44px;
+  --card-link-h: 56px;
+  --safe-bottom: 20px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'Nunito',sans-serif; background:#e8e4df; color:var(--text);
+  min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  padding:24px 16px;
+}
+h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
+
+/* ═══ PAGE LAYOUT ═══ */
+.page-title { text-align:center; margin-bottom:24px; }
+.page-title h1 { font-size:1.5rem; color:var(--text); }
+.page-title p { color:var(--text-sec); font-size:0.82rem; margin-top:4px; }
+
+.mockup-row {
+  display:flex; gap:40px; flex-wrap:wrap; justify-content:center;
+  align-items:flex-start; width:100%;
+}
+
+.mockup-col { display:flex; flex-direction:column; align-items:center; gap:12px; }
+.mockup-label {
+  font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.85rem;
+  color:var(--text-sec); text-transform:uppercase; letter-spacing:0.08em;
+}
+.mockup-sublabel { font-size:0.72rem; color:var(--text-muted); max-width:var(--phone-w); text-align:center; }
+
+/* ═══ PHONE FRAME ═══ */
+.phone {
+  width:var(--phone-w); height:var(--phone-h);
+  background:var(--bg); border-radius:40px;
+  border:3px solid #c8c0b5;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.1),
+              inset 0 0 0 1px rgba(255,255,255,0.4);
+  overflow:hidden; position:relative;
+  display:flex; flex-direction:column;
+}
+
+/* Status bar */
+.status-bar {
+  height:48px; display:flex; align-items:flex-end; justify-content:space-between;
+  padding:0 28px 6px; font-size:12px; font-weight:600; color:var(--text);
+  flex-shrink:0;
+}
+.status-bar .time { font-weight:700; }
+.status-bar .icons { display:flex; gap:4px; align-items:center; }
+.status-bar .icons span { font-size:11px; }
+
+/* ═══ NAV BAR ═══ */
+.navbar {
+  height:var(--nav-h); display:flex; align-items:center;
+  padding:0 16px; background:var(--bg-card);
+  backdrop-filter:blur(12px) saturate(180%);
+  border-bottom:1px solid var(--border); flex-shrink:0;
+  gap:12px;
+}
+.navbar .logo {
+  font-family:'Quicksand',sans-serif; font-weight:800; font-size:1.1rem;
+  color:hsl(25,95%,45%); display:flex; align-items:center; gap:6px;
+}
+.navbar .logo .dice {
+  width:28px; height:28px; background:hsl(25,95%,45%); border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+  color:white; font-size:14px; font-weight:800;
+}
+.navbar .spacer { flex:1; }
+.navbar .nav-btn {
+  width:36px; height:36px; border-radius:50%;
+  background:var(--bg-muted); border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; color:var(--text-sec);
+  transition:background 0.2s;
+}
+.navbar .nav-btn:hover { background:hsl(25,95%,45%,0.1); }
+.navbar .avatar {
+  width:34px; height:34px; border-radius:50%;
+  background:linear-gradient(135deg, hsl(262,83%,58%), hsl(262,83%,40%));
+  color:white; display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; font-family:'Quicksand',sans-serif;
+  border:2px solid white; box-shadow:var(--shadow-warm-sm);
+}
+
+/* ═══ SEARCH BAR ═══ */
+.search-bar {
+  height:var(--search-h); padding:6px 16px; flex-shrink:0;
+  background:var(--bg);
+}
+.search-input {
+  width:100%; height:36px; border-radius:18px;
+  background:var(--bg-card); border:1px solid var(--border);
+  padding:0 16px 0 38px; font-size:14px; font-family:'Nunito',sans-serif;
+  color:var(--text); outline:none; box-shadow:var(--shadow-warm-sm);
+  position:relative;
+}
+.search-input::placeholder { color:var(--text-muted); }
+.search-wrap {
+  position:relative; width:100%; height:36px;
+}
+.search-wrap .icon {
+  position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  font-size:15px; color:var(--text-muted); pointer-events:none;
+}
+
+/* ═══ MAIN CONTENT AREA ═══ */
+.content-area {
+  flex:1; display:flex; position:relative; overflow:hidden;
+  min-height:0;
+}
+
+/* ═══ HAND STACK (left edge) ═══ */
+.hand-stack {
+  width:var(--hand-w); flex-shrink:0; position:relative;
+  display:flex; flex-direction:column; align-items:center;
+  padding:8px 0; z-index:10;
+  background:linear-gradient(90deg, rgba(0,0,0,0.03) 0%, transparent 100%);
+}
+.hand-label {
+  writing-mode:vertical-rl; text-orientation:mixed;
+  font-family:'Quicksand',sans-serif; font-size:9px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.1em;
+  color:var(--text-muted); margin-bottom:8px;
+  transform:rotate(180deg);
+}
+.hand-cards {
+  display:flex; flex-direction:column; gap:6px;
+  align-items:center; flex:1; overflow-y:auto;
+  scrollbar-width:none;
+}
+.hand-cards::-webkit-scrollbar { display:none; }
+
+.hand-card {
+  width:36px; height:52px; border-radius:8px;
+  background:var(--bg-card); border:1px solid var(--border);
+  box-shadow:var(--shadow-warm-sm); cursor:pointer;
+  position:relative; overflow:hidden;
+  transition:transform 0.25s, box-shadow 0.25s, outline 0.25s;
+  outline:2px solid transparent; outline-offset:1px;
+}
+.hand-card:hover {
+  transform:scale(1.12); box-shadow:var(--shadow-warm-md);
+}
+.hand-card.active {
+  outline-offset:2px; transform:scale(1.15);
+  box-shadow:var(--shadow-warm-lg);
+}
+.hand-card .edge {
+  position:absolute; left:0; top:0; bottom:0; width:4px;
+}
+.hand-card .mini-title {
+  position:absolute; bottom:2px; left:5px; right:2px;
+  font-size:5px; font-weight:700; font-family:'Quicksand',sans-serif;
+  color:var(--text); line-height:1.1; overflow:hidden;
+}
+.hand-card .mini-cover {
+  width:100%; height:28px; object-fit:cover;
+  background:linear-gradient(135deg, #f0e8dc, #e8ddd0);
+}
+
+/* ═══ FOCUSED CARD ═══ */
+.focused-area {
+  flex:1; display:flex; flex-direction:column;
+  padding:8px 12px 8px 4px; min-width:0;
+  position:relative;
+}
+
+.swipe-container {
+  flex:1; position:relative; overflow:hidden;
+  border-radius:16px; min-height:0;
+}
+
+.focused-card {
+  position:absolute; inset:0;
+  background:var(--bg-card);
+  backdrop-filter:blur(12px) saturate(180%);
+  border:1px solid var(--border);
+  border-radius:16px; overflow:hidden;
+  box-shadow:var(--shadow-warm-xl);
+  display:flex; flex-direction:column;
+  transition:transform 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s;
+}
+.focused-card .accent-bar {
+  height:4px; width:100%; flex-shrink:0;
+}
+.focused-card .card-cover {
+  height:42%; flex-shrink:0; position:relative; overflow:hidden;
+}
+.focused-card .card-cover .cover-img {
+  width:100%; height:100%; object-fit:cover;
+  display:flex; align-items:center; justify-content:center;
+  font-size:64px;
+}
+.focused-card .card-cover .cover-gradient {
+  position:absolute; bottom:0; left:0; right:0; height:60%;
+  pointer-events:none;
+}
+.focused-card .card-cover .entity-badge {
+  position:absolute; top:12px; left:12px;
+  padding:3px 10px; border-radius:20px;
+  font-family:'Quicksand',sans-serif; font-size:10px;
+  font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
+  color:white; backdrop-filter:blur(8px);
+}
+.focused-card .card-cover .rating-badge {
+  position:absolute; top:12px; right:12px;
+  padding:4px 10px; border-radius:12px;
+  background:rgba(0,0,0,0.5); backdrop-filter:blur(8px);
+  color:#fbbf24; font-size:12px; font-weight:700;
+  display:flex; align-items:center; gap:4px;
+}
+
+.focused-card .card-body {
+  flex:1; padding:16px; display:flex; flex-direction:column; gap:8px;
+  overflow-y:auto;
+}
+.focused-card .card-title {
+  font-family:'Quicksand',sans-serif; font-size:1.25rem;
+  font-weight:700; color:var(--text); line-height:1.2;
+}
+.focused-card .card-subtitle {
+  font-size:0.82rem; color:var(--text-sec); line-height:1.3;
+}
+.focused-card .card-meta {
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;
+}
+.focused-card .meta-chip {
+  display:flex; align-items:center; gap:4px;
+  font-size:12px; color:var(--text-sec);
+  background:var(--bg-muted); padding:4px 10px;
+  border-radius:20px; font-weight:600;
+}
+.focused-card .meta-chip .icon { font-size:13px; }
+
+/* Quick action row on focused card */
+.focused-card .quick-actions {
+  display:flex; gap:8px; margin-top:auto; padding-top:8px;
+}
+.focused-card .qa-btn {
+  width:40px; height:40px; border-radius:50%;
+  background:rgba(255,255,255,0.85); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.6);
+  box-shadow:var(--shadow-warm-sm);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:16px;
+  transition:transform 0.2s, background 0.2s;
+}
+.focused-card .qa-btn:hover { transform:scale(1.12); }
+.focused-card .qa-btn.primary {
+  background:hsl(25,95%,45%); color:white; border-color:transparent;
+  box-shadow:0 4px 12px hsla(25,95%,45%,0.3);
+}
+
+/* Swipe indicators */
+.swipe-hint {
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:28px; height:48px; border-radius:14px;
+  background:rgba(0,0,0,0.06); display:flex; align-items:center;
+  justify-content:center; color:var(--text-muted); font-size:18px;
+  z-index:5; cursor:pointer; transition:background 0.2s;
+}
+.swipe-hint:hover { background:rgba(0,0,0,0.12); }
+.swipe-hint.left { left:-4px; }
+.swipe-hint.right { right:4px; }
+
+/* ═══ CARD-TO-CARD LINKS ═══ */
+.card-links {
+  height:auto; flex-shrink:0; padding:6px 12px 6px 4px;
+}
+.card-links-inner {
+  display:flex; align-items:center; gap:4px;
+  padding:8px 10px; border-radius:12px;
+  background:var(--bg-card); border:1px solid var(--border);
+  box-shadow:var(--shadow-warm-sm);
+}
+.card-links-label {
+  font-size:8px; color:var(--text-muted); font-weight:700;
+  text-transform:uppercase; letter-spacing:0.08em;
+  margin-right:4px; white-space:nowrap;
+  font-family:'Quicksand',sans-serif;
+}
+.card-link-btn {
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:4px 8px; border-radius:10px; cursor:pointer;
+  transition:background 0.2s; border:none; background:transparent;
+}
+.card-link-btn:hover { background:var(--bg-muted); }
+.card-link-btn .link-icon {
+  width:28px; height:28px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; border:1px solid var(--border);
+  background:var(--bg-card);
+}
+.card-link-btn .link-label {
+  font-size:8px; font-weight:700; color:var(--text-sec);
+  font-family:'Quicksand',sans-serif;
+}
+
+/* ═══ ACTION BAR ═══ */
+.action-bar {
+  height:var(--action-h); flex-shrink:0;
+  padding:0 16px; padding-bottom:var(--safe-bottom);
+  background:var(--bg-card);
+  backdrop-filter:blur(16px) saturate(180%);
+  border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-around;
+  gap:4px;
+}
+.action-item {
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  cursor:pointer; border:none; background:transparent;
+  padding:6px 12px; border-radius:12px;
+  transition:background 0.2s;
+  min-width:56px;
+}
+.action-item:hover { background:var(--bg-muted); }
+.action-item .action-icon {
+  font-size:20px; line-height:1;
+}
+.action-item .action-label {
+  font-size:9px; font-weight:700; color:var(--text-sec);
+  font-family:'Quicksand',sans-serif;
+}
+.action-item.active .action-icon { color:hsl(25,95%,45%); }
+.action-item.active .action-label { color:hsl(25,95%,45%); }
+
+/* ═══ DRAWER OVERLAY ═══ */
+.drawer-overlay {
+  position:absolute; inset:0; z-index:50;
+  pointer-events:none; transition:background 0.35s;
+}
+.drawer-overlay.open {
+  background:rgba(0,0,0,0.3); pointer-events:auto;
+}
+.drawer-panel {
+  position:absolute; top:calc(var(--nav-h) + 48px); /* below navbar+status */
+  left:0; right:0; bottom:40%;
+  background:var(--bg-card);
+  backdrop-filter:blur(16px) saturate(180%);
+  border-bottom:1px solid var(--border);
+  box-shadow:0 8px 32px rgba(0,0,0,0.12);
+  border-radius:0 0 20px 20px;
+  transform:translateY(-105%);
+  transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);
+  display:flex; flex-direction:column;
+  overflow:hidden; z-index:51;
+}
+.drawer-overlay.open .drawer-panel {
+  transform:translateY(0);
+}
+.drawer-handle {
+  width:36px; height:4px; border-radius:2px;
+  background:var(--border); margin:10px auto 6px;
+  flex-shrink:0;
+}
+.drawer-tabs {
+  display:flex; padding:0 12px; gap:2px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.drawer-tab {
+  padding:8px 10px; font-size:11px; font-weight:700;
+  font-family:'Quicksand',sans-serif;
+  color:var(--text-muted); cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:color 0.2s, border-color 0.2s;
+  background:transparent; border-top:none; border-left:none; border-right:none;
+}
+.drawer-tab.active {
+  color:hsl(25,95%,45%);
+  border-bottom-color:hsl(25,95%,45%);
+}
+.drawer-tab:hover { color:var(--text); }
+.drawer-content {
+  flex:1; padding:12px 16px; overflow-y:auto;
+  font-size:13px; color:var(--text-sec); line-height:1.6;
+}
+.drawer-content h4 { font-size:14px; color:var(--text); margin-bottom:6px; }
+.drawer-content .info-row {
+  display:flex; justify-content:space-between; padding:6px 0;
+  border-bottom:1px solid var(--border-light);
+  font-size:12px;
+}
+.drawer-content .info-row .label { color:var(--text-muted); }
+.drawer-content .info-row .value { font-weight:600; color:var(--text); }
+
+/* ═══ CONTEXT SWITCHER ═══ */
+.context-bar {
+  display:flex; gap:8px; padding:8px 16px; justify-content:center;
+  margin-bottom:16px;
+}
+.ctx-btn {
+  padding:6px 16px; border-radius:20px; border:1px solid var(--border);
+  background:var(--bg-card); font-family:'Quicksand',sans-serif;
+  font-size:12px; font-weight:700; cursor:pointer;
+  color:var(--text-sec); transition:all 0.2s;
+}
+.ctx-btn:hover { border-color:hsl(25,95%,45%,0.3); }
+.ctx-btn.active {
+  background:hsl(25,95%,45%); color:white; border-color:transparent;
+  box-shadow:0 4px 12px hsla(25,95%,45%,0.25);
+}
+
+/* ═══ ANNOTATIONS ═══ */
+.annotation {
+  position:absolute; font-size:9px; font-family:'Quicksand',sans-serif;
+  font-weight:700; color:hsl(350,89%,50%); background:hsla(350,89%,95%,0.9);
+  padding:2px 6px; border-radius:4px; white-space:nowrap;
+  pointer-events:none; z-index:60;
+  border:1px solid hsla(350,89%,60%,0.3);
+}
+
+/* ═══ SWIPE ANIMATION ═══ */
+@keyframes swipeLeft {
+  0% { transform:translateX(0); opacity:1; }
+  100% { transform:translateX(-120%); opacity:0; }
+}
+@keyframes swipeIn {
+  0% { transform:translateX(120%); opacity:0; }
+  100% { transform:translateX(0); opacity:1; }
+}
+.swipe-left { animation:swipeLeft 0.4s cubic-bezier(0.4,0,0.2,1) forwards; }
+.swipe-in { animation:swipeIn 0.4s cubic-bezier(0.4,0,0.2,1) forwards; }
+
+/* ═══ FEATURE TABLE ═══ */
+.feature-table {
+  width:100%; max-width:900px; margin:32px auto;
+  border-collapse:collapse; font-size:12px;
+}
+.feature-table th {
+  font-family:'Quicksand',sans-serif; font-weight:700;
+  padding:10px 12px; text-align:left;
+  background:hsl(25,95%,45%); color:white;
+  font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+}
+.feature-table td {
+  padding:8px 12px; border-bottom:1px solid var(--border);
+  vertical-align:top;
+}
+.feature-table tr:nth-child(even) { background:rgba(180,130,80,0.04); }
+.feature-table .comp { font-family:monospace; font-size:11px; color:hsl(25,95%,45%); font-weight:600; }
+.feature-table .maps { color:var(--text-sec); }
+.feature-table .new { color:hsl(142,70%,35%); font-weight:700; }
+.feature-table .reuse { color:hsl(220,80%,50%); font-weight:700; }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width:480px) {
+  .phone { width:100%; height:100vh; border-radius:0; border:none; }
+  body { padding:0; }
+  .mockup-row { gap:0; }
+  .page-title, .context-bar, .feature-table, .mockup-label, .mockup-sublabel { display:none; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>MeepleAI — Mobile Card-Focus Layout</h1>
+  <p>Mockup interattivo del nuovo layout mobile-first con metafora "mano di carte"</p>
+</div>
+
+<!-- Context switcher -->
+<div class="context-bar">
+  <button class="ctx-btn active" onclick="switchContext('library')">📚 Libreria</button>
+  <button class="ctx-btn" onclick="switchContext('sessions')">🎯 Sessioni</button>
+  <button class="ctx-btn" onclick="switchContext('agents')">🤖 Agenti</button>
+  <button class="ctx-btn" onclick="switchContext('chat')">💬 Chat</button>
+</div>
+
+<div class="mockup-row">
+
+  <!-- ═══════════════════════════════════════════════
+       PHONE 1: CARD VIEW (card.jpeg wireframe)
+       ═══════════════════════════════════════════════ -->
+  <div class="mockup-col">
+    <span class="mockup-label">Card View — Focus Mode</span>
+    <span class="mockup-sublabel">Swipe tra carte, hand stack a sinistra, card-to-card links</span>
+
+    <div class="phone" id="phone-card">
+      <!-- Status bar -->
+      <div class="status-bar">
+        <span class="time">14:32</span>
+        <div class="icons">
+          <span>📶</span><span>🔋</span>
+        </div>
+      </div>
+
+      <!-- Nav bar -->
+      <div class="navbar">
+        <div class="logo">
+          <div class="dice">🎲</div>
+          MeepleAI
+        </div>
+        <div class="spacer"></div>
+        <button class="nav-btn" title="Notifiche">🔔</button>
+        <div class="avatar">MR</div>
+      </div>
+
+      <!-- Search -->
+      <div class="search-bar">
+        <div class="search-wrap">
+          <span class="icon">🔍</span>
+          <input class="search-input" placeholder="Cerca nella tua libreria..." readonly>
+        </div>
+      </div>
+
+      <!-- Main content: Hand + Focused Card -->
+      <div class="content-area">
+        <!-- HAND STACK -->
+        <div class="hand-stack">
+          <span class="hand-label" id="hand-label">La tua mano</span>
+          <div class="hand-cards" id="hand-cards">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- FOCUSED CARD + SWIPE -->
+        <div class="focused-area">
+          <div class="swipe-container" id="swipe-container">
+            <div class="swipe-hint left" onclick="swipePrev()">‹</div>
+            <div class="swipe-hint right" onclick="swipeNext()">›</div>
+
+            <div class="focused-card" id="focused-card">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- CARD-TO-CARD LINKS -->
+          <div class="card-links">
+            <div class="card-links-inner" id="card-links">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTION BAR -->
+      <div class="action-bar" id="action-bar">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Annotations -->
+      <div class="annotation" style="top:62px;right:52px;">← NavBar</div>
+      <div class="annotation" style="top:114px;right:20px;">← Ricerca</div>
+      <div class="annotation" style="top:200px;left:2px;transform:rotate(-90deg) translateX(-60px);">Hand Cards →</div>
+      <div class="annotation" style="bottom:128px;right:16px;">← Card Links</div>
+      <div class="annotation" style="bottom:30px;left:50%;transform:translateX(-50%);">Action Bar</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PHONE 2: DRAWER VIEW (layout.jpeg wireframe)
+       ═══════════════════════════════════════════════ -->
+  <div class="mockup-col">
+    <span class="mockup-label">Drawer View — Dettagli</span>
+    <span class="mockup-sublabel">Drawer scivola dall'alto con tabs ExtraMeepleCard</span>
+
+    <div class="phone" id="phone-drawer">
+      <div class="status-bar">
+        <span class="time">14:32</span>
+        <div class="icons"><span>📶</span><span>🔋</span></div>
+      </div>
+
+      <div class="navbar">
+        <div class="logo">
+          <div class="dice">🎲</div>
+          MeepleAI
+        </div>
+        <div class="spacer"></div>
+        <button class="nav-btn" title="Chiudi drawer" onclick="toggleDrawer()">✕</button>
+        <div class="avatar">MR</div>
+      </div>
+
+      <!-- Drawer overlay -->
+      <div class="drawer-overlay open" id="drawer-overlay" onclick="toggleDrawer()">
+        <div class="drawer-panel" onclick="event.stopPropagation()">
+          <div class="drawer-handle"></div>
+          <div class="drawer-tabs">
+            <button class="drawer-tab active" onclick="switchTab(this,'overview')">Overview</button>
+            <button class="drawer-tab" onclick="switchTab(this,'ai')">🤖 AI</button>
+            <button class="drawer-tab" onclick="switchTab(this,'history')">Cronologia</button>
+            <button class="drawer-tab" onclick="switchTab(this,'media')">Media</button>
+          </div>
+          <div class="drawer-content" id="drawer-content">
+            <h4>Azul — Dettagli Gioco</h4>
+            <div class="info-row"><span class="label">Editore</span><span class="value">Plan B Games</span></div>
+            <div class="info-row"><span class="label">Anno</span><span class="value">2017</span></div>
+            <div class="info-row"><span class="label">Giocatori</span><span class="value">2–4</span></div>
+            <div class="info-row"><span class="label">Durata</span><span class="value">30–45 min</span></div>
+            <div class="info-row"><span class="label">Complessità</span><span class="value">●●○○○ (1.77)</span></div>
+            <div class="info-row"><span class="label">Partite giocate</span><span class="value">23</span></div>
+            <div class="info-row"><span class="label">Ultimo giocato</span><span class="value">2 giorni fa</span></div>
+            <div class="info-row"><span class="label">In libreria dal</span><span class="value">12 Gen 2025</span></div>
+            <div class="info-row"><span class="label">KB Status</span><span class="value" style="color:hsl(142,70%,35%);">✓ Indicizzato</span></div>
+            <div class="info-row"><span class="label">Agente AI</span><span class="value" style="color:hsl(38,92%,50%);">Azul Expert — attivo</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Behind drawer: card stack + main (dimmed) -->
+      <div class="content-area" style="opacity:0.4;filter:blur(1px);">
+        <div class="hand-stack">
+          <span class="hand-label">La tua mano</span>
+          <div class="hand-cards" id="hand-cards-drawer"></div>
+        </div>
+        <div class="focused-area">
+          <div class="swipe-container">
+            <div class="focused-card" id="focused-card-drawer" style="pointer-events:none;"></div>
+          </div>
+          <div class="card-links">
+            <div class="card-links-inner">
+              <span class="card-links-label">COLLEGATI</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar" style="opacity:0.4;">
+        <div class="action-item">
+          <span class="action-icon">📚</span>
+          <span class="action-label">Libreria</span>
+        </div>
+        <div class="action-item active">
+          <span class="action-icon">🏠</span>
+          <span class="action-label">Home</span>
+        </div>
+        <div class="action-item">
+          <span class="action-icon">💬</span>
+          <span class="action-label">Chat</span>
+        </div>
+        <div class="action-item">
+          <span class="action-icon">🎯</span>
+          <span class="action-label">Sessioni</span>
+        </div>
+        <div class="action-item">
+          <span class="action-icon">👤</span>
+          <span class="action-label">Profilo</span>
+        </div>
+      </div>
+
+      <!-- Annotations -->
+      <div class="annotation" style="top:158px;right:12px;">← Drawer (ExtraMeepleCardDrawer)</div>
+      <div class="annotation" style="top:198px;right:12px;font-size:8px;background:hsla(220,80%,92%,0.9);color:hsl(220,80%,40%);border-color:hsl(220,80%,55%,0.3);">Tabs: Overview, AI, History, Media</div>
+      <div class="annotation" style="bottom:210px;left:6px;">Card Stack (dimmed) →</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ARCHITECTURE MAPPING TABLE
+     ═══════════════════════════════════════════════ -->
+<div style="max-width:960px;margin:40px auto 24px;">
+  <h2 style="font-size:1.1rem;text-align:center;margin-bottom:4px;">Component Architecture Mapping</h2>
+  <p style="text-align:center;font-size:0.78rem;color:var(--text-sec);margin-bottom:16px;">
+    Wireframe zone → Componenti esistenti riutilizzati vs nuovi da creare
+  </p>
+</div>
+<table class="feature-table">
+  <thead>
+    <tr>
+      <th>Wireframe Zone</th>
+      <th>Component</th>
+      <th>Status</th>
+      <th>Note</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>NAV BAR</td>
+      <td class="comp">TopNavbar.tsx</td>
+      <td class="reuse">RIUSO 100%</td>
+      <td class="maps">Invariato. h-14, logo + search + avatar</td>
+    </tr>
+    <tr>
+      <td>RICERCA</td>
+      <td class="comp">SearchBar (in TopNavbar)</td>
+      <td class="reuse">RIUSO 90%</td>
+      <td class="maps">Spostare sotto navbar come pill separata su mobile</td>
+    </tr>
+    <tr>
+      <td>HAND CARDS (sinistra)</td>
+      <td class="comp">HandStack.tsx</td>
+      <td class="new">NUOVO</td>
+      <td class="maps">Mini-card stack verticale, max 7 visibili, scroll</td>
+    </tr>
+    <tr>
+      <td>GAME CARD (focus)</td>
+      <td class="comp">MeepleCard + adapters (14)</td>
+      <td class="reuse">RIUSO 100%</td>
+      <td class="maps">Stesso adapter, wrap in FocusedCardArea con swipe</td>
+    </tr>
+    <tr>
+      <td>Swipe ◄ ►</td>
+      <td class="comp">FocusedCardArea.tsx</td>
+      <td class="new">NUOVO</td>
+      <td class="maps">Framer Motion gesture, pointer events, bounded carousel</td>
+    </tr>
+    <tr>
+      <td>CARD TO CARD LINK</td>
+      <td class="comp">CardNavigationFooter.tsx</td>
+      <td class="reuse">RIUSO 95%</td>
+      <td class="maps">Esistente! Icone entity-colored → nav grafo entità</td>
+    </tr>
+    <tr>
+      <td>ACTION BAR</td>
+      <td class="comp">AdaptiveBottomBar.tsx</td>
+      <td class="reuse">RIUSO 85%</td>
+      <td class="maps">Actions row già esiste. Aggiungere tab navigation persistente</td>
+    </tr>
+    <tr>
+      <td>DRAWER</td>
+      <td class="comp">ExtraMeepleCardDrawer.tsx</td>
+      <td class="reuse">RIUSO 90%</td>
+      <td class="maps">Cambiare side="right" → side="top" su mobile. Stessi tabs</td>
+    </tr>
+    <tr>
+      <td>Hand Context State</td>
+      <td class="comp">useHandContext.ts</td>
+      <td class="new">NUOVO</td>
+      <td class="maps">Zustand store: cards[], focusedIdx, handContext type</td>
+    </tr>
+    <tr>
+      <td>Layout Orchestrator</td>
+      <td class="comp">CardFocusLayout.tsx</td>
+      <td class="new">NUOVO</td>
+      <td class="maps">Condizionale in AppShell: isMobile → CardFocusLayout</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="max-width:960px;margin:16px auto;text-align:center;">
+  <p style="font-size:0.82rem;color:var(--text-sec);">
+    <strong style="color:hsl(220,80%,50%);">RIUSO</strong>: 6 componenti esistenti (~85% del layout) —
+    <strong style="color:hsl(142,70%,35%);">NUOVO</strong>: 4 componenti (~15% nuovo codice)
+  </p>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA — Cards per context
+// ═══════════════════════════════════════════════════════════════
+const CONTEXTS = {
+  library: {
+    handLabel: 'La tua mano',
+    searchPlaceholder: 'Cerca nella tua libreria...',
+    cards: [
+      {
+        id: 'azul', entity: 'game', title: 'Azul',
+        subtitle: 'Plan B Games · 2017',
+        cover: 'linear-gradient(135deg, #1e88e5 0%, #0d47a1 50%, #ffc107 100%)',
+        coverEmoji: '🔷',
+        rating: 7.8, ratingMax: 10,
+        meta: [
+          { icon: '👥', value: '2–4' },
+          { icon: '⏱️', value: '30–45m' },
+          { icon: '🧩', value: '1.77' }
+        ],
+        badge: 'In Libreria',
+        quickActions: ['▶️', '🤖', '📋', '❤️'],
+        links: [
+          { icon: '🎯', label: 'Sessioni', entity: 'session' },
+          { icon: '🤖', label: 'Agente', entity: 'agent' },
+          { icon: '📚', label: 'KB', entity: 'doc' },
+          { icon: '💬', label: 'Chat', entity: 'chat' },
+        ],
+        actions: ['📚 Libreria', '🏠 Home', '💬 Chat', '🎯 Sessioni', '👤 Profilo']
+      },
+      {
+        id: 'catan', entity: 'game', title: 'Catan',
+        subtitle: 'KOSMOS · 1995',
+        cover: 'linear-gradient(135deg, #e65100 0%, #bf360c 50%, #4caf50 100%)',
+        coverEmoji: '🏝️',
+        rating: 7.2, ratingMax: 10,
+        meta: [
+          { icon: '👥', value: '3–4' },
+          { icon: '⏱️', value: '60–120m' },
+          { icon: '🧩', value: '2.32' }
+        ],
+        badge: 'In Libreria',
+        quickActions: ['▶️', '🤖', '📋'],
+        links: [
+          { icon: '🎯', label: 'Sessioni', entity: 'session' },
+          { icon: '🤖', label: 'Agente', entity: 'agent' },
+          { icon: '📚', label: 'KB', entity: 'doc' },
+        ],
+        actions: ['📚 Libreria', '🏠 Home', '💬 Chat', '🎯 Sessioni', '👤 Profilo']
+      },
+      {
+        id: 'wingspan', entity: 'game', title: 'Wingspan',
+        subtitle: 'Stonemaier Games · 2019',
+        cover: 'linear-gradient(135deg, #81c784 0%, #388e3c 50%, #c8e6c9 100%)',
+        coverEmoji: '🐦',
+        rating: 8.1, ratingMax: 10,
+        meta: [
+          { icon: '👥', value: '1–5' },
+          { icon: '⏱️', value: '40–70m' },
+          { icon: '🧩', value: '2.44' }
+        ],
+        badge: 'In Libreria',
+        quickActions: ['▶️', '🤖', '📋'],
+        links: [
+          { icon: '🎯', label: 'Sessioni', entity: 'session' },
+          { icon: '📚', label: 'KB', entity: 'doc' },
+        ],
+        actions: ['📚 Libreria', '🏠 Home', '💬 Chat', '🎯 Sessioni', '👤 Profilo']
+      },
+      {
+        id: 'root', entity: 'game', title: 'Root',
+        subtitle: 'Leder Games · 2018',
+        cover: 'linear-gradient(135deg, #795548 0%, #4e342e 50%, #ffcc02 100%)',
+        coverEmoji: '🦊',
+        rating: 7.9, ratingMax: 10,
+        meta: [
+          { icon: '👥', value: '2–4' },
+          { icon: '⏱️', value: '60–90m' },
+          { icon: '🧩', value: '3.58' }
+        ],
+        badge: 'Wishlist',
+        quickActions: ['🛒', '📋'],
+        links: [
+          { icon: '📚', label: 'KB', entity: 'doc' },
+        ],
+        actions: ['📚 Libreria', '🏠 Home', '💬 Chat', '🎯 Sessioni', '👤 Profilo']
+      },
+      {
+        id: 'everdell', entity: 'game', title: 'Everdell',
+        subtitle: 'Starling Games · 2018',
+        cover: 'linear-gradient(135deg, #ab47bc 0%, #6a1b9a 50%, #f8bbd0 100%)',
+        coverEmoji: '🐿️',
+        rating: 7.8, ratingMax: 10,
+        meta: [
+          { icon: '👥', value: '1–4' },
+          { icon: '⏱️', value: '40–80m' },
+        ],
+        badge: 'In Libreria',
+        quickActions: ['▶️', '📋'],
+        links: [
+          { icon: '🎯', label: 'Sessioni', entity: 'session' },
+        ],
+        actions: ['📚 Libreria', '🏠 Home', '💬 Chat', '🎯 Sessioni', '👤 Profilo']
+      },
+    ]
+  },
+  sessions: {
+    handLabel: 'Sessioni attive',
+    searchPlaceholder: 'Cerca sessioni...',
+    cards: [
+      {
+        id: 's1', entity: 'session', title: 'Serata Azul',
+        subtitle: 'Azul · Casa di Marco · In corso',
+        cover: 'linear-gradient(135deg, hsl(240,60%,55%), hsl(240,60%,35%))',
+        coverEmoji: '🎯',
+        meta: [
+          { icon: '👥', value: '4 giocatori' },
+          { icon: '⏱️', value: '45 min' },
+          { icon: '📊', value: 'Turno 3' }
+        ],
+        badge: 'In Corso',
+        quickActions: ['▶️', '🧰', '📤'],
+        links: [
+          { icon: '🎲', label: 'Gioco', entity: 'game' },
+          { icon: '👥', label: 'Giocatori', entity: 'player' },
+          { icon: '🤖', label: 'Agente', entity: 'agent' },
+        ],
+        actions: ['▶️ Riprendi', '🧰 Toolkit', '📤 Condividi', '🎯 Sessioni', '👤 Profilo']
+      },
+      {
+        id: 's2', entity: 'session', title: 'Torneo Catan',
+        subtitle: 'Catan · Game Store · Completata',
+        cover: 'linear-gradient(135deg, hsl(240,60%,45%), hsl(240,40%,30%))',
+        coverEmoji: '🏆',
+        meta: [
+          { icon: '👥', value: '3 giocatori' },
+          { icon: '⏱️', value: '1h 20m' },
+        ],
+        badge: 'Completata',
+        quickActions: ['📊', '📤'],
+        links: [
+          { icon: '🎲', label: 'Gioco', entity: 'game' },
+          { icon: '👥', label: 'Giocatori', entity: 'player' },
+        ],
+        actions: ['📊 Risultati', '📤 Condividi', '🎯 Sessioni', '👤 Profilo']
+      },
+    ]
+  },
+  agents: {
+    handLabel: 'I tuoi agenti',
+    searchPlaceholder: 'Cerca agenti AI...',
+    cards: [
+      {
+        id: 'a1', entity: 'agent', title: 'Azul Rules Expert',
+        subtitle: 'RAG Strategy · GPT-4o-mini · Attivo',
+        cover: 'linear-gradient(135deg, hsl(38,92%,50%), hsl(38,70%,35%))',
+        coverEmoji: '🤖',
+        meta: [
+          { icon: '💬', value: '342 invocazioni' },
+          { icon: '📚', value: '12 documenti' },
+        ],
+        badge: 'Attivo',
+        quickActions: ['💬', '📊', '⚙️'],
+        links: [
+          { icon: '🎲', label: 'Gioco', entity: 'game' },
+          { icon: '📚', label: 'KB', entity: 'doc' },
+          { icon: '💬', label: 'Chat', entity: 'chat' },
+        ],
+        actions: ['💬 Chat', '📊 Stats', '⚙️ Config', '🤖 Agenti', '👤 Profilo']
+      },
+      {
+        id: 'a2', entity: 'agent', title: 'Catan Strategy Coach',
+        subtitle: 'Coaching · GPT-4o · Idle',
+        cover: 'linear-gradient(135deg, hsl(38,80%,45%), hsl(38,60%,30%))',
+        coverEmoji: '🧠',
+        meta: [
+          { icon: '💬', value: '89 invocazioni' },
+        ],
+        badge: 'Idle',
+        quickActions: ['💬', '📊'],
+        links: [
+          { icon: '🎲', label: 'Gioco', entity: 'game' },
+          { icon: '💬', label: 'Chat', entity: 'chat' },
+        ],
+        actions: ['💬 Chat', '📊 Stats', '🤖 Agenti', '👤 Profilo']
+      },
+    ]
+  },
+  chat: {
+    handLabel: 'Conversazioni',
+    searchPlaceholder: 'Cerca nelle chat...',
+    cards: [
+      {
+        id: 'c1', entity: 'chatSession', title: 'Come si gioca ad Azul?',
+        subtitle: 'Azul Rules Expert · 12 messaggi',
+        cover: 'linear-gradient(135deg, hsl(220,80%,55%), hsl(220,60%,35%))',
+        coverEmoji: '💬',
+        meta: [
+          { icon: '💬', value: '12 messaggi' },
+          { icon: '⏱️', value: '5 min fa' },
+        ],
+        badge: 'Attiva',
+        quickActions: ['💬', '📤', '📋'],
+        links: [
+          { icon: '🎲', label: 'Gioco', entity: 'game' },
+          { icon: '🤖', label: 'Agente', entity: 'agent' },
+        ],
+        actions: ['💬 Continua', '📤 Esporta', '🤖 Agenti', '💬 Chat', '👤 Profilo']
+      },
+      {
+        id: 'c2', entity: 'chatSession', title: 'Strategia apertura Catan',
+        subtitle: 'Catan Coach · 8 messaggi',
+        cover: 'linear-gradient(135deg, hsl(220,70%,50%), hsl(220,50%,30%))',
+        coverEmoji: '🗨️',
+        meta: [
+          { icon: '💬', value: '8 messaggi' },
+          { icon: '⏱️', value: '2 giorni fa' },
+        ],
+        badge: 'Archiviata',
+        quickActions: ['💬', '📤'],
+        links: [
+          { icon: '🎲', label: 'Gioco', entity: 'game' },
+          { icon: '🤖', label: 'Agente', entity: 'agent' },
+        ],
+        actions: ['💬 Riapri', '📤 Esporta', '💬 Chat', '👤 Profilo']
+      },
+    ]
+  }
+};
+
+const ENTITY_COLORS = {
+  game:        { h: 25,  s: 95, l: 45 },
+  player:      { h: 262, s: 83, l: 58 },
+  session:     { h: 240, s: 60, l: 55 },
+  agent:       { h: 38,  s: 92, l: 50 },
+  doc:         { h: 210, s: 40, l: 55 },
+  document:    { h: 210, s: 40, l: 55 },
+  chatSession: { h: 220, s: 80, l: 55 },
+  chat:        { h: 220, s: 80, l: 55 },
+  event:       { h: 350, s: 89, l: 60 },
+};
+
+// ═══ STATE ═══
+let currentContext = 'library';
+let focusedIndex = 0;
+
+function getCards() { return CONTEXTS[currentContext]?.cards || []; }
+function getColor(entity) {
+  const c = ENTITY_COLORS[entity] || ENTITY_COLORS.game;
+  return `hsl(${c.h},${c.s}%,${c.l}%)`;
+}
+function getColorAlpha(entity, alpha) {
+  const c = ENTITY_COLORS[entity] || ENTITY_COLORS.game;
+  return `hsla(${c.h},${c.s}%,${c.l}%,${alpha})`;
+}
+
+// ═══ RENDER ═══
+function renderAll() {
+  const cards = getCards();
+  if (focusedIndex >= cards.length) focusedIndex = 0;
+
+  renderHandStack('hand-cards', cards, focusedIndex);
+  renderHandStack('hand-cards-drawer', cards, focusedIndex);
+  renderFocusedCard('focused-card', cards[focusedIndex]);
+  renderFocusedCard('focused-card-drawer', cards[focusedIndex]);
+  renderCardLinks('card-links', cards[focusedIndex]);
+  renderActionBar('action-bar', cards[focusedIndex]);
+  updateSearchPlaceholder();
+  updateHandLabel();
+  updateContextBtns();
+}
+
+function renderHandStack(containerId, cards, activeIdx) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = cards.map((card, i) => `
+    <div class="hand-card ${i === activeIdx ? 'active' : ''}"
+         style="${i === activeIdx ? `outline-color:${getColorAlpha(card.entity,0.5)};` : ''}"
+         onclick="focusCard(${i})" title="${card.title}">
+      <div class="edge" style="background:${getColor(card.entity)};"></div>
+      <div class="mini-cover" style="background:${card.cover};display:flex;align-items:center;justify-content:center;font-size:16px;">${card.coverEmoji || ''}</div>
+      <div class="mini-title">${card.title}</div>
+    </div>
+  `).join('');
+}
+
+function renderFocusedCard(containerId, card) {
+  const el = document.getElementById(containerId);
+  if (!el || !card) return;
+  const color = getColor(card.entity);
+  const colorAlpha = getColorAlpha(card.entity, 0.15);
+
+  el.style.outline = `2px solid ${getColorAlpha(card.entity, 0.4)}`;
+  el.style.outlineOffset = '2px';
+
+  el.innerHTML = `
+    <div class="accent-bar" style="background:${color};"></div>
+    <div class="card-cover">
+      <div class="cover-img" style="background:${card.cover};">${card.coverEmoji || ''}</div>
+      <div class="cover-gradient" style="background:linear-gradient(to top,var(--bg-card) 0%,transparent 100%);"></div>
+      <div class="entity-badge" style="background:${getColorAlpha(card.entity, 0.85)};">${card.entity === 'chatSession' ? 'Chat' : card.entity.charAt(0).toUpperCase() + card.entity.slice(1)}</div>
+      ${card.rating ? `<div class="rating-badge">⭐ ${card.rating}</div>` : ''}
+    </div>
+    <div class="card-body">
+      <div class="card-title">${card.title}</div>
+      <div class="card-subtitle">${card.subtitle}</div>
+      <div class="card-meta">
+        ${(card.meta || []).map(m => `
+          <span class="meta-chip"><span class="icon">${m.icon}</span> ${m.value}</span>
+        `).join('')}
+        ${card.badge ? `<span class="meta-chip" style="background:${colorAlpha};color:${color};font-weight:700;font-size:11px;">${card.badge}</span>` : ''}
+      </div>
+      <div class="quick-actions">
+        ${(card.quickActions || []).map((qa, i) => `
+          <div class="qa-btn ${i === 0 ? 'primary' : ''}" style="${i === 0 ? `background:${color};box-shadow:0 4px 12px ${getColorAlpha(card.entity,0.3)};` : ''}" title="Azione ${i+1}">${qa}</div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderCardLinks(containerId, card) {
+  const el = document.getElementById(containerId);
+  if (!el || !card) return;
+  el.innerHTML = `
+    <span class="card-links-label">COLLEGATI</span>
+    ${(card.links || []).map(link => `
+      <button class="card-link-btn" title="Vai a ${link.label}">
+        <span class="link-icon" style="color:${getColor(link.entity)};">${link.icon}</span>
+        <span class="link-label">${link.label}</span>
+      </button>
+    `).join('')}
+  `;
+}
+
+function renderActionBar(containerId, card) {
+  const el = document.getElementById(containerId);
+  if (!el || !card) return;
+  const actions = card.actions || [];
+  el.innerHTML = actions.map((a, i) => {
+    const [icon, label] = a.split(' ');
+    const isActive = (currentContext === 'library' && label === 'Libreria') ||
+                     (currentContext === 'sessions' && label === 'Sessioni') ||
+                     (currentContext === 'agents' && label === 'Agenti') ||
+                     (currentContext === 'chat' && label === 'Chat');
+    return `
+      <div class="action-item ${isActive ? 'active' : ''}">
+        <span class="action-icon">${icon}</span>
+        <span class="action-label">${label}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateSearchPlaceholder() {
+  const input = document.querySelector('#phone-card .search-input');
+  if (input) input.placeholder = CONTEXTS[currentContext]?.searchPlaceholder || 'Cerca...';
+}
+
+function updateHandLabel() {
+  const el = document.getElementById('hand-label');
+  if (el) el.textContent = CONTEXTS[currentContext]?.handLabel || 'Carte';
+}
+
+function updateContextBtns() {
+  document.querySelectorAll('.ctx-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('onclick')?.includes(currentContext));
+  });
+}
+
+// ═══ INTERACTIONS ═══
+function switchContext(ctx) {
+  currentContext = ctx;
+  focusedIndex = 0;
+  renderAll();
+}
+
+function focusCard(idx) {
+  focusedIndex = idx;
+  renderAll();
+}
+
+function swipeNext() {
+  const cards = getCards();
+  if (focusedIndex < cards.length - 1) {
+    const el = document.getElementById('focused-card');
+    el.classList.add('swipe-left');
+    setTimeout(() => {
+      el.classList.remove('swipe-left');
+      focusedIndex++;
+      renderAll();
+      el.classList.add('swipe-in');
+      setTimeout(() => el.classList.remove('swipe-in'), 450);
+    }, 350);
+  }
+}
+
+function swipePrev() {
+  if (focusedIndex > 0) {
+    focusedIndex--;
+    renderAll();
+  }
+}
+
+function toggleDrawer() {
+  const overlay = document.getElementById('drawer-overlay');
+  overlay.classList.toggle('open');
+}
+
+function switchTab(btn, tab) {
+  document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  const content = document.getElementById('drawer-content');
+  const tabContent = {
+    overview: `
+      <h4>Azul — Dettagli Gioco</h4>
+      <div class="info-row"><span class="label">Editore</span><span class="value">Plan B Games</span></div>
+      <div class="info-row"><span class="label">Anno</span><span class="value">2017</span></div>
+      <div class="info-row"><span class="label">Giocatori</span><span class="value">2–4</span></div>
+      <div class="info-row"><span class="label">Durata</span><span class="value">30–45 min</span></div>
+      <div class="info-row"><span class="label">Complessità</span><span class="value">●●○○○ (1.77)</span></div>
+      <div class="info-row"><span class="label">Partite</span><span class="value">23</span></div>
+      <div class="info-row"><span class="label">Ultimo giocato</span><span class="value">2 giorni fa</span></div>
+      <div class="info-row"><span class="label">KB Status</span><span class="value" style="color:hsl(142,70%,35%);">✓ Indicizzato</span></div>
+      <div class="info-row"><span class="label">Agente</span><span class="value" style="color:hsl(38,92%,50%);">Azul Expert — attivo</span></div>
+    `,
+    ai: `
+      <h4>🤖 Azul Rules Expert</h4>
+      <div class="info-row"><span class="label">Strategia</span><span class="value">RAG</span></div>
+      <div class="info-row"><span class="label">Modello</span><span class="value">GPT-4o-mini</span></div>
+      <div class="info-row"><span class="label">Invocazioni</span><span class="value">342</span></div>
+      <div class="info-row"><span class="label">Stato</span><span class="value" style="color:hsl(142,70%,35%);">Attivo</span></div>
+      <div style="margin-top:12px;padding:10px;background:var(--bg-muted);border-radius:10px;font-size:12px;">
+        <strong>Ultimo messaggio:</strong><br>
+        "Le tessere blu valgono di più quando completano una riga..."
+      </div>
+    `,
+    history: `
+      <h4>📜 Cronologia Partite</h4>
+      <div class="info-row"><span class="label">11 Mar 2026</span><span class="value">Vittoria (Marco, 72 pt)</span></div>
+      <div class="info-row"><span class="label">8 Mar 2026</span><span class="value">2° posto (Marco, 61 pt)</span></div>
+      <div class="info-row"><span class="label">2 Mar 2026</span><span class="value">Vittoria (Marco, 78 pt)</span></div>
+      <div class="info-row"><span class="label">24 Feb 2026</span><span class="value">3° posto (Marco, 54 pt)</span></div>
+      <div class="info-row"><span class="label">18 Feb 2026</span><span class="value">Vittoria (Marco, 69 pt)</span></div>
+    `,
+    media: `
+      <h4>📸 Media</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
+        <div style="aspect-ratio:1;background:linear-gradient(135deg,#e3f2fd,#bbdefb);border-radius:8px;display:flex;align-items:center;justify-content:center;">📷</div>
+        <div style="aspect-ratio:1;background:linear-gradient(135deg,#f3e5f5,#e1bee7);border-radius:8px;display:flex;align-items:center;justify-content:center;">📷</div>
+        <div style="aspect-ratio:1;background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-radius:8px;display:flex;align-items:center;justify-content:center;">📷</div>
+        <div style="aspect-ratio:1;background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-radius:8px;display:flex;align-items:center;justify-content:center;">📷</div>
+      </div>
+    `,
+  };
+  content.innerHTML = tabContent[tab] || '<p>Contenuto non disponibile</p>';
+}
+
+// ═══ TOUCH SWIPE SUPPORT ═══
+let touchStartX = 0;
+let touchStartY = 0;
+document.getElementById('swipe-container')?.addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+document.getElementById('swipe-container')?.addEventListener('touchend', (e) => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+    if (dx < 0) swipeNext();
+    else swipePrev();
+  }
+}, { passive: true });
+
+// ═══ INIT ═══
+renderAll();
+</script>
+
+</body>
+</html>

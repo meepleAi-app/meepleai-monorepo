@@ -25,7 +25,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 
 import { QueueItem } from './queue-item';
 import { reorderQueue } from '../lib/queue-api';

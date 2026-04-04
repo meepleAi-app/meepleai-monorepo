@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
@@ -20,10 +21,10 @@ public class LanguageDetectorTests
     {
         var result = _detector.Detect(null!);
 
-        Assert.Equal("unknown", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable);
-        Assert.Equal(0, result.Confidence);
-        Assert.NotNull(result.RejectionReason);
+        result.DetectedLanguage.Should().Be("unknown");
+        result.IsAnalyzable.Should().BeFalse();
+        result.Confidence.Should().Be(0);
+        result.RejectionReason.Should().NotBeNull();
     }
 
     [Fact]
@@ -31,8 +32,8 @@ public class LanguageDetectorTests
     {
         var result = _detector.Detect("");
 
-        Assert.Equal("unknown", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("unknown");
+        result.IsAnalyzable.Should().BeFalse();
     }
 
     [Fact]
@@ -40,8 +41,8 @@ public class LanguageDetectorTests
     {
         var result = _detector.Detect("   \n\t  ");
 
-        Assert.Equal("unknown", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("unknown");
+        result.IsAnalyzable.Should().BeFalse();
     }
 
     [Fact]
@@ -49,8 +50,8 @@ public class LanguageDetectorTests
     {
         var result = _detector.Detect("12345 67890 11111");
 
-        Assert.Equal("unknown", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("unknown");
+        result.IsAnalyzable.Should().BeFalse();
     }
 
     #endregion
@@ -64,10 +65,10 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("en", result.DetectedLanguage);
-        Assert.True(result.IsAnalyzable);
-        Assert.True(result.Confidence > 0.8);
-        Assert.Null(result.RejectionReason);
+        result.DetectedLanguage.Should().Be("en");
+        result.IsAnalyzable.Should().BeTrue();
+        (result.Confidence > 0.8).Should().BeTrue();
+        result.RejectionReason.Should().BeNull();
     }
 
     [Fact]
@@ -78,8 +79,8 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("en", result.DetectedLanguage);
-        Assert.True(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("en");
+        result.IsAnalyzable.Should().BeTrue();
     }
 
     #endregion
@@ -94,8 +95,8 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("it", result.DetectedLanguage);
-        Assert.True(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("it");
+        result.IsAnalyzable.Should().BeTrue();
     }
 
     #endregion
@@ -110,8 +111,8 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("de", result.DetectedLanguage);
-        Assert.True(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("de");
+        result.IsAnalyzable.Should().BeTrue();
     }
 
     #endregion
@@ -126,8 +127,8 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("fr", result.DetectedLanguage);
-        Assert.True(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("fr");
+        result.IsAnalyzable.Should().BeTrue();
     }
 
     #endregion
@@ -142,8 +143,8 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("es", result.DetectedLanguage);
-        Assert.True(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("es");
+        result.IsAnalyzable.Should().BeTrue();
     }
 
     #endregion
@@ -157,9 +158,9 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("zh", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable);
-        Assert.Contains("CJK", result.RejectionReason);
+        result.DetectedLanguage.Should().Be("zh");
+        result.IsAnalyzable.Should().BeFalse();
+        result.RejectionReason.Should().Contain("CJK");
     }
 
     [Fact]
@@ -169,9 +170,9 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("zh", result.DetectedLanguage); // CJK maps to zh by default
-        Assert.False(result.IsAnalyzable);
-        Assert.Contains("CJK", result.RejectionReason);
+        result.DetectedLanguage.Should().Be("zh");
+        result.IsAnalyzable.Should().BeFalse();
+        result.RejectionReason.Should().Contain("CJK");
     }
 
     [Fact]
@@ -181,8 +182,8 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("zh", result.DetectedLanguage); // Hangul is in CJK block
-        Assert.False(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("zh");
+        result.IsAnalyzable.Should().BeFalse();
     }
 
     #endregion
@@ -196,9 +197,9 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("ar", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable);
-        Assert.Contains("Arabic", result.RejectionReason);
+        result.DetectedLanguage.Should().Be("ar");
+        result.IsAnalyzable.Should().BeFalse();
+        result.RejectionReason.Should().Contain("Arabic");
     }
 
     #endregion
@@ -212,8 +213,8 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("el", result.DetectedLanguage);
-        Assert.True(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("el");
+        result.IsAnalyzable.Should().BeTrue();
     }
 
     #endregion
@@ -227,8 +228,8 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("ru", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable); // Russian not in analyzable list
+        result.DetectedLanguage.Should().Be("ru");
+        result.IsAnalyzable.Should().BeFalse();
     }
 
     #endregion
@@ -245,8 +246,8 @@ public class LanguageDetectorTests
         var result = _detector.Detect(text);
 
         // CJK should dominate
-        Assert.Equal("zh", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("zh");
+        result.IsAnalyzable.Should().BeFalse();
     }
 
     [Fact]
@@ -256,8 +257,8 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("en", result.DetectedLanguage);
-        Assert.True(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("en");
+        result.IsAnalyzable.Should().BeTrue();
     }
 
     [Fact]
@@ -268,8 +269,8 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("en", result.DetectedLanguage); // Defaults to English for unrecognized Latin
-        Assert.True(result.IsAnalyzable);
+        result.DetectedLanguage.Should().Be("en");
+        result.IsAnalyzable.Should().BeTrue();
     }
 
     [Theory]
@@ -298,9 +299,9 @@ public class LanguageDetectorTests
             IsAnalyzable: true,
             Confidence: 0.95);
 
-        Assert.True(result.IsAnalyzable);
-        Assert.Equal(lang, result.DetectedLanguage);
-        Assert.Null(result.RejectionReason);
+        result.IsAnalyzable.Should().BeTrue();
+        result.DetectedLanguage.Should().Be(lang);
+        result.RejectionReason.Should().BeNull();
     }
 
     #endregion
@@ -314,9 +315,9 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("th", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable);
-        Assert.Contains("Thai", result.RejectionReason);
+        result.DetectedLanguage.Should().Be("th");
+        result.IsAnalyzable.Should().BeFalse();
+        result.RejectionReason.Should().Contain("Thai");
     }
 
     [Fact]
@@ -326,9 +327,9 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("hi", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable);
-        Assert.Contains("Devanagari", result.RejectionReason);
+        result.DetectedLanguage.Should().Be("hi");
+        result.IsAnalyzable.Should().BeFalse();
+        result.RejectionReason.Should().Contain("Devanagari");
     }
 
     #endregion
@@ -342,9 +343,9 @@ public class LanguageDetectorTests
 
         var result = _detector.Detect(text);
 
-        Assert.Equal("he", result.DetectedLanguage);
-        Assert.False(result.IsAnalyzable);
-        Assert.Contains("Hebrew", result.RejectionReason);
+        result.DetectedLanguage.Should().Be("he");
+        result.IsAnalyzable.Should().BeFalse();
+        result.RejectionReason.Should().Contain("Hebrew");
     }
 
     #endregion
@@ -356,7 +357,7 @@ public class LanguageDetectorTests
     {
         var result = new LanguageDetectionResult("en", true, 0.95);
 
-        Assert.Null(result.RejectionReason);
+        result.RejectionReason.Should().BeNull();
     }
 
     [Fact]
@@ -364,8 +365,8 @@ public class LanguageDetectorTests
     {
         var result = new LanguageDetectionResult("zh", false, 0.9, "CJK not supported");
 
-        Assert.Equal("CJK not supported", result.RejectionReason);
-        Assert.False(result.IsAnalyzable);
+        result.RejectionReason.Should().Be("CJK not supported");
+        result.IsAnalyzable.Should().BeFalse();
     }
 
     #endregion

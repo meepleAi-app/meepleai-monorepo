@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.Tests.BoundedContexts.Administration.TestHelpers;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.Entities;
@@ -26,12 +27,12 @@ public class AlertTests
         var alert = new Alert(id, alertType, severity, message);
 
         // Assert
-        Assert.Equal(id, alert.Id);
-        Assert.Equal(alertType, alert.AlertType);
-        Assert.Equal(severity, alert.Severity);
-        Assert.Equal(message, alert.Message);
-        Assert.True(alert.IsActive);
-        Assert.Null(alert.ResolvedAt);
+        alert.Id.Should().Be(id);
+        alert.AlertType.Should().Be(alertType);
+        alert.Severity.Should().Be(severity);
+        alert.Message.Should().Be(message);
+        alert.IsActive.Should().BeTrue();
+        alert.ResolvedAt.Should().BeNull();
     }
 
     [Fact]
@@ -46,7 +47,7 @@ public class AlertTests
             .Build();
 
         // Assert
-        Assert.Equal(metadata, alert.Metadata);
+        alert.Metadata.Should().Be(metadata);
     }
 
     [Fact]
@@ -60,10 +61,10 @@ public class AlertTests
         alert.Resolve();
 
         // Assert
-        Assert.False(alert.IsActive);
-        Assert.NotNull(alert.ResolvedAt);
-        Assert.True(alert.ResolvedAt >= beforeResolve);
-        Assert.True(alert.ResolvedAt <= DateTime.UtcNow.AddSeconds(1));
+        alert.IsActive.Should().BeFalse();
+        alert.ResolvedAt.Should().NotBeNull();
+        (alert.ResolvedAt >= beforeResolve).Should().BeTrue();
+        (alert.ResolvedAt <= DateTime.UtcNow.AddSeconds(1)).Should().BeTrue();
     }
 
     [Fact]
@@ -77,8 +78,8 @@ public class AlertTests
         alert.Resolve(); // Resolve again
 
         // Assert
-        Assert.False(alert.IsActive);
-        Assert.Equal(firstResolvedAt, alert.ResolvedAt); // Should not change
+        alert.IsActive.Should().BeFalse();
+        alert.ResolvedAt.Should().Be(firstResolvedAt); // Should not change
     }
 
     [Fact]
@@ -91,8 +92,8 @@ public class AlertTests
             .Build();
 
         // Assert
-        Assert.Equal(AlertSeverity.Critical, alert.Severity);
-        Assert.Equal("CriticalError", alert.AlertType);
+        alert.Severity.Should().Be(AlertSeverity.Critical);
+        alert.AlertType.Should().Be("CriticalError");
     }
 
     [Fact]
@@ -105,7 +106,7 @@ public class AlertTests
         var alert = new AlertBuilder().Build();
 
         // Assert
-        Assert.True(alert.TriggeredAt >= beforeCreate);
-        Assert.True(alert.TriggeredAt <= DateTime.UtcNow.AddSeconds(1));
+        (alert.TriggeredAt >= beforeCreate).Should().BeTrue();
+        (alert.TriggeredAt <= DateTime.UtcNow.AddSeconds(1)).Should().BeTrue();
     }
 }

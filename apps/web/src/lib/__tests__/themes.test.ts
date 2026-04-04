@@ -63,35 +63,35 @@ Object.defineProperty(document, 'documentElement', {
 });
 
 describe('THEMES Array', () => {
-  it('exports THEMES array with 18 theme definitions', () => {
+  it('exports THEMES array with 19 theme definitions', () => {
     expect(Array.isArray(THEMES)).toBe(true);
-    expect(THEMES.length).toBe(18);
+    expect(THEMES.length).toBe(19);
   });
 
-  it('has 10 preset themes (5 light + 5 dark)', () => {
-    const presetThemes = THEMES.filter((t) => !t.accessibilityMode);
-    expect(presetThemes.length).toBe(10);
+  it('has 11 preset themes (5 light + 6 dark)', () => {
+    const presetThemes = THEMES.filter(t => !t.accessibilityMode);
+    expect(presetThemes.length).toBe(11);
 
-    const lightPresets = presetThemes.filter((t) => t.mode === 'light');
-    const darkPresets = presetThemes.filter((t) => t.mode === 'dark');
+    const lightPresets = presetThemes.filter(t => t.mode === 'light');
+    const darkPresets = presetThemes.filter(t => t.mode === 'dark');
 
     expect(lightPresets.length).toBe(5);
-    expect(darkPresets.length).toBe(5);
+    expect(darkPresets.length).toBe(6);
   });
 
   it('has 8 accessibility themes (4 modes x 2 light/dark)', () => {
-    const accessibilityThemes = THEMES.filter((t) => t.accessibilityMode);
+    const accessibilityThemes = THEMES.filter(t => t.accessibilityMode);
     expect(accessibilityThemes.length).toBe(8);
 
     const accessibilityModes = ['high-contrast', 'deuteranopia', 'protanopia', 'tritanopia'];
-    accessibilityModes.forEach((mode) => {
-      const modeThemes = accessibilityThemes.filter((t) => t.accessibilityMode === mode);
+    accessibilityModes.forEach(mode => {
+      const modeThemes = accessibilityThemes.filter(t => t.accessibilityMode === mode);
       expect(modeThemes.length).toBe(2); // light + dark
     });
   });
 
   it('each theme has required properties', () => {
-    THEMES.forEach((theme) => {
+    THEMES.forEach(theme => {
       expect(theme.id).toBeDefined();
       expect(theme.name).toBeDefined();
       expect(theme.description).toBeDefined();
@@ -111,7 +111,7 @@ describe('THEMES Array', () => {
   });
 
   it('has unique IDs for all themes', () => {
-    const ids = THEMES.map((t) => t.id);
+    const ids = THEMES.map(t => t.id);
     const uniqueIds = new Set(ids);
     expect(uniqueIds.size).toBe(ids.length);
   });
@@ -130,8 +130,8 @@ describe('THEMES Array', () => {
       'midnight-dark',
     ];
 
-    expectedPresets.forEach((id) => {
-      expect(THEMES.find((t) => t.id === id)).toBeDefined();
+    expectedPresets.forEach(id => {
+      expect(THEMES.find(t => t.id === id)).toBeDefined();
     });
   });
 });
@@ -417,7 +417,7 @@ describe('HSL roundtrip', () => {
   });
 
   it('validates all THEMES colors are valid HSL', () => {
-    THEMES.forEach((theme) => {
+    THEMES.forEach(theme => {
       Object.entries(theme.colors).forEach(([colorName, colorValue]) => {
         expect(isValidHSL(colorValue)).toBe(true);
       });

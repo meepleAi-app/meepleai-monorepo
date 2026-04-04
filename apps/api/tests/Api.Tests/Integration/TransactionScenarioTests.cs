@@ -20,7 +20,7 @@ namespace Api.Tests.Integration;
 /// Tests commit, rollback, optimistic locking, deadlock handling, and transaction scope.
 /// Issue #2307: Week 3 - Transaction integrity integration testing (5 tests)
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("Issue", "2307")]
@@ -44,18 +44,7 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         _databaseName = $"test_transactions_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -385,7 +374,6 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
             FilePath = "/path/scope_test.pdf",
             FileSizeBytes = 1000000,
             UploadedByUserId = userId,
-            ProcessingStatus = "pending"
         };
 
         // Act - Single transaction across multiple entity types

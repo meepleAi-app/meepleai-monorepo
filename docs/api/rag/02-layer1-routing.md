@@ -297,6 +297,6 @@ The tier-strategy access matrix and model mappings can be configured by administ
 - Reset to system defaults
 
 **Related Documentation**:
-- [Admin Configuration Guide](../../04-admin/rag-tier-strategy-config.md)
-- [Migration Guide](../../02-development/migrations/tier-strategy-refactor.md)
+- [Admin Configuration Guide](../../admin/rag-tier-strategy-config.md)
+- [Migration Guide](../../development/migrations/tier-strategy-refactor.md)
 - [RAG Flow Diagram](diagrams/rag-flow-current.md)

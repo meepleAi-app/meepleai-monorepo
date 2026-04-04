@@ -136,6 +136,12 @@ const nextConfig = {
         hostname: '**.boardgamegeek.com',
         pathname: '/**',
       },
+      // Wildcard catch-all for user-provided / admin-provided image URLs
+      // (badge iconUrl, game cover images from arbitrary CDNs, etc.)
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
   },
 
@@ -251,8 +257,9 @@ const nextConfig = {
       },
       { source: '/games/:id/agents', destination: '/library/:id?tab=agent', permanent: true },
       { source: '/games/:id/chats', destination: '/chat', permanent: true },
-      { source: '/games/catalog', destination: '/discover', permanent: true },
-      { source: '/games/add', destination: '/discover/add', permanent: true },
+      { source: '/games', destination: '/library?tab=public', permanent: true },
+      { source: '/games/catalog', destination: '/library?tab=public', permanent: true },
+      { source: '/games/add', destination: '/library', permanent: true },
 
       // Catch-all for any other /settings sub-paths
       { source: '/settings/:path*', destination: '/profile?tab=settings', permanent: true },
@@ -518,22 +525,47 @@ const nextConfig = {
     ];
   },
 
+  // SEC-09: Security headers for Next.js responses (static assets bypass API middleware)
+  async headers() {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=()',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self' data:",
+              `connect-src 'self' ${apiBaseUrl}`,
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; '),
+          },
+        ],
+      },
+    ];
+  },
+
   // Note: API proxy is now handled by catch-all API route at app/api/[...path]/route.ts
   // This preserves Set-Cookie headers from backend (Issue #703)
 
-  // Turbopack configuration for Next.js 16
-  turbopack: {
-    resolveAlias: {
-      // Stub out @hyperdx/browser when API key not configured to avoid
-      // Turbopack module factory errors with Node.js polyfill dependencies
-      ...(!process.env.NEXT_PUBLIC_HYPERDX_API_KEY
-        ? { '@hyperdx/browser': './src/lib/hyperdx-stub.ts' }
-        : {}),
-    },
-  },
-
   // Fix cross-origin warning from 127.0.0.1 to localhost
   allowedDevOrigins: ['127.0.0.1', 'localhost'],
+
+  // Turbopack config (default bundler in Next.js 16)
+  turbopack: {},
 
   // Webpack config for backward compatibility (use --webpack flag if needed)
   webpack: config => {

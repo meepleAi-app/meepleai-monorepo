@@ -11,14 +11,24 @@
 import { useEffect, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Loader2 } from 'lucide-react';
+import { AlertTriangle, BookOpen, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AgentBuilderForm } from '@/components/admin/agent-definitions/AgentBuilderForm';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/overlays/dialog';
 import { api } from '@/lib/api';
 import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
-import type { AgentDefinitionDto, CreateAgentDefinition, KbCardDto } from '@/lib/api/schemas/agent-definitions.schemas';
+import type {
+  AgentDefinitionDto,
+  CreateAgentDefinition,
+  KbCardDto,
+} from '@/lib/api/schemas/agent-definitions.schemas';
 
 interface SharedGameContext {
   /**
@@ -123,7 +133,7 @@ export function AgentBuilderModal({
 
       return createdAgent;
     },
-    onSuccess: (agent) => {
+    onSuccess: agent => {
       toast.success(`Agent "${agent.name}" created and linked to ${sharedGameContext.gameTitle}`);
 
       // Invalidate queries to refetch linked agent
@@ -140,16 +150,16 @@ export function AgentBuilderModal({
   });
 
   const handleKbCardToggle = (cardId: string, checked: boolean) => {
-    setSelectedKbCardIds((prev) =>
-      checked ? [...prev, cardId] : prev.filter((id) => id !== cardId)
-    );
+    setSelectedKbCardIds(prev => (checked ? [...prev, cardId] : prev.filter(id => id !== cardId)));
   };
 
   // Generate default values with SharedGame context
   const defaultValues: Partial<CreateAgentDefinition> = {
     name: `${sharedGameContext.gameTitle} Arbitro`,
     description: `AI assistant for ${sharedGameContext.gameTitle}${
-      sharedGameContext.gameDescription ? `: ${sharedGameContext.gameDescription.slice(0, 100)}` : ''
+      sharedGameContext.gameDescription
+        ? `: ${sharedGameContext.gameDescription.slice(0, 100)}`
+        : ''
     }`,
     model: 'gpt-4',
     maxTokens: 2048,
@@ -160,13 +170,13 @@ export function AgentBuilderModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={isOpen => !isOpen && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create AI Agent for {sharedGameContext.gameTitle}</DialogTitle>
           <DialogDescription>
-            Configure a new AI agent that will be linked to this game.
-            The agent will have access to the game&apos;s knowledge base and documents.
+            Configure a new AI agent that will be linked to this game. The agent will have access to
+            the game&apos;s knowledge base and documents.
           </DialogDescription>
         </DialogHeader>
 
@@ -188,26 +198,24 @@ export function AgentBuilderModal({
                 Select which indexed documents this agent can retrieve from. Leave empty to use all
                 available documents.
               </p>
-              {kbCards.map((card) => (
+              {kbCards.map(card => (
                 <div
                   key={card.id}
                   className="flex items-start gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
-                  onClick={() =>
-                    handleKbCardToggle(card.id, !selectedKbCardIds.includes(card.id))
-                  }
+                  onClick={() => handleKbCardToggle(card.id, !selectedKbCardIds.includes(card.id))}
                 >
                   <input
                     type="checkbox"
                     id={`kb-card-${card.id}`}
                     checked={selectedKbCardIds.includes(card.id)}
-                    onChange={(e) => handleKbCardToggle(card.id, e.target.checked)}
-                    onClick={(e) => e.stopPropagation()}
+                    onChange={e => handleKbCardToggle(card.id, e.target.checked)}
+                    onClick={e => e.stopPropagation()}
                     className="mt-0.5 h-4 w-4 shrink-0"
                   />
                   <label
                     htmlFor={`kb-card-${card.id}`}
                     className="flex-1 text-sm cursor-pointer"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={e => e.stopPropagation()}
                   >
                     <span className="font-medium">{card.fileName}</span>
                     {card.documentType && (
@@ -231,18 +239,26 @@ export function AgentBuilderModal({
               )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              No indexed documents available. Upload and index documents first to enable targeted
-              knowledge retrieval.
-            </p>
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  No indexed documents available
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  Upload and process a PDF for this game before creating an agent.
+                </p>
+              </div>
+            </div>
           )}
         </div>
 
         <div className="mt-4">
           <AgentBuilderForm
             defaultValues={defaultValues}
-            onSubmit={(data) => createAgentMutation.mutate(data)}
+            onSubmit={data => createAgentMutation.mutate(data)}
             isLoading={createAgentMutation.isPending}
+            disabled={!isLoadingKbCards && kbCards?.length === 0}
           />
         </div>
       </DialogContent>

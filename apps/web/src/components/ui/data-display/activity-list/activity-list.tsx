@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe style/icon map Record access */
 /**
  * ActivityList Component - Generic Activity Feed/Timeline
  *
@@ -163,11 +162,18 @@ export function ActivityList({
       <CardContent className="p-0">
         {displayEvents.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground" data-testid="activity-list-empty">
-            <ActivityIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" aria-hidden="true" />
+            <ActivityIcon
+              className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50"
+              aria-hidden="true"
+            />
             <p data-testid="activity-list-empty-message">{strings.emptyState}</p>
           </div>
         ) : (
-          <div className="max-h-[480px] overflow-y-auto" role="region" aria-label={strings.regionLabel}>
+          <div
+            className="max-h-[480px] overflow-y-auto"
+            role="region"
+            aria-label={strings.regionLabel}
+          >
             <ul className="divide-y divide-gray-100" role="list">
               {displayEvents.map((event, index) => {
                 // Icon selection based on mode
@@ -203,9 +209,10 @@ export function ActivityList({
                 const relativeTime = formatRelativeTimestamp(event.timestamp, locale);
 
                 // Hover color based on icon mode
-                const hoverClass = iconMode === 'category'
-                  ? 'hover:bg-muted/50 dark:hover:bg-muted/30'
-                  : 'hover:bg-orange-50';
+                const hoverClass =
+                  iconMode === 'category'
+                    ? 'hover:bg-muted/50 dark:hover:bg-muted/30'
+                    : 'hover:bg-orange-50';
 
                 return (
                   <ListItem
@@ -224,7 +231,11 @@ export function ActivityList({
                           'flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center',
                           iconColorClass
                         )}
-                        aria-label={iconMode === 'category' ? `${getActivityCategory(event.eventType)} activity` : `${event.severity || 'Info'} event`}
+                        aria-label={
+                          iconMode === 'category'
+                            ? `${getActivityCategory(event.eventType)} activity`
+                            : `${event.severity || 'Info'} event`
+                        }
                       >
                         <Icon className="h-5 w-5" aria-hidden="true" />
                       </div>
@@ -233,7 +244,9 @@ export function ActivityList({
                         <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
                           <time
                             dateTime={event.timestamp}
-                            title={new Date(event.timestamp).toLocaleString(locale === 'it' ? 'it-IT' : 'en-US')}
+                            title={new Date(event.timestamp).toLocaleString(
+                              locale === 'it' ? 'it-IT' : 'en-US'
+                            )}
                           >
                             {relativeTime}
                           </time>

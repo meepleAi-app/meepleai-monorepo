@@ -33,27 +33,27 @@
 
 ## 🔗 Quick Links
 
-- Epic: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4192
-- PR (merged): https://github.com/DegrassiAaron/meepleai-monorepo/pull/4191
+- Epic: https://github.com/meepleAi-app/meepleai-monorepo/issues/4192
+- PR (merged): https://github.com/meepleAi-app/meepleai-monorepo/pull/4191
 
 ### Frontend
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4193
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4194
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4195
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4196
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4197
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4193
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4194
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4195
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4196
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4197
 
 ### Backend
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4198
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4199
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4200
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4201
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4202
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4198
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4199
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4200
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4201
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4202
 
 ### Testing
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4203
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4204
-- https://github.com/DegrassiAaron/meepleai-monorepo/issues/4205
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4203
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4204
+- https://github.com/meepleAi-app/meepleai-monorepo/issues/4205
 
 ---
 

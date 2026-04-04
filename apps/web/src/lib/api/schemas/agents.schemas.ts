@@ -25,6 +25,7 @@ export const AgentDtoSchema = z.object({
   isIdle: z.boolean(),
   // Issue #4914: user-owned agent fields
   gameId: z.string().uuid().nullable().optional(),
+  gameName: z.string().nullable().optional(),
   createdByUserId: z.string().uuid().nullable().optional(),
 });
 

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -17,14 +18,14 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
     {
         var state = new CircuitBreakerState();
 
-        Assert.Equal(CircuitState.Closed, state.State);
-        Assert.True(state.AllowsRequests());
+        state.State.Should().Be(CircuitState.Closed);
+        state.AllowsRequests().Should().BeTrue();
 
         // Should open after 5 failures (default)
         for (var i = 0; i < 5; i++)
             state.RecordFailure();
 
-        Assert.Equal(CircuitState.Open, state.State);
+        state.State.Should().Be(CircuitState.Open);
     }
 
     [Fact]
@@ -34,34 +35,34 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
 
         state.RecordFailure();
         state.RecordFailure();
-        Assert.Equal(CircuitState.Closed, state.State);
+        state.State.Should().Be(CircuitState.Closed);
 
         state.RecordFailure();
-        Assert.Equal(CircuitState.Open, state.State);
+        state.State.Should().Be(CircuitState.Open);
     }
 
     [Fact]
-    public void CustomSuccessThreshold_ClosesAfterConfiguredSuccesses()
+    public async Task CustomSuccessThreshold_ClosesAfterConfiguredSuccesses()
     {
         // Use 1-second open duration so AllowsRequests transitions to HalfOpen after wait
         var state = new CircuitBreakerState(failureThreshold: 1, openDurationSeconds: 1, successThreshold: 2);
 
         // Open the circuit
         state.RecordFailure();
-        Assert.Equal(CircuitState.Open, state.State);
+        state.State.Should().Be(CircuitState.Open);
 
         // Wait for open duration to expire, then transition to HalfOpen
-        Thread.Sleep(1100);
-        Assert.True(state.AllowsRequests());
-        Assert.Equal(CircuitState.HalfOpen, state.State);
+        await Task.Delay(1100);
+        state.AllowsRequests().Should().BeTrue();
+        state.State.Should().Be(CircuitState.HalfOpen);
 
         // One success isn't enough
         state.RecordSuccess();
-        Assert.Equal(CircuitState.HalfOpen, state.State);
+        state.State.Should().Be(CircuitState.HalfOpen);
 
         // Two successes closes it
         state.RecordSuccess();
-        Assert.Equal(CircuitState.Closed, state.State);
+        state.State.Should().Be(CircuitState.Closed);
     }
 
     [Theory]
@@ -74,46 +75,46 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
         // Should use default of 5
         for (var i = 0; i < 4; i++)
             state.RecordFailure();
-        Assert.Equal(CircuitState.Closed, state.State);
+        state.State.Should().Be(CircuitState.Closed);
 
         state.RecordFailure();
-        Assert.Equal(CircuitState.Open, state.State);
+        state.State.Should().Be(CircuitState.Open);
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void InvalidSuccessThreshold_FallsBackToDefault(int invalidThreshold)
+    public async Task InvalidSuccessThreshold_FallsBackToDefault(int invalidThreshold)
     {
         var state = new CircuitBreakerState(failureThreshold: 1, openDurationSeconds: 1, successThreshold: invalidThreshold);
 
         // Open and transition to HalfOpen
         state.RecordFailure();
-        Thread.Sleep(1100);
+        await Task.Delay(1100);
         state.AllowsRequests();
-        Assert.Equal(CircuitState.HalfOpen, state.State);
+        state.State.Should().Be(CircuitState.HalfOpen);
 
         // Should use default of 3
         state.RecordSuccess();
         state.RecordSuccess();
-        Assert.Equal(CircuitState.HalfOpen, state.State);
+        state.State.Should().Be(CircuitState.HalfOpen);
 
         state.RecordSuccess();
-        Assert.Equal(CircuitState.Closed, state.State);
+        state.State.Should().Be(CircuitState.Closed);
     }
 
     [Fact]
-    public void GetStatus_ShowsConfiguredSuccessThreshold()
+    public async Task GetStatus_ShowsConfiguredSuccessThreshold()
     {
         var state = new CircuitBreakerState(failureThreshold: 1, openDurationSeconds: 1, successThreshold: 5);
 
         state.RecordFailure();
-        Thread.Sleep(1100);
+        await Task.Delay(1100);
         state.AllowsRequests(); // HalfOpen
         state.RecordSuccess();
 
         var status = state.GetStatus();
-        Assert.Contains("/5", status); // Shows configured threshold
+        status.Should().Contain("/5"); // Shows configured threshold
     }
 
     [Fact]
@@ -123,10 +124,10 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
 
         state.RecordFailure();
         state.RecordFailure();
-        Assert.Equal(CircuitState.Open, state.State);
+        state.State.Should().Be(CircuitState.Open);
 
         state.Reset();
-        Assert.Equal(CircuitState.Closed, state.State);
-        Assert.Equal(0, state.ConsecutiveFailures);
+        state.State.Should().Be(CircuitState.Closed);
+        state.ConsecutiveFailures.Should().Be(0);
     }
 }

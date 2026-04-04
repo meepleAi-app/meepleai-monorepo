@@ -16,6 +16,7 @@
 
 import { cookies } from 'next/headers';
 
+import { logger } from '@/lib/logger';
 import type { AuthUser } from '@/types/auth';
 
 // ============================================================================
@@ -91,7 +92,7 @@ export async function getServerUser(): Promise<AuthUser | null> {
     return data.user || null;
   } catch (error) {
     // Network error or JSON parse error
-    console.error('[getServerUser] Failed to validate session:', error);
+    logger.error('[getServerUser] Failed to validate session:', error);
     return null;
   }
 }

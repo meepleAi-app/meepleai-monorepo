@@ -14,7 +14,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Tests DeleteBehavior.Cascade for ChatThread and DocumentCollection FK.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

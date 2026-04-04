@@ -1,4 +1,6 @@
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Services;
+using TierLimits = Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects.TierLimits;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
@@ -361,6 +363,7 @@ internal sealed class PdfTestFixture : IDisposable
     public Mock<IAiResponseCacheService> CacheServiceMock { get; }
     public Mock<IBlobStorageService> BlobStorageServiceMock { get; }
     public Mock<IPdfUploadQuotaService> QuotaServiceMock { get; }
+    public Mock<ITierEnforcementService> TierEnforcementServiceMock { get; }
     public Mock<IMediator> MediatorMock { get; }
     public IOptions<PdfProcessingOptions> PdfOptions { get; }
     public TimeProvider? TimeProvider { get; }
@@ -391,6 +394,15 @@ internal sealed class PdfTestFixture : IDisposable
         MediatorMock = mediatorMock;
         PdfOptions = pdfOptions;
         TimeProvider = timeProvider;
+
+        // E2-3: Default tier enforcement mock — allows all operations (admin-like)
+        TierEnforcementServiceMock = new Mock<ITierEnforcementService>();
+        TierEnforcementServiceMock
+            .Setup(t => t.CanPerformAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        TierEnforcementServiceMock
+            .Setup(t => t.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.Unlimited);
     }
 
     /// <summary>
@@ -408,6 +420,7 @@ internal sealed class PdfTestFixture : IDisposable
             CacheServiceMock.Object,
             BlobStorageServiceMock.Object,
             QuotaServiceMock.Object,
+            TierEnforcementServiceMock.Object,
             PdfOptions,
             MediatorMock.Object,
             privateGameRepository: null,  // Issue #3664: New parameter
@@ -431,6 +444,7 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
+                TierEnforcementServiceMock.Object,
                 PdfOptions,
                 MediatorMock.Object),
 
@@ -444,6 +458,7 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
+                TierEnforcementServiceMock.Object,
                 PdfOptions,
                 MediatorMock.Object),
 
@@ -457,6 +472,7 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
+                TierEnforcementServiceMock.Object,
                 PdfOptions,
                 MediatorMock.Object),
 
@@ -470,6 +486,7 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
+                TierEnforcementServiceMock.Object,
                 PdfOptions,
                 MediatorMock.Object),
 
@@ -483,6 +500,7 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
+                TierEnforcementServiceMock.Object,
                 PdfOptions,
                 MediatorMock.Object),
 
@@ -496,6 +514,7 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
+                TierEnforcementServiceMock.Object,
                 PdfOptions,
                 MediatorMock.Object),
 
@@ -509,6 +528,7 @@ internal sealed class PdfTestFixture : IDisposable
                 null!,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
+                TierEnforcementServiceMock.Object,
                 PdfOptions,
                 MediatorMock.Object),
 
@@ -522,6 +542,7 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 null!,
                 QuotaServiceMock.Object,
+                TierEnforcementServiceMock.Object,
                 PdfOptions,
                 MediatorMock.Object),
 
@@ -535,6 +556,7 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 null!,
+                TierEnforcementServiceMock.Object,
                 PdfOptions,
                 MediatorMock.Object),
 
@@ -548,6 +570,7 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
+                TierEnforcementServiceMock.Object,
                 null!,
                 MediatorMock.Object),
 
@@ -561,6 +584,7 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
+                TierEnforcementServiceMock.Object,
                 PdfOptions,
                 null!),
 

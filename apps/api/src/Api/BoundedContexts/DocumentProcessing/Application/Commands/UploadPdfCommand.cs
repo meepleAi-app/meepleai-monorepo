@@ -13,5 +13,6 @@ internal record UploadPdfCommand(
     PdfUploadMetadata? Metadata,       // New: game metadata for auto-creation
     Guid? PrivateGameId,               // Issue #3664: Private game ID
     Guid UserId,
-    IFormFile File
+    IFormFile File,
+    string? Priority = null            // "normal" | "urgent" | null — admin priority override
 ) : ICommand<PdfUploadResult>;

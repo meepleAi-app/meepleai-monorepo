@@ -6,16 +6,11 @@
 
 'use client';
 
-import { CircleDot } from 'lucide-react';
+import { CircleDot, Loader2 } from 'lucide-react';
+
+import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 
 import { LockedSlotCard } from '../slots/LockedSlotCard';
-
-interface Slot {
-  id: string;
-  status: 'active' | 'available' | 'locked';
-  gameTitle?: string;
-  typologyName?: string;
-}
 
 interface SlotCardsProps {
   /** User's current tier */
@@ -25,22 +20,21 @@ interface SlotCardsProps {
 }
 
 export function SlotCards({ currentTier = 'free', onUpgradeClick }: SlotCardsProps) {
-  // Mock data - replace with useSlotManagement hook
-  const slots: Slot[] = [
-    { id: '1', status: 'active', gameTitle: '7 Wonders', typologyName: 'Rules Helper' },
-    { id: '2', status: 'active', gameTitle: 'Splendor', typologyName: 'Strategy' },
-    { id: '3', status: 'available' },
-    { id: '4', status: 'available' },
-    { id: '5', status: 'available' },
-    { id: '6', status: 'locked' },
-    { id: '7', status: 'locked' },
-    { id: '8', status: 'locked' },
-  ];
+  const { data, isLoading } = useAgentSlots();
 
-  const activeCount = slots.filter(s => s.status === 'active').length;
-  const totalSlots = slots.filter(s => s.status !== 'locked').length;
-  const lockedCount = slots.filter(s => s.status === 'locked').length;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+
+  const slots = data?.slots ?? [];
+  const activeCount = data?.used ?? 0;
+  const totalSlots = data?.total ?? 0;
   const nonLockedSlots = slots.filter(s => s.status !== 'locked');
+  const lockedCount = slots.filter(s => s.status === 'locked').length;
 
   return (
     <div className="space-y-4">
@@ -55,7 +49,7 @@ export function SlotCards({ currentTier = 'free', onUpgradeClick }: SlotCardsPro
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {nonLockedSlots.map(slot => (
           <div
-            key={slot.id}
+            key={slot.slotIndex}
             className={`
               relative rounded-lg border-2 p-4 min-h-[100px] transition-all
               ${
@@ -69,9 +63,9 @@ export function SlotCards({ currentTier = 'free', onUpgradeClick }: SlotCardsPro
               <>
                 <div className="text-2xl mb-1">🤖</div>
                 <div className="text-xs font-medium text-white truncate">
-                  {slot.gameTitle}
+                  {slot.agentName ?? 'Agent'}
                 </div>
-                <div className="text-xs text-slate-400 truncate">{slot.typologyName}</div>
+                <div className="text-xs text-slate-400 truncate">{slot.gameId ?? ''}</div>
               </>
             )}
 
@@ -82,6 +76,12 @@ export function SlotCards({ currentTier = 'free', onUpgradeClick }: SlotCardsPro
             )}
           </div>
         ))}
+
+        {nonLockedSlots.length === 0 && (
+          <div className="col-span-4 text-center py-4 text-sm text-slate-500">
+            No slots available
+          </div>
+        )}
       </div>
 
       {/* Premium Upgrade Card - Issue #3247 */}

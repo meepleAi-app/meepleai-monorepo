@@ -5,9 +5,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
-import { useGameDetailStore } from '../useGameDetailStore';
+import { useGameDetailStore } from '../game-detail-store';
 
-describe('useGameDetailStore', () => {
+describe('game-detail-store', () => {
   beforeEach(() => {
     const { result } = renderHook(() => useGameDetailStore());
     act(() => {
@@ -128,7 +128,7 @@ describe('useGameDetailStore', () => {
       const { result } = renderHook(() => useGameDetailStore());
       const states = ['Nuovo', 'Wishlist', 'Owned', 'InPrestito', null] as const;
 
-      states.forEach((state) => {
+      states.forEach(state => {
         act(() => {
           result.current.setCurrentState(state);
         });

@@ -41,7 +41,6 @@ internal record PdfListItemDto(
     string FileName,
     string? GameTitle,
     Guid? GameId,
-    string ProcessingStatus,
     string ProcessingState,
     int ProgressPercentage,
     long FileSizeBytes,

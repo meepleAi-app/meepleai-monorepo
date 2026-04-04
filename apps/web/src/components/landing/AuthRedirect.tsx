@@ -19,7 +19,7 @@ export function AuthRedirect() {
 
   useEffect(() => {
     if (hasSessionCookie()) {
-      router.replace('/dashboard');
+      router.replace('/library');
     }
   }, [router]);
 

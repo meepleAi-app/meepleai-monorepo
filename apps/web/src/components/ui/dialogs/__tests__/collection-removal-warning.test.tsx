@@ -8,7 +8,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { CollectionRemovalWarning } from '../collection-removal-warning';
-import type { AssociatedData } from '@/hooks/use-collection-actions';
+import type { AssociatedData } from '@/hooks/useCollectionActions';
 
 describe('CollectionRemovalWarning', () => {
   const mockAssociatedData: AssociatedData = {
@@ -60,7 +60,7 @@ describe('CollectionRemovalWarning', () => {
     // Assert
     expect(screen.getByText('Agente AI personalizzato')).toBeInTheDocument();
     expect(screen.getByText('PDF privato caricato')).toBeInTheDocument();
-    expect(screen.getByText('3 chat con l\'agente')).toBeInTheDocument();
+    expect(screen.getByText("3 chat con l'agente")).toBeInTheDocument();
     expect(screen.getByText('5 sessioni registrate')).toBeInTheDocument();
     expect(screen.getByText('2 task nella checklist')).toBeInTheDocument();
     expect(screen.getByText('1 etichette personalizzate')).toBeInTheDocument();

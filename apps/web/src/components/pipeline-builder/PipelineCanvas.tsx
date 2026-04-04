@@ -42,7 +42,6 @@ import { PLUGIN_CATEGORY_COLORS } from './types';
 
 import type { PluginNodeData, PipelineEdgeData, PluginCategory } from './types';
 
-
 // =============================================================================
 // Node and Edge Types
 // =============================================================================
@@ -103,7 +102,7 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
       onNodesChange(changes);
 
       // Handle position changes
-      changes.forEach((change) => {
+      changes.forEach(change => {
         if (change.type === 'position' && 'position' in change && change.position) {
           updateNodePosition(change.id, change.position);
         }
@@ -121,7 +120,7 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
 
       onEdgesChange(changes);
 
-      changes.forEach((change) => {
+      changes.forEach(change => {
         if (change.type === 'remove') {
           removeEdge(change.id);
         }
@@ -149,7 +148,7 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
             isValid: true,
           },
         };
-        setEdges((eds) => addEdge(newEdge, eds));
+        setEdges(eds => addEdge(newEdge, eds));
       }
     },
     [isLocked, addPipelineEdge, setEdges]
@@ -213,7 +212,7 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
             isValid: true,
           },
         };
-        setNodes((nds) => [...nds, newNode]);
+        setNodes(nds => [...nds, newNode]);
       }
 
       endDrag();
@@ -225,15 +224,22 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
   const enhancedNodes = useMemo(() => {
     if (!isExecuting || !executionTrace) return nodes;
 
-    return nodes.map((node) => {
-      const step = executionTrace.steps.find((s) => s.nodeId === node.id);
+    return nodes.map(node => {
+      const step = executionTrace.steps.find(s => s.nodeId === node.id);
       const nodeData = node.data as PluginNodeData;
       return {
         ...node,
         data: {
           ...nodeData,
           executionStatus: step?.status,
-          executionResult: step?.output ? { nodeId: node.id, input: null, output: step.output, durationMs: step.durationMs || 0 } : undefined,
+          executionResult: step?.output
+            ? {
+                nodeId: node.id,
+                input: null,
+                output: step.output,
+                durationMs: step.durationMs || 0,
+              }
+            : undefined,
         },
       };
     });
@@ -243,10 +249,9 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
   const enhancedEdges = useMemo(() => {
     if (!isExecuting || !executionTrace) return edges;
 
-    // eslint-disable-next-line security/detect-object-injection -- currentStepIndex is a numeric index
     const executingNodeId = executionTrace.steps[currentStepIndex]?.nodeId;
 
-    return edges.map((edge) => ({
+    return edges.map(edge => ({
       ...edge,
       animated: edge.source === executingNodeId || edge.target === executingNodeId,
       style: {
@@ -258,22 +263,17 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
   }, [edges, isExecuting, executionTrace, currentStepIndex]);
 
   // MiniMap node color function
-  const miniMapNodeColor = useCallback(
-    (node: Node) => {
-      const data = node.data as PluginNodeData | undefined;
-      return data?.category ? PLUGIN_CATEGORY_COLORS[data.category as PluginCategory] || '#6b7280' : '#6b7280';
-    },
-    []
-  );
+  const miniMapNodeColor = useCallback((node: Node) => {
+    const data = node.data as PluginNodeData | undefined;
+    return data?.category
+      ? PLUGIN_CATEGORY_COLORS[data.category as PluginCategory] || '#6b7280'
+      : '#6b7280';
+  }, []);
 
   return (
     <div
       ref={reactFlowWrapper}
-      className={cn(
-        'h-full w-full',
-        isDragging && 'ring-2 ring-primary ring-offset-2',
-        className
-      )}
+      className={cn('h-full w-full', isDragging && 'ring-2 ring-primary ring-offset-2', className)}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -302,12 +302,7 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
         className="bg-background"
       >
         {showGrid && (
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={15}
-            size={1}
-            className="bg-muted/30"
-          />
+          <Background variant={BackgroundVariant.Dots} gap={15} size={1} className="bg-muted/30" />
         )}
 
         <Controls
@@ -333,7 +328,6 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
             <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg animate-pulse flex items-center gap-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-ping" />
               <span className="text-sm font-medium">
-                {/* eslint-disable-next-line security/detect-object-injection -- numeric index */}
                 Executing: {executionTrace?.steps[currentStepIndex]?.nodeName || 'Starting...'}
               </span>
             </div>

@@ -8,6 +8,7 @@ using Moq.Protected;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -28,9 +29,9 @@ public class OllamaLlmClientTests
         var client = CreateClient();
 
         // Act & Assert
-        Assert.True(client.SupportsModel("llama3:8b"));
-        Assert.True(client.SupportsModel("mistral:latest"));
-        Assert.True(client.SupportsModel("qwen:7b"));
+        client.SupportsModel("llama3:8b").Should().BeTrue();
+        client.SupportsModel("mistral:latest").Should().BeTrue();
+        client.SupportsModel("qwen:7b").Should().BeTrue();
     }
 
     [Fact]
@@ -40,8 +41,8 @@ public class OllamaLlmClientTests
         var client = CreateClient();
 
         // Act & Assert
-        Assert.False(client.SupportsModel("openai/gpt-4o-mini"));
-        Assert.False(client.SupportsModel("anthropic/claude-3.5-haiku"));
+        client.SupportsModel("openai/gpt-4o-mini").Should().BeFalse();
+        client.SupportsModel("anthropic/claude-3.5-haiku").Should().BeFalse();
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class OllamaLlmClientTests
         var client = CreateClient();
 
         // Assert
-        Assert.Equal("Ollama", client.ProviderName);
+        client.ProviderName.Should().Be("Ollama");
     }
 
     [Fact]
@@ -90,10 +91,10 @@ public class OllamaLlmClientTests
             TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("Test response", result.Response);
-        Assert.NotNull(result.Usage);
-        Assert.True(result.Usage.TotalTokens > 0); // Estimated tokens
+        result.Success.Should().BeTrue();
+        result.Response.Should().Be("Test response");
+        result.Usage.Should().NotBeNull();
+        (result.Usage.TotalTokens > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -120,8 +121,8 @@ public class OllamaLlmClientTests
             TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("timed out", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().ContainEquivalentOf("timed out");
     }
 
     [Fact]
@@ -153,8 +154,8 @@ public class OllamaLlmClientTests
             TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("404", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("404");
     }
 
     [Fact]
@@ -193,10 +194,10 @@ public class OllamaLlmClientTests
 
         // Assert - verify content chunks (usage chunk may follow)
         var contentChunks = chunks.Where(c => c.Content != null).ToList();
-        Assert.Equal(3, contentChunks.Count);
-        Assert.Equal("Hello ", contentChunks[0].Content);
-        Assert.Equal("world", contentChunks[1].Content);
-        Assert.Equal("!", contentChunks[2].Content);
+        contentChunks.Count.Should().Be(3);
+        contentChunks[0].Content.Should().Be("Hello ");
+        contentChunks[1].Content.Should().Be("world");
+        contentChunks[2].Content.Should().Be("!");
     }
 
     [Fact]
@@ -237,8 +238,8 @@ public class OllamaLlmClientTests
             TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(italianResponse, result.Response);
+        result.Success.Should().BeTrue();
+        result.Response.Should().Be(italianResponse);
     }
 
     [Fact]
@@ -270,8 +271,8 @@ public class OllamaLlmClientTests
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.Equal(5, results.Length);
-        Assert.All(results, r => Assert.True(r.Success));
+        results.Length.Should().Be(5);
+        results.Should().OnlyContain(r => r.Success);
     }
 
     [Fact]
@@ -297,8 +298,8 @@ public class OllamaLlmClientTests
             "llama3:8b", "system", "prompt", 0.7, 100, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Invalid response format", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Invalid response format");
     }
 
     [Fact]
@@ -312,8 +313,8 @@ public class OllamaLlmClientTests
             "llama3:8b", "system", "", 0.7, 100, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("No user prompt", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("No user prompt");
     }
 
     [Fact]
@@ -335,8 +336,8 @@ public class OllamaLlmClientTests
             "llama3:8b", "system", "prompt", 0.7, 100, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("HTTP error", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("HTTP error");
     }
 
     private static OllamaLlmClient CreateClient(HttpMessageHandler? handler = null)

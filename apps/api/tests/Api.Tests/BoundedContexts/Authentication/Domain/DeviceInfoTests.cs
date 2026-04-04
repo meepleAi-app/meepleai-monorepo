@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain;
 
@@ -25,12 +26,12 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Desktop", deviceInfo.DeviceType);
-        Assert.Equal("Chrome", deviceInfo.Browser);
-        Assert.StartsWith("120", deviceInfo.BrowserVersion);
-        Assert.Equal("Windows", deviceInfo.OperatingSystem);
-        Assert.Equal("10/11", deviceInfo.OsVersion);
-        Assert.False(deviceInfo.IsMobile);
+        deviceInfo.DeviceType.Should().Be("Desktop");
+        deviceInfo.Browser.Should().Be("Chrome");
+        deviceInfo.BrowserVersion.Should().StartWith("120");
+        deviceInfo.OperatingSystem.Should().Be("Windows");
+        deviceInfo.OsVersion.Should().Be("10/11");
+        deviceInfo.IsMobile.Should().BeFalse();
     }
 
     [Fact]
@@ -43,11 +44,11 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Desktop", deviceInfo.DeviceType);
-        Assert.Equal("Firefox", deviceInfo.Browser);
-        Assert.StartsWith("121", deviceInfo.BrowserVersion);
-        Assert.Equal("macOS", deviceInfo.OperatingSystem);
-        Assert.False(deviceInfo.IsMobile);
+        deviceInfo.DeviceType.Should().Be("Desktop");
+        deviceInfo.Browser.Should().Be("Firefox");
+        deviceInfo.BrowserVersion.Should().StartWith("121");
+        deviceInfo.OperatingSystem.Should().Be("macOS");
+        deviceInfo.IsMobile.Should().BeFalse();
     }
 
     [Fact]
@@ -60,11 +61,11 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Desktop", deviceInfo.DeviceType);
-        Assert.Equal("Safari", deviceInfo.Browser);
-        Assert.StartsWith("17", deviceInfo.BrowserVersion);
-        Assert.Equal("macOS", deviceInfo.OperatingSystem);
-        Assert.False(deviceInfo.IsMobile);
+        deviceInfo.DeviceType.Should().Be("Desktop");
+        deviceInfo.Browser.Should().Be("Safari");
+        deviceInfo.BrowserVersion.Should().StartWith("17");
+        deviceInfo.OperatingSystem.Should().Be("macOS");
+        deviceInfo.IsMobile.Should().BeFalse();
     }
 
     [Fact]
@@ -77,11 +78,11 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Desktop", deviceInfo.DeviceType);
-        Assert.Equal("Edge", deviceInfo.Browser);
-        Assert.StartsWith("120", deviceInfo.BrowserVersion);
-        Assert.Equal("Windows", deviceInfo.OperatingSystem);
-        Assert.False(deviceInfo.IsMobile);
+        deviceInfo.DeviceType.Should().Be("Desktop");
+        deviceInfo.Browser.Should().Be("Edge");
+        deviceInfo.BrowserVersion.Should().StartWith("120");
+        deviceInfo.OperatingSystem.Should().Be("Windows");
+        deviceInfo.IsMobile.Should().BeFalse();
     }
 
     [Fact]
@@ -94,10 +95,10 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Desktop", deviceInfo.DeviceType);
-        Assert.Equal("Chrome", deviceInfo.Browser);
-        Assert.Equal("Linux", deviceInfo.OperatingSystem);
-        Assert.False(deviceInfo.IsMobile);
+        deviceInfo.DeviceType.Should().Be("Desktop");
+        deviceInfo.Browser.Should().Be("Chrome");
+        deviceInfo.OperatingSystem.Should().Be("Linux");
+        deviceInfo.IsMobile.Should().BeFalse();
     }
 
     #endregion
@@ -114,10 +115,10 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Phone", deviceInfo.DeviceType);
-        Assert.Equal("Safari", deviceInfo.Browser);
-        Assert.Equal("iOS", deviceInfo.OperatingSystem);
-        Assert.True(deviceInfo.IsMobile);
+        deviceInfo.DeviceType.Should().Be("Phone");
+        deviceInfo.Browser.Should().Be("Safari");
+        deviceInfo.OperatingSystem.Should().Be("iOS");
+        deviceInfo.IsMobile.Should().BeTrue();
     }
 
     [Fact]
@@ -130,11 +131,11 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Phone", deviceInfo.DeviceType);
-        Assert.Equal("Chrome", deviceInfo.Browser);
-        Assert.Equal("Android", deviceInfo.OperatingSystem);
-        Assert.StartsWith("14", deviceInfo.OsVersion);
-        Assert.True(deviceInfo.IsMobile);
+        deviceInfo.DeviceType.Should().Be("Phone");
+        deviceInfo.Browser.Should().Be("Chrome");
+        deviceInfo.OperatingSystem.Should().Be("Android");
+        deviceInfo.OsVersion.Should().StartWith("14");
+        deviceInfo.IsMobile.Should().BeTrue();
     }
 
     [Fact]
@@ -147,10 +148,10 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Tablet", deviceInfo.DeviceType);
-        Assert.Equal("Safari", deviceInfo.Browser);
-        Assert.Equal("iOS", deviceInfo.OperatingSystem);
-        Assert.True(deviceInfo.IsMobile);
+        deviceInfo.DeviceType.Should().Be("Tablet");
+        deviceInfo.Browser.Should().Be("Safari");
+        deviceInfo.OperatingSystem.Should().Be("iOS");
+        deviceInfo.IsMobile.Should().BeTrue();
     }
 
     [Fact]
@@ -163,10 +164,10 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Tablet", deviceInfo.DeviceType);
-        Assert.Equal("Chrome", deviceInfo.Browser);
-        Assert.Equal("Android", deviceInfo.OperatingSystem);
-        Assert.False(deviceInfo.IsMobile); // Android tablets without "Mobile" are not marked as mobile
+        deviceInfo.DeviceType.Should().Be("Tablet");
+        deviceInfo.Browser.Should().Be("Chrome");
+        deviceInfo.OperatingSystem.Should().Be("Android");
+        deviceInfo.IsMobile.Should().BeFalse(); // Android tablets without "Mobile" are not marked as mobile
     }
 
     #endregion
@@ -180,11 +181,11 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(null);
 
         // Assert
-        Assert.Equal("Unknown", deviceInfo.DeviceType);
-        Assert.Equal("Unknown", deviceInfo.Browser);
-        Assert.Equal("Unknown", deviceInfo.OperatingSystem);
-        Assert.False(deviceInfo.IsMobile);
-        Assert.Equal("", deviceInfo.RawUserAgent);
+        deviceInfo.DeviceType.Should().Be("Unknown");
+        deviceInfo.Browser.Should().Be("Unknown");
+        deviceInfo.OperatingSystem.Should().Be("Unknown");
+        deviceInfo.IsMobile.Should().BeFalse();
+        deviceInfo.RawUserAgent.Should().Be("");
     }
 
     [Fact]
@@ -194,10 +195,10 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse("");
 
         // Assert
-        Assert.Equal("Unknown", deviceInfo.DeviceType);
-        Assert.Equal("Unknown", deviceInfo.Browser);
-        Assert.Equal("Unknown", deviceInfo.OperatingSystem);
-        Assert.False(deviceInfo.IsMobile);
+        deviceInfo.DeviceType.Should().Be("Unknown");
+        deviceInfo.Browser.Should().Be("Unknown");
+        deviceInfo.OperatingSystem.Should().Be("Unknown");
+        deviceInfo.IsMobile.Should().BeFalse();
     }
 
     [Fact]
@@ -207,8 +208,8 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse("   ");
 
         // Assert
-        Assert.Equal("Unknown", deviceInfo.DeviceType);
-        Assert.Equal("Unknown", deviceInfo.Browser);
+        deviceInfo.DeviceType.Should().Be("Unknown");
+        deviceInfo.Browser.Should().Be("Unknown");
     }
 
     [Fact]
@@ -221,10 +222,10 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Desktop", deviceInfo.DeviceType);
-        Assert.Equal("Unknown", deviceInfo.Browser);
-        Assert.Equal("Unknown", deviceInfo.OperatingSystem);
-        Assert.Equal(userAgent, deviceInfo.RawUserAgent);
+        deviceInfo.DeviceType.Should().Be("Desktop");
+        deviceInfo.Browser.Should().Be("Unknown");
+        deviceInfo.OperatingSystem.Should().Be("Unknown");
+        deviceInfo.RawUserAgent.Should().Be(userAgent);
     }
 
     #endregion
@@ -242,9 +243,9 @@ public class DeviceInfoTests
         var displayName = deviceInfo.GetDisplayName();
 
         // Assert
-        Assert.Contains("Chrome", displayName);
-        Assert.Contains("Windows", displayName);
-        Assert.Contains("on", displayName);
+        displayName.Should().Contain("Chrome");
+        displayName.Should().Contain("Windows");
+        displayName.Should().Contain("on");
     }
 
     [Fact]
@@ -257,7 +258,7 @@ public class DeviceInfoTests
         var displayName = deviceInfo.GetDisplayName();
 
         // Assert
-        Assert.Equal("Unknown on Unknown", displayName);
+        displayName.Should().Be("Unknown on Unknown");
     }
 
     #endregion
@@ -278,8 +279,8 @@ public class DeviceInfoTests
         var deviceInfo = DeviceInfo.Parse(userAgent);
 
         // Assert
-        Assert.Equal("Windows", deviceInfo.OperatingSystem);
-        Assert.Equal(expectedVersion, deviceInfo.OsVersion);
+        deviceInfo.OperatingSystem.Should().Be("Windows");
+        deviceInfo.OsVersion.Should().Be(expectedVersion);
     }
 
     #endregion

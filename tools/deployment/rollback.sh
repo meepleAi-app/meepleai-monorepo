@@ -12,7 +12,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-DOCKER_REGISTRY="${DOCKER_REGISTRY:-ghcr.io/degrassiaaron}"
+DOCKER_REGISTRY="${DOCKER_REGISTRY:-ghcr.io/meepleai-app}"
 
 echo -e "${RED}⏮️  Rollback - ${ENVIRONMENT}${NC}"
 echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"

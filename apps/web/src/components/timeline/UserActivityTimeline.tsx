@@ -15,7 +15,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { Loader2, RefreshCw, Filter, X } from 'lucide-react';
 
-import { ActivityTimeline, type ActivityEvent } from '@/components/admin/ActivityTimeline';
+import { ActivityFeed, type ActivityEvent } from '@/components/admin/ActivityFeed';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
@@ -30,6 +30,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
 import type { UserActivityDto, UserActivityFilters } from '@/lib/api/schemas';
+import { logger } from '@/lib/logger';
 
 export interface UserActivityTimelineProps {
   /** User ID to fetch activity for. If null, fetches current user's activity */
@@ -109,7 +110,7 @@ export function UserActivityTimeline({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load activity';
       setError(message);
-      console.error('Failed to fetch user activity:', err);
+      logger.error('Failed to fetch user activity:', err);
     } finally {
       setIsLoading(false);
     }
@@ -276,11 +277,14 @@ export function UserActivityTimeline({
       )}
 
       {/* Activity Feed */}
-      <ActivityTimeline
+      <ActivityFeed
         events={events}
         maxEvents={maxEvents}
         viewAllHref={viewAllHref}
         showViewAll={showViewAll}
+        iconMode="category"
+        animated
+        locale="it"
       />
     </div>
   );

@@ -84,7 +84,7 @@ public class AuthenticationDomainEventsTests
         var user = CreateTestUser();
         var oldRole = user.Role;
         var newRole = Role.Editor;
-        var requesterRole = Role.Admin;
+        var requesterRole = Role.SuperAdmin;
 
         // Act
         user.AssignRole(newRole, requesterRole);
@@ -166,32 +166,6 @@ public class AuthenticationDomainEventsTests
         oauthLinkedEvent.UserId.Should().Be(user.Id);
         oauthLinkedEvent.Provider.Should().Be("google");
         oauthLinkedEvent.ProviderUserId.Should().Be("google123");
-    }
-
-    [Fact]
-    public void ApiKeyRevoke_ShouldRaiseApiKeyRevokedEvent()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var (apiKey, _) = ApiKey.Create(
-            id: Guid.NewGuid(),
-            userId: userId,
-            keyName: "Test Key",
-            scopes: "read,write"
-        );
-
-        // Act
-        apiKey.Revoke(userId, "Security audit");
-
-        // Assert
-        apiKey.DomainEvents.Should().HaveCount(1);
-        var domainEvent = apiKey.DomainEvents.ElementAt(0);
-        domainEvent.Should().BeOfType<ApiKeyRevokedEvent>();
-
-        var apiKeyRevokedEvent = (ApiKeyRevokedEvent)domainEvent;
-        apiKeyRevokedEvent.ApiKeyId.Should().Be(apiKey.Id);
-        apiKeyRevokedEvent.UserId.Should().Be(userId);
-        apiKeyRevokedEvent.Reason.Should().Be("Security audit");
     }
 
     [Fact]

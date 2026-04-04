@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MeepleAI — 4 Layout Alternativi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Nunito:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ─── Tokens ─── */
+:root {
+  --bg:          #0b0b0f;
+  --surface:     #141419;
+  --elevated:    #1c1c24;
+  --highlight:   #23232e;
+  --border:      rgba(255,255,255,0.07);
+  --border-hi:   rgba(255,255,255,0.13);
+  --text:        #eeeef5;
+  --muted:       #8888a0;
+  --faint:       #4a4a60;
+  --c-game:      hsl(25,95%,45%);
+  --c-player:    hsl(262,83%,58%);
+  --c-session:   hsl(240,60%,55%);
+  --c-chat:      hsl(220,80%,55%);
+  --c-kb:        hsl(174,60%,40%);
+  --c-event:     hsl(350,89%,60%);
+  --c-agent:     hsl(38,92%,50%);
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px;
+  --font-d: 'Bricolage Grotesque', sans-serif;
+  --font-b: 'Nunito', sans-serif;
+  --font-m: 'DM Mono', monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--text);font-size:13px;-webkit-font-smoothing:antialiased}
+
+/* ─── Switcher bar ─── */
+.switcher{
+  position:fixed;top:0;left:0;right:0;z-index:9999;
+  background:rgba(11,11,15,0.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:4px;padding:8px 12px;
+}
+.switcher-label{font-family:var(--font-m);font-size:10px;color:var(--faint);letter-spacing:.08em;margin-right:6px}
+.sw-btn{
+  font-family:var(--font-m);font-size:11px;padding:5px 14px;border-radius:7px;
+  border:1px solid var(--border);cursor:pointer;
+  background:transparent;color:var(--muted);transition:all .15s;
+  white-space:nowrap;
+}
+.sw-btn:hover{border-color:var(--border-hi);color:var(--text)}
+.sw-btn.active{background:var(--c-game);border-color:var(--c-game);color:#fff}
+.sw-device{
+  margin-left:auto;display:flex;gap:4px;
+  background:var(--elevated);border:1px solid var(--border);
+  border-radius:8px;padding:3px;
+}
+.sw-dev-btn{
+  font-family:var(--font-m);font-size:10px;padding:3px 9px;border-radius:5px;
+  border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s;
+}
+.sw-dev-btn.active{background:var(--highlight);color:var(--text)}
+
+/* ─── Canvas ─── */
+.canvas{
+  margin-top:46px;height:calc(100dvh - 46px);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+  background:repeating-linear-gradient(0deg,transparent,transparent 23px,rgba(255,255,255,0.015) 24px),
+             repeating-linear-gradient(90deg,transparent,transparent 23px,rgba(255,255,255,0.015) 24px);
+}
+.frame{
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:var(--r-lg);
+  overflow:hidden;
+  box-shadow:0 24px 80px rgba(0,0,0,.8);
+  transition:all .3s cubic-bezier(.4,0,.2,1);
+  transform-origin:top center;
+  position:relative;
+}
+.frame.desktop{width:1140px;height:calc(100dvh - 80px);max-height:760px;max-width:calc(100vw - 40px)}
+.frame.mobile{width:390px;height:720px;max-height:calc(100dvh - 80px)}
+.frame-inner{width:100%;height:100%;overflow:hidden;position:relative;display:flex;flex-direction:column}
+
+/* ─── Shared TopNav ─── */
+.topnav{
+  height:44px;min-height:44px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;padding:0 14px;flex-shrink:0;z-index:20;
+}
+.logo{font-family:var(--font-d);font-weight:800;font-size:15px;display:flex;align-items:center;gap:7px}
+.logo-box{width:26px;height:26px;background:var(--c-game);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.search-bar{
+  flex:1;max-width:340px;margin-left:auto;height:28px;
+  background:var(--elevated);border:1px solid var(--border);border-radius:7px;
+  display:flex;align-items:center;padding:0 9px;gap:6px;
+  color:var(--muted);font-size:12px;cursor:pointer;
+}
+.search-bar kbd{font-family:var(--font-m);font-size:9px;background:var(--highlight);border:1px solid var(--border-hi);border-radius:3px;padding:1px 5px;margin-left:auto;color:var(--muted)}
+.nav-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--c-player),var(--c-game));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+
+/* ═══════════════════════════════════════════════════════
+   MEEPLECARD — riutilizzato in tutti i layout
+═══════════════════════════════════════════════════════ */
+.mc{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  overflow:hidden;cursor:pointer;position:relative;
+  transition:transform .28s cubic-bezier(.4,0,.2,1),box-shadow .28s,border-color .2s;
+  box-shadow:0 1px 4px rgba(0,0,0,.4);
+}
+.mc:hover{transform:translateY(-4px);box-shadow:0 12px 36px rgba(0,0,0,.6);border-color:var(--border-hi)}
+.mc[data-e="game"]    {border-left:3px solid var(--c-game)}
+.mc[data-e="session"] {border-left:3px solid var(--c-session)}
+.mc[data-e="player"]  {border-left:3px solid var(--c-player)}
+.mc[data-e="chat"]    {border-left:3px solid var(--c-chat)}
+.mc[data-e="kb"]      {border-left:3px solid var(--c-kb)}
+.mc[data-e="event"]   {border-left:3px solid var(--c-event)}
+/* shimmer */
+.mc::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.07) 50%,transparent 60%);transform:translateX(-100%);pointer-events:none}
+.mc:hover::after{transform:translateX(100%);transition:transform .55s ease}
+
+.mc-cover{position:relative;overflow:hidden;aspect-ratio:3/4}
+.mc-cover-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px}
+.mc-cover-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.5) 0%,transparent 55%)}
+.mc-badge{position:absolute;top:6px;left:6px;font-size:7px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;padding:2px 6px;border-radius:4px}
+.mc-rank{position:absolute;top:6px;right:6px;font-family:var(--font-m);font-size:10px;color:var(--c-game);background:rgba(0,0,0,.6);backdrop-filter:blur(4px);border-radius:4px;padding:1px 5px}
+.mc-body{padding:8px 9px 9px}
+.mc-title{font-family:var(--font-d);font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.mc-sub{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px}
+.mc-chips{display:flex;flex-wrap:wrap;gap:3px}
+.mc-chip{font-size:9px;font-weight:600;color:var(--muted);background:var(--elevated);padding:2px 5px;border-radius:4px}
+.mc-stars{color:hsl(45,90%,60%);font-size:9px;letter-spacing:.5px}
+.mc-score{font-family:var(--font-m);font-size:9px;font-weight:500;color:var(--muted);margin-left:3px}
+
+/* list variant */
+.mc.list{display:flex;flex-direction:row;border-radius:var(--r-md)}
+.mc.list .mc-cover{width:56px;min-width:56px;height:56px;aspect-ratio:unset;border-radius:var(--r-md) 0 0 var(--r-md)}
+.mc.list .mc-cover-bg{font-size:22px}
+.mc.list .mc-badge{display:none}
+.mc.list .mc-body{display:flex;flex-direction:column;justify-content:center;padding:6px 10px}
+
+/* compact variant */
+.mc.compact{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-md)}
+.mc.compact .mc-cover{width:36px;min-width:36px;height:36px;aspect-ratio:unset;border-radius:7px;flex-shrink:0}
+.mc.compact .mc-cover-bg{font-size:16px}
+.mc.compact .mc-body{padding:0;min-width:0}
+.mc.compact .mc-badge{display:none}
+
+/* ── entity gradient backgrounds ── */
+.gg{background:linear-gradient(135deg,hsl(30,50%,18%),hsl(20,55%,12%))}
+.gs{background:linear-gradient(135deg,hsl(240,40%,22%),hsl(240,30%,14%))}
+.gp{background:linear-gradient(135deg,hsl(262,40%,20%),hsl(262,30%,13%))}
+.gc{background:linear-gradient(135deg,hsl(220,40%,20%),hsl(220,30%,13%))}
+.gk{background:linear-gradient(135deg,hsl(174,35%,18%),hsl(174,25%,12%))}
+.ge{background:linear-gradient(135deg,hsl(350,40%,20%),hsl(350,30%,13%))}
+.ga{background:linear-gradient(135deg,hsl(38,45%,20%),hsl(38,35%,13%))}
+.gb{background:linear-gradient(135deg,hsl(195,40%,18%),hsl(195,30%,12%))}
+.gn{background:linear-gradient(135deg,hsl(120,35%,18%),hsl(120,25%,12%))}
+.gv{background:linear-gradient(135deg,hsl(340,40%,18%),hsl(340,30%,12%))}
+
+/* ══════════════════════════════════════════════════════════
+   LAYOUT A — COVER GRID  (ispirazione: Letterboxd)
+   Navigazione principale = griglia di copertine grandi.
+   Tab "Per Te / Amici / Scopri" in cima.
+   Nessun shelf — solo grid con hover overlay.
+══════════════════════════════════════════════════════════ */
+#layout-a .body{display:flex;flex:1;min-height:0;overflow:hidden}
+#layout-a .side{width:44px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px}
+#layout-a .si{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:16px;color:var(--faint);cursor:pointer;transition:all .15s}
+#layout-a .si:hover,#layout-a .si.on{background:var(--elevated);color:var(--text)}
+#layout-a .si.on{color:var(--c-game)}
+#layout-a .main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+#layout-a .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 16px;flex-shrink:0;background:var(--surface)}
+#layout-a .tab{padding:10px 16px;font-family:var(--font-d);font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+#layout-a .tab.on{color:var(--text);border-bottom-color:var(--c-game)}
+#layout-a .tab:hover{color:var(--text)}
+#layout-a .cover-grid{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:8px;
+  padding:14px 14px 80px;overflow-y:auto;
+}
+#layout-a .cover-grid .mc-cover{aspect-ratio:2/3;border-radius:var(--r-md)}
+/* Big cards first row */
+#layout-a .cover-grid .mc:nth-child(1),
+#layout-a .cover-grid .mc:nth-child(2){grid-column:span 2;grid-row:span 2}
+#layout-a .cover-grid .mc:nth-child(1) .mc-cover,
+#layout-a .cover-grid .mc:nth-child(2) .mc-cover{aspect-ratio:unset;height:100%}
+/* Hover overlay with info */
+#layout-a .mc-hover-info{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.3) 50%,transparent 100%);
+  display:flex;flex-direction:column;justify-content:flex-end;padding:10px;
+  opacity:0;transition:opacity .2s;
+}
+#layout-a .mc:hover .mc-hover-info{opacity:1}
+#layout-a .mc-hover-title{font-family:var(--font-d);font-size:12px;font-weight:700;line-height:1.2;margin-bottom:4px}
+#layout-a .mc-hover-meta{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+#layout-a .mc-hover-chip{font-size:9px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);padding:2px 6px;border-radius:20px;color:rgba(255,255,255,.9)}
+#layout-a .mc-hover-rating{color:hsl(45,90%,65%);font-size:10px}
+#layout-a .mc-hover-action{
+  margin-top:7px;width:100%;text-align:center;
+  background:var(--c-game);color:#fff;font-family:var(--font-d);font-size:10px;font-weight:700;
+  padding:5px;border-radius:7px;opacity:0;transform:translateY(4px);transition:all .2s .05s;
+}
+#layout-a .mc:hover .mc-hover-action{opacity:1;transform:translateY(0)}
+/* Mobile A */
+.mobile #layout-a .cover-grid{grid-template-columns:repeat(3,1fr);padding:10px 10px 80px}
+.mobile #layout-a .cover-grid .mc:nth-child(1),
+.mobile #layout-a .cover-grid .mc:nth-child(2){grid-column:span 1;grid-row:span 1}
+.mobile #layout-a .cover-grid .mc:nth-child(1) .mc-cover,
+.mobile #layout-a .cover-grid .mc:nth-child(2) .mc-cover{aspect-ratio:2/3;height:auto}
+.mobile #layout-a .side{display:none}
+.mobile #layout-a .mc-hover-info{opacity:0}
+
+/* ══════════════════════════════════════════════════════════
+   LAYOUT B — BENTO COMMAND  (ispirazione: Linear / Vercel)
+   Dashboard data-first. Sidebar con nav tree espandibile.
+   Bento grid di widget: sessioni live, stats, AI, libreria.
+   Nessuna lista — tutto card widget.
+══════════════════════════════════════════════════════════ */
+#layout-b .body{display:flex;flex:1;min-height:0;overflow:hidden}
+#layout-b .side{
+  width:200px;min-width:200px;background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:12px 8px;gap:2px;overflow-y:auto;
+}
+#layout-b .side-section-label{font-family:var(--font-m);font-size:9px;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;padding:8px 8px 4px;margin-top:4px}
+#layout-b .sn{
+  display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;
+  font-size:12px;font-weight:600;font-family:var(--font-d);
+  cursor:pointer;color:var(--muted);transition:all .15s;
+}
+#layout-b .sn:hover{background:var(--elevated);color:var(--text)}
+#layout-b .sn.on{background:rgba(245,130,31,.1);color:var(--c-game)}
+#layout-b .sn .ic{font-size:14px;width:20px;text-align:center}
+#layout-b .sn .badge{margin-left:auto;font-family:var(--font-m);font-size:9px;background:var(--elevated);padding:1px 6px;border-radius:10px;color:var(--muted)}
+#layout-b .main{flex:1;overflow-y:auto;padding:14px}
+#layout-b .bento{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:60px;gap:8px}
+.bw{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;padding:12px;transition:all .2s;cursor:pointer}
+.bw:hover{background:var(--elevated);border-color:var(--border-hi)}
+.bw-label{font-family:var(--font-m);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
+.bw-val{font-family:var(--font-d);font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.bw-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.bw-up{color:hsl(142,70%,55%);font-size:10px;font-weight:700;background:rgba(16,185,129,.12);padding:1px 6px;border-radius:20px;display:inline-block;margin-top:4px}
+/* Bento spans */
+.bw.s-2-2{grid-column:span 2;grid-row:span 2}
+.bw.s-3-2{grid-column:span 3;grid-row:span 2}
+.bw.s-4-2{grid-column:span 4;grid-row:span 2}
+.bw.s-6-2{grid-column:span 6;grid-row:span 2}
+.bw.s-8-2{grid-column:span 8;grid-row:span 2}
+.bw.s-4-3{grid-column:span 4;grid-row:span 3}
+.bw.s-4-4{grid-column:span 4;grid-row:span 4}
+.bw.s-6-3{grid-column:span 6;grid-row:span 3}
+.bw.s-6-4{grid-column:span 6;grid-row:span 4}
+.bw.s-8-3{grid-column:span 8;grid-row:span 3}
+.bw.s-12-2{grid-column:span 12;grid-row:span 2}
+/* Live badge */
+.live-dot{width:7px;height:7px;background:hsl(142,70%,55%);border-radius:50%;display:inline-block;animation:pulse 1.5s infinite;margin-right:5px}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.live-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:hsl(142,70%,55%);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid rgba(16,185,129,.2)}
+/* bento game mini-list */
+.bw-game-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.bw-game-row:last-child{border-bottom:none}
+.bw-game-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.bw-game-name{font-family:var(--font-d);font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bw-game-meta{font-family:var(--font-m);font-size:9px;color:var(--muted)}
+/* chat bento */
+.bw-chat-msg{padding:6px 8px;border-radius:8px;font-size:11px;line-height:1.4;margin-bottom:6px}
+.bw-chat-msg.user{background:rgba(245,130,31,.12);border:1px solid rgba(245,130,31,.15);text-align:right}
+.bw-chat-msg.ai{background:var(--elevated);border:1px solid var(--border)}
+.bw-cit{display:inline;background:rgba(59,130,246,.15);color:hsl(220,80%,70%);font-family:var(--font-m);font-size:8px;padding:1px 4px;border-radius:3px;cursor:pointer}
+/* Mobile B */
+.mobile #layout-b .side{display:none}
+.mobile #layout-b .bento{grid-template-columns:repeat(6,1fr)}
+.mobile #layout-b .bw.s-8-2,.mobile #layout-b .bw.s-8-3{grid-column:span 6}
+.mobile #layout-b .bw.s-6-4,.mobile #layout-b .bw.s-6-3,.mobile #layout-b .bw.s-6-2{grid-column:span 6}
+.mobile #layout-b .bw.s-4-4,.mobile #layout-b .bw.s-4-3,.mobile #layout-b .bw.s-4-2{grid-column:span 6}
+.mobile #layout-b .bw.s-3-2{grid-column:span 3}
+.mobile #layout-b .bw.s-2-2{grid-column:span 3}
+.mobile #layout-b .bw.s-12-2{grid-column:span 6}
+
+/* ══════════════════════════════════════════════════════════
+   LAYOUT C — MAGAZINE SPLIT  (ispirazione: editorial/Vercel)
+   Left: featured hero game (40%) — Right: colonne contenuto (60%)
+   Scoperta + stats + chat preview affiancate.
+   Navigazione top-tabs per sezioni.
+══════════════════════════════════════════════════════════ */
+#layout-c .body{display:flex;flex:1;min-height:0;overflow:hidden}
+#layout-c .hero-col{
+  width:38%;min-width:260px;background:var(--elevated);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
+}
+#layout-c .hero-bg{
+  flex:1;display:flex;align-items:center;justify-content:center;font-size:80px;
+  background:linear-gradient(160deg,hsl(30,50%,16%),hsl(262,35%,10%));
+  position:relative;overflow:hidden;
+}
+#layout-c .hero-bg::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,.8) 100%);
+}
+#layout-c .hero-info{
+  position:absolute;bottom:0;left:0;right:0;padding:20px;
+  background:linear-gradient(to top,rgba(0,0,0,.9) 0%,transparent 100%);
+  z-index:2;
+}
+#layout-c .hero-entity-badge{
+  display:inline-block;font-size:9px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.06em;background:var(--c-game);color:#fff;padding:3px 8px;border-radius:5px;
+  margin-bottom:8px;
+}
+#layout-c .hero-title{font-family:var(--font-d);font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin-bottom:5px}
+#layout-c .hero-sub{font-size:12px;color:rgba(255,255,255,.6);margin-bottom:12px}
+#layout-c .hero-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+#layout-c .hero-chip{font-size:10px;background:rgba(255,255,255,.1);backdrop-filter:blur(4px);padding:3px 9px;border-radius:20px;color:rgba(255,255,255,.8)}
+#layout-c .hero-stars{color:hsl(45,90%,60%);font-size:13px;margin-bottom:12px}
+#layout-c .hero-actions{display:flex;gap:8px}
+#layout-c .hero-btn{
+  flex:1;text-align:center;padding:8px;border-radius:9px;font-family:var(--font-d);
+  font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;
+}
+#layout-c .hero-btn.primary{background:var(--c-game);color:#fff;box-shadow:0 4px 14px rgba(245,130,31,.4)}
+#layout-c .hero-btn.secondary{background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.12)}
+#layout-c .hero-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+/* Right columns */
+#layout-c .content-col{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+#layout-c .top-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 14px;background:var(--surface);flex-shrink:0}
+#layout-c .ttab{padding:9px 13px;font-family:var(--font-d);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+#layout-c .ttab.on{color:var(--text);border-bottom-color:var(--c-game)}
+#layout-c .columns{display:grid;grid-template-columns:1fr 1fr;gap:0;flex:1;min-height:0;overflow:hidden}
+#layout-c .col{overflow-y:auto;padding:12px;border-right:1px solid var(--border)}
+#layout-c .col:last-child{border-right:none}
+#layout-c .col-title{font-family:var(--font-m);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
+#layout-c .col-list{display:flex;flex-direction:column;gap:7px}
+/* Mobile C */
+.mobile #layout-c .hero-col{display:none}
+.mobile #layout-c .content-col{flex:none;width:100%}
+.mobile #layout-c .columns{grid-template-columns:1fr}
+.mobile #layout-c .col:first-child{border-right:none}
+
+/* ══════════════════════════════════════════════════════════
+   LAYOUT D — SOCIAL FEED  (ispirazione: Letterboxd/Goodreads)
+   Feed centrale con activity stream.
+   Sidebar destra: stats + giochi in trending.
+   Scoperta guidata dalla community.
+══════════════════════════════════════════════════════════ */
+#layout-d .body{display:flex;flex:1;min-height:0;overflow:hidden}
+#layout-d .side-l{width:52px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px;flex-shrink:0}
+#layout-d .di{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:9px;font-size:17px;color:var(--faint);cursor:pointer;transition:all .15s}
+#layout-d .di:hover,#layout-d .di.on{background:var(--elevated);color:var(--text)}
+#layout-d .di.on{color:var(--c-game)}
+#layout-d .feed-col{flex:1;overflow-y:auto;padding:14px 16px 80px;display:flex;flex-direction:column;gap:0}
+/* Feed tabs */
+#layout-d .feed-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px;flex-shrink:0}
+#layout-d .ftab{padding:7px 14px;font-family:var(--font-d);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+#layout-d .ftab.on{color:var(--text);border-bottom-color:var(--c-game)}
+/* Feed card */
+.feed-item{
+  display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--border);
+  transition:background .15s;cursor:pointer;
+}
+.feed-item:hover{background:rgba(255,255,255,.02);margin:0 -6px;padding-left:6px;padding-right:6px;border-radius:var(--r-md)}
+.feed-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px}
+.feed-content{flex:1;min-width:0}
+.feed-meta{font-size:11px;color:var(--muted);margin-bottom:4px}
+.feed-meta strong{color:var(--text);font-weight:700}
+.feed-meta .time{float:right;font-family:var(--font-m);font-size:9px}
+.feed-card-inline{display:flex;gap:9px;align-items:center;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 10px;margin-top:6px}
+.feed-game-thumb{width:36px;height:48px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.feed-game-info{flex:1;min-width:0}
+.feed-game-title{font-family:var(--font-d);font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed-game-sub{font-size:10px;color:var(--muted)}
+.feed-review-stars{color:hsl(45,90%,60%);font-size:11px;margin-top:3px}
+.feed-score-row{display:flex;gap:8px;margin-top:5px}
+.feed-score-chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--highlight)}
+.feed-actions{display:flex;gap:8px;margin-top:6px}
+.feed-action{font-size:10px;color:var(--muted);cursor:pointer;padding:2px 7px;border-radius:20px;border:1px solid var(--border);transition:all .15s;font-weight:600}
+.feed-action:hover{border-color:var(--border-hi);color:var(--text)}
+/* Right sidebar */
+#layout-d .side-r{
+  width:220px;min-width:220px;border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;padding:12px;gap:14px;flex-shrink:0;
+}
+.side-r-section{display:flex;flex-direction:column;gap:7px}
+.side-r-title{font-family:var(--font-m);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.side-stat-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.side-stat-row:last-child{border-bottom:none}
+.side-stat-label{font-size:11px;color:var(--muted)}
+.side-stat-val{font-family:var(--font-d);font-size:13px;font-weight:700;color:var(--c-game)}
+/* leaderboard mini */
+.lb-mini{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.lb-mini:last-child{border-bottom:none}
+.lb-mini-rank{font-family:var(--font-m);font-size:10px;color:var(--faint);width:16px;text-align:center}
+.lb-mini-av{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.lb-mini-name{flex:1;font-size:11px;font-weight:600;font-family:var(--font-d)}
+.lb-mini-v{font-family:var(--font-m);font-size:10px;color:var(--muted)}
+/* Mobile D */
+.mobile #layout-d .side-l{display:none}
+.mobile #layout-d .side-r{display:none}
+.mobile #layout-d .feed-col{padding:10px 12px 74px}
+
+/* ─── Bottom tab bar ─── */
+.btab{
+  display:none;height:52px;background:var(--surface);border-top:1px solid var(--border);
+  padding:0 4px;align-items:center;justify-content:space-around;flex-shrink:0;
+}
+.mobile .btab{display:flex}
+.btitem{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 14px;border-radius:9px;cursor:pointer;color:var(--faint);font-size:16px}
+.btitem span.lbl{font-size:8px;font-family:var(--font-b);font-weight:700;letter-spacing:.02em}
+.btitem.on{color:var(--c-game)}
+
+/* ─── Layout wrapper hide/show ─── */
+.layout{display:none;flex-direction:column;width:100%;height:100%}
+.layout.visible{display:flex}
+
+/* ─── FAB (mobile only) ─── */
+.fab{
+  position:absolute;bottom:62px;right:12px;
+  width:44px;height:44px;background:var(--c-game);color:#fff;
+  border-radius:13px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;cursor:pointer;z-index:50;
+  box-shadow:0 4px 16px rgba(245,130,31,.45);transition:all .2s;
+}
+.fab:hover{transform:scale(1.07) rotate(5deg)}
+.desktop-frame .fab{display:none}
+.mobile-frame .fab{display:flex}
+</style>
+</head>
+<body>
+
+<!-- Switcher -->
+<div class="switcher">
+  <span class="switcher-label">LAYOUT</span>
+  <button class="sw-btn active" onclick="showLayout('a')">A · Cover Grid</button>
+  <button class="sw-btn" onclick="showLayout('b')">B · Bento Command</button>
+  <button class="sw-btn" onclick="showLayout('c')">C · Magazine Split</button>
+  <button class="sw-btn" onclick="showLayout('d')">D · Social Feed</button>
+  <div class="sw-device">
+    <button class="sw-dev-btn active" onclick="setDevice('desktop')">Desktop</button>
+    <button class="sw-dev-btn" onclick="setDevice('mobile')">Mobile</button>
+  </div>
+</div>
+
+<div class="canvas" id="canvas">
+<div class="frame desktop" id="frame">
+<div class="frame-inner" id="frame-inner">
+
+  <!-- Shared TopNav -->
+  <nav class="topnav">
+    <div class="logo"><div class="logo-box">🎲</div>MeepleAI</div>
+    <div class="search-bar">
+      <span>🔍</span><span>⌘K — cerca giochi, regole…</span>
+      <kbd>⌘K</kbd>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:8px">
+      <span style="font-size:15px;color:var(--muted);cursor:pointer">🔔</span>
+      <div class="nav-avatar">M</div>
+    </div>
+  </nav>
+
+  <!-- ══════ LAYOUT A — COVER GRID ══════ -->
+  <div class="layout visible" id="layout-a">
+    <div class="body">
+      <aside class="side">
+        <div class="si on">🏠</div>
+        <div class="si">🎲</div>
+        <div class="si">📚</div>
+        <div class="si">💬</div>
+        <div class="si">📊</div>
+        <div style="flex:1"></div>
+        <div class="si">⚙️</div>
+      </aside>
+      <div class="main">
+        <div class="tabs">
+          <div class="tab on">✨ Per Te</div>
+          <div class="tab">👥 Amici</div>
+          <div class="tab">🔥 Scopri</div>
+          <div class="tab">🆕 Novità</div>
+        </div>
+        <div class="cover-grid">
+          <!-- Featured 1 (span 2×2) -->
+          <div class="mc" data-e="game" style="border-radius:var(--r-lg);overflow:hidden;position:relative">
+            <div class="mc-cover gg" style="height:100%;border-radius:0">
+              <div class="mc-cover-bg" style="font-size:70px;opacity:.5">🐦</div>
+              <div class="mc-cover-overlay"></div>
+            </div>
+            <div class="mc-hover-info">
+              <div class="mc-hover-title" style="font-size:16px">Wingspan</div>
+              <div class="mc-hover-meta">
+                <span class="mc-hover-chip">1–5 giocatori</span>
+                <span class="mc-hover-chip">40–70'</span>
+                <span class="mc-hover-rating">★ 8.9</span>
+              </div>
+              <div class="mc-hover-action">Vedi dettagli →</div>
+            </div>
+            <div class="mc-badge" style="background:var(--c-game)">Game</div>
+          </div>
+          <!-- Featured 2 (span 2×2) -->
+          <div class="mc" data-e="game" style="border-radius:var(--r-lg);overflow:hidden;position:relative">
+            <div class="mc-cover gs" style="height:100%;border-radius:0">
+              <div class="mc-cover-bg" style="font-size:70px;opacity:.5">🏝️</div>
+              <div class="mc-cover-overlay"></div>
+            </div>
+            <div class="mc-hover-info">
+              <div class="mc-hover-title" style="font-size:16px">Catan</div>
+              <div class="mc-hover-meta">
+                <span class="mc-hover-chip">3–4 giocatori</span>
+                <span class="mc-hover-chip">60–120'</span>
+                <span class="mc-hover-rating">★ 7.3</span>
+              </div>
+              <div class="mc-hover-action">Vedi dettagli →</div>
+            </div>
+            <div class="mc-badge" style="background:var(--c-game)">Game</div>
+          </div>
+          <!-- Normal cards -->
+          <div class="mc" data-e="game" style="position:relative">
+            <div class="mc-cover gv"><div class="mc-cover-bg">🌸</div><div class="mc-cover-overlay"></div></div>
+            <div class="mc-hover-info"><div class="mc-hover-title">Azul</div><div class="mc-hover-meta"><span class="mc-hover-chip">2–4</span><span class="mc-hover-rating">★ 8.2</span></div><div class="mc-hover-action">Apri →</div></div>
+          </div>
+          <div class="mc" data-e="game" style="position:relative">
+            <div class="mc-cover ga"><div class="mc-cover-bg">🧛</div><div class="mc-cover-overlay"></div><div class="mc-rank">#4</div></div>
+            <div class="mc-hover-info"><div class="mc-hover-title">Arkham Horror</div><div class="mc-hover-meta"><span class="mc-hover-chip">1–6</span></div><div class="mc-hover-action">Apri →</div></div>
+          </div>
+          <div class="mc" data-e="game" style="position:relative">
+            <div class="mc-cover gk"><div class="mc-cover-bg">🌿</div><div class="mc-cover-overlay"></div></div>
+            <div class="mc-hover-info"><div class="mc-hover-title">Cascadia</div><div class="mc-hover-meta"><span class="mc-hover-chip">1–4</span><span class="mc-hover-rating">★ 8.1</span></div><div class="mc-hover-action">Apri →</div></div>
+          </div>
+          <div class="mc" data-e="game" style="position:relative">
+            <div class="mc-cover gb"><div class="mc-cover-bg">🌊</div><div class="mc-cover-overlay"></div></div>
+            <div class="mc-hover-info"><div class="mc-hover-title">Everdell</div><div class="mc-hover-meta"><span class="mc-hover-chip">2–4</span><span class="mc-hover-rating">★ 8.4</span></div><div class="mc-hover-action">Apri →</div></div>
+          </div>
+          <div class="mc" data-e="game" style="position:relative">
+            <div class="mc-cover gn"><div class="mc-cover-bg">🏹</div><div class="mc-cover-overlay"></div><div class="mc-rank">#1</div></div>
+            <div class="mc-hover-info"><div class="mc-hover-title">Gloomhaven</div><div class="mc-hover-meta"><span class="mc-hover-chip">1–4</span></div><div class="mc-hover-action">Apri →</div></div>
+          </div>
+          <div class="mc" data-e="game" style="position:relative">
+            <div class="mc-cover ge"><div class="mc-cover-bg">🌋</div><div class="mc-cover-overlay"></div></div>
+            <div class="mc-hover-info"><div class="mc-hover-title">Terraforming Mars</div><div class="mc-hover-meta"><span class="mc-hover-chip">1–5</span><span class="mc-hover-rating">★ 8.3</span></div><div class="mc-hover-action">Apri →</div></div>
+          </div>
+          <div class="mc" data-e="game" style="position:relative">
+            <div class="mc-cover gp"><div class="mc-cover-bg">🧙</div><div class="mc-cover-overlay"></div></div>
+            <div class="mc-hover-info"><div class="mc-hover-title">Spirit Island</div><div class="mc-hover-meta"><span class="mc-hover-chip">1–4</span><span class="mc-hover-rating">★ 8.5</span></div><div class="mc-hover-action">Apri →</div></div>
+          </div>
+          <div class="mc" data-e="game" style="position:relative">
+            <div class="mc-cover gc"><div class="mc-cover-bg">🏙️</div><div class="mc-cover-overlay"></div></div>
+            <div class="mc-hover-info"><div class="mc-hover-title">Pandemic</div><div class="mc-hover-meta"><span class="mc-hover-chip">2–4</span><span class="mc-hover-rating">★ 7.6</span></div><div class="mc-hover-action">Apri →</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav class="btab">
+      <div class="btitem on"><span>🏠</span><span class="lbl">Home</span></div>
+      <div class="btitem"><span>🎲</span><span class="lbl">Giochi</span></div>
+      <div class="btitem"><span>💬</span><span class="lbl">Chat</span></div>
+      <div class="btitem"><span>📊</span><span class="lbl">Stats</span></div>
+      <div class="btitem"><span>👤</span><span class="lbl">Io</span></div>
+    </nav>
+  </div>
+
+  <!-- ══════ LAYOUT B — BENTO COMMAND ══════ -->
+  <div class="layout" id="layout-b">
+    <div class="body">
+      <aside class="side">
+        <div class="side-section-label">Navigazione</div>
+        <div class="sn on"><span class="ic">🏠</span>Dashboard<span class="badge"></span></div>
+        <div class="sn"><span class="ic">🎲</span>Giochi<span class="badge">23</span></div>
+        <div class="sn"><span class="ic">🏆</span>Sessioni<span class="badge">47</span></div>
+        <div class="sn"><span class="ic">💬</span>Chat AI<span class="badge">3</span></div>
+        <div class="sn"><span class="ic">📄</span>Regole KB</div>
+        <div class="sn"><span class="ic">👥</span>Giocatori</div>
+        <div class="side-section-label">Gestione</div>
+        <div class="sn"><span class="ic">📊</span>Analytics</div>
+        <div class="sn"><span class="ic">⚙️</span>Impostazioni</div>
+      </aside>
+      <div class="main">
+        <div class="bento">
+          <!-- Live session widget (8×2) -->
+          <div class="bw s-8-2" style="border-left:3px solid hsl(142,70%,55%);background:rgba(16,185,129,.05)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span class="bw-label">Sessione Live</span>
+              <span class="live-badge"><span class="live-dot"></span>IN CORSO</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,hsl(240,40%,25%),hsl(240,30%,16%));display:flex;align-items:center;justify-content:center;font-size:22px">🐦</div>
+              <div>
+                <div style="font-family:var(--font-d);font-size:16px;font-weight:800;letter-spacing:-.02em">Wingspan</div>
+                <div style="font-size:11px;color:var(--muted)">Mario · Luigi · Peach — Turno 3</div>
+              </div>
+              <div style="margin-left:auto;background:var(--c-game);color:#fff;font-family:var(--font-d);font-size:11px;font-weight:700;padding:6px 14px;border-radius:8px;cursor:pointer">Entra →</div>
+            </div>
+          </div>
+          <!-- Stats widgets (4×2 = 4 x 1 row each) -->
+          <div class="bw s-4-2" style="border-left:3px solid var(--c-game)">
+            <div class="bw-label">Partite</div>
+            <div class="bw-val" style="color:var(--c-game)">47</div>
+            <div class="bw-up">+5 questo mese</div>
+          </div>
+          <!-- Giochi shelf compact (6×3) -->
+          <div class="bw s-6-4" style="overflow:hidden;padding:12px">
+            <div class="bw-label" style="margin-bottom:10px">La tua Libreria</div>
+            <div class="bw-game-row"><div class="bw-game-icon gg">🐦</div><div class="bw-game-name">Wingspan</div><div class="bw-game-meta" style="color:var(--c-game)">★ 8.9</div></div>
+            <div class="bw-game-row"><div class="bw-game-icon gs">🏝️</div><div class="bw-game-name">Catan</div><div class="bw-game-meta" style="color:var(--c-game)">★ 7.3</div></div>
+            <div class="bw-game-row"><div class="bw-game-icon gv">🌸</div><div class="bw-game-name">Azul</div><div class="bw-game-meta" style="color:var(--c-game)">★ 8.2</div></div>
+            <div class="bw-game-row"><div class="bw-game-icon ga">🧛</div><div class="bw-game-name">Arkham Horror</div><div class="bw-game-meta" style="color:var(--c-game)">★ 7.8</div></div>
+            <div style="margin-top:8px;font-size:10px;color:var(--c-game);font-weight:700;cursor:pointer">Vedi tutti 23 →</div>
+          </div>
+          <!-- Stats row -->
+          <div class="bw s-3-2" style="border-left:3px solid var(--c-session)">
+            <div class="bw-label">Ore di gioco</div>
+            <div class="bw-val" style="color:var(--c-session)">32h</div>
+            <div class="bw-sub" style="margin-top:4px">+3h vs mese scorso</div>
+          </div>
+          <div class="bw s-3-2" style="border-left:3px solid var(--c-event)">
+            <div class="bw-label">Vittorie</div>
+            <div class="bw-val" style="color:var(--c-event)">12</div>
+            <div class="bw-sub" style="margin-top:4px">56% win rate</div>
+          </div>
+          <!-- Chat AI widget (6×3) -->
+          <div class="bw s-6-4" style="border-left:3px solid var(--c-chat);display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <span class="bw-label">Chat AI — Catan</span>
+              <span style="font-size:9px;color:var(--c-chat);font-weight:700;background:rgba(59,130,246,.12);padding:2px 7px;border-radius:20px">Attiva</span>
+            </div>
+            <div class="bw-chat-msg user">Quante strade per turno?</div>
+            <div class="bw-chat-msg ai">Puoi costruirne quante vuoi con le risorse disponibili. <span class="bw-cit">p.8</span></div>
+            <div style="margin-top:auto;display:flex;gap:7px">
+              <div style="flex:1;height:28px;background:var(--elevated);border:1px solid var(--border);border-radius:7px;padding:0 9px;display:flex;align-items:center;font-size:11px;color:var(--faint)">Fai una domanda…</div>
+              <div style="width:28px;height:28px;background:var(--c-chat);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer">↑</div>
+            </div>
+          </div>
+          <!-- Leaderboard widget (6×3) -->
+          <div class="bw s-6-3" style="border-left:3px solid var(--c-event);padding:12px">
+            <div class="bw-label" style="margin-bottom:10px">Classifica Gruppo</div>
+            <div class="bw-game-row"><div style="font-size:16px;width:22px;text-align:center">🥇</div><div class="bw-game-icon" style="background:var(--c-game);width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:700">M</div><div class="bw-game-name">Mario</div><div class="bw-game-meta" style="color:var(--c-event)">12 vittorie</div></div>
+            <div class="bw-game-row"><div style="font-size:16px;width:22px;text-align:center">🥈</div><div class="bw-game-icon" style="background:var(--c-player);width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:700">L</div><div class="bw-game-name">Luigi</div><div class="bw-game-meta">9 vittorie</div></div>
+            <div class="bw-game-row"><div style="font-size:16px;width:22px;text-align:center">🥉</div><div class="bw-game-icon" style="background:var(--c-event);width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:700">P</div><div class="bw-game-name">Peach</div><div class="bw-game-meta">7 vittorie</div></div>
+          </div>
+          <!-- KB Trending widget (6×2) -->
+          <div class="bw s-6-2" style="border-left:3px solid var(--c-kb)">
+            <div class="bw-label">Popolari questa settimana</div>
+            <div style="display:flex;gap:7px;margin-top:8px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+                <div style="width:40px;height:54px;border-radius:8px;background:linear-gradient(135deg,hsl(25,50%,20%),hsl(15,60%,14%));display:flex;align-items:center;justify-content:center;font-size:20px">🏹</div>
+                <div style="font-size:9px;font-family:var(--font-d);font-weight:700;color:var(--text)">Gloomhaven</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+                <div style="width:40px;height:54px;border-radius:8px;background:linear-gradient(135deg,hsl(200,45%,18%),hsl(200,35%,12%));display:flex;align-items:center;justify-content:center;font-size:20px">🌊</div>
+                <div style="font-size:9px;font-family:var(--font-d);font-weight:700;color:var(--text)">Everdell</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+                <div style="width:40px;height:54px;border-radius:8px;background:linear-gradient(135deg,hsl(120,35%,18%),hsl(120,25%,12%));display:flex;align-items:center;justify-content:center;font-size:20px">🌿</div>
+                <div style="font-size:9px;font-family:var(--font-d);font-weight:700;color:var(--text)">Cascadia</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+                <div style="width:40px;height:54px;border-radius:8px;background:linear-gradient(135deg,hsl(38,45%,20%),hsl(38,35%,13%));display:flex;align-items:center;justify-content:center;font-size:20px">🌋</div>
+                <div style="font-size:9px;font-family:var(--font-d);font-weight:700;color:var(--text)">Terraforming</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav class="btab">
+      <div class="btitem on"><span>🏠</span><span class="lbl">Home</span></div>
+      <div class="btitem"><span>🎲</span><span class="lbl">Giochi</span></div>
+      <div class="btitem"><span>💬</span><span class="lbl">Chat</span></div>
+      <div class="btitem"><span>📊</span><span class="lbl">Stats</span></div>
+      <div class="btitem"><span>👤</span><span class="lbl">Io</span></div>
+    </nav>
+  </div>
+
+  <!-- ══════ LAYOUT C — MAGAZINE SPLIT ══════ -->
+  <div class="layout" id="layout-c">
+    <div class="body">
+      <div class="hero-col">
+        <div class="hero-bg">
+          🐦
+        </div>
+        <div class="hero-info">
+          <div class="hero-entity-badge">Game</div>
+          <div class="hero-title">Wingspan</div>
+          <div class="hero-sub">Stonemaier Games · 2019</div>
+          <div class="hero-meta">
+            <span class="hero-chip">1–5 giocatori</span>
+            <span class="hero-chip">40–70 min</span>
+            <span class="hero-chip">Peso: medio</span>
+          </div>
+          <div class="hero-stars">★★★★★ 8.9</div>
+          <div class="hero-actions">
+            <div class="hero-btn primary">💬 Chiedi all'AI</div>
+            <div class="hero-btn secondary">📚 Aggiungi</div>
+          </div>
+        </div>
+      </div>
+      <div class="content-col">
+        <div class="top-tabs">
+          <div class="ttab on">Libreria</div>
+          <div class="ttab">Sessioni</div>
+          <div class="ttab">Scopri</div>
+          <div class="ttab">Regole</div>
+        </div>
+        <div class="columns">
+          <!-- Col 1: recent sessions as compact cards -->
+          <div class="col">
+            <div class="col-title">Giocati di recente</div>
+            <div class="col-list">
+              <div class="mc compact" data-e="session"><div class="mc-cover gs"><div class="mc-cover-bg">🐦</div></div><div class="mc-body"><div class="mc-title">Wingspan</div><div class="mc-sub">Luigi vince · 1:45</div></div></div>
+              <div class="mc compact" data-e="session"><div class="mc-cover gg"><div class="mc-cover-bg">🏝️</div></div><div class="mc-body"><div class="mc-title">Catan</div><div class="mc-sub">Mario vince · 2:10</div></div></div>
+              <div class="mc compact" data-e="session"><div class="mc-cover gv"><div class="mc-cover-bg">🌸</div></div><div class="mc-body"><div class="mc-title">Azul</div><div class="mc-sub">Peach vince · 0:50</div></div></div>
+              <div class="mc compact" data-e="session"><div class="mc-cover ga"><div class="mc-cover-bg">🧛</div></div><div class="mc-body"><div class="mc-title">Arkham Horror</div><div class="mc-sub">Sconfitta · 3:20</div></div></div>
+              <div class="mc compact" data-e="session"><div class="mc-cover gk"><div class="mc-cover-bg">🌿</div></div><div class="mc-body"><div class="mc-title">Cascadia</div><div class="mc-sub">Mario vince · 0:55</div></div></div>
+              <div class="mc compact" data-e="session"><div class="mc-cover gb"><div class="mc-cover-bg">🌊</div></div><div class="mc-body"><div class="mc-title">Everdell</div><div class="mc-sub">Luigi vince · 1:20</div></div></div>
+            </div>
+          </div>
+          <!-- Col 2: library grid -->
+          <div class="col">
+            <div class="col-title">In libreria</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+              <div class="mc" data-e="game"><div class="mc-cover gg" style="aspect-ratio:3/4"><div class="mc-cover-bg">🐦</div><div class="mc-cover-overlay"></div><div class="mc-badge" style="background:var(--c-game)">Game</div></div><div class="mc-body"><div class="mc-title">Wingspan</div><div class="mc-chips"><span class="mc-chip">1–5</span><span class="mc-chip">★8.9</span></div></div></div>
+              <div class="mc" data-e="game"><div class="mc-cover gs" style="aspect-ratio:3/4"><div class="mc-cover-bg">🏝️</div><div class="mc-cover-overlay"></div><div class="mc-badge" style="background:var(--c-game)">Game</div></div><div class="mc-body"><div class="mc-title">Catan</div><div class="mc-chips"><span class="mc-chip">3–4</span><span class="mc-chip">★7.3</span></div></div></div>
+              <div class="mc" data-e="game"><div class="mc-cover gv" style="aspect-ratio:3/4"><div class="mc-cover-bg">🌸</div><div class="mc-cover-overlay"></div><div class="mc-badge" style="background:var(--c-game)">Game</div></div><div class="mc-body"><div class="mc-title">Azul</div><div class="mc-chips"><span class="mc-chip">2–4</span><span class="mc-chip">★8.2</span></div></div></div>
+              <div class="mc" data-e="game"><div class="mc-cover ga" style="aspect-ratio:3/4"><div class="mc-cover-bg">🧛</div><div class="mc-cover-overlay"></div><div class="mc-badge" style="background:var(--c-game)">Game</div></div><div class="mc-body"><div class="mc-title">Arkham</div><div class="mc-chips"><span class="mc-chip">1–6</span><span class="mc-chip">★7.8</span></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav class="btab">
+      <div class="btitem on"><span>🏠</span><span class="lbl">Home</span></div>
+      <div class="btitem"><span>🎲</span><span class="lbl">Giochi</span></div>
+      <div class="btitem"><span>💬</span><span class="lbl">Chat</span></div>
+      <div class="btitem"><span>📊</span><span class="lbl">Stats</span></div>
+      <div class="btitem"><span>👤</span><span class="lbl">Io</span></div>
+    </nav>
+  </div>
+
+  <!-- ══════ LAYOUT D — SOCIAL FEED ══════ -->
+  <div class="layout" id="layout-d">
+    <div class="body">
+      <aside class="side-l">
+        <div class="di on">🏠</div>
+        <div class="di">🎲</div>
+        <div class="di">👥</div>
+        <div class="di">💬</div>
+        <div class="di">📊</div>
+        <div style="flex:1"></div>
+        <div class="di">⚙️</div>
+      </aside>
+      <div class="feed-col">
+        <div class="feed-tabs">
+          <div class="ftab on">📰 Per Te</div>
+          <div class="ftab">👥 Amici</div>
+          <div class="ftab">🌍 Community</div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-avatar" style="background:var(--c-player)">L</div>
+          <div class="feed-content">
+            <div class="feed-meta"><strong>Luigi</strong> ha giocato <strong>Wingspan</strong> <span class="time">2h fa</span></div>
+            <div class="feed-card-inline">
+              <div class="feed-game-thumb gg">🐦</div>
+              <div class="feed-game-info">
+                <div class="feed-game-title">Wingspan</div>
+                <div class="feed-game-sub">Stonemaier Games</div>
+                <div class="feed-review-stars">★★★★★</div>
+              </div>
+              <div>
+                <div class="feed-score-chip" style="background:rgba(16,185,129,.15);color:hsl(142,70%,55%)">Vittoria!</div>
+              </div>
+            </div>
+            <div class="feed-score-row">
+              <span class="feed-score-chip">3 giocatori</span>
+              <span class="feed-score-chip">1h 45m</span>
+            </div>
+            <div class="feed-actions">
+              <div class="feed-action">❤️ 3</div>
+              <div class="feed-action">💬 Commenta</div>
+              <div class="feed-action">➕ Aggiungi a libreria</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-avatar" style="background:var(--c-event)">P</div>
+          <div class="feed-content">
+            <div class="feed-meta"><strong>Peach</strong> ha aggiunto alla wishlist <strong>Everdell</strong> <span class="time">5h fa</span></div>
+            <div class="feed-card-inline">
+              <div class="feed-game-thumb gb">🌊</div>
+              <div class="feed-game-info">
+                <div class="feed-game-title">Everdell</div>
+                <div class="feed-game-sub">Starling Games</div>
+              </div>
+              <div style="font-size:10px;color:var(--muted);font-family:var(--font-m)">★ 8.4</div>
+            </div>
+            <div class="feed-actions">
+              <div class="feed-action">❤️ 1</div>
+              <div class="feed-action">💬 Commenta</div>
+              <div class="feed-action">👀 Voglio giocarlo</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-avatar" style="background:var(--c-game)">M</div>
+          <div class="feed-content">
+            <div class="feed-meta"><strong>Mario</strong> ha recensito <strong>Catan</strong> con <span style="color:hsl(45,90%,65%)">★★★★</span> <span class="time">ieri</span></div>
+            <div class="feed-card-inline">
+              <div class="feed-game-thumb gg">🏝️</div>
+              <div class="feed-game-info">
+                <div class="feed-game-title">Catan</div>
+                <div class="feed-game-sub">"Classico senza tempo, ideale con 4 giocatori"</div>
+              </div>
+            </div>
+            <div class="feed-actions">
+              <div class="feed-action">❤️ 7</div>
+              <div class="feed-action">💬 2 commenti</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-avatar" style="background:var(--c-kb)">T</div>
+          <div class="feed-content">
+            <div class="feed-meta"><strong>Toad</strong> ha caricato il rulebook di <strong>Arkham Horror</strong> <span class="time">2 gg fa</span></div>
+            <div class="feed-card-inline">
+              <div class="feed-game-thumb ga" style="font-size:14px">📄</div>
+              <div class="feed-game-info">
+                <div class="feed-game-title">arkham_horror_rules.pdf</div>
+                <div class="feed-game-sub">248 pagine · Indicizzato ✓</div>
+              </div>
+              <div style="font-size:10px;font-weight:700;color:var(--c-kb);background:rgba(20,184,166,.12);padding:2px 7px;border-radius:20px">KB</div>
+            </div>
+            <div class="feed-actions">
+              <div class="feed-action">💬 Chiedi all'AI</div>
+              <div class="feed-action">📥 Usa il mio agente</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- Right sidebar -->
+      <div class="side-r">
+        <div class="side-r-section">
+          <div class="side-r-title">Le tue statistiche</div>
+          <div class="side-stat-row"><span class="side-stat-label">Partite</span><span class="side-stat-val">47</span></div>
+          <div class="side-stat-row"><span class="side-stat-label">Ore di gioco</span><span class="side-stat-val">32h</span></div>
+          <div class="side-stat-row"><span class="side-stat-label">Win rate</span><span class="side-stat-val">56%</span></div>
+          <div class="side-stat-row"><span class="side-stat-label">In libreria</span><span class="side-stat-val">23</span></div>
+        </div>
+        <div class="side-r-section">
+          <div class="side-r-title">Classifica Gruppo</div>
+          <div class="lb-mini"><span class="lb-mini-rank">🥇</span><div class="lb-mini-av" style="background:var(--c-game)">M</div><span class="lb-mini-name">Mario</span><span class="lb-mini-v">12v</span></div>
+          <div class="lb-mini"><span class="lb-mini-rank">🥈</span><div class="lb-mini-av" style="background:var(--c-player)">L</div><span class="lb-mini-name">Luigi</span><span class="lb-mini-v">9v</span></div>
+          <div class="lb-mini"><span class="lb-mini-rank">🥉</span><div class="lb-mini-av" style="background:var(--c-event)">P</div><span class="lb-mini-name">Peach</span><span class="lb-mini-v">7v</span></div>
+          <div class="lb-mini"><span class="lb-mini-rank" style="font-family:var(--font-m);font-size:10px">4</span><div class="lb-mini-av" style="background:var(--c-kb)">T</div><span class="lb-mini-name">Toad</span><span class="lb-mini-v">5v</span></div>
+        </div>
+        <div class="side-r-section">
+          <div class="side-r-title">Popolari ora</div>
+          <div class="mc compact" data-e="game" style="margin-bottom:5px"><div class="mc-cover gn"><div class="mc-cover-bg">🏹</div></div><div class="mc-body"><div class="mc-title">Gloomhaven</div><div class="mc-sub">🎲 128 partite</div></div></div>
+          <div class="mc compact" data-e="game" style="margin-bottom:5px"><div class="mc-cover gb"><div class="mc-cover-bg">🌊</div></div><div class="mc-body"><div class="mc-title">Everdell</div><div class="mc-sub">🎲 97 partite</div></div></div>
+          <div class="mc compact" data-e="game"><div class="mc-cover gk"><div class="mc-cover-bg">🌿</div></div><div class="mc-body"><div class="mc-title">Cascadia</div><div class="mc-sub">🎲 84 partite</div></div></div>
+        </div>
+      </div>
+    </div>
+    <nav class="btab">
+      <div class="btitem on"><span>🏠</span><span class="lbl">Home</span></div>
+      <div class="btitem"><span>🎲</span><span class="lbl">Giochi</span></div>
+      <div class="btitem"><span>💬</span><span class="lbl">Chat</span></div>
+      <div class="btitem"><span>📊</span><span class="lbl">Stats</span></div>
+      <div class="btitem"><span>👤</span><span class="lbl">Io</span></div>
+    </nav>
+  </div>
+
+  <div class="fab">＋</div>
+</div><!-- /frame-inner -->
+</div><!-- /frame -->
+</div><!-- /canvas -->
+
+<script>
+let currentLayout = 'a';
+let currentDevice = 'desktop';
+
+function showLayout(id) {
+  document.querySelectorAll('.layout').forEach(l => l.classList.remove('visible'));
+  document.getElementById('layout-' + id).classList.add('visible');
+  document.querySelectorAll('.sw-btn').forEach((b,i) => b.classList.remove('active'));
+  document.querySelector(`.sw-btn[onclick="showLayout('${id}')"]`).classList.add('active');
+  currentLayout = id;
+}
+
+function setDevice(type) {
+  currentDevice = type;
+  document.querySelectorAll('.sw-dev-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.sw-dev-btn[onclick="setDevice('${type}')"]`).classList.add('active');
+  const frame = document.getElementById('frame');
+  const inner = document.getElementById('frame-inner');
+  if (type === 'mobile') {
+    frame.className = 'frame mobile';
+    inner.classList.add('mobile');
+    inner.classList.remove('desktop-frame');
+    inner.classList.add('mobile-frame');
+  } else {
+    frame.className = 'frame desktop';
+    inner.classList.remove('mobile');
+    inner.classList.remove('mobile-frame');
+    inner.classList.add('desktop-frame');
+  }
+}
+
+// Tabs interaction for layout A
+document.querySelectorAll('#layout-a .tab').forEach(t => {
+  t.addEventListener('click', function() {
+    document.querySelectorAll('#layout-a .tab').forEach(x => x.classList.remove('on'));
+    this.classList.add('on');
+  });
+});
+document.querySelectorAll('#layout-c .ttab').forEach(t => {
+  t.addEventListener('click', function() {
+    document.querySelectorAll('#layout-c .ttab').forEach(x => x.classList.remove('on'));
+    this.classList.add('on');
+  });
+});
+document.querySelectorAll('#layout-d .ftab').forEach(t => {
+  t.addEventListener('click', function() {
+    document.querySelectorAll('#layout-d .ftab').forEach(x => x.classList.remove('on'));
+    this.classList.add('on');
+  });
+});
+
+// Scale frame to fit canvas
+function scaleFrame() {
+  const canvas = document.getElementById('canvas');
+  const frame = document.getElementById('frame');
+  const cw = canvas.clientWidth - 40;
+  const ch = canvas.clientHeight - 40;
+  const fw = frame.scrollWidth || (currentDevice === 'mobile' ? 390 : 1140);
+  const fh = frame.scrollHeight || (currentDevice === 'mobile' ? 720 : 760);
+  const scale = Math.min(cw / fw, ch / fh, 1);
+  frame.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', scaleFrame);
+setTimeout(scaleFrame, 100);
+</script>
+</body>
+</html>

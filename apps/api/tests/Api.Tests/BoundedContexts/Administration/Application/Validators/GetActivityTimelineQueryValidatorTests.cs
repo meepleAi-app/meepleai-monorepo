@@ -3,6 +3,7 @@ using Api.BoundedContexts.Administration.Application.Validators;
 using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Validators;
 
@@ -177,9 +178,8 @@ public sealed class GetActivityTimelineQueryValidatorTests
             DateFrom: new DateTime(2025, 1, 1),
             DateTo: new DateTime(2026, 2, 1));
         var result = _validator.TestValidate(query);
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors,
-            e => e.ErrorMessage == "Date range must not exceed 1 year (365 days)");
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorMessage == "Date range must not exceed 1 year (365 days)");
     }
 
     [Fact]

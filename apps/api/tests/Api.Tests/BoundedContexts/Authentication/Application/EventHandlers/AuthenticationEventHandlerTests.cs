@@ -7,87 +7,17 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.EventHandlers;
 
 /// <summary>
 /// Unit tests for Authentication domain event handlers.
-/// Issue #2645: Event handler tests for ApiKeyRevoked, EmailChanged, OAuth events.
+/// Issue #2645: Event handler tests for EmailChanged, OAuth events.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class AuthenticationEventHandlerTests
 {
-    #region ApiKeyRevokedEventHandler Tests
-
-    [Fact]
-    public async Task ApiKeyRevokedEventHandler_Handle_CreatesAuditLog()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<ApiKeyRevokedEventHandler>>();
-        var handler = new ApiKeyRevokedEventHandler(dbContext, logger.Object);
-
-        var apiKeyId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var reason = "Security compromise suspected";
-        var @event = new ApiKeyRevokedEvent(apiKeyId, userId, reason);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.FirstOrDefault(a => a.Action.Contains("ApiKeyRevokedEvent"));
-        Assert.NotNull(auditLog);
-        Assert.Equal(userId, auditLog.UserId);
-        Assert.Contains("ApiKeyRevoked", auditLog.Details);
-        Assert.Contains(apiKeyId.ToString(), auditLog.Details);
-    }
-
-    [Fact]
-    public async Task ApiKeyRevokedEventHandler_Handle_WithNullReason_CreatesAuditLog()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<ApiKeyRevokedEventHandler>>();
-        var handler = new ApiKeyRevokedEventHandler(dbContext, logger.Object);
-
-        var @event = new ApiKeyRevokedEvent(Guid.NewGuid(), Guid.NewGuid(), null);
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        var auditLog = dbContext.AuditLogs.FirstOrDefault();
-        Assert.NotNull(auditLog);
-        Assert.Equal("Success", auditLog.Result);
-    }
-
-    [Fact]
-    public async Task ApiKeyRevokedEventHandler_Handle_LogsEventInformation()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<ApiKeyRevokedEventHandler>>();
-        var handler = new ApiKeyRevokedEventHandler(dbContext, logger.Object);
-
-        var @event = new ApiKeyRevokedEvent(Guid.NewGuid(), Guid.NewGuid(), "Test reason");
-
-        // Act
-        await handler.Handle(@event, CancellationToken.None);
-
-        // Assert
-        logger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Handling domain event")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
-    }
-
-    #endregion
-
     #region EmailChangedEventHandler Tests
 
     [Fact]
@@ -108,11 +38,11 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.FirstOrDefault(a => a.Action.Contains("EmailChangedEvent"));
-        Assert.NotNull(auditLog);
-        Assert.Equal(userId, auditLog.UserId);
-        Assert.Contains("EmailChanged", auditLog.Details);
-        Assert.Contains("old@example.com", auditLog.Details);
-        Assert.Contains("new@example.com", auditLog.Details);
+        auditLog.Should().NotBeNull();
+        auditLog.UserId.Should().Be(userId);
+        auditLog.Details.Should().Contain("EmailChanged");
+        auditLog.Details.Should().Contain("old@example.com");
+        auditLog.Details.Should().Contain("new@example.com");
     }
 
     [Fact]
@@ -133,8 +63,8 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.Single();
-        Assert.Contains("previous@test.com", auditLog.Details);
-        Assert.Contains("current@test.com", auditLog.Details);
+        auditLog.Details.Should().Contain("previous@test.com");
+        auditLog.Details.Should().Contain("current@test.com");
     }
 
     [Fact]
@@ -156,8 +86,8 @@ public class AuthenticationEventHandlerTests
 
         // Assert - Emails should be normalized to lowercase
         var auditLog = dbContext.AuditLogs.Single();
-        Assert.Contains("old@example.com", auditLog.Details);
-        Assert.Contains("new@example.com", auditLog.Details);
+        auditLog.Details.Should().Contain("old@example.com");
+        auditLog.Details.Should().Contain("new@example.com");
     }
 
     #endregion
@@ -182,10 +112,10 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.FirstOrDefault(a => a.Action.Contains("OAuthAccountLinkedEvent"));
-        Assert.NotNull(auditLog);
-        Assert.Equal(userId, auditLog.UserId);
-        Assert.Contains("OAuthAccountLinked", auditLog.Details);
-        Assert.Contains("google", auditLog.Details);
+        auditLog.Should().NotBeNull();
+        auditLog.UserId.Should().Be(userId);
+        auditLog.Details.Should().Contain("OAuthAccountLinked");
+        auditLog.Details.Should().Contain("google");
     }
 
     [Fact]
@@ -203,8 +133,8 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.Single();
-        Assert.Contains("discord", auditLog.Details);
-        Assert.Contains("discord-id-456", auditLog.Details);
+        auditLog.Details.Should().Contain("discord");
+        auditLog.Details.Should().Contain("discord-id-456");
     }
 
     [Theory]
@@ -225,8 +155,8 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.Single();
-        Assert.Contains(provider, auditLog.Details);
-        Assert.Contains(providerUserId, auditLog.Details);
+        auditLog.Details.Should().Contain(provider);
+        auditLog.Details.Should().Contain(providerUserId);
     }
 
     #endregion
@@ -250,9 +180,9 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.FirstOrDefault(a => a.Action.Contains("OAuthAccountUnlinkedEvent"));
-        Assert.NotNull(auditLog);
-        Assert.Equal(userId, auditLog.UserId);
-        Assert.Contains("OAuthAccountUnlinked", auditLog.Details);
+        auditLog.Should().NotBeNull();
+        auditLog.UserId.Should().Be(userId);
+        auditLog.Details.Should().Contain("OAuthAccountUnlinked");
     }
 
     [Fact]
@@ -270,7 +200,7 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.Single();
-        Assert.Contains("github", auditLog.Details);
+        auditLog.Details.Should().Contain("github");
     }
 
     [Theory]
@@ -291,7 +221,7 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.Single();
-        Assert.Contains(provider, auditLog.Details);
+        auditLog.Details.Should().Contain(provider);
     }
 
     #endregion
@@ -316,9 +246,9 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.FirstOrDefault(a => a.Action.Contains("OAuthTokensRefreshedEvent"));
-        Assert.NotNull(auditLog);
-        Assert.Null(auditLog.UserId); // Token refresh is OAuth account event, not user-specific
-        Assert.Contains("OAuthTokensRefreshed", auditLog.Details);
+        auditLog.Should().NotBeNull();
+        auditLog.UserId.Should().BeNull(); // Token refresh is OAuth account event, not user-specific
+        auditLog.Details.Should().Contain("OAuthTokensRefreshed");
     }
 
     [Fact]
@@ -337,7 +267,7 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.Single();
-        Assert.Contains("2025", auditLog.Details); // Verify expiration year is in metadata
+        auditLog.Details.Should().Contain("2025"); // Verify expiration year is in metadata
     }
 
     [Fact]
@@ -355,7 +285,7 @@ public class AuthenticationEventHandlerTests
 
         // Assert - UserId should be null for OAuth token refresh (account-level, not user-level)
         var auditLog = dbContext.AuditLogs.Single();
-        Assert.Null(auditLog.UserId);
+        auditLog.UserId.Should().BeNull();
     }
 
     [Fact]
@@ -374,51 +304,9 @@ public class AuthenticationEventHandlerTests
 
         // Assert
         var auditLog = dbContext.AuditLogs.Single();
-        Assert.Contains(oauthAccountId.ToString(), auditLog.Details);
+        auditLog.Details.Should().Contain(oauthAccountId.ToString());
     }
 
     #endregion
 
-    #region Error Handling Tests
-
-    [Fact]
-    public async Task EventHandler_Handle_ThrowsOnDbContextError()
-    {
-        // Arrange - Use disposed context to simulate error
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<ApiKeyRevokedEventHandler>>();
-        var handler = new ApiKeyRevokedEventHandler(dbContext, logger.Object);
-
-        await dbContext.DisposeAsync();
-
-        var @event = new ApiKeyRevokedEvent(Guid.NewGuid(), Guid.NewGuid(), "Test");
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ObjectDisposedException>(() =>
-            handler.Handle(@event, CancellationToken.None));
-    }
-
-    [Fact]
-    public void EventHandler_Constructor_ThrowsOnNullDbContext()
-    {
-        // Arrange
-        var logger = new Mock<ILogger<ApiKeyRevokedEventHandler>>();
-
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new ApiKeyRevokedEventHandler(null!, logger.Object));
-    }
-
-    [Fact]
-    public void EventHandler_Constructor_ThrowsOnNullLogger()
-    {
-        // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new ApiKeyRevokedEventHandler(dbContext, null!));
-    }
-
-    #endregion
 }

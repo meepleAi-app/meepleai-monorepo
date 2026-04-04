@@ -12,7 +12,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Repository details
-REPO="DegrassiAaron/meepleai-monorepo"
+REPO="meepleAi-app/meepleai-monorepo"
 
 echo -e "${BLUE}════════════════════════════════════════════════════════════${NC}"
 echo -e "${BLUE}   CodeQL False Positive Dismissal Helper${NC}"

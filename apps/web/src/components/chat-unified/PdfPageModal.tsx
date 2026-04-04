@@ -5,8 +5,8 @@ import { useCallback, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { Citation } from '@/types';
 

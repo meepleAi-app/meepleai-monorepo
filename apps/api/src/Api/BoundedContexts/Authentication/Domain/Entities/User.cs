@@ -1,7 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
-using Api.BoundedContexts.Administration.Domain.Enums; // Epic #4068: UserAccountStatus
+using Api.SharedKernel.Domain.Enums; // Epic #4068: UserAccountStatus (moved to SharedKernel)
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 
@@ -33,6 +33,11 @@ public sealed class User : AggregateRoot<Guid>
     public string Theme { get; private set; }
     public int DataRetentionDays { get; private set; }
 
+    // Privacy preferences
+    public bool ShowProfile { get; private set; } = true;
+    public bool ShowActivity { get; private set; } = true;
+    public bool ShowLibrary { get; private set; } = true;
+
     // Gamification properties (Issue #3141)
     public int Level { get; private set; }
     public int ExperiencePoints { get; private set; }
@@ -55,12 +60,28 @@ public sealed class User : AggregateRoot<Guid>
     private readonly List<BackupCode> _backupCodes = new();
     public IReadOnlyCollection<BackupCode> BackupCodes => _backupCodes.AsReadOnly();
 
+    // Admin invitation properties (admin invitation flow)
+    public Guid? InvitedByUserId { get; private set; }
+    public DateTime? InvitationExpiresAt { get; private set; }
+
+    // Onboarding preferences (Issue #124: Invitation system)
+    public List<string>? Interests { get; private set; }
+
+    // Profile & Onboarding
+    public string? AvatarUrl { get; private set; }
+    public string? Bio { get; private set; }
+    public DateTime? OnboardingWizardSeenAt { get; private set; }
+    public DateTime? OnboardingDismissedAt { get; private set; }
+
+    // Issue #323: Onboarding completion tracking
+    public bool OnboardingCompleted { get; private set; }
+    public bool OnboardingSkipped { get; private set; }
+    public DateTime? OnboardingCompletedAt { get; private set; }
+
     // Navigation properties (not part of domain model, for EF Core only)
     private readonly List<Session> _sessions = new();
-    private readonly List<ApiKey> _apiKeys = new();
     private readonly List<OAuthAccount> _oauthAccounts = new();
     public IReadOnlyCollection<Session> Sessions => _sessions.AsReadOnly();
-    public IReadOnlyCollection<ApiKey> ApiKeys => _apiKeys.AsReadOnly();
     public IReadOnlyCollection<OAuthAccount> OAuthAccounts => _oauthAccounts.AsReadOnly();
 
     /// <summary>
@@ -97,6 +118,11 @@ public sealed class User : AggregateRoot<Guid>
         Theme = "system";
         DataRetentionDays = 90;
 
+        // Default privacy settings
+        ShowProfile = true;
+        ShowActivity = true;
+        ShowLibrary = true;
+
         // Default gamification (Issue #3141)
         Level = 1;
         ExperiencePoints = 0;
@@ -106,6 +132,109 @@ public sealed class User : AggregateRoot<Guid>
         LockedUntil = null;
 
         IsTwoFactorEnabled = false;
+    }
+
+    /// <summary>
+    /// Creates a new user in Pending state (admin-provisioned, no password yet).
+    /// The user must activate their account via invitation to set a password and become Active.
+    /// </summary>
+    /// <param name="email">The user's email address.</param>
+    /// <param name="displayName">The user's display name.</param>
+    /// <param name="role">The assigned role.</param>
+    /// <param name="tier">The assigned subscription tier.</param>
+    /// <param name="invitedByUserId">The ID of the admin who created this invitation.</param>
+    /// <param name="expiresAt">When the invitation expires (UTC).</param>
+    /// <param name="timeProvider">Time provider for testability.</param>
+    /// <returns>A new User in Pending state.</returns>
+    public static User CreatePending(
+        Email email,
+        string displayName,
+        Role role,
+        UserTier tier,
+        Guid invitedByUserId,
+        DateTime expiresAt,
+        TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+        ArgumentNullException.ThrowIfNull(displayName);
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentNullException.ThrowIfNull(tier);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            DisplayName = displayName,
+            PasswordHash = null!,
+            Role = role,
+            Tier = tier,
+            Status = UserAccountStatus.Pending,
+            CreatedAt = timeProvider.GetUtcNow().UtcDateTime,
+            InvitedByUserId = invitedByUserId,
+            InvitationExpiresAt = expiresAt,
+            EmailVerified = false,
+
+            // Default preferences
+            Language = "en",
+            EmailNotifications = true,
+            Theme = "system",
+            DataRetentionDays = 90,
+
+            // Default privacy settings
+            ShowProfile = true,
+            ShowActivity = true,
+            ShowLibrary = true,
+
+            // Default gamification (Issue #3141)
+            Level = 1,
+            ExperiencePoints = 0,
+
+            // Default lockout state (Issue #3339)
+            FailedLoginAttempts = 0,
+            LockedUntil = null,
+
+            IsTwoFactorEnabled = false,
+        };
+
+        user.AddDomainEvent(new UserProvisionedEvent(
+            user.Id,
+            email.Value,
+            displayName,
+            role.Value,
+            tier.Value,
+            invitedByUserId));
+
+        return user;
+    }
+
+    /// <summary>
+    /// Activates a pending user account from an invitation.
+    /// Transitions the user from Pending to Active, sets their password, and marks email as verified.
+    /// </summary>
+    /// <param name="passwordHash">The user's chosen password hash.</param>
+    /// <param name="timeProvider">Time provider for testability.</param>
+    /// <exception cref="InvalidOperationException">Thrown when user is not in Pending status.</exception>
+    public void ActivateFromInvitation(PasswordHash passwordHash, TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(passwordHash);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        if (Status != UserAccountStatus.Pending)
+            throw new InvalidOperationException("Only users in Pending status can be activated from an invitation.");
+
+        PasswordHash = passwordHash;
+        Status = UserAccountStatus.Active;
+        EmailVerified = true;
+        EmailVerifiedAt = timeProvider.GetUtcNow().UtcDateTime;
+        VerificationGracePeriodEndsAt = null;
+
+        AddDomainEvent(new UserActivatedFromInvitationEvent(
+            Id,
+            Email.Value,
+            Role.Value,
+            Tier.Value,
+            InvitedByUserId!.Value));
     }
 
     /// <summary>
@@ -254,30 +383,44 @@ public sealed class User : AggregateRoot<Guid>
     {
         ArgumentNullException.ThrowIfNull(newRole);
         ArgumentNullException.ThrowIfNull(requesterRole);
-        // Only admins can assign roles
-        if (!requesterRole.IsAdmin())
-            throw new DomainException("Only administrators can assign roles");
 
-        // Cannot assign admin role to self (must be done by another admin)
-        if (newRole.IsAdmin() && Role.IsAdmin())
-            throw new DomainException("Cannot modify admin role through self-service");
+        // Only SuperAdmin can assign roles
+        if (!requesterRole.IsSuperAdmin())
+            throw new DomainException("Only the SuperAdmin can assign roles");
 
-        var oldRole = Role;
+        // Cannot assign SuperAdmin role (it's seeded, not assignable)
+        if (newRole.IsSuperAdmin())
+            throw new DomainException("SuperAdmin role cannot be assigned — it is created during system seed only");
+
+        // Cannot change a SuperAdmin's role (immutable)
+        if (this.Role.IsSuperAdmin())
+            throw new DomainException("SuperAdmin role is immutable and cannot be changed");
+
+        var oldRole = this.Role;
         Role = newRole;
         AddDomainEvent(new RoleChangedEvent(Id, oldRole, newRole));
     }
 
     /// <summary>
-    /// Updates the user's role (admin-only operation).
+    /// Updates the user's role (superadmin-only operation).
     /// Use this in admin handlers where authorization is already verified.
     /// </summary>
     public void UpdateRole(Role newRole)
     {
         ArgumentNullException.ThrowIfNull(newRole);
-        if (Role == newRole)
+
+        // SuperAdmin role is immutable
+        if (this.Role.IsSuperAdmin())
+            throw new DomainException("SuperAdmin role is immutable and cannot be changed");
+
+        // Cannot promote to SuperAdmin via UpdateRole
+        if (newRole.IsSuperAdmin())
+            throw new DomainException("SuperAdmin role cannot be assigned — it is created during system seed only");
+
+        if (this.Role == newRole)
             return; // No change
 
-        var oldRole = Role;
+        var oldRole = this.Role;
         Role = newRole;
         AddDomainEvent(new RoleChangedEvent(Id, oldRole, newRole));
     }
@@ -652,6 +795,86 @@ public sealed class User : AggregateRoot<Guid>
         DataRetentionDays = dataRetentionDays;
     }
 
+    /// <summary>
+    /// Updates the user's privacy settings (profile visibility).
+    /// </summary>
+    public void UpdatePrivacySettings(bool showProfile, bool showActivity, bool showLibrary)
+    {
+        ShowProfile = showProfile;
+        ShowActivity = showActivity;
+        ShowLibrary = showLibrary;
+    }
+
+    /// <summary>
+    /// Updates the user's onboarding interest selections.
+    /// Issue #124: Invitation system onboarding wizard.
+    /// </summary>
+    /// <param name="interests">List of interest tags selected by the user</param>
+    public void UpdateInterests(List<string>? interests)
+    {
+        Interests = interests;
+    }
+
+    #region Onboarding
+
+    /// <summary>
+    /// Marks the onboarding wizard as seen. Idempotent — early return if already set.
+    /// </summary>
+    public void MarkOnboardingWizardSeen()
+    {
+        if (OnboardingWizardSeenAt.HasValue) return;
+        OnboardingWizardSeenAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Dismisses the onboarding checklist. Idempotent — early return if already dismissed.
+    /// </summary>
+    public void DismissOnboarding()
+    {
+        if (OnboardingDismissedAt.HasValue) return;
+        OnboardingDismissedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Updates the user's avatar URL.
+    /// </summary>
+    public void UpdateAvatarUrl(string avatarUrl)
+    {
+        AvatarUrl = avatarUrl;
+    }
+
+    /// <summary>
+    /// Updates the user's bio.
+    /// </summary>
+    public void UpdateBio(string bio)
+    {
+        Bio = bio;
+    }
+
+    /// <summary>
+    /// Marks the user's onboarding as completed.
+    /// Issue #323: Onboarding completion tracking.
+    /// </summary>
+    public void CompleteOnboarding()
+    {
+        OnboardingCompleted = true;
+        OnboardingSkipped = false;
+        OnboardingCompletedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Marks the user's onboarding as skipped.
+    /// Issue #323: Onboarding completion tracking.
+    /// </summary>
+    public void SkipOnboarding()
+    {
+        OnboardingCompleted = true;
+        OnboardingSkipped = true;
+        OnboardingCompletedAt = DateTime.UtcNow;
+    }
+
+    #endregion
+
     #region Persistence Hydration Methods (internal - S3011 fix)
 
     /// <summary>
@@ -767,6 +990,49 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Restores profile and onboarding state from persistence layer.
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreOnboardingState(string? avatarUrl, string? bio, DateTime? wizardSeenAt, DateTime? dismissedAt)
+    {
+        AvatarUrl = avatarUrl;
+        Bio = bio;
+        OnboardingWizardSeenAt = wizardSeenAt;
+        OnboardingDismissedAt = dismissedAt;
+    }
+
+    /// <summary>
+    /// Restores invitation state from persistence layer.
+    /// Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreInvitationState(Guid? invitedByUserId, DateTime? invitationExpiresAt)
+    {
+        InvitedByUserId = invitedByUserId;
+        InvitationExpiresAt = invitationExpiresAt;
+    }
+
+    /// <summary>
+    /// Restores account status from persistence layer.
+    /// Issue #124: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreAccountStatus(UserAccountStatus status)
+    {
+        Status = status;
+    }
+
+    /// <summary>
+    /// Restores password hash from persistence layer. Null for pending (invited) users.
+    /// Issue #124: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestorePasswordHash(PasswordHash? passwordHash)
+    {
+        PasswordHash = passwordHash!;
+    }
+
+    /// <summary>
     /// Restores email verification state from persistence layer.
     /// Issue #3672: Internal method to avoid reflection in repository (S3011 compliance).
     /// Should only be called by UserRepository during entity materialization.
@@ -776,6 +1042,17 @@ public sealed class User : AggregateRoot<Guid>
         EmailVerified = emailVerified;
         EmailVerifiedAt = emailVerifiedAt;
         VerificationGracePeriodEndsAt = verificationGracePeriodEndsAt;
+    }
+
+    /// <summary>
+    /// Restores onboarding state from persistence layer.
+    /// Issue #323: Onboarding completion tracking.
+    /// </summary>
+    internal void RestoreOnboardingState(bool onboardingCompleted, bool onboardingSkipped, DateTime? onboardingCompletedAt)
+    {
+        OnboardingCompleted = onboardingCompleted;
+        OnboardingSkipped = onboardingSkipped;
+        OnboardingCompletedAt = onboardingCompletedAt;
     }
 
     #endregion

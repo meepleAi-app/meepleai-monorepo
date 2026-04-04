@@ -9,12 +9,10 @@ import { z } from 'zod';
 
 // Known notification types (for component logic — not used for validation)
 export const KNOWN_NOTIFICATION_TYPES = [
-  'pdf_upload_completed',
+  'document_ready',
   'rule_spec_generated',
-  'processing_failed',
-  'new_comment',
+  'document_processing_failed',
   'shared_link_accessed',
-  'processing_job_completed',
   'share_request_created',
   'share_request_approved',
   'share_request_rejected',
@@ -22,9 +20,9 @@ export const KNOWN_NOTIFICATION_TYPES = [
   'admin_new_share_request',
   'admin_shared_game_submitted',
   'admin_openrouter_daily_summary',
-  'admin_openrouter_rpm_alert',
-  'admin_openrouter_budget_alert',
-  'admin_circuit_breaker_state_changed',
+  'admin_openrouter_threshold_alert',
+  'admin_system_health_alert',
+  'admin_model_status_changed',
   'badge_earned',
   'rate_limit_approaching',
   'rate_limit_reached',
@@ -33,8 +31,12 @@ export const KNOWN_NOTIFICATION_TYPES = [
   'session_terminated',
   'game_proposal_in_review',
   'game_proposal_kb_merged',
-  'processing_job_failed',
-  'agent_linked',
+  'agent_ready',
+  'game_night_invitation',
+  'game_night_rsvp_received',
+  'game_night_published',
+  'game_night_cancelled',
+  'game_night_reminder',
 ] as const;
 
 // Defensive schema — accepts any string to prevent API breaking on new backend types
@@ -84,6 +86,12 @@ export const NotificationPreferencesSchema = z.object({
   inAppOnDocumentFailed: z.boolean(),
   inAppOnRetryAvailable: z.boolean(),
   hasPushSubscription: z.boolean(),
+  // Game Night preferences (Issue #33 / #44 / #47)
+  inAppOnGameNightInvitation: z.boolean().optional().default(true),
+  emailOnGameNightInvitation: z.boolean().optional().default(true),
+  pushOnGameNightInvitation: z.boolean().optional().default(true),
+  emailOnGameNightReminder: z.boolean().optional().default(true),
+  pushOnGameNightReminder: z.boolean().optional().default(true),
 });
 export type NotificationPreferences = z.infer<typeof NotificationPreferencesSchema>;
 

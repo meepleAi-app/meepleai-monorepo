@@ -10,7 +10,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { PlayHistory } from '@/components/play-records/PlayHistory';
-import * as usePlayRecordsHooks from '@/lib/hooks/use-play-records';
+import * as usePlayRecordsHooks from '@/lib/domain-hooks/usePlayRecords';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -20,22 +20,25 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock hooks
-vi.mock('@/lib/hooks/use-play-records', () => ({
+vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
   usePlayHistory: vi.fn(),
 }));
 
-// Mock Zustand store
+// Mock Zustand store — support selector pattern: usePlayRecordsStore(state => state.field)
+const mockStoreState = {
+  viewMode: 'grid' as const,
+  sortBy: 'recent' as const,
+  sidebarOpen: true,
+  setFilter: vi.fn(),
+  resetFilters: vi.fn(),
+  setViewMode: vi.fn(),
+  setSortBy: vi.fn(),
+  toggleSidebar: vi.fn(),
+};
 vi.mock('@/lib/stores/play-records-store', () => ({
-  usePlayRecordsStore: vi.fn(() => ({
-    viewMode: 'grid',
-    sortBy: 'recent',
-    sidebarOpen: true,
-    setFilter: vi.fn(),
-    resetFilters: vi.fn(),
-    setViewMode: vi.fn(),
-    setSortBy: vi.fn(),
-    toggleSidebar: vi.fn(),
-  })),
+  usePlayRecordsStore: vi.fn((selector?: (state: typeof mockStoreState) => unknown) =>
+    selector ? selector(mockStoreState) : mockStoreState
+  ),
   selectFilters: vi.fn(() => ({
     status: 'all',
     searchQuery: '',

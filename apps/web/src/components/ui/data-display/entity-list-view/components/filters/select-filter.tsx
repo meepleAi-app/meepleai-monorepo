@@ -8,14 +8,14 @@
 
 import React from 'react';
 
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Label } from '@/components/ui/primitives/label';
 
 import type { SelectFilter as SelectFilterConfig } from '../../entity-list-view.types';
 
@@ -36,16 +36,14 @@ export function SelectFilter<T>({ filter, value, onChange }: SelectFilterProps<T
       <Label htmlFor={filter.id} className="text-sm font-medium">
         {filter.label}
       </Label>
-      {filter.description && (
-        <p className="text-xs text-muted-foreground">{filter.description}</p>
-      )}
+      {filter.description && <p className="text-xs text-muted-foreground">{filter.description}</p>}
 
-      <Select value={currentValue} onValueChange={(val) => onChange(val)}>
+      <Select value={currentValue} onValueChange={val => onChange(val)}>
         <SelectTrigger id={filter.id} className="w-full">
           <SelectValue placeholder={`Select ${filter.label.toLowerCase()}...`} />
         </SelectTrigger>
         <SelectContent>
-          {filter.options.map((option) => (
+          {filter.options.map(option => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
             </SelectItem>

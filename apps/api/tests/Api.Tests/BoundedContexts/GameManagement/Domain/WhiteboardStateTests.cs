@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.WhiteboardState;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
@@ -24,24 +25,26 @@ public class WhiteboardStateTests
     {
         var whiteboard = new WhiteboardState(Guid.NewGuid(), SessionId, UserId);
 
-        Assert.Equal(SessionId, whiteboard.SessionId);
-        Assert.Equal(UserId, whiteboard.LastModifiedBy);
-        Assert.Empty(whiteboard.Strokes);
-        Assert.Equal("{}", whiteboard.StructuredJson);
+        whiteboard.SessionId.Should().Be(SessionId);
+        whiteboard.LastModifiedBy.Should().Be(UserId);
+        whiteboard.Strokes.Should().BeEmpty();
+        whiteboard.StructuredJson.Should().Be("{}");
     }
 
     [Fact]
     public void Constructor_WithEmptySessionId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new WhiteboardState(Guid.NewGuid(), Guid.Empty, UserId));
+        var act = () =>
+            new WhiteboardState(Guid.NewGuid(), Guid.Empty, UserId);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithEmptyUserId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new WhiteboardState(Guid.NewGuid(), SessionId, Guid.Empty));
+        var act = () =>
+            new WhiteboardState(Guid.NewGuid(), SessionId, Guid.Empty);
+        act.Should().Throw<ArgumentException>();
     }
 
     // ========================================================================
@@ -55,9 +58,9 @@ public class WhiteboardStateTests
 
         var stroke = whiteboard.AddStroke("stroke-1", "{\"path\":[]}", UserId);
 
-        Assert.Single(whiteboard.Strokes);
-        Assert.Equal("stroke-1", stroke.Id);
-        Assert.Equal("{\"path\":[]}", stroke.DataJson);
+        whiteboard.Strokes.Should().ContainSingle();
+        stroke.Id.Should().Be("stroke-1");
+        stroke.DataJson.Should().Be("{\"path\":[]}");
     }
 
     [Fact]
@@ -67,7 +70,7 @@ public class WhiteboardStateTests
 
         var stroke = whiteboard.AddStroke("stroke-1", null!, UserId);
 
-        Assert.Equal("{}", stroke.DataJson);
+        stroke.DataJson.Should().Be("{}");
     }
 
     [Fact]
@@ -76,8 +79,9 @@ public class WhiteboardStateTests
         var whiteboard = new WhiteboardState(Guid.NewGuid(), SessionId, UserId);
         whiteboard.AddStroke("stroke-1", "{}", UserId);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            whiteboard.AddStroke("stroke-1", "{\"new\":true}", UserId));
+        var act = () =>
+            whiteboard.AddStroke("stroke-1", "{\"new\":true}", UserId);
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -85,8 +89,9 @@ public class WhiteboardStateTests
     {
         var whiteboard = new WhiteboardState(Guid.NewGuid(), SessionId, UserId);
 
-        Assert.Throws<ArgumentException>(() =>
-            whiteboard.AddStroke("", "{}", UserId));
+        var act = () =>
+            whiteboard.AddStroke("", "{}", UserId);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -97,7 +102,7 @@ public class WhiteboardStateTests
 
         whiteboard.AddStroke("stroke-1", "{}", anotherUser);
 
-        Assert.Equal(anotherUser, whiteboard.LastModifiedBy);
+        whiteboard.LastModifiedBy.Should().Be(anotherUser);
     }
 
     [Fact]
@@ -109,7 +114,7 @@ public class WhiteboardStateTests
         whiteboard.AddStroke("stroke-2", "{}", UserId);
         whiteboard.AddStroke("stroke-3", "{}", UserId);
 
-        Assert.Equal(3, whiteboard.Strokes.Count);
+        whiteboard.Strokes.Count.Should().Be(3);
     }
 
     // ========================================================================
@@ -124,8 +129,8 @@ public class WhiteboardStateTests
 
         var removedId = whiteboard.RemoveStroke("stroke-1", UserId);
 
-        Assert.Equal("stroke-1", removedId);
-        Assert.Empty(whiteboard.Strokes);
+        removedId.Should().Be("stroke-1");
+        whiteboard.Strokes.Should().BeEmpty();
     }
 
     [Fact]
@@ -133,8 +138,9 @@ public class WhiteboardStateTests
     {
         var whiteboard = new WhiteboardState(Guid.NewGuid(), SessionId, UserId);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            whiteboard.RemoveStroke("non-existing", UserId));
+        var act = () =>
+            whiteboard.RemoveStroke("non-existing", UserId);
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -142,8 +148,9 @@ public class WhiteboardStateTests
     {
         var whiteboard = new WhiteboardState(Guid.NewGuid(), SessionId, UserId);
 
-        Assert.Throws<ArgumentException>(() =>
-            whiteboard.RemoveStroke("", UserId));
+        var act = () =>
+            whiteboard.RemoveStroke("", UserId);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -156,8 +163,8 @@ public class WhiteboardStateTests
 
         whiteboard.RemoveStroke("stroke-2", UserId);
 
-        Assert.Equal(2, whiteboard.Strokes.Count);
-        Assert.DoesNotContain(whiteboard.Strokes, s => s.Id == "stroke-2");
+        whiteboard.Strokes.Count.Should().Be(2);
+        whiteboard.Strokes.Should().NotContain(s => s.Id == "stroke-2");
     }
 
     // ========================================================================
@@ -172,7 +179,7 @@ public class WhiteboardStateTests
 
         whiteboard.UpdateStructured(newJson, UserId);
 
-        Assert.Equal(newJson, whiteboard.StructuredJson);
+        whiteboard.StructuredJson.Should().Be(newJson);
     }
 
     [Fact]
@@ -182,7 +189,7 @@ public class WhiteboardStateTests
 
         whiteboard.UpdateStructured(null!, UserId);
 
-        Assert.Equal("{}", whiteboard.StructuredJson);
+        whiteboard.StructuredJson.Should().Be("{}");
     }
 
     [Fact]
@@ -191,8 +198,9 @@ public class WhiteboardStateTests
         var whiteboard = new WhiteboardState(Guid.NewGuid(), SessionId, UserId);
         var oversizedJson = new string('x', 100 * 1024 + 1); // 100 KB + 1 byte
 
-        Assert.Throws<ArgumentException>(() =>
-            whiteboard.UpdateStructured(oversizedJson, UserId));
+        var act = () =>
+            whiteboard.UpdateStructured(oversizedJson, UserId);
+        act.Should().Throw<ArgumentException>();
     }
 
     // ========================================================================
@@ -209,8 +217,8 @@ public class WhiteboardStateTests
 
         whiteboard.Clear(UserId);
 
-        Assert.Empty(whiteboard.Strokes);
-        Assert.Equal("{}", whiteboard.StructuredJson);
+        whiteboard.Strokes.Should().BeEmpty();
+        whiteboard.StructuredJson.Should().Be("{}");
     }
 
     [Fact]
@@ -221,7 +229,7 @@ public class WhiteboardStateTests
 
         whiteboard.Clear(clearingUser);
 
-        Assert.Equal(clearingUser, whiteboard.LastModifiedBy);
+        whiteboard.LastModifiedBy.Should().Be(clearingUser);
     }
 
     // ========================================================================
@@ -238,10 +246,10 @@ public class WhiteboardStateTests
         var whiteboard = WhiteboardState.Restore(
             id, SessionId, strokes, "{\"key\":\"val\"}", UserId, now, now.AddHours(-1));
 
-        Assert.Equal(id, whiteboard.Id);
-        Assert.Equal(SessionId, whiteboard.SessionId);
-        Assert.Equal(2, whiteboard.Strokes.Count);
-        Assert.Equal("{\"key\":\"val\"}", whiteboard.StructuredJson);
-        Assert.Equal(UserId, whiteboard.LastModifiedBy);
+        whiteboard.Id.Should().Be(id);
+        whiteboard.SessionId.Should().Be(SessionId);
+        whiteboard.Strokes.Count.Should().Be(2);
+        whiteboard.StructuredJson.Should().Be("{\"key\":\"val\"}");
+        whiteboard.LastModifiedBy.Should().Be(UserId);
     }
 }

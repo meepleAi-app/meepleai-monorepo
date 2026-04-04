@@ -24,5 +24,5 @@ internal record UploadSharedGamePdfCommand(
 public record UploadSharedGamePdfResult(
     Guid PdfDocumentId,
     Guid SharedGameDocumentId,
-    string ProcessingStatus
+    string ProcessingState
 );

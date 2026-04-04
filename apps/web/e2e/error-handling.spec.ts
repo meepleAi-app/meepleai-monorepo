@@ -82,7 +82,7 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
       });
 
       // Try to access nonexistent game directly
-      await page.goto('/games/nonexistent-game-id').catch(() => {
+      await page.goto('/library/games/nonexistent-game-id').catch(() => {
         // May redirect or show error
       });
 

@@ -397,7 +397,6 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         if (historyIndex <= 0) return;
 
         const newIndex = historyIndex - 1;
-        // eslint-disable-next-line security/detect-object-injection -- newIndex is numeric
         const historyState = history[newIndex];
         set({
           pipeline: structuredClone(historyState),
@@ -413,7 +412,6 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         if (historyIndex >= history.length - 1) return;
 
         const newIndex = historyIndex + 1;
-        // eslint-disable-next-line security/detect-object-injection -- newIndex is numeric
         const historyState = history[newIndex];
         set({
           pipeline: structuredClone(historyState),
@@ -468,7 +466,6 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         for (let i = 0; i < trace.steps.length; i++) {
           if (!get().isExecuting) break; // Stopped
 
-          // eslint-disable-next-line security/detect-object-injection -- i is numeric index
           const step = trace.steps[i];
 
           // Update step to running
@@ -637,7 +634,6 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         const { configSchema, config } = node.data;
         if (configSchema.required) {
           configSchema.required.forEach(field => {
-            // eslint-disable-next-line security/detect-object-injection -- field from schema.required array
             const fieldValue = config[field];
             if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
               errors.push(`Required field "${field}" is missing`);
@@ -816,7 +812,6 @@ function extractDefaultConfig(schema: PluginNodeData['configSchema']): Record<st
   if (schema.properties) {
     Object.entries(schema.properties).forEach(([key, prop]) => {
       if ('default' in prop && prop.default !== undefined) {
-        // eslint-disable-next-line security/detect-object-injection -- key from Object.entries
         config[key] = prop.default;
       }
     });

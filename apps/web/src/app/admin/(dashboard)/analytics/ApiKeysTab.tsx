@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 
 import { Download } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { ApiKeyWithStatsDto } from '@/lib/api/schemas/admin.schemas';
 

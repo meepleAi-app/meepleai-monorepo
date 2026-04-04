@@ -42,7 +42,7 @@ export function BggSearchStep({ onGameSelected }: BggSearchStepProps) {
         <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Search BoardGameGeek (e.g. Catan, Wingspan, Gloomhaven)..."
+          placeholder="Cerca gioco (es. Catan, Wingspan, Gloomhaven)..."
           value={query}
           onChange={e => setQuery(e.target.value)}
           className="pl-10 h-11"
@@ -55,9 +55,7 @@ export function BggSearchStep({ onGameSelected }: BggSearchStepProps) {
 
       {/* Hint */}
       {!showResults && !error && (
-        <p className="text-sm text-muted-foreground">
-          Type at least 2 characters to search BoardGameGeek
-        </p>
+        <p className="text-sm text-muted-foreground">Digita almeno 2 caratteri per cercare</p>
       )}
 
       {/* Error */}

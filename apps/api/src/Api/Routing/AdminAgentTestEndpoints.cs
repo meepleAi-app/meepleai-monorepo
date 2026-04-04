@@ -15,7 +15,7 @@ internal static class AdminAgentTestEndpoints
     {
         var group = endpoints.MapGroup("/admin/games")
             .WithTags("Admin - Agent Testing")
-            .RequireAuthorization(policy => policy.RequireRole("Admin"));
+            .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin"));
 
         // POST /api/v1/admin/games/{gameId}/agent/auto-test
         group.MapPost("/{gameId:guid}/agent/auto-test", HandleRunAutoTest)

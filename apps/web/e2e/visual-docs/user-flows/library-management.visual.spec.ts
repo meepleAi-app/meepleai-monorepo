@@ -120,20 +120,30 @@ test.describe('Library Management Flow - Visual Documentation', () => {
       title: 'My Game Library',
       description: 'Personal game library showing owned games',
       annotations: [
-        { selector: 'h1, [data-testid="library-heading"]', label: 'Library', color: ANNOTATION_COLORS.primary },
+        {
+          selector: 'h1, [data-testid="library-heading"]',
+          label: 'Library',
+          color: ANNOTATION_COLORS.primary,
+        },
       ],
       nextAction: 'Browse library',
     });
 
     // Step 2: Library cards
-    const libraryCard = page.locator('[data-testid="library-card"], .library-item, article').first();
+    const libraryCard = page
+      .locator('[data-testid="library-card"], .library-item, article')
+      .first();
     if (await libraryCard.isVisible({ timeout: 3000 }).catch(() => false)) {
       await helper.capture(page, {
         step: 2,
         title: 'Library Games',
         description: 'Games in library with play statistics',
         annotations: [
-          { selector: '[data-testid="library-card"], .library-item, article', label: 'Game Entry', color: ANNOTATION_COLORS.info },
+          {
+            selector: '[data-testid="library-card"], .library-item, article',
+            label: 'Game Entry',
+            color: ANNOTATION_COLORS.info,
+          },
         ],
         previousAction: 'View library',
         nextAction: 'Manage game',
@@ -141,14 +151,20 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     }
 
     // Step 3: Quota display (if visible)
-    const quotaDisplay = page.locator('[data-testid="quota"], text=/\\d+.*\\/.*\\d+/, .quota-info').first();
+    const quotaDisplay = page
+      .locator('[data-testid="quota"], text=/\\d+.*\\/.*\\d+/, .quota-info')
+      .first();
     if (await quotaDisplay.isVisible({ timeout: 2000 }).catch(() => false)) {
       await helper.capture(page, {
         step: 3,
         title: 'Library Quota',
         description: 'Current library usage and limits based on tier',
         annotations: [
-          { selector: '[data-testid="quota"], .quota-info', label: 'Quota Info', color: ANNOTATION_COLORS.warning },
+          {
+            selector: '[data-testid="quota"], .quota-info',
+            label: 'Quota Info',
+            color: ANNOTATION_COLORS.warning,
+          },
         ],
         previousAction: 'View quota',
         nextAction: 'Check limits',
@@ -172,7 +188,7 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     });
 
     // Step 1: Navigate to games catalog
-    await page.goto('/games');
+    await page.goto('/library');
     await waitForStableState(page);
 
     await helper.capture(page, {
@@ -183,14 +199,22 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     });
 
     // Step 2: Click add button
-    const addButton = page.locator('button:has-text("Add to Library"), button:has-text("Aggiungi"), [data-testid="add-to-library"]').first();
+    const addButton = page
+      .locator(
+        'button:has-text("Add to Library"), button:has-text("Aggiungi"), [data-testid="add-to-library"]'
+      )
+      .first();
     if (await addButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await helper.capture(page, {
         step: 2,
         title: 'Add to Library Button',
         description: 'Click to add game to personal library',
         annotations: [
-          { selector: 'button:has-text("Add to Library"), button:has-text("Aggiungi")', label: 'Add Button', color: ANNOTATION_COLORS.success },
+          {
+            selector: 'button:has-text("Add to Library"), button:has-text("Aggiungi")',
+            label: 'Add Button',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         previousAction: 'Find game',
         nextAction: 'Click add',
@@ -214,14 +238,20 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     });
 
     // Step 2: Find remove button
-    const removeButton = page.locator('button:has-text("Remove"), button:has-text("Rimuovi"), [data-testid="remove-game"]').first();
+    const removeButton = page
+      .locator('button:has-text("Remove"), button:has-text("Rimuovi"), [data-testid="remove-game"]')
+      .first();
     if (await removeButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await helper.capture(page, {
         step: 2,
         title: 'Remove Game Option',
         description: 'Remove game from library',
         annotations: [
-          { selector: 'button:has-text("Remove"), button:has-text("Rimuovi")', label: 'Remove', color: ANNOTATION_COLORS.error },
+          {
+            selector: 'button:has-text("Remove"), button:has-text("Rimuovi")',
+            label: 'Remove',
+            color: ANNOTATION_COLORS.error,
+          },
         ],
         previousAction: 'Find game',
         nextAction: 'Confirm removal',
@@ -229,14 +259,20 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     }
 
     // Step 3: Confirmation dialog (if exists)
-    const confirmDialog = page.locator('[role="dialog"], [data-testid="confirm-dialog"], .modal').first();
+    const confirmDialog = page
+      .locator('[role="dialog"], [data-testid="confirm-dialog"], .modal')
+      .first();
     if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
       await helper.capture(page, {
         step: 3,
         title: 'Confirm Removal',
         description: 'Confirm game removal from library',
         annotations: [
-          { selector: '[role="dialog"], .modal', label: 'Confirm Dialog', color: ANNOTATION_COLORS.warning },
+          {
+            selector: '[role="dialog"], .modal',
+            label: 'Confirm Dialog',
+            color: ANNOTATION_COLORS.warning,
+          },
         ],
         previousAction: 'Click remove',
         nextAction: 'Confirm or cancel',
@@ -244,7 +280,9 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     }
 
     helper.setTotalSteps(3);
-    console.log(`\n✅ Remove from library captured: ${helper.getCapturedSteps().length} screenshots`);
+    console.log(
+      `\n✅ Remove from library captured: ${helper.getCapturedSteps().length} screenshots`
+    );
   });
 
   test('upload custom PDF to library game', async ({ page }) => {
@@ -258,11 +296,13 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     });
 
     // Step 1: Navigate to game in library
-    await page.goto('/games/game-1');
+    await page.goto('/library/games/game-1');
     await waitForStableState(page);
 
     // Step 2: Go to Rules tab
-    const rulesTab = page.locator('button:has-text("Rules"), [role="tab"]:has-text("Rules")').first();
+    const rulesTab = page
+      .locator('button:has-text("Rules"), [role="tab"]:has-text("Rules")')
+      .first();
     if (await rulesTab.isVisible({ timeout: 2000 }).catch(() => false)) {
       await rulesTab.click();
       await waitForStableState(page);
@@ -272,14 +312,20 @@ test.describe('Library Management Flow - Visual Documentation', () => {
         title: 'Rules Tab',
         description: 'Navigate to Rules section to upload PDF',
         annotations: [
-          { selector: 'button:has-text("Upload"), [data-testid="upload-pdf"]', label: 'Upload PDF', color: ANNOTATION_COLORS.primary },
+          {
+            selector: 'button:has-text("Upload"), [data-testid="upload-pdf"]',
+            label: 'Upload PDF',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         nextAction: 'Click upload',
       });
     }
 
     // Step 3: Upload modal/form
-    const uploadButton = page.locator('button:has-text("Upload"), [data-testid="upload-pdf"]').first();
+    const uploadButton = page
+      .locator('button:has-text("Upload"), [data-testid="upload-pdf"]')
+      .first();
     if (await uploadButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await uploadButton.click();
       await waitForStableState(page);
@@ -291,7 +337,11 @@ test.describe('Library Management Flow - Visual Documentation', () => {
           title: 'PDF Upload Form',
           description: 'Upload a custom PDF rulebook',
           annotations: [
-            { selector: 'input[type="file"]', label: 'File Input', color: ANNOTATION_COLORS.primary },
+            {
+              selector: 'input[type="file"]',
+              label: 'File Input',
+              color: ANNOTATION_COLORS.primary,
+            },
           ],
           previousAction: 'Open upload form',
           nextAction: 'Select PDF file',

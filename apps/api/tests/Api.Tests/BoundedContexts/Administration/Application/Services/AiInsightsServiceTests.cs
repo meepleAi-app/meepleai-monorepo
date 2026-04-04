@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using DomainInsightType = Api.BoundedContexts.Administration.Domain.ValueObjects.InsightType;
 using DtoInsightType = Api.BoundedContexts.Administration.Application.DTOs.InsightType;
 
@@ -64,10 +65,10 @@ public sealed class AiInsightsServiceTests
         var result = await _service.GetInsightsAsync(_userId);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Insights.Count);
-        Assert.True(result.GeneratedAt <= DateTime.UtcNow);
-        Assert.True(result.NextRefresh > result.GeneratedAt);
+        result.Should().NotBeNull();
+        result.Insights.Count.Should().Be(2);
+        (result.GeneratedAt <= DateTime.UtcNow).Should().BeTrue();
+        (result.NextRefresh > result.GeneratedAt).Should().BeTrue();
     }
 
     [Fact]
@@ -82,10 +83,10 @@ public sealed class AiInsightsServiceTests
         var result = await _service.GetInsightsAsync(_userId);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result.Insights);
-        Assert.True(result.GeneratedAt <= DateTime.UtcNow);
-        Assert.True(result.NextRefresh > result.GeneratedAt);
+        result.Should().NotBeNull();
+        result.Insights.Should().BeEmpty();
+        (result.GeneratedAt <= DateTime.UtcNow).Should().BeTrue();
+        (result.NextRefresh > result.GeneratedAt).Should().BeTrue();
     }
 
     [Fact]
@@ -100,8 +101,8 @@ public sealed class AiInsightsServiceTests
         var result = await _service.GetInsightsAsync(_userId);
 
         // Assert - should gracefully handle errors
-        Assert.NotNull(result);
-        Assert.Empty(result.Insights);
+        result.Should().NotBeNull();
+        result.Insights.Should().BeEmpty();
     }
 
     [Fact]
@@ -118,8 +119,7 @@ public sealed class AiInsightsServiceTests
         stopwatch.Stop();
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(stopwatch.ElapsedMilliseconds < 1000,
-            $"Expected <1000ms, got {stopwatch.ElapsedMilliseconds}ms");
+        result.Should().NotBeNull();
+        (stopwatch.ElapsedMilliseconds < 1000).Should().BeTrue($"Expected <1000ms, got {stopwatch.ElapsedMilliseconds}ms");
     }
 }

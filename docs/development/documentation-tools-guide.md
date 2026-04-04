@@ -66,7 +66,7 @@ app.MapPost("/api/v1/games", async (CreateGameCommand cmd, IMediator mediator) =
 ```
 
 **Validates**:
-- Link relativi (`../01-architecture/adr/adr-001.md`)
+- Link relativi (`../architecture/adr/adr-001.md`)
 - File existence
 - Directory existence
 - Skips external URLs (http://, https://)
@@ -328,9 +328,9 @@ pnpm storybook
 
 ## 📖 Related Documentation
 
-- [API Documentation](../03-api/README.md) - Using Scalar UI
+- [API Documentation](../api/README.md) - Using Scalar UI
 - [Development Guide](./README.md) - Development workflow
-- [Testing Guide](../05-testing/README.md) - Testing documentation
+- [Testing Guide](../testing/README.md) - Testing documentation
 
 ---
 

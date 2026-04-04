@@ -82,8 +82,9 @@ public class DeleteGameErrataCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _repositoryMock.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

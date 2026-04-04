@@ -88,7 +88,7 @@ export interface Action {
   /** Context to switch to when action is triggered */
   contextChange?: LayoutContext;
   /** Visibility rules based on user role (optional, backward-compatible) */
-  visibility?: { minRole?: 'Editor' | 'Admin' };
+  visibility?: { minRole?: 'editor' | 'admin' };
 }
 
 /**

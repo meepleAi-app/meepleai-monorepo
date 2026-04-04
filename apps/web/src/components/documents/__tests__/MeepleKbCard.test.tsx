@@ -86,22 +86,22 @@ describe('MeepleKbCard', () => {
 
   it('renders indexed status badge for completed document', () => {
     render(<MeepleKbCard document={mockIndexedDocument} />);
-    expect(screen.getByTestId('document-status-indexed')).toBeInTheDocument();
+    expect(screen.getByTestId('kb-status-indexed')).toBeInTheDocument();
   });
 
   it('renders processing status badge for in-progress document', () => {
     render(<MeepleKbCard document={mockProcessingDocument} />);
-    expect(screen.getByTestId('document-status-processing')).toBeInTheDocument();
+    expect(screen.getByTestId('kb-status-processing')).toBeInTheDocument();
   });
 
   it('renders failed status badge for failed document', () => {
     render(<MeepleKbCard document={mockFailedDocument} />);
-    expect(screen.getByTestId('document-status-failed')).toBeInTheDocument();
+    expect(screen.getByTestId('kb-status-failed')).toBeInTheDocument();
   });
 
   it('renders none status badge for pending document', () => {
     render(<MeepleKbCard document={mockNoneDocument} />);
-    expect(screen.getByTestId('document-status-none')).toBeInTheDocument();
+    expect(screen.getByTestId('kb-status-none')).toBeInTheDocument();
   });
 
   // --------------------------------------------------------------------------

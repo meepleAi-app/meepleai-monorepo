@@ -18,9 +18,9 @@ internal static class BggImportQueueEndpoints
 {
     internal static IEndpointRouteBuilder MapBggImportQueueEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/admin/bgg-queue")
+        var group = endpoints.MapGroup("/admin/bgg-queue")
             .WithTags("BGG Import Queue")
-            .RequireAuthorization(policy => policy.RequireRole("Admin")); // Admin-only endpoints
+            .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin")); // Admin-only endpoints
 
         // GET /api/v1/admin/bgg-queue/status - Get current queue status
         group.MapGet("/status", GetQueueStatus)
@@ -186,7 +186,8 @@ internal static class BggImportQueueEndpoints
         var command = new EnqueueBggBatchFromJsonCommand
         {
             JsonContent = request.JsonContent,
-            UserId = userId != null && Guid.TryParse(userId, out var userGuid) ? userGuid : Guid.Empty
+            UserId = userId != null && Guid.TryParse(userId, out var userGuid) ? userGuid : Guid.Empty,
+            AutoPublish = request.AutoPublish
         };
 
         var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
@@ -395,4 +396,4 @@ public sealed record EnqueueBggBatchRequest(List<int> BggIds);
 /// <summary>
 /// Request to bulk import games from JSON content (Issue #4352)
 /// </summary>
-public sealed record EnqueueBggBatchFromJsonRequest(string JsonContent);
+public sealed record EnqueueBggBatchFromJsonRequest(string JsonContent, bool AutoPublish = false);

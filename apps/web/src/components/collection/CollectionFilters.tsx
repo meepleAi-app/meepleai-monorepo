@@ -21,13 +21,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import {
-  FileText,
-  MessageSquare,
-  Tag,
-  X,
-  ChevronDown,
-} from 'lucide-react';
+import { FileText, MessageSquare, Tag, X, ChevronDown } from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -81,14 +75,7 @@ interface FilterChipProps {
   onClear?: () => void;
 }
 
-function FilterChip({
-  icon,
-  label,
-  value,
-  isActive,
-  onClick,
-  onClear,
-}: FilterChipProps) {
+function FilterChip({ icon, label, value, isActive, onClick, onClear }: FilterChipProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -115,11 +102,11 @@ function FilterChip({
           <span
             role="button"
             tabIndex={0}
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               onClear();
             }}
-            onKeyDown={(e) => {
+            onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.stopPropagation();
                 e.preventDefault();
@@ -168,13 +155,10 @@ function CategoryDropdown({ value, categories, onChange }: CategoryDropdownProps
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[140px]">
-        <DropdownMenuItem
-          onClick={() => onChange(null)}
-          className={cn(!value && 'bg-muted')}
-        >
+        <DropdownMenuItem onClick={() => onChange(null)} className={cn(!value && 'bg-muted')}>
           Tutte
         </DropdownMenuItem>
-        {categories.map((category) => (
+        {categories.map(category => (
           <DropdownMenuItem
             key={category}
             onClick={() => onChange(category)}
@@ -201,7 +185,6 @@ export function CollectionFilters({
   className,
 }: CollectionFiltersProps) {
   const handleToggleFilter = (key: 'hasPdf' | 'hasActiveChat') => {
-    // eslint-disable-next-line security/detect-object-injection
     const newValue = cycleToggle(filters[key]);
     onFilterChange({
       ...filters,
@@ -223,7 +206,8 @@ export function CollectionFilters({
     });
   };
 
-  const hasActiveFilters = filters.hasPdf !== null || filters.hasActiveChat !== null || filters.category !== null;
+  const hasActiveFilters =
+    filters.hasPdf !== null || filters.hasActiveChat !== null || filters.category !== null;
 
   return (
     <section
@@ -260,10 +244,7 @@ export function CollectionFilters({
 
       {/* Clear All Filters */}
       {hasActiveFilters && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
+        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}>
           <Button
             variant="ghost"
             size="sm"

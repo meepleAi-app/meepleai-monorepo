@@ -116,12 +116,14 @@ describe('QueueItem', () => {
   describe('Priority', () => {
     it('should display priority for Queued items', () => {
       renderQueueItem(makeJob({ status: 'Queued', priority: 10 }));
-      expect(screen.getByText('Pri: 10')).toBeInTheDocument();
+      // PriorityBadge uses data-testid; priority 10 = 'normal' level
+      expect(screen.getByTestId('priority-badge-normal')).toBeInTheDocument();
     });
 
     it('should not display priority for Processing items', () => {
       renderQueueItem(makeJob({ status: 'Processing', priority: 10 }));
-      expect(screen.queryByText(/Pri:/)).not.toBeInTheDocument();
+      // PriorityBadge only renders for Queued status
+      expect(screen.queryByTestId('priority-badge-normal')).not.toBeInTheDocument();
     });
   });
 

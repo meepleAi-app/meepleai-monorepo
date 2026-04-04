@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Administration.Domain.Enums;
+using Api.SharedKernel.Domain.Enums;
 using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
@@ -60,6 +60,9 @@ public sealed class Permission
 
         if (context.UserStatus == UserAccountStatus.Suspended)
             return PermissionCheckResult.Denied("User account is suspended");
+
+        if (context.UserStatus == UserAccountStatus.Pending)
+            return PermissionCheckResult.Denied("User account is pending activation");
 
         if (AllowedStates != null &&
             !string.IsNullOrEmpty(context.ResourceState) &&

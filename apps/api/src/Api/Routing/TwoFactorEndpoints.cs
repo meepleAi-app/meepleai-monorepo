@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Api.Middleware;
 using Api.Models;
 using Api.Services;
 using MediatR;
@@ -115,7 +116,7 @@ internal static class TwoFactorEndpoints
 
             if (!result.Allowed)
             {
-                logger.LogWarning("2FA verify rate limited for session {SessionToken}", request.SessionToken);
+                logger.LogWarning("2FA verify rate limited for session {SessionToken}", LogValueSanitizer.Sanitize(request.SessionToken));
                 return Results.StatusCode(429);
             }
 

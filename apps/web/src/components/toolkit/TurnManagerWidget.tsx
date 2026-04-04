@@ -7,7 +7,7 @@ import { ChevronRight, RotateCcw, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { useWidgetSync } from '@/lib/hooks/useWidgetSync';
+import { useWidgetSync } from '@/lib/domain-hooks/useWidgetSync';
 
 import { WidgetCard } from './WidgetCard';
 
@@ -55,7 +55,7 @@ export function TurnManagerWidget({
   const [round, setRound] = useState(1);
   const [newPlayerName, setNewPlayerName] = useState('');
 
-  const { broadcastState, isConnected } = useWidgetSync({
+  const { broadcastState, isConnected: _isConnected } = useWidgetSync({
     sessionId,
     toolkitId,
     widgetType: 'TurnManager',

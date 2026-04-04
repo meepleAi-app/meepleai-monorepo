@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Models;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 using Api.Middleware.Exceptions;
@@ -27,6 +28,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     private readonly List<Guid> _turnOrder = new();
     private readonly List<RoundScore> _roundScores = new();
     private readonly List<TurnRecord> _turnRecords = new();
+    private readonly List<RuleDisputeEntry> _disputes = new();
+    private SetupChecklistData? _setupChecklist;
 
 #pragma warning disable CS8618
     private LiveGameSession() : base()
@@ -60,6 +63,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public string? Notes { get; private set; }
     public AgentSessionMode AgentMode { get; private set; }
     public Guid? ChatSessionId { get; private set; }
+    public TurnAdvancePolicy TurnAdvancePolicy { get; private set; }
     public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
 
     // === Read-only collections ===
@@ -69,6 +73,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public IReadOnlyList<Guid> TurnOrder => _turnOrder.AsReadOnly();
     public IReadOnlyList<RoundScore> RoundScores => _roundScores.AsReadOnly();
     public IReadOnlyList<TurnRecord> TurnRecords => _turnRecords.AsReadOnly();
+    public IReadOnlyList<RuleDisputeEntry> Disputes => _disputes.AsReadOnly();
+    public SetupChecklistData? SetupChecklist => _setupChecklist;
 
     // === Computed Properties ===
 
@@ -91,7 +97,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         PlayRecordVisibility visibility = PlayRecordVisibility.Private,
         Guid? groupId = null,
         SessionScoringConfig? scoringConfig = null,
-        AgentSessionMode agentMode = AgentSessionMode.None)
+        AgentSessionMode agentMode = AgentSessionMode.None,
+        TurnAdvancePolicy turnAdvancePolicy = TurnAdvancePolicy.Manual)
     {
         if (id == Guid.Empty)
             throw new ValidationException("Session ID cannot be empty");
@@ -126,7 +133,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
             UpdatedAt = now,
             CurrentTurnIndex = 0,
             ScoringConfig = scoringConfig ?? SessionScoringConfig.CreateDefault(),
-            AgentMode = agentMode
+            AgentMode = agentMode,
+            TurnAdvancePolicy = turnAdvancePolicy
         };
 
         session.AddDomainEvent(new LiveSessionCreatedEvent(id, createdByUserId, trimmedName, gameId));
@@ -538,6 +546,19 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Sets the policy that controls how turns advance.
+    /// </summary>
+    public void SetTurnAdvancePolicy(TurnAdvancePolicy policy, TimeProvider? timeProvider = null)
+    {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot change turn advance policy on a completed session");
+
+        TurnAdvancePolicy = policy;
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
     /// Configures phase names from a toolkit's turn template.
     /// </summary>
     public void ConfigurePhases(string[] phaseNames, TimeProvider? timeProvider = null)
@@ -583,6 +604,36 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     /// </summary>
     public string? GetCurrentPhaseName() =>
         PhaseNames.Length > CurrentPhaseIndex ? PhaseNames[CurrentPhaseIndex] : null;
+
+    // === Disputes ===
+
+    /// <summary>
+    /// Adds a rule dispute arbitration entry to the session log.
+    /// Disputes are stored as JSONB and represent AI-resolved rule questions.
+    /// </summary>
+    public void AddDispute(RuleDisputeEntry dispute)
+    {
+        ArgumentNullException.ThrowIfNull(dispute);
+        _disputes.Add(dispute);
+    }
+
+    // === Setup Checklist ===
+
+    /// <summary>
+    /// Sets the setup checklist for the session (initial assignment).
+    /// </summary>
+    public void SetSetupChecklist(SetupChecklistData checklist)
+    {
+        _setupChecklist = checklist ?? throw new ArgumentNullException(nameof(checklist));
+    }
+
+    /// <summary>
+    /// Updates the setup checklist for the session.
+    /// </summary>
+    public void UpdateSetupChecklist(SetupChecklistData checklist)
+    {
+        _setupChecklist = checklist ?? throw new ArgumentNullException(nameof(checklist));
+    }
 
     // === State & Notes ===
 

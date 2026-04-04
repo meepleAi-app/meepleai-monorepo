@@ -8,7 +8,7 @@
 
 import React from 'react';
 
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/primitives/label';
 import { Slider } from '@/components/ui/slider';
 
 import type { RangeFilter as RangeFilterConfig } from '../../entity-list-view.types';
@@ -36,9 +36,7 @@ export function RangeFilter<T>({ filter, value, onChange }: RangeFilterProps<T>)
         </span>
       </div>
 
-      {filter.description && (
-        <p className="text-xs text-muted-foreground">{filter.description}</p>
-      )}
+      {filter.description && <p className="text-xs text-muted-foreground">{filter.description}</p>}
 
       {/* Dual-handle slider */}
       <Slider

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Services;
 
@@ -69,7 +70,7 @@ public class EmailVerificationServiceTests
             TestCancellationToken);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockEmailService.Verify(x => x.SendVerificationEmailAsync(
             "test@example.com",
             "Test User",
@@ -78,9 +79,9 @@ public class EmailVerificationServiceTests
 
         // Verify token was created in database
         var token = await dbContext.EmailVerifications.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.NotNull(token);
-        Assert.Equal(userId, token.UserId);
-        Assert.Null(token.VerifiedAt);
+        token.Should().NotBeNull();
+        token.UserId.Should().Be(userId);
+        token.VerifiedAt.Should().BeNull();
     }
 
     [Fact]
@@ -112,7 +113,7 @@ public class EmailVerificationServiceTests
             TestCancellationToken);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockEmailService.Verify(x => x.SendVerificationEmailAsync(
             It.IsAny<string>(),
             It.IsAny<string>(),
@@ -135,7 +136,7 @@ public class EmailVerificationServiceTests
             TestCancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -175,18 +176,18 @@ public class EmailVerificationServiceTests
         var result = await service.VerifyEmailAsync(token, TestCancellationToken);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
 
         // Verify user is now verified
         var updatedUser = await dbContext.Users.FindAsync([userId], TestCancellationToken);
-        Assert.NotNull(updatedUser);
-        Assert.True(updatedUser.EmailVerified);
-        Assert.NotNull(updatedUser.EmailVerifiedAt);
+        updatedUser.Should().NotBeNull();
+        updatedUser.EmailVerified.Should().BeTrue();
+        updatedUser.EmailVerifiedAt.Should().NotBeNull();
 
         // Verify token is marked as used
         var updatedVerification = await dbContext.EmailVerifications.FindAsync([verification.Id], TestCancellationToken);
-        Assert.NotNull(updatedVerification);
-        Assert.NotNull(updatedVerification.VerifiedAt);
+        updatedVerification.Should().NotBeNull();
+        updatedVerification.VerifiedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -226,12 +227,12 @@ public class EmailVerificationServiceTests
         var result = await service.VerifyEmailAsync(token, TestCancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
 
         // Verify user is still not verified
         var updatedUser = await dbContext.Users.FindAsync([userId], TestCancellationToken);
-        Assert.NotNull(updatedUser);
-        Assert.False(updatedUser.EmailVerified);
+        updatedUser.Should().NotBeNull();
+        updatedUser.EmailVerified.Should().BeFalse();
     }
 
     [Fact]
@@ -272,7 +273,7 @@ public class EmailVerificationServiceTests
         var result = await service.VerifyEmailAsync(token, TestCancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -286,7 +287,7 @@ public class EmailVerificationServiceTests
         var result = await service.VerifyEmailAsync("invalid-token-does-not-exist", TestCancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -329,7 +330,7 @@ public class EmailVerificationServiceTests
         var result = await service.ResendVerificationEmailAsync("test@example.com", TestCancellationToken);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockEmailService.Verify(x => x.SendVerificationEmailAsync(
             "test@example.com",
             It.IsAny<string>(),
@@ -366,10 +367,10 @@ public class EmailVerificationServiceTests
         var service = CreateService(dbContext);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.ResendVerificationEmailAsync("test@example.com", TestCancellationToken));
+        var act = () => service.ResendVerificationEmailAsync("test@example.com", TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Too many", exception.Message);
+        exception.Message.Should().Contain("Too many");
     }
 
     [Fact]
@@ -392,7 +393,7 @@ public class EmailVerificationServiceTests
         var result = await service.ResendVerificationEmailAsync("nonexistent@example.com", TestCancellationToken);
 
         // Assert - should return true to prevent email enumeration
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockEmailService.Verify(x => x.SendVerificationEmailAsync(
             It.IsAny<string>(),
             It.IsAny<string>(),
@@ -425,7 +426,7 @@ public class EmailVerificationServiceTests
         var result = await service.IsEmailVerifiedAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -452,7 +453,7 @@ public class EmailVerificationServiceTests
         var result = await service.IsEmailVerifiedAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     private MeepleAiDbContext CreateInMemoryDbContext()

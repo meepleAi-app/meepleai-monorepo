@@ -1,7 +1,13 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Services;
 using Api.Models;
+using Api.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Api.Infrastructure.BackgroundServices;
@@ -22,6 +28,9 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<BggImportQueueBackgroundService> _logger;
     private readonly BggImportQueueConfiguration _config;
+
+    private static readonly TimeSpan StaleThreshold = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan StaleRecoveryInterval = TimeSpan.FromMinutes(5);
 
     public BggImportQueueBackgroundService(
         IServiceScopeFactory scopeFactory,
@@ -68,6 +77,10 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
             await Task.Delay(initialDelay, stoppingToken).ConfigureAwait(false);
         }
 
+        // Recover stale items on startup
+        await RecoverStaleItemsAsync(stoppingToken).ConfigureAwait(false);
+        var lastStaleRecovery = DateTime.UtcNow;
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -90,6 +103,13 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
             }
 #pragma warning restore CA1031
 
+            // Periodic stale recovery
+            if (DateTime.UtcNow - lastStaleRecovery > StaleRecoveryInterval)
+            {
+                await RecoverStaleItemsAsync(stoppingToken).ConfigureAwait(false);
+                lastStaleRecovery = DateTime.UtcNow;
+            }
+
             // Rate limiting: Wait for configured interval (default 1 second for BGG API)
             var interval = TimeSpan.FromSeconds(_config.ProcessingIntervalSeconds);
             await Task.Delay(interval, stoppingToken).ConfigureAwait(false);
@@ -100,74 +120,280 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
 
     /// <summary>
     /// Process the next queued item (lowest position).
+    /// Uses separate DI scopes for queue operations vs MediatR command execution
+    /// to prevent the handler's DbContext mutations from polluting queue state.
     /// </summary>
     private async Task ProcessNextQueueItemAsync(CancellationToken cancellationToken)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-
-        // Get next queued item
-        var queueItem = await queueService.GetNextQueuedItemAsync(cancellationToken).ConfigureAwait(false);
-        if (queueItem == null)
+        // Scope 1: Read next queued item (isolated from handler's DbContext)
+        Guid queueItemId;
+        int? bggId;
+        int retryCount;
+        Guid? requestedByUserId;
+        BggQueueJobType jobType;
+        Guid? sharedGameId;
+        string? gameName;
+        bool autoPublish;
         {
-            // Queue is empty - check for cleanup
-            if (_config.AutoCleanupDays > 0)
+            using var readScope = _scopeFactory.CreateScope();
+            var readQueueService = readScope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
+
+            var queueItem = await readQueueService.GetNextQueuedItemAsync(cancellationToken).ConfigureAwait(false);
+            if (queueItem == null)
             {
-                await PerformCleanupAsync(queueService, cancellationToken).ConfigureAwait(false);
+                if (_config.AutoCleanupDays > 0)
+                {
+                    await PerformCleanupAsync(readQueueService, cancellationToken).ConfigureAwait(false);
+                }
+                return;
             }
-            return;
-        }
 
-        _logger.LogInformation(
-            "Processing BGG import: Id={Id}, BggId={BggId}, Position={Position}, Attempt={Attempt}",
-            queueItem.Id, queueItem.BggId, queueItem.Position, queueItem.RetryCount + 1);
-
-        try
-        {
-            // Mark as processing
-            await queueService.MarkAsProcessingAsync(queueItem.Id, cancellationToken).ConfigureAwait(false);
-
-            // Execute import via CQRS command
-            // Note: Background queue imports use system user ID (Guid.Empty) since they are global operations
-            var command = new ImportGameFromBggCommand(queueItem.BggId, Guid.Empty);
-            var createdGameId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
-
-            // Mark as completed
-            await queueService.MarkAsCompletedAsync(queueItem.Id, createdGameId, cancellationToken).ConfigureAwait(false);
+            queueItemId = queueItem.Id;
+            bggId = queueItem.BggId;
+            retryCount = queueItem.RetryCount;
+            requestedByUserId = queueItem.RequestedByUserId;
+            jobType = queueItem.JobType;
+            sharedGameId = queueItem.SharedGameId;
+            gameName = queueItem.GameName;
+            autoPublish = queueItem.AutoPublish;
 
             _logger.LogInformation(
-                "Successfully imported BGG game: QueueId={QueueId}, BggId={BggId}, CreatedGameId={CreatedGameId}",
-                queueItem.Id, queueItem.BggId, createdGameId);
+                "Processing BGG import: Id={Id}, BggId={BggId}, Position={Position}, Attempt={Attempt}",
+                queueItem.Id, queueItem.BggId, queueItem.Position, retryCount + 1);
+
+            // Mark as processing in the same scope that loaded it
+            await readQueueService.MarkAsProcessingAsync(queueItemId, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Scope 2: Execute MediatR command (separate DbContext)
+        Guid? createdGameId = null;
+        Exception? importException = null;
+        try
+        {
+            using var commandScope = _scopeFactory.CreateScope();
+            var mediator = commandScope.ServiceProvider.GetRequiredService<IMediator>();
+
+            var userId = requestedByUserId ?? Guid.Empty;
+
+            if (jobType == BggQueueJobType.Import && bggId.HasValue)
+            {
+                var command = new ImportGameFromBggCommand(bggId.Value, userId, autoPublish);
+                createdGameId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+            }
+            else if (jobType == BggQueueJobType.Enrichment && sharedGameId.HasValue)
+            {
+                createdGameId = await ProcessEnrichmentItemAsync(
+                    commandScope.ServiceProvider, sharedGameId.Value, bggId, gameName,
+                    cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
-            // Mark as failed (handles retry logic internally)
-            var errorMessage = $"{ex.GetType().Name}: {ex.Message}";
-            await queueService.MarkAsFailedAsync(
-                queueItem.Id,
-                errorMessage,
-                _config.MaxRetryAttempts,
-                cancellationToken).ConfigureAwait(false);
+            importException = ex;
+        }
 
-            _logger.LogError(
-                ex,
-                "Failed to import BGG game: QueueId={QueueId}, BggId={BggId}, Attempt={Attempt}/{MaxAttempts}",
-                queueItem.Id, queueItem.BggId, queueItem.RetryCount + 1, _config.MaxRetryAttempts);
+        // Scope 3: Update queue status (fresh DbContext, no pollution from handler)
+        {
+            using var updateScope = _scopeFactory.CreateScope();
+            var updateQueueService = updateScope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
 
-            // Exponential backoff delay if retry will occur
-            if (queueItem.RetryCount + 1 < _config.MaxRetryAttempts)
+            if (importException == null && createdGameId.HasValue)
             {
-                var backoffDelay = TimeSpan.FromSeconds(
-                    _config.BaseRetryDelaySeconds * Math.Pow(2, queueItem.RetryCount));
+                // Success path
+                await updateQueueService.MarkAsCompletedAsync(queueItemId, createdGameId.Value, cancellationToken).ConfigureAwait(false);
 
                 _logger.LogInformation(
-                    "Retry scheduled with exponential backoff: {Delay} seconds",
-                    backoffDelay.TotalSeconds);
+                    "Successfully imported BGG game: QueueId={QueueId}, BggId={BggId}, CreatedGameId={CreatedGameId}",
+                    queueItemId, bggId, createdGameId.Value);
+            }
+            else if (importException is InvalidOperationException { Message: var msg } && msg.Contains("already exists"))
+            {
+                // Game was already imported — look up existing and mark completed
+                var updateDbContext = updateScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+                var existingGame = await updateDbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(g => g.BggId == bggId, cancellationToken)
+                    .ConfigureAwait(false);
 
-                await Task.Delay(backoffDelay, cancellationToken).ConfigureAwait(false);
+                var existingGameId = existingGame?.Id ?? Guid.Empty;
+                await updateQueueService.MarkAsCompletedAsync(queueItemId, existingGameId, cancellationToken).ConfigureAwait(false);
+
+                _logger.LogInformation(
+                    importException,
+                    "BGG game already exists, marked as completed: QueueId={QueueId}, BggId={BggId}, ExistingGameId={GameId}",
+                    queueItemId, bggId, existingGameId);
+            }
+            else if (importException != null)
+            {
+                // General failure — mark as failed with retry logic
+                var errorMessage = $"{importException.GetType().Name}: {importException.Message}";
+                await updateQueueService.MarkAsFailedAsync(
+                    queueItemId,
+                    errorMessage,
+                    _config.MaxRetryAttempts,
+                    cancellationToken).ConfigureAwait(false);
+
+                _logger.LogError(
+                    importException,
+                    "Failed to import BGG game: QueueId={QueueId}, BggId={BggId}, Attempt={Attempt}/{MaxAttempts}",
+                    queueItemId, bggId, retryCount + 1, _config.MaxRetryAttempts);
+
+                if (retryCount + 1 < _config.MaxRetryAttempts)
+                {
+                    var backoffDelay = TimeSpan.FromSeconds(
+                        _config.BaseRetryDelaySeconds * Math.Pow(2, retryCount));
+
+                    _logger.LogInformation(
+                        "Retry scheduled with exponential backoff: {Delay} seconds",
+                        backoffDelay.TotalSeconds);
+
+                    await Task.Delay(backoffDelay, cancellationToken).ConfigureAwait(false);
+                }
             }
         }
+    }
+
+    /// <summary>
+    /// Process an enrichment queue item: fetch BGG details and update the existing SharedGame.
+    /// If BggId is null, auto-match by searching BGG with the game name.
+    /// </summary>
+    private async Task<Guid?> ProcessEnrichmentItemAsync(
+        IServiceProvider serviceProvider,
+        Guid sharedGameId,
+        int? bggId,
+        string? gameName,
+        CancellationToken cancellationToken)
+    {
+        var repository = serviceProvider.GetRequiredService<ISharedGameRepository>();
+        var bggService = serviceProvider.GetRequiredService<IBggApiService>();
+        var unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
+
+        var game = await repository.GetByIdAsync(sharedGameId, cancellationToken).ConfigureAwait(false);
+        if (game is null)
+        {
+            throw new InvalidOperationException($"SharedGame {sharedGameId} not found for enrichment");
+        }
+
+        // Transition to Enriching state
+        game.TransitionDataStatusTo(GameDataStatus.Enriching);
+
+        // Auto-match if BggId is unknown
+        var resolvedBggId = bggId;
+        if (!resolvedBggId.HasValue && !string.IsNullOrWhiteSpace(gameName))
+        {
+            var searchResults = await bggService.SearchGamesAsync(gameName, exact: true, ct: cancellationToken)
+                .ConfigureAwait(false);
+
+            if (searchResults.Count == 0)
+            {
+                // Retry with non-exact search
+                searchResults = await bggService.SearchGamesAsync(gameName, exact: false, ct: cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            if (searchResults.Count == 0)
+            {
+                game.TransitionDataStatusTo(GameDataStatus.Failed);
+                await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                throw new InvalidOperationException($"No BGG match found for '{gameName}'");
+            }
+
+            if (searchResults.Count > 5)
+            {
+                game.TransitionDataStatusTo(GameDataStatus.Failed);
+                await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                throw new InvalidOperationException(
+                    $"Ambiguous BGG match for '{gameName}': {searchResults.Count} results. Provide BggId manually.");
+            }
+
+            resolvedBggId = searchResults[0].BggId;
+            _logger.LogInformation(
+                "Auto-matched '{GameName}' to BggId={BggId} ({MatchName})",
+                gameName, resolvedBggId, searchResults[0].Name);
+        }
+
+        if (!resolvedBggId.HasValue)
+        {
+            game.TransitionDataStatusTo(GameDataStatus.Failed);
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            throw new InvalidOperationException(
+                $"Cannot enrich SharedGame {sharedGameId}: no BggId and no GameName for auto-match");
+        }
+
+        // Fetch full details from BGG
+        var details = await bggService.GetGameDetailsAsync(resolvedBggId.Value, ct: cancellationToken)
+            .ConfigureAwait(false);
+
+        if (details is null)
+        {
+            game.TransitionDataStatusTo(GameDataStatus.Failed);
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            throw new InvalidOperationException($"BGG game {resolvedBggId} not found");
+        }
+
+        // Map and enrich
+        var complexityRating = details.AverageWeight.HasValue
+            ? (decimal?)Math.Round((decimal)details.AverageWeight.Value, 2)
+            : null;
+        var averageRating = details.AverageRating.HasValue
+            ? (decimal?)Math.Round((decimal)details.AverageRating.Value, 2)
+            : null;
+
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback placeholder for games without BGG images
+        var imageUrl = details.ImageUrl ?? "https://placehold.co/300x300?text=No+Image";
+#pragma warning restore S1075
+        var thumbnailUrl = details.ThumbnailUrl ?? imageUrl;
+
+        game.EnrichFromBgg(
+            description: details.Description ?? "Imported from BoardGameGeek",
+            yearPublished: details.YearPublished ?? DateTime.UtcNow.Year,
+            minPlayers: details.MinPlayers ?? 1,
+            maxPlayers: details.MaxPlayers ?? 4,
+            playingTimeMinutes: details.PlayingTime ?? details.MinPlayTime ?? 60,
+            minAge: details.MinAge ?? 8,
+            complexityRating: complexityRating,
+            averageRating: averageRating,
+            imageUrl: imageUrl,
+            thumbnailUrl: thumbnailUrl,
+            rulebookUrl: null,
+            bggId: resolvedBggId.Value);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Enriched SharedGame {SharedGameId} from BGG {BggId} ({Title})",
+            sharedGameId, resolvedBggId.Value, details.Name);
+
+        return sharedGameId;
+    }
+
+    /// <summary>
+    /// Recover items stuck in Processing state for longer than the threshold.
+    /// </summary>
+    private async Task RecoverStaleItemsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
+
+            var recovered = await queueService.RecoverStaleItemsAsync(StaleThreshold, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (recovered > 0)
+            {
+                _logger.LogWarning(
+                    "Recovered {Count} stale BGG import items (stuck in Processing > {Minutes}min)",
+                    recovered, StaleThreshold.TotalMinutes);
+            }
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // BACKGROUND SERVICE: Stale recovery failure should not crash the service
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during stale item recovery");
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>

@@ -294,8 +294,8 @@ Implement full functionality for 3 detail pages:
 - Screenshots (3 images)
 
 ### **GitHub**
-- Epic: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4192
-- PR: https://github.com/DegrassiAaron/meepleai-monorepo/pull/4191 (merged)
+- Epic: https://github.com/meepleAi-app/meepleai-monorepo/issues/4192
+- PR: https://github.com/meepleAi-app/meepleai-monorepo/pull/4191 (merged)
 - Issues: #4193-#4205 (13 issues tracked)
 
 ---

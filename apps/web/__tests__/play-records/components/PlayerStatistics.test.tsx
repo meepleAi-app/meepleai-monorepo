@@ -10,10 +10,10 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { PlayerStatistics } from '@/components/play-records/PlayerStatistics';
-import * as usePlayRecordsHooks from '@/lib/hooks/use-play-records';
+import * as usePlayRecordsHooks from '@/lib/domain-hooks/usePlayRecords';
 
 // Mock hooks
-vi.mock('@/lib/hooks/use-play-records', () => ({
+vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
   usePlayerStatistics: vi.fn(),
 }));
 
@@ -22,15 +22,15 @@ const mockStatsData = {
   totalWins: 18,
   gamePlayCounts: {
     'Twilight Imperium': 12,
-    'Wingspan': 8,
-    'Gloomhaven': 10,
-    'Azul': 5,
+    Wingspan: 8,
+    Gloomhaven: 10,
+    Azul: 5,
     'Ticket to Ride': 7,
   },
   averageScoresByGame: {
     'Twilight Imperium': 245.5,
-    'Wingspan': 78.2,
-    'Gloomhaven': 156.8,
+    Wingspan: 78.2,
+    Gloomhaven: 156.8,
   },
 };
 

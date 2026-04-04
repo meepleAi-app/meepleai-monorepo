@@ -126,7 +126,7 @@ sudo ufw enable
 ssh user@your-server-ip
 
 # Clone repository
-git clone https://github.com/DegrassiAaron/meepleai-monorepo.git /opt/meepleai
+git clone https://github.com/meepleAi-app/meepleai-monorepo.git /opt/meepleai
 cd /opt/meepleai
 ```
 
@@ -470,8 +470,8 @@ pwsh scripts/deployment/deploy-meepleai.ps1 up
 
 ## Support
 
-- **Issues**: https://github.com/DegrassiAaron/meepleai-monorepo/issues
-- **Documentation**: https://github.com/DegrassiAaron/meepleai-monorepo/tree/main/docs
+- **Issues**: https://github.com/meepleAi-app/meepleai-monorepo/issues
+- **Documentation**: https://github.com/meepleAi-app/meepleai-monorepo/tree/main/docs
 
 ---
 

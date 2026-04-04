@@ -123,8 +123,8 @@ describe('Tabs - Accessibility', () => {
       </Tabs>
     );
 
-    const tab = getByRole('tab');
-    expect(tab).toHaveClass('focus-visible:ring-2');
+    const tab = getByRole('tab', { name: /keyboard test/i });
+    expect(tab.className).toContain('focus-visible:ring-2');
   });
 
   it('should disable tabs when disabled prop is true', () => {

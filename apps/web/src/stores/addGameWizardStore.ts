@@ -12,6 +12,7 @@ import { devtools } from 'zustand/middleware';
 import { toast } from '@/components/layout';
 import { api } from '@/lib/api';
 import { ERROR_MESSAGES } from '@/lib/errors/messages';
+import { logger } from '@/lib/logger';
 import type { Game } from '@/types/domain';
 
 /** Centralized toast messages for the add-game wizard — import in tests to avoid magic strings */
@@ -205,7 +206,8 @@ export const useAddGameWizardStore = create<AddGameWizardState>()(
         set({ isProcessing: true, error: null });
 
         try {
-          const { selectedGame, isCustomGame, customGameData, uploadedPdfId, uploadedPdfName } = get();
+          const { selectedGame, isCustomGame, customGameData, uploadedPdfId, uploadedPdfName } =
+            get();
 
           // Validate final state
           if (!selectedGame && !isCustomGame) {
@@ -268,7 +270,7 @@ export const useAddGameWizardStore = create<AddGameWizardState>()(
                 });
               } catch (pdfError) {
                 // PDF association failed but game was added - log but don't fail
-                console.warn('Failed to associate PDF with library entry:', pdfError);
+                logger.warn(`Failed to associate PDF with library entry: ${pdfError}`);
                 toast.warning(ADD_GAME_WIZARD_MESSAGES.pdfFailed);
               }
             }

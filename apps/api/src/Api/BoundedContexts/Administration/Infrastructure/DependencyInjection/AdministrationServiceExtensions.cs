@@ -8,9 +8,16 @@ using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
+using Api.Infrastructure.BackgroundServices;
+using Api.Infrastructure.Configuration;
+using Api.Infrastructure.Seeders;
+using Api.Infrastructure.Seeders.Catalog;
+using Api.Infrastructure.Seeders.Core;
+using Api.Infrastructure.Seeders.LivedIn;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Extensions.Http;
@@ -21,14 +28,12 @@ namespace Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 
 internal static class AdministrationServiceExtensions
 {
-#pragma warning disable S1133 // Method marked obsolete but kept for backward compatibility during migration
-    [Obsolete("Use AddAdministrationInfrastructure instead for modular registration")]
     public static IServiceCollection AddAdministrationContext(
         this IServiceCollection services,
         IConfiguration configuration)
-#pragma warning restore S1133
     {
         // Repositories
+        services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<IAlertConfigurationRepository, AlertConfigurationRepository>();  // Issue #2112: Missing DI registration
         services.AddScoped<IAlertRuleRepository, AlertRuleRepository>();  // Issue #2112: Missing DI registration
@@ -48,13 +53,17 @@ internal static class AdministrationServiceExtensions
         // Issue #5512: GDPR AI consent tracking
         services.AddScoped<IUserAiConsentRepository, UserAiConsentRepository>();
 
+        // Service call logging repository
+        services.AddScoped<IServiceCallLogRepository, ServiceCallLogRepository>();
+
         // Issue #3692: Token Management repositories + OpenRouter API
         services.AddScoped<ITokenTierRepository, TokenTierRepository>();
         services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
         services.AddScoped<ITokenTrackingService, TokenTrackingService>(); // Issue #3786: Token tracking service
         services.AddHttpClient<IOpenRouterService, OpenRouterService>()
             .AddPolicyHandler(GetRetryPolicy())
-            .AddPolicyHandler(GetCircuitBreakerPolicy());
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "OpenRouter", sp.GetService<ICircuitBreakerStateTracker>()));
 
         // Budget Display System: Credit-based budget services
         services.AddScoped<ICreditConversionService, CreditConversionService>();
@@ -64,6 +73,10 @@ internal static class AdministrationServiceExtensions
         // Issue #3693: Batch Job System repositories
         services.AddScoped<IBatchJobRepository, BatchJobRepository>();
 
+        // RAG Backup services (Task 10: export, import, snapshot storage)
+        services.AddScoped<IRagBackupStorageService, RagBackupStorageService>();
+        services.AddScoped<IRagExportService, RagExportService>();
+
         // MVP Stack Optimization: Vector re-embedding service (e5-large → mxbai-embed-large migration)
         services.AddScoped<VectorReembeddingService>();
 
@@ -72,13 +85,38 @@ internal static class AdministrationServiceExtensions
             configuration.GetSection(OrphanedTaskCleanupOptions.SectionKey));
         services.AddScoped<IOrphanedTaskCleanupService, OrphanedTaskCleanupService>();
 
+        // Issue #138: Docker Socket Proxy service for admin container management
+        services.AddHttpClient<IDockerProxyService, DockerProxyService>(client =>
+        {
+            var host = Environment.GetEnvironmentVariable("DOCKER_PROXY_HOST") ?? "docker-socket-proxy";
+            var port = Environment.GetEnvironmentVariable("DOCKER_PROXY_PORT") ?? "2375";
+            client.BaseAddress = new Uri($"http://{host}:{port}");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+
+        // Seq structured log query client
+        services.Configure<SeqOptions>(configuration.GetSection(SeqOptions.SectionName));
+        services.AddHttpClient<ISeqQueryClient, SeqQueryClient>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<SeqOptions>>().Value;
+            client.BaseAddress = new Uri(options.ServerUrl);
+            if (!string.IsNullOrEmpty(options.ApiKey))
+                client.DefaultRequestHeaders.Add("X-Seq-ApiKey", options.ApiKey);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
+
         // Issue #891: Infrastructure health monitoring service
         services.AddScoped<IInfrastructureHealthService, InfrastructureHealthService>();
+
+        // Issue #448: Service health monitoring background service with hysteresis
+        services.Configure<HealthMonitorOptions>(configuration.GetSection(HealthMonitorOptions.SectionName));
+        services.AddHostedService<InfrastructureHealthMonitorService>();
 
         // Issue #893: Prometheus HTTP client with Polly retry policy
         services.AddHttpClient<IPrometheusQueryService, PrometheusHttpClient>()
             .AddPolicyHandler(GetRetryPolicy())
-            .AddPolicyHandler(GetCircuitBreakerPolicy());
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "Prometheus", sp.GetService<ICircuitBreakerStateTracker>()));
 
         // Issue #894: Infrastructure details orchestration service
         services.AddScoped<IInfrastructureDetailsService, InfrastructureDetailsService>();
@@ -88,8 +126,13 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ILighthouseReportParserService, LighthouseReportParserService>();
         services.AddScoped<IPlaywrightReportParserService, PlaywrightReportParserService>();
 
-        // ISSUE-2512: Auto-configuration service for first run setup
-        services.AddScoped<IAutoConfigurationService, AutoConfigurationService>();
+        // ISSUE-2512: AutoConfigurationService removed — replaced by SeedOrchestrator (Epic #318)
+
+        // Epic #318: Layered seeding system
+        services.AddScoped<ISeedLayer, CoreSeedLayer>();
+        services.AddScoped<ISeedLayer, CatalogSeedLayer>();
+        services.AddScoped<ISeedLayer, LivedInSeedLayer>();
+        services.AddScoped<SeedOrchestrator>();
 
         // Issue #3916: AI insights service for personalized dashboard recommendations
         services.AddScoped<IAiInsightsService, AiInsightsService>();
@@ -101,6 +144,10 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<IRAGRecommender, RAGRecommender>();
         services.AddScoped<IStreakAnalyzer, StreakAnalyzer>();
 
+        // Circuit breaker state tracker — singleton, holds in-memory state across requests
+        services.AddSingleton<ICircuitBreakerStateTracker, CircuitBreakerStateTracker>();
+        services.AddHostedService<CircuitBreakerRegistrationService>();
+
         // Issue #3324: SSE real-time dashboard streaming service
         // Singleton because it holds Channel-based subscriber state across requests
         services.AddSingleton<IDashboardStreamService, DashboardStreamService>();
@@ -108,7 +155,8 @@ internal static class AdministrationServiceExtensions
         // Issue #2139: HttpClient for Prometheus queries
         services.AddHttpClient<PrometheusClientService>()
             .AddPolicyHandler(GetRetryPolicy())
-            .AddPolicyHandler(GetCircuitBreakerPolicy());
+            .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+                "PrometheusClient", sp.GetService<ICircuitBreakerStateTracker>()));
 
         // ISSUE-916: Report generation and scheduling services
         services.AddScoped<IReportGeneratorService, ReportGeneratorService>();
@@ -117,7 +165,9 @@ internal static class AdministrationServiceExtensions
         // ISSUE-916: Quartz.NET configuration for report scheduling
         services.AddQuartz(q =>
         {
+#pragma warning disable CS0618 // UseMicrosoftDependencyInjectionJobFactory is obsolete but still functional
             q.UseMicrosoftDependencyInjectionJobFactory();
+#pragma warning restore CS0618
             q.UseInMemoryStore(); // Use in-memory for alpha; can switch to DB persistence later
 
             // Register report generation job
@@ -158,6 +208,17 @@ internal static class AdministrationServiceExtensions
                 .WithIdentity("batch-job-processor-trigger", "background")
                 .WithSimpleSchedule(x => x.WithIntervalInSeconds(30).RepeatForever())
                 .WithDescription("Processes queued batch jobs every 30 seconds"));
+
+            // Service call log retention: daily at 4 AM UTC, keeps 7 days
+            q.AddJob<ServiceCallLogRetentionJob>(opts => opts
+                .WithIdentity("service-call-log-retention-job", "maintenance")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("service-call-log-retention-job", "maintenance")
+                .WithIdentity("service-call-log-retention-trigger", "maintenance")
+                .WithCronSchedule("0 0 4 * * ?")
+                .WithDescription("Runs daily to clean up service call logs older than 7 days"));
         });
 
         services.AddQuartzHostedService(options =>
@@ -181,12 +242,20 @@ internal static class AdministrationServiceExtensions
                 });
     }
 
-    private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+    private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy(
+        string? serviceName = null, ICircuitBreakerStateTracker? tracker = null)
     {
         return HttpPolicyExtensions
             .HandleTransientHttpError()
             .CircuitBreakerAsync(
                 handledEventsAllowedBeforeBreaking: 5,
-                durationOfBreak: TimeSpan.FromSeconds(30));
+                durationOfBreak: TimeSpan.FromSeconds(30),
+                onBreak: (outcome, _) =>
+                {
+                    tracker?.RecordBreak(serviceName ?? "Unknown",
+                        outcome.Exception?.Message ?? outcome.Result?.ReasonPhrase);
+                },
+                onReset: () => tracker?.RecordReset(serviceName ?? "Unknown"),
+                onHalfOpen: () => tracker?.RecordHalfOpen(serviceName ?? "Unknown"));
     }
 }

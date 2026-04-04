@@ -30,7 +30,7 @@ import { api, type ProcessingProgress } from '@/lib/api';
 // Constants
 // ============================================================================
 
-const DEFAULT_POLLING_INTERVAL_MS = 500;
+const DEFAULT_POLLING_INTERVAL_MS = 2000;
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000;
 
@@ -89,7 +89,6 @@ export function usePdfProcessingProgress(
 
   // Refs for cleanup and tracking
   const isMountedRef = useRef(true);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const retryCountRef = useRef(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasNotifiedCompletionRef = useRef(false);
@@ -122,10 +121,6 @@ export function usePdfProcessingProgress(
     if (progressRef.current && isTerminalState(progressRef.current.currentStep)) {
       return;
     }
-
-    // Create new AbortController for this request
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = new AbortController();
 
     try {
       setIsLoading(true);
@@ -161,11 +156,6 @@ export function usePdfProcessingProgress(
     } catch (err) {
       if (!isMountedRef.current) return;
 
-      // Check if it's an abort error (ignore these)
-      if (err instanceof Error && err.name === 'AbortError') {
-        return;
-      }
-
       // Retry logic
       if (retryCountRef.current < MAX_RETRY_ATTEMPTS) {
         retryCountRef.current += 1;
@@ -179,7 +169,8 @@ export function usePdfProcessingProgress(
       }
 
       // Max retries exceeded - set error state
-      const errorObj = err instanceof Error ? err : new Error('Failed to fetch processing progress');
+      const errorObj =
+        err instanceof Error ? err : new Error('Failed to fetch processing progress');
       setError(errorObj);
     } finally {
       if (isMountedRef.current) {
@@ -239,11 +230,6 @@ export function usePdfProcessingProgress(
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
-      }
-
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
       }
     };
   }, [enabled, pdfId, pollingInterval, fetchProgress]);

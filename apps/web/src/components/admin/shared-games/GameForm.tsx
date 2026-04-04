@@ -21,9 +21,14 @@ import { useForm, Controller, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
-
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Separator } from '@/components/ui/navigation/separator';
 import {
   Select,
@@ -37,6 +42,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, type GameCategory, type GameMechanic, type SharedGameDetail } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 import { PdfIndexingStatus } from './PdfIndexingStatus';
 import { PdfUploadSection, type UploadedPdf } from './PdfUploadSection';
@@ -151,7 +157,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
         setCategories(categoriesResult);
         setMechanics(mechanicsResult);
       } catch (err) {
-        console.error('Failed to fetch reference data:', err);
+        logger.error('Failed to fetch reference data:', err);
         toast.error('Errore nel caricamento di categorie e meccaniche');
       }
     };
@@ -183,8 +189,10 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 language: data.rulesLanguage || 'it',
               }
             : null,
-        categoryIds: selectedCategories,
-        mechanicIds: selectedMechanics,
+        categories: selectedCategories,
+        mechanics: selectedMechanics,
+        designers: [],
+        publishers: [],
       };
 
       let gameId: string;
@@ -201,12 +209,15 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
       // Link uploaded PDF to the game if present (#3642)
       if (uploadedPdf && !isEditMode) {
         try {
-          const response = await fetch(`${API_BASE}/api/v1/admin/shared-games/${gameId}/documents`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ documentId: uploadedPdf.id, setAsActive: true }),
-          });
+          const response = await fetch(
+            `${API_BASE}/api/v1/admin/shared-games/${gameId}/documents`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ documentId: uploadedPdf.id, setAsActive: true }),
+            }
+          );
           if (response.ok) {
             toast.success('PDF collegato al gioco');
             setShowPdfStatus(true);
@@ -218,7 +229,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
 
       onSubmit(gameId);
     } catch (error) {
-      console.error('Failed to save game:', error);
+      logger.error('Failed to save game:', error);
       toast.error('Errore nel salvataggio del gioco', {
         description: error instanceof Error ? error.message : 'Errore sconosciuto',
       });
@@ -282,7 +293,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
 
             {/* BGG ID */}
             <div>
-              <Label htmlFor="bggId">BoardGameGeek ID</Label>
+              <Label htmlFor="bggId">ID Esterno</Label>
               <div className="flex gap-2">
                 <Input
                   id="bggId"
@@ -416,7 +427,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 disabled={isSubmitting || isLoading}
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Scala BGG: 1 = Leggero, 5 = Pesante
+                Scala complessità: 1 = Leggero, 5 = Pesante
               </p>
               {errors.complexityRating && (
                 <p className="text-sm text-destructive mt-1">{errors.complexityRating.message}</p>
@@ -655,7 +666,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
       {/* PDF Upload Section (#3642) */}
       <PdfUploadSection
         gameId={isEditMode ? game.id : undefined}
-        onPdfUploaded={(pdf) => {
+        onPdfUploaded={pdf => {
           setUploadedPdf(pdf);
           if (isEditMode) {
             setShowPdfStatus(true);
@@ -675,7 +686,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
           pdfId={uploadedPdf.id}
           fileName={uploadedPdf.fileName}
           onComplete={() => toast.success('PDF indicizzato - RAG pronto!')}
-          onError={(err) => toast.error(`Errore indicizzazione: ${err}`)}
+          onError={err => toast.error(`Errore indicizzazione: ${err}`)}
         />
       )}
 

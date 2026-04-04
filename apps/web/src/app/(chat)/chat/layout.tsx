@@ -1,44 +1,26 @@
 /**
  * Chat Section Layout
- * Issue #5044 — Chat Section MiniNav + ActionBar
  *
- * Registers MiniNav (single "Chat" tab) and FloatingActionBar for /chat/*.
- * All pages under /chat/ inherit this config, including the thread view.
+ * Desktop: 2-panel layout with persistent conversation list sidebar (w-80) + main content.
+ * Mobile: single panel, children only (conversation list is page.tsx, thread is [threadId]).
  *
- * - /chat          → Chat list (tab active)
- * - /chat/new      → New chat form
- * - /chat/[threadId] → Thread view (tab highlights /chat root)
+ * Carte in Mano — NavConfig removed, navigation handled by UserShell card system.
  */
 
-'use client';
+import { type ReactNode } from 'react';
 
-import { type ReactNode, useEffect } from 'react';
+import { ChatConversationList } from '@/components/chat-unified/ChatConversationList';
 
-import { MessageSquare, Plus } from 'lucide-react';
+export default function ChatSectionLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex h-full">
+      {/* Conversation list sidebar — desktop only */}
+      <aside className="hidden lg:flex lg:w-80 lg:flex-shrink-0 flex-col border-r border-border/40 overflow-y-auto bg-background/50">
+        <ChatConversationList />
+      </aside>
 
-import { useSetNavConfig } from '@/context/NavigationContext';
-
-export default function ChatLayout({ children }: { children: ReactNode }) {
-  const setNavConfig = useSetNavConfig();
-
-  useEffect(() => {
-    setNavConfig({
-      miniNav: [
-        { id: 'chats', label: 'Chat', href: '/chat', icon: MessageSquare },
-      ],
-      actionBar: [
-        {
-          id: 'new-chat',
-          label: 'Nuova Chat',
-          icon: Plus,
-          variant: 'primary',
-          onClick: () => {
-            window.location.href = '/chat/new';
-          },
-        },
-      ],
-    });
-  }, [setNavConfig]);
-
-  return <>{children}</>;
+      {/* Main content — thread view or mobile conversation list */}
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
 }

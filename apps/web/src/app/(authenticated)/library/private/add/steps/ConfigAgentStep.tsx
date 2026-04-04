@@ -11,6 +11,7 @@ import { useMemo, useState } from 'react';
 
 import { TypologySelector, StrategySelector } from '@/components/agent/config';
 import { toast } from '@/components/layout';
+import { DocumentSelectionPanel } from '@/components/library/DocumentSelectionPanel';
 import { Spinner } from '@/components/loading';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
@@ -33,9 +34,10 @@ export function ConfigAgentStep({
   onSkip,
   onBack,
 }: ConfigAgentStepProps) {
-  const [typologyId, setTypologyId] = useState<string>();
+  const [agentDefinitionId, setagentDefinitionId] = useState<string>();
   const [strategyName, setStrategyName] = useState<string>('Balanced');
   const [isCreating, setIsCreating] = useState(false);
+  const [_selectedDocIds, setSelectedDocIds] = useState<string[]>([_pdfId]);
 
   const { data: currentUser } = useCurrentUser();
 
@@ -47,7 +49,7 @@ export function ConfigAgentStep({
   }, [currentUser?.role]);
 
   const handleCreate = async () => {
-    if (!typologyId) {
+    if (!agentDefinitionId) {
       toast.error('Seleziona un tipo di agente');
       return;
     }
@@ -60,7 +62,7 @@ export function ConfigAgentStep({
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          typologyId,
+          agentDefinitionId,
           strategyName,
           strategyParameters: null,
         }),
@@ -93,10 +95,23 @@ export function ConfigAgentStep({
       </div>
 
       {/* Agent Type Selection */}
-      <TypologySelector value={typologyId} onChange={setTypologyId} />
+      <TypologySelector value={agentDefinitionId} onChange={setagentDefinitionId} />
 
       {/* Strategy Selection */}
       <StrategySelector value={strategyName} onChange={setStrategyName} userTier={userTier} />
+
+      {/* Document Selection */}
+      <div className="mt-6">
+        <h3 className="text-sm font-medium text-gray-300 mb-2">Documenti per la Knowledge Base</h3>
+        <div className="bg-[#21262d] rounded-lg border border-[#30363d] p-3">
+          <DocumentSelectionPanel
+            gameId={gameId}
+            wizardMode={true}
+            initialSelection={[_pdfId]}
+            onSelectionChange={setSelectedDocIds}
+          />
+        </div>
+      </div>
 
       {/* Info Card */}
       <Card className="p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
@@ -115,7 +130,11 @@ export function ConfigAgentStep({
           <Button variant="outline" onClick={onSkip} disabled={isCreating}>
             Salta Agente
           </Button>
-          <Button onClick={handleCreate} disabled={!typologyId || isCreating} className="min-w-32">
+          <Button
+            onClick={handleCreate}
+            disabled={!agentDefinitionId || isCreating}
+            className="min-w-32"
+          >
             {isCreating ? (
               <>
                 <Spinner size="sm" className="mr-2" />

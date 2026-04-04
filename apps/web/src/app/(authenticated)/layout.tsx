@@ -1,21 +1,14 @@
 /**
  * Authenticated Route Group Layout
- * Issue #5035 - Layout System v3: LayoutShell (Concept 4 Floating)
  *
- * Applies LayoutShell to all pages in (authenticated) group.
- * Concept 4: TopNavbar (sticky) + MiniNav (context) + FloatingActionBar (pill)
- *
- * Pages register their nav config via useSetNavConfig() in layout.tsx or page.tsx.
+ * Uses UserShell for all authenticated user pages.
+ * Admin pages use a separate AdminShell via admin/(dashboard)/layout.tsx.
  */
 
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 
-import { LayoutShell } from '@/components/layout/LayoutShell';
+import { UserShell } from '@/components/layout/UserShell';
 
-export default function AuthenticatedRouteLayout({ children }: { children: ReactNode }) {
-  return (
-    <LayoutShell>
-      {children}
-    </LayoutShell>
-  );
+export default async function AuthenticatedRouteLayout({ children }: { children: ReactNode }) {
+  return <UserShell>{children}</UserShell>;
 }

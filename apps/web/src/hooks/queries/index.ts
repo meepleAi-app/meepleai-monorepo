@@ -42,6 +42,15 @@ export {
   libraryKeys,
 } from './useLibrary';
 
+// Agent Data hooks — KB docs & chat threads (Phase 0: Game Table Detail)
+export {
+  useAgentKbDocs,
+  useAgentThreads,
+  agentDataKeys,
+  mapKbDocs,
+  mapThreads,
+} from './useAgentData';
+
 // Agent Documents queries and mutations (Issue #2399)
 export {
   useAgentDocuments,
@@ -192,6 +201,26 @@ export { useRulebookAnalysis, rulebookAnalysisKeys } from './useRulebookAnalysis
 
 // Game Setup Wizard queries (Issue #5583)
 export { useGameAnalysis, useGameExpansions, gameSetupKeys } from './useGameSetup';
+
+// Email Templates queries and mutations (Issue #52-#56)
+export {
+  useEmailTemplates,
+  useEmailTemplate,
+  useEmailTemplateVersions,
+  useCreateEmailTemplate,
+  useUpdateEmailTemplate,
+  usePublishEmailTemplate,
+  usePreviewEmailTemplate,
+  emailTemplateKeys,
+} from './useEmailTemplates';
+
+// Game Memory — house rules & notes (US-53)
+export { useGameMemory, useAddHouseRule, gameMemoryKeys } from './useGameMemory';
+
+// Feature Flags queries
+export { useUserFeatures, featureFlagKeys } from './useFeatureFlags';
+
+// Next Session queries (Library Hero Banner)
 
 // Re-export from @tanstack/react-query for convenience
 export {

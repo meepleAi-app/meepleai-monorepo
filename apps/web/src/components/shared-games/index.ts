@@ -18,10 +18,11 @@ export {
 export { SharedGameDetailModal, type SharedGameDetailModalProps } from './SharedGameDetailModal';
 export { KnowledgeBaseTab, type KnowledgeBaseTabProps } from './KnowledgeBaseTab';
 export { ContributorsSection } from './ContributorsSection';
-export { ContributorCard } from './ContributorCard';
+export { MeepleContributorCard } from './MeepleContributorCard';
+
+// Re-export the replacement component for migration convenience
 export {
-  CatalogGameCard,
-  CatalogGameCardSkeleton,
-  type CatalogGameCardProps,
-  type CommunityStats,
-} from './CatalogGameCard';
+  MeepleGameCatalogCard,
+  MeepleGameCatalogCardSkeleton,
+  type MeepleGameCatalogCardProps,
+} from '../catalog/MeepleGameCatalogCard';

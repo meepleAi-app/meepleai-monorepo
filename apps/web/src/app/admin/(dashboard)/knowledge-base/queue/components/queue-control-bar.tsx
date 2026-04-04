@@ -8,7 +8,7 @@ import { PauseIcon, PlayIcon, UsersIcon, AlertTriangleIcon, ClockIcon } from 'lu
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Slider } from '@/components/ui/primitives/slider';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 
 import { updateQueueConfig, useQueueConfig, useQueueStatus } from '../lib/queue-api';
 

@@ -40,8 +40,8 @@ vi.mock('@/hooks/queries', () => ({
 
 vi.mock('@/config/entity-navigation', () => ({
   getNavigationLinks: vi.fn(() => [
-    { label: 'KB', href: '/games/game-1/knowledge-base' },
-    { label: 'Agents', href: '/games/game-1/agents' },
+    { label: 'KB', href: '/library/games/game-1/knowledge-base' },
+    { label: 'Agents', href: '/library/games/game-1/agents' },
   ]),
 }));
 
@@ -86,9 +86,7 @@ function createTestQueryClient() {
 
 function renderWithProviders(ui: React.ReactElement) {
   const client = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
 // ============================================================================
@@ -142,14 +140,11 @@ describe('MeepleUserLibraryCard', () => {
     });
 
     it('applies custom className', () => {
-      renderWithProviders(
-        <MeepleUserLibraryCard game={mockGame} className="custom-class" />
-      );
+      renderWithProviders(<MeepleUserLibraryCard game={mockGame} className="custom-class" />);
       const card = screen.getByTestId('library-game-card-game-1');
       // className may be on the card element itself or a FlipCard ancestor wrapper
       expect(
-        card.classList.contains('custom-class') ||
-        !!card.closest('.custom-class')
+        card.classList.contains('custom-class') || !!card.closest('.custom-class')
       ).toBeTruthy();
     });
   });
@@ -159,9 +154,7 @@ describe('MeepleUserLibraryCard', () => {
       const onClickMock = vi.fn();
       // Verify the card renders with onClick prop (click propagation is MeepleCard's responsibility)
       expect(() =>
-        renderWithProviders(
-          <MeepleUserLibraryCard game={mockGame} onClick={onClickMock} />
-        )
+        renderWithProviders(<MeepleUserLibraryCard game={mockGame} onClick={onClickMock} />)
       ).not.toThrow();
       expect(screen.getByTestId('library-game-card-game-1')).toBeInTheDocument();
     });
@@ -170,7 +163,7 @@ describe('MeepleUserLibraryCard', () => {
       renderWithProviders(<MeepleUserLibraryCard game={mockGame} />);
       const infoLink = screen.queryByRole('link', { name: /dettaglio|info/i });
       if (infoLink) {
-        expect(infoLink).toHaveAttribute('href', '/games/game-1');
+        expect(infoLink).toHaveAttribute('href', '/library/games/game-1');
       }
     });
   });

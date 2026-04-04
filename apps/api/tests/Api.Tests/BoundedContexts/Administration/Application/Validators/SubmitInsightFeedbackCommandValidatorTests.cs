@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Validators;
+using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Xunit;
 
@@ -9,6 +10,8 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Validators;
 /// Unit tests for SubmitInsightFeedbackCommandValidator.
 /// Issue #4124: AI Insights Runtime Validation (Performance + Accuracy).
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Administration")]
 public class SubmitInsightFeedbackCommandValidatorTests
 {
     private readonly SubmitInsightFeedbackCommandValidator _validator = new();

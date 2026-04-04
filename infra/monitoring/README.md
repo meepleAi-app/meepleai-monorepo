@@ -1,6 +1,6 @@
 # MeepleAI Monitoring Infrastructure
 
-Observability stack: Prometheus (metrics), Loki (logs), Grafana (visualization), HyperDX (unified observability).
+Observability stack: Prometheus (metrics), Loki (logs), Grafana (visualization).
 
 ## Services
 
@@ -10,7 +10,6 @@ Observability stack: Prometheus (metrics), Loki (logs), Grafana (visualization),
 | Prometheus | 9090 | Metrics storage & querying |
 | Loki | 3100 | Log aggregation & querying |
 | Fluent Bit | - | Log collection agent |
-| HyperDX | 8180 | Unified observability (logs + traces + session replay) |
 | Alertmanager | 9093 | Alert routing & notifications |
 
 ## Quick Start
@@ -21,9 +20,6 @@ docker compose up -d grafana prometheus
 
 # Start log aggregation (Issue #3367)
 docker compose -f compose.logging.yml up -d
-
-# Start HyperDX (optional - unified observability)
-docker compose -f compose.hyperdx.yml up -d
 
 # Verify all healthy
 docker ps --filter "name=meepleai-" --format "{{.Names}}\t{{.Status}}"
@@ -76,10 +72,6 @@ Import dashboards from `grafana/dashboards/*.json`:
 ### Loki
 - URL: `http://loki:3100`
 - Max query lookback: 30 days
-
-### HyperDX (if using)
-- Web UI: `http://localhost:8180`
-- OTLP HTTP: `http://meepleai-hyperdx:14318`
 
 ## Alerting
 

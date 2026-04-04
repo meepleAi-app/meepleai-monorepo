@@ -10,8 +10,8 @@ import { useState, useMemo, useCallback } from 'react';
 
 import { Play, X, ChevronDown, ChevronRight, User, Clock, ImageIcon } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 
 import type { SessionAttachmentDto } from './PhotoUploadModal';
 

@@ -67,7 +67,7 @@ export function GameDetailsStep({ selectedGame, onBack, onGameCreated }: GameDet
             <div>
               <p className="font-quicksand font-bold text-foreground">{selectedGame.name}</p>
               <p className="text-sm text-muted-foreground font-normal mt-1">
-                Selected from BoardGameGeek
+                Selezionato dal catalogo
               </p>
             </div>
           </CardTitle>
@@ -86,7 +86,7 @@ export function GameDetailsStep({ selectedGame, onBack, onGameCreated }: GameDet
             <div className="flex items-center gap-2">
               <HashIcon className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-xs text-muted-foreground">BGG ID</p>
+                <p className="text-xs text-muted-foreground">ID</p>
                 <p className="text-sm font-medium">{selectedGame.bggId}</p>
               </div>
             </div>
@@ -99,8 +99,8 @@ export function GameDetailsStep({ selectedGame, onBack, onGameCreated }: GameDet
           {/* Info note */}
           <div className="mt-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 p-3">
             <p className="text-sm text-amber-700 dark:text-amber-400">
-              Creating this game will import all available data from BGG including description,
-              player counts, play time, categories, mechanics, designers, and publishers.
+              Creando questo gioco verranno importati tutti i dati disponibili: descrizione, numero
+              giocatori, durata, categorie, meccaniche, designer e publisher.
             </p>
           </div>
         </CardContent>

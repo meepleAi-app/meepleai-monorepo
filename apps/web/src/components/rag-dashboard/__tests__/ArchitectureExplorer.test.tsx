@@ -113,7 +113,7 @@ describe('ArchitectureExplorer', () => {
       render(<ArchitectureExplorer />);
 
       expect(screen.getByText('Redis Cache')).toBeInTheDocument();
-      expect(screen.getByText('Qdrant')).toBeInTheDocument();
+      expect(screen.getByText('pgvector')).toBeInTheDocument();
       expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
     });
 
@@ -401,11 +401,11 @@ describe('ArchitectureExplorer', () => {
       const user = userEvent.setup();
       render(<ArchitectureExplorer />);
 
-      const qdrantNode = screen.getByText('Qdrant');
-      await user.click(qdrantNode);
+      const pgvectorNode = screen.getByText('pgvector');
+      await user.click(pgvectorNode);
 
       await waitFor(() => {
-        expect(screen.getByText(/Vector database/)).toBeInTheDocument();
+        expect(screen.getByText(/PostgreSQL pgvector extension/)).toBeInTheDocument();
         expect(screen.getByText('storage')).toBeInTheDocument();
       });
     });
@@ -418,7 +418,9 @@ describe('ArchitectureExplorer', () => {
       await user.click(tierResolverNode);
 
       await waitFor(() => {
-        expect(screen.queryByRole('button', { name: /view documentation/i })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('button', { name: /view documentation/i })
+        ).not.toBeInTheDocument();
       });
     });
   });

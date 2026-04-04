@@ -1,0 +1,70 @@
+# Shared Game Catalog seed manifest
+# Used by CatalogSeedLayer to create SharedGame entries
+# BGG IDs used to fetch metadata; fallback data used when BGG unavailable
+games:
+  - title: "7 Wonders"
+    bggId: 68448
+    language: en
+    pdfFile: "7-wonders_rulebook.pdf"
+    imageUrl: "https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__original/img/jt70jJDZ1y1FWJs4ZQf5FI8APVY=/0x0/filters:format(jpeg)/pic7149798.jpg"
+    thumbnailUrl: "https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__small/img/BUOso8b0M1aUOkU80FWlhE8uuxc=/fit-in/200x150/filters:strip_icc()/pic7149798.jpg"
+
+  - title: "Agricola"
+    bggId: 31260
+    language: en
+    pdfFile: "agricola_rulebook.pdf"
+    imageUrl: "https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__original/img/V37KuMJlCzpxAilzN39BzeLvc9Q=/0x0/filters:format(jpeg)/pic1899157.jpg"
+    thumbnailUrl: "https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__small/img/TpNF65wCIb1n3EGW18eJJ3MlRMo=/fit-in/200x150/filters:strip_icc()/pic1899157.jpg"
+
+  - title: "Azul"
+    bggId: 230802
+    language: en
+    pdfFile: "azul_rulebook.pdf"
+    imageUrl: "https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__original/img/AkbtYVc6xXJF3c9EUrakklcclKw=/0x0/filters:format(png)/pic6973671.png"
+    thumbnailUrl: "https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__small/img/ccsXKrdGJw-YSClWwzVUwk5Nh9Y=/fit-in/200x150/filters:strip_icc()/pic6973671.png"
+
+  - title: "Catan"
+    bggId: 13
+    language: en
+    pdfFile: "catan_rulebook.pdf"
+    imageUrl: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__original/img/IwRwEpu1I6YfkyYjFIekCh80ntc=/0x0/filters:format(jpeg)/pic2419375.jpg"
+    thumbnailUrl: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__small/img/7a0LOL48K-2lC3IG0HyYT3XxJBs=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg"
+
+  - title: "Carcassonne"
+    bggId: 822
+    language: en
+    pdfFile: "carcassonne_rulebook.pdf"
+    imageUrl: "https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__original/img/bP18m_PYjyFOv1IBGgMOteQUneA=/0x0/filters:format(jpeg)/pic8621446.jpg"
+    thumbnailUrl: "https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__small/img/oEEslN-EGqh82sNI6Aj4_MFXYg0=/fit-in/200x150/filters:strip_icc()/pic8621446.jpg"
+
+  - title: "Pandemic"
+    bggId: 30549
+    language: en
+    pdfFile: "pandemic_rulebook.pdf"
+    imageUrl: "https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__original/img/IsrvRLpUV1TEyZsO5rC-btXaPz0=/0x0/filters:format(jpeg)/pic1534148.jpg"
+    thumbnailUrl: "https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__small/img/oqViRj6nVxK3m36NluTxU1PZkrk=/fit-in/200x150/filters:strip_icc()/pic1534148.jpg"
+
+  - title: "Chess"
+    language: it
+    pdfFile: "scacchi-fide_2017_rulebook.pdf"
+
+  - title: "Splendor"
+    bggId: 148228
+    language: en
+    pdfFile: "splendor_rulebook.pdf"
+    imageUrl: "https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__original/img/rqcUdtu_N4v-SpI96XVmpYHnJww=/0x0/filters:format(png)/pic8234167.png"
+    thumbnailUrl: "https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__small/img/KKU_42Uswt4tKCpf1zY5kTzgr-g=/fit-in/200x150/filters:strip_icc()/pic8234167.png"
+
+  - title: "Ticket to Ride"
+    bggId: 9209
+    language: en
+    pdfFile: "ticket-to-ride_rulebook.pdf"
+    imageUrl: "https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__original/img/rWF8r4JXXCQQ7QhiWHhmT-rQ3Pc=/0x0/filters:format(jpeg)/pic8937637.jpg"
+    thumbnailUrl: "https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__small/img/5G46jv8MFh_BfX67iMSouTMhKxc=/fit-in/200x150/filters:strip_icc()/pic8937637.jpg"
+
+  - title: "Wingspan"
+    bggId: 266192
+    language: en
+    pdfFile: "wingspan_en_rulebook.pdf"
+    imageUrl: "https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__original/img/cI782Zis9cT66j2MjSHKJGnFPNw=/0x0/filters:format(jpeg)/pic4458123.jpg"
+    thumbnailUrl: "https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__small/img/VNToqgS2-pOGU6MuvIkMPKn_y-s=/fit-in/200x150/filters:strip_icc()/pic4458123.jpg"

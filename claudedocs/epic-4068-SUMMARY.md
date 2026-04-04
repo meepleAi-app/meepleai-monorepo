@@ -25,9 +25,9 @@
 
 | # | Title | Estimate | Priority | Depends On |
 |---|-------|----------|----------|------------|
-| [#4177](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4177) | Permission Data Model & Schema | 3-4 giorni | P1-High | None |
-| [#4178](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4178) | Permission Hooks & Utilities | 3-4 giorni | P1-High | #4177 |
-| [#4179](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4179) | MeepleCard Permission Integration | 2-3 giorni | P1-High | #4178 |
+| [#4177](https://github.com/meepleAi-app/meepleai-monorepo/issues/4177) | Permission Data Model & Schema | 3-4 giorni | P1-High | None |
+| [#4178](https://github.com/meepleAi-app/meepleai-monorepo/issues/4178) | Permission Hooks & Utilities | 3-4 giorni | P1-High | #4177 |
+| [#4179](https://github.com/meepleAi-app/meepleai-monorepo/issues/4179) | MeepleCard Permission Integration | 2-3 giorni | P1-High | #4178 |
 
 **Scope**:
 - **Tiers**: Free, Normal, Pro, Enterprise (hierarchy-based)
@@ -42,8 +42,8 @@
 
 | # | Title | Estimate | Priority | Depends On |
 |---|-------|----------|----------|------------|
-| [#4186](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4186) | Tooltip Positioning System | 3-4 giorni | P2-Medium | None |
-| [#4180](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4180) | Tooltip Accessibility WCAG 2.1 AA | 2-3 giorni | P1-High | #4186 |
+| [#4186](https://github.com/meepleAi-app/meepleai-monorepo/issues/4186) | Tooltip Positioning System | 3-4 giorni | P2-Medium | None |
+| [#4180](https://github.com/meepleAi-app/meepleai-monorepo/issues/4180) | Tooltip Accessibility WCAG 2.1 AA | 2-3 giorni | P1-High | #4186 |
 
 **Scope**:
 - **Positioning**: Viewport boundary detection, auto-flip (top/bottom/left/right)
@@ -57,8 +57,8 @@
 
 | # | Title | Estimate | Priority | Depends On |
 |---|-------|----------|----------|------------|
-| [#4181](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4181) | Vertical Tag Component | 3-4 giorni | P2-Medium | None |
-| [#4182](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4182) | Tag System Integration in MeepleCard | 2 giorni | P2-Medium | #4181 |
+| [#4181](https://github.com/meepleAi-app/meepleai-monorepo/issues/4181) | Vertical Tag Component | 3-4 giorni | P2-Medium | None |
+| [#4182](https://github.com/meepleAi-app/meepleai-monorepo/issues/4182) | Tag System Integration in MeepleCard | 2 giorni | P2-Medium | #4181 |
 
 **Scope**:
 - **Layout**: Left edge vertical strip (32px desktop, 28px tablet, 24px mobile)
@@ -85,7 +85,7 @@
 
 | # | Title | Estimate | Priority | Depends On |
 |---|-------|----------|----------|------------|
-| [#4183](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4183) | Collection Limit UI & Progress Indicators | 2-3 giorni | P2-Medium | #4178 |
+| [#4183](https://github.com/meepleAi-app/meepleai-monorepo/issues/4183) | Collection Limit UI & Progress Indicators | 2-3 giorni | P2-Medium | #4178 |
 
 **Scope**:
 - **Limits**: Single collection per user (semplificato!)
@@ -113,7 +113,7 @@ Your Collection (Pro Tier)
 
 | # | Title | Estimate | Priority | Depends On |
 |---|-------|----------|----------|------------|
-| [#4184](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4184) | Agent-Specific Metadata & Status Display | 3 giorni | P2-Medium | None |
+| [#4184](https://github.com/meepleAi-app/meepleai-monorepo/issues/4184) | Agent-Specific Metadata & Status Display | 3 giorni | P2-Medium | None |
 
 **Scope**:
 - **Status Badge**: Active (green ●), Idle (gray ○), Training (yellow ◐), Error (red ✕)
@@ -142,7 +142,7 @@ Your Collection (Pro Tier)
 
 | # | Title | Estimate | Priority | Depends On |
 |---|-------|----------|----------|------------|
-| [#4185](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4185) | Integration Testing & Documentation | 2-3 giorni | P1-High | All above |
+| [#4185](https://github.com/meepleAi-app/meepleai-monorepo/issues/4185) | Integration Testing & Documentation | 2-3 giorni | P1-High | All above |
 
 **Scope**:
 - **E2E Tests**: Permission flows (Free/Normal/Pro/Enterprise users)
@@ -303,8 +303,8 @@ PARALLEL TRACKS:                              │
 
 ## 🔗 Quick Links
 
-- **Epic**: [#4068](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4068)
-- **All Issues**: [#4177-#4186](https://github.com/DegrassiAaron/meepleai-monorepo/issues?q=is%3Aissue+4177+OR+4178+OR+4179+OR+4180+OR+4181+OR+4182+OR+4183+OR+4184+OR+4185+OR+4186)
+- **Epic**: [#4068](https://github.com/meepleAi-app/meepleai-monorepo/issues/4068)
+- **All Issues**: [#4177-#4186](https://github.com/meepleAi-app/meepleai-monorepo/issues?q=is%3Aissue+4177+OR+4178+OR+4179+OR+4180+OR+4181+OR+4182+OR+4183+OR+4184+OR+4185+OR+4186)
 - **Component**: `apps/web/src/components/ui/data-display/meeple-card.tsx`
 - **Docs**: `docs/frontend/components/meeple-card.md`
 - **Specs**: `claudedocs/epic-4068-*.md`

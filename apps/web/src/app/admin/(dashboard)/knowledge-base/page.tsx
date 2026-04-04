@@ -7,10 +7,14 @@ import {
   ListOrderedIcon,
   ArrowRightIcon,
   CpuIcon,
+  ThumbsUpIcon,
+  GamepadIcon,
+  ArchiveIcon,
 } from 'lucide-react';
 import { type Metadata } from 'next';
 import Link from 'next/link';
 
+import { KbHubClient } from '@/components/admin/knowledge-base/hub/kb-hub-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 
 export const metadata: Metadata = {
@@ -31,7 +35,7 @@ const sections = [
   {
     title: 'Vector Collections',
     description:
-      'Manage Qdrant vector collections, view embeddings health, and run similarity searches',
+      'Manage pgvector embeddings, view vector store health, and run similarity searches',
     icon: DatabaseIcon,
     href: '/admin/knowledge-base/vectors',
     color: 'from-blue-500 to-indigo-600',
@@ -81,6 +85,33 @@ const sections = [
     color: 'from-violet-500 to-purple-600',
     stats: 'View metrics',
   },
+  {
+    title: 'User Feedback',
+    description:
+      'Review thumbs up/down feedback from users on KB-powered chat responses, filter by outcome and paginate results',
+    icon: ThumbsUpIcon,
+    href: '/admin/knowledge-base/feedback',
+    color: 'from-rose-500 to-pink-600',
+    stats: 'View feedback',
+  },
+  {
+    title: 'KB per Gioco',
+    description:
+      'Panoramica dello stato della Knowledge Base per ogni gioco: documenti indicizzati, chunk count, e stato backup automatico',
+    icon: GamepadIcon,
+    href: '/admin/knowledge-base/games',
+    color: 'from-teal-500 to-cyan-600',
+    stats: 'Vedi stati',
+  },
+  {
+    title: 'Snapshot RAG',
+    description:
+      'Gestisci i backup della Knowledge Base. Ripristina uno snapshot per evitare di rielaborare i PDF — risparmia tempo e risorse',
+    icon: ArchiveIcon,
+    href: '/admin/knowledge-base/snapshots',
+    color: 'from-indigo-500 to-purple-600',
+    stats: 'Gestisci snapshot',
+  },
 ];
 
 export default function KnowledgeBasePage() {
@@ -95,6 +126,9 @@ export default function KnowledgeBasePage() {
           Manage documents, vector collections, and the RAG retrieval pipeline
         </p>
       </div>
+
+      {/* Live Dashboard Widgets */}
+      <KbHubClient />
 
       {/* Section Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

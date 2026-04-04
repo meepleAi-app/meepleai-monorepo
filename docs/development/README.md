@@ -332,8 +332,7 @@ pnpm test:coverage     # Coverage report
 
 **Logs Location**:
 - Console: stdout
-- HyperDX: http://localhost:8080 → logs panel
-- Seq (optional): http://localhost:5341
+- Grafana/Loki: http://localhost:3001 → logs panel
 
 ### Frontend Debugging
 
@@ -496,8 +495,8 @@ Complete Docker Compose guides for local development:
 - [Local Environment Startup](local-environment-startup-guide.md)
 
 ### Architecture
-- [Architecture Overview](../01-architecture/overview/system-architecture.md)
-- [ADRs](../01-architecture/adr/)
+- [Architecture Overview](../architecture/overview/system-architecture.md)
+- [ADRs](../architecture/adr/)
 - [Bounded Context READMEs](../../apps/api/src/Api/BoundedContexts/)
 
 ### API & Testing

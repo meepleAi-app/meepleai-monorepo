@@ -107,6 +107,16 @@ internal static class SecretsHelper
     }
 
     /// <summary>
+    /// Resolve seed test password from SEED_TEST_PASSWORD secret or env var.
+    /// Shared by SeedTestUserCommandHandler and SeedE2ETestUsersCommandHandler.
+    /// </summary>
+    public static string? GetSeedTestPassword(IConfiguration config, ILogger? logger = null)
+    {
+        return GetSecretOrValue(config, "SEED_TEST_PASSWORD", logger, required: false)
+            ?? Environment.GetEnvironmentVariable("SEED_TEST_PASSWORD");
+    }
+
+    /// <summary>
     /// Builds a PostgreSQL connection string using password from secret file or config.
     /// </summary>
     /// <param name="config">Configuration instance</param>
@@ -116,8 +126,6 @@ internal static class SecretsHelper
         IConfiguration config,
         ILogger? logger = null)
     {
-        Console.WriteLine("[DEBUG #2152] SecretsHelper.BuildPostgresConnectionString() called");
-
         // Priority: Environment variable > Configuration > Default
         // This ensures launchSettings.json and SecretLoader env vars work correctly
         var host = Environment.GetEnvironmentVariable("POSTGRES_HOST")
@@ -130,28 +138,37 @@ internal static class SecretsHelper
             ?? config["POSTGRES_DB"]
             ?? config["ConnectionStrings:DefaultDatabase"]
             ?? "meepleai";
-        // Issue #2152: Change default username from 'meeple' to 'postgres' for CI/standard PostgreSQL compatibility
         var username = Environment.GetEnvironmentVariable("POSTGRES_USER")
             ?? config["POSTGRES_USER"]
             ?? "postgres";
 
-        Console.WriteLine($"[DEBUG #2152] SecretsHelper values: Host={host}, Port={port}, DB={database}, User={username}");
+        // Issue #279: Guard against Docker-internal hostnames leaking into local dev.
+        // If POSTGRES_HOST resolved to a Docker service name (e.g. "postgres") but we're
+        // NOT running inside Docker, DNS resolution will fail. Fall back to localhost.
+        if (string.Equals(host, "postgres", StringComparison.OrdinalIgnoreCase)
+            && !IsRunningInDocker())
+        {
+            logger?.LogWarning(
+                "POSTGRES_HOST resolved to Docker service name '{Host}' but not running in Docker. Falling back to localhost.",
+                host);
+            host = "localhost";
+        }
 
         // Get password from secret file or direct config
-        // Issue #2152: Try GetSecretOrValue first, then Environment.GetEnvironmentVariable directly
         var password = GetSecretOrValue(config, "POSTGRES_PASSWORD", logger, required: false)
             ?? Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
-
-        Console.WriteLine($"[DEBUG #2152] SecretsHelper password source: {(password != null ? "found" : "NULL")}");
 
         // If no password configured, return null to allow fallback to other connection string sources
         if (string.IsNullOrEmpty(password))
         {
-            Console.WriteLine("[DEBUG #2152] SecretsHelper: POSTGRES_PASSWORD not found anywhere, returning null for fallback");
             return null;
         }
 
-        var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password}";
+        var sslMode = Environment.GetEnvironmentVariable("POSTGRES_SSL_MODE")
+            ?? config["POSTGRES_SSL_MODE"];
+        var connectionString = string.IsNullOrWhiteSpace(sslMode)
+            ? $"Host={host};Port={port};Database={database};Username={username};Password={password}"
+            : $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode={sslMode}";
 
         logger?.LogInformation(
             "Built PostgreSQL connection string: Host={Host}, Database={Database}, User={User}",
@@ -161,5 +178,19 @@ internal static class SecretsHelper
         );
 
         return connectionString;
+    }
+
+    /// <summary>
+    /// Detect if the current process is running inside a Docker container.
+    /// </summary>
+    private static bool IsRunningInDocker()
+    {
+        // Standard Docker detection: /.dockerenv file exists
+        if (File.Exists("/.dockerenv"))
+            return true;
+
+        // DOTNET_RUNNING_IN_CONTAINER is set by official .NET Docker images
+        var dotnetInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER");
+        return string.Equals(dotnetInContainer, "true", StringComparison.OrdinalIgnoreCase);
     }
 }

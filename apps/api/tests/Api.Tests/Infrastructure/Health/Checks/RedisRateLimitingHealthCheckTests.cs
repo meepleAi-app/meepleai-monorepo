@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Infrastructure.Health.Checks;
 
@@ -57,7 +58,7 @@ public sealed class RedisRateLimitingHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext(), CancellationToken.None);
 
-        Assert.Equal(HealthStatus.Healthy, result.Status);
+        result.Status.Should().Be(HealthStatus.Healthy);
     }
 
     [Fact]
@@ -70,8 +71,8 @@ public sealed class RedisRateLimitingHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext(), CancellationToken.None);
 
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Contains("rate limiting is disabled", result.Description, StringComparison.OrdinalIgnoreCase);
+        result.Status.Should().Be(HealthStatus.Degraded);
+        result.Description.Should().ContainEquivalentOf("rate limiting is disabled");
     }
 
     [Fact]
@@ -83,6 +84,6 @@ public sealed class RedisRateLimitingHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext(), CancellationToken.None);
 
-        Assert.Equal(HealthStatus.Healthy, result.Status);
+        result.Status.Should().Be(HealthStatus.Healthy);
     }
 }

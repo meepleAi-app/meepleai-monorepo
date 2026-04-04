@@ -1,0 +1,619 @@
+'use client';
+
+/**
+ * MeepleCardGrid - Grid variant renderer
+ *
+ * 7:10 cover aspect ratio, hover translateY(-6px), entity glow ring,
+ * footer metadata bar, and entity-specific content sections.
+ *
+ * @module components/ui/data-display/meeple-card/variants/MeepleCardGrid
+ */
+
+import React, { useState, useCallback } from 'react';
+
+import { cn } from '@/lib/utils';
+
+import { DeckStack } from '../../deck-stack/DeckStack';
+import { ExtraMeepleCardDrawer } from '../../extra-meeple-card/ExtraMeepleCardDrawer';
+import { HoloOverlay } from '../../holo';
+import { AgentModelInfo } from '../../meeple-card-features/AgentModelInfo';
+import { AgentStatsDisplay } from '../../meeple-card-features/AgentStatsDisplay';
+import { AgentStatusBadge } from '../../meeple-card-features/AgentStatusBadge';
+import { BulkSelectCheckbox } from '../../meeple-card-features/BulkSelectCheckbox';
+import { CardAgentAction } from '../../meeple-card-features/CardAgentAction';
+import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
+import { ChatStatusBadge } from '../../meeple-card-features/ChatStatusBadge';
+import { ChatUnreadBadge } from '../../meeple-card-features/ChatUnreadBadge';
+import { KbStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
+import { ManaLinkFooter } from '../../meeple-card-features/ManaLinkFooter';
+import { PrimaryActions } from '../../meeple-card-features/PrimaryActions';
+import { SessionActionButtons } from '../../meeple-card-features/SessionActionButtons';
+import { SessionScoreTable } from '../../meeple-card-features/SessionScoreTable';
+import { SessionStatusBadge } from '../../meeple-card-features/SessionStatusBadge';
+import { SessionTurnSequence } from '../../meeple-card-features/SessionTurnSequence';
+import { SnapshotHistorySlider } from '../../meeple-card-features/SnapshotHistorySlider';
+import { StatusGlow } from '../../meeple-card-features/StatusGlow';
+import { SymbolStrip } from '../../meeple-card-features/SymbolStrip';
+import { TimeTravelOverlay } from '../../meeple-card-features/TimeTravelOverlay';
+import { RatingDisplay, MeepleCardSkeleton } from '../../meeple-card-parts';
+import {
+  entityColors,
+  DRAWER_ENTITY_TYPE_MAP,
+  meepleCardVariants,
+  contentVariants,
+  getCardFrameStyle,
+  CARD_SECTION_HEIGHTS,
+} from '../../meeple-card-styles';
+import { useCardTheme } from '../hooks/useCardTheme';
+import { useMobileInteraction } from '../hooks/useMobileInteraction';
+import { CardActions, CardActionStrip } from '../parts/CardActions';
+import { CardBadges } from '../parts/CardBadges';
+import { CardCover } from '../parts/CardCover';
+import { CardTagStrip } from '../parts/CardTagStrip';
+
+import type { DeckStackItem } from '../../deck-stack/deck-stack-types';
+import type { MeepleCardProps, MeepleEntityType } from '../types';
+
+export type MeepleCardGridProps = MeepleCardProps;
+
+/**
+ * Grid variant: vertical card with 7:10 cover, hover lift, entity glow ring.
+ * Renders a footer metadata bar below the content area.
+ */
+export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCardGridProps) {
+  const {
+    id,
+    entity,
+    title,
+    subtitle,
+    imageUrl,
+    avatarUrl,
+    metadata = [],
+    actions = [],
+    rating,
+    ratingMax = 5,
+    badge,
+    customColor,
+    onClick,
+    loading = false,
+    className,
+    'data-testid': testId,
+    showWishlist,
+    isWishlisted,
+    onWishlistToggle,
+    quickActions,
+    userRole,
+    status,
+    showStatusIcon,
+    selectable,
+    selected,
+    onSelect,
+    flippable,
+    entityQuickActions,
+    showInfoButton,
+    entityId,
+    infoTooltip,
+    tags,
+    maxVisibleTags = 3,
+    showTagStrip,
+    agentStatus,
+    agentModel,
+    agentStats,
+    capabilities,
+    chatStatus,
+    chatStats,
+    chatPreview: _chatPreview,
+    unreadCount,
+    hasAgent,
+    agentId,
+    onCreateAgent,
+    sessionStatus,
+    sessionPlayers,
+    sessionRoundScores,
+    sessionTurn,
+    sessionActions,
+    isSessionHost,
+    onPrevTurn,
+    onNextTurn,
+    sessionSnapshots,
+    currentSnapshotIndex,
+    onSnapshotSelect,
+    isTimeTravelMode,
+    onTimeTravelToggle,
+    documentStatus,
+    linkCount,
+    firstLinkPreview: _firstLinkPreview,
+    onLinksClick,
+    kbCards,
+    linkedEntities,
+    onManaPipClick,
+    primaryActions,
+    glowState,
+    stateLabel,
+    coverLabels,
+    subtypeIcons,
+    showHolo = false,
+    identityChip1,
+    identityChip2,
+    playerCountDisplay,
+    playTimeDisplay,
+    gamesPlayed,
+    winRate,
+    winnerScore,
+    sessionDate,
+    conversationCount,
+    agentAccuracy,
+    linkedKbCount,
+    pageCount,
+    chunkCount,
+    bottomStatLabel,
+    bottomStatValue,
+    isInteractive: isInteractiveProp = true,
+  } = props;
+
+  const cardTheme = useCardTheme();
+
+  const variant = 'grid' as const;
+  const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
+  const color = customColor || entityColors[entity].hsl;
+  const hasQuickActions = !!(quickActions && quickActions.length > 0);
+  const showWishlistBtn = !!showWishlist && !hasQuickActions;
+  const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [deckStackOpen, setDeckStackOpen] = useState(false);
+  const [deckStackItems, setDeckStackItems] = useState<DeckStackItem[]>([]);
+  const [deckStackAnchor, setDeckStackAnchor] = useState<DOMRect | null>(null);
+
+  const handleManaPipClick = useCallback(
+    (entityType: MeepleEntityType) => {
+      if (onManaPipClick) {
+        onManaPipClick(entityType);
+        return;
+      }
+      // No consumer handler — open deck stack with empty items (no-op visually)
+      setDeckStackItems([]);
+      setDeckStackAnchor(null);
+      setDeckStackOpen(true);
+    },
+    [onManaPipClick]
+  );
+
+  const hasMobileActions =
+    hasQuickActions || !!entityQuickActions || showWishlistBtn || !!(showInfoButton && entityId);
+
+  const {
+    isMobile,
+    showMobileActions: _showMobileActions,
+    setShowMobileActions: _setShowMobileActions,
+    handleMobileClick,
+    cardRef,
+  } = useMobileInteraction({
+    hasMobileActions,
+    flippable,
+    onClick,
+  });
+
+  const supportsViewTransition =
+    typeof document !== 'undefined' && 'startViewTransition' in document;
+
+  const isInteractive = isInteractiveProp && !!onClick && !(actions.length > 0);
+
+  const handleDesktopClick = () => {
+    if (flippable) return;
+    if (onClick) onClick();
+  };
+
+  const handleCardClick = isMobile
+    ? handleMobileClick
+    : isInteractive
+      ? handleDesktopClick
+      : undefined;
+
+  if (loading) {
+    return <MeepleCardSkeleton variant={variant} />;
+  }
+
+  // KB cards worst-status
+  const worstKbStatus =
+    kbCards && kbCards.length > 0
+      ? kbCards.some(k => k.status === 'failed')
+        ? ('failed' as const)
+        : kbCards.some(k => k.status === 'processing')
+          ? ('processing' as const)
+          : kbCards.some(k => k.status === 'indexed')
+            ? ('indexed' as const)
+            : ('none' as const)
+      : null;
+
+  const Component = isInteractive ? 'div' : 'article';
+
+  const hasStripActions =
+    !!entityQuickActions || !!(showInfoButton && entityId) || showWishlistBtn || hasQuickActions;
+
+  const stripElement = hasStripActions ? (
+    <CardActionStrip
+      entity={entity}
+      customColor={customColor}
+      entityQuickActions={entityQuickActions}
+      quickActions={quickActions}
+      userRole={userRole}
+      showWishlistBtn={showWishlistBtn}
+      isWishlisted={isWishlisted}
+      onWishlistToggle={onWishlistToggle}
+      showInfoButton={showInfoButton}
+      entityId={entityId}
+      infoTooltip={infoTooltip}
+      drawerEntityType={drawerEntityType}
+      onDrawerOpen={() => setDrawerOpen(true)}
+      testId={testId}
+      hasQuickActions={hasQuickActions}
+    />
+  ) : null;
+
+  return (
+    <Component
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ref={cardRef as React.Ref<any>}
+      className={cn(
+        meepleCardVariants({ variant }),
+        'hover:outline-2 hover:outline-offset-2',
+        '[&:hover]:[-webkit-transform:translateY(-6px)] [&:hover]:[transform:translateY(-6px)]',
+        selected && 'ring-2 ring-offset-2 bg-accent/10',
+        selected && `ring-[hsl(${color})]`,
+        className,
+        cardTheme === 'gaming' && 'glass-card'
+      )}
+      style={
+        {
+          ...getCardFrameStyle('grid'),
+          '--mc-entity-color': `hsl(${color})`,
+          outlineColor: `hsla(${color}, 0.4)`,
+          viewTransitionName:
+            supportsViewTransition && entityId ? `meeple-card-${entityId}` : undefined,
+        } as React.CSSProperties
+      }
+      onClick={handleCardClick}
+      role={isInteractive || (isMobile && hasMobileActions) ? 'button' : undefined}
+      tabIndex={isInteractive || (isMobile && hasMobileActions) ? 0 : undefined}
+      onKeyDown={
+        isInteractive
+          ? e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+      aria-label={`${entityColors[entity].name}: ${title}`}
+      data-testid={testId || 'meeple-card'}
+      data-entity={entity}
+      data-variant={variant}
+      data-card-root
+    >
+      {showHolo && <HoloOverlay />}
+
+      {glowState && <StatusGlow state={glowState} entityColor={entityColors[entity].hsl} />}
+
+      {selectable && (
+        <BulkSelectCheckbox
+          selectable={selectable}
+          selected={!!selected}
+          onSelect={onSelect || (() => {})}
+          id={testId || 'card'}
+          entityColor={color}
+        />
+      )}
+
+      {entity === 'session' &&
+        isTimeTravelMode &&
+        sessionSnapshots &&
+        currentSnapshotIndex != null &&
+        sessionSnapshots[currentSnapshotIndex] && (
+          <TimeTravelOverlay
+            snapshot={sessionSnapshots[currentSnapshotIndex]}
+            totalSnapshots={sessionSnapshots.length}
+            isActive={isTimeTravelMode}
+            onExit={() => onTimeTravelToggle?.(false)}
+          />
+        )}
+
+      <CardTagStrip
+        variant={variant}
+        entity={entity}
+        customColor={customColor}
+        tags={tags}
+        maxVisibleTags={maxVisibleTags}
+        showTagStrip={showTagStrip}
+        status={status}
+        showStatusIcon={showStatusIcon}
+        badge={badge}
+      />
+
+      <CardBadges variant={variant} linkCount={linkCount} onLinksClick={onLinksClick} />
+
+      <CardCover
+        src={coverSrc}
+        alt={title}
+        variant={variant}
+        entity={entity}
+        customColor={customColor}
+        coverLabels={coverLabels}
+        showEntityType
+        subtypeIcons={subtypeIcons}
+        stateLabel={stateLabel}
+        actionStrip={stripElement}
+      />
+
+      <SymbolStrip
+        entity={entity}
+        identityChip1={identityChip1}
+        identityChip2={identityChip2}
+        playerCountDisplay={playerCountDisplay}
+        playTimeDisplay={playTimeDisplay}
+        gamesPlayed={gamesPlayed}
+        winRate={winRate}
+        winnerScore={winnerScore}
+        sessionDate={sessionDate}
+        conversationCount={conversationCount}
+        agentAccuracy={agentAccuracy}
+        linkedKbCount={linkedKbCount}
+        pageCount={pageCount}
+        chunkCount={chunkCount}
+      />
+
+      {/* Content area */}
+      <div className={contentVariants({ variant })}>
+        <CardActions
+          variant={variant}
+          entity={entity}
+          customColor={customColor}
+          actions={actions}
+        />
+
+        {/* Title */}
+        <h3 className="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-white/90 truncate">
+          {title}
+        </h3>
+
+        {/* Subtitle */}
+        {subtitle && (
+          <p className="text-white/55 text-[0.7rem] sm:text-[0.78rem] mt-px mb-0.5 sm:mb-1 truncate">
+            {subtitle}
+          </p>
+        )}
+
+        {primaryActions && primaryActions.length > 0 && (
+          <PrimaryActions
+            actions={primaryActions}
+            className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          />
+        )}
+
+        {/* Rating */}
+        {rating !== undefined && <RatingDisplay rating={rating} max={ratingMax} className="mb-2" />}
+
+        {/* Agent-specific info */}
+        {entity === 'agent' &&
+          (agentStatus ||
+            agentModel ||
+            (capabilities && capabilities.length > 0) ||
+            agentStats) && (
+            <div className="flex flex-col gap-1.5 mb-2" data-testid="agent-info-section">
+              {(agentStatus || agentModel) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {agentStatus && <AgentStatusBadge status={agentStatus} size="sm" />}
+                  {agentModel && (
+                    <AgentModelInfo
+                      modelName={agentModel.modelName}
+                      parameters={agentModel.parameters}
+                      size="sm"
+                    />
+                  )}
+                </div>
+              )}
+              {capabilities && capabilities.length > 0 && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  {capabilities.map(cap => (
+                    <span
+                      key={cap}
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                    >
+                      {cap}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {agentStats && (
+                <AgentStatsDisplay
+                  stats={agentStats}
+                  layout="horizontal"
+                  className="text-white/55"
+                />
+              )}
+            </div>
+          )}
+
+        {/* ChatSession-specific info (grid shows status + stats only) */}
+        {entity === 'chatSession' && (chatStatus || chatStats) && (
+          <div className="flex flex-col gap-1.5 mb-2" data-testid="chat-info-section">
+            {chatStatus && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <ChatStatusBadge status={chatStatus} size="sm" />
+              </div>
+            )}
+            {chatStats && (
+              <ChatStatsDisplay stats={chatStats} layout="horizontal" className="text-white/55" />
+            )}
+          </div>
+        )}
+
+        {entity === 'chatSession' && unreadCount !== undefined && unreadCount > 0 && (
+          <ChatUnreadBadge count={unreadCount} />
+        )}
+
+        {/* Session-specific info */}
+        {entity === 'session' && (sessionStatus || sessionPlayers || sessionTurn) && (
+          <div className="flex flex-col gap-1.5 mb-2" data-testid="session-info-section">
+            {sessionStatus && <SessionStatusBadge status={sessionStatus} size="sm" />}
+            {sessionPlayers && sessionPlayers.length > 0 && (
+              <SessionScoreTable
+                players={sessionPlayers}
+                roundScores={sessionRoundScores ?? []}
+                onEditScore={sessionActions?.onEditScore}
+                maxVisibleRounds={3}
+              />
+            )}
+            {sessionTurn &&
+              sessionPlayers &&
+              sessionPlayers.length > 0 &&
+              sessionStatus !== 'completed' && (
+                <SessionTurnSequence
+                  players={sessionPlayers}
+                  turn={sessionTurn}
+                  isHost={isSessionHost}
+                  onPrevTurn={onPrevTurn}
+                  onNextTurn={onNextTurn}
+                />
+              )}
+            {sessionStatus && sessionActions && (
+              <SessionActionButtons status={sessionStatus} actions={sessionActions} />
+            )}
+          </div>
+        )}
+
+        {/* Document-specific info */}
+        {entity === 'kb' && documentStatus && (
+          <div className="flex items-center gap-1.5 mb-2">
+            <KbStatusBadge status={documentStatus} size="sm" />
+          </div>
+        )}
+
+        {/* KB Cards worst-status badge */}
+        {entity === 'game' && worstKbStatus && (
+          <div className="flex items-center gap-1.5 mb-2" data-testid="meeple-card-kb-badge">
+            <KbStatusBadge status={worstKbStatus} size="sm" />
+            <span className="text-[10px] text-white/55 font-medium">{kbCards!.length} KB</span>
+          </div>
+        )}
+
+        {/* Snapshot History Slider */}
+        {entity === 'session' && sessionSnapshots && sessionSnapshots.length > 0 && (
+          <SnapshotHistorySlider
+            snapshots={sessionSnapshots}
+            currentIndex={currentSnapshotIndex}
+            onSelect={onSnapshotSelect}
+            isTimeTravelMode={isTimeTravelMode}
+            onTimeTravelToggle={onTimeTravelToggle}
+          />
+        )}
+      </div>
+
+      {/* Grid footer: metadata info bar */}
+      {metadata.length > 0 && (
+        <div
+          className={cn(
+            'flex items-center justify-evenly gap-2',
+            'px-3 py-2',
+            'border-t border-white/10',
+            'bg-black/30',
+            !(linkedEntities && linkedEntities.length > 0) &&
+              !(entity === 'game' && hasAgent !== undefined) &&
+              'rounded-b-2xl'
+          )}
+          data-testid="meeple-card-footer"
+        >
+          {metadata.map((item, index) => {
+            const chipContent = (
+              <>
+                {item.icon && (
+                  <item.icon
+                    className="w-5 h-5 text-[hsl(25,80%,55%)] opacity-[0.85]"
+                    aria-hidden="true"
+                  />
+                )}
+                <span className="font-nunito">{item.label || item.value}</span>
+              </>
+            );
+            if (item.onClick) {
+              return (
+                <button
+                  key={item.label ?? item.value ?? String(index)}
+                  type="button"
+                  className="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(200,180,140,0.85)] cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={e => {
+                    e.stopPropagation();
+                    item.onClick!();
+                  }}
+                >
+                  {chipContent}
+                </button>
+              );
+            }
+            return (
+              <span
+                key={item.label ?? item.value ?? String(index)}
+                className="flex items-center gap-2 text-[0.78rem] font-semibold text-[rgba(200,180,140,0.85)]"
+              >
+                {chipContent}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Agent action footer */}
+      {entity === 'game' && hasAgent !== undefined && id && (
+        <CardAgentAction
+          hasAgent={hasAgent}
+          agentId={agentId}
+          gameId={id}
+          onCreateAgent={onCreateAgent}
+          variant={variant}
+          hasNavFooter={!!(linkedEntities && linkedEntities.length > 0)}
+        />
+      )}
+
+      {/* Navigation footer */}
+      {linkedEntities && linkedEntities.length > 0 && (
+        <ManaLinkFooter linkedEntities={linkedEntities} onPipClick={handleManaPipClick} />
+      )}
+
+      {/* Bottom bar — solo se ha contenuto */}
+      {bottomStatValue && (
+        <div
+          data-testid="meeple-card-bottom-bar"
+          className="flex items-center justify-end px-2 shrink-0 bg-black/70 border-t border-white/5"
+          style={{ height: `${CARD_SECTION_HEIGHTS.bottomBar}px` }}
+        >
+          <span className="text-[9px] text-white/60 shrink-0">
+            {bottomStatLabel ? `${bottomStatLabel} ` : ''}
+            {bottomStatValue}
+          </span>
+        </div>
+      )}
+
+      {/* Drawer */}
+      {entityId && drawerEntityType && (
+        <ExtraMeepleCardDrawer
+          entityType={drawerEntityType}
+          entityId={entityId}
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* DeckStack for mana pip navigation */}
+      <DeckStack
+        isOpen={deckStackOpen}
+        items={deckStackItems}
+        onItemClick={(_id, _entityType) => {
+          setDeckStackOpen(false);
+        }}
+        onClose={() => setDeckStackOpen(false)}
+        anchorRect={deckStackAnchor}
+      />
+    </Component>
+  );
+});

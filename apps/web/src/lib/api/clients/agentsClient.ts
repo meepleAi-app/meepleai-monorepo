@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
+
 import {
   AgentDtoSchema,
   AgentResponseDtoSchema,
@@ -33,6 +35,8 @@ import {
   type PlayerModeSuggestionResponse,
   type Typology, // Added for AGT-012
 } from '../schemas';
+import { QuickCreateResultSchema, type QuickCreateResult } from '../schemas/ownership.schemas';
+import { AgentCostEstimateSchema, type AgentCostEstimate } from '../schemas/rag-setup.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 import type {
@@ -457,6 +461,8 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       agentName?: string;
       strategyName?: string;
       strategyParameters?: Record<string, unknown>;
+      /** Pre-selected KB document IDs (from SearchAgentSheet wizard) */
+      documentIds?: string[];
     }): Promise<{
       agentId: string;
       agentName: string;
@@ -487,7 +493,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Issue #4962: Wire agent test console to real backend API
      */
     async testTypology(
-      typologyId: string,
+      agentDefinitionId: string,
       testQuery: string
     ): Promise<{
       success: boolean;
@@ -498,7 +504,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
         success: boolean;
         response: string;
         confidenceScore: number;
-      }>(`/api/v1/agent-typologies/${encodeURIComponent(typologyId)}/test`, { testQuery });
+      }>(`/api/v1/agent-typologies/${encodeURIComponent(agentDefinitionId)}/test`, { testQuery });
 
       if (!response) {
         throw new Error('Failed to test agent typology: no response from server');
@@ -513,7 +519,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Issue #4962: Wire agent test console to real backend API
      */
     async saveTestResult(result: {
-      typologyId: string;
+      agentDefinitionId: string;
       query: string;
       response: string;
       modelUsed: string;
@@ -527,7 +533,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       const saved = await httpClient.post<{ id: string }>(
         '/api/v1/admin/test-results',
         {
-          typologyId: result.typologyId,
+          agentDefinitionId: result.agentDefinitionId,
           query: result.query,
           response: result.response,
           modelUsed: result.modelUsed,
@@ -628,7 +634,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
                 const event = JSON.parse(data);
                 yield event as SSEEvent;
               } catch (e) {
-                console.error('Failed to parse SSE event:', e);
+                logger.error('Failed to parse SSE event:', e);
               }
             }
           }
@@ -677,6 +683,70 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
         throw new Error('Failed to update agent configuration: no response from server');
       }
       return response;
+    },
+
+    // ========== RAG Setup (Admin) ==========
+
+    /** Estimate cost for agent with selected documents */
+    async estimateAgentCost(request: {
+      gameId: string;
+      documentIds: string[];
+      strategyName?: string;
+    }): Promise<AgentCostEstimate | null> {
+      return httpClient.post(
+        '/api/v1/admin/agents/estimate-cost',
+        request,
+        AgentCostEstimateSchema
+      );
+    },
+
+    // ========== Quick Create Tutor (Ownership RAG Access) ==========
+
+    /**
+     * Quick-create a tutor agent for a game after ownership declaration.
+     * Uses pre-existing KB cards to instantly set up a chat-ready agent.
+     * POST /api/v1/agents/quick-create
+     * @param gameId - Game UUID
+     * @param sharedGameId - Optional shared game UUID for catalog-linked games
+     */
+    async quickCreateTutor(gameId: string, sharedGameId?: string): Promise<QuickCreateResult> {
+      const body: { gameId: string; sharedGameId?: string } = { gameId };
+      if (sharedGameId) {
+        body.sharedGameId = sharedGameId;
+      }
+      const response = await httpClient.post<QuickCreateResult>(
+        '/api/v1/agents/quick-create',
+        body,
+        QuickCreateResultSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to quick-create tutor: no response from server');
+      }
+
+      return response;
+    },
+
+    /** Create agent with auto-link to SharedGame and document attachment */
+    async createAgentWithSetup(request: {
+      userId: string;
+      userTier: string;
+      userRole: string;
+      gameId: string;
+      addToCollection: boolean;
+      agentType: string;
+      agentName?: string;
+      strategyName?: string;
+      sharedGameId: string;
+      documentIds: string[];
+    }): Promise<{
+      agentId: string;
+      agentName: string;
+      threadId: string;
+      slotUsed: number;
+      gameAddedToCollection: boolean;
+    } | null> {
+      return httpClient.post('/api/v1/agents/setup', request);
     },
   };
 }

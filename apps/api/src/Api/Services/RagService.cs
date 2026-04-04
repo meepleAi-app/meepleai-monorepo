@@ -22,40 +22,26 @@ internal class RagService : IRagService
     // CONFIG-04: Hardcoded defaults (lowest priority fallback)
     private const int DefaultTopK = 5;
 
-    private readonly IEmbeddingService _embeddingService;
-    private readonly IQdrantService _qdrantService;
     private readonly IHybridSearchService _hybridSearchService; // AI-14: Hybrid search service
     private readonly ILlmService _llmService;
     private readonly IAiResponseCacheService _cache;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly ILogger<RagService> _logger;
-
-    // SOLID Refactoring Phase 3: Extracted specialized services
-    private readonly IQueryExpansionService _queryExpansion;
-    private readonly ISearchResultReranker _reranker;
     private readonly IRagConfigurationProvider _configProvider; // Issue #1441: Centralized configuration provider
 
     public RagService(
-        IEmbeddingService embeddingService,
-        IQdrantService qdrantService,
         IHybridSearchService hybridSearchService, // AI-14: Inject hybrid search service
         ILlmService llmService,
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
         ILogger<RagService> logger,
-        IQueryExpansionService queryExpansion,
-        ISearchResultReranker reranker,
         IRagConfigurationProvider configProvider) // Issue #1441: Centralized configuration provider
     {
-        _embeddingService = embeddingService;
-        _qdrantService = qdrantService;
         _hybridSearchService = hybridSearchService; // AI-14
         _llmService = llmService;
         _cache = cache;
         _promptTemplateService = promptTemplateService;
         _logger = logger;
-        _queryExpansion = queryExpansion;
-        _reranker = reranker;
         _configProvider = configProvider; // Issue #1441
     }
 
@@ -158,7 +144,7 @@ internal class RagService : IRagService
             cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<List<SearchResultItem>> ExecuteRetrievalPhaseAsync(
+    private Task<List<SearchResultItem>> ExecuteRetrievalPhaseAsync(
         string query,
         string gameId,
         string language,
@@ -166,39 +152,11 @@ internal class RagService : IRagService
         Activity? activity,
         CancellationToken cancellationToken)
     {
-        // Step 1: PERF-08 - Generate query variations for improved recall
-        var queryVariations = await _queryExpansion.GenerateQueryVariationsAsync(query, language, cancellationToken).ConfigureAwait(false);
-        activity?.SetTag("query.variations.count", queryVariations.Count);
-
-        _logger.LogDebug("Generated {Count} query variations: {Variations}",
-            queryVariations.Count, string.Join(", ", queryVariations.Take(3)));
-
-        // Step 2: Generate embeddings for all query variations
-        // AI-09: Use language-aware embedding service
-        var embeddingTasks = queryVariations
-            .Select(q => _embeddingService.GenerateEmbeddingAsync(q, language, cancellationToken))
-            .ToList();
-        var embeddingResults = await Task.WhenAll(embeddingTasks).ConfigureAwait(false);
-
-        var embeddings = embeddingResults
-            .Where(r => r.Success && r.Embeddings.Count > 0)
-            .Select(r => r.Embeddings[0])
-            .ToList();
-
-        if (embeddings.Count == 0)
-        {
-            _logger.LogError("Failed to generate query embeddings for language {Language}", language);
-            return new List<SearchResultItem>();
-        }
-
-        // Step 3: PERF-08 - Search Qdrant with all query variations (parallel execution)
-        var searchTasks = embeddings
-            .Select(embedding => _qdrantService.SearchAsync(gameId, embedding, language, limit: topK, documentIds: null, cancellationToken))
-            .ToList();
-        var searchResults = await Task.WhenAll(searchTasks).ConfigureAwait(false);
-
-        // Step 4: PERF-08 - Fuse and deduplicate results using Reciprocal Rank Fusion (RRF)
-        return await _reranker.FuseSearchResultsAsync(searchResults.Where(r => r.Success).ToList()).ConfigureAwait(false);
+        // Vector store (Qdrant) has been removed — retrieval returns empty results.
+        // The hybrid search path (AskWithHybridSearchAsync) should be used instead.
+        _logger.LogInformation("Vector retrieval skipped (Qdrant removed), returning empty results for game {GameId}", gameId);
+        activity?.SetTag("query.variations.count", 0);
+        return Task.FromResult(new List<SearchResultItem>());
     }
 
     private async Task<QaResponse> ExecuteGenerationPhaseAsync(
@@ -376,35 +334,16 @@ internal class RagService : IRagService
             cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<List<SearchResultItem>?> ExecuteExplainRetrievalAsync(
+    private Task<List<SearchResultItem>?> ExecuteExplainRetrievalAsync(
         string topic,
         string gameId,
         string language,
         int topK,
         CancellationToken cancellationToken)
     {
-        // Step 1: Generate embedding for the topic
-        // AI-09: Use language-aware embedding service
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, language, cancellationToken).ConfigureAwait(false);
-        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
-        {
-            _logger.LogError("Failed to generate topic embedding for language {Language}: {Error}", language, embeddingResult.ErrorMessage);
-            return null;
-        }
-
-        var topicEmbedding = embeddingResult.Embeddings[0];
-
-        // Step 2: Search Qdrant for relevant chunks (get more for comprehensive explanation)
-        // AI-09: Filter search by language
-        // CONFIG-04: Use dynamic topK from configuration
-        var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, language, limit: topK, documentIds: null, cancellationToken).ConfigureAwait(false);
-
-        if (!searchResult.Success)
-        {
-            return new List<SearchResultItem>();
-        }
-
-        return searchResult.Results;
+        // Vector store (Qdrant) has been removed — explain retrieval returns empty results.
+        _logger.LogInformation("Vector retrieval skipped (Qdrant removed) for explain, game {GameId}", gameId);
+        return Task.FromResult<List<SearchResultItem>?>(new List<SearchResultItem>());
     }
 
     private async Task<ExplainResponse> GenerateExplanationResponseAsync(

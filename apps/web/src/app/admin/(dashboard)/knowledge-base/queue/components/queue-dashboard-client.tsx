@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeftIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
@@ -24,13 +24,36 @@ import { useQueueList, useJobDetail } from '../lib/queue-api';
 
 import type { QueueFilters } from '../lib/queue-api';
 
-export function QueueDashboardClient({ gameId }: { gameId?: string }) {
+export function QueueDashboardClient({
+  gameId,
+  highlightJobId,
+  documentId,
+}: {
+  gameId?: string;
+  highlightJobId?: string;
+  /** Fallback document ID from upload flow when no jobId is available */
+  documentId?: string;
+}) {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<QueueFilters>({
     page: 1,
     pageSize: 20,
   });
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (highlightJobId) {
+      setSelectedJobId(highlightJobId);
+    }
+  }, [highlightJobId]);
+
+  // When no jobId is available but a documentId was passed from the upload flow,
+  // pre-populate the search filter so the queue shows the relevant job.
+  useEffect(() => {
+    if (!highlightJobId && documentId) {
+      setFilters(prev => ({ ...prev, search: documentId }));
+    }
+  }, [highlightJobId, documentId]);
 
   // SSE connections
   const { connectionState: queueSSEState, reconnect: reconnectQueueSSE } = useQueueSSE(true);

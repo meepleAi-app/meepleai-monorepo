@@ -49,7 +49,7 @@ vi.mock('@/components/ui/meeple/meeple-logo', () => ({
 }));
 
 // Mock NotificationCenter to avoid IntlProvider dependency (it uses useTranslation/useIntl)
-vi.mock('@/components/layout/Navbar/NotificationCenter', () => ({
+vi.mock('@/components/notifications/NotificationCenter', () => ({
   NotificationCenter: () => null,
 }));
 

@@ -10,16 +10,16 @@
  * @module components/ui/data-display/entity-list-view/utils/filter-utils
  */
 
-import type { FilterConfig, FilterState } from '../entity-list-view.types';
+import type { FilterConfig, FilterState, FilterValue } from '../entity-list-view.types';
 
 /**
  * Get nested value from object using dot notation
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getNestedValue<T>(obj: T, field: keyof T | string): any {
+function getNestedValue<T>(obj: T, field: keyof T | string): unknown {
   if (typeof field === 'string' && field.includes('.')) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, security/detect-object-injection
-    return field.split('.').reduce((acc, part) => (acc as any)?.[part], obj as any);
+    return field
+      .split('.')
+      .reduce((acc: unknown, part) => (acc as Record<string, unknown>)?.[part], obj as unknown);
   }
   return obj[field as keyof T];
 }
@@ -38,9 +38,9 @@ export function applyFilters<T>(
   filterState: FilterState,
   filterConfig: FilterConfig<T>[]
 ): T[] {
-  return items.filter((item) => {
+  return items.filter(item => {
     // Item must pass ALL active filters
-    return filterConfig.every((filter) => {
+    return filterConfig.every(filter => {
       const filterValue = filterState[filter.id];
 
       // Skip inactive/empty filters
@@ -80,7 +80,7 @@ export function applyFilters<T>(
         case 'date-range': {
           // DateRange: filterValue is { start: Date, end: Date }
           const dateRange = filterValue as { start: Date; end: Date };
-          const itemDate = new Date(itemValue);
+          const itemDate = new Date(itemValue as string | number | Date);
 
           if (isNaN(itemDate.getTime())) return false;
 
@@ -102,7 +102,7 @@ export function applyFilters<T>(
  * Count active filters (non-empty values)
  */
 export function countActiveFilters(filterState: FilterState): number {
-  return Object.values(filterState).filter((value) => {
+  return Object.values(filterState).filter(value => {
     if (value === undefined || value === null || value === '') return false;
     if (Array.isArray(value) && value.length === 0) return false;
     if (typeof value === 'boolean' && value === false) return false;
@@ -113,25 +113,23 @@ export function countActiveFilters(filterState: FilterState): number {
 /**
  * Get filter display value for chip
  */
-export function getFilterDisplayValue(
+export function getFilterDisplayValue<T>(
   filterId: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  filterValue: any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  filterConfig: FilterConfig<any>[]
+  filterValue: FilterValue,
+  filterConfig: FilterConfig<T>[]
 ): string {
-  const filter = filterConfig.find((f) => f.id === filterId);
+  const filter = filterConfig.find(f => f.id === filterId);
   if (!filter) return String(filterValue);
 
   switch (filter.type) {
     case 'select': {
       if (filter.multiple && Array.isArray(filterValue)) {
         const labels = filterValue
-          .map((val) => filter.options.find((opt) => opt.value === val)?.label || val)
+          .map(val => filter.options.find(opt => opt.value === val)?.label || val)
           .join(', ');
         return labels || String(filterValue);
       }
-      const option = filter.options.find((opt) => opt.value === filterValue);
+      const option = filter.options.find(opt => opt.value === filterValue);
       return option?.label || String(filterValue);
     }
 

@@ -57,6 +57,42 @@ internal sealed class CreateSharedGameCommandValidator : AbstractValidator<Creat
         RuleFor(x => x.Rules)
             .SetValidator(new GameRulesDtoValidator()!)
             .When(x => x.Rules is not null);
+
+        When(x => x.Categories != null, () =>
+        {
+            RuleFor(x => x.Categories!)
+                .Must(list => list.Count <= 50).WithMessage("Cannot have more than 50 categories");
+            RuleForEach(x => x.Categories!)
+                .NotEmpty().WithMessage("Category name cannot be empty")
+                .MaximumLength(200).WithMessage("Category name too long");
+        });
+
+        When(x => x.Mechanics != null, () =>
+        {
+            RuleFor(x => x.Mechanics!)
+                .Must(list => list.Count <= 50).WithMessage("Cannot have more than 50 mechanics");
+            RuleForEach(x => x.Mechanics!)
+                .NotEmpty().WithMessage("Mechanic name cannot be empty")
+                .MaximumLength(200).WithMessage("Mechanic name too long");
+        });
+
+        When(x => x.Designers != null, () =>
+        {
+            RuleFor(x => x.Designers!)
+                .Must(list => list.Count <= 20).WithMessage("Cannot have more than 20 designers");
+            RuleForEach(x => x.Designers!)
+                .NotEmpty().WithMessage("Designer name cannot be empty")
+                .MaximumLength(200).WithMessage("Designer name too long");
+        });
+
+        When(x => x.Publishers != null, () =>
+        {
+            RuleFor(x => x.Publishers!)
+                .Must(list => list.Count <= 20).WithMessage("Cannot have more than 20 publishers");
+            RuleForEach(x => x.Publishers!)
+                .NotEmpty().WithMessage("Publisher name cannot be empty")
+                .MaximumLength(200).WithMessage("Publisher name too long");
+        });
     }
 
     private static bool BeValidUrl(string url)

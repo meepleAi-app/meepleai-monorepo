@@ -58,7 +58,7 @@ export interface ResolvedNavigationLink {
  * ```
  * Game ──► KB/Agent tab, Agent tab, Chats, Sessions
  * Agent ──► Library, Library, Chats, Sessions
- * Document ──► Game (library), Agent
+ * KB ──► Game (library), Agent
  * Session ──► Game (library), Players, Agent, Chats
  * Player ──► Sessions, Library
  * ChatSession ──► Game (library), Agent, Session
@@ -74,7 +74,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
   {
     game: [
       {
-        entity: 'document',
+        entity: 'kb',
         label: 'KB',
         buildHref: id => `/library/${id}?tab=agent`,
       },
@@ -102,7 +102,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
         buildHref: _id => `/library`,
       },
       {
-        entity: 'document',
+        entity: 'kb',
         label: 'KB',
         buildHref: _id => `/library`,
       },
@@ -118,7 +118,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
       },
     ],
 
-    document: [
+    kb: [
       {
         entity: 'game',
         label: 'Game',
@@ -231,14 +231,13 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
  *
  * ```ts
  * const links = getNavigationLinks('game', { id: '123' });
- * // [{ entity: 'document', label: 'KB', href: '/library/123?tab=agent' }, …]
+ * // [{ entity: 'kb', label: 'KB', href: '/library/123?tab=agent' }, …]
  * ```
  */
 export function getNavigationLinks(
   entity: MeepleEntityType,
   entityData: EntityIdBag
 ): ResolvedNavigationLink[] {
-  // eslint-disable-next-line security/detect-object-injection -- entity comes from typed union
   const targets = ENTITY_NAVIGATION_GRAPH[entity];
   if (!targets) return [];
 
@@ -246,7 +245,6 @@ export function getNavigationLinks(
 
   for (const target of targets) {
     const key = target.idKey ?? 'id';
-    // eslint-disable-next-line security/detect-object-injection -- key is from config
     const value = entityData[key];
     if (!value) continue;
 

@@ -12,7 +12,7 @@ set -euo pipefail
 RUNNER_VERSION="2.321.0"
 RUNNER_NAME="oracle-arm-runner"
 RUNNER_LABELS="self-hosted,linux,ARM64"
-REPO_URL="${REPO_URL:-https://github.com/DegrassiAaron/meepleai-monorepo}"
+REPO_URL="${REPO_URL:-https://github.com/meepleAi-app/meepleai-monorepo}"
 RUNNER_DIR="/home/ubuntu/actions-runner"
 RUNNER_TOKEN=""
 

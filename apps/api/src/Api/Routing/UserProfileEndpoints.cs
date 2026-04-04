@@ -38,6 +38,10 @@ internal static class UserProfileEndpoints
         MapAiUsageEndpoints(group);
         // Issue #3674: User available features
         MapFeatureAccessEndpoints(group);
+        // Issue #323: Onboarding completion
+        MapCompleteOnboardingEndpoint(group);
+        // Issue #124: Save user interests from onboarding wizard
+        MapSaveUserInterestsEndpoint(group);
 
         return group;
     }
@@ -104,7 +108,9 @@ internal static class UserProfileEndpoints
             {
                 UserId = session!.User!.Id,
                 DisplayName = payload.DisplayName,
-                Email = payload.Email
+                Email = payload.Email,
+                AvatarUrl = payload.AvatarUrl,
+                Bio = payload.Bio,
             };
 
             await mediator.Send(command, ct).ConfigureAwait(false);
@@ -253,7 +259,10 @@ internal static class UserProfileEndpoints
                 Language = payload.Language,
                 Theme = payload.Theme,
                 EmailNotifications = payload.EmailNotifications,
-                DataRetentionDays = payload.DataRetentionDays
+                DataRetentionDays = payload.DataRetentionDays,
+                ShowProfile = payload.ShowProfile,
+                ShowActivity = payload.ShowActivity,
+                ShowLibrary = payload.ShowLibrary
             };
 
             var updatedProfile = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -304,7 +313,10 @@ internal static class UserProfileEndpoints
                 language = userProfile!.Language,
                 theme = userProfile.Theme,
                 emailNotifications = userProfile.EmailNotifications,
-                dataRetentionDays = userProfile.DataRetentionDays
+                dataRetentionDays = userProfile.DataRetentionDays,
+                showProfile = userProfile.ShowProfile,
+                showActivity = userProfile.ShowActivity,
+                showLibrary = userProfile.ShowLibrary
             };
 
             return Results.Json(preferences);
@@ -425,6 +437,64 @@ internal static class UserProfileEndpoints
 **Response**: UserAiUsageDto with detailed usage breakdown.")
         .Produces<UserAiUsageDto>(200)
         .Produces(401);
+
+        // Issue #94: Multi-period usage summary (today/7d/30d)
+        group.MapGet("/users/me/ai-usage/summary", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var query = new GetMyAiUsageSummaryQuery(session!.User!.Id);
+            return Results.Ok(await mediator.Send(query, ct).ConfigureAwait(false));
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyAiUsageSummary")
+        .WithTags("AI Usage")
+        .WithSummary("Get multi-period AI usage summary (today/7d/30d)")
+        .Produces<AiUsageSummaryDto>(200)
+        .Produces(401);
+
+        // Issue #94: Usage distributions (model, provider, operation)
+        group.MapGet("/users/me/ai-usage/distributions", async (
+            HttpContext context,
+            IMediator mediator,
+            int days = 30,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var clampedDays = Math.Clamp(days, 1, 90);
+            var query = new GetMyAiUsageDistributionsQuery(session!.User!.Id, clampedDays);
+            return Results.Ok(await mediator.Send(query, ct).ConfigureAwait(false));
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyAiUsageDistributions")
+        .WithTags("AI Usage")
+        .WithSummary("Get AI usage distribution breakdowns (model, provider, operation)")
+        .Produces<AiUsageDistributionsDto>(200)
+        .Produces(401);
+
+        // Issue #94: Recent individual requests (last 7 days, paginated)
+        group.MapGet("/users/me/ai-usage/recent", async (
+            HttpContext context,
+            IMediator mediator,
+            int page = 1,
+            int pageSize = 20,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var query = new GetMyAiUsageRecentQuery(session!.User!.Id, page, pageSize);
+            return Results.Ok(await mediator.Send(query, ct).ConfigureAwait(false));
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyAiUsageRecent")
+        .WithTags("AI Usage")
+        .WithSummary("Get recent AI requests (last 7 days, paginated)")
+        .Produces<AiUsageRecentDto>(200)
+        .Produces(401);
     }
 
     private static void MapFeatureAccessEndpoints(RouteGroupBuilder group)
@@ -466,12 +536,100 @@ internal static class UserProfileEndpoints
         .Produces<IReadOnlyList<UserFeatureDto>>(200)
         .Produces(401);
     }
+
+    private static void MapCompleteOnboardingEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/users/onboarding/complete", async (
+            [FromBody] CompleteOnboardingPayload payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.Onboarding.CompleteOnboardingCommand(
+                UserId: session!.User!.Id,
+                Skipped: payload.Skipped
+            );
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Onboarding {Status} for user {UserId}",
+                payload.Skipped ? "skipped" : "completed", session.User.Id);
+
+            return Results.Json(new { ok = true, message = payload.Skipped ? "Onboarding skipped" : "Onboarding completed" });
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("CompleteOnboarding")
+        .WithTags("User Profile", "Onboarding")
+        .WithSummary("Mark onboarding as completed or skipped")
+        .WithDescription(@"Marks the authenticated user's onboarding wizard as completed or skipped.
+
+**Issue**: #323 - Onboarding completion tracking.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Request Body**: CompleteOnboardingPayload with skipped flag.")
+        .Produces(200)
+        .Produces(401);
+    }
+
+    private static void MapSaveUserInterestsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/users/interests", async (
+            [FromBody] SaveUserInterestsPayload payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.UserProfile.SaveUserInterestsCommand(
+                UserId: session!.User!.Id,
+                Interests: payload.Interests
+            );
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Saved {Count} interests for user {UserId}",
+                payload.Interests?.Count ?? 0, session.User.Id);
+
+            return Results.Json(new { ok = true, message = "Interests saved successfully" });
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("SaveUserInterests")
+        .WithTags("User Profile", "Onboarding")
+        .WithSummary("Save user's board game interests")
+        .WithDescription(@"Saves the user's board game category interests from the onboarding wizard.
+
+**Issue**: #124 - Invitation system onboarding wizard.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Request Body**: SaveUserInterestsPayload with list of interest category IDs.
+Valid categories: Strategy, Party, Cooperative, Family, Thematic, Abstract, Card, Dice, Miniatures.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+    }
 }
+
+/// <summary>
+/// Payload for completing onboarding. Issue #323.
+/// </summary>
+internal record CompleteOnboardingPayload(bool Skipped = false);
+
+/// <summary>
+/// Payload for saving user interests. Issue #124.
+/// </summary>
+internal record SaveUserInterestsPayload(List<string> Interests);
 
 /// <summary>
 /// Payload for updating user profile.
 /// </summary>
-internal record UpdateProfilePayload(string? DisplayName, string? Email);
+internal record UpdateProfilePayload(string? DisplayName, string? Email, string? AvatarUrl, string? Bio);
 
 /// <summary>
 /// Payload for changing password.
@@ -485,4 +643,7 @@ internal record UpdatePreferencesPayload(
     string Language,
     string Theme,
     bool EmailNotifications,
-    int DataRetentionDays);
+    int DataRetentionDays,
+    bool ShowProfile = true,
+    bool ShowActivity = true,
+    bool ShowLibrary = true);

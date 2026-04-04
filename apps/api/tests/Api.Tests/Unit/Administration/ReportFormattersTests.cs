@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
 using Api.Tests.Constants;
 using System.Text;
 using System.Text.Json;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Unit.Administration;
@@ -31,8 +32,8 @@ public sealed class ReportFormattersTests
         var result = formatter.Format(content);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -47,8 +48,8 @@ public sealed class ReportFormattersTests
         var csvText = Encoding.UTF8.GetString(result);
 
         // Assert
-        Assert.Contains("Test Report", csvText);
-        Assert.Contains("Metric,Value", csvText); // CSV headers
+        csvText.Should().Contain("Test Report");
+        csvText.Should().Contain("Metric,Value"); // CSV headers
     }
 
     [Fact]
@@ -86,8 +87,8 @@ public sealed class ReportFormattersTests
         var csvText = Encoding.UTF8.GetString(result);
 
         // Assert
-        Assert.Contains("Section 1", csvText);
-        Assert.Contains("Section 2", csvText);
+        csvText.Should().Contain("Section 1");
+        csvText.Should().Contain("Section 2");
     }
 
     [Fact]
@@ -121,7 +122,7 @@ public sealed class ReportFormattersTests
         var csvText = Encoding.UTF8.GetString(result);
 
         // Assert
-        Assert.NotEmpty(csvText);
+        csvText.Should().NotBeEmpty();
         // CSV should handle special characters properly
     }
 
@@ -135,7 +136,7 @@ public sealed class ReportFormattersTests
         var extension = formatter.GetFileExtension();
 
         // Assert
-        Assert.Equal("csv", extension);
+        extension.Should().Be("csv");
     }
 
     #endregion
@@ -158,13 +159,13 @@ public sealed class ReportFormattersTests
         var result = formatter.Format(content);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
 
         // Verify it's valid JSON
         var jsonText = Encoding.UTF8.GetString(result);
         var parsed = JsonDocument.Parse(jsonText);
-        Assert.NotNull(parsed);
+        parsed.Should().NotBeNull();
     }
 
     [Fact]
@@ -181,11 +182,11 @@ public sealed class ReportFormattersTests
 
         // Assert
         var root = parsed.RootElement;
-        Assert.True(root.TryGetProperty("title", out var title));
-        Assert.Equal("Test Report", title.GetString());
-        Assert.True(root.TryGetProperty("description", out _));
-        Assert.True(root.TryGetProperty("generatedAt", out _));
-        Assert.True(root.TryGetProperty("sections", out _));
+        root.TryGetProperty("title", out var title).Should().BeTrue();
+        title.GetString().Should().Be("Test Report");
+        root.TryGetProperty("description", out _).Should().BeTrue();
+        root.TryGetProperty("generatedAt", out _).Should().BeTrue();
+        root.TryGetProperty("sections", out _).Should().BeTrue();
     }
 
     [Fact]
@@ -212,7 +213,7 @@ public sealed class ReportFormattersTests
 
         // Assert
         var sections = parsed.RootElement.GetProperty("sections");
-        Assert.Equal(3, sections.GetArrayLength());
+        sections.GetArrayLength().Should().Be(3);
     }
 
     [Fact]
@@ -246,9 +247,9 @@ public sealed class ReportFormattersTests
         var jsonText = Encoding.UTF8.GetString(result);
 
         // Assert - JsonFormatter currently doesn't serialize chart data, only section data
-        Assert.Contains("Section with Chart", jsonText);
-        Assert.Contains("sections", jsonText);
-        Assert.NotEmpty(result);
+        jsonText.Should().Contain("Section with Chart");
+        jsonText.Should().Contain("sections");
+        result.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -275,8 +276,8 @@ public sealed class ReportFormattersTests
 
         // Assert
         var metadata = parsed.RootElement.GetProperty("metadata");
-        Assert.True(metadata.TryGetProperty("hours", out var hours));
-        Assert.Equal(24, hours.GetInt32());
+        metadata.TryGetProperty("hours", out var hours).Should().BeTrue();
+        hours.GetInt32().Should().Be(24);
     }
 
     [Fact]
@@ -289,7 +290,7 @@ public sealed class ReportFormattersTests
         var extension = formatter.GetFileExtension();
 
         // Assert
-        Assert.Equal("json", extension);
+        extension.Should().Be("json");
     }
 
     #endregion
@@ -313,11 +314,11 @@ public sealed class ReportFormattersTests
         var result = formatter.Format(content);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
         // PDF should start with "%PDF-"
         var pdfHeader = Encoding.ASCII.GetString(result.Take(5).ToArray());
-        Assert.Equal("%PDF-", pdfHeader);
+        pdfHeader.Should().Be("%PDF-");
     }
 
     [Fact]
@@ -332,9 +333,9 @@ public sealed class ReportFormattersTests
         var result = formatter.Format(content);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.True(result.Length > 100); // PDF should have reasonable size
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
+        (result.Length > 100).Should().BeTrue(); // PDF should have reasonable size
     }
 
     [Fact]
@@ -364,8 +365,8 @@ public sealed class ReportFormattersTests
         var result = formatter.Format(content);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.Length > 100);
+        result.Should().NotBeNull();
+        (result.Length > 100).Should().BeTrue();
     }
 
     [Fact]
@@ -402,8 +403,8 @@ public sealed class ReportFormattersTests
         var result = formatter.Format(content);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.Length > 100);
+        result.Should().NotBeNull();
+        (result.Length > 100).Should().BeTrue();
     }
 
     [Fact]
@@ -435,8 +436,8 @@ public sealed class ReportFormattersTests
         var result = formatter.Format(content);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.Length > 500); // Should be larger with more data
+        result.Should().NotBeNull();
+        (result.Length > 500).Should().BeTrue(); // Should be larger with more data
     }
 
     [Fact]
@@ -450,7 +451,7 @@ public sealed class ReportFormattersTests
         var extension = formatter.GetFileExtension();
 
         // Assert
-        Assert.Equal("pdf", extension);
+        extension.Should().Be("pdf");
     }
 
     #endregion
@@ -496,7 +497,7 @@ public sealed class ReportFormattersTests
         };
 
         // Assert
-        Assert.Equal(3, extensions.Distinct().Count());
+        extensions.Distinct().Count().Should().Be(3);
     }
 
     #endregion

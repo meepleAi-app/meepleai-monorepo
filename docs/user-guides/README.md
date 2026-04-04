@@ -118,10 +118,10 @@ Must be tested before any release:
 
 ## Related Documentation
 
-- [Product Specification](../01-architecture/overview/product-specification.md)
-- [API Reference](../03-api/README.md)
-- [Bounded Contexts](../09-bounded-contexts/)
-- [E2E Test Guide](../05-testing/e2e/e2-e-test-guide.md)
+- [Product Specification](../architecture/overview/product-specification.md)
+- [API Reference](../api/README.md)
+- [Bounded Contexts](../bounded-contexts/)
+- [E2E Test Guide](../testing/e2e/e2-e-test-guide.md)
 
 ---
 

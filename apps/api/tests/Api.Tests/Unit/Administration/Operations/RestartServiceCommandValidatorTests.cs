@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands.Operations;
 using Api.BoundedContexts.Administration.Application.Validators;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Unit.Administration.Operations;
@@ -24,8 +25,8 @@ public sealed class RestartServiceCommandValidatorTests
         var result = _validator.Validate(command);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
     }
 
     [Fact]
@@ -40,8 +41,8 @@ public sealed class RestartServiceCommandValidatorTests
         var result = _validator.Validate(command);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == "ServiceName");
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "ServiceName");
     }
 
     [Fact]
@@ -56,8 +57,8 @@ public sealed class RestartServiceCommandValidatorTests
         var result = _validator.Validate(command);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e =>
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e =>
             e.PropertyName == "ServiceName" &&
             e.ErrorMessage.Contains("Invalid service name", StringComparison.Ordinal));
     }
@@ -74,8 +75,8 @@ public sealed class RestartServiceCommandValidatorTests
         var result = _validator.Validate(command);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == "AdminUserId");
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "AdminUserId");
     }
 
     [Theory]
@@ -93,6 +94,6 @@ public sealed class RestartServiceCommandValidatorTests
         var result = _validator.Validate(command);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
     }
 }

@@ -4,6 +4,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Enums;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.ValueObjects;
 
@@ -23,16 +24,16 @@ public class E2EMetricsTests
         var metrics = E2EMetrics.CreateDefault();
 
         // Assert
-        Assert.Equal(0m, metrics.Coverage);
-        Assert.Equal(0m, metrics.PassRate);
-        Assert.Equal(0m, metrics.FlakyRate);
-        Assert.Equal(0m, metrics.ExecutionTime);
-        Assert.Equal(0, metrics.TotalTests);
-        Assert.Equal(0, metrics.PassedTests);
-        Assert.Equal(0, metrics.FailedTests);
-        Assert.Equal(0, metrics.SkippedTests);
-        Assert.Equal(0, metrics.FlakyTests);
-        Assert.Equal(TestExecutionStatus.NoData, metrics.Status);
+        metrics.Coverage.Should().Be(0m);
+        metrics.PassRate.Should().Be(0m);
+        metrics.FlakyRate.Should().Be(0m);
+        metrics.ExecutionTime.Should().Be(0m);
+        metrics.TotalTests.Should().Be(0);
+        metrics.PassedTests.Should().Be(0);
+        metrics.FailedTests.Should().Be(0);
+        metrics.SkippedTests.Should().Be(0);
+        metrics.FlakyTests.Should().Be(0);
+        metrics.Status.Should().Be(TestExecutionStatus.NoData);
     }
 
     [Fact]
@@ -42,9 +43,9 @@ public class E2EMetricsTests
         var empty = E2EMetrics.Empty;
 
         // Assert
-        Assert.Equal(0m, empty.Coverage);
-        Assert.Equal(0m, empty.PassRate);
-        Assert.Equal(TestExecutionStatus.NoData, empty.Status);
+        empty.Coverage.Should().Be(0m);
+        empty.PassRate.Should().Be(0m);
+        empty.Status.Should().Be(TestExecutionStatus.NoData);
     }
 
     #endregion
@@ -68,17 +69,17 @@ public class E2EMetricsTests
             lastRunAt: lastRun);
 
         // Assert
-        Assert.Equal(100m, metrics.Coverage);
-        Assert.Equal(100m, metrics.PassRate);
-        Assert.Equal(0m, metrics.FlakyRate);
-        Assert.Equal(50m, metrics.ExecutionTime); // 5000ms / 100 tests
-        Assert.Equal(100, metrics.TotalTests);
-        Assert.Equal(100, metrics.PassedTests);
-        Assert.Equal(0, metrics.FailedTests);
-        Assert.Equal(0, metrics.SkippedTests);
-        Assert.Equal(0, metrics.FlakyTests);
-        Assert.Equal(lastRun, metrics.LastRunAt);
-        Assert.Equal(TestExecutionStatus.Pass, metrics.Status);
+        metrics.Coverage.Should().Be(100m);
+        metrics.PassRate.Should().Be(100m);
+        metrics.FlakyRate.Should().Be(0m);
+        metrics.ExecutionTime.Should().Be(50m); // 5000ms / 100 tests
+        metrics.TotalTests.Should().Be(100);
+        metrics.PassedTests.Should().Be(100);
+        metrics.FailedTests.Should().Be(0);
+        metrics.SkippedTests.Should().Be(0);
+        metrics.FlakyTests.Should().Be(0);
+        metrics.LastRunAt.Should().Be(lastRun);
+        metrics.Status.Should().Be(TestExecutionStatus.Pass);
     }
 
     [Fact]
@@ -96,9 +97,9 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(95m, metrics.PassRate);
-        Assert.Equal(5m, metrics.FlakyRate);
-        Assert.Equal(TestExecutionStatus.Pass, metrics.Status);
+        metrics.PassRate.Should().Be(95m);
+        metrics.FlakyRate.Should().Be(5m);
+        metrics.Status.Should().Be(TestExecutionStatus.Pass);
     }
 
     [Fact]
@@ -116,9 +117,9 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(94m, metrics.PassRate);
-        Assert.Equal(6m, metrics.FlakyRate);
-        Assert.Equal(TestExecutionStatus.Warning, metrics.Status);
+        metrics.PassRate.Should().Be(94m);
+        metrics.FlakyRate.Should().Be(6m);
+        metrics.Status.Should().Be(TestExecutionStatus.Warning);
     }
 
     [Fact]
@@ -136,9 +137,9 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(80m, metrics.PassRate);
-        Assert.Equal(10m, metrics.FlakyRate);
-        Assert.Equal(TestExecutionStatus.Warning, metrics.Status);
+        metrics.PassRate.Should().Be(80m);
+        metrics.FlakyRate.Should().Be(10m);
+        metrics.Status.Should().Be(TestExecutionStatus.Warning);
     }
 
     [Fact]
@@ -156,8 +157,8 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(79m, metrics.PassRate);
-        Assert.Equal(TestExecutionStatus.Fail, metrics.Status);
+        metrics.PassRate.Should().Be(79m);
+        metrics.Status.Should().Be(TestExecutionStatus.Fail);
     }
 
     [Fact]
@@ -175,9 +176,9 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(95m, metrics.PassRate);
-        Assert.Equal(11m, metrics.FlakyRate);
-        Assert.Equal(TestExecutionStatus.Fail, metrics.Status);
+        metrics.PassRate.Should().Be(95m);
+        metrics.FlakyRate.Should().Be(11m);
+        metrics.Status.Should().Be(TestExecutionStatus.Fail);
     }
 
     [Fact]
@@ -194,11 +195,11 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(0m, metrics.Coverage);
-        Assert.Equal(0m, metrics.PassRate);
-        Assert.Equal(0m, metrics.FlakyRate);
-        Assert.Equal(0m, metrics.ExecutionTime);
-        Assert.Equal(TestExecutionStatus.Fail, metrics.Status);
+        metrics.Coverage.Should().Be(0m);
+        metrics.PassRate.Should().Be(0m);
+        metrics.FlakyRate.Should().Be(0m);
+        metrics.ExecutionTime.Should().Be(0m);
+        metrics.Status.Should().Be(TestExecutionStatus.Fail);
     }
 
     [Fact]
@@ -216,9 +217,9 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(90m, metrics.PassRate); // passedTests / totalTests * 100
-        Assert.Equal(10, metrics.SkippedTests);
-        Assert.Equal(TestExecutionStatus.Warning, metrics.Status);
+        metrics.PassRate.Should().Be(90m); // passedTests / totalTests * 100
+        metrics.SkippedTests.Should().Be(10);
+        metrics.Status.Should().Be(TestExecutionStatus.Warning);
     }
 
     #endregion
@@ -239,7 +240,7 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.True(metrics.MeetsQualityStandards);
+        metrics.MeetsQualityStandards.Should().BeTrue();
     }
 
     [Fact]
@@ -256,7 +257,7 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert - Coverage = 89% (< 90% threshold)
-        Assert.False(metrics.MeetsQualityStandards);
+        metrics.MeetsQualityStandards.Should().BeFalse();
     }
 
     [Fact]
@@ -273,7 +274,7 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.False(metrics.MeetsQualityStandards);
+        metrics.MeetsQualityStandards.Should().BeFalse();
     }
 
     [Fact]
@@ -290,7 +291,7 @@ public class E2EMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.False(metrics.MeetsQualityStandards);
+        metrics.MeetsQualityStandards.Should().BeFalse();
     }
 
     #endregion
@@ -301,60 +302,66 @@ public class E2EMetricsTests
     public void FromTestRun_NegativeTotalTests_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            E2EMetrics.FromTestRun(-1, 0, 0, 0, 0, 0, DateTime.UtcNow));
+        var act = () =>
+            E2EMetrics.FromTestRun(-1, 0, 0, 0, 0, 0, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("totalTests", exception.Message);
+        exception.Message.Should().Contain("totalTests");
     }
 
     [Fact]
     public void FromTestRun_NegativePassedTests_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            E2EMetrics.FromTestRun(10, -1, 0, 0, 0, 0, DateTime.UtcNow));
+        var act = () =>
+            E2EMetrics.FromTestRun(10, -1, 0, 0, 0, 0, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("passedTests", exception.Message);
+        exception.Message.Should().Contain("passedTests");
     }
 
     [Fact]
     public void FromTestRun_NegativeFailedTests_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            E2EMetrics.FromTestRun(10, 0, -1, 0, 0, 0, DateTime.UtcNow));
+        var act = () =>
+            E2EMetrics.FromTestRun(10, 0, -1, 0, 0, 0, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("failedTests", exception.Message);
+        exception.Message.Should().Contain("failedTests");
     }
 
     [Fact]
     public void FromTestRun_NegativeSkippedTests_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            E2EMetrics.FromTestRun(10, 0, 0, -1, 0, 0, DateTime.UtcNow));
+        var act = () =>
+            E2EMetrics.FromTestRun(10, 0, 0, -1, 0, 0, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("skippedTests", exception.Message);
+        exception.Message.Should().Contain("skippedTests");
     }
 
     [Fact]
     public void FromTestRun_NegativeFlakyTests_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            E2EMetrics.FromTestRun(10, 0, 0, 0, -1, 0, DateTime.UtcNow));
+        var act = () =>
+            E2EMetrics.FromTestRun(10, 0, 0, 0, -1, 0, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("flakyTests", exception.Message);
+        exception.Message.Should().Contain("flakyTests");
     }
 
     [Fact]
     public void FromTestRun_NegativeDuration_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            E2EMetrics.FromTestRun(10, 10, 0, 0, 0, -1, DateTime.UtcNow));
+        var act = () =>
+            E2EMetrics.FromTestRun(10, 10, 0, 0, 0, -1, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("durationMs", exception.Message);
+        exception.Message.Should().Contain("durationMs");
     }
 
     #endregion
@@ -370,9 +377,9 @@ public class E2EMetricsTests
         var metrics2 = E2EMetrics.FromTestRun(100, 95, 5, 0, 3, 1000, now);
 
         // Assert
-        Assert.Equal(metrics1, metrics2);
-        Assert.True(metrics1 == metrics2);
-        Assert.False(metrics1 != metrics2);
+        metrics2.Should().Be(metrics1);
+        (metrics1 == metrics2).Should().BeTrue();
+        (metrics1 != metrics2).Should().BeFalse();
     }
 
     [Fact]
@@ -384,9 +391,9 @@ public class E2EMetricsTests
         var metrics2 = E2EMetrics.FromTestRun(100, 90, 10, 0, 3, 1000, now);
 
         // Assert
-        Assert.NotEqual(metrics1, metrics2);
-        Assert.False(metrics1 == metrics2);
-        Assert.True(metrics1 != metrics2);
+        metrics2.Should().NotBe(metrics1);
+        (metrics1 == metrics2).Should().BeFalse();
+        (metrics1 != metrics2).Should().BeTrue();
     }
 
     [Fact]
@@ -397,7 +404,7 @@ public class E2EMetricsTests
         var metrics2 = E2EMetrics.FromTestRun(100, 95, 5, 0, 3, 1000, DateTime.UtcNow.AddMinutes(1));
 
         // Assert
-        Assert.NotEqual(metrics1, metrics2);
+        metrics2.Should().NotBe(metrics1);
     }
 
     #endregion
@@ -414,11 +421,11 @@ public class E2EMetricsTests
         var result = metrics.ToString();
 
         // Assert
-        Assert.Contains("Coverage=", result);
-        Assert.Contains("Pass=", result);
-        Assert.Contains("Flaky=", result);
-        Assert.Contains("Status=", result);
-        Assert.StartsWith("E2E:", result);
+        result.Should().Contain("Coverage=");
+        result.Should().Contain("Pass=");
+        result.Should().Contain("Flaky=");
+        result.Should().Contain("Status=");
+        result.Should().StartWith("E2E:");
     }
 
     [Fact]
@@ -431,8 +438,8 @@ public class E2EMetricsTests
         var result = metrics.ToString();
 
         // Assert - Check for percentages with culture-independent assertion
-        Assert.Contains("Pass=95", result);
-        Assert.Contains("Flaky=5", result);
+        result.Should().Contain("Pass=95");
+        result.Should().Contain("Flaky=5");
     }
 
     #endregion

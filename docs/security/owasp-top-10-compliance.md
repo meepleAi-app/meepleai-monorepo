@@ -529,7 +529,7 @@ pnpm audit --fix
 **Monitoring**:
 - [ ] Grafana alerts configured (failed logins, errors)
 - [ ] Prometheus metrics collecting (request rates, latencies)
-- [ ] Log aggregation working (Seq/HyperDX)
+- [ ] Log aggregation working (Loki)
 - [ ] Security scan scheduled (weekly Semgrep)
 
 **Validation**:
@@ -543,10 +543,10 @@ pnpm audit --fix
 ## 📚 Security Resources
 
 ### Internal Documentation
-- [Secrets Management](../04-deployment/secrets-management.md)
-- [OAuth Testing](../05-testing/backend/oauth-testing.md)
-- [Authentication Context](../07-bounded-contexts/authentication.md)
-- [ADR-010: Security Headers](../01-architecture/adr/adr-010-security-headers-middleware.md)
+- [Secrets Management](../deployment/secrets-management.md)
+- [OAuth Testing](../testing/backend/oauth-testing.md)
+- [Authentication Context](../bounded-contexts/authentication.md)
+- [ADR-010: Security Headers](../architecture/adr/adr-010-security-headers-middleware.md)
 
 ### External Resources
 - [OWASP Top 10 (2021)](https://owasp.org/Top10/)

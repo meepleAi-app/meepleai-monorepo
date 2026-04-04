@@ -218,7 +218,7 @@ export default function GameReviewsPage() {
       <div className="container mx-auto max-w-4xl">
         {/* Back Button */}
         <Button asChild variant="ghost" className="mb-6 font-nunito">
-          <Link href={`/games/${gameId}`}>
+          <Link href={`/library/games/${gameId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Game
           </Link>
         </Button>

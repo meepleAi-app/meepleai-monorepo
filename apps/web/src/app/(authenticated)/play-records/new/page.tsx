@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
 import { Button } from '@/components/ui/primitives/button';
 import type { SessionCreateForm as SessionFormData } from '@/lib/api/schemas/play-records.schemas';
-import { useCreatePlayRecord } from '@/lib/hooks/use-play-records';
+import { useCreatePlayRecord } from '@/lib/domain-hooks/usePlayRecords';
 
 export default function NewPlayRecordPage() {
   const router = useRouter();

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers.Unit;
 
@@ -26,7 +27,7 @@ public sealed class GetDashboardQueryTests
         var query = new GetDashboardQuery(userId);
 
         // Assert
-        Assert.Equal(userId, query.UserId);
+        query.UserId.Should().Be(userId);
     }
 
     [Fact]
@@ -48,16 +49,16 @@ public sealed class GetDashboardQueryTests
         var response = new DashboardResponseDto(user, stats, sessions, library, activity, chats);
 
         // Assert
-        Assert.NotNull(response);
-        Assert.Equal(userId, response.User.Id);
-        Assert.Equal("Test User", response.User.Username);
-        Assert.Equal("test@example.com", response.User.Email);
-        Assert.Equal(10, response.Stats.LibraryCount);
-        Assert.Equal(5, response.Stats.PlayedLast30Days);
-        Assert.Equal(15, response.Stats.ChatCount);
-        Assert.Equal(3, response.Stats.WishlistCount);
-        Assert.Equal(7, response.Stats.CurrentStreak);
-        Assert.Equal(50, response.LibrarySnapshot.Quota.Used);
+        response.Should().NotBeNull();
+        response.User.Id.Should().Be(userId);
+        response.User.Username.Should().Be("Test User");
+        response.User.Email.Should().Be("test@example.com");
+        response.Stats.LibraryCount.Should().Be(10);
+        response.Stats.PlayedLast30Days.Should().Be(5);
+        response.Stats.ChatCount.Should().Be(15);
+        response.Stats.WishlistCount.Should().Be(3);
+        response.Stats.CurrentStreak.Should().Be(7);
+        response.LibrarySnapshot.Quota.Used.Should().Be(50);
     }
 
     [Fact]
@@ -73,11 +74,11 @@ public sealed class GetDashboardQueryTests
         );
 
         // Assert
-        Assert.Equal(100, stats.LibraryCount);
-        Assert.Equal(15, stats.PlayedLast30Days);
-        Assert.Equal(20, stats.ChatCount);
-        Assert.Equal(5, stats.WishlistCount);
-        Assert.Equal(7, stats.CurrentStreak);
+        stats.LibraryCount.Should().Be(100);
+        stats.PlayedLast30Days.Should().Be(15);
+        stats.ChatCount.Should().Be(20);
+        stats.WishlistCount.Should().Be(5);
+        stats.CurrentStreak.Should().Be(7);
     }
 
     [Fact]
@@ -87,8 +88,8 @@ public sealed class GetDashboardQueryTests
         var quota = new DashboardQuotaDto(Used: 250, Total: 1000);
 
         // Assert
-        Assert.Equal(250, quota.Used);
-        Assert.Equal(1000, quota.Total);
+        quota.Used.Should().Be(250);
+        quota.Total.Should().Be(1000);
     }
 
     [Fact]
@@ -113,15 +114,15 @@ public sealed class GetDashboardQueryTests
         );
 
         // Assert
-        Assert.Equal(sessionId, session.Id);
-        Assert.Equal("Chess", session.GameName);
-        Assert.Equal(gameId, session.GameId);
-        Assert.Equal("https://example.com/chess.jpg", session.CoverUrl);
-        Assert.Equal(3, session.Players.Current);
-        Assert.Equal(4, session.Players.Total);
-        Assert.Equal(5, session.Progress.Turn);
-        Assert.Equal("120min", session.Progress.Duration);
-        Assert.Equal(lastActivity, session.LastActivity);
+        session.Id.Should().Be(sessionId);
+        session.GameName.Should().Be("Chess");
+        session.GameId.Should().Be(gameId);
+        session.CoverUrl.Should().Be("https://example.com/chess.jpg");
+        session.Players.Current.Should().Be(3);
+        session.Players.Total.Should().Be(4);
+        session.Progress.Turn.Should().Be(5);
+        session.Progress.Duration.Should().Be("120min");
+        session.LastActivity.Should().Be(lastActivity);
     }
 
     [Fact]
@@ -140,11 +141,11 @@ public sealed class GetDashboardQueryTests
         );
 
         // Assert
-        Assert.Equal(gameId, topGame.Id);
-        Assert.Equal("Catan", topGame.Title);
-        Assert.Equal("https://example.com/catan.jpg", topGame.CoverUrl);
-        Assert.Equal(4.5m, topGame.Rating);
-        Assert.Equal(25, topGame.PlayCount);
+        topGame.Id.Should().Be(gameId);
+        topGame.Title.Should().Be("Catan");
+        topGame.CoverUrl.Should().Be("https://example.com/catan.jpg");
+        topGame.Rating.Should().Be(4.5m);
+        topGame.PlayCount.Should().Be(25);
     }
 
     [Fact]
@@ -167,14 +168,14 @@ public sealed class GetDashboardQueryTests
         );
 
         // Assert
-        Assert.Equal("game-123", activity.Id);
-        Assert.Equal("game_added", activity.Type);
-        Assert.Equal(gameId, activity.GameId);
-        Assert.Equal("Catan", activity.GameName);
-        Assert.Null(activity.SessionId);
-        Assert.Null(activity.ChatId);
-        Assert.Null(activity.Topic);
-        Assert.Equal(timestamp, activity.Timestamp);
+        activity.Id.Should().Be("game-123");
+        activity.Type.Should().Be("game_added");
+        activity.GameId.Should().Be(gameId);
+        activity.GameName.Should().Be("Catan");
+        activity.SessionId.Should().BeNull();
+        activity.ChatId.Should().BeNull();
+        activity.Topic.Should().BeNull();
+        activity.Timestamp.Should().Be(timestamp);
     }
 
     [Fact]
@@ -197,12 +198,12 @@ public sealed class GetDashboardQueryTests
         );
 
         // Assert
-        Assert.Equal("chat-456", activity.Id);
-        Assert.Equal("chat_saved", activity.Type);
-        Assert.Null(activity.GameId);
-        Assert.Null(activity.GameName);
-        Assert.Equal(chatId, activity.ChatId);
-        Assert.Equal("Rules discussion", activity.Topic);
+        activity.Id.Should().Be("chat-456");
+        activity.Type.Should().Be("chat_saved");
+        activity.GameId.Should().BeNull();
+        activity.GameName.Should().BeNull();
+        activity.ChatId.Should().Be(chatId);
+        activity.Topic.Should().Be("Rules discussion");
     }
 
     [Fact]
@@ -220,10 +221,10 @@ public sealed class GetDashboardQueryTests
         );
 
         // Assert
-        Assert.Equal("chat-789", chat.Id);
-        Assert.Equal("Rules discussion", chat.Topic);
-        Assert.Equal(8, chat.MessageCount);
-        Assert.Equal(timestamp, chat.Timestamp);
+        chat.Id.Should().Be("chat-789");
+        chat.Topic.Should().Be("Rules discussion");
+        chat.MessageCount.Should().Be(8);
+        chat.Timestamp.Should().Be(timestamp);
     }
 
     [Fact]
@@ -238,7 +239,7 @@ public sealed class GetDashboardQueryTests
         );
 
         // Assert
-        Assert.Null(chat.MessageCount);
+        chat.MessageCount.Should().BeNull();
     }
 
     [Fact]
@@ -251,8 +252,8 @@ public sealed class GetDashboardQueryTests
         );
 
         // Assert
-        Assert.Empty(snapshot.TopGames);
-        Assert.Equal(0, snapshot.Quota.Used);
+        snapshot.TopGames.Should().BeEmpty();
+        snapshot.Quota.Used.Should().Be(0);
     }
 
     [Fact]
@@ -262,8 +263,8 @@ public sealed class GetDashboardQueryTests
         var progress = new DashboardProgressDto(Turn: 12, Duration: "45min");
 
         // Assert
-        Assert.Equal(12, progress.Turn);
-        Assert.Equal("45min", progress.Duration);
+        progress.Turn.Should().Be(12);
+        progress.Duration.Should().Be("45min");
     }
 
     [Fact]
@@ -280,8 +281,8 @@ public sealed class GetDashboardQueryTests
         );
 
         // Assert
-        Assert.Equal(userId, user.Id);
-        Assert.Equal("Marco", user.Username);
-        Assert.Equal("marco@example.com", user.Email);
+        user.Id.Should().Be(userId);
+        user.Username.Should().Be("Marco");
+        user.Email.Should().Be("marco@example.com");
     }
 }

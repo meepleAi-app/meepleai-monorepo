@@ -16,7 +16,7 @@ export interface QuickMenuItem {
   label: string;
   action: string;
   /** Visibility rules based on user role (optional) */
-  visibility?: { minRole?: 'Editor' | 'Admin' };
+  visibility?: { minRole?: 'editor' | 'admin' };
 }
 
 /**
@@ -28,7 +28,7 @@ export interface FABActionConfig {
   action: string;
   quickMenuItems: QuickMenuItem[];
   /** Visibility rules based on user role (optional) */
-  visibility?: { minRole?: 'Editor' | 'Admin' };
+  visibility?: { minRole?: 'editor' | 'admin' };
 }
 
 /**
@@ -64,7 +64,12 @@ export const FAB_CONFIG: Record<LayoutContext, FABActionConfig | null> = {
     label: 'Aggiungi primo gioco',
     action: 'library:add',
     quickMenuItems: [
-      { id: 'browse', icon: 'gamepad-2', label: 'Sfoglia catalogo', action: 'library:browse-catalog' },
+      {
+        id: 'browse',
+        icon: 'gamepad-2',
+        label: 'Sfoglia catalogo',
+        action: 'library:browse-catalog',
+      },
       { id: 'import', icon: 'download', label: 'Importa', action: 'library:import' },
     ],
   },
@@ -96,7 +101,12 @@ export const FAB_CONFIG: Record<LayoutContext, FABActionConfig | null> = {
     label: 'Inizia partita',
     action: 'session:start',
     quickMenuItems: [
-      { id: 'add-player', icon: 'user-plus', label: 'Aggiungi giocatore', action: 'session:add-player' },
+      {
+        id: 'add-player',
+        icon: 'user-plus',
+        label: 'Aggiungi giocatore',
+        action: 'session:add-player',
+      },
       { id: 'rules', icon: 'book-open', label: 'Regole', action: 'session:rules' },
     ],
   },
@@ -157,7 +167,6 @@ export const FAB_CONFIG: Record<LayoutContext, FABActionConfig | null> = {
  * Get FAB configuration for a specific context.
  */
 export function getFABConfig(context: LayoutContext): FABActionConfig | null {
-  // eslint-disable-next-line security/detect-object-injection -- context is from typed LayoutContext union
   return FAB_CONFIG[context] ?? null;
 }
 

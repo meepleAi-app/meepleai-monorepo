@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Domain.Exceptions;
@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -138,10 +139,10 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: userId.ToString()); // Same user
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
-        Assert.Equal("Cannot delete your own account", exception.Message);
+        exception.Message.Should().Be("Cannot delete your own account");
 
         // Verify user was NOT deleted
         _userRepositoryMock.Verify(
@@ -174,10 +175,10 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: requestingUserId.ToString());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
-        Assert.Equal("Cannot delete the last admin user", exception.Message);
+        exception.Message.Should().Be("Cannot delete the last admin user");
 
         // Verify user was NOT deleted
         _userRepositoryMock.Verify(
@@ -201,10 +202,10 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: requestingUserId.ToString());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
-        Assert.Contains($"User {userId} not found", exception.Message);
+        exception.Message.Should().Contain($"User {userId} not found");
 
         // Verify delete was NOT called
         _userRepositoryMock.Verify(
@@ -235,8 +236,8 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: requestingUserId.ToString());
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -346,8 +347,8 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: Guid.NewGuid().ToString());
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -363,8 +364,8 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: emptyRequestingUserId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -378,8 +379,8 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: Guid.NewGuid().ToString());
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -393,8 +394,8 @@ public class DeleteUserCommandHandlerTests
             RequestingUserId: "not-a-guid");
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -413,8 +414,8 @@ public class DeleteUserCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<DomainException>();
 
         _userRepositoryMock.Verify(r => r.DeleteAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }

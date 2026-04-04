@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleCard Buttons — Problem & Options</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --game-hsl: 25 95% 45%;
+    --shadow-warm-sm: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-warm-xl: 0 12px 32px rgba(0,0,0,0.15);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Nunito', sans-serif; background: #0f0f14; color: #e5e5e5; padding: 32px; }
+  h1 { font-family: 'Quicksand', sans-serif; font-size: 1.6rem; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  h2 { font-family: 'Quicksand', sans-serif; font-size: 1.1rem; font-weight: 600; margin: 40px 0 16px; color: #aaa; text-transform: uppercase; letter-spacing: 0.08em; }
+  .subtitle { color: #888; font-size: 0.85rem; margin-bottom: 32px; }
+  hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 40px 0; }
+
+  /* Card base */
+  .card {
+    width: 220px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #1a1a22;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 3px solid hsl(var(--game-hsl));
+    box-shadow: var(--shadow-warm-sm);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .cover {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 7/10;
+    overflow: hidden;
+    background: linear-gradient(135deg, hsl(var(--game-hsl) / 0.25), hsl(var(--game-hsl) / 0.08));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+  }
+
+  .card-content {
+    padding: 10px 12px 12px;
+  }
+
+  .card-title {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #f0f0f0;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .card-subtitle {
+    font-size: 0.78rem;
+    color: #888;
+  }
+
+  /* Mana pip */
+  .mana-pip {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    background: radial-gradient(circle at 35% 35%, hsl(var(--game-hsl)), hsl(var(--game-hsl) / 0.65));
+    box-shadow: 0 4px 16px hsl(var(--game-hsl) / 0.35);
+    outline: 2px solid hsl(var(--game-hsl) / 0.35);
+    outline-offset: 2px;
+    position: relative;
+  }
+  .mana-pip span { position: relative; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+
+  /* Cover overlay elements */
+  .cover-overlay { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+  .cover-labels { position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 4px; max-width: calc(100% - 50px); }
+  .cover-label { display: inline-flex; padding: 3px 9px; border-radius: 5px; backdrop-filter: blur(8px); font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 11px; color: white; background: hsl(var(--game-hsl) / 0.85); width: fit-content; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cover-entity-type { position: absolute; top: 8px; right: 8px; }
+  .cover-subtypes { position: absolute; bottom: 8px; left: 8px; display: flex; gap: 4px; }
+  .subtype-icon { width: 24px; height: 24px; border-radius: 6px; backdrop-filter: blur(8px); background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.12); font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .cover-state-label { position: absolute; bottom: 8px; right: 8px; padding: 3px 9px; border-radius: 6px; backdrop-filter: blur(8px); font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(16,185,129,0.8); color: white; }
+
+  /* Action buttons (current) */
+  .action-btn {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 150ms;
+  }
+  .action-btn:hover { transform: scale(1.1); }
+
+  .btn-info { background: hsl(var(--game-hsl) / 0.7); color: white; }
+  .btn-heart { background: rgba(239,68,68,0.6); color: white; }
+  .btn-menu { background: rgba(255,255,255,0.1); color: #ccc; }
+
+  /* Positioning variants */
+  .actions-top-right {
+    position: absolute;
+    top: 10px; right: 10px;
+    display: flex; gap: 6px;
+    z-index: 15;
+  }
+
+  .actions-bottom-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    display: flex; justify-content: flex-end; gap: 6px;
+    padding: 6px 8px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    z-index: 15;
+  }
+
+  .actions-content-row {
+    display: flex; justify-content: flex-end; gap: 6px;
+    padding: 4px 0 2px;
+  }
+
+  .actions-right-edge {
+    position: absolute;
+    top: 50%; right: 6px;
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 6px;
+    z-index: 15;
+  }
+
+  /* Comparison layout */
+  .comparison { display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 32px; }
+  .comparison-col { flex: 0 0 auto; text-align: center; }
+  .comparison-col .label { font-family: 'Quicksand', sans-serif; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; padding: 4px 12px; border-radius: 6px; display: inline-block; }
+  .label-problem { background: hsl(0 60% 40% / 0.3); color: hsl(0 80% 70%); }
+  .label-option { background: hsl(220 60% 35% / 0.3); color: hsl(220 80% 70%); }
+  .label-rec { background: hsl(142 60% 35% / 0.3); color: hsl(142 80% 65%); }
+
+  .conflict-zone {
+    position: absolute;
+    border: 2px dashed hsl(0 80% 60% / 0.6);
+    border-radius: 8px;
+    background: hsl(0 80% 50% / 0.1);
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .annotation {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 8px;
+    max-width: 700px;
+  }
+  .annotation-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+  .annotation-text { font-size: 0.82rem; line-height: 1.5; color: #bbb; }
+  .annotation-text strong { color: #e5e5e5; }
+
+  .card-row { display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<h1>MeepleCard Buttons — Problema & Opzioni</h1>
+<p class="subtitle">I pulsanti hover (info, wishlist, menu) si sovrappongono al nuovo cover overlay 4-corner</p>
+
+<hr>
+
+<!-- ============ PROBLEMA ============ -->
+<h2>Il Problema (stato attuale con hover)</h2>
+
+<div class="comparison">
+  <div class="comparison-col">
+    <div class="label label-problem">Conflitto top-right</div>
+    <div class="card">
+      <div class="cover">
+        🎲
+        <div class="cover-overlay">
+          <div class="cover-labels"><span class="cover-label">Catan</span></div>
+          <div class="cover-entity-type"><span class="mana-pip"><span>🎲</span></span></div>
+          <div class="cover-subtypes"><span class="subtype-icon">⚔️</span></div>
+          <span class="cover-state-label">Owned</span>
+        </div>
+        <!-- Conflicting buttons -->
+        <div class="actions-top-right">
+          <div class="action-btn btn-info">i</div>
+          <div class="action-btn btn-heart">♥</div>
+          <div class="action-btn btn-menu">⋮</div>
+        </div>
+        <!-- Conflict highlight -->
+        <div class="conflict-zone" style="top:4px; right:4px; width:110px; height:36px;"></div>
+      </div>
+      <div class="card-content">
+        <div class="card-title">Catan</div>
+        <div class="card-subtitle">Klaus Teuber • 1995</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="annotation">
+  <span class="annotation-icon">&#9888;&#65039;</span>
+  <div class="annotation-text">
+    <strong>3 pulsanti hover (info, wishlist, menu)</strong> appaiono a <code>top:10px right:10px z:15</code> — direttamente sopra il <strong>mana pip</strong> (top-right del CoverOverlay, z:3). Con molti pulsanti, si sovrappongono anche ai <strong>label</strong> top-left.
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ OPZIONE A ============ -->
+<h2>Opzione A — Bottom bar gradient sul cover</h2>
+
+<div class="card-row">
+  <div class="comparison-col">
+    <div class="label label-option">Hover → bottom bar</div>
+    <div class="card">
+      <div class="cover">
+        🎲
+        <div class="cover-overlay">
+          <div class="cover-labels"><span class="cover-label">Catan</span></div>
+          <div class="cover-entity-type"><span class="mana-pip"><span>🎲</span></span></div>
+          <div class="cover-subtypes"><span class="subtype-icon">⚔️</span></div>
+          <span class="cover-state-label">Owned</span>
+        </div>
+        <div class="actions-bottom-bar">
+          <div class="action-btn btn-info">i</div>
+          <div class="action-btn btn-heart">♥</div>
+          <div class="action-btn btn-menu">⋮</div>
+        </div>
+      </div>
+      <div class="card-content">
+        <div class="card-title">Catan</div>
+        <div class="card-subtitle">Klaus Teuber • 1995</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="annotation">
+  <span class="annotation-icon">&#128900;</span>
+  <div class="annotation-text">
+    Pulsanti in basso sul cover con gradient trasparente→nero. <strong>Pro:</strong> non tocca i 4 angoli. <strong>Contro:</strong> si sovrappone a subtypes (bottom-left) e state badge (bottom-right).
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ OPZIONE B ============ -->
+<h2>Opzione B — Content area row (sotto il cover)</h2>
+
+<div class="card-row">
+  <div class="comparison-col">
+    <div class="label label-rec">Hover → content row</div>
+    <div class="card">
+      <div class="cover">
+        🎲
+        <div class="cover-overlay">
+          <div class="cover-labels"><span class="cover-label">Catan</span></div>
+          <div class="cover-entity-type"><span class="mana-pip"><span>🎲</span></span></div>
+          <div class="cover-subtypes"><span class="subtype-icon">⚔️</span></div>
+          <span class="cover-state-label">Owned</span>
+        </div>
+      </div>
+      <div class="card-content">
+        <div class="actions-content-row">
+          <div class="action-btn btn-info">i</div>
+          <div class="action-btn btn-heart">♥</div>
+          <div class="action-btn btn-menu">⋮</div>
+        </div>
+        <div class="card-title">Catan</div>
+        <div class="card-subtitle">Klaus Teuber • 1995</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="annotation">
+  <span class="annotation-icon">&#128994;</span>
+  <div class="annotation-text">
+    Pulsanti nella content area, sopra il titolo. <strong>Pro:</strong> zero conflitti con il cover overlay, separazione pulita. <strong>Contro:</strong> occupa spazio verticale nel content, titolo scende leggermente.
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ OPZIONE C ============ -->
+<h2>Opzione C — Right edge strip verticale</h2>
+
+<div class="card-row">
+  <div class="comparison-col">
+    <div class="label label-option">Hover → edge strip</div>
+    <div class="card">
+      <div class="cover">
+        🎲
+        <div class="cover-overlay">
+          <div class="cover-labels"><span class="cover-label">Catan</span></div>
+          <div class="cover-entity-type"><span class="mana-pip"><span>🎲</span></span></div>
+          <div class="cover-subtypes"><span class="subtype-icon">⚔️</span></div>
+          <span class="cover-state-label">Owned</span>
+        </div>
+        <div class="actions-right-edge">
+          <div class="action-btn btn-info">i</div>
+          <div class="action-btn btn-heart">♥</div>
+          <div class="action-btn btn-menu">⋮</div>
+        </div>
+      </div>
+      <div class="card-content">
+        <div class="card-title">Catan</div>
+        <div class="card-subtitle">Klaus Teuber • 1995</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="annotation">
+  <span class="annotation-icon">&#128900;</span>
+  <div class="annotation-text">
+    Pulsanti centrati verticalmente sul bordo destro del cover. <strong>Pro:</strong> non tocca gli angoli. <strong>Contro:</strong> interferisce con il mana pip e state badge sul bordo destro, look non convenzionale.
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ CONFRONTO DIRETTO ============ -->
+<h2>Confronto diretto — tutte le opzioni</h2>
+
+<div class="card-row">
+  <!-- Current (problem) -->
+  <div style="text-align:center;">
+    <div class="card">
+      <div class="cover">
+        🎲
+        <div class="cover-overlay">
+          <div class="cover-labels"><span class="cover-label">Catan</span></div>
+          <div class="cover-entity-type"><span class="mana-pip"><span>🎲</span></span></div>
+          <div class="cover-subtypes"><span class="subtype-icon">⚔️</span></div>
+          <span class="cover-state-label">Owned</span>
+        </div>
+        <div class="actions-top-right">
+          <div class="action-btn btn-info">i</div>
+          <div class="action-btn btn-heart">♥</div>
+          <div class="action-btn btn-menu">⋮</div>
+        </div>
+      </div>
+      <div class="card-content">
+        <div class="card-title">Catan</div>
+        <div class="card-subtitle">Klaus Teuber</div>
+      </div>
+    </div>
+    <small style="color:hsl(0 80% 65%);margin-top:8px;display:block;">Attuale (conflitto)</small>
+  </div>
+
+  <!-- A: Bottom bar -->
+  <div style="text-align:center;">
+    <div class="card">
+      <div class="cover">
+        🎲
+        <div class="cover-overlay">
+          <div class="cover-labels"><span class="cover-label">Catan</span></div>
+          <div class="cover-entity-type"><span class="mana-pip"><span>🎲</span></span></div>
+          <div class="cover-subtypes"><span class="subtype-icon">⚔️</span></div>
+          <span class="cover-state-label">Owned</span>
+        </div>
+        <div class="actions-bottom-bar">
+          <div class="action-btn btn-info">i</div>
+          <div class="action-btn btn-heart">♥</div>
+          <div class="action-btn btn-menu">⋮</div>
+        </div>
+      </div>
+      <div class="card-content">
+        <div class="card-title">Catan</div>
+        <div class="card-subtitle">Klaus Teuber</div>
+      </div>
+    </div>
+    <small style="color:hsl(220 80% 70%);margin-top:8px;display:block;">A: Bottom bar</small>
+  </div>
+
+  <!-- B: Content row -->
+  <div style="text-align:center;">
+    <div class="card">
+      <div class="cover">
+        🎲
+        <div class="cover-overlay">
+          <div class="cover-labels"><span class="cover-label">Catan</span></div>
+          <div class="cover-entity-type"><span class="mana-pip"><span>🎲</span></span></div>
+          <div class="cover-subtypes"><span class="subtype-icon">⚔️</span></div>
+          <span class="cover-state-label">Owned</span>
+        </div>
+      </div>
+      <div class="card-content">
+        <div class="actions-content-row">
+          <div class="action-btn btn-info">i</div>
+          <div class="action-btn btn-heart">♥</div>
+          <div class="action-btn btn-menu">⋮</div>
+        </div>
+        <div class="card-title">Catan</div>
+        <div class="card-subtitle">Klaus Teuber</div>
+      </div>
+    </div>
+    <small style="color:hsl(142 80% 65%);margin-top:8px;display:block;">B: Content row (rec.)</small>
+  </div>
+
+  <!-- C: Right edge -->
+  <div style="text-align:center;">
+    <div class="card">
+      <div class="cover">
+        🎲
+        <div class="cover-overlay">
+          <div class="cover-labels"><span class="cover-label">Catan</span></div>
+          <div class="cover-entity-type"><span class="mana-pip"><span>🎲</span></span></div>
+          <div class="cover-subtypes"><span class="subtype-icon">⚔️</span></div>
+          <span class="cover-state-label">Owned</span>
+        </div>
+        <div class="actions-right-edge">
+          <div class="action-btn btn-info">i</div>
+          <div class="action-btn btn-heart">♥</div>
+          <div class="action-btn btn-menu">⋮</div>
+        </div>
+      </div>
+      <div class="card-content">
+        <div class="card-title">Catan</div>
+        <div class="card-subtitle">Klaus Teuber</div>
+      </div>
+    </div>
+    <small style="color:hsl(220 80% 70%);margin-top:8px;display:block;">C: Right edge</small>
+  </div>
+</div>
+
+</body>
+</html>

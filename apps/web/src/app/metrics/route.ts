@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { logger } from '@/lib/logger';
 import { getPrometheusMetrics } from '@/lib/metrics/session-cache-metrics';
 
 /**
@@ -27,7 +28,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('[metrics] Failed to generate Prometheus metrics:', error);
+    logger.error('[metrics] Failed to generate Prometheus metrics:', error);
 
     return new NextResponse('# Error generating metrics\n', {
       status: 500,

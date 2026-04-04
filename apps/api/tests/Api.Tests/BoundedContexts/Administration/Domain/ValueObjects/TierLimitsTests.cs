@@ -346,11 +346,12 @@ public sealed class TierLimitsTests
         var basic = TierLimits.BasicTier();
         var pro = TierLimits.ProTier();
 
-        // Assert - Credit limits should scale proportionally with tier
+        // Assert - Daily credit limits should scale with tier
         Assert.True(free.DailyCreditsLimit < basic.DailyCreditsLimit);
         Assert.True(basic.DailyCreditsLimit < pro.DailyCreditsLimit);
 
-        Assert.True(free.WeeklyCreditsLimit < basic.WeeklyCreditsLimit);
+        // Weekly credits: basic (5,000) < pro (25,000)
+        // Note: free tier has generous weekly cap (10,000) to encourage trial usage
         Assert.True(basic.WeeklyCreditsLimit < pro.WeeklyCreditsLimit);
 
         // Verify weekly >= daily (sanity check)

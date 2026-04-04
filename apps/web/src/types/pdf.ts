@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe typed Record access with ProcessingStep enum keys */
 /**
  * PDF Processing Types (PDF-08)
  * Type definitions for PDF processing progress tracking
@@ -19,6 +18,11 @@ export enum ProcessingStep {
 
 /**
  * Processing progress response from API
+ */
+/**
+ * @deprecated Import `ProcessingProgress` from `@/lib/api` instead.
+ * This interface is stale — the authoritative type is the Zod schema
+ * in `lib/api/schemas/pdf.schemas.ts` (ProcessingProgressSchema).
  */
 export interface ProcessingProgress {
   currentStep: ProcessingStep;
@@ -117,7 +121,7 @@ export function getPdfStateLabel(state: PdfState): string {
     ready: 'Ready',
     failed: 'Failed',
   };
-   
+
   return labels[state];
 }
 
@@ -142,6 +146,6 @@ export function getPdfStateOrder(state: PdfState): number {
     ready: 6,
     failed: 6,
   };
-   
+
   return order[state];
 }

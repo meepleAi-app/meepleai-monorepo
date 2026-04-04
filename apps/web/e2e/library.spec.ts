@@ -25,7 +25,7 @@ test.describe('User Library Management', () => {
 
   test('should add game to library from catalog', async ({ page }) => {
     // Go to catalog
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Click "Add to Library" on first game
     const addButton = page.locator('button:has-text("Aggiungi alla Collezione")').first();
@@ -115,7 +115,10 @@ test.describe('User Library Management', () => {
     await page.waitForSelector('[data-testid="game-card"]', { timeout: 5000 });
 
     // Click remove button (trash icon)
-    const removeButton = page.locator('button').filter({ has: page.locator('svg.lucide-trash-2') }).first();
+    const removeButton = page
+      .locator('button')
+      .filter({ has: page.locator('svg.lucide-trash-2') })
+      .first();
     await removeButton.click();
 
     // Verify confirmation dialog
@@ -130,7 +133,10 @@ test.describe('User Library Management', () => {
     const initialCount = await page.locator('[data-testid="game-card"]').count();
 
     // Click remove
-    const removeButton = page.locator('button').filter({ has: page.locator('svg.lucide-trash-2') }).first();
+    const removeButton = page
+      .locator('button')
+      .filter({ has: page.locator('svg.lucide-trash-2') })
+      .first();
     await removeButton.click();
 
     // Confirm removal
@@ -159,9 +165,9 @@ test.describe('User Library Management', () => {
     await favoriteButton.click();
 
     // Verify success toast
-    await expect(
-      page.locator('text=/added to|removed from.*favorites/i')
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=/added to|removed from.*favorites/i')).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test('should change sort order', async ({ page }) => {

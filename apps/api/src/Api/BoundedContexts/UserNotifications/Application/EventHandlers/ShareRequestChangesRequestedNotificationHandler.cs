@@ -1,45 +1,39 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
-using Api.Services;
 using Api.SharedKernel.Application.EventHandlers;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
 /// Handles ShareRequestChangesRequestedEvent to send notifications when changes are requested.
-/// Creates both in-app notifications and email notifications with reviewer feedback.
+/// Dispatches via NotificationDispatcher for multi-channel delivery (in-app, email, Slack).
 /// </summary>
 internal sealed class ShareRequestChangesRequestedNotificationHandler
     : DomainEventHandlerBase<ShareRequestChangesRequestedEvent>
 {
-    private readonly INotificationRepository _notificationRepository;
+    private readonly INotificationDispatcher _dispatcher;
     private readonly IUserRepository _userRepository;
     private readonly IShareRequestRepository _shareRequestRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
-    private readonly IEmailService _emailService;
 
     public ShareRequestChangesRequestedNotificationHandler(
         MeepleAiDbContext dbContext,
-        INotificationRepository notificationRepository,
+        INotificationDispatcher dispatcher,
         IUserRepository userRepository,
         IShareRequestRepository shareRequestRepository,
         ISharedGameRepository sharedGameRepository,
-        IEmailService emailService,
         ILogger<ShareRequestChangesRequestedNotificationHandler> logger)
         : base(dbContext, logger)
     {
-        _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
-        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
     }
 
     protected override async Task HandleEventAsync(
@@ -79,62 +73,24 @@ internal sealed class ShareRequestChangesRequestedNotificationHandler
 
         var gameTitle = sourceGame.Title;
 
-        // Create in-app notification (high priority)
-        var notification = new Notification(
-            id: Guid.NewGuid(),
-            userId: shareRequest.UserId,
-            type: NotificationType.ShareRequestChangesRequested,
-            severity: NotificationSeverity.Info,
-            title: "Changes Requested",
-            message: $"The reviewer has requested some changes for your \"{gameTitle}\" submission.",
-            link: $"/contributions/requests/{domainEvent.ShareRequestId}",
-            metadata: JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["shareRequestId"] = domainEvent.ShareRequestId,
-                ["gameTitle"] = gameTitle,
-                ["feedback"] = domainEvent.Feedback
-            }));
-
-        await _notificationRepository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
-
-        Logger.LogInformation(
-            "Created in-app notification for changes requested on share request {ShareRequestId}",
-            domainEvent.ShareRequestId);
-
-        // Send email notification with feedback (best-effort)
-        try
+        await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            await _emailService.SendShareRequestChangesRequestedEmailAsync(
-                user.Email,
+            Type = NotificationType.ShareRequestChangesRequested,
+            RecipientUserId = shareRequest.UserId,
+            Payload = new ShareRequestPayload(
+                domainEvent.ShareRequestId,
                 user.DisplayName,
                 gameTitle,
-                domainEvent.Feedback,
-                domainEvent.ShareRequestId,
-                cancellationToken).ConfigureAwait(false);
+                sourceGame.ImageUrl),
+            DeepLinkPath = $"/contributions/requests/{domainEvent.ShareRequestId}"
+        }, cancellationToken).ConfigureAwait(false);
 
-            Logger.LogInformation(
-                "Sent share request changes requested email to user {UserId} for game {GameTitle}",
-                shareRequest.UserId,
-                gameTitle);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            // Log error but don't fail handler - email is non-critical
-            Logger.LogError(
-                ex,
-                "Failed to send share request changes requested email to user {UserId}",
-                shareRequest.UserId);
-        }
-#pragma warning restore CA1031
+        Logger.LogInformation(
+            "Dispatched notification for changes requested on share request {ShareRequestId}",
+            domainEvent.ShareRequestId);
     }
 
-    protected override Guid? GetUserId(ShareRequestChangesRequestedEvent domainEvent)
-    {
-        // Note: We need to get userId from share request in HandleEventAsync
-        // Return null here as we don't have direct access to userId in the event
-        return null;
-    }
+    protected override Guid? GetUserId(ShareRequestChangesRequestedEvent domainEvent) => null;
 
     protected override Dictionary<string, object?>? GetAuditMetadata(ShareRequestChangesRequestedEvent domainEvent)
     {

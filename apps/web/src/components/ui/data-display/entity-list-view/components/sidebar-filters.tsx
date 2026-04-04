@@ -12,22 +12,10 @@
 
 import React, { useState } from 'react';
 
-import {
-  Search,
-  X,
-  ChevronDown,
-  Filter,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { Search, X, ChevronDown, Filter, SlidersHorizontal } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/primitives/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 import type { SortOption } from '../entity-list-view.types';
@@ -122,7 +110,7 @@ function EntityTypeCheckbox({
         <input
           type="checkbox"
           checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
+          onChange={e => onChange(e.target.checked)}
           className="sr-only peer"
           aria-label={`Filter by ${label}`}
         />
@@ -139,7 +127,13 @@ function EntityTypeCheckbox({
         >
           {checked && (
             <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M2 6l3 3 5-5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           )}
         </div>
@@ -152,10 +146,7 @@ function EntityTypeCheckbox({
       >
         {label}
       </span>
-      <div
-        className="ml-auto w-2 h-2 rounded-full"
-        style={{ backgroundColor: color }}
-      />
+      <div className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
     </label>
   );
 }
@@ -179,7 +170,7 @@ function SidebarContent<T>({
   onClearFilters,
 }: SidebarFiltersProps<T>) {
   const [sortOpen, setSortOpen] = useState(false);
-  const currentSortOption = sortOptions.find((o) => o.value === currentSort) ?? sortOptions[0];
+  const currentSortOption = sortOptions.find(o => o.value === currentSort) ?? sortOptions[0];
 
   return (
     <div className="space-y-5">
@@ -194,7 +185,7 @@ function SidebarContent<T>({
             <input
               type="search"
               value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onChange={e => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
               className={cn(
                 'w-full h-9 pl-9 pr-8 rounded-lg',
@@ -226,16 +217,16 @@ function SidebarContent<T>({
             Entity Type
           </label>
           <div className="space-y-0.5">
-            {entityTypes.map((type) => (
+            {entityTypes.map(type => (
               <EntityTypeCheckbox
                 key={type}
                 entityType={type}
                 checked={selectedEntityTypes.includes(type)}
-                onChange={(isChecked) => {
+                onChange={isChecked => {
                   if (isChecked) {
                     onEntityTypeChange([...selectedEntityTypes, type]);
                   } else {
-                    onEntityTypeChange(selectedEntityTypes.filter((t) => t !== type));
+                    onEntityTypeChange(selectedEntityTypes.filter(t => t !== type));
                   }
                 }}
               />
@@ -268,11 +259,16 @@ function SidebarContent<T>({
               aria-expanded={sortOpen}
             >
               <span className="font-nunito">{currentSortOption?.label || 'Select...'}</span>
-              <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', sortOpen && 'rotate-180')} />
+              <ChevronDown
+                className={cn(
+                  'w-4 h-4 text-muted-foreground transition-transform',
+                  sortOpen && 'rotate-180'
+                )}
+              />
             </button>
             {sortOpen && (
               <div className="absolute left-0 right-0 mt-1 z-50 rounded-lg bg-popover border border-border shadow-lg py-1">
-                {sortOptions.map((option) => (
+                {sortOptions.map(option => (
                   <button
                     key={option.value}
                     type="button"
@@ -332,10 +328,7 @@ export function SidebarFilters<T>(props: SidebarFiltersProps<T>) {
     <>
       {/* Desktop sidebar */}
       <aside
-        className={cn(
-          'hidden lg:block w-[280px] flex-shrink-0',
-          className
-        )}
+        className={cn('hidden lg:block w-[280px] flex-shrink-0', className)}
         data-testid={testId || 'sidebar-filters'}
       >
         <div

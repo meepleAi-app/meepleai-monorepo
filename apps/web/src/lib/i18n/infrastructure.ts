@@ -11,10 +11,8 @@ export const infrastructurei18n = {
     services: {
       postgres: 'PostgreSQL',
       redis: 'Redis',
-      qdrant: 'Qdrant',
-      'qdrant-collection': 'Qdrant Collection',
+      pgvector: 'pgvector',
       n8n: 'n8n',
-      hyperdx: 'HyperDX',
       prometheus: 'Prometheus',
       grafana: 'Grafana',
       api: 'API',
@@ -100,10 +98,8 @@ export const infrastructurei18n = {
     services: {
       postgres: 'PostgreSQL',
       redis: 'Redis',
-      qdrant: 'Qdrant',
-      'qdrant-collection': 'Qdrant Collection',
+      pgvector: 'pgvector',
       n8n: 'n8n',
-      hyperdx: 'HyperDX',
       prometheus: 'Prometheus',
       grafana: 'Grafana',
       api: 'API',
@@ -194,8 +190,5 @@ export type Locale = keyof typeof infrastructurei18n;
  */
 export function getInfrastructureI18n(locale: Locale = 'it') {
   // Safe access with known keys - locale is typed Locale union ('it' | 'en')
-  return locale in infrastructurei18n
-    ? // eslint-disable-next-line security/detect-object-injection
-      infrastructurei18n[locale]
-    : infrastructurei18n.it;
+  return locale in infrastructurei18n ? infrastructurei18n[locale] : infrastructurei18n.it;
 }

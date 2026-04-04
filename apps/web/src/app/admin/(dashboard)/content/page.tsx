@@ -9,13 +9,12 @@
 
 import { Suspense } from 'react';
 
-import { Gamepad2, Share2, Database } from 'lucide-react';
+import { Share2, Database } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
 
 import { KnowledgeBaseTab } from './KnowledgeBaseTab';
-import { AdminContentNavConfig } from './NavConfig';
 import { SharedGamesTab } from './SharedGamesTab';
 
 interface AdminContentPageProps {
@@ -23,7 +22,6 @@ interface AdminContentPageProps {
 }
 
 const TABS: readonly HubTab[] = [
-  { id: 'games', label: 'Games', href: '/admin/content?tab=games', icon: <Gamepad2 /> },
   { id: 'shared', label: 'Shared Games', href: '/admin/content?tab=shared', icon: <Share2 /> },
   { id: 'kb', label: 'Knowledge Base', href: '/admin/content?tab=kb', icon: <Database /> },
 ] as const;
@@ -45,16 +43,10 @@ function TabSkeleton() {
 
 function renderTabContent(tab: TabId) {
   switch (tab) {
-    case 'games':
-      return (
-        <Suspense fallback={<TabSkeleton />}>
-          <SharedGamesTab showCategories />
-        </Suspense>
-      );
     case 'shared':
       return (
         <Suspense fallback={<TabSkeleton />}>
-          <SharedGamesTab />
+          <SharedGamesTab showCategories />
         </Suspense>
       );
     case 'kb':
@@ -74,13 +66,12 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
 
   return (
     <div className="space-y-5">
-      <AdminContentNavConfig />
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Content Management
+          Gestione Contenuti
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Manage games, shared content, and knowledge base.
+          Gestisci giochi, contenuti condivisi e knowledge base.
         </p>
       </div>
 

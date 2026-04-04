@@ -40,7 +40,7 @@ internal class StrategyPatternEntityConfiguration : IEntityTypeConfiguration<Str
 
         // Issue #3547: Vector embedding for pattern matching
         builder.Property(e => e.Embedding)
-            .HasColumnType("vector(1536)");
+            .HasColumnType("vector(1024)");
 
         // Indexes for query performance
         builder.HasIndex(e => e.GameId);

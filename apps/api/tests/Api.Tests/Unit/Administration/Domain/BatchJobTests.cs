@@ -245,12 +245,12 @@ public sealed class BatchJobTests
     }
 
     [Fact]
-    public void Complete_ShouldCalculateDuration()
+    public async Task Complete_ShouldCalculateDuration()
     {
         // Arrange
         var job = BatchJob.Create(JobType.BggSync, "{}", TestUserId);
         job.Start();
-        Thread.Sleep(1100); // Simulate execution time (need >1s for integer duration)
+        await Task.Delay(1100); // Simulate execution time (need >1s for integer duration)
 
         // Act
         job.Complete(null, "Synced 100 games", null);

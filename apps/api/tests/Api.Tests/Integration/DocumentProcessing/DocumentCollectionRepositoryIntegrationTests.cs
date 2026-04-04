@@ -26,7 +26,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// Issue #2051: Multi-document collection persistence
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2051")]
@@ -59,21 +59,9 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         _databaseName = $"test_docrepo_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         services.AddScoped<IDocumentCollectionRepository, DocumentCollectionRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-        // MediatR (required by MeepleAiDbContext)
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -589,7 +577,6 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
             FilePath = "/test/path/test1.pdf",
             FileSizeBytes = 5000,
             PageCount = 10,
-            ProcessingStatus = "completed",
             UploadedAt = DateTime.UtcNow,
             UploadedByUserId = TestUserId
         };
@@ -601,7 +588,6 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
             FilePath = "/test/path/test2.pdf",
             FileSizeBytes = 5000,
             PageCount = 10,
-            ProcessingStatus = "completed",
             UploadedAt = DateTime.UtcNow,
             UploadedByUserId = TestUserId
         };

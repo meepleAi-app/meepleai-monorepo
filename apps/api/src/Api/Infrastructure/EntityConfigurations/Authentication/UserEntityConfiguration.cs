@@ -46,6 +46,21 @@ internal class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(e => e.FailedLoginAttempts).IsRequired().HasDefaultValue(0);
         builder.Property(e => e.LockedUntil);
 
+        // Issue #124: Onboarding interests (JSONB array)
+        builder.Property(e => e.Interests)
+            .HasColumnType("jsonb")
+            .IsRequired(false);
+
+        // Profile & Onboarding
+        builder.Property(e => e.AvatarUrl).IsRequired(false).HasMaxLength(2048);
+        builder.Property(e => e.Bio).IsRequired(false).HasMaxLength(500);
+        builder.Property(e => e.OnboardingWizardSeenAt).IsRequired(false);
+        builder.Property(e => e.OnboardingDismissedAt).IsRequired(false);
+
+        // Admin Invitation Flow
+        builder.Property(e => e.InvitedByUserId).IsRequired(false);
+        builder.Property(e => e.InvitationExpiresAt).IsRequired(false);
+
         // Relationships
         builder.HasMany(e => e.Sessions)
             .WithOne(s => s.User)

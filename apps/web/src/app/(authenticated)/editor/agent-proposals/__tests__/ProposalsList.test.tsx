@@ -2,6 +2,7 @@
  * ProposalsList Component Tests - Issue #3182
  *
  * Tests for proposals list with filters and status management.
+ * Updated after agent system simplification: Typology → AgentDefinitionDto.
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -10,7 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { vi } from 'vitest';
 
 import { agentTypologiesApi } from '@/lib/api/agent-typologies.api';
-import type { Typology } from '@/lib/api/schemas/agent-typologies.schemas';
+import type { AgentDefinitionDto } from '@/lib/api/schemas/agent-definitions.schemas';
 
 import { ProposalsList } from '../_components/ProposalsList';
 
@@ -29,42 +30,44 @@ vi.mock('@/lib/api/agent-typologies.api', () => ({
   },
 }));
 
-const mockProposals: Typology[] = [
-  {
+const makeDefinition = (overrides: Partial<AgentDefinitionDto> = {}): AgentDefinitionDto => ({
+  id: 'def-1',
+  name: 'Test Agent',
+  description: 'Test description',
+  type: 'RagAgent',
+  config: { model: 'test-model', maxTokens: 1024, temperature: 0.7 },
+  strategyName: 'HybridSearch',
+  strategyParameters: {},
+  prompts: [],
+  tools: [],
+  kbCardIds: [],
+  chatLanguage: 'auto',
+  isActive: true,
+  status: 0,
+  createdAt: new Date().toISOString(),
+  updatedAt: null,
+  ...overrides,
+});
+
+const mockProposals: AgentDefinitionDto[] = [
+  makeDefinition({
     id: '1',
     name: 'Rules Assistant',
     description: 'Helps with game rules',
-    basePrompt: 'You are a rules expert',
-    defaultStrategyName: 'HybridSearch',
-    status: 'Draft',
-    createdBy: 'user-1',
-    createdAt: new Date().toISOString(),
-    isDeleted: false,
-  },
-  {
+    isActive: false,
+  }),
+  makeDefinition({
     id: '2',
     name: 'Setup Helper',
     description: 'Assists with game setup',
-    basePrompt: 'You are a setup assistant',
-    defaultStrategyName: 'VectorOnly',
-    status: 'PendingReview',
-    createdBy: 'user-1',
-    createdAt: new Date().toISOString(),
-    isDeleted: false,
-  },
-  {
+    isActive: true,
+  }),
+  makeDefinition({
     id: '3',
     name: 'Strategy Guide',
     description: 'Provides strategy tips',
-    basePrompt: 'You are a strategy expert',
-    defaultStrategyName: 'HybridSearch',
-    status: 'Approved',
-    createdBy: 'user-1',
-    approvedBy: 'admin-1',
-    createdAt: new Date().toISOString(),
-    approvedAt: new Date().toISOString(),
-    isDeleted: false,
-  },
+    isActive: true,
+  }),
 ];
 
 function renderComponent() {
@@ -119,7 +122,7 @@ describe('ProposalsList', () => {
       expect(screen.getByText('Rules Assistant')).toBeInTheDocument();
     });
 
-    // Filter by Draft
+    // Filter by Draft (isActive: false)
     const draftButton = screen.getByRole('button', { name: 'Draft' });
     await user.click(draftButton);
 
@@ -163,9 +166,7 @@ describe('ProposalsList', () => {
   });
 
   it('shows error state on API failure', async () => {
-    vi.mocked(agentTypologiesApi.getMyProposals).mockRejectedValue(
-      new Error('API Error')
-    );
+    vi.mocked(agentTypologiesApi.getMyProposals).mockRejectedValue(new Error('API Error'));
 
     renderComponent();
 

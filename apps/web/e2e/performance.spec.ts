@@ -218,7 +218,7 @@ test.describe('Performance Testing - Additional Pages', () => {
     const newContext = await browser.newContext({ baseURL });
     const newPage = await newContext.newPage();
 
-    await newPage.goto('/games');
+    await newPage.goto('/library');
     await newPage.waitForLoadState('networkidle');
 
     await playAudit({

@@ -13,3 +13,5 @@ export { ScoreTrackerWidget } from './ScoreTrackerWidget';
 export { ResourceManagerWidget } from './ResourceManagerWidget';
 export { NoteManagerWidget } from './NoteManagerWidget';
 export { WhiteboardWidget } from './WhiteboardWidget';
+export { CardDeckTool } from './CardDeckTool';
+export { CounterTool } from './CounterTool';

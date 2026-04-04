@@ -99,9 +99,12 @@ export function RequireRole({
           return;
         }
 
-        // Check authorization (role-based)
+        // Check authorization (role-based with hierarchy)
+        // Issue #372: SuperAdmin has all permissions — inherits every role
         const userRole = result.user.role.toLowerCase();
-        const hasRequiredRole = allowedRoles.some(role => role.toLowerCase() === userRole);
+        const isSuperAdmin = userRole === 'superadmin';
+        const hasRequiredRole =
+          isSuperAdmin || allowedRoles.some(role => role.toLowerCase() === userRole);
 
         if (!hasRequiredRole) {
           // Authenticated but not authorized

@@ -183,8 +183,10 @@ export function CommentThread({
     }
   };
 
-  // Only editors and admins can create comments
-  const canComment = currentUserRole === 'Admin' || currentUserRole === 'Editor';
+  // Only editors and admins can create comments (normalize for case-insensitive comparison)
+  const normalizedRole = currentUserRole?.toLowerCase();
+  const canComment =
+    normalizedRole === 'admin' || normalizedRole === 'superadmin' || normalizedRole === 'editor';
 
   return (
     <div className="mt-6" data-testid="comment-thread">

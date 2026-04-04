@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe size map Record access */
 /**
  * Spinner Component
  *

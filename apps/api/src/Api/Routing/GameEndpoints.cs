@@ -881,21 +881,6 @@ internal static class GameEndpoints
         .WithSummary("Restore from snapshot")
         .WithDescription("Restores game state from a previously saved snapshot. Requires active user session.");
 
-        // ========================================
-        // Player Mode Move Suggestions - Issue #2404
-        // ========================================
-
-        // Suggest moves for current game state
-        group.MapPost("/sessions/{sessionId}/suggest-move", HandleSuggestMove)
-        .RequireSession()
-        .Produces<MoveSuggestionsDto>(200)
-        .Produces(400)
-        .Produces(401)
-        .Produces(404)
-        .WithTags("Sessions", "AI", "PlayerMode")
-        .WithSummary("Suggest moves using AI")
-        .WithDescription("Generates AI-powered move suggestions for the current game state using Player Mode agent. Requires active user session.");
-
         // Apply a move suggestion to game state
         group.MapPost("/sessions/{sessionId}/apply-suggestion", HandleApplySuggestion)
         .RequireSession()
@@ -1022,27 +1007,6 @@ internal static class GameEndpoints
         var command = new RestoreStateSnapshotCommand(
             SessionStateId: state.Id,
             SnapshotId: snapshotId
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
-    }
-
-    // Issue #2404: Player Mode Move Suggestion handlers
-    private static async Task<IResult> HandleSuggestMove(
-        Guid sessionId,
-        [FromBody] SuggestMoveRequest request,
-        HttpContext context,
-        IMediator mediator,
-        CancellationToken ct)
-    {
-        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-        var command = new SuggestMoveCommand(
-            SessionId: sessionId,
-            AgentId: request.AgentId,
-            Query: request.Query,
-            UserId: session.User!.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

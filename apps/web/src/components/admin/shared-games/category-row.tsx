@@ -2,7 +2,7 @@
 
 import { GripVerticalIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 export interface CategoryRowProps {
   name: string;
@@ -13,14 +13,7 @@ export interface CategoryRowProps {
   onDelete?: () => void;
 }
 
-export function CategoryRow({
-  name,
-  emoji,
-  gameCount,
-  color,
-  onEdit,
-  onDelete,
-}: CategoryRowProps) {
+export function CategoryRow({ name, emoji, gameCount, color, onEdit, onDelete }: CategoryRowProps) {
   return (
     <tr className="hover:bg-amber-50/30 dark:hover:bg-zinc-900/50 transition-colors">
       {/* Drag Handle */}
@@ -55,12 +48,7 @@ export function CategoryRow({
       {/* Actions */}
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onEdit}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant="ghost" size="sm" onClick={onEdit} className="h-8 w-8 p-0">
             <PencilIcon className="h-4 w-4" />
             <span className="sr-only">Edit {name}</span>
           </Button>

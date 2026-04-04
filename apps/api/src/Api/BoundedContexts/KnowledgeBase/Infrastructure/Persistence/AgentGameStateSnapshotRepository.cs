@@ -28,9 +28,10 @@ internal class AgentGameStateSnapshotRepository : RepositoryBase, IAgentGameStat
             .AsNoTracking()
             .Where(s => s.GameId == gameId)
             .OrderByDescending(s => s.TurnNumber)
+            .ThenByDescending(s => s.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
-        return entity != null ? MapToDomain(entity) : null;
+        return entity is null ? null : MapToDomain(entity);
     }
 
     public async Task<List<AgentGameStateSnapshot>> GetByGameIdAsync(
@@ -64,7 +65,7 @@ internal class AgentGameStateSnapshotRepository : RepositoryBase, IAgentGameStat
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false);
 
-        return entity != null ? MapToDomain(entity) : null;
+        return entity is null ? null : MapToDomain(entity);
     }
 
     public async Task AddAsync(AgentGameStateSnapshot snapshot, CancellationToken cancellationToken = default)
@@ -73,19 +74,17 @@ internal class AgentGameStateSnapshotRepository : RepositoryBase, IAgentGameStat
         await DbContext.Set<AgentGameStateSnapshotEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task UpdateAsync(AgentGameStateSnapshot snapshot, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(AgentGameStateSnapshot snapshot, CancellationToken cancellationToken = default)
     {
-        var entity = MapToEntity(snapshot);
+        var entity = await DbContext.Set<AgentGameStateSnapshotEntity>()
+            .FirstOrDefaultAsync(s => s.Id == snapshot.Id, cancellationToken).ConfigureAwait(false);
 
-        // Detach existing tracked entity to avoid conflicts
-        var tracked = DbContext.ChangeTracker.Entries<AgentGameStateSnapshotEntity>()
-            .FirstOrDefault(e => e.Entity.Id == entity.Id);
+        if (entity is null) return;
 
-        if (tracked != null)
-            tracked.State = EntityState.Detached;
-
-        DbContext.Set<AgentGameStateSnapshotEntity>().Update(entity);
-        return Task.CompletedTask;
+        entity.BoardStateJson = snapshot.BoardStateJson;
+        entity.TurnNumber = snapshot.TurnNumber;
+        entity.ActivePlayerId = snapshot.ActivePlayerId;
+        entity.Embedding = snapshot.Embedding != null ? new Pgvector.Vector(snapshot.Embedding.Values) : null;
     }
 
     public async Task<int> DeleteOlderThanAsync(DateTime cutoffDate, CancellationToken cancellationToken = default)
@@ -102,11 +101,10 @@ internal class AgentGameStateSnapshotRepository : RepositoryBase, IAgentGameStat
         Vector? embedding = null;
         if (entity.Embedding != null)
         {
-            // Issue #3547: Convert Pgvector.Vector → float[] → Domain.Vector
             embedding = new Vector(entity.Embedding.ToArray());
         }
 
-        var snapshot = new AgentGameStateSnapshot(
+        return new AgentGameStateSnapshot(
             id: entity.Id,
             gameId: entity.GameId,
             agentSessionId: entity.AgentSessionId,
@@ -114,12 +112,6 @@ internal class AgentGameStateSnapshotRepository : RepositoryBase, IAgentGameStat
             turnNumber: entity.TurnNumber,
             activePlayerId: entity.ActivePlayerId,
             embedding: embedding);
-
-        // Override the auto-generated timestamp with the persisted value
-        var createdAtProp = typeof(AgentGameStateSnapshot).GetProperty("CreatedAt");
-        createdAtProp?.SetValue(snapshot, entity.CreatedAt);
-
-        return snapshot;
     }
 
     private static AgentGameStateSnapshotEntity MapToEntity(AgentGameStateSnapshot snapshot)
@@ -133,7 +125,6 @@ internal class AgentGameStateSnapshotRepository : RepositoryBase, IAgentGameStat
             TurnNumber = snapshot.TurnNumber,
             ActivePlayerId = snapshot.ActivePlayerId,
             CreatedAt = snapshot.CreatedAt,
-            // Issue #3547: Convert Domain.Vector → float[] → Pgvector.Vector
             Embedding = snapshot.Embedding != null ? new Pgvector.Vector(snapshot.Embedding.Values) : null
         };
     }

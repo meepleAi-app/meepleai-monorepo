@@ -191,6 +191,16 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Restores a player from persistence with its original ID.
+    /// Used by the repository during domain reconstitution — does not raise domain events.
+    /// </summary>
+    internal void RestorePlayer(Guid playerId, Guid? userId, string displayName)
+    {
+        var player = new RecordPlayer(playerId, Id, userId, displayName);
+        _players.Add(player);
+    }
+
+    /// <summary>
     /// Records a score for a player.
     /// </summary>
     public void RecordScore(Guid playerId, RecordScore score, TimeProvider? timeProvider = null)

@@ -1,5 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,18 +11,17 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// EF Core implementation of ISessionAttachmentRepository.
 /// Issue #5360 - SessionAttachment EF Core configuration + migration.
 /// </summary>
-internal sealed class SessionAttachmentRepository : ISessionAttachmentRepository
+internal sealed class SessionAttachmentRepository : RepositoryBase, ISessionAttachmentRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
 
-    public SessionAttachmentRepository(MeepleAiDbContext dbContext)
+    public SessionAttachmentRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<SessionAttachment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.SessionAttachments
+        var entity = await DbContext.SessionAttachments
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -31,7 +32,7 @@ internal sealed class SessionAttachmentRepository : ISessionAttachmentRepository
     public async Task<IReadOnlyList<SessionAttachment>> GetBySessionIdAsync(
         Guid sessionId, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.SessionAttachments
+        var entities = await DbContext.SessionAttachments
             .AsNoTracking()
             .Where(a => a.SessionId == sessionId)
             .OrderByDescending(a => a.CreatedAt)
@@ -44,7 +45,7 @@ internal sealed class SessionAttachmentRepository : ISessionAttachmentRepository
     public async Task<IReadOnlyList<SessionAttachment>> GetBySnapshotAsync(
         Guid sessionId, int snapshotIndex, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.SessionAttachments
+        var entities = await DbContext.SessionAttachments
             .AsNoTracking()
             .Where(a => a.SessionId == sessionId && a.SnapshotIndex == snapshotIndex)
             .OrderByDescending(a => a.CreatedAt)
@@ -57,7 +58,7 @@ internal sealed class SessionAttachmentRepository : ISessionAttachmentRepository
     public async Task<int> CountByPlayerAndSnapshotAsync(
         Guid sessionId, Guid playerId, int? snapshotIndex, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.SessionAttachments
+        var query = DbContext.SessionAttachments
             .Where(a => a.SessionId == sessionId && a.PlayerId == playerId);
 
         if (snapshotIndex.HasValue)
@@ -69,12 +70,12 @@ internal sealed class SessionAttachmentRepository : ISessionAttachmentRepository
     public async Task AddAsync(SessionAttachment attachment, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(attachment);
-        await _dbContext.SessionAttachments.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.SessionAttachments.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> SoftDeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.SessionAttachments
+        var entity = await DbContext.SessionAttachments
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -89,7 +90,7 @@ internal sealed class SessionAttachmentRepository : ISessionAttachmentRepository
     public async Task<IReadOnlyList<SessionAttachment>> GetExpiredAttachmentsAsync(
         DateTime cutoffDate, int batchSize, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.SessionAttachments
+        var entities = await DbContext.SessionAttachments
             .AsNoTracking()
             .Where(a => a.CreatedAt < cutoffDate)
             .OrderBy(a => a.CreatedAt)
@@ -102,7 +103,7 @@ internal sealed class SessionAttachmentRepository : ISessionAttachmentRepository
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static SessionAttachment MapToDomain(SessionAttachmentEntity entity)

@@ -1,0 +1,258 @@
+/**
+ * Admin Monitor Sub-Client
+ *
+ * Service dashboard, metrics, reports, OpenRouter status,
+ * Docker container management, and testing dashboard.
+ */
+
+import { z } from 'zod';
+
+import { getApiBase } from '../../core/httpClient';
+import {
+  EnhancedServiceDashboardSchema,
+  MetricsTimeSeriesResponseSchema,
+  ScheduleReportResponseSchema,
+  GetScheduledReportsResponseSchema,
+  GetReportExecutionsResponseSchema,
+  AccessibilityMetricsSchema,
+  PerformanceMetricsSchema,
+  E2EMetricsSchema,
+  ContainerInfoSchema,
+  ContainerLogsSchema,
+  type AccessibilityMetrics,
+  type PerformanceMetrics,
+  type E2EMetrics,
+  type GenerateReportRequest,
+  type ScheduleReportRequest,
+  type UpdateReportScheduleRequest,
+  type ScheduledReportDto,
+  type ReportExecutionDto,
+  type ScheduleReportResponse,
+  type ContainerInfo,
+  type ContainerLogs,
+} from '../../schemas';
+import {
+  CircuitBreakerStateSchema,
+  type CircuitBreakerState,
+} from '../../schemas/admin/admin-circuit-breakers.schemas';
+import {
+  ApplicationLogsResponseSchema,
+  type ApplicationLogsResponse,
+  type ApplicationLogsFilters,
+} from '../../schemas/admin/admin-logs.schemas';
+import {
+  ServiceCallsResponseSchema,
+  ServiceCallSummarySchema,
+  type ServiceCallsResponse,
+  type ServiceCallSummary,
+  type ServiceCallFilters,
+} from '../../schemas/admin/admin-service-calls.schemas';
+import {
+  OpenRouterStatusDtoSchema,
+  type OpenRouterStatusDto,
+} from '../../schemas/admin-knowledge-base.schemas';
+
+import type { HttpClient } from '../../core/httpClient';
+
+export function createAdminMonitorClient(http: HttpClient) {
+  return {
+    // ========== Enhanced Service Dashboard (Issue #132) ==========
+
+    async getServiceDashboard() {
+      return http.get(
+        '/api/v1/admin/infrastructure/services/dashboard',
+        EnhancedServiceDashboardSchema
+      );
+    },
+
+    async restartService(
+      serviceName: string
+    ): Promise<{ message: string; estimatedDowntime: string }> {
+      const result = await http.post(
+        '/api/v1/admin/operations/restart-service',
+        { serviceName },
+        z.object({ message: z.string(), estimatedDowntime: z.string() })
+      );
+      if (!result) {
+        throw new Error('Failed to restart service');
+      }
+      return result;
+    },
+
+    // ========== Docker Container Management (Issue #139) ==========
+
+    async getDockerContainers(): Promise<ContainerInfo[]> {
+      const res = await http.get('/api/v1/admin/docker/containers');
+      return z.array(ContainerInfoSchema).parse(res);
+    },
+
+    async getContainerLogs(containerId: string, tail: number = 100): Promise<ContainerLogs> {
+      const res = await http.get(
+        `/api/v1/admin/docker/containers/${containerId}/logs?tail=${tail}`
+      );
+      return ContainerLogsSchema.parse(res);
+    },
+
+    // ========== Metrics ==========
+
+    async getMetricsTimeSeries(range: '1h' | '6h' | '24h' | '7d' = '1h') {
+      return http.get(
+        `/api/v1/admin/infrastructure/metrics/timeseries?range=${range}`,
+        MetricsTimeSeriesResponseSchema
+      );
+    },
+
+    async getAccessibilityMetrics(): Promise<AccessibilityMetrics> {
+      const result = await http.get(
+        '/api/v1/admin/testing/accessibility',
+        AccessibilityMetricsSchema
+      );
+      if (!result) {
+        throw new Error('Failed to fetch accessibility metrics');
+      }
+      return result;
+    },
+
+    async getPerformanceMetrics(): Promise<PerformanceMetrics> {
+      const result = await http.get('/api/v1/admin/testing/performance', PerformanceMetricsSchema);
+      if (!result) {
+        throw new Error('Failed to fetch performance metrics');
+      }
+      return result;
+    },
+
+    async getE2EMetrics(): Promise<E2EMetrics> {
+      const result = await http.get('/api/v1/admin/testing/e2e', E2EMetricsSchema);
+      if (!result) {
+        throw new Error('Failed to fetch E2E metrics');
+      }
+      return result;
+    },
+
+    // ========== Report Generation & Scheduling (Issue #920) ==========
+
+    async generateReport(request: GenerateReportRequest): Promise<Blob> {
+      const response = await fetch(`${getApiBase()}/api/v1/admin/reports/generate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Report generation failed: ${response.statusText}`);
+      }
+
+      return response.blob();
+    },
+
+    async scheduleReport(request: ScheduleReportRequest): Promise<ScheduleReportResponse> {
+      return http.post('/api/v1/admin/reports/schedule', request, ScheduleReportResponseSchema);
+    },
+
+    async updateReportSchedule(
+      reportId: string,
+      request: UpdateReportScheduleRequest
+    ): Promise<void> {
+      await http.patch(`/api/v1/admin/reports/${reportId}/schedule`, request);
+    },
+
+    async deleteScheduledReport(reportId: string): Promise<void> {
+      await http.delete(`/api/v1/admin/reports/${reportId}`);
+    },
+
+    async getScheduledReports(): Promise<ScheduledReportDto[]> {
+      const result = await http.get(
+        '/api/v1/admin/reports/scheduled',
+        GetScheduledReportsResponseSchema
+      );
+      return result ?? [];
+    },
+
+    async getReportExecutions(params?: { reportId?: string }): Promise<ReportExecutionDto[]> {
+      const queryParams = new URLSearchParams();
+      if (params?.reportId) queryParams.set('reportId', params.reportId);
+
+      const query = queryParams.toString();
+      const result = await http.get(
+        `/api/v1/admin/reports/executions${query ? `?${query}` : ''}`,
+        GetReportExecutionsResponseSchema
+      );
+      return result ?? [];
+    },
+
+    // ========== Application Logs (Seq) ==========
+
+    async getApplicationLogs(filters?: ApplicationLogsFilters): Promise<ApplicationLogsResponse> {
+      const params = new URLSearchParams();
+      if (filters?.search) params.set('search', filters.search);
+      if (filters?.level) params.set('level', filters.level);
+      if (filters?.source) params.set('source', filters.source);
+      if (filters?.correlationId) params.set('correlationId', filters.correlationId);
+      if (filters?.from) params.set('from', filters.from);
+      if (filters?.to) params.set('to', filters.to);
+      if (filters?.count !== undefined) params.set('count', String(filters.count));
+      if (filters?.afterId) params.set('afterId', filters.afterId);
+
+      const query = params.toString();
+      const result = await http.get(
+        `/api/v1/admin/logs${query ? `?${query}` : ''}`,
+        ApplicationLogsResponseSchema
+      );
+      if (!result) {
+        return { items: [], remainingCount: null, lastId: null };
+      }
+      return result;
+    },
+
+    // ========== OpenRouter Status ==========
+
+    async getOpenRouterStatus(): Promise<OpenRouterStatusDto | null> {
+      const result = await http.get('/api/v1/admin/openrouter/status', OpenRouterStatusDtoSchema);
+      return result ?? null;
+    },
+
+    // ========== Service Call History ==========
+
+    async getServiceCalls(filters?: ServiceCallFilters): Promise<ServiceCallsResponse> {
+      const params = new URLSearchParams();
+      if (filters?.service) params.set('service', filters.service);
+      if (filters?.success !== undefined) params.set('success', String(filters.success));
+      if (filters?.correlationId) params.set('correlationId', filters.correlationId);
+      if (filters?.from) params.set('from', filters.from);
+      if (filters?.to) params.set('to', filters.to);
+      if (filters?.minLatencyMs !== undefined)
+        params.set('minLatencyMs', String(filters.minLatencyMs));
+      if (filters?.page !== undefined) params.set('page', String(filters.page));
+      if (filters?.pageSize !== undefined) params.set('pageSize', String(filters.pageSize));
+
+      const query = params.toString();
+      const result = await http.get(
+        `/api/v1/admin/service-calls${query ? `?${query}` : ''}`,
+        ServiceCallsResponseSchema
+      );
+      if (!result) {
+        return { items: [], totalCount: 0, page: 1, pageSize: 50 };
+      }
+      return result;
+    },
+
+    async getServiceCallSummary(
+      period: '1h' | '6h' | '24h' | '7d' = '24h'
+    ): Promise<ServiceCallSummary[]> {
+      const result = await http.get(`/api/v1/admin/service-calls/summary?period=${period}`);
+      return ServiceCallSummarySchema.array().parse(result ?? []);
+    },
+
+    // ========== Circuit Breaker States (Issue #3.4) ==========
+
+    async getCircuitBreakerStates(): Promise<CircuitBreakerState[]> {
+      const res = await http.get('/api/v1/admin/circuit-breakers');
+      return z.array(CircuitBreakerStateSchema).parse(res);
+    },
+  };
+}
+
+export type AdminMonitorClient = ReturnType<typeof createAdminMonitorClient>;

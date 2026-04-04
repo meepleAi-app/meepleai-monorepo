@@ -2,7 +2,7 @@
   "id": "health-monitor",
   "name": "System Health Monitor",
   "version": "1.0.0",
-  "description": "Continuous health check monitoring for all services (API, Qdrant, Redis, PostgreSQL) with alerting on failures",
+  "description": "Continuous health check monitoring for all services (API, pgvector, Redis, PostgreSQL) with alerting on failures",
   "category": "monitoring",
   "author": "MeepleAI",
   "tags": ["health", "monitoring", "uptime", "alerts"],

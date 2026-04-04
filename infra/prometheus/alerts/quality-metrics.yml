@@ -69,7 +69,7 @@ groups:
             Average overall confidence is {{ $value | humanizePercentage }} (threshold: 60%).
             AI responses have been consistently low quality for 1 hour.
             This indicates systematic issues with RAG, LLM, or citation quality.
-            Check Qdrant connection, embedding service, and LLM API health.
+            Check pgvector (PostgreSQL) connection, embedding service, and LLM API health.
           runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
           dashboard_url: "http://localhost:3001/d/quality-metrics"
 
@@ -105,7 +105,7 @@ groups:
           description: |
             RAG confidence is {{ $value | humanizePercentage }} (threshold: 50%).
             Semantic search is not finding relevant context consistently.
-            Check Qdrant vector DB health, embedding service, and index quality.
+            Check pgvector (PostgreSQL) health, embedding service, and index quality.
           runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
           dashboard_url: "http://localhost:3001/d/quality-metrics"
 

@@ -34,12 +34,7 @@ async function setupQuotaExceededMocks(
     pdfFull?: boolean;
   } = {}
 ) {
-  const {
-    tier = 'Free',
-    libraryFull = false,
-    sessionsFull = false,
-    pdfFull = false,
-  } = options;
+  const { tier = 'Free', libraryFull = false, sessionsFull = false, pdfFull = false } = options;
 
   const quotaLimits = {
     Free: { library: 5, sessions: 3, pdf: 3 },
@@ -68,7 +63,7 @@ async function setupQuotaExceededMocks(
   };
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -86,7 +81,7 @@ async function setupQuotaExceededMocks(
   });
 
   // Mock quota status endpoint
-  await page.route(`${API_BASE}/api/v1/users/me/quota`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/users/me/quota`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -95,7 +90,7 @@ async function setupQuotaExceededMocks(
   });
 
   // Mock library endpoint with quota enforcement
-  await page.route(`${API_BASE}/api/v1/library**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library**`, async route => {
     const method = route.request().method();
 
     if (method === 'GET') {
@@ -143,7 +138,7 @@ async function setupQuotaExceededMocks(
   });
 
   // Mock sessions endpoint with quota enforcement
-  await page.route(`${API_BASE}/api/v1/sessions`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/sessions`, async route => {
     const method = route.request().method();
 
     if (method === 'GET') {
@@ -179,7 +174,7 @@ async function setupQuotaExceededMocks(
   });
 
   // Mock games catalog
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -192,7 +187,7 @@ async function setupQuotaExceededMocks(
   });
 
   // Mock PDF upload with quota enforcement
-  await page.route(`${API_BASE}/api/v1/documents/upload`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/documents/upload`, async route => {
     if (pdfFull && tier !== 'Premium') {
       await route.fulfill({
         status: 403,
@@ -223,11 +218,13 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         libraryFull: true,
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Try to add a game to library
-      const addButton = page.getByRole('button', { name: /add.*library|add.*to.*collection/i }).first();
+      const addButton = page
+        .getByRole('button', { name: /add.*library|add.*to.*collection/i })
+        .first();
 
       if (await addButton.isVisible()) {
         await addButton.click();
@@ -243,7 +240,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         libraryFull: true,
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add.*library/i }).first();
@@ -253,9 +250,9 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
 
         // Should show upgrade button/link
         await expect(
-          page.getByRole('button', { name: /upgrade/i }).or(
-            page.getByRole('link', { name: /upgrade|pricing/i })
-          )
+          page
+            .getByRole('button', { name: /upgrade/i })
+            .or(page.getByRole('link', { name: /upgrade|pricing/i }))
         ).toBeVisible();
       }
     });
@@ -271,9 +268,10 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
 
       // Should show option to remove games or manage library
       await expect(
-        page.getByRole('button', { name: /remove|delete/i }).first().or(
-          page.getByText(/remove.*game|manage.*library/i)
-        )
+        page
+          .getByRole('button', { name: /remove|delete/i })
+          .first()
+          .or(page.getByText(/remove.*game|manage.*library/i))
       ).toBeVisible();
     });
 
@@ -283,7 +281,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         libraryFull: true,
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add.*library/i }).first();
@@ -308,13 +306,17 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
       await page.waitForLoadState('networkidle');
 
       // Try to create session
-      const createButton = page.getByRole('button', { name: /create.*session|new.*session|start/i });
+      const createButton = page.getByRole('button', {
+        name: /create.*session|new.*session|start/i,
+      });
 
       if (await createButton.isVisible()) {
         await createButton.click();
 
         // Should show quota exceeded message
-        await expect(page.getByText(/limit.*reached|quota.*exceeded|cannot.*create/i)).toBeVisible();
+        await expect(
+          page.getByText(/limit.*reached|quota.*exceeded|cannot.*create/i)
+        ).toBeVisible();
       }
     });
 
@@ -334,9 +336,9 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
 
         // Should suggest ending existing sessions
         await expect(
-          page.getByText(/end.*session|close.*session|manage.*session/i).or(
-            page.getByRole('button', { name: /end|close/i })
-          )
+          page
+            .getByText(/end.*session|close.*session|manage.*session/i)
+            .or(page.getByRole('button', { name: /end|close/i }))
         ).toBeVisible();
       }
     });
@@ -349,7 +351,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         libraryFull: true,
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add.*library/i }).first();
@@ -378,7 +380,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
       });
 
       // Mock pricing page
-      await page.route(`${API_BASE}/api/v1/pricing**`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/pricing**`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -391,7 +393,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         });
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add.*library/i }).first();
@@ -400,9 +402,9 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         await addButton.click();
 
         // Click upgrade
-        const upgradeButton = page.getByRole('button', { name: /upgrade/i }).or(
-          page.getByRole('link', { name: /upgrade/i })
-        );
+        const upgradeButton = page
+          .getByRole('button', { name: /upgrade/i })
+          .or(page.getByRole('link', { name: /upgrade/i }));
 
         if (await upgradeButton.isVisible()) {
           await upgradeButton.click();
@@ -423,7 +425,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         libraryFull: true,
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add.*library/i }).first();
@@ -442,7 +444,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         libraryFull: true,
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add.*library/i }).first();
@@ -461,7 +463,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         libraryFull: false, // Premium has unlimited
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add.*library/i }).first();
@@ -480,7 +482,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
       let libraryCount = 5;
 
       // Setup dynamic library count
-      await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -491,7 +493,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         });
       });
 
-      await page.route(`${API_BASE}/api/v1/library**`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/library**`, async route => {
         const method = route.request().method();
         if (method === 'DELETE') {
           libraryCount--;
@@ -514,7 +516,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         }
       });
 
-      await page.route(`${API_BASE}/api/v1/users/me/quota`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/users/me/quota`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -524,7 +526,7 @@ test.describe('ERR-14: Quota Exceeded Actions', () => {
         });
       });
 
-      await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/games**`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',

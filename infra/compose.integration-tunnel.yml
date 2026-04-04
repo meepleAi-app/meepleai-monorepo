@@ -1,0 +1,10 @@
+# Override: Point AI services to SSH tunnels instead of meepleai.app
+# Usage: docker compose -f docker-compose.yml -f compose.integration.yml -f compose.integration-tunnel.yml up api web -d
+services:
+  api:
+    environment:
+      LOCAL_EMBEDDING_URL: http://host.docker.internal:18000
+      Embedding__LocalServiceUrl: http://host.docker.internal:18000
+      RERANKER_URL: http://host.docker.internal:18003
+      UNSTRUCTURED_URL: http://host.docker.internal:18001
+      SMOLDOCLING_URL: http://host.docker.internal:18002

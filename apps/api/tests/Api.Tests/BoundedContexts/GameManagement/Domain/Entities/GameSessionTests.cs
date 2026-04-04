@@ -949,7 +949,7 @@ public sealed class GameSessionTests
     }
 
     [Fact]
-    public void Duration_WhenCompleted_ReturnsFixedDuration()
+    public async Task Duration_WhenCompleted_ReturnsFixedDuration()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -958,7 +958,7 @@ public sealed class GameSessionTests
         var completedDuration = session.Duration;
 
         // Wait a bit
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         var laterDuration = session.Duration;

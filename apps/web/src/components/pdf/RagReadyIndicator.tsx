@@ -35,7 +35,6 @@ import { useEmbeddingStatus, type UseEmbeddingStatusOptions } from '@/hooks/useE
 import type { EmbeddingStatus } from '@/lib/api/schemas/knowledge-base.schemas';
 import { cn } from '@/lib/utils';
 
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -90,7 +89,6 @@ interface StageIndicatorProps {
 }
 
 function StageIndicator({ stage, currentStatus, index }: StageIndicatorProps) {
-  // eslint-disable-next-line security/detect-object-injection -- stage from typed enum
   const config = STAGE_CONFIG[stage];
   if (!config) return null;
   const Icon = config.icon;
@@ -108,7 +106,7 @@ function StageIndicator({ stage, currentStatus, index }: StageIndicatorProps) {
         'flex flex-col items-center gap-1.5 transition-all duration-300',
         isCompleted && 'opacity-100',
         isActive && 'scale-105',
-        !isCompleted && !isActive && 'opacity-40',
+        !isCompleted && !isActive && 'opacity-40'
       )}
       data-testid={`embedding-stage-${stage.toLowerCase()}`}
     >
@@ -118,7 +116,7 @@ function StageIndicator({ stage, currentStatus, index }: StageIndicatorProps) {
           isCompleted && 'border-green-500 bg-green-500/10 text-green-600',
           isActive && 'border-primary bg-primary/10 text-primary animate-pulse',
           !isCompleted && !isActive && 'border-muted-foreground/30 text-muted-foreground/40',
-          isFailed && 'border-destructive bg-destructive/10 text-destructive',
+          isFailed && 'border-destructive bg-destructive/10 text-destructive'
         )}
       >
         {isActive && !isFailed ? (
@@ -131,7 +129,7 @@ function StageIndicator({ stage, currentStatus, index }: StageIndicatorProps) {
           <div
             className={cn(
               'absolute left-full top-1/2 h-0.5 w-6 -translate-y-1/2 transition-colors duration-300',
-              isCompleted ? 'bg-green-500' : 'bg-muted-foreground/20',
+              isCompleted ? 'bg-green-500' : 'bg-muted-foreground/20'
             )}
           />
         )}
@@ -141,7 +139,7 @@ function StageIndicator({ stage, currentStatus, index }: StageIndicatorProps) {
           'text-[10px] font-medium',
           isCompleted && 'text-green-600',
           isActive && 'text-primary',
-          !isCompleted && !isActive && 'text-muted-foreground/40',
+          !isCompleted && !isActive && 'text-muted-foreground/40'
         )}
       >
         {config.label}
@@ -169,8 +167,17 @@ export function RagReadyIndicator({
     onError,
   };
 
-  const { data, isLoading, isPolling, isReady, isFailed, stageLabel, chunkProgress, error, refetch } =
-    useEmbeddingStatus(gameId, hookOptions);
+  const {
+    data,
+    isLoading,
+    isPolling,
+    isReady,
+    isFailed,
+    stageLabel,
+    chunkProgress,
+    error,
+    refetch,
+  } = useEmbeddingStatus(gameId, hookOptions);
 
   // Browser notification on completion
   const hasNotifiedBrowserRef = useRef(false);
@@ -186,7 +193,7 @@ export function RagReadyIndicator({
         icon: '/favicon.ico',
       });
     },
-    [gameName],
+    [gameName]
   );
 
   useEffect(() => {
@@ -198,7 +205,10 @@ export function RagReadyIndicator({
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn('rounded-lg border bg-card p-4', className)} data-testid="rag-indicator-loading">
+      <div
+        className={cn('rounded-lg border bg-card p-4', className)}
+        data-testid="rag-indicator-loading"
+      >
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Verifica stato Knowledge Base...
@@ -278,14 +288,22 @@ export function RagReadyIndicator({
               <CheckCircle2 className="h-5 w-5 text-green-600" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-green-600 dark:text-green-400" aria-live="polite">
+              <p
+                className="text-sm font-semibold text-green-600 dark:text-green-400"
+                aria-live="polite"
+              >
                 Knowledge Base Pronta
               </p>
               <p className="text-xs text-muted-foreground">
                 {gameName || data?.gameName || 'Il gioco'} è pronto per le domande AI
               </p>
             </div>
-            <Button asChild size="sm" className="bg-green-600 hover:bg-green-700" data-testid="chat-now-button">
+            <Button
+              asChild
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+              data-testid="chat-now-button"
+            >
               <Link href={`/chat/new?game=${encodeURIComponent(gameId)}`}>
                 <MessageSquare className="mr-1.5 h-4 w-4" />
                 Chat Now

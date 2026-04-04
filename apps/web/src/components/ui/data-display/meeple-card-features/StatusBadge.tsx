@@ -7,7 +7,12 @@
 
 import { CheckCircle, Heart, Play, ArrowLeftRight, Repeat, type LucideIcon } from 'lucide-react';
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
 export type GameStatus = 'owned' | 'wishlisted' | 'played' | 'borrowed' | 'for-trade';
@@ -21,7 +26,14 @@ export interface StatusBadgeProps {
 
 const statusConfig: Record<
   GameStatus,
-  { label: string; color: string; bgClass: string; textClass: string; icon: LucideIcon; description: string }
+  {
+    label: string;
+    color: string;
+    bgClass: string;
+    textClass: string;
+    icon: LucideIcon;
+    description: string;
+  }
 > = {
   owned: {
     label: 'Posseduto',
@@ -65,15 +77,19 @@ const statusConfig: Record<
   },
 };
 
-export function StatusBadge({ status, showIcon = false, size = 'sm', className }: StatusBadgeProps) {
+export function StatusBadge({
+  status,
+  showIcon = false,
+  size = 'sm',
+  className,
+}: StatusBadgeProps) {
   const statuses = Array.isArray(status) ? status : [status];
 
   if (statuses.length === 0) return null;
 
   return (
     <div className={cn('flex flex-col gap-1', className)} data-testid="status-badge-container">
-      {statuses.map((s) => {
-        // eslint-disable-next-line security/detect-object-injection
+      {statuses.map(s => {
         const config = statusConfig[s];
         const Icon = config.icon;
 

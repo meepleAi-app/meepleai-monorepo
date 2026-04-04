@@ -9,13 +9,16 @@ public class RerankerHealthCheck : IHealthCheck
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<RerankerHealthCheck> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public RerankerHealthCheck(
         IConfiguration configuration,
-        ILogger<RerankerHealthCheck> logger)
+        ILogger<RerankerHealthCheck> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -30,7 +33,8 @@ public class RerankerHealthCheck : IHealthCheck
 
         try
         {
-            using var client = new HttpClient { BaseAddress = new Uri(rerankerUrl) };
+            using var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(rerankerUrl);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 

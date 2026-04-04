@@ -183,9 +183,7 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
             services.AddSingleton(mockRedis.Object);
 
             // Mock vector/embedding services (not needed for HTTP/auth tests)
-            services.RemoveAll(typeof(IQdrantService));
             services.RemoveAll(typeof(IEmbeddingService));
-            services.AddScoped<IQdrantService>(_ => Mock.Of<IQdrantService>());
             services.AddScoped<IEmbeddingService>(_ => Mock.Of<IEmbeddingService>());
 
             // Mock cache service

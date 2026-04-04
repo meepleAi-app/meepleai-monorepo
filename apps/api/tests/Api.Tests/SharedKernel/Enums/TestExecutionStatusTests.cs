@@ -1,5 +1,6 @@
 using Api.SharedKernel.Enums;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.SharedKernel.Enums;
@@ -15,10 +16,10 @@ public class TestExecutionStatusTests
     public void TestExecutionStatus_ShouldHaveCorrectValues()
     {
         // Assert - Verify enum values match specification
-        Assert.Equal(0, (int)TestExecutionStatus.Pass);
-        Assert.Equal(1, (int)TestExecutionStatus.Warning);
-        Assert.Equal(2, (int)TestExecutionStatus.Fail);
-        Assert.Equal(3, (int)TestExecutionStatus.NoData);
+        ((int)TestExecutionStatus.Pass).Should().Be(0);
+        ((int)TestExecutionStatus.Warning).Should().Be(1);
+        ((int)TestExecutionStatus.Fail).Should().Be(2);
+        ((int)TestExecutionStatus.NoData).Should().Be(3);
     }
 
     [Fact]
@@ -31,8 +32,8 @@ public class TestExecutionStatusTests
         var actualMembers = Enum.GetNames(typeof(TestExecutionStatus));
 
         // Assert
-        Assert.Equal(expectedMembers.Length, actualMembers.Length);
-        Assert.All(expectedMembers, expected => Assert.Contains(expected, actualMembers));
+        actualMembers.Length.Should().Be(expectedMembers.Length);
+        expectedMembers.Should().AllSatisfy(expected => actualMembers.Should().Contain(expected));
     }
 
     [Theory]
@@ -46,7 +47,7 @@ public class TestExecutionStatusTests
         var result = status.ToString();
 
         // Assert
-        Assert.Equal(expectedName, result);
+        result.Should().Be(expectedName);
     }
 
     [Theory]
@@ -60,14 +61,14 @@ public class TestExecutionStatusTests
         var result = Enum.Parse<TestExecutionStatus>(input);
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void TestExecutionStatus_Parse_WithInvalidValue_ShouldThrowException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => Enum.Parse<TestExecutionStatus>("Invalid"));
+        ((Action)(() => Enum.Parse<TestExecutionStatus>("Invalid"))).Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -81,24 +82,24 @@ public class TestExecutionStatusTests
         var result = (TestExecutionStatus)value;
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void TestExecutionStatus_ShouldSupportComparison()
     {
         // Assert - Verify logical ordering: Pass < Warning < Fail < NoData
-        Assert.True(TestExecutionStatus.Pass < TestExecutionStatus.Warning);
-        Assert.True(TestExecutionStatus.Warning < TestExecutionStatus.Fail);
-        Assert.True(TestExecutionStatus.Fail < TestExecutionStatus.NoData);
+        (TestExecutionStatus.Pass < TestExecutionStatus.Warning).Should().BeTrue();
+        (TestExecutionStatus.Warning < TestExecutionStatus.Fail).Should().BeTrue();
+        (TestExecutionStatus.Fail < TestExecutionStatus.NoData).Should().BeTrue();
     }
 
     [Fact]
     public void TestExecutionStatus_ShouldBeValueTypeEnum()
     {
         // Assert
-        Assert.True(typeof(TestExecutionStatus).IsEnum);
-        Assert.True(typeof(TestExecutionStatus).IsValueType);
-        Assert.Equal(typeof(int), Enum.GetUnderlyingType(typeof(TestExecutionStatus)));
+        typeof(TestExecutionStatus).IsEnum.Should().BeTrue();
+        typeof(TestExecutionStatus).IsValueType.Should().BeTrue();
+        Enum.GetUnderlyingType(typeof(TestExecutionStatus)).Should().Be(typeof(int));
     }
 }

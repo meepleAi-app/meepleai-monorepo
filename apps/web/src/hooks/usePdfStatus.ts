@@ -18,6 +18,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { mapProcessingStepToPdfState } from '@/types/pdf';
 import type { PdfState } from '@/types/pdf';
 import type { ProcessingStep } from '@/types/pdf';
@@ -45,12 +46,7 @@ declare global {
 // Types
 // ============================================================================
 
-export type ConnectionState =
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'polling'
-  | 'failed';
+export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'polling' | 'failed';
 
 export interface ConnectionMetrics {
   /** Total uptime in milliseconds */
@@ -137,11 +133,11 @@ function calculateBackoffDelay(attempt: number): number {
  */
 function shouldUsePollingForNetwork(): boolean {
   if (typeof navigator === 'undefined') return false;
-  
+
   const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  
+
   if (!connection) return false;
-  
+
   // Auto-fallback to polling for slow-2g
   return connection.effectiveType === 'slow-2g';
 }
@@ -206,7 +202,7 @@ export function usePdfStatus(
     setConnectionState('polling');
     setIsPolling(true);
     setIsConnected(false);
-    
+
     // Increment fallback triggers metric
     setConnectionMetrics(prev => ({
       ...prev,
@@ -288,11 +284,11 @@ export function usePdfStatus(
         setIsConnected(true);
         setIsPolling(false);
         setError(null);
-        
+
         // Save reconnect attempts before resetting
         const wasReconnecting = reconnectAttemptsRef.current > 0;
         reconnectAttemptsRef.current = 0;
-        
+
         // Update metrics
         setConnectionMetrics(prev => ({
           ...prev,
@@ -301,7 +297,7 @@ export function usePdfStatus(
         }));
       };
 
-      eventSource.onmessage = (e) => {
+      eventSource.onmessage = e => {
         if (!isMountedRef.current) return;
 
         // Preserve Last-Event-ID for stream resume
@@ -340,7 +336,7 @@ export function usePdfStatus(
             eventSource.close();
           }
         } catch (parseErr) {
-          console.error('Failed to parse SSE message:', parseErr);
+          logger.error('Failed to parse SSE message:', parseErr);
         }
       };
 
@@ -354,7 +350,7 @@ export function usePdfStatus(
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current += 1;
           setConnectionState('reconnecting');
-          
+
           const delay = calculateBackoffDelay(reconnectAttemptsRef.current);
           setTimeout(() => {
             if (isMountedRef.current) {

@@ -7,7 +7,7 @@
  *  🔄 Turn Order  → TurnOrderTool + useTurnOrder
  *  🎲 Dice        → DiceRoller + useDiceRoller
  *  🖊️ Whiteboard  → WhiteboardTool + useWhiteboardTool
- *  📊 Scoreboard  → Scoreboard (data from sessionStore)
+ *  📊 Scoreboard  → Scoreboard (data from session-store)
  *
  * Custom toolkit tools (Issue #4976):
  *  - Fetches published GameToolkit via useGameToolkit(session.gameId)
@@ -15,7 +15,7 @@
  *  - Counter tools use CounterToolContent sub-component (encapsulates hook)
  *
  * Active tool persisted in URL query param `?tool=<toolId>` (Issue #4974).
- * `sessionStore.activeTool` mirrors the URL for cross-component access.
+ * `session-store.activeTool` mirrors the URL for cross-component access.
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -35,14 +35,18 @@ import {
   WhiteboardTool,
 } from '@/components/session';
 import type { CounterToolConfig, Participant } from '@/components/session/types';
-import { useCounterTool } from '@/lib/hooks/useCounterTool';
-import { useDiceRoller } from '@/lib/hooks/useDiceRoller';
-import { useGameToolkit } from '@/lib/hooks/useGameToolkit';
-import { useSessionSync } from '@/lib/hooks/useSessionSync';
-import { useTurnOrder } from '@/lib/hooks/useTurnOrder';
-import { useWhiteboardTool } from '@/lib/hooks/useWhiteboardTool';
-import { useSessionStore } from '@/lib/stores/sessionStore';
-import type { ToolId } from '@/lib/stores/sessionStore';
+import { CardDeckTool } from '@/components/toolkit';
+import { DiceRoller as ToolkitDiceRoller } from '@/components/toolkit/DiceRoller';
+import { Timer as ToolkitTimer } from '@/components/toolkit/Timer';
+import { useCounterTool } from '@/lib/domain-hooks/useCounterTool';
+import { useDiceRoller } from '@/lib/domain-hooks/useDiceRoller';
+import { useGameToolkit } from '@/lib/domain-hooks/useGameToolkit';
+import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
+import { useSessionToolLog } from '@/lib/domain-hooks/useSessionToolLog';
+import { useTurnOrder } from '@/lib/domain-hooks/useTurnOrder';
+import { useWhiteboardTool } from '@/lib/domain-hooks/useWhiteboardTool';
+import { useSessionStore } from '@/lib/stores/session-store';
+import type { ToolId } from '@/lib/stores/session-store';
 import type { CounterToolDto } from '@/lib/types/gameToolkit';
 import { resolveSessionTools } from '@/lib/utils/resolveSessionTools';
 
@@ -93,7 +97,7 @@ function CounterToolContent({
 
 // ── CustomToolPlaceholder ─────────────────────────────────────────────────────
 
-/** Shown for custom tool types not yet fully implemented (card, timer, dice). */
+/** Shown for custom tool types not yet fully implemented (e.g. card). */
 function CustomToolPlaceholder({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-3 text-stone-400 dark:text-stone-500">
@@ -115,6 +119,8 @@ export function ActiveSessionPageContent() {
   if (!sessionId) {
     throw new Error('Session ID is required');
   }
+
+  const { logToolAction } = useSessionToolLog(sessionId);
 
   const {
     activeSession,
@@ -374,7 +380,78 @@ export function ActiveSessionPageContent() {
         }
       }
 
-      // Dice, card, timer — placeholder for now
+      // Custom dice → standalone DiceRoller widget
+      if (activeTool.startsWith('custom-dice-')) {
+        const diceIdx = parseInt(activeTool.replace('custom-dice-', ''), 10);
+        const diceDto = toolkit.diceTools[diceIdx];
+        if (diceDto) {
+          const diceConfig = diceDto.customFaces?.length
+            ? { name: diceDto.name, customFaces: diceDto.customFaces, count: diceDto.quantity }
+            : {
+                name: diceDto.name,
+                sides: parseInt(diceDto.diceType.replace(/\D/g, ''), 10) || 6,
+                count: diceDto.quantity,
+              };
+          return (
+            <ToolkitDiceRoller
+              config={diceConfig}
+              onRoll={r =>
+                logToolAction(
+                  'dice',
+                  'roll',
+                  `${diceDto.name}: [${r.faces.join(', ')}] = ${r.total}`
+                )
+              }
+            />
+          );
+        }
+      }
+
+      // Custom timer → standalone Timer widget
+      if (activeTool.startsWith('custom-timer-')) {
+        const timerIdx = parseInt(activeTool.replace('custom-timer-', ''), 10);
+        const timerDto = toolkit.timerTools[timerIdx];
+        if (timerDto) {
+          const timerType =
+            timerDto.timerType === 'countup'
+              ? 'countup'
+              : timerDto.timerType === 'turn'
+                ? 'turn'
+                : 'countdown';
+          return (
+            <ToolkitTimer
+              name={timerDto.name}
+              defaultSeconds={timerDto.durationSeconds}
+              type={timerType}
+              onAction={(action, seconds) =>
+                logToolAction('timer', action, `${timerDto.name}: ${action} @ ${seconds}s`)
+              }
+            />
+          );
+        }
+      }
+
+      // Card tools → CardDeckTool
+      if (activeTool.startsWith('custom-card-')) {
+        const cardIdx = parseInt(activeTool.replace('custom-card-', ''), 10);
+        const cardDto = toolkit.cardTools[cardIdx];
+        if (cardDto) {
+          const cards = Array.from({ length: cardDto.cardCount }, (_, i) => String(i + 1));
+          return (
+            <CardDeckTool
+              deckId={`session-${sessionId}-card-${cardIdx}`}
+              name={cardDto.name}
+              cards={cards}
+              reshuffleOnEmpty={cardDto.allowReturnToDeck}
+              onAction={(action, result) =>
+                logToolAction('card', action, `${cardDto.name}: ${result}`)
+              }
+            />
+          );
+        }
+      }
+
+      // Other unimplemented types — placeholder
       const customTool = customTools.find(t => t.id === activeTool);
       if (customTool) {
         return <CustomToolPlaceholder label={customTool.label} />;

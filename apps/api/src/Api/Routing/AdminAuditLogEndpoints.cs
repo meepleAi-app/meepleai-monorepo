@@ -71,6 +71,43 @@ internal static class AdminAuditLogEndpoints
             return Results.File(exportResult.Content, exportResult.ContentType, exportResult.FileName);
         });
 
+        // Per-user audit log - Issue #124
+        group.MapGet("/admin/users/{userId:guid}/audit-log", async (
+            Guid userId,
+            HttpContext context,
+            IMediator mediator,
+            int? limit,
+            int? offset,
+            string? action,
+            string? resource,
+            string? result,
+            DateTime? startDate,
+            DateTime? endDate,
+            CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var query = new GetAuditLogsQuery(
+                Limit: limit ?? 50,
+                Offset: offset ?? 0,
+                AdminUserId: userId,
+                Action: action,
+                Resource: resource,
+                Result: result,
+                StartDate: startDate,
+                EndDate: endDate);
+
+            var queryResult = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(queryResult);
+        })
+        .WithName("GetUserAuditLog")
+        .WithTags("Admin", "AuditLog")
+        .WithSummary("Get audit log filtered by user")
+        .WithDescription("Returns audit log entries for a specific user. Issue #124.")
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status403Forbidden);
+
         return group;
     }
 }

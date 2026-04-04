@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Domain;
@@ -21,13 +22,13 @@ public class SessionDeckTests
         var deck = SessionDeck.CreateStandardDeck(_sessionId);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, deck.Id);
-        Assert.Equal(_sessionId, deck.SessionId);
-        Assert.Equal("Standard Deck", deck.Name);
-        Assert.Equal(DeckType.Standard52, deck.DeckType);
-        Assert.Equal(52, deck.Cards.Count);
-        Assert.Equal(52, deck.DrawPile.Count);
-        Assert.Empty(deck.DiscardPile);
+        deck.Id.Should().NotBe(Guid.Empty);
+        deck.SessionId.Should().Be(_sessionId);
+        deck.Name.Should().Be("Standard Deck");
+        deck.DeckType.Should().Be(DeckType.Standard52);
+        deck.Cards.Count.Should().Be(52);
+        deck.DrawPile.Count.Should().Be(52);
+        deck.DiscardPile.Should().BeEmpty();
     }
 
     [Fact]
@@ -37,18 +38,18 @@ public class SessionDeckTests
         var deck = SessionDeck.CreateStandardDeck(_sessionId, "Deck with Jokers", includeJokers: true);
 
         // Assert
-        Assert.Equal(54, deck.Cards.Count);
-        Assert.Equal(54, deck.DrawPile.Count);
-        Assert.Contains(deck.Cards, c => c.Name == "Red Joker");
-        Assert.Contains(deck.Cards, c => c.Name == "Black Joker");
+        deck.Cards.Count.Should().Be(54);
+        deck.DrawPile.Count.Should().Be(54);
+        deck.Cards.Should().Contain(c => c.Name == "Red Joker");
+        deck.Cards.Should().Contain(c => c.Name == "Black Joker");
     }
 
     [Fact]
     public void CreateStandardDeck_EmptySessionId_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            SessionDeck.CreateStandardDeck(Guid.Empty));
+        var act = () => SessionDeck.CreateStandardDeck(Guid.Empty);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -66,17 +67,17 @@ public class SessionDeckTests
         var deck = SessionDeck.CreateCustomDeck(_sessionId, "My Custom Deck", cards);
 
         // Assert
-        Assert.Equal(DeckType.Custom, deck.DeckType);
-        Assert.Equal("My Custom Deck", deck.Name);
-        Assert.Equal(3, deck.Cards.Count);
+        deck.DeckType.Should().Be(DeckType.Custom);
+        deck.Name.Should().Be("My Custom Deck");
+        deck.Cards.Count.Should().Be(3);
     }
 
     [Fact]
     public void CreateCustomDeck_EmptyCards_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            SessionDeck.CreateCustomDeck(_sessionId, "Empty Deck", new List<Card>()));
+        var act = () => SessionDeck.CreateCustomDeck(_sessionId, "Empty Deck", new List<Card>());
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -95,9 +96,9 @@ public class SessionDeckTests
         }
 
         // Assert
-        Assert.True(orderChanged, "Shuffle should change the order of cards");
-        Assert.Equal(52, deck.DrawPile.Count);
-        Assert.NotNull(deck.LastShuffledAt);
+        orderChanged.Should().BeTrue("Shuffle should change the order of cards");
+        deck.DrawPile.Count.Should().Be(52);
+        deck.LastShuffledAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -110,9 +111,9 @@ public class SessionDeckTests
         var drawnCards = deck.DrawCards(_participantId, 5);
 
         // Assert
-        Assert.Equal(5, drawnCards.Count);
-        Assert.Equal(47, deck.DrawPile.Count);
-        Assert.Equal(5, deck.GetHand(_participantId).Count);
+        drawnCards.Count.Should().Be(5);
+        deck.DrawPile.Count.Should().Be(47);
+        deck.GetHand(_participantId).Count.Should().Be(5);
     }
 
     [Fact]
@@ -122,9 +123,9 @@ public class SessionDeckTests
         var deck = SessionDeck.CreateStandardDeck(_sessionId);
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            deck.DrawCards(_participantId, 100));
-        Assert.Contains("Not enough cards", ex.Message);
+        var act = () => deck.DrawCards(_participantId, 100);
+        var ex = act.Should().Throw<InvalidOperationException>().Which;
+        ex.Message.Should().Contain("Not enough cards");
     }
 
     [Fact]
@@ -134,8 +135,8 @@ public class SessionDeckTests
         var deck = SessionDeck.CreateStandardDeck(_sessionId);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            deck.DrawCards(Guid.Empty, 5));
+        var act = () => deck.DrawCards(Guid.Empty, 5);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -145,8 +146,10 @@ public class SessionDeckTests
         var deck = SessionDeck.CreateStandardDeck(_sessionId);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => deck.DrawCards(_participantId, 0));
-        Assert.Throws<ArgumentException>(() => deck.DrawCards(_participantId, -1));
+        var act0 = () => deck.DrawCards(_participantId, 0);
+        act0.Should().Throw<ArgumentException>();
+        var actNeg = () => deck.DrawCards(_participantId, -1);
+        actNeg.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -160,8 +163,8 @@ public class SessionDeckTests
         deck.DiscardCards(_participantId, drawnCards.Take(2).ToList());
 
         // Assert
-        Assert.Equal(3, deck.GetHand(_participantId).Count);
-        Assert.Equal(2, deck.DiscardPile.Count);
+        deck.GetHand(_participantId).Count.Should().Be(3);
+        deck.DiscardPile.Count.Should().Be(2);
     }
 
     [Fact]
@@ -172,9 +175,9 @@ public class SessionDeckTests
         deck.DrawCards(_participantId, 5);
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            deck.DiscardCards(_participantId, new List<Guid> { Guid.NewGuid() }));
-        Assert.Contains("not found in participant's hand", ex.Message);
+        var act = () => deck.DiscardCards(_participantId, new List<Guid> { Guid.NewGuid() });
+        var ex = act.Should().Throw<InvalidOperationException>().Which;
+        ex.Message.Should().Contain("not found in participant's hand");
     }
 
     [Fact]
@@ -188,11 +191,11 @@ public class SessionDeckTests
         deck.ReturnCards(_participantId, drawnCards.Take(2).ToList());
 
         // Assert
-        Assert.Single(deck.GetHand(_participantId));
-        Assert.Equal(51, deck.DrawPile.Count);
+        deck.GetHand(_participantId).Should().ContainSingle();
+        deck.DrawPile.Count.Should().Be(51);
         // Returned cards should be at the bottom
-        Assert.Contains(drawnCards[0], deck.DrawPile.TakeLast(2));
-        Assert.Contains(drawnCards[1], deck.DrawPile.TakeLast(2));
+        deck.DrawPile.TakeLast(2).Should().Contain(drawnCards[0]);
+        deck.DrawPile.TakeLast(2).Should().Contain(drawnCards[1]);
     }
 
     [Fact]
@@ -207,8 +210,8 @@ public class SessionDeckTests
         deck.ShuffleDiscardIntoDraw();
 
         // Assert
-        Assert.Equal(52, deck.DrawPile.Count);
-        Assert.Empty(deck.DiscardPile);
+        deck.DrawPile.Count.Should().Be(52);
+        deck.DiscardPile.Should().BeEmpty();
     }
 
     [Fact]
@@ -221,9 +224,9 @@ public class SessionDeckTests
         var peeked = deck.PeekDrawPile(3);
 
         // Assert
-        Assert.Equal(3, peeked.Count);
-        Assert.Equal(52, deck.DrawPile.Count); // Cards not removed
-        Assert.Equal(deck.DrawPile.Take(3), peeked);
+        peeked.Count.Should().Be(3);
+        deck.DrawPile.Count.Should().Be(52); // Cards not removed
+        peeked.Should().BeEquivalentTo(deck.DrawPile.Take(3));
     }
 
     [Fact]
@@ -237,7 +240,7 @@ public class SessionDeckTests
         var peeked = deck.PeekDrawPile(10);
 
         // Assert
-        Assert.Equal(2, peeked.Count);
+        peeked.Count.Should().Be(2);
     }
 
     [Fact]
@@ -251,8 +254,8 @@ public class SessionDeckTests
         var card = deck.GetCard(cardId);
 
         // Assert
-        Assert.NotNull(card);
-        Assert.Equal(cardId, card.Id);
+        card.Should().NotBeNull();
+        card!.Id.Should().Be(cardId);
     }
 
     [Fact]
@@ -265,7 +268,7 @@ public class SessionDeckTests
         var card = deck.GetCard(Guid.NewGuid());
 
         // Assert
-        Assert.Null(card);
+        card.Should().BeNull();
     }
 
     [Fact]
@@ -280,9 +283,9 @@ public class SessionDeckTests
         deck.Reset();
 
         // Assert
-        Assert.Equal(52, deck.DrawPile.Count);
-        Assert.Empty(deck.DiscardPile);
-        Assert.Empty(deck.GetHand(_participantId));
+        deck.DrawPile.Count.Should().Be(52);
+        deck.DiscardPile.Should().BeEmpty();
+        deck.GetHand(_participantId).Should().BeEmpty();
     }
 
     [Fact]
@@ -295,8 +298,8 @@ public class SessionDeckTests
         deck.SoftDelete();
 
         // Assert
-        Assert.True(deck.IsDeleted);
-        Assert.NotNull(deck.DeletedAt);
+        deck.IsDeleted.Should().BeTrue();
+        deck.DeletedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -312,9 +315,9 @@ public class SessionDeckTests
         deck.DrawCards(participant2, 7);
 
         // Assert
-        Assert.Equal(5, deck.GetHand(participant1).Count);
-        Assert.Equal(7, deck.GetHand(participant2).Count);
-        Assert.Equal(40, deck.DrawPile.Count);
+        deck.GetHand(participant1).Count.Should().Be(5);
+        deck.GetHand(participant2).Count.Should().Be(7);
+        deck.DrawPile.Count.Should().Be(40);
     }
 }
 
@@ -332,19 +335,21 @@ public class CardTests
         var card = Card.Create("My Card", "http://example.com/card.jpg", "Custom", "1", 0);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, card.Id);
-        Assert.Equal("My Card", card.Name);
-        Assert.Equal("http://example.com/card.jpg", card.ImageUrl);
-        Assert.Equal("Custom", card.Suit);
-        Assert.Equal("1", card.Value);
+        card.Id.Should().NotBe(Guid.Empty);
+        card.Name.Should().Be("My Card");
+        card.ImageUrl.Should().Be("http://example.com/card.jpg");
+        card.Suit.Should().Be("Custom");
+        card.Value.Should().Be("1");
     }
 
     [Fact]
     public void Create_EmptyName_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => Card.Create(""));
-        Assert.Throws<ArgumentException>(() => Card.Create("   "));
+        var act1 = () => Card.Create("");
+        act1.Should().Throw<ArgumentException>();
+        var act2 = () => Card.Create("   ");
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -354,9 +359,9 @@ public class CardTests
         var card = Card.CreateStandard("Hearts", "Ace", 0);
 
         // Assert
-        Assert.Equal("Ace of Hearts", card.Name);
-        Assert.Equal("Hearts", card.Suit);
-        Assert.Equal("Ace", card.Value);
+        card.Name.Should().Be("Ace of Hearts");
+        card.Suit.Should().Be("Hearts");
+        card.Value.Should().Be("Ace");
     }
 
     [Fact]
@@ -366,18 +371,18 @@ public class CardTests
         var cards = StandardDeckFactory.CreateStandardDeck();
 
         // Assert
-        Assert.Equal(52, cards.Count);
+        cards.Count.Should().Be(52);
 
         // Verify all suits
-        Assert.Equal(13, cards.Count(c => c.Suit == "Hearts"));
-        Assert.Equal(13, cards.Count(c => c.Suit == "Diamonds"));
-        Assert.Equal(13, cards.Count(c => c.Suit == "Clubs"));
-        Assert.Equal(13, cards.Count(c => c.Suit == "Spades"));
+        cards.Count(c => c.Suit == "Hearts").Should().Be(13);
+        cards.Count(c => c.Suit == "Diamonds").Should().Be(13);
+        cards.Count(c => c.Suit == "Clubs").Should().Be(13);
+        cards.Count(c => c.Suit == "Spades").Should().Be(13);
 
         // Verify all values
         foreach (var value in new[] { "Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King" })
         {
-            Assert.Equal(4, cards.Count(c => c.Value == value));
+            cards.Count(c => c.Value == value).Should().Be(4);
         }
     }
 
@@ -388,7 +393,7 @@ public class CardTests
         var cards = StandardDeckFactory.CreateStandardDeckWithJokers();
 
         // Assert
-        Assert.Equal(54, cards.Count);
-        Assert.Equal(2, cards.Count(c => c.Suit == "Joker"));
+        cards.Count.Should().Be(54);
+        cards.Count(c => c.Suit == "Joker").Should().Be(2);
     }
 }

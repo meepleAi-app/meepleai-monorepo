@@ -38,9 +38,6 @@ export function RecentLibraryCard({ game }: RecentLibraryCardProps) {
         subtitle={`Aggiunto ${addedAgo}`}
         imageUrl={game.gameImageUrl || undefined}
         badge={game.isFavorite ? 'Preferito' : undefined}
-        showInfoButton
-        infoHref="/library"
-        infoTooltip="Gestisci"
       />
     </div>
   );

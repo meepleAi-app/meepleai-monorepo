@@ -20,7 +20,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 /// ISSUE-3494: Performance tests for MultiTierCache.
 /// Verifies latency targets: L1 &lt;1ms, L2 &lt;10ms, P95 &lt;100ms for cached reads.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Performance)]
 [Trait("Issue", "3494")]
 public sealed class MultiTierCachePerformanceTests : IAsyncLifetime

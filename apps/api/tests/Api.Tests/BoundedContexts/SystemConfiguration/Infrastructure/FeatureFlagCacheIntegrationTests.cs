@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.SystemConfiguration.Infrastructure;
 /// Week 9: SystemConfiguration infrastructure layer (15 tests)
 /// Tests: Feature flag validation, toggle operations, cache invalidation, runtime config updates
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SystemConfiguration")]

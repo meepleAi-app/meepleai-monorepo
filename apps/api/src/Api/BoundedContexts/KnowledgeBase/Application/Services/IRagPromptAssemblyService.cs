@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -21,7 +22,9 @@ internal interface IRagPromptAssemblyService
     /// <param name="userQuestion">The user's current question</param>
     /// <param name="gameId">Game ID for scoping Qdrant search</param>
     /// <param name="chatThread">Chat thread for history inclusion (nullable for first message)</param>
+    /// <param name="userTier">User subscription tier for RAG enhancement routing (nullable for backward compatibility)</param>
     /// <param name="ct">Cancellation token</param>
+    /// <param name="debugCollector">Optional collector for RAG debug events (null = no debug emission)</param>
     /// <returns>Assembled prompt ready for LLM consumption</returns>
     Task<AssembledPrompt> AssemblePromptAsync(
         string agentTypology,
@@ -30,5 +33,7 @@ internal interface IRagPromptAssemblyService
         string userQuestion,
         Guid gameId,
         ChatThread? chatThread,
-        CancellationToken ct);
+        UserTier? userTier,
+        CancellationToken ct,
+        IRagDebugEventCollector? debugCollector = null);
 }

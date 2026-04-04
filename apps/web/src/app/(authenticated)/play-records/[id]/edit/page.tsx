@@ -29,7 +29,7 @@ import {
   UpdatePlayRecordRequestSchema,
   type UpdatePlayRecordRequest,
 } from '@/lib/api/schemas/play-records.schemas';
-import { usePlayRecord, useUpdateRecord } from '@/lib/hooks/use-play-records';
+import { usePlayRecord, useUpdateRecord } from '@/lib/domain-hooks/usePlayRecords';
 
 export default function EditPlayRecordPage() {
   const params = useParams();

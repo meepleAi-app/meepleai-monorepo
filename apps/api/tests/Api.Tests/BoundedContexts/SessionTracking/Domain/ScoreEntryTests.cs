@@ -157,14 +157,14 @@ public class ScoreEntryTests
     }
 
     [Fact]
-    public void UpdateScore_ShouldChangeValueAndTimestamp()
+    public async Task UpdateScore_ShouldChangeValueAndTimestamp()
     {
         // Arrange
         var scoreEntry = ScoreEntry.Create(Guid.NewGuid(), Guid.NewGuid(), 10m, Guid.NewGuid(), roundNumber: 1);
         var originalTimestamp = scoreEntry.Timestamp;
 
         // Act
-        Thread.Sleep(10); // Ensure timestamp changes
+        await Task.Delay(50); // Ensure timestamp changes
         scoreEntry.UpdateScore(20m);
 
         // Assert

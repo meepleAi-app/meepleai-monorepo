@@ -258,4 +258,53 @@ public class PdfTextProcessingDomainServiceTests
         // Assert
         result.Should().Be(ExtractionQuality.VeryLow);
     }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Unicode surrogate handling: invalid surrogates must not crash NormalizeText
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void NormalizeText_WithLoneHighSurrogate_DoesNotThrow()
+    {
+        // Arrange: lone high surrogate (U+D800) — invalid in UTF-16
+        var rawText = "Hello\ud800World";
+
+        // Act
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
+
+        // Assert: should replace surrogate with U+FFFD, not throw
+        result.Should().Contain("Hello");
+        result.Should().Contain("World");
+        result.Should().Contain("\uFFFD");
+    }
+
+    [Fact]
+    public void NormalizeText_WithLoneLowSurrogate_DoesNotThrow()
+    {
+        // Arrange: lone low surrogate (U+DC00) — invalid in UTF-16
+        var rawText = "Hello\udc00World";
+
+        // Act
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
+
+        // Assert
+        result.Should().Contain("Hello");
+        result.Should().Contain("World");
+        result.Should().Contain("\uFFFD");
+    }
+
+    [Fact]
+    public void NormalizeText_WithValidSurrogatePair_PreservesCharacter()
+    {
+        // Arrange: valid surrogate pair for emoji (U+1F3B2 = dice)
+        var rawText = "Game\U0001F3B2Night";
+
+        // Act
+        var result = PdfTextProcessingDomainService.NormalizeText(rawText);
+
+        // Assert: valid pair should be preserved
+        result.Should().Contain("Game");
+        result.Should().Contain("Night");
+        result.Should().NotContain("\uFFFD");
+    }
 }

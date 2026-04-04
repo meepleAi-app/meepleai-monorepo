@@ -1,43 +1,37 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
-using Api.Services;
 using Api.SharedKernel.Application.EventHandlers;
-using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
 /// Handles SharedGameSubmittedForApprovalEvent to notify admins when a game is submitted for approval.
-/// Creates in-app notifications and email notifications for all admin users.
+/// Dispatches via NotificationDispatcher for multi-channel delivery (in-app, email, Slack).
 /// Issue #4159: Backend - Approval Workflow Extension
 /// </summary>
 internal sealed class SharedGameSubmittedForApprovalNotificationHandler
     : DomainEventHandlerBase<SharedGameSubmittedForApprovalEvent>
 {
-    private readonly INotificationRepository _notificationRepository;
+    private readonly INotificationDispatcher _dispatcher;
     private readonly IUserRepository _userRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
-    private readonly IEmailService _emailService;
 
     public SharedGameSubmittedForApprovalNotificationHandler(
         MeepleAiDbContext dbContext,
-        INotificationRepository notificationRepository,
+        INotificationDispatcher dispatcher,
         IUserRepository userRepository,
         ISharedGameRepository sharedGameRepository,
-        IEmailService emailService,
         ILogger<SharedGameSubmittedForApprovalNotificationHandler> logger)
         : base(dbContext, logger)
     {
-        _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
-        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
     }
 
     protected override async Task HandleEventAsync(
@@ -64,14 +58,10 @@ internal sealed class SharedGameSubmittedForApprovalNotificationHandler
             return;
         }
 
-        // Get all admin users to notify (both Admin and SuperAdmin roles)
+        // Get all admin users to notify
         var adminDomainEntities = await _userRepository.GetAdminUsersAsync(cancellationToken).ConfigureAwait(false);
 
-        var adminUsers = adminDomainEntities
-            .Select(u => new { u.Id, Email = u.Email.Value, u.DisplayName })
-            .ToList();
-
-        if (adminUsers.Count == 0)
+        if (adminDomainEntities.Count == 0)
         {
             Logger.LogWarning(
                 "No admin users found to notify for shared game {GameId} submission",
@@ -81,63 +71,28 @@ internal sealed class SharedGameSubmittedForApprovalNotificationHandler
 
         Logger.LogInformation(
             "Notifying {AdminCount} admins about shared game {GameId} submission by {SubmitterName}",
-            adminUsers.Count,
+            adminDomainEntities.Count,
             domainEvent.GameId,
             submitter.DisplayName);
 
-        // Create in-app notification for each admin
-        foreach (var admin in adminUsers)
+        // Dispatch notification for each admin
+        foreach (var admin in adminDomainEntities)
         {
-            var notification = new Notification(
-                id: Guid.NewGuid(),
-                userId: admin.Id,
-                type: NotificationType.AdminSharedGameSubmitted,
-                severity: NotificationSeverity.Info,
-                title: "New Game Submitted for Approval",
-                message: $"{submitter.DisplayName} submitted \"{game.Title}\" for approval.",
-                link: $"/admin/approval-queue?gameId={domainEvent.GameId}",
-                metadata: JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
-                {
-                    ["gameId"] = domainEvent.GameId,
-                    ["gameTitle"] = game.Title,
-                    ["submittedBy"] = domainEvent.SubmittedBy,
-                    ["submitterName"] = submitter.DisplayName
-                }));
-
-            await _notificationRepository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
-
-            Logger.LogInformation(
-                "Created in-app notification for admin {AdminId} about game {GameTitle}",
-                admin.Id,
-                game.Title);
-
-            // Send email notification (best-effort, don't fail handler)
-            try
+            await _dispatcher.DispatchAsync(new NotificationMessage
             {
-                await _emailService.SendSharedGameSubmittedForApprovalEmailAsync(
-                    admin.Email,
-                    admin.DisplayName,
-                    game.Title,
-                    submitter.DisplayName,
-                    domainEvent.GameId,
-                    cancellationToken).ConfigureAwait(false);
-
-                Logger.LogInformation(
-                    "Sent approval notification email to admin {AdminEmail} for game {GameTitle}",
-                    admin.Email,
-                    game.Title);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            catch (Exception ex)
-            {
-                // Log error but don't fail handler - email is non-critical
-                Logger.LogError(
-                    ex,
-                    "Failed to send approval email to admin {AdminEmail}",
-                    admin.Email);
-            }
-#pragma warning restore CA1031
+                Type = NotificationType.AdminSharedGameSubmitted,
+                RecipientUserId = admin.Id,
+                Payload = new GenericPayload(
+                    "New Game Submitted for Approval",
+                    $"{submitter.DisplayName} submitted \"{game.Title}\" for approval."),
+                DeepLinkPath = $"/admin/approval-queue?gameId={domainEvent.GameId}"
+            }, cancellationToken).ConfigureAwait(false);
         }
+
+        Logger.LogInformation(
+            "Dispatched {Count} admin notifications for shared game {GameTitle} submission",
+            adminDomainEntities.Count,
+            game.Title);
     }
 
     protected override Guid? GetUserId(SharedGameSubmittedForApprovalEvent domainEvent) => domainEvent.SubmittedBy;

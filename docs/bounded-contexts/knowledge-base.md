@@ -389,18 +389,18 @@ BoundedContexts/KnowledgeBase/
 ## 🔗 Related Docs
 
 **Architecture**:
-- [ADR-001: Hybrid RAG](../01-architecture/adr/adr-001-hybrid-rag.md)
-- [ADR-005: Cosine Similarity Consensus](../01-architecture/adr/adr-005-cosine-similarity-consensus.md)
-- [ADR-007: Hybrid LLM](../01-architecture/adr/adr-007-hybrid-llm.md)
-- [ADR-008: Streaming CQRS](../01-architecture/adr/adr-008-streaming-cqrs-migration.md)
+- [ADR-001: Hybrid RAG](../architecture/adr/adr-001-hybrid-rag.md)
+- [ADR-005: Cosine Similarity Consensus](../architecture/adr/adr-005-cosine-similarity-consensus.md)
+- [ADR-007: Hybrid LLM](../architecture/adr/adr-007-hybrid-llm.md)
+- [ADR-008: Streaming CQRS](../architecture/adr/adr-008-streaming-cqrs-migration.md)
 
 **Other Contexts**:
 - [GameManagement](./game-management.md), [DocumentProcessing](./document-processing.md)
 - [UserLibrary](./user-library.md), [Administration](./administration.md)
 
 **Testing**:
-- [RAG Validation 20Q](../../05-testing/rag-validation-20q.md)
-- [Backend Testing Patterns](../../05-testing/backend/backend-testing-patterns.md)
+- [RAG Validation 20Q](../../testing/rag-validation-20q.md)
+- [Backend Testing Patterns](../../testing/backend/backend-testing-patterns.md)
 
 ---
 

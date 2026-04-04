@@ -11,9 +11,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 public record AskArbiterCommand : IRequest<ArbiterVerdictDto>
 {
     /// <summary>
-    /// The agent to use for the arbiter query (must have KB documents).
+    /// The agent definition to use for the arbiter query (must have KB documents).
     /// </summary>
-    public required Guid AgentId { get; init; }
+    public required Guid AgentDefinitionId { get; init; }
 
     /// <summary>
     /// The game session context for the dispute.

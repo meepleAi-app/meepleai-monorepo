@@ -3,7 +3,6 @@
  *
  * Centralized logging for API errors.
  * Sends structured logs with correlationId for distributed tracing.
- * Seq integration removed - replaced by HyperDX unified observability (Issue #1564).
  */
 
 /* eslint-disable no-console */
@@ -60,18 +59,9 @@ class ConsoleLogger implements Logger {
 }
 
 /**
- * Seq logger implementation removed (Issue #1564)
- *
- * SeqLogger class removed - frontend logs now use ConsoleLogger only.
- * Backend telemetry (logs, traces) is sent to HyperDX via OpenTelemetry.
- * For frontend observability, consider HyperDX browser SDK integration in future.
- */
-
-/**
  * Create logger instance
  *
  * Uses ConsoleLogger for all environments.
- * Seq integration removed (Issue #1564) - replaced by HyperDX for backend telemetry.
  */
 function createLogger(): Logger {
   return new ConsoleLogger();

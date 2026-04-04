@@ -40,9 +40,9 @@ vi.mock('@/components/ui/data-display/meeple-card', () => ({
     rating,
     loading,
     entityQuickActions,
-    navigateTo,
+    linkedEntities,
     showInfoButton,
-    infoHref,
+    entityId,
     infoTooltip,
     'data-testid': testId,
     ...rest
@@ -64,18 +64,18 @@ vi.mock('@/components/ui/data-display/meeple-card', () => ({
             {qa.label}
           </span>
         ))}
-      {/* Render nav links */}
-      {Array.isArray(navigateTo) &&
-        (navigateTo as Array<{ label: string; href: string }>).map((nl, i) => (
-          <a key={i} data-testid={`nav-link-${i}`} href={nl.href}>
-            {nl.label}
-          </a>
+      {/* Render linked entity pips */}
+      {Array.isArray(linkedEntities) &&
+        (linkedEntities as Array<{ entityType: string; count: number }>).map((le, i) => (
+          <span key={i} data-testid={`linked-entity-${i}`} data-entity-type={le.entityType}>
+            {le.entityType}
+          </span>
         ))}
       {/* Info button */}
-      {showInfoButton && (
-        <a data-testid="info-button" href={infoHref as string} title={infoTooltip as string}>
+      {showInfoButton && entityId && (
+        <button data-testid="info-button" title={infoTooltip as string}>
           Info
-        </a>
+        </button>
       )}
     </div>
   ),
@@ -181,38 +181,34 @@ describe('MeepleGameCatalogCard', () => {
     });
   });
 
-  // ── Navigation Links ───────────────────────────────────────────────────
+  // ── Linked Entities ────────────────────────────────────────────────────
 
-  describe('Navigation Links', () => {
-    it('renders exactly 1 nav link', () => {
+  describe('Linked Entities', () => {
+    it('renders 1 linked entity (kb) when not in library', () => {
       renderWithProviders(<MeepleGameCatalogCard game={mockGame} />);
-      expect(screen.getByTestId('nav-link-0')).toBeInTheDocument();
-      expect(screen.queryByTestId('nav-link-1')).not.toBeInTheDocument();
+      expect(screen.getByTestId('linked-entity-0')).toBeInTheDocument();
+      expect(screen.getByTestId('linked-entity-0')).toHaveAttribute('data-entity-type', 'kb');
+      expect(screen.queryByTestId('linked-entity-1')).not.toBeInTheDocument();
     });
 
-    it('shows "Regolamento" link pointing to game detail', () => {
+    it('renders multiple linked entities when in library', () => {
+      (useGameInLibraryStatus as Mock).mockReturnValue({
+        data: { inLibrary: true },
+        isLoading: false,
+      });
       renderWithProviders(<MeepleGameCatalogCard game={mockGame} />);
-      const link = screen.getByTestId('nav-link-0');
-      expect(link).toHaveTextContent('Regolamento');
-      expect(link).toHaveAttribute('href', '/games/game-1');
-    });
-
-    it('does NOT render KB, Agents, Chats, or Sessions links', () => {
-      renderWithProviders(<MeepleGameCatalogCard game={mockGame} />);
-      expect(screen.queryByText(/Knowledge Base/i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Agents/i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Chat/i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Sessions/i)).not.toBeInTheDocument();
+      expect(screen.getByTestId('linked-entity-0')).toBeInTheDocument();
+      expect(screen.getByTestId('linked-entity-1')).toBeInTheDocument();
     });
   });
 
   // ── Info Button ────────────────────────────────────────────────────────
 
   describe('Info Button', () => {
-    it('renders info button with correct href', () => {
+    it('renders info button with drawer trigger', () => {
       renderWithProviders(<MeepleGameCatalogCard game={mockGame} />);
       const info = screen.getByTestId('info-button');
-      expect(info).toHaveAttribute('href', '/games/game-1');
+      expect(info).toBeInTheDocument();
       expect(info).toHaveAttribute('title', 'Vai al dettaglio');
     });
   });
@@ -248,11 +244,11 @@ describe('MeepleGameCatalogCard', () => {
       expect(screen.getByTestId('card-rating')).toHaveTextContent('0');
     });
 
-    it('shows year and BGG in subtitle when available', () => {
+    it('shows year and ID in subtitle when available', () => {
       renderWithProviders(<MeepleGameCatalogCard game={mockGame} />);
       const subtitle = screen.getByTestId('card-subtitle');
       expect(subtitle).toHaveTextContent('1995');
-      expect(subtitle).toHaveTextContent('BGG: 13');
+      expect(subtitle).toHaveTextContent('ID: 13');
     });
   });
 

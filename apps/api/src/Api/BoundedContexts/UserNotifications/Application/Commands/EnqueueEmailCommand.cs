@@ -15,5 +15,6 @@ internal record EnqueueEmailCommand(
     string FileName,
     string? DocumentUrl = null,
     string? ErrorMessage = null,
-    int? RetryCount = null
+    int? RetryCount = null,
+    Guid? CorrelationId = null
 ) : ICommand<Guid>;

@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.EventHandlers;
 
@@ -139,7 +140,7 @@ public class UserActivityCacheInvalidationEventHandlerTests
         var exception = await Record.ExceptionAsync(() => _handler.Handle(evt, CancellationToken.None));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Error,
@@ -169,7 +170,7 @@ public class UserActivityCacheInvalidationEventHandlerTests
         var exception = await Record.ExceptionAsync(() => _handler.Handle(evt, CancellationToken.None));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Error,

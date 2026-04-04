@@ -29,6 +29,7 @@ export const createAgentDefinitionSchema = z.object({
   prompts: z.array(promptTemplateSchema).max(20).optional().default([]),
   tools: z.array(toolConfigSchema).max(50).optional().default([]),
   kbCardIds: z.array(z.string().uuid()).optional().default([]),
+  chatLanguage: z.string().max(10).optional().default('auto'),
 });
 
 // Update Agent Definition Schema
@@ -61,7 +62,9 @@ export const agentDefinitionDtoSchema = z.object({
   prompts: z.array(promptTemplateSchema),
   tools: z.array(toolConfigSchema),
   kbCardIds: z.array(z.string().uuid()).optional().default([]),
+  chatLanguage: z.string().optional().default('auto'),
   isActive: z.boolean(),
+  status: z.number().optional().default(0),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime().nullable(),
 });

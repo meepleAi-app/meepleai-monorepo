@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Validators;
 using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Validators.ChatSession;
 
@@ -165,7 +166,7 @@ public class AddChatSessionMessageCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.SessionId);
         result.ShouldHaveValidationErrorFor(x => x.Role);
         result.ShouldHaveValidationErrorFor(x => x.Content);
-        Assert.Equal(3, result.Errors.Count);
+        result.Errors.Count.Should().Be(3);
     }
 
     [Theory]

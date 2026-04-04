@@ -205,6 +205,9 @@ describe('AuthClient - Profile & Preferences', () => {
           emailNotifications: true,
           theme: 'dark',
           dataRetentionDays: 30,
+          showProfile: true,
+          showActivity: true,
+          showLibrary: true,
         };
 
         mockFetch.mockResolvedValueOnce({

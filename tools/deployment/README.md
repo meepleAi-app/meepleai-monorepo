@@ -61,7 +61,7 @@ IMAGE_TAG=v1.2.3 bash tools/deployment/deploy-staging.sh
 ```
 
 **Environment Variables:**
-- `DOCKER_REGISTRY` - Docker registry URL (default: `ghcr.io/degrassiaaron`)
+- `DOCKER_REGISTRY` - Docker registry URL (default: `ghcr.io/meepleai-app`)
 - `IMAGE_TAG` - Image tag (default: git commit hash)
 - `STAGING_HOST` - Staging hostname (default: `staging.meepleai.dev`)
 - `REQUIRE_TESTS` - Run tests before deploy (default: `true`)
@@ -321,7 +321,7 @@ bash tools/deployment/rollback.sh production
 Create `.env.deployment` file:
 ```bash
 # Docker Registry
-DOCKER_REGISTRY=ghcr.io/degrassiaaron
+DOCKER_REGISTRY=ghcr.io/meepleai-app
 
 # Staging
 STAGING_HOST=staging.meepleai.dev
@@ -431,7 +431,7 @@ curl https://api.staging.meepleai.dev/health
 **Rollback fails:**
 ```bash
 # Manually pull previous image
-docker pull ghcr.io/degrassiaaron/meepleai-api:staging-latest
+docker pull ghcr.io/meepleai-app/meepleai-api:staging-latest
 
 # Check deployment history
 cat /tmp/meepleai-last-staging-deployment.txt

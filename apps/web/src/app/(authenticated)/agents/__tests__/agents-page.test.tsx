@@ -50,6 +50,36 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+// Mock CardBrowser (requires CardBrowserProvider context)
+vi.mock('@/components/ui/data-display/meeple-card-browser', () => ({
+  useCardBrowser: () => ({ open: vi.fn() }),
+  CardBrowserProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Mock stores and hooks that don't need real implementations
+vi.mock('@/stores/use-card-hand', () => ({
+  useCardHand: () => ({ drawCard: vi.fn() }),
+}));
+
+vi.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({ isMobile: false }),
+}));
+
+vi.mock('@/hooks/useEntityActions', () => ({
+  useEntityActions: () => ({ quickActions: [] }),
+}));
+
+vi.mock('@/hooks/useInfiniteScroll', () => ({
+  useInfiniteScroll: () => ({ current: null }),
+}));
+
+vi.mock('@/components/ui/data-display/ListPageHeader', () => ({
+  ListPageHeader: ({ count }: { count: number }) => (
+    <div>{count === 1 ? '1 agent found' : `${count} agents found`}</div>
+  ),
+  useViewPreference: () => ['grid', vi.fn()],
+}));
+
 // Mock hooks
 vi.mock('@/hooks/queries/useAgents', () => ({
   useAgents: vi.fn(),
@@ -64,7 +94,17 @@ vi.mock('@/hooks/queries/useAgentSlots', () => ({
 vi.mock('@/hooks/queries/useAgentTypologies', () => ({
   useApprovedTypologies: () => ({
     data: [
-      { id: 'typ-1', name: 'Rules Helper', description: 'Helps with rules', defaultStrategyName: 'Balanced', basePrompt: '', status: 'Approved', createdBy: '', isDeleted: false, createdAt: '' },
+      {
+        id: 'typ-1',
+        name: 'Rules Helper',
+        description: 'Helps with rules',
+        defaultStrategyName: 'Balanced',
+        basePrompt: '',
+        status: 'Approved',
+        createdBy: '',
+        isDeleted: false,
+        createdAt: '',
+      },
     ],
     isLoading: false,
     error: null,
@@ -74,7 +114,15 @@ vi.mock('@/hooks/queries/useAgentTypologies', () => ({
 vi.mock('@/hooks/queries/useRagStrategies', () => ({
   useRagStrategies: () => ({
     data: [
-      { name: 'Balanced', displayName: 'Balanced', complexity: 1, description: 'Balanced', useCase: 'General', estimatedTokens: 1000, requiresAdmin: false },
+      {
+        name: 'Balanced',
+        displayName: 'Balanced',
+        complexity: 1,
+        description: 'Balanced',
+        useCase: 'General',
+        estimatedTokens: 1000,
+        requiresAdmin: false,
+      },
     ],
     isLoading: false,
     error: null,
@@ -86,8 +134,20 @@ import { useAgents } from '@/hooks/queries/useAgents';
 import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 
 const mockAgents = [
-  { id: 'agent-1', name: 'RulesMaster', type: 'Tutor', strategyName: 'Balanced', invocationCount: 42 },
-  { id: 'agent-2', name: 'StrategyBot', type: 'Arbitro', strategyName: 'Fast', invocationCount: 10 },
+  {
+    id: 'agent-1',
+    name: 'RulesMaster',
+    type: 'Tutor',
+    strategyName: 'Balanced',
+    invocationCount: 42,
+  },
+  {
+    id: 'agent-2',
+    name: 'StrategyBot',
+    type: 'Arbitro',
+    strategyName: 'Fast',
+    invocationCount: 10,
+  },
 ];
 
 const mockSlotsData = {
@@ -95,7 +155,13 @@ const mockSlotsData = {
   used: 1,
   available: 2,
   slots: [
-    { slotIndex: 0, agentId: 'agent-1', agentName: 'RulesMaster', gameId: 'g-1', status: 'active' as const },
+    {
+      slotIndex: 0,
+      agentId: 'agent-1',
+      agentName: 'RulesMaster',
+      gameId: 'g-1',
+      status: 'active' as const,
+    },
     { slotIndex: 1, agentId: null, agentName: null, gameId: null, status: 'available' as const },
     { slotIndex: 2, agentId: null, agentName: null, gameId: null, status: 'available' as const },
   ],
@@ -173,7 +239,9 @@ describe('AgentsPage', () => {
       fireEvent.click(screen.getByText('Crea Agente'));
 
       await waitFor(() => {
-        expect(screen.getByText('Crea Agente', { selector: '[class*="SheetTitle"], h2' })).toBeInTheDocument();
+        expect(
+          screen.getByText('Crea Agente', { selector: '[class*="SheetTitle"], h2' })
+        ).toBeInTheDocument();
       });
     });
 

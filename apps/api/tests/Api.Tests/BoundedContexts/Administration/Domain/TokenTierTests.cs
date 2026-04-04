@@ -60,7 +60,7 @@ public sealed class TokenTierTests
     }
 
     [Fact]
-    public void UpdateLimits_WithValidData_ShouldUpdateLimitsAndTimestamp()
+    public async Task UpdateLimits_WithValidData_ShouldUpdateLimitsAndTimestamp()
     {
         // Arrange
         var tier = TokenTier.CreateFreeTier();
@@ -69,7 +69,7 @@ public sealed class TokenTierTests
 
         // Act
         var beforeUpdate = DateTime.UtcNow;
-        Thread.Sleep(10); // Ensure timestamp difference
+        await Task.Delay(50); // Ensure timestamp difference
         tier.UpdateLimits(newLimits);
 
         // Assert
@@ -78,7 +78,7 @@ public sealed class TokenTierTests
     }
 
     [Fact]
-    public void UpdatePricing_WithValidData_ShouldUpdatePricingAndTimestamp()
+    public async Task UpdatePricing_WithValidData_ShouldUpdatePricingAndTimestamp()
     {
         // Arrange
         var tier = TokenTier.CreateFreeTier();
@@ -87,7 +87,7 @@ public sealed class TokenTierTests
 
         // Act
         var beforeUpdate = DateTime.UtcNow;
-        Thread.Sleep(10); // Ensure timestamp difference
+        await Task.Delay(50); // Ensure timestamp difference
         tier.UpdatePricing(newPricing);
 
         // Assert
@@ -96,7 +96,7 @@ public sealed class TokenTierTests
     }
 
     [Fact]
-    public void Deactivate_ShouldSetIsActiveToFalseAndUpdateTimestamp()
+    public async Task Deactivate_ShouldSetIsActiveToFalseAndUpdateTimestamp()
     {
         // Arrange
         var tier = TokenTier.CreateFreeTier();
@@ -104,7 +104,7 @@ public sealed class TokenTierTests
 
         // Act
         var beforeUpdate = DateTime.UtcNow;
-        Thread.Sleep(10);
+        await Task.Delay(50);
         tier.Deactivate();
 
         // Assert

@@ -16,12 +16,12 @@
 
 import {
   Bot,
+  Calendar,
   CheckCircle2,
   Info,
   AlertTriangle,
   XCircle,
   FileCheck,
-  MessageSquare,
   Link as LinkIcon,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -29,7 +29,7 @@ import { useRouter } from 'next/navigation';
 import { PdfStatusBadge } from '@/components/pdf';
 import type { NotificationDto } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { useNotificationStore } from '@/store/notification/store';
+import { useNotificationStore } from '@/stores/notification/store';
 
 export interface NotificationItemProps {
   notification: NotificationDto;
@@ -45,9 +45,10 @@ export function NotificationItem({ notification }: NotificationItemProps) {
       void markAsRead(notification.id);
     }
 
-    // Navigate to link if exists
-    if (notification.link) {
-      router.push(notification.link);
+    // Navigate to link if exists, otherwise resolve deep link from metadata
+    const target = notification.link ?? getNotificationDeepLink(notification);
+    if (target) {
+      router.push(target);
     }
   };
 
@@ -59,10 +60,10 @@ export function NotificationItem({ notification }: NotificationItemProps) {
 
   // Check if PDF-related notification (Issue #4217)
   const isPdfNotification =
-    notification.type === 'pdf_upload_completed' || notification.type === 'processing_failed';
+    notification.type === 'document_ready' || notification.type === 'document_processing_failed';
 
   // Check if KB indexing complete notification (Issue #4947)
-  const isKbReady = notification.type === 'processing_job_completed';
+  const isKbReady = notification.type === 'document_ready';
 
   return (
     <button
@@ -89,7 +90,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
             {/* New: PdfStatusBadge for PDF notifications (Issue #4217) */}
             {isPdfNotification && (
               <PdfStatusBadge
-                state={notification.type === 'pdf_upload_completed' ? 'ready' : 'failed'}
+                state={notification.type === 'document_ready' ? 'ready' : 'failed'}
                 variant="compact"
                 showIcon={false}
               />
@@ -153,19 +154,49 @@ function getSeverityConfig(severity: string): {
 
 function getTypeIcon(type: string): React.ComponentType<{ className?: string }> {
   switch (type) {
-    case 'pdf_upload_completed':
+    case 'document_ready':
     case 'rule_spec_generated':
       return FileCheck;
-    case 'new_comment':
-      return MessageSquare;
     case 'shared_link_accessed':
       return LinkIcon;
-    case 'processing_failed':
+    case 'document_processing_failed':
       return XCircle;
-    case 'processing_job_completed':
+    case 'agent_ready':
       return Bot;
+    case 'game_night_invitation':
+    case 'game_night_rsvp_received':
+    case 'game_night_published':
+    case 'game_night_cancelled':
+    case 'game_night_reminder':
+      return Calendar;
     default:
       return Info;
+  }
+}
+
+/**
+ * Resolves a deep link from notification metadata when no explicit link is set.
+ * Supports pdf_upload_completed → private game Smart Hub page.
+ */
+export function getNotificationDeepLink(notification: NotificationDto): string | null {
+  if (!notification.metadata) return null;
+
+  try {
+    const meta = JSON.parse(notification.metadata) as Record<string, unknown>;
+
+    switch (notification.type) {
+      case 'document_ready': {
+        const privateGameId = meta.privateGameId as string | undefined;
+        if (privateGameId) {
+          return `/library/private/${privateGameId}`;
+        }
+        return null;
+      }
+      default:
+        return null;
+    }
+  } catch {
+    return null;
   }
 }
 

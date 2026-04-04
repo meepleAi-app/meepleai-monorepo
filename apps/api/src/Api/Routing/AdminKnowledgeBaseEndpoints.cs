@@ -1,8 +1,11 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
-using Api.Services;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Routing;
 
@@ -18,64 +21,30 @@ internal static class AdminKnowledgeBaseEndpoints
             .WithTags("Admin", "KnowledgeBase")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 
-        // GET /api/v1/admin/kb/vector-collections (#4655, #4785)
-        kbGroup.MapGet("/vector-collections", async (
-            IQdrantClientAdapter qdrantClient,
-            ILogger<Program> logger,
-            CancellationToken cancellationToken) =>
+        // GET /api/v1/admin/kb/vector-stats — pgvector statistics grouped by game
+        kbGroup.MapGet("/vector-stats", async (IMediator mediator, CancellationToken ct) =>
         {
-            try
-            {
-                var collectionNames = await qdrantClient.ListCollectionsAsync(cancellationToken)
-                    .ConfigureAwait(false);
+            var result = await mediator.Send(new GetVectorStatsQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetVectorStats")
+        .WithSummary("Get pgvector statistics grouped by game");
 
-                var collections = new List<object>();
-                foreach (var name in collectionNames)
-                {
-                    try
-                    {
-                        var info = await qdrantClient.GetCollectionInfoAsync(name, cancellationToken)
-                            .ConfigureAwait(false);
-
-                        var vectorCount = (long)info.PointsCount;
-                        var dimensions = 384; // Default for sentence-transformers
-                        var memoryBytes = vectorCount * dimensions * 4L;
-                        var indexedCount = (long)info.IndexedVectorsCount;
-                        var health = vectorCount > 0 && indexedCount > 0
-                            ? (int)Math.Min(100, (indexedCount * 100) / Math.Max(1, vectorCount))
-                            : 0;
-
-                        collections.Add(new
-                        {
-                            name,
-                            vectorCount,
-                            dimensions,
-                            storage = FormatBytes(memoryBytes),
-                            health,
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Failed to get info for collection {CollectionName}", name);
-                        collections.Add(new
-                        {
-                            name,
-                            vectorCount = 0L,
-                            dimensions = 0,
-                            storage = "N/A",
-                            health = 0,
-                        });
-                    }
-                }
-
-                return Results.Ok(new { collections });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to list Qdrant collections");
-                return Results.Ok(new { collections = Array.Empty<object>() });
-            }
-        });
+        // POST /api/v1/admin/kb/vector-search — semantic search over pgvector embeddings
+        kbGroup.MapPost("/vector-search", async (
+            [FromBody] VectorSearchRequest request,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new VectorSemanticSearchQuery(
+                request.Query,
+                Math.Clamp(request.Limit ?? 10, 1, 100),
+                request.GameId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("VectorSearch")
+        .WithSummary("Semantic search over pgvector embeddings");
 
         // GET /api/v1/admin/kb/processing-queue (#4655, #4785)
         kbGroup.MapGet("/processing-queue", async (
@@ -101,6 +70,25 @@ internal static class AdminKnowledgeBaseEndpoints
             return Results.Ok(result);
         });
 
+        // POST /api/v1/admin/kb/agents/estimate-cost - Pre-chat cost estimation
+        kbGroup.MapPost("/agents/estimate-cost", async (
+            [FromBody] EstimateAgentCostByDocumentsRequest request,
+            IMediator mediator,
+            CancellationToken cancellationToken) =>
+        {
+            var query = new EstimateAgentCostQuery(
+                request.GameId,
+                request.DocumentIds,
+                request.StrategyName ?? "HybridSearch");
+
+            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("EstimateAgentCostByDocuments")
+        .WithSummary("Estimate token cost before starting a RAG chat session")
+        .WithDescription("Calculates estimated cost per query based on document chunks, model pricing, and retrieval strategy.")
+        .Produces<AgentCostEstimateDto>();
+
         // GET /api/v1/admin/shared-games (extended for admin - #4654, #4785)
         var gamesGroup = group.MapGroup("/admin/shared-games")
             .WithTags("Admin", "SharedGames")
@@ -119,16 +107,22 @@ internal static class AdminKnowledgeBaseEndpoints
         return group;
     }
 
-    private static string FormatBytes(long bytes)
-    {
-        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
-        double len = bytes;
-        var order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len /= 1024;
-        }
-        return $"{len:0.##} {sizes[order]}";
-    }
 }
+
+/// <summary>
+/// Request model for semantic vector search.
+/// </summary>
+internal record VectorSearchRequest(
+    string Query,
+    int? Limit,
+    Guid? GameId
+);
+
+/// <summary>
+/// Request model for pre-chat agent cost estimation by document selection.
+/// </summary>
+internal record EstimateAgentCostByDocumentsRequest(
+    Guid GameId,
+    List<Guid> DocumentIds,
+    string? StrategyName
+);

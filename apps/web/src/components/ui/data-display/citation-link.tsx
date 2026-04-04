@@ -9,6 +9,7 @@
 
 import React from 'react';
 
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 import { Badge } from './badge';
@@ -92,7 +93,7 @@ export const CitationLink = React.memo<CitationLinkProps>(
   ({ pageNumber, documentName, onClick, className }) => {
     // Validate page number
     if (!validatePageNumber(pageNumber)) {
-      console.warn(`[CitationLink] Invalid page number: ${pageNumber}`);
+      logger.warn(`[CitationLink] Invalid page number: ${pageNumber}`);
       return null;
     }
 

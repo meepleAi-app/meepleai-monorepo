@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -25,108 +26,114 @@ public class TokenUsageTests
             provider: "OpenRouter");
 
         // Assert
-        Assert.Equal(100, tokenUsage.PromptTokens);
-        Assert.Equal(50, tokenUsage.CompletionTokens);
-        Assert.Equal(150, tokenUsage.TotalTokens);
-        Assert.Equal(0.002m, tokenUsage.EstimatedCost);
-        Assert.Equal("openai/gpt-4o-mini", tokenUsage.ModelId);
-        Assert.Equal("OpenRouter", tokenUsage.Provider);
+        tokenUsage.PromptTokens.Should().Be(100);
+        tokenUsage.CompletionTokens.Should().Be(50);
+        tokenUsage.TotalTokens.Should().Be(150);
+        tokenUsage.EstimatedCost.Should().Be(0.002m);
+        tokenUsage.ModelId.Should().Be("openai/gpt-4o-mini");
+        tokenUsage.Provider.Should().Be("OpenRouter");
     }
 
     [Fact]
     public void Constructor_NegativePromptTokens_ThrowsArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => new TokenUsage(
+        Action act = () => new TokenUsage(
             promptTokens: -1,
             completionTokens: 50,
             totalTokens: 150,
             estimatedCost: 0.002m,
             modelId: "openai/gpt-4o-mini",
-            provider: "OpenRouter"));
+            provider: "OpenRouter");
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Prompt tokens cannot be negative", exception.Message);
-        Assert.Equal("promptTokens", exception.ParamName);
+        exception.Message.Should().Contain("Prompt tokens cannot be negative");
+        exception.ParamName.Should().Be("promptTokens");
     }
 
     [Fact]
     public void Constructor_NegativeCompletionTokens_ThrowsArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => new TokenUsage(
+        Action act = () => new TokenUsage(
             promptTokens: 100,
             completionTokens: -1,
             totalTokens: 150,
             estimatedCost: 0.002m,
             modelId: "openai/gpt-4o-mini",
-            provider: "OpenRouter"));
+            provider: "OpenRouter");
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Completion tokens cannot be negative", exception.Message);
-        Assert.Equal("completionTokens", exception.ParamName);
+        exception.Message.Should().Contain("Completion tokens cannot be negative");
+        exception.ParamName.Should().Be("completionTokens");
     }
 
     [Fact]
     public void Constructor_NegativeTotalTokens_ThrowsArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => new TokenUsage(
+        Action act = () => new TokenUsage(
             promptTokens: 100,
             completionTokens: 50,
             totalTokens: -1,
             estimatedCost: 0.002m,
             modelId: "openai/gpt-4o-mini",
-            provider: "OpenRouter"));
+            provider: "OpenRouter");
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Total tokens cannot be negative", exception.Message);
-        Assert.Equal("totalTokens", exception.ParamName);
+        exception.Message.Should().Contain("Total tokens cannot be negative");
+        exception.ParamName.Should().Be("totalTokens");
     }
 
     [Fact]
     public void Constructor_NegativeCost_ThrowsArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => new TokenUsage(
+        Action act = () => new TokenUsage(
             promptTokens: 100,
             completionTokens: 50,
             totalTokens: 150,
             estimatedCost: -0.001m,
             modelId: "openai/gpt-4o-mini",
-            provider: "OpenRouter"));
+            provider: "OpenRouter");
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Estimated cost cannot be negative", exception.Message);
-        Assert.Equal("estimatedCost", exception.ParamName);
+        exception.Message.Should().Contain("Estimated cost cannot be negative");
+        exception.ParamName.Should().Be("estimatedCost");
     }
 
     [Fact]
     public void Constructor_EmptyModelId_ThrowsArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => new TokenUsage(
+        Action act = () => new TokenUsage(
             promptTokens: 100,
             completionTokens: 50,
             totalTokens: 150,
             estimatedCost: 0.002m,
             modelId: "",
-            provider: "OpenRouter"));
+            provider: "OpenRouter");
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Model ID cannot be empty", exception.Message);
-        Assert.Equal("modelId", exception.ParamName);
+        exception.Message.Should().Contain("Model ID cannot be empty");
+        exception.ParamName.Should().Be("modelId");
     }
 
     [Fact]
     public void Constructor_EmptyProvider_ThrowsArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => new TokenUsage(
+        Action act = () => new TokenUsage(
             promptTokens: 100,
             completionTokens: 50,
             totalTokens: 150,
             estimatedCost: 0.002m,
             modelId: "openai/gpt-4o-mini",
-            provider: ""));
+            provider: "");
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Provider cannot be empty", exception.Message);
-        Assert.Equal("provider", exception.ParamName);
+        exception.Message.Should().Contain("Provider cannot be empty");
+        exception.ParamName.Should().Be("provider");
     }
 
     [Fact]
@@ -136,12 +143,12 @@ public class TokenUsageTests
         var empty = TokenUsage.Empty;
 
         // Assert
-        Assert.Equal(0, empty.PromptTokens);
-        Assert.Equal(0, empty.CompletionTokens);
-        Assert.Equal(0, empty.TotalTokens);
-        Assert.Equal(0m, empty.EstimatedCost);
-        Assert.Equal("none", empty.ModelId);
-        Assert.Equal("none", empty.Provider);
+        empty.PromptTokens.Should().Be(0);
+        empty.CompletionTokens.Should().Be(0);
+        empty.TotalTokens.Should().Be(0);
+        empty.EstimatedCost.Should().Be(0m);
+        empty.ModelId.Should().Be("none");
+        empty.Provider.Should().Be("none");
     }
 
     [Fact]
@@ -165,12 +172,12 @@ public class TokenUsageTests
         var tokenUsage = TokenUsage.FromLlmResult(llmUsage, llmCost);
 
         // Assert
-        Assert.Equal(100, tokenUsage.PromptTokens);
-        Assert.Equal(50, tokenUsage.CompletionTokens);
-        Assert.Equal(150, tokenUsage.TotalTokens);
-        Assert.Equal(0.002m, tokenUsage.EstimatedCost);
-        Assert.Equal("openai/gpt-4o-mini", tokenUsage.ModelId);
-        Assert.Equal("OpenRouter", tokenUsage.Provider);
+        tokenUsage.PromptTokens.Should().Be(100);
+        tokenUsage.CompletionTokens.Should().Be(50);
+        tokenUsage.TotalTokens.Should().Be(150);
+        tokenUsage.EstimatedCost.Should().Be(0.002m);
+        tokenUsage.ModelId.Should().Be("openai/gpt-4o-mini");
+        tokenUsage.Provider.Should().Be("OpenRouter");
     }
 
     [Fact]
@@ -181,9 +188,9 @@ public class TokenUsageTests
         var tokenUsage2 = new TokenUsage(100, 50, 150, 0.002m, "openai/gpt-4o-mini", "OpenRouter");
 
         // Assert
-        Assert.Equal(tokenUsage1, tokenUsage2);
-        Assert.True(tokenUsage1 == tokenUsage2);
-        Assert.False(tokenUsage1 != tokenUsage2);
+        tokenUsage2.Should().Be(tokenUsage1);
+        (tokenUsage1 == tokenUsage2).Should().BeTrue();
+        (tokenUsage1 != tokenUsage2).Should().BeFalse();
     }
 
     [Fact]
@@ -194,9 +201,9 @@ public class TokenUsageTests
         var tokenUsage2 = new TokenUsage(200, 100, 300, 0.004m, "openai/gpt-4o-mini", "OpenRouter");
 
         // Assert
-        Assert.NotEqual(tokenUsage1, tokenUsage2);
-        Assert.False(tokenUsage1 == tokenUsage2);
-        Assert.True(tokenUsage1 != tokenUsage2);
+        tokenUsage2.Should().NotBe(tokenUsage1);
+        (tokenUsage1 == tokenUsage2).Should().BeFalse();
+        (tokenUsage1 != tokenUsage2).Should().BeTrue();
     }
 
     [Fact]
@@ -209,14 +216,14 @@ public class TokenUsageTests
         var result = tokenUsage.ToString();
 
         // Assert - Verify key components are present in output
-        Assert.Contains("Total=150", result);
-        Assert.Contains("Prompt=100", result);
-        Assert.Contains("Completion=50", result);
-        Assert.Contains("Cost=", result);
-        Assert.Contains("Model=openai/gpt-4o-mini", result);
-        Assert.Contains("Provider=OpenRouter", result);
+        result.Should().Contain("Total=150");
+        result.Should().Contain("Prompt=100");
+        result.Should().Contain("Completion=50");
+        result.Should().Contain("Cost=");
+        result.Should().Contain("Model=openai/gpt-4o-mini");
+        result.Should().Contain("Provider=OpenRouter");
         // Verify it's in TokenUsage format
-        Assert.StartsWith("TokenUsage(", result);
+        result.Should().StartWith("TokenUsage(");
     }
 
     [Fact]
@@ -232,8 +239,8 @@ public class TokenUsageTests
             provider: "  OpenRouter  ");
 
         // Assert
-        Assert.Equal("openai/gpt-4o-mini", tokenUsage.ModelId);
-        Assert.Equal("OpenRouter", tokenUsage.Provider);
+        tokenUsage.ModelId.Should().Be("openai/gpt-4o-mini");
+        tokenUsage.Provider.Should().Be("OpenRouter");
     }
 
     [Theory]
@@ -256,10 +263,10 @@ public class TokenUsageTests
             "OpenRouter");
 
         // Assert
-        Assert.Equal(promptTokens, tokenUsage.PromptTokens);
-        Assert.Equal(completionTokens, tokenUsage.CompletionTokens);
-        Assert.Equal(totalTokens, tokenUsage.TotalTokens);
-        Assert.Equal((decimal)cost, tokenUsage.EstimatedCost);
+        tokenUsage.PromptTokens.Should().Be(promptTokens);
+        tokenUsage.CompletionTokens.Should().Be(completionTokens);
+        tokenUsage.TotalTokens.Should().Be(totalTokens);
+        tokenUsage.EstimatedCost.Should().Be((decimal)cost);
     }
 }
 

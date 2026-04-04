@@ -10,7 +10,6 @@
 
 import React from 'react';
 
-
 import {
   Tooltip,
   TooltipContent,
@@ -75,16 +74,13 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
     return null;
   }
 
-  // eslint-disable-next-line security/detect-object-injection
   const entityColor = customColor || entityColors[entityType].hsl;
 
   // Mobile: 44px touch targets (WCAG), Desktop: compact sizes
-  const buttonSize = size === 'sm'
-    ? 'w-11 h-11 md:w-[30px] md:h-[30px]'
-    : 'w-11 h-11 md:w-[36px] md:h-[36px]';
-  const iconSize = size === 'sm'
-    ? 'w-5 h-5 md:w-[15px] md:h-[15px]'
-    : 'w-5 h-5 md:w-[18px] md:h-[18px]';
+  const buttonSize =
+    size === 'sm' ? 'w-11 h-11 md:w-[30px] md:h-[30px]' : 'w-11 h-11 md:w-[36px] md:h-[36px]';
+  const iconSize =
+    size === 'sm' ? 'w-5 h-5 md:w-[15px] md:h-[15px]' : 'w-5 h-5 md:w-[18px] md:h-[18px]';
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -105,7 +101,7 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
                * See: https://www.radix-ui.com/primitives/docs/components/tooltip#with-disabled-button
                */}
               <button
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   if (!action.disabled) {
                     action.onClick();
@@ -115,6 +111,7 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
                 className={cn(
                   // Base styles
                   buttonSize,
+                  'group',
                   'rounded-full flex items-center justify-center',
                   'border border-white/50',
                   'bg-white/80 backdrop-blur-[8px]',
@@ -128,30 +125,33 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
                   action.disabled && 'opacity-50 cursor-not-allowed',
                   // Mobile: always visible. Desktop: fade in on card hover
                   'md:opacity-0 md:pointer-events-none',
-                  'md:group-hover:opacity-100 md:group-hover:pointer-events-auto',
+                  'md:group-hover:opacity-100 md:group-hover:pointer-events-auto'
                 )}
                 style={{
                   transitionDelay: `${delay}ms`,
                   // Entity-colored focus ring
                   ['--tw-ring-color' as string]: `hsl(${entityColor})`,
+                  // Entity-colored icon on hover
+                  ['--hover-color' as string]: `hsl(${entityColor})`,
                 }}
-                aria-label={action.disabled && action.disabledTooltip ? action.disabledTooltip : action.label}
+                aria-label={
+                  action.disabled && action.disabledTooltip ? action.disabledTooltip : action.label
+                }
               >
                 <Icon
                   className={cn(
                     iconSize,
-                    'stroke-slate-600 transition-colors duration-200',
+                    'transition-colors duration-200',
+                    !action.disabled
+                      ? 'text-slate-600 group-hover:text-[var(--hover-color)]'
+                      : 'stroke-slate-600 opacity-50'
                   )}
                   strokeWidth={2}
-                  style={{
-                    // Entity-colored icon on hover
-                    ['--hover-color' as string]: `hsl(${entityColor})`,
-                  }}
                 />
 
                 {/* Entity-colored hover glow */}
                 <span
-                  className="absolute inset-0 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+                  className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                   style={{
                     boxShadow: `0 0 0 2px hsl(${entityColor})`,
                   }}

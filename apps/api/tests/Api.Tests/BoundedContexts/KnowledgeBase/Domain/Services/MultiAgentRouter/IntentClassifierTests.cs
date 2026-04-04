@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 
@@ -25,9 +26,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.MoveValidation, result.Intent);
-        Assert.True(result.Confidence >= 0.70,
-            $"Expected confidence >= 0.70, got {result.Confidence:F3} for query: '{query}'");
+        result.Intent.Should().Be(AgentIntent.MoveValidation);
+        (result.Confidence >= 0.70).Should().BeTrue($"Expected confidence >= 0.70, got {result.Confidence:F3} for query: '{query}'");
     }
 
     [Theory]
@@ -38,9 +38,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.MoveValidation, result.Intent);
-        Assert.True(result.Confidence >= 0.85,
-            $"Expected high confidence >= 0.85 for clear query, got {result.Confidence:F3}");
+        result.Intent.Should().Be(AgentIntent.MoveValidation);
+        (result.Confidence >= 0.85).Should().BeTrue($"Expected high confidence >= 0.85 for clear query, got {result.Confidence:F3}");
     }
 
     #endregion
@@ -59,9 +58,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.StrategicAnalysis, result.Intent);
-        Assert.True(result.Confidence >= 0.70,
-            $"Expected confidence >= 0.70, got {result.Confidence:F3} for query: '{query}'");
+        result.Intent.Should().Be(AgentIntent.StrategicAnalysis);
+        (result.Confidence >= 0.70).Should().BeTrue($"Expected confidence >= 0.70, got {result.Confidence:F3} for query: '{query}'");
     }
 
     [Theory]
@@ -71,9 +69,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.StrategicAnalysis, result.Intent);
-        Assert.True(result.Confidence >= 0.85,
-            $"Expected high confidence >= 0.85 for clear query, got {result.Confidence:F3}");
+        result.Intent.Should().Be(AgentIntent.StrategicAnalysis);
+        (result.Confidence >= 0.85).Should().BeTrue($"Expected high confidence >= 0.85 for clear query, got {result.Confidence:F3}");
     }
 
     #endregion
@@ -89,9 +86,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.RulesQuestion, result.Intent);
-        Assert.True(result.Confidence >= 0.60,
-            $"Expected confidence >= 0.60, got {result.Confidence:F3} for query: '{query}'");
+        result.Intent.Should().Be(AgentIntent.RulesQuestion);
+        (result.Confidence >= 0.60).Should().BeTrue($"Expected confidence >= 0.60, got {result.Confidence:F3} for query: '{query}'");
     }
 
     #endregion
@@ -110,9 +106,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.Tutorial, result.Intent);
-        Assert.True(result.Confidence >= 0.70,
-            $"Expected confidence >= 0.70, got {result.Confidence:F3} for query: '{query}'");
+        result.Intent.Should().Be(AgentIntent.Tutorial);
+        (result.Confidence >= 0.70).Should().BeTrue($"Expected confidence >= 0.70, got {result.Confidence:F3} for query: '{query}'");
     }
 
     [Theory]
@@ -122,9 +117,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.Tutorial, result.Intent);
-        Assert.True(result.Confidence >= 0.85,
-            $"Expected high confidence >= 0.85 for clear query, got {result.Confidence:F3}");
+        result.Intent.Should().Be(AgentIntent.Tutorial);
+        (result.Confidence >= 0.85).Should().BeTrue($"Expected high confidence >= 0.85 for clear query, got {result.Confidence:F3}");
     }
 
     #endregion
@@ -140,7 +134,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.Unknown, result.Intent);
+        result.Intent.Should().Be(AgentIntent.Unknown);
     }
 
     [Fact]
@@ -148,8 +142,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery("");
 
-        Assert.Equal(AgentIntent.Unknown, result.Intent);
-        Assert.Equal(0.0, result.Confidence);
+        result.Intent.Should().Be(AgentIntent.Unknown);
+        result.Confidence.Should().Be(0.0);
     }
 
     [Fact]
@@ -157,8 +151,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(null!);
 
-        Assert.Equal(AgentIntent.Unknown, result.Intent);
-        Assert.Equal(0.0, result.Confidence);
+        result.Intent.Should().Be(AgentIntent.Unknown);
+        result.Confidence.Should().Be(0.0);
     }
 
     [Fact]
@@ -166,7 +160,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery("   ");
 
-        Assert.Equal(AgentIntent.Unknown, result.Intent);
+        result.Intent.Should().Be(AgentIntent.Unknown);
     }
 
     #endregion
@@ -186,8 +180,7 @@ public class IntentClassifierTests
         var withoutScore = without.AllScores
             .First(s => s.Intent == AgentIntent.MoveValidation).Score;
 
-        Assert.True(withoutScore > withNegativeScore,
-            $"Expected lower MoveValidation score with negative keywords. Without: {withoutScore:F3}, With: {withNegativeScore:F3}");
+        (withoutScore > withNegativeScore).Should().BeTrue($"Expected lower MoveValidation score with negative keywords. Without: {withoutScore:F3}, With: {withNegativeScore:F3}");
     }
 
     #endregion
@@ -199,8 +192,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery("validate move e2 to e4");
 
-        Assert.True(result.ClassificationDuration.TotalMilliseconds < 50,
-            $"Classification took {result.ClassificationDuration.TotalMilliseconds:F1}ms, expected <50ms");
+        (result.ClassificationDuration.TotalMilliseconds < 50).Should().BeTrue($"Classification took {result.ClassificationDuration.TotalMilliseconds:F1}ms, expected <50ms");
     }
 
     #endregion
@@ -212,8 +204,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery("validate move");
 
-        Assert.NotEmpty(result.AllScores);
-        Assert.Equal(5, result.AllScores.Count); // 5 intent patterns
+        result.AllScores.Should().NotBeEmpty();
+        result.AllScores.Count.Should().Be(5); // 5 intent patterns
     }
 
     [Fact]
@@ -223,8 +215,7 @@ public class IntentClassifierTests
 
         for (int i = 0; i < result.AllScores.Count - 1; i++)
         {
-            Assert.True(result.AllScores[i].Score >= result.AllScores[i + 1].Score,
-                $"Scores not sorted: [{i}]={result.AllScores[i].Score:F3} < [{i + 1}]={result.AllScores[i + 1].Score:F3}");
+            (result.AllScores[i].Score >= result.AllScores[i + 1].Score).Should().BeTrue($"Scores not sorted: [{i}]={result.AllScores[i].Score:F3} < [{i + 1}]={result.AllScores[i + 1].Score:F3}");
         }
     }
 
@@ -258,7 +249,7 @@ public class IntentClassifierTests
         var expectedIntent = Enum.Parse<AgentIntent>(expectedIntentName);
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(expectedIntent, result.Intent);
+        result.Intent.Should().Be(expectedIntent);
     }
 
     #endregion

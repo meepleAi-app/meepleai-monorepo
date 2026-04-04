@@ -376,4 +376,4 @@ dpkg-reconfigure -plow unattended-upgrades
 
 ---
 
-**See Also**: [Domain Setup](./domain-setup-guide.md) | [Email & TOTP](./email-totp-services.md) | [Monitoring](../04-deployment/monitoring/)
+**See Also**: [Domain Setup](./domain-setup-guide.md) | [Email & TOTP](./email-totp-services.md) | [Monitoring](../deployment/monitoring/)

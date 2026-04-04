@@ -1,0 +1,120 @@
+# OPS-02: Prometheus Configuration — STAGING (meepleai.app)
+# Auto-generated from prometheus.yml with staging-specific external_labels.
+# Mount via compose.staging.yml: ./prometheus.staging.yml:/etc/prometheus/prometheus.yml:ro
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+  external_labels:
+    cluster: 'meepleai-staging'
+    environment: 'staging'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      timeout: 10s
+      api_version: v2
+
+rule_files:
+  - '/etc/prometheus/prometheus-rules.yml'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  - job_name: 'meepleai-api'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['api:8080']
+        labels:
+          service: 'meepleai-api'
+          component: 'backend'
+
+  - job_name: 'meepleai-web'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['web:3000']
+        labels:
+          service: 'meepleai-web'
+          component: 'frontend'
+
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+        labels:
+          service: 'grafana'
+          component: 'visualization'
+
+  # ---------------------------------------------------------------------------
+  # AI/ML Services (profile: ai)
+  # ---------------------------------------------------------------------------
+
+  - job_name: 'embedding-service'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['embedding-service:8000']
+        labels:
+          service: 'embedding-service'
+          component: 'ml'
+          profile: 'ai'
+
+  - job_name: 'unstructured-service'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['unstructured-service:8001']
+        labels:
+          service: 'unstructured-service'
+          component: 'ingestion'
+          profile: 'ai'
+
+  - job_name: 'smoldocling-service'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['smoldocling-service:8002']
+        labels:
+          service: 'smoldocling-service'
+          component: 'ingestion'
+          profile: 'ai'
+
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+        labels:
+          service: 'alertmanager'
+          component: 'alerting'
+
+  - job_name: 'cadvisor'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+          component: 'container-metrics'
+
+  - job_name: 'node-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+          component: 'host-metrics'
+
+  - job_name: 'traefik'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['traefik:8080']
+        labels:
+          service: 'traefik'
+          component: 'proxy'

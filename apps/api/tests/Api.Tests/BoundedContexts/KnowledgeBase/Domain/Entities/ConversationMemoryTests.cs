@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 
@@ -31,14 +32,14 @@ public class ConversationMemoryTests
             content, messageType, timestamp);
 
         // Assert
-        Assert.Equal(id, memory.Id);
-        Assert.Equal(sessionId, memory.SessionId);
-        Assert.Equal(userId, memory.UserId);
-        Assert.Equal(gameId, memory.GameId);
-        Assert.Equal(content, memory.Content);
-        Assert.Equal(messageType, memory.MessageType);
-        Assert.Equal(timestamp, memory.Timestamp);
-        Assert.Null(memory.Embedding);
+        memory.Id.Should().Be(id);
+        memory.SessionId.Should().Be(sessionId);
+        memory.UserId.Should().Be(userId);
+        memory.GameId.Should().Be(gameId);
+        memory.Content.Should().Be(content);
+        memory.MessageType.Should().Be(messageType);
+        memory.Timestamp.Should().Be(timestamp);
+        memory.Embedding.Should().BeNull();
     }
 
     [Fact]
@@ -55,7 +56,7 @@ public class ConversationMemoryTests
             "Test content", "user");
 
         // Assert
-        Assert.Null(memory.GameId);
+        memory.GameId.Should().BeNull();
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class ConversationMemoryTests
             "Test content", "user");
 
         // Assert
-        Assert.InRange(memory.Timestamp, before, DateTime.UtcNow.AddSeconds(1));
+        memory.Timestamp.Should().BeOnOrAfter(before).And.BeOnOrBefore(DateTime.UtcNow.AddSeconds(1));
     }
 
     [Fact]
@@ -85,63 +86,68 @@ public class ConversationMemoryTests
             "Test content", "user", embedding: embedding);
 
         // Assert
-        Assert.NotNull(memory.Embedding);
-        Assert.Equal(3, memory.Embedding.Values.Length);
+        memory.Embedding.Should().NotBeNull();
+        memory.Embedding.Values.Length.Should().Be(3);
     }
 
     [Fact]
     public void Create_WithEmptySessionId_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             new ConversationMemory(
                 Guid.NewGuid(), Guid.Empty, Guid.NewGuid(), null,
-                "Test content", "user"));
-        Assert.Contains("Session ID cannot be empty", ex.Message);
+                "Test content", "user");
+        var ex = act.Should().Throw<ArgumentException>().Which;
+        ex.Message.Should().Contain("Session ID cannot be empty");
     }
 
     [Fact]
     public void Create_WithEmptyUserId_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             new ConversationMemory(
                 Guid.NewGuid(), Guid.NewGuid(), Guid.Empty, null,
-                "Test content", "user"));
-        Assert.Contains("User ID cannot be empty", ex.Message);
+                "Test content", "user");
+        var ex = act.Should().Throw<ArgumentException>().Which;
+        ex.Message.Should().Contain("User ID cannot be empty");
     }
 
     [Fact]
     public void Create_WithEmptyContent_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             new ConversationMemory(
                 Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
-                "", "user"));
-        Assert.Contains("Content cannot be empty", ex.Message);
+                "", "user");
+        var ex = act.Should().Throw<ArgumentException>().Which;
+        ex.Message.Should().Contain("Content cannot be empty");
     }
 
     [Fact]
     public void Create_WithWhitespaceContent_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             new ConversationMemory(
                 Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
-                "   ", "user"));
-        Assert.Contains("Content cannot be empty", ex.Message);
+                "   ", "user");
+        var ex = act.Should().Throw<ArgumentException>().Which;
+        ex.Message.Should().Contain("Content cannot be empty");
     }
 
     [Fact]
     public void Create_WithEmptyMessageType_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             new ConversationMemory(
                 Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
-                "Test content", ""));
-        Assert.Contains("Message type cannot be empty", ex.Message);
+                "Test content", "");
+        var ex = act.Should().Throw<ArgumentException>().Which;
+        ex.Message.Should().Contain("Message type cannot be empty");
     }
 
     [Fact]
@@ -157,8 +163,8 @@ public class ConversationMemoryTests
         memory.SetEmbedding(embedding);
 
         // Assert
-        Assert.NotNull(memory.Embedding);
-        Assert.Equal(embedding, memory.Embedding);
+        memory.Embedding.Should().NotBeNull();
+        memory.Embedding.Should().Be(embedding);
     }
 
     [Fact]
@@ -170,7 +176,8 @@ public class ConversationMemoryTests
             "Test content", "user");
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => memory.SetEmbedding(null!));
+        Action act = () => memory.SetEmbedding(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #region CalculateTemporalScore Tests
@@ -188,7 +195,7 @@ public class ConversationMemoryTests
         var score = memory.CalculateTemporalScore(now, TimeSpan.FromHours(24));
 
         // Assert
-        Assert.Equal(1.0, score, precision: 2);
+        score.Should().BeApproximately(1.0, 0.01);
     }
 
     [Fact]
@@ -205,7 +212,7 @@ public class ConversationMemoryTests
         var score = memory.CalculateTemporalScore(now, TimeSpan.FromHours(24));
 
         // Assert
-        Assert.True(score < 0.1, $"Score should be low for old memory, got {score}");
+        (score < 0.1).Should().BeTrue($"Score should be low for old memory, got {score}");
     }
 
     [Fact]
@@ -222,7 +229,7 @@ public class ConversationMemoryTests
         var score = memory.CalculateTemporalScore(now, TimeSpan.FromHours(24));
 
         // Assert
-        Assert.Equal(0.0, score);
+        score.Should().Be(0.0);
     }
 
     [Fact]
@@ -239,7 +246,7 @@ public class ConversationMemoryTests
         var score = memory.CalculateTemporalScore(now, TimeSpan.FromHours(24));
 
         // Assert
-        Assert.Equal(0.0, score);
+        score.Should().Be(0.0);
     }
 
     [Fact]
@@ -256,7 +263,7 @@ public class ConversationMemoryTests
         var score = memory.CalculateTemporalScore(now, TimeSpan.FromHours(24));
 
         // Assert
-        Assert.Equal(1.0, score);
+        score.Should().Be(1.0);
     }
 
     [Fact]
@@ -273,7 +280,7 @@ public class ConversationMemoryTests
         var score = memory.CalculateTemporalScore(now, TimeSpan.FromHours(24));
 
         // Assert
-        Assert.InRange(score, 0.01, 0.99);
+        score.Should().BeInRange(0.01, 0.99);
     }
 
     [Fact]
@@ -300,8 +307,8 @@ public class ConversationMemoryTests
         var score8h = memory8h.CalculateTemporalScore(now, decayWindow);
 
         // Assert - scores should decrease monotonically
-        Assert.True(score1h > score4h, $"1h score ({score1h}) should be > 4h score ({score4h})");
-        Assert.True(score4h > score8h, $"4h score ({score4h}) should be > 8h score ({score8h})");
+        (score1h > score4h).Should().BeTrue($"1h score ({score1h}) should be > 4h score ({score4h})");
+        (score4h > score8h).Should().BeTrue($"4h score ({score4h}) should be > 8h score ({score8h})");
     }
 
     [Theory]
@@ -323,7 +330,7 @@ public class ConversationMemoryTests
         var score = memory.CalculateTemporalScore(now, TimeSpan.FromHours(24));
 
         // Assert - allow tolerance for exponential calculation
-        Assert.InRange(score, expectedApproxScore - 0.05, expectedApproxScore + 0.05);
+        score.Should().BeInRange(expectedApproxScore - 0.05, expectedApproxScore + 0.05);
     }
 
     [Fact]
@@ -342,8 +349,8 @@ public class ConversationMemoryTests
         var score48h = memory.CalculateTemporalScore(now, TimeSpan.FromHours(48));
 
         // Assert - wider window = higher score for same age
-        Assert.True(score24h > score8h, "24h window should give higher score than 8h window");
-        Assert.True(score48h > score24h, "48h window should give higher score than 24h window");
+        (score24h > score8h).Should().BeTrue("24h window should give higher score than 8h window");
+        (score48h > score24h).Should().BeTrue("48h window should give higher score than 24h window");
     }
 
     #endregion
@@ -378,7 +385,7 @@ public class ConversationMemoryTests
             var score = memory.CalculateTemporalScore(now, decayWindow);
 
             // Assert
-            Assert.InRange(score, 0.0, 1.0);
+            score.Should().BeInRange(0.0, 1.0);
         }
     }
 

@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 
@@ -40,7 +41,7 @@ public class AgentRouterServiceTests
     {
         var decision = _router.RouteQuery(query);
 
-        Assert.Equal(expectedAgent, decision.TargetAgent);
+        decision.TargetAgent.Should().Be(expectedAgent);
     }
 
     #endregion
@@ -52,10 +53,9 @@ public class AgentRouterServiceTests
     {
         var decision = _router.RouteQuery("validate move to e4");
 
-        Assert.True(decision.ShouldRoute,
-            $"Expected ShouldRoute=true for high confidence ({decision.Confidence:F3})");
-        Assert.False(decision.RequiresConfirmation);
-        Assert.Null(decision.FallbackAgents);
+        decision.ShouldRoute.Should().BeTrue($"Expected ShouldRoute=true for high confidence ({decision.Confidence:F3})");
+        decision.RequiresConfirmation.Should().BeFalse();
+        decision.FallbackAgents.Should().BeNull();
     }
 
     [Fact]
@@ -63,8 +63,8 @@ public class AgentRouterServiceTests
     {
         var decision = _router.RouteQuery("hello, what's going on?");
 
-        Assert.NotNull(decision.FallbackAgents);
-        Assert.NotEmpty(decision.FallbackAgents);
+        decision.FallbackAgents.Should().NotBeNull();
+        decision.FallbackAgents.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class AgentRouterServiceTests
     {
         var decision = _router.RouteQuery("random question about nothing");
 
-        Assert.Equal("TutorAgent", decision.TargetAgent);
+        decision.TargetAgent.Should().Be("TutorAgent");
     }
 
     #endregion
@@ -84,8 +84,7 @@ public class AgentRouterServiceTests
     {
         var decision = _router.RouteQuery("validate move e2 to e4");
 
-        Assert.True(decision.RoutingDuration.TotalMilliseconds < 50,
-            $"Routing took {decision.RoutingDuration.TotalMilliseconds:F1}ms, expected <50ms P95");
+        (decision.RoutingDuration.TotalMilliseconds < 50).Should().BeTrue($"Routing took {decision.RoutingDuration.TotalMilliseconds:F1}ms, expected <50ms P95");
     }
 
     [Fact]
@@ -93,8 +92,8 @@ public class AgentRouterServiceTests
     {
         var decision = _router.RouteQuery("suggest best move");
 
-        Assert.True(decision.ClassificationDuration.TotalMilliseconds >= 0);
-        Assert.True(decision.RoutingDuration >= decision.ClassificationDuration);
+        (decision.ClassificationDuration.TotalMilliseconds >= 0).Should().BeTrue();
+        (decision.RoutingDuration >= decision.ClassificationDuration).Should().BeTrue();
     }
 
     #endregion
@@ -106,8 +105,8 @@ public class AgentRouterServiceTests
     {
         var decision = _router.RouteQuery("validate move");
 
-        Assert.NotNull(decision.AllIntentScores);
-        Assert.NotEmpty(decision.AllIntentScores);
+        decision.AllIntentScores.Should().NotBeNull();
+        decision.AllIntentScores.Should().NotBeEmpty();
     }
 
     #endregion
@@ -117,13 +116,13 @@ public class AgentRouterServiceTests
     [Fact]
     public void RouteQuery_EmptyQuery_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => _router.RouteQuery(""));
+        ((Action)(() => _router.RouteQuery(""))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void RouteQuery_WhitespaceQuery_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => _router.RouteQuery("   "));
+        ((Action)(() => _router.RouteQuery("   "))).Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -139,9 +138,9 @@ public class AgentRouterServiceTests
 
         var snapshot = _metricsCollector.GetSnapshot();
 
-        Assert.Equal(3, snapshot.TotalDecisions);
-        Assert.True(snapshot.AverageConfidence > 0);
-        Assert.True(snapshot.AverageRoutingLatencyMs >= 0);
+        snapshot.TotalDecisions.Should().Be(3);
+        (snapshot.AverageConfidence > 0).Should().BeTrue();
+        (snapshot.AverageRoutingLatencyMs >= 0).Should().BeTrue();
     }
 
     [Fact]
@@ -153,8 +152,8 @@ public class AgentRouterServiceTests
 
         var snapshot = _metricsCollector.GetSnapshot();
 
-        Assert.True(snapshot.AgentUsageDistribution.ContainsKey("ArbitroAgent"));
-        Assert.True(snapshot.AgentUsageDistribution.ContainsKey("TutorAgent"));
+        snapshot.AgentUsageDistribution.ContainsKey("ArbitroAgent").Should().BeTrue();
+        snapshot.AgentUsageDistribution.ContainsKey("TutorAgent").Should().BeTrue();
     }
 
     [Fact]
@@ -165,8 +164,8 @@ public class AgentRouterServiceTests
 
         var snapshot = _metricsCollector.GetSnapshot();
 
-        Assert.True(snapshot.IntentDistribution.ContainsKey(AgentIntent.MoveValidation));
-        Assert.True(snapshot.IntentDistribution.ContainsKey(AgentIntent.StrategicAnalysis));
+        snapshot.IntentDistribution.ContainsKey(AgentIntent.MoveValidation).Should().BeTrue();
+        snapshot.IntentDistribution.ContainsKey(AgentIntent.StrategicAnalysis).Should().BeTrue();
     }
 
     #endregion

@@ -87,7 +87,7 @@ const mockEditor = {
   removeCounterTool: vi.fn(),
 };
 
-vi.mock('@/lib/hooks/usePrivateToolkitEditor', () => ({
+vi.mock('@/lib/domain-hooks/usePrivateToolkitEditor', () => ({
   usePrivateToolkitEditor: () => mockEditor,
 }));
 

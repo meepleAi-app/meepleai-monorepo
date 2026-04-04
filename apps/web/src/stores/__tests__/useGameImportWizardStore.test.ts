@@ -31,8 +31,15 @@ vi.mock('@/components/layout', () => ({
   },
 }));
 
-// Mock fetch for submitWizard
-global.fetch = vi.fn();
+// Mock API client for submitWizard
+const mockWizardCreateGame = vi.fn();
+vi.mock('@/lib/api', () => ({
+  api: {
+    sharedGames: {
+      wizardCreateGame: (...args: unknown[]) => mockWizardCreateGame(...args),
+    },
+  },
+}));
 
 const mockUploadedPdf: UploadedPdf = {
   id: 'pdf-123',
@@ -43,13 +50,12 @@ const mockExtractedMetadata: ExtractedMetadata = {
   title: 'Test Game',
   minPlayers: 2,
   maxPlayers: 4,
-  playTime: 60,
-  complexity: 3,
+  playingTime: 60,
   description: 'A test game',
 };
 
 const mockBggGameData: BggGameData = {
-  id: 12345,
+  bggId: 12345,
   name: 'Test Game from BGG',
   yearPublished: 2020,
   minPlayers: 2,
@@ -65,12 +71,11 @@ const mockEnrichedData: EnrichedGameData = {
   title: 'Test Game (Final)',
   minPlayers: 2,
   maxPlayers: 4,
-  playTime: 60,
-  complexity: 3,
+  playingTime: 60,
   description: 'Final description',
   bggId: 12345,
   imageUrl: 'https://example.com/image.jpg',
-  yearPublished: 2020,
+  year: 2020,
   minAge: 10,
 };
 
@@ -89,11 +94,12 @@ beforeEach(() => {
     error: null,
   });
 
-  // Reset fetch mock
-  (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-    ok: true,
-    json: async () => ({ success: true }),
-  } as Response);
+  // Reset API mock
+  mockWizardCreateGame.mockResolvedValue({
+    gameId: 'game-new-123',
+    approvalStatus: 'Published',
+    bggEnrichmentApplied: false,
+  });
 });
 
 describe('useGameImportWizardStore', () => {
@@ -323,6 +329,7 @@ describe('useGameImportWizardStore', () => {
       // Setup complete wizard state
       act(() => {
         result.current.setUploadedPdf(mockUploadedPdf);
+        result.current.setSelectedBggId(12345, mockBggGameData);
         result.current.resolveConflicts(mockEnrichedData);
       });
 
@@ -330,18 +337,15 @@ describe('useGameImportWizardStore', () => {
         await result.current.submitWizard();
       });
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/admin/games/wizard/confirm-import'),
-        expect.objectContaining({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            pdfId: mockUploadedPdf.id,
-            gameData: mockEnrichedData,
-          }),
-        })
-      );
+      expect(mockWizardCreateGame).toHaveBeenCalledWith({
+        pdfDocumentId: mockUploadedPdf.id,
+        extractedTitle: mockEnrichedData.title,
+        minPlayers: mockEnrichedData.minPlayers,
+        maxPlayers: mockEnrichedData.maxPlayers,
+        playingTimeMinutes: mockEnrichedData.playingTime,
+        minAge: mockEnrichedData.minAge,
+        selectedBggId: 12345,
+      });
 
       // State should reset after successful submission
       expect(result.current.currentStep).toBe(1);
@@ -405,10 +409,7 @@ describe('useGameImportWizardStore', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
       // Mock API failure
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: false,
-        statusText: 'Internal Server Error',
-      } as Response);
+      mockWizardCreateGame.mockRejectedValue(new Error('Internal Server Error'));
 
       act(() => {
         result.current.setUploadedPdf(mockUploadedPdf);
@@ -423,11 +424,11 @@ describe('useGameImportWizardStore', () => {
       } catch (err) {
         errorThrown = true;
         expect(err).toBeInstanceOf(Error);
-        expect((err as Error).message).toBe('Import failed: Internal Server Error');
+        expect((err as Error).message).toBe('Internal Server Error');
       }
 
       expect(errorThrown).toBe(true);
-      expect(result.current.error).toBe('Import failed: Internal Server Error');
+      expect(result.current.error).toBe('Internal Server Error');
       expect(result.current.isProcessing).toBe(false);
     });
 
@@ -440,16 +441,17 @@ describe('useGameImportWizardStore', () => {
       });
 
       // Create a promise that we can control
-      let resolveSubmit: () => void;
-      const submitPromise = new Promise<void>(resolve => {
+      let resolveSubmit: (value: unknown) => void;
+      const submitPromise = new Promise(resolve => {
         resolveSubmit = resolve;
       });
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      mockWizardCreateGame.mockImplementation(async () => {
         await submitPromise;
         return {
-          ok: true,
-          json: async () => ({ success: true }),
+          gameId: 'game-new-123',
+          approvalStatus: 'Published',
+          bggEnrichmentApplied: false,
         };
       });
 
@@ -458,13 +460,8 @@ describe('useGameImportWizardStore', () => {
         await result.current.submitWizard();
       });
 
-      // Check processing state is true during submission
-      // Note: This check happens synchronously, before the promise resolves
-      // In practice, isProcessing will be set in the store, but we can't easily test
-      // the intermediate state with this pattern. For now, we just verify it completes.
-
       // Resolve the submission
-      resolveSubmit!();
+      resolveSubmit!(undefined);
       await submissionPromise;
 
       expect(result.current.isProcessing).toBe(false);

@@ -105,7 +105,7 @@ export function ColorSchemeProvider({ children }: ColorSchemeProviderProps) {
     (themeId: string) => {
       const theme = themes.find(t => t.id === themeId);
       if (!theme) {
-        console.warn(`Theme not found: ${themeId}`);
+        logger.warn(`Theme not found: ${themeId}`);
         return;
       }
 
@@ -164,7 +164,7 @@ export function ColorSchemeProvider({ children }: ColorSchemeProviderProps) {
     (themeId: string) => {
       const theme = themes.find(t => t.id === themeId);
       if (!theme || !theme.isCustom) {
-        console.warn('Cannot remove non-custom theme');
+        logger.warn('Cannot remove non-custom theme');
         return;
       }
 
@@ -224,4 +224,12 @@ export function useColorScheme(): ColorSchemeContextValue {
     throw new Error('useColorScheme must be used within ColorSchemeProvider');
   }
   return context;
+}
+
+/**
+ * Safe variant that returns null instead of throwing when used outside ColorSchemeProvider.
+ * Use this when the component may render outside the provider.
+ */
+export function useSafeColorScheme(): ColorSchemeContextValue | undefined {
+  return useContext(ColorSchemeContext);
 }

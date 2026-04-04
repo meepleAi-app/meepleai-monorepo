@@ -82,7 +82,15 @@ describe('LibraryClient - Issue #3026', () => {
     });
 
     it('should filter by favorites only', async () => {
-      vi.mocked(mockHttpClient.get).mockResolvedValue({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false });
+      vi.mocked(mockHttpClient.get).mockResolvedValue({
+        items: [],
+        page: 1,
+        pageSize: 20,
+        totalCount: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      });
 
       const client = createLibraryClient({ httpClient: mockHttpClient });
       await client.getLibrary({ favoritesOnly: true });
@@ -94,7 +102,15 @@ describe('LibraryClient - Issue #3026', () => {
     });
 
     it('should filter by state', async () => {
-      vi.mocked(mockHttpClient.get).mockResolvedValue({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false });
+      vi.mocked(mockHttpClient.get).mockResolvedValue({
+        items: [],
+        page: 1,
+        pageSize: 20,
+        totalCount: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      });
 
       const client = createLibraryClient({ httpClient: mockHttpClient });
       await client.getLibrary({ stateFilter: ['Owned', 'Wishlist'] });
@@ -110,7 +126,15 @@ describe('LibraryClient - Issue #3026', () => {
     });
 
     it('should apply sorting', async () => {
-      vi.mocked(mockHttpClient.get).mockResolvedValue({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false });
+      vi.mocked(mockHttpClient.get).mockResolvedValue({
+        items: [],
+        page: 1,
+        pageSize: 20,
+        totalCount: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      });
 
       const client = createLibraryClient({ httpClient: mockHttpClient });
       await client.getLibrary({ sortBy: 'addedAt', sortDescending: true });
@@ -312,7 +336,7 @@ describe('LibraryClient - Issue #3026', () => {
     const mockAgentConfig = {
       id: 'config-123',
       gameId: 'game-456',
-      typologyId: 'strategy',
+      agentDefinitionId: 'strategy',
       modelName: 'gpt-4',
       costEstimate: 0.05,
     };
@@ -370,7 +394,7 @@ describe('LibraryClient - Issue #3026', () => {
 
         const client = createLibraryClient({ httpClient: mockHttpClient });
         const result = await client.saveAgentConfig('game-456', {
-          typologyId: 'strategy',
+          agentDefinitionId: 'strategy',
           modelName: 'gpt-4',
           costEstimate: 0.05,
         });
@@ -378,7 +402,7 @@ describe('LibraryClient - Issue #3026', () => {
         expect(result.success).toBe(true);
         expect(mockHttpClient.post).toHaveBeenCalledWith(
           '/api/v1/library/games/game-456/agent-config',
-          expect.objectContaining({ typologyId: 'strategy' }),
+          expect.objectContaining({ agentDefinitionId: 'strategy' }),
           expect.any(Object)
         );
       });
@@ -390,7 +414,7 @@ describe('LibraryClient - Issue #3026', () => {
 
         await expect(
           client.saveAgentConfig('game-456', {
-            typologyId: 'strategy',
+            agentDefinitionId: 'strategy',
             modelName: 'gpt-4',
             costEstimate: 0.05,
           })
@@ -474,9 +498,9 @@ describe('LibraryClient - Issue #3026', () => {
 
         const client = createLibraryClient({ httpClient: mockHttpClient });
 
-        await expect(
-          client.updateShareLink('abc123', { expiresInDays: 60 })
-        ).rejects.toThrow('Failed to update share link');
+        await expect(client.updateShareLink('abc123', { expiresInDays: 60 })).rejects.toThrow(
+          'Failed to update share link'
+        );
       });
     });
 
@@ -650,9 +674,9 @@ describe('LibraryClient - Issue #3026', () => {
 
         const client = createLibraryClient({ httpClient: mockHttpClient });
 
-        await expect(
-          client.createCustomLabel({ name: 'Test', color: '#ff0000' })
-        ).rejects.toThrow('Failed to create custom label');
+        await expect(client.createCustomLabel({ name: 'Test', color: '#ff0000' })).rejects.toThrow(
+          'Failed to create custom label'
+        );
       });
     });
 

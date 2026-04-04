@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -118,7 +119,7 @@ public class ReviewShareRequestValidatorTests
         var result = await validator.TestValidateAsync(command);
 
         // Assert
-        Assert.Contains(result.Errors, e => e.ErrorMessage == "Share request not found or not in review status");
+        result.Errors.Should().Contain(e => e.ErrorMessage == "Share request not found or not in review status");
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public class ReviewShareRequestValidatorTests
         var result = await validator.TestValidateAsync(command);
 
         // Assert
-        Assert.Contains(result.Errors, e => e.ErrorMessage == "You are not the current reviewer of this share request");
+        result.Errors.Should().Contain(e => e.ErrorMessage == "You are not the current reviewer of this share request");
     }
 
     #endregion
@@ -340,7 +341,7 @@ public class ReviewShareRequestValidatorTests
         var result = await validator.TestValidateAsync(command);
 
         // Assert
-        Assert.Contains(result.Errors, e => e.ErrorMessage == "Share request not found or not in review status");
+        result.Errors.Should().Contain(e => e.ErrorMessage == "Share request not found or not in review status");
     }
 
     #endregion

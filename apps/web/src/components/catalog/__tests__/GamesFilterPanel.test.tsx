@@ -97,15 +97,15 @@ describe('GamesFilterPanel', () => {
     it('renders "Tutti i giochi" link', () => {
       render(<GamesFilterPanel isCollapsed={false} />);
       expect(screen.getByText('Tutti i giochi')).toBeInTheDocument();
-      expect(screen.getByText('Tutti i giochi').closest('a')).toHaveAttribute('href', '/games');
+      expect(screen.getByText('Tutti i giochi').closest('a')).toHaveAttribute('href', '/library');
     });
 
-    it('renders "Top BGG" link with sort params', () => {
+    it('renders "Top Rated" link with sort params', () => {
       render(<GamesFilterPanel isCollapsed={false} />);
-      expect(screen.getByText('Top BGG')).toBeInTheDocument();
-      expect(screen.getByText('Top BGG').closest('a')).toHaveAttribute(
+      expect(screen.getByText('Top Rated')).toBeInTheDocument();
+      expect(screen.getByText('Top Rated').closest('a')).toHaveAttribute(
         'href',
-        '/games?sortBy=AverageRating&sortDesc=true'
+        '/library?sortBy=AverageRating&sortDesc=true'
       );
     });
 
@@ -114,7 +114,7 @@ describe('GamesFilterPanel', () => {
       expect(screen.getByText('2 Giocatori')).toBeInTheDocument();
       expect(screen.getByText('2 Giocatori').closest('a')).toHaveAttribute(
         'href',
-        '/games?minPlayers=2&maxPlayers=2'
+        '/library?minPlayers=2&maxPlayers=2'
       );
     });
 
@@ -123,7 +123,7 @@ describe('GamesFilterPanel', () => {
       expect(screen.getByText('3-6 Giocatori')).toBeInTheDocument();
       expect(screen.getByText('3-6 Giocatori').closest('a')).toHaveAttribute(
         'href',
-        '/games?minPlayers=3&maxPlayers=6'
+        '/library?minPlayers=3&maxPlayers=6'
       );
     });
 
@@ -132,14 +132,14 @@ describe('GamesFilterPanel', () => {
       expect(screen.getByText('Aggiunti di recente')).toBeInTheDocument();
       expect(screen.getByText('Aggiunti di recente').closest('a')).toHaveAttribute(
         'href',
-        '/games?sortBy=CreatedAt&sortDesc=true'
+        '/library?sortBy=CreatedAt&sortDesc=true'
       );
     });
 
     it('renders "Dashboard" back link', () => {
       render(<GamesFilterPanel isCollapsed={false} />);
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
-      expect(screen.getByText('Dashboard').closest('a')).toHaveAttribute('href', '/dashboard');
+      expect(screen.getByText('Dashboard').closest('a')).toHaveAttribute('href', '/library');
     });
   });
 
@@ -152,10 +152,10 @@ describe('GamesFilterPanel', () => {
       expect(link?.className).toContain('font-semibold');
     });
 
-    it('highlights "Top BGG" when matching sort params are in URL', () => {
+    it('highlights "Top Rated" when matching sort params are in URL', () => {
       mockSearchParams = new URLSearchParams('sortBy=AverageRating&sortDesc=true');
       render(<GamesFilterPanel isCollapsed={false} />);
-      const link = screen.getByText('Top BGG').closest('a');
+      const link = screen.getByText('Top Rated').closest('a');
       expect(link?.className).toContain('font-semibold');
     });
   });
@@ -253,7 +253,7 @@ describe('GamesFilterPanel', () => {
       render(<GamesFilterPanel isCollapsed={true} />);
       // Text labels should not render (only icons visible)
       expect(screen.queryByText('Tutti i giochi')).not.toBeInTheDocument();
-      expect(screen.queryByText('Top BGG')).not.toBeInTheDocument();
+      expect(screen.queryByText('Top Rated')).not.toBeInTheDocument();
     });
 
     it('hides advanced panel toggle when collapsed', () => {

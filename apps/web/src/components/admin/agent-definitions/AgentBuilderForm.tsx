@@ -5,14 +5,51 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { Button, Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider, Textarea } from '@/components/ui';
-import { createAgentDefinitionSchema, type CreateAgentDefinition } from '@/lib/api/schemas/agent-definitions.schemas';
+import {
+  Button,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Slider,
+  Textarea,
+} from '@/components/ui';
+import {
+  createAgentDefinitionSchema,
+  type CreateAgentDefinition,
+} from '@/lib/api/schemas/agent-definitions.schemas';
 
 interface AgentBuilderFormProps {
   defaultValues?: Partial<CreateAgentDefinition>;
   onSubmit: (data: z.output<typeof createAgentDefinitionSchema>) => void;
   isLoading?: boolean;
+  disabled?: boolean;
 }
+
+const CHAT_LANGUAGES = [
+  { value: 'auto', label: 'Auto (from PDF)' },
+  { value: 'en', label: 'English' },
+  { value: 'it', label: 'Italiano' },
+  { value: 'de', label: 'Deutsch' },
+  { value: 'fr', label: 'Français' },
+  { value: 'es', label: 'Español' },
+  { value: 'pt', label: 'Português' },
+  { value: 'nl', label: 'Nederlands' },
+  { value: 'pl', label: 'Polski' },
+  { value: 'ru', label: 'Русский' },
+  { value: 'ja', label: '日本語' },
+  { value: 'zh', label: '中文' },
+  { value: 'ko', label: '한국어' },
+];
 
 const MODELS = [
   { value: 'gpt-4', label: 'GPT-4' },
@@ -22,12 +59,18 @@ const MODELS = [
   { value: 'deepseek-chat', label: 'DeepSeek Chat' },
 ];
 
-export function AgentBuilderForm({ defaultValues, onSubmit, isLoading }: AgentBuilderFormProps) {
+export function AgentBuilderForm({
+  defaultValues,
+  onSubmit,
+  isLoading,
+  disabled,
+}: AgentBuilderFormProps) {
   const form = useForm<z.input<typeof createAgentDefinitionSchema>>({
     resolver: zodResolver(createAgentDefinitionSchema),
     defaultValues: defaultValues || {
       name: '',
       description: '',
+      chatLanguage: 'auto',
       model: 'gpt-4',
       maxTokens: 2048,
       temperature: 0.7,
@@ -36,12 +79,20 @@ export function AgentBuilderForm({ defaultValues, onSubmit, isLoading }: AgentBu
     },
   });
 
-  const { fields: promptFields, append: appendPrompt, remove: removePrompt } = useFieldArray({
+  const {
+    fields: promptFields,
+    append: appendPrompt,
+    remove: removePrompt,
+  } = useFieldArray({
     control: form.control,
     name: 'prompts',
   });
 
-  const { fields: toolFields, append: appendTool, remove: removeTool } = useFieldArray({
+  const {
+    fields: toolFields,
+    append: appendTool,
+    remove: removeTool,
+  } = useFieldArray({
     control: form.control,
     name: 'tools',
   });
@@ -84,6 +135,34 @@ export function AgentBuilderForm({ defaultValues, onSubmit, isLoading }: AgentBu
               </FormItem>
             )}
           />
+
+          <FormField
+            control={form.control}
+            name="chatLanguage"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Chat Language</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value || 'auto'}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {CHAT_LANGUAGES.map(lang => (
+                      <SelectItem key={lang.value} value={lang.value}>
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Language for agent responses. &quot;Auto&quot; detects from PDF content.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         {/* Model Configuration */}
@@ -103,7 +182,7 @@ export function AgentBuilderForm({ defaultValues, onSubmit, isLoading }: AgentBu
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {MODELS.map((model) => (
+                    {MODELS.map(model => (
                       <SelectItem key={model.value} value={model.value}>
                         {model.label}
                       </SelectItem>
@@ -288,7 +367,7 @@ export function AgentBuilderForm({ defaultValues, onSubmit, isLoading }: AgentBu
 
         {/* Submit */}
         <div className="flex justify-end gap-4">
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading || disabled}>
             {isLoading ? 'Saving...' : 'Save Agent'}
           </Button>
         </div>

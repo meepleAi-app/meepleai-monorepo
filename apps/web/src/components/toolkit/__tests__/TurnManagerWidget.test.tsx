@@ -8,7 +8,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
 const mockBroadcastState = vi.fn();
-vi.mock('@/lib/hooks/useWidgetSync', () => ({
+vi.mock('@/lib/domain-hooks/useWidgetSync', () => ({
   useWidgetSync: () => ({ broadcastState: mockBroadcastState, isConnected: false }),
 }));
 

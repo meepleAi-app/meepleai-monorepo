@@ -14,6 +14,7 @@ import {
   GripVerticalIcon,
 } from 'lucide-react';
 
+import { PriorityBadge } from '@/components/admin/knowledge-base/priority-badge';
 import { Badge } from '@/components/ui/data-display/badge';
 import { cn } from '@/lib/utils';
 
@@ -133,7 +134,7 @@ export function QueueItem({ job, isSelected, onSelect }: QueueItemProps) {
             {job.currentStep && (
               <span className="text-blue-600 dark:text-blue-400">{job.currentStep}</span>
             )}
-            {job.status === 'Queued' && <span>Pri: {job.priority}</span>}
+            {job.status === 'Queued' && <PriorityBadge priority={job.priority} showNormal />}
             {job.status === 'Failed' && job.retryCount > 0 && (
               <span className="text-red-600 dark:text-red-400">
                 Retry {job.retryCount}/{job.maxRetries}

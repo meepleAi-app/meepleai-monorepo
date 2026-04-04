@@ -1,8 +1,7 @@
 /**
  * Breadcrumb Labels Configuration
- * Issue #5 from mobile-first-ux-epic.md
  *
- * Maps route segments to human-readable labels for the MobileBreadcrumb component.
+ * Maps route segments to human-readable labels for breadcrumb navigation.
  * Used to build breadcrumb trails from the current pathname.
  */
 
@@ -53,7 +52,6 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
  * Falls back to title-casing the segment if not found in config.
  */
 export function getSegmentLabel(segment: string): string {
-  // eslint-disable-next-line security/detect-object-injection
   const label = BREADCRUMB_LABELS[segment];
   if (label) return label;
 

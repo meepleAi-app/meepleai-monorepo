@@ -9,6 +9,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -60,7 +61,7 @@ public class RejectSharedGamePublicationCommandHandlerTests
 
         // Submit for approval first
         game.SubmitForApproval(creatorId);
-        Assert.Equal(GameStatus.PendingApproval, game.Status);
+        game.Status.Should().Be(GameStatus.PendingApproval);
 
         var command = new RejectSharedGamePublicationCommand(game.Id, rejecterId, reason);
 
@@ -84,16 +85,16 @@ public class RejectSharedGamePublicationCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedGame);
-        Assert.Equal(GameStatus.Draft, capturedGame.Status);
-        Assert.Equal(rejecterId, capturedGame.ModifiedBy);
-        Assert.NotNull(capturedGame.ModifiedAt);
+        capturedGame.Should().NotBeNull();
+        capturedGame.Status.Should().Be(GameStatus.Draft);
+        capturedGame.ModifiedBy.Should().Be(rejecterId);
+        capturedGame.ModifiedAt.Should().NotBeNull();
 
         // Verify domain event raised
-        var rejectEvent = Assert.IsType<SharedGamePublicationRejectedEvent>(capturedGame.DomainEvents.Last());
-        Assert.Equal(game.Id, rejectEvent.GameId);
-        Assert.Equal(rejecterId, rejectEvent.RejectedBy);
-        Assert.Equal(reason, rejectEvent.Reason);
+        var rejectEvent = capturedGame.DomainEvents.Last().Should().BeOfType<SharedGamePublicationRejectedEvent>().Subject;
+        rejectEvent.GameId.Should().Be(game.Id);
+        rejectEvent.RejectedBy.Should().Be(rejecterId);
+        rejectEvent.Reason.Should().Be(reason);
     }
 
     [Fact]
@@ -107,8 +108,8 @@ public class RejectSharedGamePublicationCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -137,7 +138,7 @@ public class RejectSharedGamePublicationCommandHandlerTests
             .ReturnsAsync(game);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

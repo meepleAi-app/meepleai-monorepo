@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Administration.Application.Handlers.TokenManagement;
+using Api.BoundedContexts.Administration.Application.Commands.TokenManagement;
 using Api.BoundedContexts.Administration.Application.Queries.TokenManagement;
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Repositories;

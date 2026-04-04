@@ -58,20 +58,21 @@ export interface ProgressBadgeProps {
 
 function getStateColor(state: string): string {
   const colors: Record<string, string> = {
-    'pending': 'text-muted-foreground bg-muted',
-    'uploading': 'text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30',
-    'extracting': 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30',
-    'chunking': 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30',
-    'embedding': 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30',
-    'indexing': 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30',
-    'ready': 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30',
-    'failed': 'text-destructive bg-destructive/10',
+    pending: 'text-muted-foreground bg-muted',
+    uploading: 'text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30',
+    extracting: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30',
+    chunking: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30',
+    embedding: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30',
+    indexing: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30',
+    ready: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30',
+    indexed: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30',
+    failed: 'text-destructive bg-destructive/10',
   };
-  return colors[state] || colors['pending'];
+  return colors[state.toLowerCase()] || colors['pending'];
 }
 
 function getStateIcon(state: string): React.ReactNode {
-  const iconClass = "h-3.5 w-3.5";
+  const iconClass = 'h-3.5 w-3.5';
 
   switch (state) {
     case 'pending':
@@ -79,6 +80,7 @@ function getStateIcon(state: string): React.ReactNode {
     case 'uploading':
       return <Upload className={iconClass} />;
     case 'ready':
+    case 'indexed':
       return <Check className={iconClass} />;
     case 'failed':
       return <X className={iconClass} />;
@@ -90,14 +92,15 @@ function getStateIcon(state: string): React.ReactNode {
 
 function getStateLabel(state: string): string {
   const labels: Record<string, string> = {
-    'pending': 'Pending',
-    'uploading': 'Uploading',
-    'extracting': 'Extracting',
-    'chunking': 'Chunking',
-    'embedding': 'Embedding',
-    'indexing': 'Indexing',
-    'ready': 'Ready',
-    'failed': 'Failed',
+    pending: 'Pending',
+    uploading: 'Uploading',
+    extracting: 'Extracting',
+    chunking: 'Chunking',
+    embedding: 'Embedding',
+    indexing: 'Indexing',
+    ready: 'Ready',
+    indexed: 'Ready',
+    failed: 'Failed',
   };
   return labels[state] || state;
 }
@@ -128,7 +131,8 @@ export function ProgressBadge({
   // ============================================================================
 
   const state = hookData.status?.state ?? staticState ?? 'pending';
-  const progress = hookData.metrics?.progressPercentage ?? hookData.status?.progress ?? staticProgress ?? 0;
+  const progress =
+    hookData.metrics?.progressPercentage ?? hookData.status?.progress ?? staticProgress ?? 0;
   const eta = hookData.metrics?.estimatedTimeRemaining ?? hookData.status?.eta ?? staticEta;
 
   // Format ETA
@@ -180,7 +184,8 @@ export function ProgressBadge({
                 </p>
                 {eta && (
                   <p className="text-muted-foreground">
-                    ETA: <span className="text-amber-600 dark:text-amber-400">{formatEta(eta)}</span>
+                    ETA:{' '}
+                    <span className="text-amber-600 dark:text-amber-400">{formatEta(eta)}</span>
                   </p>
                 )}
               </>

@@ -8,15 +8,15 @@ import { toast } from 'sonner';
 
 import {
   SessionHeader,
-  ParticipantCard,
+  MeepleParticipantCard,
   ScoreInput,
   Scoreboard,
   type SyncStatus,
 } from '@/components/session';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { getGameTemplateByName } from '@/lib/config/game-templates';
-import { useSessionSync } from '@/lib/hooks/useSessionSync';
-import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
+import { useSessionStore } from '@/lib/stores/session-store';
 
 /**
  * Game-Specific Active Session Page
@@ -68,7 +68,7 @@ export default function GameSpecificSessionPage() {
 
         if (gameResponse.ok) {
           const gameData = await gameResponse.json();
-          setGameName(gameData.name);
+          setGameName(gameData.title ?? gameData.name ?? '');
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to load session');
@@ -199,7 +199,7 @@ export default function GameSpecificSessionPage() {
           <div className="lg:col-span-1 space-y-4">
             <h2 className="text-lg font-semibold mb-4">Participants</h2>
             {participants.map(participant => (
-              <ParticipantCard key={participant.id} participant={participant} />
+              <MeepleParticipantCard key={participant.id} participant={participant} />
             ))}
 
             {/* Template Info */}

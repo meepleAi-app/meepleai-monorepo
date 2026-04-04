@@ -18,7 +18,7 @@ public class AlertEntity
     /// Type of alert (e.g., "HighErrorRate", "DatabaseDown", "QdrantDown").
     /// </summary>
     [Required]
-    [MaxLength(50)]
+    [MaxLength(100)]
     [Column("alert_type")]
     public string AlertType { get; set; } = string.Empty;
 

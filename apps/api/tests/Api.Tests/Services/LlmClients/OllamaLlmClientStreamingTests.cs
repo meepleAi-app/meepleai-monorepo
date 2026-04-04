@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Services.LlmClients;
@@ -106,31 +107,31 @@ public class OllamaLlmClientStreamingTests
         }
 
         // Assert
-        Assert.Equal(4, chunks.Count);
+        chunks.Count.Should().Be(4);
 
         // First 3 chunks: content
-        Assert.Equal("Hello", chunks[0].Content);
-        Assert.Null(chunks[0].Usage);
-        Assert.False(chunks[0].IsFinal);
+        chunks[0].Content.Should().Be("Hello");
+        chunks[0].Usage.Should().BeNull();
+        chunks[0].IsFinal.Should().BeFalse();
 
-        Assert.Equal(" there", chunks[1].Content);
-        Assert.Equal("!", chunks[2].Content);
+        chunks[1].Content.Should().Be(" there");
+        chunks[2].Content.Should().Be("!");
 
         // Final chunk: usage metadata
         var finalChunk = chunks[3];
-        Assert.Null(finalChunk.Content);
-        Assert.True(finalChunk.IsFinal);
-        Assert.NotNull(finalChunk.Usage);
-        Assert.NotNull(finalChunk.Cost);
+        finalChunk.Content.Should().BeNull();
+        finalChunk.IsFinal.Should().BeTrue();
+        finalChunk.Usage.Should().NotBeNull();
+        finalChunk.Cost.Should().NotBeNull();
 
         // Verify usage (Ollama provides prompt_eval_count and eval_count)
-        Assert.Equal(25, finalChunk.Usage!.PromptTokens);
-        Assert.Equal(10, finalChunk.Usage.CompletionTokens);
-        Assert.Equal(35, finalChunk.Usage.TotalTokens);
+        finalChunk.Usage!.PromptTokens.Should().Be(25);
+        finalChunk.Usage.CompletionTokens.Should().Be(10);
+        finalChunk.Usage.TotalTokens.Should().Be(35);
 
         // Verify cost (Ollama is free - zero cost)
-        Assert.Equal(0.0m, finalChunk.Cost!.TotalCost);
-        Assert.Equal("Ollama", finalChunk.Cost.Provider);
+        finalChunk.Cost!.TotalCost.Should().Be(0.0m);
+        finalChunk.Cost.Provider.Should().Be("Ollama");
     }
 
     [Fact]
@@ -165,9 +166,9 @@ public class OllamaLlmClientStreamingTests
         }
 
         // Assert
-        Assert.Single(chunks); // Only content chunk, no final usage chunk
-        Assert.Equal("Test", chunks[0].Content);
-        Assert.Null(chunks[0].Usage);
+        chunks.Should().ContainSingle(); // Only content chunk, no final usage chunk
+        chunks[0].Content.Should().Be("Test");
+        chunks[0].Usage.Should().BeNull();
 
         // Verify warning logged
         _loggerMock.Verify(

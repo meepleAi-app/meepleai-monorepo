@@ -2,6 +2,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,24 +12,23 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// <summary>
 /// Repository implementation for MechanicDraft entities.
 /// </summary>
-internal sealed class MechanicDraftRepository : IMechanicDraftRepository
+internal sealed class MechanicDraftRepository : RepositoryBase, IMechanicDraftRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public MechanicDraftRepository(MeepleAiDbContext context)
+    public MechanicDraftRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context;
     }
 
     public async Task AddAsync(MechanicDraft draft, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(draft);
-        await _context.MechanicDrafts.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.MechanicDrafts.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<MechanicDraft?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.MechanicDrafts
+        var entity = await DbContext.MechanicDrafts
             .AsNoTracking()
             .FirstOrDefaultAsync(d => d.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -40,7 +41,7 @@ internal sealed class MechanicDraftRepository : IMechanicDraftRepository
         Guid pdfDocumentId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _context.MechanicDrafts
+        var entity = await DbContext.MechanicDrafts
             .AsNoTracking()
             .Where(d => d.SharedGameId == sharedGameId
                         && d.PdfDocumentId == pdfDocumentId
@@ -56,7 +57,7 @@ internal sealed class MechanicDraftRepository : IMechanicDraftRepository
         Guid sharedGameId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.MechanicDrafts
+        var entities = await DbContext.MechanicDrafts
             .AsNoTracking()
             .Where(d => d.SharedGameId == sharedGameId)
             .OrderByDescending(d => d.LastModified)
@@ -69,7 +70,7 @@ internal sealed class MechanicDraftRepository : IMechanicDraftRepository
     public void Update(MechanicDraft draft)
     {
         var entity = MapToEntity(draft);
-        _context.MechanicDrafts.Update(entity);
+        DbContext.MechanicDrafts.Update(entity);
     }
 
     private static MechanicDraft MapToDomain(MechanicDraftEntity entity)

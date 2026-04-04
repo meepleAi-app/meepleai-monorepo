@@ -5,8 +5,8 @@ import { type Metadata } from 'next';
 import { PermissionsMatrix } from '@/components/admin/users/permissions-matrix';
 
 export const metadata: Metadata = {
-  title: 'Roles & Permissions',
-  description: 'Manage user roles and access control across the platform',
+  title: 'Ruoli e Permessi',
+  description: 'Gestisci ruoli utente e controllo accessi sulla piattaforma',
 };
 
 function CardSkeleton({ height = 'h-[180px]' }: { height?: string }) {
@@ -22,10 +22,10 @@ export default function RolesPermissionsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-          Roles & Permissions
+          Ruoli e Permessi
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage user roles and access control across the platform
+          Gestisci ruoli utente e controllo accessi sulla piattaforma
         </p>
       </div>
 

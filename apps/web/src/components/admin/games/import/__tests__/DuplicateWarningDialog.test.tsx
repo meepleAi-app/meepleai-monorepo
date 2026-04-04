@@ -47,7 +47,7 @@ describe('DuplicateWarningDialog', () => {
     render(<DuplicateWarningDialog {...defaultProps} />);
 
     expect(screen.getByText('Duplicate Game Detected')).toBeInTheDocument();
-    expect(screen.getByText(/BGG ID 13 already exists/i)).toBeInTheDocument();
+    expect(screen.getByText(/ID 13 esiste già/i)).toBeInTheDocument();
 
     // Existing game
     expect(screen.getByText('Existing Game')).toBeInTheDocument();

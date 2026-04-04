@@ -13,7 +13,7 @@
  *
  * @example
  * ```tsx
- * import { toast } from '@/hooks/use-toast';
+ * import { toast } from '@/hooks/useToast';
  * import { ProgressToast } from '@/components/pdf/progress-toast';
  *
  * // Show toast
@@ -34,8 +34,8 @@ import * as React from 'react';
 
 import { X, Eye, Check, AlertCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/feedback/progress';
+import { Button } from '@/components/ui/primitives/button';
 import { usePdfProgress } from '@/hooks/usePdfProgress';
 import { cn } from '@/lib/utils';
 
@@ -143,8 +143,8 @@ export function ProgressToast({
               {isComplete
                 ? 'Processing complete'
                 : isFailed
-                ? 'Processing failed'
-                : `${currentState.charAt(0).toUpperCase() + currentState.slice(1)}... ${progressValue}%`}
+                  ? 'Processing failed'
+                  : `${currentState.charAt(0).toUpperCase() + currentState.slice(1)}... ${progressValue}%`}
             </p>
           </div>
         </div>
@@ -180,23 +180,13 @@ export function ProgressToast({
       {/* Actions */}
       <div className="flex items-center gap-2">
         {onViewDetails && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleViewDetails}
-            className="text-xs h-7"
-          >
+          <Button variant="ghost" size="sm" onClick={handleViewDetails} className="text-xs h-7">
             <Eye className="h-3 w-3 mr-1" />
             View Details
           </Button>
         )}
         {!onViewDetails && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDismiss}
-            className="text-xs h-7 ml-auto"
-          >
+          <Button variant="ghost" size="sm" onClick={handleDismiss} className="text-xs h-7 ml-auto">
             Dismiss
           </Button>
         )}

@@ -171,8 +171,8 @@ idx_collections_game ON DocumentCollections(GameId, UserId)
 ## Related Documentation
 
 **ADRs**:
-- [ADR-003b: Unstructured PDF Processing](../../01-architecture/adr/adr-003b-unstructured-pdf.md)
-- [ADR-026: Document Collections](../../01-architecture/adr/adr-026-document-collections.md)
+- [ADR-003b: Unstructured PDF Processing](../../architecture/adr/adr-003b-unstructured-pdf.md)
+- [ADR-026: Document Collections](../../architecture/adr/adr-026-document-collections.md)
 
 **Contexts**:
 - [KnowledgeBase](./knowledge-base.md) - RAG indexing

@@ -37,7 +37,7 @@ export function AdminAuthGuard({
   children,
   loading,
   user,
-  loadingMessage = 'Authenticating...',
+  loadingMessage = 'Verifica autorizzazioni...',
   backgroundClass = 'min-h-dvh bg-background p-8',
 }: AdminAuthGuardProps) {
   if (loading) {
@@ -62,16 +62,16 @@ export function AdminAuthGuard({
         <div className="max-w-7xl mx-auto">
           <div className="max-w-md mx-auto mt-12">
             <div className="p-6 bg-red-50 border border-red-600 rounded-lg mb-4">
-              <h2 className="text-lg font-semibold text-red-900 mb-2">Unauthorized Access</h2>
+              <h2 className="text-lg font-semibold text-red-900 mb-2">Accesso Non Autorizzato</h2>
               <p className="text-red-800">
-                Admin access required. Please log in with an administrator account.
+                Accesso admin richiesto. Effettua il login con un account amministratore.
               </p>
             </div>
             <Link
               href="/login"
               className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Go to Login
+              Vai al Login
             </Link>
           </div>
         </div>

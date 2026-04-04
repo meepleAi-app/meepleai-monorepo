@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -19,6 +20,7 @@ namespace Api.Tests.Administration.AutoConfiguration;
 public sealed class SeedAdminUserCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
+    private readonly Mock<IUserAiConsentRepository> _consentRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IConfiguration> _configurationMock;
     private readonly Mock<ILogger<SeedAdminUserCommandHandler>> _loggerMock;
@@ -27,12 +29,14 @@ public sealed class SeedAdminUserCommandHandlerTests
     public SeedAdminUserCommandHandlerTests()
     {
         _userRepositoryMock = new Mock<IUserRepository>();
+        _consentRepositoryMock = new Mock<IUserAiConsentRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _configurationMock = new Mock<IConfiguration>();
         _loggerMock = new Mock<ILogger<SeedAdminUserCommandHandler>>();
 
         _handler = new SeedAdminUserCommandHandler(
             _userRepositoryMock.Object,
+            _consentRepositoryMock.Object,
             _unitOfWorkMock.Object,
             _configurationMock.Object,
             _loggerMock.Object
@@ -86,7 +90,7 @@ public sealed class SeedAdminUserCommandHandlerTests
             x => x.AddAsync(It.Is<User>(u =>
                 u.Email.Value == "admin@test.com" &&
                 u.DisplayName == "Test Admin" &&
-                u.Role == Role.Admin
+                u.Role == Role.SuperAdmin
             ), It.IsAny<CancellationToken>()),
             Times.Once
         );
@@ -107,12 +111,23 @@ public sealed class SeedAdminUserCommandHandlerTests
 
         _configurationMock.Setup(x => x["INITIAL_ADMIN_EMAIL"]).Returns((string?)null);
 
+        // Clear env var fallback so handler sees null from both sources
+        var previousValue = Environment.GetEnvironmentVariable("INITIAL_ADMIN_EMAIL");
+        Environment.SetEnvironmentVariable("INITIAL_ADMIN_EMAIL", null);
+
         var command = new SeedAdminUserCommand();
 
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, CancellationToken.None)
-        );
+        try
+        {
+            // Act & Assert
+            var act = async () => await _handler.Handle(command, CancellationToken.None);
+            await act.Should().ThrowAsync<InvalidOperationException>();
+        }
+        finally
+        {
+            // Restore
+            Environment.SetEnvironmentVariable("INITIAL_ADMIN_EMAIL", previousValue);
+        }
     }
 
     [Fact]
@@ -129,9 +144,8 @@ public sealed class SeedAdminUserCommandHandlerTests
         var command = new SeedAdminUserCommand();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, CancellationToken.None)
-        );
+        var act2 = async () => await _handler.Handle(command, CancellationToken.None);
+        var exception = (await act2.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("at least 8 characters");
     }
@@ -150,9 +164,8 @@ public sealed class SeedAdminUserCommandHandlerTests
         var command = new SeedAdminUserCommand();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, CancellationToken.None)
-        );
+        var act3 = async () => await _handler.Handle(command, CancellationToken.None);
+        var exception = (await act3.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("uppercase letter");
     }
@@ -171,9 +184,8 @@ public sealed class SeedAdminUserCommandHandlerTests
         var command = new SeedAdminUserCommand();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, CancellationToken.None)
-        );
+        var act4 = async () => await _handler.Handle(command, CancellationToken.None);
+        var exception = (await act4.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("digit");
     }

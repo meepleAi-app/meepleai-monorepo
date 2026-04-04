@@ -77,11 +77,12 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task<IReadOnlyList<PdfDocument>> FindByStatusAsync(string status, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PdfDocument>> FindByStateAsync(PdfProcessingState state, CancellationToken cancellationToken = default)
     {
+        var stateString = state.ToString();
         var entities = await DbContext.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.ProcessingStatus == status)
+            .Where(p => p.ProcessingState == stateString)
             .OrderByDescending(p => p.UploadedAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -148,6 +149,17 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return await DbContext.PdfDocuments.AnyAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<PdfDocument?> FindByContentHashAsync(string contentHash, CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.ContentHash == contentHash)
+            .OrderByDescending(p => p.UploadedAt)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
     public async Task<bool> ExistsByContentHashAsync(string contentHash, Guid? gameId, Guid? privateGameId, CancellationToken cancellationToken = default)
     {
         return await DbContext.PdfDocuments.AnyAsync(p =>
@@ -200,7 +212,6 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             fileSize: fileSize,
             uploadedByUserId: entity.UploadedByUserId,
             uploadedAt: entity.UploadedAt,
-            processingStatus: entity.ProcessingStatus,
             processedAt: entity.ProcessedAt,
             pageCount: entity.PageCount,
             processingError: entity.ProcessingError,
@@ -231,7 +242,9 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             copyrightDisclaimerAcceptedAt: entity.CopyrightDisclaimerAcceptedAt, // Issue #5446
             copyrightDisclaimerAcceptedBy: entity.CopyrightDisclaimerAcceptedBy, // Issue #5446
             isActiveForRag: entity.IsActiveForRag, // Issue #5446
-            versionLabel: entity.VersionLabel // Issue #5447
+            versionLabel: entity.VersionLabel, // Issue #5447
+            languageConfidence: entity.LanguageConfidence, // E5-1
+            languageOverride: entity.LanguageOverride // E5-1
         );
     }
 
@@ -247,7 +260,6 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             ContentType = domain.ContentType,
             UploadedByUserId = domain.UploadedByUserId,
             UploadedAt = domain.UploadedAt,
-            ProcessingStatus = domain.ProcessingStatus,
             ProcessingState = domain.ProcessingState.ToString(), // Issue #4215
             ProcessedAt = domain.ProcessedAt,
             PageCount = domain.PageCount,
@@ -275,7 +287,9 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             CopyrightDisclaimerAcceptedAt = domain.CopyrightDisclaimerAcceptedAt, // Issue #5446
             CopyrightDisclaimerAcceptedBy = domain.CopyrightDisclaimerAcceptedBy, // Issue #5446
             IsActiveForRag = domain.IsActiveForRag, // Issue #5446
-            VersionLabel = domain.VersionLabel // Issue #5447
+            VersionLabel = domain.VersionLabel, // Issue #5447
+            LanguageConfidence = domain.LanguageConfidence, // E5-1
+            LanguageOverride = domain.LanguageOverride // E5-1
         };
     }
 }

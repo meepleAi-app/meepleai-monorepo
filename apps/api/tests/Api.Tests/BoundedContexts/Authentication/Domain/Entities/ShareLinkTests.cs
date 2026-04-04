@@ -4,6 +4,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -34,18 +35,18 @@ public class ShareLinkTests
         );
 
         // Assert
-        Assert.NotNull(shareLink);
-        Assert.NotEqual(Guid.Empty, shareLink.Id);
-        Assert.Equal(threadId, shareLink.ThreadId);
-        Assert.Equal(creatorId, shareLink.CreatorId);
-        Assert.Equal(ShareLinkRole.View, shareLink.Role);
-        Assert.Equal(expiresAt, shareLink.ExpiresAt);
-        Assert.Equal("Test share link", shareLink.Label);
-        Assert.False(shareLink.IsRevoked);
-        Assert.False(shareLink.IsExpired);
-        Assert.True(shareLink.IsValid);
-        Assert.Equal(0, shareLink.AccessCount);
-        Assert.Null(shareLink.LastAccessedAt);
+        shareLink.Should().NotBeNull();
+        shareLink.Id.Should().NotBe(Guid.Empty);
+        shareLink.ThreadId.Should().Be(threadId);
+        shareLink.CreatorId.Should().Be(creatorId);
+        shareLink.Role.Should().Be(ShareLinkRole.View);
+        shareLink.ExpiresAt.Should().Be(expiresAt);
+        shareLink.Label.Should().Be("Test share link");
+        shareLink.IsRevoked.Should().BeFalse();
+        shareLink.IsExpired.Should().BeFalse();
+        shareLink.IsValid.Should().BeTrue();
+        shareLink.AccessCount.Should().Be(0);
+        shareLink.LastAccessedAt.Should().BeNull();
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public class ShareLinkTests
         );
 
         // Assert
-        Assert.Equal(ShareLinkRole.Comment, shareLink.Role);
+        shareLink.Role.Should().Be(ShareLinkRole.Comment);
     }
 
     [Fact]
@@ -76,55 +77,55 @@ public class ShareLinkTests
         );
 
         // Assert
-        Assert.Null(shareLink.Label);
+        shareLink.Label.Should().BeNull();
     }
 
     [Fact]
     public void Create_WithEmptyThreadId_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             ShareLink.Create(
                 threadId: Guid.Empty,
                 creatorId: Guid.NewGuid(),
                 role: ShareLinkRole.View,
                 expiresAt: DateTime.UtcNow.AddDays(7)
-            )
-        );
+            );
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Thread ID", exception.Message);
+        exception.Message.Should().Contain("Thread ID");
     }
 
     [Fact]
     public void Create_WithEmptyCreatorId_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             ShareLink.Create(
                 threadId: Guid.NewGuid(),
                 creatorId: Guid.Empty,
                 role: ShareLinkRole.View,
                 expiresAt: DateTime.UtcNow.AddDays(7)
-            )
-        );
+            );
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Creator ID", exception.Message);
+        exception.Message.Should().Contain("Creator ID");
     }
 
     [Fact]
     public void Create_WithPastExpiration_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             ShareLink.Create(
                 threadId: Guid.NewGuid(),
                 creatorId: Guid.NewGuid(),
                 role: ShareLinkRole.View,
                 expiresAt: DateTime.UtcNow.AddSeconds(-1) // Past
-            )
-        );
+            );
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("future", exception.Message);
+        exception.Message.Should().Contain("future");
     }
 
     [Fact]
@@ -144,7 +145,7 @@ public class ShareLinkTests
         var after = DateTime.UtcNow;
 
         // Assert
-        Assert.InRange(shareLink.CreatedAt, before, after);
+        shareLink.CreatedAt.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 
     [Fact]
@@ -166,10 +167,10 @@ public class ShareLinkTests
         var after = DateTime.UtcNow;
 
         // Assert
-        Assert.True(shareLink.IsRevoked);
-        Assert.NotNull(shareLink.RevokedAt);
-        Assert.InRange(shareLink.RevokedAt.Value, before, after);
-        Assert.False(shareLink.IsValid);
+        shareLink.IsRevoked.Should().BeTrue();
+        shareLink.RevokedAt.Should().NotBeNull();
+        shareLink.RevokedAt.Value.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
+        shareLink.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -186,11 +187,11 @@ public class ShareLinkTests
         shareLink.Revoke();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            shareLink.Revoke()
-        );
+        var act = () =>
+            shareLink.Revoke();
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("already revoked", exception.Message);
+        exception.Message.Should().Contain("already revoked");
     }
 
     [Fact]
@@ -210,7 +211,7 @@ public class ShareLinkTests
         shareLink.RecordAccess();
 
         // Assert
-        Assert.Equal(3, shareLink.AccessCount);
+        shareLink.AccessCount.Should().Be(3);
     }
 
     [Fact]
@@ -232,8 +233,8 @@ public class ShareLinkTests
         var after = DateTime.UtcNow;
 
         // Assert
-        Assert.NotNull(shareLink.LastAccessedAt);
-        Assert.InRange(shareLink.LastAccessedAt.Value, before, after);
+        shareLink.LastAccessedAt.Should().NotBeNull();
+        shareLink.LastAccessedAt.Value.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 
     [Fact]
@@ -253,7 +254,7 @@ public class ShareLinkTests
         shareLink.UpdateExpiration(newExpiration);
 
         // Assert
-        Assert.Equal(newExpiration, shareLink.ExpiresAt);
+        shareLink.ExpiresAt.Should().Be(newExpiration);
     }
 
     [Fact]
@@ -268,11 +269,11 @@ public class ShareLinkTests
         );
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            shareLink.UpdateExpiration(DateTime.UtcNow.AddSeconds(-1))
-        );
+        var act = () =>
+            shareLink.UpdateExpiration(DateTime.UtcNow.AddSeconds(-1));
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("future", exception.Message);
+        exception.Message.Should().Contain("future");
     }
 
     [Fact]
@@ -289,11 +290,11 @@ public class ShareLinkTests
         shareLink.Revoke();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            shareLink.UpdateExpiration(DateTime.UtcNow.AddDays(30))
-        );
+        var act = () =>
+            shareLink.UpdateExpiration(DateTime.UtcNow.AddDays(30));
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("revoked", exception.Message);
+        exception.Message.Should().Contain("revoked");
     }
 
     [Fact]
@@ -303,8 +304,8 @@ public class ShareLinkTests
         var shareLink = ShareLinkBuilder.CreateExpired();
 
         // Assert - no waiting needed, deterministically expired
-        Assert.True(shareLink.IsExpired);
-        Assert.False(shareLink.IsValid);
+        shareLink.IsExpired.Should().BeTrue();
+        shareLink.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -319,9 +320,9 @@ public class ShareLinkTests
         );
 
         // Assert
-        Assert.True(shareLink.IsValid);
-        Assert.False(shareLink.IsRevoked);
-        Assert.False(shareLink.IsExpired);
+        shareLink.IsValid.Should().BeTrue();
+        shareLink.IsRevoked.Should().BeFalse();
+        shareLink.IsExpired.Should().BeFalse();
     }
 
     [Fact]
@@ -338,7 +339,7 @@ public class ShareLinkTests
         shareLink.Revoke();
 
         // Assert
-        Assert.False(shareLink.IsValid);
+        shareLink.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -354,9 +355,9 @@ public class ShareLinkTests
         );
 
         // Assert
-        Assert.NotNull(shareLink.TimeUntilExpiration);
+        shareLink.TimeUntilExpiration.Should().NotBeNull();
         // Allow for some execution time variance
-        Assert.InRange(shareLink.TimeUntilExpiration.Value.TotalDays, 6.9, 7.1);
+        shareLink.TimeUntilExpiration.Value.TotalDays.Should().BeInRange(6.9, 7.1);
     }
 
     [Fact]
@@ -366,7 +367,7 @@ public class ShareLinkTests
         var shareLink = ShareLinkBuilder.CreateExpired();
 
         // Assert - no waiting needed, deterministically expired
-        Assert.Null(shareLink.TimeUntilExpiration);
+        shareLink.TimeUntilExpiration.Should().BeNull();
     }
 
     [Fact]
@@ -384,12 +385,12 @@ public class ShareLinkTests
         var token = shareLink.GenerateToken(TestSecretKey);
 
         // Assert
-        Assert.NotNull(token);
-        Assert.NotEmpty(token.Value);
-        Assert.Equal(shareLink.Id, token.ShareLinkId);
-        Assert.Equal(shareLink.ThreadId, token.ThreadId);
-        Assert.Equal(shareLink.CreatorId, token.CreatorId);
-        Assert.Equal(shareLink.Role, token.Role);
+        token.Should().NotBeNull();
+        token.Value.Should().NotBeEmpty();
+        token.ShareLinkId.Should().Be(shareLink.Id);
+        token.ThreadId.Should().Be(shareLink.ThreadId);
+        token.CreatorId.Should().Be(shareLink.CreatorId);
+        token.Role.Should().Be(shareLink.Role);
     }
 
     [Fact]
@@ -406,11 +407,11 @@ public class ShareLinkTests
         shareLink.Revoke();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            shareLink.GenerateToken(TestSecretKey)
-        );
+        var act = () =>
+            shareLink.GenerateToken(TestSecretKey);
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("revoked", exception.Message);
+        exception.Message.Should().Contain("revoked");
     }
 
     [Fact]
@@ -420,10 +421,10 @@ public class ShareLinkTests
         var shareLink = ShareLinkBuilder.CreateExpired();
 
         // Act & Assert - no waiting needed, deterministically expired
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            shareLink.GenerateToken(TestSecretKey)
-        );
+        var act = () =>
+            shareLink.GenerateToken(TestSecretKey);
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("expired", exception.Message);
+        exception.Message.Should().Contain("expired");
     }
 }

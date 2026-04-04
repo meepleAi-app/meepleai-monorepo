@@ -13,6 +13,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -73,10 +74,10 @@ public class CreateShareRequestCommandHandlerTests
         var response = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(response);
-        Assert.NotEqual(Guid.Empty, response.ShareRequestId);
-        Assert.Equal(ShareRequestStatus.Pending, response.Status);
-        Assert.Equal(ContributionType.NewGame, response.ContributionType);
+        response.Should().NotBeNull();
+        response.ShareRequestId.Should().NotBe(Guid.Empty);
+        response.Status.Should().Be(ShareRequestStatus.Pending);
+        response.ContributionType.Should().Be(ContributionType.NewGame);
 
         _shareRequestRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<ShareRequest>(), It.IsAny<CancellationToken>()),
@@ -85,11 +86,11 @@ public class CreateShareRequestCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedRequest);
-        Assert.Equal(TestUserId, capturedRequest.UserId);
-        Assert.Equal(TestGameId, capturedRequest.SourceGameId);
-        Assert.Equal("Great game to share!", capturedRequest.UserNotes);
-        Assert.Equal(ContributionType.NewGame, capturedRequest.ContributionType);
+        capturedRequest.Should().NotBeNull();
+        capturedRequest.UserId.Should().Be(TestUserId);
+        capturedRequest.SourceGameId.Should().Be(TestGameId);
+        capturedRequest.UserNotes.Should().Be("Great game to share!");
+        capturedRequest.ContributionType.Should().Be(ContributionType.NewGame);
     }
 
     [Fact]
@@ -121,10 +122,10 @@ public class CreateShareRequestCommandHandlerTests
         var response = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(ContributionType.AdditionalContent, response.ContributionType);
-        Assert.NotNull(capturedRequest);
-        Assert.Equal(ContributionType.AdditionalContent, capturedRequest.ContributionType);
-        Assert.Equal(existingGameId, capturedRequest.TargetSharedGameId);
+        response.ContributionType.Should().Be(ContributionType.AdditionalContent);
+        capturedRequest.Should().NotBeNull();
+        capturedRequest.ContributionType.Should().Be(ContributionType.AdditionalContent);
+        capturedRequest.TargetSharedGameId.Should().Be(existingGameId);
     }
 
     [Fact]
@@ -163,8 +164,8 @@ public class CreateShareRequestCommandHandlerTests
         var response = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedRequest);
-        Assert.Equal(2, capturedRequest.AttachedDocuments.Count);
+        capturedRequest.Should().NotBeNull();
+        capturedRequest.AttachedDocuments.Count.Should().Be(2);
     }
 
     [Fact]
@@ -180,8 +181,8 @@ public class CreateShareRequestCommandHandlerTests
             .ReturnsAsync((UserLibraryEntry?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _shareRequestRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<ShareRequest>(), It.IsAny<CancellationToken>()),
@@ -207,8 +208,8 @@ public class CreateShareRequestCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _shareRequestRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<ShareRequest>(), It.IsAny<CancellationToken>()),
@@ -243,17 +244,17 @@ public class CreateShareRequestCommandHandlerTests
         var response = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert: Should be NewGame since source and existing are the same
-        Assert.Equal(ContributionType.NewGame, response.ContributionType);
-        Assert.NotNull(capturedRequest);
-        Assert.Null(capturedRequest.TargetSharedGameId);
+        response.ContributionType.Should().Be(ContributionType.NewGame);
+        capturedRequest.Should().NotBeNull();
+        capturedRequest.TargetSharedGameId.Should().BeNull();
     }
 
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private void SetupMocks(UserLibraryEntry libraryEntry, SharedGame sourceGame)

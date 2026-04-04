@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 /**
  * IndexedDB Offline Storage for MeepleAI PWA (Issue #3346)
  *
@@ -97,15 +99,14 @@ export async function initOfflineStorage(): Promise<IDBDatabase> {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
-      console.error('[OfflineStorage] Failed to open database:', request.error);
+      logger.error('[OfflineStorage] Failed to open database:', request.error);
       reject(request.error);
     };
 
     request.onsuccess = () => {
       dbInstance = request.result;
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[OfflineStorage] Database opened successfully');
+        logger.debug('[OfflineStorage] Database opened successfully');
       }
       resolve(dbInstance);
     };
@@ -140,8 +141,7 @@ export async function initOfflineStorage(): Promise<IDBDatabase> {
       }
 
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[OfflineStorage] Database schema created/upgraded');
+        logger.debug('[OfflineStorage] Database schema created/upgraded');
       }
     };
   });
@@ -166,8 +166,7 @@ export async function saveSession(session: OfflineSession): Promise<void> {
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[OfflineStorage] Session saved:', session.id);
+        logger.debug(`[OfflineStorage] Session saved: ${session.id}`);
       }
       resolve();
     };
@@ -227,8 +226,7 @@ export async function deleteSession(id: string): Promise<void> {
 
     transaction.oncomplete = () => {
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[OfflineStorage] Session deleted:', id);
+        logger.debug(`[OfflineStorage] Session deleted: ${id}`);
       }
       resolve();
     };
@@ -263,8 +261,7 @@ export async function queueAction(
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[OfflineStorage] Action queued:', fullAction.type, id);
+        logger.debug(`[OfflineStorage] Action queued: ${fullAction.type} ${id}`);
       }
       resolve(id);
     };
@@ -309,8 +306,7 @@ export async function removeAction(id: string): Promise<void> {
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[OfflineStorage] Action removed:', id);
+        logger.debug(`[OfflineStorage] Action removed: ${id}`);
       }
       resolve();
     };
@@ -351,8 +347,7 @@ export async function clearAllActions(): Promise<void> {
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[OfflineStorage] All actions cleared');
+        logger.debug('[OfflineStorage] All actions cleared');
       }
       resolve();
     };
@@ -506,8 +501,7 @@ export async function clearAllData(): Promise<void> {
 
     transaction.oncomplete = () => {
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[OfflineStorage] All data cleared');
+        logger.debug('[OfflineStorage] All data cleared');
       }
       resolve();
     };

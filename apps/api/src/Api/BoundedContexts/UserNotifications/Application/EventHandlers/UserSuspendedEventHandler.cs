@@ -1,7 +1,8 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Services;
+using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
-using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -9,22 +10,23 @@ using Microsoft.Extensions.Logging;
 namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
-/// Event handler that sends email notification when a user account is suspended.
+/// Event handler that sends notification when a user account is suspended.
+/// Dispatches via NotificationDispatcher for multi-channel delivery.
 /// Issue #2886: Email notification for user suspension.
 /// </summary>
 internal sealed class UserSuspendedEventHandler : INotificationHandler<UserSuspendedEvent>
 {
+    private readonly INotificationDispatcher _dispatcher;
     private readonly MeepleAiDbContext _dbContext;
-    private readonly IEmailService _emailService;
     private readonly ILogger<UserSuspendedEventHandler> _logger;
 
     public UserSuspendedEventHandler(
+        INotificationDispatcher dispatcher,
         MeepleAiDbContext dbContext,
-        IEmailService emailService,
         ILogger<UserSuspendedEventHandler> logger)
     {
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -46,16 +48,18 @@ internal sealed class UserSuspendedEventHandler : INotificationHandler<UserSuspe
                 return;
             }
 
-            // Send email notification
-            await _emailService.SendAccountSuspendedEmailAsync(
-                toEmail: user.Email,
-                userName: user.DisplayName ?? user.Email,
-                reason: notification.Reason,
-                cancellationToken)
-                .ConfigureAwait(false);
+            await _dispatcher.DispatchAsync(new NotificationMessage
+            {
+                Type = NotificationType.SessionTerminated,
+                RecipientUserId = notification.UserId,
+                Payload = new GenericPayload(
+                    "Account Suspended",
+                    $"Your account has been suspended. Reason: {notification.Reason}"),
+                DeepLinkPath = "/account/suspended"
+            }, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Account suspended notification sent to user {UserId}",
+                "Dispatched account suspended notification to user {UserId}",
                 notification.UserId);
         }
 #pragma warning disable CA1031

@@ -58,7 +58,7 @@ describe('ServiceCard', () => {
 
   it('applies Unhealthy state styling', () => {
     const { container } = render(
-      <ServiceCard serviceName="qdrant" status="Unhealthy" locale="it" />
+      <ServiceCard serviceName="pgvector" status="Unhealthy" locale="it" />
     );
     const card = container.querySelector('[class*="border-red-200"]');
     expect(card).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe('ServiceCard', () => {
 
   it('shows XCircle icon for Unhealthy state', () => {
     const { container } = render(
-      <ServiceCard serviceName="qdrant" status="Unhealthy" locale="it" />
+      <ServiceCard serviceName="pgvector" status="Unhealthy" locale="it" />
     );
     const icon = container.querySelector('[class*="text-red-600"]');
     expect(icon).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe('ServiceCard', () => {
   it('displays error message for Unhealthy state', () => {
     render(
       <ServiceCard
-        serviceName="qdrant"
+        serviceName="pgvector"
         status="Unhealthy"
         errorMessage="Connection refused: ECONNREFUSED"
         locale="it"
@@ -143,7 +143,7 @@ describe('ServiceCard', () => {
 
   it('formats response time >= 1000ms as seconds', () => {
     render(
-      <ServiceCard serviceName="qdrant" status="Degraded" responseTimeMs={1500} locale="it" />
+      <ServiceCard serviceName="pgvector" status="Degraded" responseTimeMs={1500} locale="it" />
     );
 
     expect(screen.getByText(/1.50s/)).toBeInTheDocument();
@@ -245,13 +245,13 @@ describe('ServiceCard', () => {
   });
 
   it('displays Italian status for Unhealthy state', () => {
-    render(<ServiceCard serviceName="qdrant" status="Unhealthy" locale="it" />);
+    render(<ServiceCard serviceName="pgvector" status="Unhealthy" locale="it" />);
 
     expect(screen.getByTestId('status-badge')).toHaveTextContent('Non funzionante');
   });
 
   it('displays English status for Unhealthy state', () => {
-    render(<ServiceCard serviceName="qdrant" status="Unhealthy" locale="en" />);
+    render(<ServiceCard serviceName="pgvector" status="Unhealthy" locale="en" />);
 
     expect(screen.getByTestId('status-badge')).toHaveTextContent('Unhealthy');
   });
@@ -286,10 +286,10 @@ describe('ServiceCard', () => {
     expect(screen.getByText('Redis')).toBeInTheDocument();
   });
 
-  it('displays "Qdrant" for "qdrant" service', () => {
-    render(<ServiceCard serviceName="qdrant" status="Healthy" locale="it" />);
+  it('displays "pgvector" for "pgvector" service', () => {
+    render(<ServiceCard serviceName="pgvector" status="Healthy" locale="it" />);
 
-    expect(screen.getByText('Qdrant')).toBeInTheDocument();
+    expect(screen.getByText('pgvector')).toBeInTheDocument();
   });
 
   it('displays raw service name for unknown service', () => {

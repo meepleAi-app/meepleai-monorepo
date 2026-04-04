@@ -18,8 +18,8 @@ import { Eye, FileText, Loader2, RefreshCw, Upload, AlertCircle } from 'lucide-r
 
 import { PdfUploadModal } from '@/components/library/PdfUploadModal';
 import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
-import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 import { cn } from '@/lib/utils';

@@ -18,7 +18,7 @@ describe('entity-navigation', () => {
       const expected = [
         'game',
         'agent',
-        'document',
+        'kb',
         'session',
         'player',
         'chatSession',
@@ -33,17 +33,17 @@ describe('entity-navigation', () => {
     it('game has 4 navigation targets', () => {
       const targets = ENTITY_NAVIGATION_GRAPH.game!;
       expect(targets).toHaveLength(4);
-      expect(targets.map(t => t.entity)).toEqual(['document', 'agent', 'chatSession', 'session']);
+      expect(targets.map(t => t.entity)).toEqual(['kb', 'agent', 'chatSession', 'session']);
     });
 
     it('agent has 4 navigation targets', () => {
       const targets = ENTITY_NAVIGATION_GRAPH.agent!;
       expect(targets).toHaveLength(4);
-      expect(targets.map(t => t.entity)).toEqual(['game', 'document', 'chatSession', 'session']);
+      expect(targets.map(t => t.entity)).toEqual(['game', 'kb', 'chatSession', 'session']);
     });
 
-    it('document has 2 navigation targets', () => {
-      const targets = ENTITY_NAVIGATION_GRAPH.document!;
+    it('kb has 2 navigation targets', () => {
+      const targets = ENTITY_NAVIGATION_GRAPH.kb!;
       expect(targets).toHaveLength(2);
       expect(targets.map(t => t.entity)).toEqual(['game', 'agent']);
     });
@@ -90,7 +90,7 @@ describe('entity-navigation', () => {
       const links = getNavigationLinks('game', { id: 'game-123' });
       expect(links).toHaveLength(4);
       expect(links[0]).toEqual<ResolvedNavigationLink>({
-        entity: 'document',
+        entity: 'kb',
         label: 'KB',
         href: '/library/game-123?tab=agent',
       });
@@ -138,8 +138,8 @@ describe('entity-navigation', () => {
       expect(getNavigationLinks('game', {})).toEqual([]);
     });
 
-    it('document links use idKey for game and agent', () => {
-      const links = getNavigationLinks('document', {
+    it('kb links use idKey for game and agent', () => {
+      const links = getNavigationLinks('kb', {
         id: 'doc-1',
         gameId: 'game-1',
         agentId: 'agent-1',
@@ -173,9 +173,9 @@ describe('entity-navigation', () => {
       expect(ENTITY_NAVIGATION_GRAPH.agent!.map(t => t.entity)).toContain('game');
     });
 
-    it('game <-> document', () => {
-      expect(ENTITY_NAVIGATION_GRAPH.game!.map(t => t.entity)).toContain('document');
-      expect(ENTITY_NAVIGATION_GRAPH.document!.map(t => t.entity)).toContain('game');
+    it('game <-> kb', () => {
+      expect(ENTITY_NAVIGATION_GRAPH.game!.map(t => t.entity)).toContain('kb');
+      expect(ENTITY_NAVIGATION_GRAPH.kb!.map(t => t.entity)).toContain('game');
     });
 
     it('game <-> session', () => {

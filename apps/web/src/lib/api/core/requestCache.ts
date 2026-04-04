@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe Map/object operations in cache logic */
 /**
  * Request Deduplication Cache (Issue #1454, #1453)
  *

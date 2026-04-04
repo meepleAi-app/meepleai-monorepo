@@ -702,7 +702,7 @@ Issue #2542: E2E Test Suite with Robust Selectors
 
 ### Codecov Dashboard
 
-**URL**: `https://codecov.io/gh/DegrassiAaron/meepleai-monorepo`
+**URL**: `https://codecov.io/gh/meepleAi-app/meepleai-monorepo`
 
 **Metrics**:
 - **E2E Coverage**: Frontend code covered by E2E tests

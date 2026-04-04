@@ -9,20 +9,23 @@ public class SmolDoclingHealthCheck : IHealthCheck
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<SmolDoclingHealthCheck> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public SmolDoclingHealthCheck(
         IConfiguration configuration,
-        ILogger<SmolDoclingHealthCheck> logger)
+        ILogger<SmolDoclingHealthCheck> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        var smoldoclingUrl = _configuration["PdfProcessing:SmolDoclingApiUrl"];
+        var smoldoclingUrl = _configuration["PdfProcessing:Extractor:SmolDocling:ApiUrl"];
         if (string.IsNullOrWhiteSpace(smoldoclingUrl))
         {
             return HealthCheckResult.Degraded("SmolDocling API not configured");
@@ -30,7 +33,8 @@ public class SmolDoclingHealthCheck : IHealthCheck
 
         try
         {
-            using var client = new HttpClient { BaseAddress = new Uri(smoldoclingUrl) };
+            using var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(smoldoclingUrl);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 

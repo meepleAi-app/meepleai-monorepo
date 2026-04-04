@@ -2,6 +2,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -10,25 +12,24 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Repository for AbTestSession aggregate.
 /// Issue #5491: AbTestSession domain entity.
 /// </summary>
-public sealed class AbTestSessionRepository : IAbTestSessionRepository
+public sealed class AbTestSessionRepository : RepositoryBase, IAbTestSessionRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public AbTestSessionRepository(MeepleAiDbContext context)
+    public AbTestSessionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task<AbTestSession?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Set<AbTestSession>()
+        return await DbContext.Set<AbTestSession>()
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == id, ct).ConfigureAwait(false);
     }
 
     public async Task<AbTestSession?> GetByIdWithVariantsAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Set<AbTestSession>()
+        return await DbContext.Set<AbTestSession>()
             .Include(s => s.Variants)
             .FirstOrDefaultAsync(s => s.Id == id, ct).ConfigureAwait(false);
     }
@@ -40,7 +41,7 @@ public sealed class AbTestSessionRepository : IAbTestSessionRepository
         int take = 20,
         CancellationToken ct = default)
     {
-        var query = _context.Set<AbTestSession>()
+        var query = DbContext.Set<AbTestSession>()
             .AsNoTracking()
             .Where(s => s.CreatedBy == userId);
 
@@ -56,7 +57,7 @@ public sealed class AbTestSessionRepository : IAbTestSessionRepository
 
     public async Task<int> CountByUserAsync(Guid userId, AbTestStatus? status = null, CancellationToken ct = default)
     {
-        var query = _context.Set<AbTestSession>()
+        var query = DbContext.Set<AbTestSession>()
             .Where(s => s.CreatedBy == userId);
 
         if (status.HasValue)
@@ -67,7 +68,7 @@ public sealed class AbTestSessionRepository : IAbTestSessionRepository
 
     public async Task<List<AbTestSession>> GetAllEvaluatedWithVariantsAsync(CancellationToken ct = default)
     {
-        return await _context.Set<AbTestSession>()
+        return await DbContext.Set<AbTestSession>()
             .AsNoTracking()
             .Include(s => s.Variants)
             .Where(s => s.Status == AbTestStatus.Evaluated)
@@ -77,13 +78,13 @@ public sealed class AbTestSessionRepository : IAbTestSessionRepository
 
     public async Task AddAsync(AbTestSession session, CancellationToken ct = default)
     {
-        await _context.Set<AbTestSession>().AddAsync(session, ct).ConfigureAwait(false);
-        await _context.SaveChangesAsync(ct).ConfigureAwait(false);
+        await DbContext.Set<AbTestSession>().AddAsync(session, ct).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(AbTestSession session, CancellationToken ct = default)
     {
-        _context.Set<AbTestSession>().Update(session);
-        await _context.SaveChangesAsync(ct).ConfigureAwait(false);
+        DbContext.Set<AbTestSession>().Update(session);
+        await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 }

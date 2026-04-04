@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Epic #1: MeepleCard Enhancements', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/games');
+    await page.goto('/library');
   });
 
   /**
@@ -119,7 +119,7 @@ test.describe('Epic #1: MeepleCard Enhancements', () => {
     await expect(ownedCard).toHaveClass(/owned/);
 
     // Not owned game
-    await page.goto('/games');
+    await page.goto('/library');
     const notOwnedCard = page.locator('[data-testid="meeple-card"][data-owned="false"]').first();
     await expect(notOwnedCard).not.toHaveClass(/owned/);
 
@@ -147,7 +147,7 @@ test.describe('Epic #1: MeepleCard Enhancements', () => {
    */
   test('MeepleCard - Permission-based action visibility', async ({ page }) => {
     // TODO: Login as different user roles
-    await page.goto('/games');
+    await page.goto('/library');
 
     const card = page.locator('[data-testid="meeple-card"]').first();
 
@@ -176,7 +176,7 @@ test.describe('Epic #1: MeepleCard Enhancements', () => {
    * Issue #4081: Performance Optimization
    */
   test('MeepleCard - Performance with 100+ cards', async ({ page }) => {
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Wait for initial load
     await page.waitForSelector('[data-testid="meeple-card"]');

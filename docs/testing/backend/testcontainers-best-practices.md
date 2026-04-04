@@ -1,6 +1,6 @@
 # Testcontainers Best Practices
 
-**Issue Reference**: [#2474 - Fix Testcontainers infrastructure stability issues](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2474)
+**Issue Reference**: [#2474 - Fix Testcontainers infrastructure stability issues](https://github.com/meepleAi-app/meepleai-monorepo/issues/2474)
 
 ## Overview
 

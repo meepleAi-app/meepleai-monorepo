@@ -4,6 +4,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Enums;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.ValueObjects;
 
@@ -23,15 +24,15 @@ public class PerformanceMetricsTests
         var metrics = PerformanceMetrics.CreateDefault();
 
         // Assert
-        Assert.Equal(0m, metrics.Lcp);
-        Assert.Equal(0m, metrics.Fid);
-        Assert.Equal(0m, metrics.Cls);
-        Assert.Equal(0m, metrics.Fcp);
-        Assert.Equal(0m, metrics.Tti);
-        Assert.Equal(0m, metrics.Tbt);
-        Assert.Equal(0m, metrics.SpeedIndex);
-        Assert.Equal(0m, metrics.PerformanceScore);
-        Assert.Equal(PerformanceBudgetStatus.NoData, metrics.BudgetStatus);
+        metrics.Lcp.Should().Be(0m);
+        metrics.Fid.Should().Be(0m);
+        metrics.Cls.Should().Be(0m);
+        metrics.Fcp.Should().Be(0m);
+        metrics.Tti.Should().Be(0m);
+        metrics.Tbt.Should().Be(0m);
+        metrics.SpeedIndex.Should().Be(0m);
+        metrics.PerformanceScore.Should().Be(0m);
+        metrics.BudgetStatus.Should().Be(PerformanceBudgetStatus.NoData);
     }
 
     [Fact]
@@ -41,9 +42,9 @@ public class PerformanceMetricsTests
         var empty = PerformanceMetrics.Empty;
 
         // Assert
-        Assert.Equal(0m, empty.Lcp);
-        Assert.Equal(0m, empty.PerformanceScore);
-        Assert.Equal(PerformanceBudgetStatus.NoData, empty.BudgetStatus);
+        empty.Lcp.Should().Be(0m);
+        empty.PerformanceScore.Should().Be(0m);
+        empty.BudgetStatus.Should().Be(PerformanceBudgetStatus.NoData);
     }
 
     #endregion
@@ -69,16 +70,16 @@ public class PerformanceMetricsTests
             lastRunAt: lastRun);
 
         // Assert
-        Assert.Equal(1500m, metrics.Lcp);
-        Assert.Equal(50m, metrics.Fid);
-        Assert.Equal(0.05m, metrics.Cls);
-        Assert.Equal(1000m, metrics.Fcp);
-        Assert.Equal(2000m, metrics.Tti);
-        Assert.Equal(100m, metrics.Tbt);
-        Assert.Equal(1500m, metrics.SpeedIndex);
-        Assert.Equal(95m, metrics.PerformanceScore);
-        Assert.Equal(lastRun, metrics.LastRunAt);
-        Assert.Equal(PerformanceBudgetStatus.Pass, metrics.BudgetStatus);
+        metrics.Lcp.Should().Be(1500m);
+        metrics.Fid.Should().Be(50m);
+        metrics.Cls.Should().Be(0.05m);
+        metrics.Fcp.Should().Be(1000m);
+        metrics.Tti.Should().Be(2000m);
+        metrics.Tbt.Should().Be(100m);
+        metrics.SpeedIndex.Should().Be(1500m);
+        metrics.PerformanceScore.Should().Be(95m);
+        metrics.LastRunAt.Should().Be(lastRun);
+        metrics.BudgetStatus.Should().Be(PerformanceBudgetStatus.Pass);
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(PerformanceBudgetStatus.Pass, metrics.BudgetStatus);
+        metrics.BudgetStatus.Should().Be(PerformanceBudgetStatus.Pass);
     }
 
     #endregion
@@ -122,7 +123,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(PerformanceBudgetStatus.Warning, metrics.BudgetStatus);
+        metrics.BudgetStatus.Should().Be(PerformanceBudgetStatus.Warning);
     }
 
     [Fact]
@@ -142,7 +143,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(PerformanceBudgetStatus.Warning, metrics.BudgetStatus);
+        metrics.BudgetStatus.Should().Be(PerformanceBudgetStatus.Warning);
     }
 
     [Fact]
@@ -162,7 +163,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(PerformanceBudgetStatus.Warning, metrics.BudgetStatus);
+        metrics.BudgetStatus.Should().Be(PerformanceBudgetStatus.Warning);
     }
 
     #endregion
@@ -186,7 +187,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(PerformanceBudgetStatus.Fail, metrics.BudgetStatus);
+        metrics.BudgetStatus.Should().Be(PerformanceBudgetStatus.Fail);
     }
 
     [Fact]
@@ -206,7 +207,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(PerformanceBudgetStatus.Fail, metrics.BudgetStatus);
+        metrics.BudgetStatus.Should().Be(PerformanceBudgetStatus.Fail);
     }
 
     [Fact]
@@ -226,7 +227,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.Equal(PerformanceBudgetStatus.Fail, metrics.BudgetStatus);
+        metrics.BudgetStatus.Should().Be(PerformanceBudgetStatus.Fail);
     }
 
     #endregion
@@ -249,7 +250,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.True(metrics.MeetsCoreWebVitals);
+        metrics.MeetsCoreWebVitals.Should().BeTrue();
     }
 
     [Fact]
@@ -268,7 +269,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.False(metrics.MeetsCoreWebVitals);
+        metrics.MeetsCoreWebVitals.Should().BeFalse();
     }
 
     [Fact]
@@ -287,7 +288,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.False(metrics.MeetsCoreWebVitals);
+        metrics.MeetsCoreWebVitals.Should().BeFalse();
     }
 
     [Fact]
@@ -306,7 +307,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.False(metrics.MeetsCoreWebVitals);
+        metrics.MeetsCoreWebVitals.Should().BeFalse();
     }
 
     [Fact]
@@ -325,7 +326,7 @@ public class PerformanceMetricsTests
             lastRunAt: DateTime.UtcNow);
 
         // Assert
-        Assert.False(metrics.MeetsCoreWebVitals);
+        metrics.MeetsCoreWebVitals.Should().BeFalse();
     }
 
     #endregion
@@ -336,70 +337,77 @@ public class PerformanceMetricsTests
     public void FromLighthouseReport_NegativeLcp_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            PerformanceMetrics.FromLighthouseReport(-1, 50, 0.1m, 1000, 2000, 100, 1500, 90, DateTime.UtcNow));
+        var act = () =>
+            PerformanceMetrics.FromLighthouseReport(-1, 50, 0.1m, 1000, 2000, 100, 1500, 90, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("lcp", exception.Message);
+        exception.Message.Should().Contain("lcp");
     }
 
     [Fact]
     public void FromLighthouseReport_NegativeFid_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            PerformanceMetrics.FromLighthouseReport(2000, -1, 0.1m, 1000, 2000, 100, 1500, 90, DateTime.UtcNow));
+        var act = () =>
+            PerformanceMetrics.FromLighthouseReport(2000, -1, 0.1m, 1000, 2000, 100, 1500, 90, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("fid", exception.Message);
+        exception.Message.Should().Contain("fid");
     }
 
     [Fact]
     public void FromLighthouseReport_NegativeCls_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            PerformanceMetrics.FromLighthouseReport(2000, 50, -0.1m, 1000, 2000, 100, 1500, 90, DateTime.UtcNow));
+        var act = () =>
+            PerformanceMetrics.FromLighthouseReport(2000, 50, -0.1m, 1000, 2000, 100, 1500, 90, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("cls", exception.Message);
+        exception.Message.Should().Contain("cls");
     }
 
     [Fact]
     public void FromLighthouseReport_NegativeFcp_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, -1, 2000, 100, 1500, 90, DateTime.UtcNow));
+        var act = () =>
+            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, -1, 2000, 100, 1500, 90, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("fcp", exception.Message);
+        exception.Message.Should().Contain("fcp");
     }
 
     [Fact]
     public void FromLighthouseReport_NegativeTti_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, 1000, -1, 100, 1500, 90, DateTime.UtcNow));
+        var act = () =>
+            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, 1000, -1, 100, 1500, 90, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("tti", exception.Message);
+        exception.Message.Should().Contain("tti");
     }
 
     [Fact]
     public void FromLighthouseReport_NegativeTbt_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, 1000, 2000, -1, 1500, 90, DateTime.UtcNow));
+        var act = () =>
+            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, 1000, 2000, -1, 1500, 90, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("tbt", exception.Message);
+        exception.Message.Should().Contain("tbt");
     }
 
     [Fact]
     public void FromLighthouseReport_NegativeSpeedIndex_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, 1000, 2000, 100, -1, 90, DateTime.UtcNow));
+        var act = () =>
+            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, 1000, 2000, 100, -1, 90, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("speedIndex", exception.Message);
+        exception.Message.Should().Contain("speedIndex");
     }
 
     #endregion
@@ -410,20 +418,22 @@ public class PerformanceMetricsTests
     public void FromLighthouseReport_ScoreAbove100_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, 1000, 2000, 100, 1500, 101, DateTime.UtcNow));
+        var act = () =>
+            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, 1000, 2000, 100, 1500, 101, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("performanceScore", exception.Message);
+        exception.Message.Should().Contain("performanceScore");
     }
 
     [Fact]
     public void FromLighthouseReport_NegativeScore_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, 1000, 2000, 100, 1500, -1, DateTime.UtcNow));
+        var act = () =>
+            PerformanceMetrics.FromLighthouseReport(2000, 50, 0.1m, 1000, 2000, 100, 1500, -1, DateTime.UtcNow);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("performanceScore", exception.Message);
+        exception.Message.Should().Contain("performanceScore");
     }
 
     #endregion
@@ -439,9 +449,9 @@ public class PerformanceMetricsTests
         var metrics2 = PerformanceMetrics.FromLighthouseReport(2000, 50, 0.08m, 1000, 2500, 150, 2000, 92, now);
 
         // Assert
-        Assert.Equal(metrics1, metrics2);
-        Assert.True(metrics1 == metrics2);
-        Assert.False(metrics1 != metrics2);
+        metrics2.Should().Be(metrics1);
+        (metrics1 == metrics2).Should().BeTrue();
+        (metrics1 != metrics2).Should().BeFalse();
     }
 
     [Fact]
@@ -453,7 +463,7 @@ public class PerformanceMetricsTests
         var metrics2 = PerformanceMetrics.FromLighthouseReport(2500, 50, 0.08m, 1000, 2500, 150, 2000, 92, now);
 
         // Assert
-        Assert.NotEqual(metrics1, metrics2);
+        metrics2.Should().NotBe(metrics1);
     }
 
     [Fact]
@@ -464,7 +474,7 @@ public class PerformanceMetricsTests
         var metrics2 = PerformanceMetrics.FromLighthouseReport(2000, 50, 0.08m, 1000, 2500, 150, 2000, 92, DateTime.UtcNow.AddMinutes(1));
 
         // Assert
-        Assert.NotEqual(metrics1, metrics2);
+        metrics2.Should().NotBe(metrics1);
     }
 
     #endregion
@@ -482,12 +492,12 @@ public class PerformanceMetricsTests
         var result = metrics.ToString();
 
         // Assert
-        Assert.Contains("Score=", result);
-        Assert.Contains("LCP=", result);
-        Assert.Contains("FID=", result);
-        Assert.Contains("CLS=", result);
-        Assert.Contains("Budget=", result);
-        Assert.StartsWith("Performance:", result);
+        result.Should().Contain("Score=");
+        result.Should().Contain("LCP=");
+        result.Should().Contain("FID=");
+        result.Should().Contain("CLS=");
+        result.Should().Contain("Budget=");
+        result.Should().StartWith("Performance:");
     }
 
     [Fact]
@@ -501,8 +511,8 @@ public class PerformanceMetricsTests
         var result = metrics.ToString();
 
         // Assert - Culture-independent assertions
-        Assert.Contains("Score=92", result);
-        Assert.Contains("CLS=0", result); // Just verify CLS is present
+        result.Should().Contain("Score=92");
+        result.Should().Contain("CLS=0"); // Just verify CLS is present
     }
 
     #endregion

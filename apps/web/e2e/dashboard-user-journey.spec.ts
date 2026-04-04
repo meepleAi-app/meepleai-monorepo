@@ -314,8 +314,8 @@ test.describe('Dashboard User Journey', () => {
       await firstGameCard.click();
 
       // Verify navigation to game detail
-      await page.waitForURL('**/games/game-1', { timeout: 10000 });
-      await expect(page).toHaveURL(/\/games\/game-1/);
+      await page.waitForURL('**/library/games/game-1', { timeout: 10000 });
+      await expect(page).toHaveURL(/\/library\/games\/game-1/);
     });
 
     test('clicking "Vedi Tutti" navigates to games catalog', async ({ page }) => {
@@ -334,9 +334,9 @@ test.describe('Dashboard User Journey', () => {
       await expect(viewAllLink).toBeVisible();
       await viewAllLink.click();
 
-      // Verify navigation to games catalog
-      await page.waitForURL('**/games', { timeout: 10000 });
-      await expect(page).toHaveURL(/\/games$/);
+      // Verify navigation to library
+      await page.waitForURL('**/library', { timeout: 10000 });
+      await expect(page).toHaveURL(/\/library$/);
     });
   });
 
@@ -396,16 +396,18 @@ test.describe('Dashboard User Journey', () => {
       await page.goto('/dashboard');
 
       // Wait for quick actions section
-      await expect(page.getByRole('region', { name: /quick actions/i })).toBeVisible({ timeout: 15000 });
+      await expect(page.getByRole('region', { name: /quick actions/i })).toBeVisible({
+        timeout: 15000,
+      });
 
       // Click "Add Game" quick action card
       const addGameAction = page.getByText('Add Game').first();
       await expect(addGameAction).toBeVisible();
       await addGameAction.click();
 
-      // Verify navigation to add game page
-      await page.waitForURL('**/games/add', { timeout: 10000 });
-      await expect(page).toHaveURL(/\/games\/add/);
+      // Verify navigation to library page
+      await page.waitForURL('**/library', { timeout: 10000 });
+      await expect(page).toHaveURL(/\/library/);
     });
 
     test('clicking New Chat quick action navigates to new chat page', async ({ page }) => {
@@ -417,7 +419,9 @@ test.describe('Dashboard User Journey', () => {
       await page.goto('/dashboard');
 
       // Wait for quick actions section
-      await expect(page.getByRole('region', { name: /quick actions/i })).toBeVisible({ timeout: 15000 });
+      await expect(page.getByRole('region', { name: /quick actions/i })).toBeVisible({
+        timeout: 15000,
+      });
 
       // Click "New Chat" quick action card
       const newChatAction = page.getByText('New Chat').first();

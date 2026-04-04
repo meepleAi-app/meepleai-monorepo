@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Domain.Entities;
 
@@ -17,13 +18,13 @@ public sealed class LlmSystemConfigTests
     {
         var config = LlmSystemConfig.CreateDefault();
 
-        Assert.NotEqual(Guid.Empty, config.Id);
-        Assert.Equal(5, config.CircuitBreakerFailureThreshold);
-        Assert.Equal(30, config.CircuitBreakerOpenDurationSeconds);
-        Assert.Equal(3, config.CircuitBreakerSuccessThreshold);
-        Assert.Equal(10.00m, config.DailyBudgetUsd);
-        Assert.Equal(100.00m, config.MonthlyBudgetUsd);
-        Assert.Equal("[\"Ollama\",\"OpenRouter\"]", config.FallbackChainJson);
+        config.Id.Should().NotBe(Guid.Empty);
+        config.CircuitBreakerFailureThreshold.Should().Be(5);
+        config.CircuitBreakerOpenDurationSeconds.Should().Be(30);
+        config.CircuitBreakerSuccessThreshold.Should().Be(3);
+        config.DailyBudgetUsd.Should().Be(10.00m);
+        config.MonthlyBudgetUsd.Should().Be(100.00m);
+        config.FallbackChainJson.Should().Be("[\"Ollama\",\"OpenRouter\"]");
     }
 
     [Fact]
@@ -34,11 +35,11 @@ public sealed class LlmSystemConfigTests
 
         config.UpdateCircuitBreakerSettings(10, 60, 5, userId);
 
-        Assert.Equal(10, config.CircuitBreakerFailureThreshold);
-        Assert.Equal(60, config.CircuitBreakerOpenDurationSeconds);
-        Assert.Equal(5, config.CircuitBreakerSuccessThreshold);
-        Assert.NotNull(config.UpdatedAt);
-        Assert.Equal(userId, config.UpdatedByUserId);
+        config.CircuitBreakerFailureThreshold.Should().Be(10);
+        config.CircuitBreakerOpenDurationSeconds.Should().Be(60);
+        config.CircuitBreakerSuccessThreshold.Should().Be(5);
+        config.UpdatedAt.Should().NotBeNull();
+        config.UpdatedByUserId.Should().Be(userId);
     }
 
     [Theory]
@@ -52,7 +53,7 @@ public sealed class LlmSystemConfigTests
     {
         var config = LlmSystemConfig.CreateDefault();
 
-        Assert.Throws<ArgumentException>(() => config.UpdateCircuitBreakerSettings(failure, open, success));
+        ((Action)(() => config.UpdateCircuitBreakerSettings(failure, open, success))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -63,10 +64,10 @@ public sealed class LlmSystemConfigTests
 
         config.UpdateBudgetLimits(25.00m, 250.00m, userId);
 
-        Assert.Equal(25.00m, config.DailyBudgetUsd);
-        Assert.Equal(250.00m, config.MonthlyBudgetUsd);
-        Assert.NotNull(config.UpdatedAt);
-        Assert.Equal(userId, config.UpdatedByUserId);
+        config.DailyBudgetUsd.Should().Be(25.00m);
+        config.MonthlyBudgetUsd.Should().Be(250.00m);
+        config.UpdatedAt.Should().NotBeNull();
+        config.UpdatedByUserId.Should().Be(userId);
     }
 
     [Theory]
@@ -76,7 +77,7 @@ public sealed class LlmSystemConfigTests
     {
         var config = LlmSystemConfig.CreateDefault();
 
-        Assert.Throws<ArgumentException>(() => config.UpdateBudgetLimits(daily, monthly));
+        ((Action)(() => config.UpdateBudgetLimits(daily, monthly))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -86,8 +87,8 @@ public sealed class LlmSystemConfigTests
 
         config.UpdateBudgetLimits(0m, 0m);
 
-        Assert.Equal(0m, config.DailyBudgetUsd);
-        Assert.Equal(0m, config.MonthlyBudgetUsd);
+        config.DailyBudgetUsd.Should().Be(0m);
+        config.MonthlyBudgetUsd.Should().Be(0m);
     }
 
     [Fact]
@@ -95,7 +96,7 @@ public sealed class LlmSystemConfigTests
     {
         var config = LlmSystemConfig.CreateDefault();
 
-        Assert.Throws<ArgumentException>(() => config.UpdateBudgetLimits(500.00m, 100.00m));
+        ((Action)(() => config.UpdateBudgetLimits(500.00m, 100.00m))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public sealed class LlmSystemConfigTests
 
         config.UpdateFallbackChain(newChain);
 
-        Assert.Equal(newChain, config.FallbackChainJson);
+        config.FallbackChainJson.Should().Be(newChain);
     }
 
     [Fact]
@@ -114,6 +115,6 @@ public sealed class LlmSystemConfigTests
     {
         var config = LlmSystemConfig.CreateDefault();
 
-        Assert.Throws<ArgumentNullException>(() => config.UpdateFallbackChain(null!));
+        ((Action)(() => config.UpdateFallbackChain(null!))).Should().Throw<ArgumentNullException>();
     }
 }

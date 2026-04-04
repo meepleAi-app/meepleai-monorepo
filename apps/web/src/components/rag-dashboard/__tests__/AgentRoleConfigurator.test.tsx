@@ -30,7 +30,7 @@ Object.assign(navigator, {
 });
 
 // Import after mocking
-import { AgentRoleConfigurator } from '../AgentRoleConfigurator';
+import { AgentRoleConfigurator } from '../config/AgentRoleConfigurator';
 
 describe('AgentRoleConfigurator', () => {
   beforeEach(() => {
@@ -99,7 +99,9 @@ describe('AgentRoleConfigurator', () => {
     it('should display agent tagline', () => {
       render(<AgentRoleConfigurator />);
 
-      expect(screen.getByText(/Precision rules interpretation with citation accuracy/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Precision rules interpretation with citation accuracy/i)
+      ).toBeInTheDocument();
     });
   });
 

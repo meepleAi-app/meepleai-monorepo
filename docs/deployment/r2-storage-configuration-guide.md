@@ -3,7 +3,7 @@
 **Document Version**: 1.0
 **Last Updated**: 2026-02-01
 **Target Audience**: DevOps Engineers, Backend Developers, System Administrators
-**Related Issue**: [#2703 - S3-Compatible Object Storage Implementation](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2703)
+**Related Issue**: [#2703 - S3-Compatible Object Storage Implementation](https://github.com/meepleAi-app/meepleai-monorepo/issues/2703)
 
 ---
 
@@ -484,7 +484,7 @@ aws s3 ls s3://meepleai-uploads \
 - [Cloudflare R2 Documentation](https://developers.cloudflare.com/r2/)
 - [R2 S3 API Compatibility](https://developers.cloudflare.com/r2/api/s3/api/)
 - [AWS SDK for .NET](https://docs.aws.amazon.com/sdk-for-net/)
-- [Issue #2703 - Original Requirements](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2703)
+- [Issue #2703 - Original Requirements](https://github.com/meepleAi-app/meepleai-monorepo/issues/2703)
 
 ### Changelog
 

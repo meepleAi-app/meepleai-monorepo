@@ -5,6 +5,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { logger } from '@/lib/logger';
+
 import { ApiError } from '../lib/api';
 import { extractCorrelationId } from '../lib/errorUtils';
 import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
@@ -155,7 +157,7 @@ async function pollProcessingStatus(
       }
 
       // For network errors, wait and retry
-      console.warn(`Polling attempt ${attempts + 1} failed:`, error);
+      logger.warn(`Polling attempt ${attempts + 1} failed: ${error}`);
       await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
       attempts++;
     }

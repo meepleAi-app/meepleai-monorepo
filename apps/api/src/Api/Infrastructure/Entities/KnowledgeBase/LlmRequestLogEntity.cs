@@ -36,4 +36,11 @@ public class LlmRequestLogEntity
     /// When true, UserId has been replaced with a salted SHA-256 hash.
     /// </summary>
     public bool IsAnonymized { get; set; }
+
+    /// <summary>
+    /// Issue #27: Geographic region hint derived from Accept-Language header.
+    /// Currently populated but not used for routing — for future analytics.
+    /// Examples: "en-US", "it-IT", "de-DE", or null when not available.
+    /// </summary>
+    public string? UserRegion { get; set; }
 }

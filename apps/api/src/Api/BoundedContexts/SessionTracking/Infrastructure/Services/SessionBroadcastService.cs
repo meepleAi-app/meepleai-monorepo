@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Channels;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.Middleware;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -99,7 +100,7 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
             }
             _logger.LogInformation(
                 "Replayed {Count} missed events for session {SessionId} since {LastEventId}",
-                missedEvents.Count, sessionId, lastEventId);
+                missedEvents.Count, sessionId, LogValueSanitizer.Sanitize(lastEventId));
         }
 
         try

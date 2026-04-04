@@ -21,6 +21,10 @@ export { RerankerSettings } from './RerankerSettings';
 export { ModelSelector } from './ModelSelector';
 export { StrategySpecificSettings } from './StrategySpecificSettings';
 
+// Moved from root level
+export { RagConfigurationForm } from './RagConfigurationForm';
+export { AgentRoleConfigurator } from './AgentRoleConfigurator';
+
 // Types and constants
 export type {
   // Core configuration types

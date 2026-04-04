@@ -29,15 +29,45 @@ async function setupCollectionFilterMocks(page: Page) {
   ];
 
   const games = [
-    { id: 'chess', title: 'Chess', collection: 'owned', playStatus: 'played', lastPlayed: '2025-01-20' },
-    { id: 'catan', title: 'Catan', collection: 'favorites', playStatus: 'played', lastPlayed: '2025-01-15' },
-    { id: 'ticket', title: 'Ticket to Ride', collection: 'owned', playStatus: 'unplayed', lastPlayed: null },
-    { id: 'pandemic', title: 'Pandemic', collection: 'wishlist', playStatus: 'unplayed', lastPlayed: null },
-    { id: 'wingspan', title: 'Wingspan', collection: 'favorites', playStatus: 'played', lastPlayed: '2025-01-10' },
+    {
+      id: 'chess',
+      title: 'Chess',
+      collection: 'owned',
+      playStatus: 'played',
+      lastPlayed: '2025-01-20',
+    },
+    {
+      id: 'catan',
+      title: 'Catan',
+      collection: 'favorites',
+      playStatus: 'played',
+      lastPlayed: '2025-01-15',
+    },
+    {
+      id: 'ticket',
+      title: 'Ticket to Ride',
+      collection: 'owned',
+      playStatus: 'unplayed',
+      lastPlayed: null,
+    },
+    {
+      id: 'pandemic',
+      title: 'Pandemic',
+      collection: 'wishlist',
+      playStatus: 'unplayed',
+      lastPlayed: null,
+    },
+    {
+      id: 'wingspan',
+      title: 'Wingspan',
+      collection: 'favorites',
+      playStatus: 'played',
+      lastPlayed: '2025-01-10',
+    },
   ];
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -54,7 +84,7 @@ async function setupCollectionFilterMocks(page: Page) {
   });
 
   // Mock collections endpoint
-  await page.route(`${API_BASE}/api/v1/library/collections**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/collections**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -66,7 +96,7 @@ async function setupCollectionFilterMocks(page: Page) {
   });
 
   // Mock library games endpoint with filter support
-  await page.route(`${API_BASE}/api/v1/library/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/games**`, async route => {
     const url = route.request().url();
     const collectionFilter = url.match(/collection=([^&]+)/)?.[1];
     const statusFilter = url.match(/status=([^&]+)/)?.[1];
@@ -74,11 +104,11 @@ async function setupCollectionFilterMocks(page: Page) {
     let filteredGames = [...games];
 
     if (collectionFilter && collectionFilter !== 'all') {
-      filteredGames = filteredGames.filter((g) => g.collection === collectionFilter);
+      filteredGames = filteredGames.filter(g => g.collection === collectionFilter);
     }
 
     if (statusFilter) {
-      filteredGames = filteredGames.filter((g) => g.playStatus === statusFilter);
+      filteredGames = filteredGames.filter(g => g.playStatus === statusFilter);
     }
 
     await route.fulfill({
@@ -96,7 +126,7 @@ async function setupCollectionFilterMocks(page: Page) {
   });
 
   // Mock common endpoints
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -117,9 +147,9 @@ test.describe('LIB-09: Collection Filters', () => {
 
       // Should show collection filter
       await expect(
-        page.getByRole('combobox', { name: /collection/i }).or(
-          page.locator('[data-testid="collection-filter"]')
-        )
+        page
+          .getByRole('combobox', { name: /collection/i })
+          .or(page.locator('[data-testid="collection-filter"]'))
       ).toBeVisible({ timeout: 5000 });
     });
 
@@ -129,9 +159,9 @@ test.describe('LIB-09: Collection Filters', () => {
       await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
-      const filterDropdown = page.getByRole('combobox', { name: /collection/i }).or(
-        page.locator('[data-testid="collection-filter"]')
-      );
+      const filterDropdown = page
+        .getByRole('combobox', { name: /collection/i })
+        .or(page.locator('[data-testid="collection-filter"]'));
 
       if (await filterDropdown.isVisible()) {
         await filterDropdown.click();
@@ -185,11 +215,13 @@ test.describe('LIB-09: Collection Filters', () => {
       await page.waitForLoadState('networkidle');
 
       await expect(
-        page.getByRole('combobox', { name: /status/i }).or(
-          page.locator('[data-testid="status-filter"]').or(
-            page.getByText(/played|unplayed/i).first()
+        page
+          .getByRole('combobox', { name: /status/i })
+          .or(
+            page
+              .locator('[data-testid="status-filter"]')
+              .or(page.getByText(/played|unplayed/i).first())
           )
-        )
       ).toBeVisible();
     });
 
@@ -199,9 +231,9 @@ test.describe('LIB-09: Collection Filters', () => {
       await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
-      const statusFilter = page.getByRole('combobox', { name: /status/i }).or(
-        page.locator('[data-testid="status-filter"]')
-      );
+      const statusFilter = page
+        .getByRole('combobox', { name: /status/i })
+        .or(page.locator('[data-testid="status-filter"]'));
 
       if (await statusFilter.isVisible()) {
         await statusFilter.click();
@@ -270,9 +302,9 @@ test.describe('LIB-09: Collection Filters', () => {
 
         // Should show active filter indicator
         await expect(
-          page.locator('[data-active-filters], .active-filter, .filter-badge').or(
-            page.getByText(/filter.*active|1.*filter/i)
-          )
+          page
+            .locator('[data-active-filters], .active-filter, .filter-badge')
+            .or(page.getByText(/filter.*active|1.*filter/i))
         ).toBeVisible();
       }
     });
@@ -351,7 +383,7 @@ test.describe('LIB-09: Collection Filters', () => {
       }
 
       // Navigate away and back
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       await page.goBack();

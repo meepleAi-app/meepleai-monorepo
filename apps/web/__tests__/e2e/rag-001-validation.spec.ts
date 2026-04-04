@@ -6,10 +6,11 @@
  * 1. Upload PDF rulebook
  * 2. Process and chunk document
  * 3. Generate embeddings
- * 4. Index in Qdrant
+ * 4. Index in pgvector
  * 5. RAG query with confidence validation
  *
  * Critical: This test validates the core RAG infrastructure before EPIC 1.
+ * Note: Qdrant replaced by pgvector — vector counts verified via /api/v1/admin/kb/vector-stats
  */
 
 import { test, expect } from '@playwright/test';
@@ -17,7 +18,6 @@ import fs from 'fs';
 import path from 'path';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-const QDRANT_URL = 'http://localhost:6333';
 const PDF_PATH = path.join(process.cwd(), '../../data/rulebook/scacchi-fide_2017_rulebook.pdf');
 
 test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
@@ -67,7 +67,10 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
     });
   });
 
-  test('should complete full RAG pipeline: Upload → Qdrant → Query', async ({ page, request }) => {
+  test('should complete full RAG pipeline: Upload → pgvector → Query', async ({
+    page,
+    request,
+  }) => {
     // Step 3: Add Chess to admin library (using SharedGameId)
     const addToLibraryResponse = await page.request.post(
       `${API_URL}/api/v1/library/games/${chessSharedGameId}`,
@@ -91,28 +94,35 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
         headers: { Cookie: adminAuthCookie },
       });
       const library = await libraryResponse.json();
-      const chessEntry = library.items.find((item: any) =>
-        item.sharedGameId === chessSharedGameId || item.gameTitle?.toLowerCase().includes('chess')
+      const chessEntry = library.items.find(
+        (item: any) =>
+          item.sharedGameId === chessSharedGameId || item.gameTitle?.toLowerCase().includes('chess')
       );
       expect(chessEntry).toBeTruthy();
       chessLibraryGameId = chessEntry.id;
       console.log(`Chess already in library: ${chessLibraryGameId}`);
     }
 
-    // Step 4: Check Qdrant collection (before upload)
-    const qdrantBefore = await request.get(`${QDRANT_URL}/collections/meepleai_documents`);
-    expect(qdrantBefore.ok()).toBeTruthy();
+    // Step 4: Check pgvector stats (before upload)
+    const statsBefore = await request.get(`${API_URL}/api/v1/admin/kb/vector-stats`, {
+      headers: { Cookie: adminAuthCookie },
+    });
+    expect(statsBefore.ok()).toBeTruthy();
 
-    const qdrantDataBefore = await qdrantBefore.json();
-    const vectorsBeforeCount = qdrantDataBefore.result.points_count || 0;
-    console.log(`Qdrant vectors before: ${vectorsBeforeCount}`);
+    const statsDataBefore = await statsBefore.json();
+    const vectorsBeforeCount = statsDataBefore.totalVectors || 0;
+    console.log(`pgvector vectors before: ${vectorsBeforeCount}`);
 
     // Step 5: Upload PDF (using SharedGameId - handler supports both)
     expect(fs.existsSync(PDF_PATH)).toBeTruthy();
 
     const pdfBuffer = fs.readFileSync(PDF_PATH);
     const formData = new FormData();
-    formData.append('file', new Blob([pdfBuffer], { type: 'application/pdf' }), 'scacchi-fide_2017_rulebook.pdf');
+    formData.append(
+      'file',
+      new Blob([pdfBuffer], { type: 'application/pdf' }),
+      'scacchi-fide_2017_rulebook.pdf'
+    );
     formData.append('gameId', chessSharedGameId); // Use SharedGameId (fix enables this!)
     formData.append('language', 'it');
 
@@ -153,9 +163,11 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
     for (let i = 0; i < 12; i++) {
       await page.waitForTimeout(5000);
 
-      const qdrantCheck = await request.get(`${QDRANT_URL}/collections/meepleai_documents`);
-      const qdrantData = await qdrantCheck.json();
-      const currentVectors = qdrantData.result.points_count || 0;
+      const statsCheck = await request.get(`${API_URL}/api/v1/admin/kb/vector-stats`, {
+        headers: { Cookie: adminAuthCookie },
+      });
+      const statsData = await statsCheck.json();
+      const currentVectors = statsData.totalVectors || 0;
 
       if (currentVectors > vectorsBeforeCount) {
         processed = true;
@@ -166,14 +178,16 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
 
     expect(processed).toBeTruthy(); // Fail if no vectors after 60 seconds
 
-    // Step 7: Verify Qdrant collection (after)
-    const qdrantAfter = await request.get(`${QDRANT_URL}/collections/meepleai_documents`);
-    const qdrantDataAfter = await qdrantAfter.json();
-    const vectorsAfterCount = qdrantDataAfter.result.points_count || 0;
+    // Step 7: Verify pgvector stats (after)
+    const statsAfter = await request.get(`${API_URL}/api/v1/admin/kb/vector-stats`, {
+      headers: { Cookie: adminAuthCookie },
+    });
+    const statsDataAfter = await statsAfter.json();
+    const vectorsAfterCount = statsDataAfter.totalVectors || 0;
 
     expect(vectorsAfterCount).toBeGreaterThan(vectorsBeforeCount);
     expect(vectorsAfterCount).toBeGreaterThan(10); // At least 10 chunks
-    console.log(`Qdrant validation: ${vectorsAfterCount} vectors`);
+    console.log(`pgvector validation: ${vectorsAfterCount} vectors`);
 
     // Step 8: Test RAG query
     const ragQueryResponse = await page.request.post(`${API_URL}/api/v1/agents/qa`, {

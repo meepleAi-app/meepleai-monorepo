@@ -81,9 +81,7 @@ describe('ShareRequestCard', () => {
   it('passes game title', () => {
     render(<ShareRequestCard request={mockRequestPending} />);
 
-    expect(mockMeepleCard).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Catan' })
-    );
+    expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Catan' }));
   });
 
   it('passes contribution type and date in subtitle', () => {
@@ -97,7 +95,10 @@ describe('ShareRequestCard', () => {
   });
 
   it('passes AdditionalContent type in subtitle', () => {
-    const additionalContentReq = { ...mockRequestPending, contributionType: 'AdditionalContent' as const };
+    const additionalContentReq = {
+      ...mockRequestPending,
+      contributionType: 'AdditionalContent' as const,
+    };
     render(<ShareRequestCard request={additionalContentReq} />);
 
     expect(mockMeepleCard).toHaveBeenCalledWith(
@@ -119,25 +120,19 @@ describe('ShareRequestCard', () => {
     const noThumbReq = { ...mockRequestPending, gameThumbnailUrl: null };
     render(<ShareRequestCard request={noThumbReq} />);
 
-    expect(mockMeepleCard).toHaveBeenCalledWith(
-      expect.objectContaining({ imageUrl: undefined })
-    );
+    expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ imageUrl: undefined }));
   });
 
   it('passes status as badge', () => {
     render(<ShareRequestCard request={mockRequestPending} />);
 
-    expect(mockMeepleCard).toHaveBeenCalledWith(
-      expect.objectContaining({ badge: 'In attesa' })
-    );
+    expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ badge: 'In attesa' }));
   });
 
   it('passes Approved status badge', () => {
     render(<ShareRequestCard request={mockRequestApproved} />);
 
-    expect(mockMeepleCard).toHaveBeenCalledWith(
-      expect.objectContaining({ badge: 'Approvato' })
-    );
+    expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ badge: 'Approvato' }));
   });
 
   it('passes document count in metadata', () => {
@@ -154,9 +149,7 @@ describe('ShareRequestCard', () => {
     const noDocsReq = { ...mockRequestPending, attachedDocumentCount: 0 };
     render(<ShareRequestCard request={noDocsReq} />);
 
-    expect(mockMeepleCard).toHaveBeenCalledWith(
-      expect.objectContaining({ metadata: undefined })
-    );
+    expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ metadata: undefined }));
   });
 
   it('includes Details action for all requests', () => {
@@ -165,7 +158,7 @@ describe('ShareRequestCard', () => {
     const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
     const actions = call?.quickActions as Array<{ label: string; onClick: () => void }>;
 
-    const detailsAction = actions.find((a) => a.label === 'Details');
+    const detailsAction = actions.find(a => a.label === 'Details');
     expect(detailsAction).toBeDefined();
 
     detailsAction?.onClick();
@@ -178,7 +171,7 @@ describe('ShareRequestCard', () => {
     const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
     const actions = call?.quickActions as Array<{ label: string; onClick: () => void }>;
 
-    const updateAction = actions.find((a) => a.label === 'Update');
+    const updateAction = actions.find(a => a.label === 'Update');
     expect(updateAction).toBeDefined();
 
     updateAction?.onClick();
@@ -191,11 +184,11 @@ describe('ShareRequestCard', () => {
     const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
     const actions = call?.quickActions as Array<{ label: string; onClick: () => void }>;
 
-    const viewGameAction = actions.find((a) => a.label === 'View Game');
+    const viewGameAction = actions.find(a => a.label === 'View Game');
     expect(viewGameAction).toBeDefined();
 
     viewGameAction?.onClick();
-    expect(mockPush).toHaveBeenCalledWith('/games/catalog/shared-1');
+    expect(mockPush).toHaveBeenCalledWith('/library/games/shared-1');
   });
 
   it('does not include Update action for Pending status', () => {
@@ -204,7 +197,7 @@ describe('ShareRequestCard', () => {
     const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
     const actions = call?.quickActions as Array<{ label: string }>;
 
-    expect(actions.find((a) => a.label === 'Update')).toBeUndefined();
+    expect(actions.find(a => a.label === 'Update')).toBeUndefined();
   });
 
   it('enables preview when user notes exist', () => {
@@ -236,9 +229,7 @@ describe('ShareRequestCard', () => {
     const noNotesReq = { ...mockRequestPending, userNotes: null };
     render(<ShareRequestCard request={noNotesReq} />);
 
-    expect(mockMeepleCard).toHaveBeenCalledWith(
-      expect.objectContaining({ showPreview: false })
-    );
+    expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ showPreview: false }));
   });
 
   it('sets correct data-testid', () => {

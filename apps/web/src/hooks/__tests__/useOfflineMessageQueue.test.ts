@@ -16,6 +16,25 @@ import { useOfflineMessageQueue } from '../useOfflineMessageQueue';
 import { useOfflineMessageQueueStore } from '@/stores/OfflineMessageQueueStore';
 import { useNetworkStatus, useOnlineCallback } from '@/hooks/useNetworkStatus';
 
+// Mock logger — source uses logger.warn, not console.warn directly
+const mockLoggerWarn = vi.fn();
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: (...args: unknown[]) => mockLoggerWarn(...args),
+    error: vi.fn(),
+  },
+  getLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: (...args: unknown[]) => mockLoggerWarn(...args),
+    error: vi.fn(),
+  }),
+  resetLogger: vi.fn(),
+  LogLevel: { DEBUG: 'debug', INFO: 'info', WARN: 'warn', ERROR: 'error' },
+}));
+
 // Mock stores and hooks
 vi.mock('@/stores/OfflineMessageQueueStore', () => ({
   useOfflineMessageQueueStore: vi.fn(),
@@ -190,17 +209,16 @@ describe('useOfflineMessageQueue', () => {
     });
 
     it('should warn when no sendMessage function provided', async () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockLoggerWarn.mockClear();
       const { result } = renderHook(() => useOfflineMessageQueue());
 
       await act(async () => {
         await result.current.replayQueue();
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(mockLoggerWarn).toHaveBeenCalledWith(
         '[useOfflineMessageQueue] No sendMessage function provided'
       );
-      consoleSpy.mockRestore();
     });
 
     it('should use custom maxRetries and replayDelayMs', async () => {

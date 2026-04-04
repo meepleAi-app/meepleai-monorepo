@@ -93,8 +93,8 @@ public sealed class MonthlyLedgerReportJobTests
             .ThrowsAsync(new InvalidOperationException("Repository failure"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<JobExecutionException>(
-            () => _job.Execute(_contextMock.Object));
+        var act = () => _job.Execute(_contextMock.Object);
+        var exception = (await act.Should().ThrowAsync<JobExecutionException>()).Which;
 
         exception.InnerException.Should().BeOfType<InvalidOperationException>();
     }
@@ -108,8 +108,8 @@ public sealed class MonthlyLedgerReportJobTests
             .ThrowsAsync(new Exception("fail"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<JobExecutionException>(
-            () => _job.Execute(_contextMock.Object));
+        var act2 = () => _job.Execute(_contextMock.Object);
+        var exception = (await act2.Should().ThrowAsync<JobExecutionException>()).Which;
 
         exception.RefireImmediately.Should().BeFalse();
     }
@@ -117,15 +117,17 @@ public sealed class MonthlyLedgerReportJobTests
     [Fact]
     public void Constructor_NullMediator_ShouldThrow()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new MonthlyLedgerReportJob(null!, _loggerMock.Object));
+        var act3 = () =>
+            new MonthlyLedgerReportJob(null!, _loggerMock.Object);
+        act3.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullLogger_ShouldThrow()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new MonthlyLedgerReportJob(_mediatorMock.Object, null!));
+        var act4 = () =>
+            new MonthlyLedgerReportJob(_mediatorMock.Object, null!);
+        act4.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]

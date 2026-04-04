@@ -5,6 +5,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -54,13 +55,13 @@ public class RagValidationPipelineServiceTests
         var result = await _service.ValidateResponseAsync(response, gameId, "en", TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Equal(3, result.LayersPassed);
-        Assert.Equal(3, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Pass, result.Severity);
-        Assert.Contains("All validations passed", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Null(result.MultiModelConsensus);
-        Assert.Null(result.ValidationAccuracyMetrics);
+        result.IsValid.Should().BeTrue();
+        result.LayersPassed.Should().Be(3);
+        result.TotalLayers.Should().Be(3);
+        result.Severity.Should().Be(RagValidationSeverity.Pass);
+        result.Message.Should().ContainEquivalentOf("All validations passed");
+        result.MultiModelConsensus.Should().BeNull();
+        result.ValidationAccuracyMetrics.Should().BeNull();
     }
 
     [Fact]
@@ -108,11 +109,11 @@ public class RagValidationPipelineServiceTests
         var result = await _service.ValidateResponseAsync(response, gameId, "en", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(2, result.LayersPassed); // Citation and Hallucination pass
-        Assert.Equal(3, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Critical, result.Severity);
-        Assert.Contains("2/3 validations passed", result.Message, StringComparison.OrdinalIgnoreCase);
+        result.IsValid.Should().BeFalse();
+        result.LayersPassed.Should().Be(2); // Citation and Hallucination pass
+        result.TotalLayers.Should().Be(3);
+        result.Severity.Should().Be(RagValidationSeverity.Critical);
+        result.Message.Should().ContainEquivalentOf("2/3 validations passed");
     }
 
     [Fact]
@@ -169,10 +170,10 @@ public class RagValidationPipelineServiceTests
         var result = await _service.ValidateResponseAsync(response, gameId, "en", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(2, result.LayersPassed);
-        Assert.Equal(3, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Warning, result.Severity);
+        result.IsValid.Should().BeFalse();
+        result.LayersPassed.Should().Be(2);
+        result.TotalLayers.Should().Be(3);
+        result.Severity.Should().Be(RagValidationSeverity.Warning);
     }
 
     [Fact]
@@ -220,20 +221,21 @@ public class RagValidationPipelineServiceTests
         var result = await _service.ValidateResponseAsync(response, gameId, "en", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(2, result.LayersPassed);
-        Assert.Equal(3, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Warning, result.Severity);
-        Assert.False(result.HallucinationDetection.IsValid);
-        Assert.Equal(2, result.HallucinationDetection.DetectedKeywords.Count);
+        result.IsValid.Should().BeFalse();
+        result.LayersPassed.Should().Be(2);
+        result.TotalLayers.Should().Be(3);
+        result.Severity.Should().Be(RagValidationSeverity.Warning);
+        result.HallucinationDetection.IsValid.Should().BeFalse();
+        result.HallucinationDetection.DetectedKeywords.Count.Should().Be(2);
     }
 
     [Fact]
     public async Task ValidateResponseAsync_NullResponse_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await _service.ValidateResponseAsync(null!, "gameId", "en", TestCancellationToken));
+        Func<Task> act = async () =>
+            await _service.ValidateResponseAsync(null!, "gameId", "en", TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -243,8 +245,9 @@ public class RagValidationPipelineServiceTests
         var response = CreateQaResponse(confidence: 0.85);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _service.ValidateResponseAsync(response, "", "en", TestCancellationToken));
+        Func<Task> act = async () =>
+            await _service.ValidateResponseAsync(response, "", "en", TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -260,7 +263,7 @@ public class RagValidationPipelineServiceTests
         var result = await _service.ValidateResponseAsync(response, gameId, null, TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         _mockHallucinationDetection.Verify(
             x => x.DetectHallucinationsAsync(It.IsAny<string>(), "en", default),
             Times.Once);
@@ -281,15 +284,15 @@ public class RagValidationPipelineServiceTests
             response, gameId, systemPrompt, userPrompt, "en", TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Equal(4, result.LayersPassed);
-        Assert.Equal(4, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Pass, result.Severity);
-        Assert.Contains("All validations passed", result.Message);
-        Assert.NotNull(result.MultiModelConsensus);
-        Assert.True(result.MultiModelConsensus.HasConsensus);
-        Assert.NotNull(result.ValidationAccuracyMetrics);
-        Assert.Contains("Validation accuracy tracking enabled", result.ValidationAccuracyMetrics);
+        result.IsValid.Should().BeTrue();
+        result.LayersPassed.Should().Be(4);
+        result.TotalLayers.Should().Be(4);
+        result.Severity.Should().Be(RagValidationSeverity.Pass);
+        result.Message.Should().Contain("All validations passed");
+        result.MultiModelConsensus.Should().NotBeNull();
+        result.MultiModelConsensus.HasConsensus.Should().BeTrue();
+        result.ValidationAccuracyMetrics.Should().NotBeNull();
+        result.ValidationAccuracyMetrics.Should().Contain("Validation accuracy tracking enabled");
     }
 
     [Fact]
@@ -356,12 +359,12 @@ public class RagValidationPipelineServiceTests
             response, gameId, systemPrompt, userPrompt, "en", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(3, result.LayersPassed); // Confidence, Citation, Hallucination pass
-        Assert.Equal(4, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Warning, result.Severity);
-        Assert.NotNull(result.MultiModelConsensus);
-        Assert.False(result.MultiModelConsensus.HasConsensus);
+        result.IsValid.Should().BeFalse();
+        result.LayersPassed.Should().Be(3); // Confidence, Citation, Hallucination pass
+        result.TotalLayers.Should().Be(4);
+        result.Severity.Should().Be(RagValidationSeverity.Warning);
+        result.MultiModelConsensus.Should().NotBeNull();
+        result.MultiModelConsensus.HasConsensus.Should().BeFalse();
     }
 
     [Fact]
@@ -381,7 +384,7 @@ public class RagValidationPipelineServiceTests
             response, gameId, systemPrompt, userPrompt, "en", TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
 
         // Verify hallucination detection was called with consensus response
         _mockHallucinationDetection.Verify(
@@ -467,8 +470,9 @@ public class RagValidationPipelineServiceTests
         var gameId = Guid.NewGuid().ToString();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.ValidateWithMultiModelAsync(response, gameId, "", "user prompt", "en", TestCancellationToken));
+        Func<Task> act = () =>
+            _service.ValidateWithMultiModelAsync(response, gameId, "", "user prompt", "en", TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -479,8 +483,9 @@ public class RagValidationPipelineServiceTests
         var gameId = Guid.NewGuid().ToString();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.ValidateWithMultiModelAsync(response, gameId, "system prompt", "", "en", TestCancellationToken));
+        Func<Task> act = () =>
+            _service.ValidateWithMultiModelAsync(response, gameId, "system prompt", "", "en", TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -547,9 +552,9 @@ public class RagValidationPipelineServiceTests
             response, gameId, systemPrompt, userPrompt, "en", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(RagValidationSeverity.Critical, result.Severity);
-        Assert.Equal(HallucinationSeverity.High, result.HallucinationDetection.Severity);
+        result.IsValid.Should().BeFalse();
+        result.Severity.Should().Be(RagValidationSeverity.Critical);
+        result.HallucinationDetection.Severity.Should().Be(HallucinationSeverity.High);
     }
     private QaResponse CreateQaResponse(double confidence)
     {

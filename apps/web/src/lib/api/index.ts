@@ -51,7 +51,24 @@ import {
   createLiveSessionsClient,
   createSessionTrackingClient,
   createGameToolkitClient,
+  createToolboxClient,
   createSessionStatisticsClient,
+  createGameNightsClient,
+  createInvitationsClient,
+  createGameNightBggClient,
+  createTierClient,
+  createSessionInviteClient,
+  createPlaylistsClient,
+  createWishlistClient,
+  createPlayRecordsClient,
+  createFeatureFlagsClient,
+  createSandboxClient,
+  createOnboardingClient,
+  createAccessRequestsClient,
+  createAdminNotificationsClient,
+  createContactClient,
+  createAgentMemoryClient,
+  createAgentDocumentsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -83,7 +100,24 @@ import {
   type LiveSessionsClient,
   type SessionTrackingClient,
   type GameToolkitClient,
+  type ToolboxClient,
   type SessionStatisticsClient,
+  type GameNightsClient,
+  type InvitationsClient,
+  type GameNightBggClient,
+  type TierClient,
+  type SessionInviteClient,
+  type PlaylistsClient,
+  type WishlistClient,
+  type PlayRecordsClient,
+  type FeatureFlagsClient,
+  type SandboxClient,
+  type OnboardingClient,
+  type AccessRequestsClient,
+  type AdminNotificationsClient,
+  type ContactClient,
+  type AgentMemoryClient,
+  type AgentDocumentsClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -137,6 +171,7 @@ export {
   ServerError,
   NetworkError,
   SchemaValidationError,
+  isNotFoundError,
 } from './core/errors';
 export { logger, logApiError } from './core/logger';
 
@@ -264,8 +299,59 @@ export interface ApiClient {
   /** Game Toolkit AI Generation */
   gameToolkit: GameToolkitClient;
 
+  /** Game Toolbox — per-game configurable containers (Epic #412) */
+  toolbox: ToolboxClient;
+
   /** Session Analytics Dashboard (P4) */
   sessionStatistics: SessionStatisticsClient;
+
+  /** Game Nights (Issue #33) */
+  gameNights: GameNightsClient;
+
+  /** User Invitations (Issue #132) */
+  invitations: InvitationsClient;
+
+  /** Game Night BGG Search & Import (Game Night Improvvisata) */
+  gameNightBgg: GameNightBggClient;
+
+  /** Tier & Usage (Game Night Improvvisata) */
+  tiers: TierClient;
+
+  /** Session Invites (Game Night Improvvisata) */
+  sessionInvites: SessionInviteClient;
+
+  /** Game Night Playlists — Gap Closure */
+  playlists: PlaylistsClient;
+
+  /** Wishlist */
+  wishlist: WishlistClient;
+
+  /** Play Records — session tracking and statistics (Issue #3892) */
+  playRecords: PlayRecordsClient;
+
+  /** User Feature Flags — server-driven feature access */
+  featureFlags: FeatureFlagsClient;
+
+  /** RAG Sandbox Dashboard (Admin) */
+  sandbox: SandboxClient;
+
+  /** First-time user onboarding */
+  onboarding: OnboardingClient;
+
+  /** Access Requests — invite-only registration */
+  accessRequests: AccessRequestsClient;
+
+  /** Admin manual notification dispatch */
+  adminNotifications: AdminNotificationsClient;
+
+  /** Public contact form submission */
+  contact: ContactClient;
+
+  /** Agent Memory — groups, game memory, player stats */
+  agentMemory: AgentMemoryClient;
+
+  /** User-scoped agent document selection */
+  agentDocuments: AgentDocumentsClient;
 
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
@@ -348,7 +434,24 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     liveSessions: createLiveSessionsClient({ httpClient }), // ISSUE-5041
     sessionTracking: createSessionTrackingClient({ httpClient }), // ISSUE-5041
     gameToolkit: createGameToolkitClient({ httpClient }), // AI Toolkit Generation
+    toolbox: createToolboxClient({ httpClient }), // Epic #412: Game Toolbox
     sessionStatistics: createSessionStatisticsClient({ httpClient }), // P4: Session Analytics
+    gameNights: createGameNightsClient({ httpClient }), // Issue #33
+    invitations: createInvitationsClient({ httpClient }), // Issue #132
+    gameNightBgg: createGameNightBggClient({ httpClient }), // Game Night Improvvisata
+    tiers: createTierClient({ httpClient }), // Game Night Improvvisata — Tier & Usage
+    sessionInvites: createSessionInviteClient({ httpClient }), // Game Night Improvvisata — Session Invites
+    playlists: createPlaylistsClient({ httpClient }), // Gap Closure — Playlists
+    wishlist: createWishlistClient({ httpClient }), // Wishlist
+    playRecords: createPlayRecordsClient({ httpClient }), // Play Records
+    featureFlags: createFeatureFlagsClient({ httpClient }), // User Feature Flags
+    sandbox: createSandboxClient({ httpClient }), // RAG Sandbox Dashboard
+    onboarding: createOnboardingClient({ httpClient }), // First-time user onboarding
+    accessRequests: createAccessRequestsClient({ httpClient }), // Invite-only registration
+    adminNotifications: createAdminNotificationsClient({ httpClient }), // Admin manual notifications
+    contact: createContactClient({ httpClient }), // Public contact form
+    agentMemory: createAgentMemoryClient({ httpClient }), // AgentMemory
+    agentDocuments: createAgentDocumentsClient({ httpClient }), // User agent document selection
     delete: (path: string) => httpClient.delete(path),
   };
 

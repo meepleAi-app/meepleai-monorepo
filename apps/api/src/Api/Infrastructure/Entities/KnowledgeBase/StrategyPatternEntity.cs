@@ -44,6 +44,6 @@ public class StrategyPatternEntity
     [MaxLength(100)]
     public string? Source { get; set; }
 
-    [Column("embedding", TypeName = "vector(1536)")]
+    [Column("embedding", TypeName = "vector(1024)")]
     public Vector? Embedding { get; set; }
 }

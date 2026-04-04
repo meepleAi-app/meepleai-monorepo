@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -78,7 +79,7 @@ public class RateLimitServiceTests
 
         // Assert
         // In Development, the multiplier should be applied: 100 * 10 = 1000
-        Assert.Equal(1000, result.MaxTokens);
+        result.MaxTokens.Should().Be(1000);
     }
 
     [Fact]
@@ -104,7 +105,7 @@ public class RateLimitServiceTests
 
         // Assert
         // In Test environment, multiplier should be applied: 60 * 10 = 600
-        Assert.Equal(600, result.MaxTokens);
+        result.MaxTokens.Should().Be(600);
     }
 
     [Fact]
@@ -130,7 +131,7 @@ public class RateLimitServiceTests
 
         // Assert
         // In Production, NO multiplier: should stay 100
-        Assert.Equal(100, result.MaxTokens);
+        result.MaxTokens.Should().Be(100);
     }
 
     [Fact]
@@ -159,8 +160,8 @@ public class RateLimitServiceTests
 
         // Assert
         // DB config with multiplier: 1000 * 10 = 10000, 10.0 * 10 = 100.0
-        Assert.Equal(10000, result.MaxTokens);
-        Assert.Equal(100.0, result.RefillRate);
+        result.MaxTokens.Should().Be(10000);
+        result.RefillRate.Should().Be(100.0);
     }
 
     [Fact]
@@ -188,8 +189,8 @@ public class RateLimitServiceTests
 
         // Assert
         // Multiplier applied to both: 100 * 10 = 1000, 1.0 * 10 = 10.0
-        Assert.Equal(1000, result.MaxTokens);
-        Assert.Equal(10.0, result.RefillRate);
+        result.MaxTokens.Should().Be(1000);
+        result.RefillRate.Should().Be(10.0);
     }
 
     [Fact]
@@ -214,20 +215,20 @@ public class RateLimitServiceTests
 
         // Act & Assert - Hardcoded defaults with multiplier
         var adminConfig = await service.GetConfigForRoleAsync("admin", TestCancellationToken);
-        Assert.Equal(10000, adminConfig.MaxTokens); // 1000 * 10
-        Assert.Equal(100.0, adminConfig.RefillRate); // 10.0 * 10
+        adminConfig.MaxTokens.Should().Be(10000);
+        adminConfig.RefillRate.Should().Be(100.0);
 
         var editorConfig = await service.GetConfigForRoleAsync("editor", TestCancellationToken);
-        Assert.Equal(5000, editorConfig.MaxTokens); // 500 * 10
-        Assert.Equal(50.0, editorConfig.RefillRate); // 5.0 * 10
+        editorConfig.MaxTokens.Should().Be(5000);
+        editorConfig.RefillRate.Should().Be(50.0);
 
         var userConfig = await service.GetConfigForRoleAsync("user", TestCancellationToken);
-        Assert.Equal(1000, userConfig.MaxTokens); // 100 * 10
-        Assert.Equal(10.0, userConfig.RefillRate); // 1.0 * 10
+        userConfig.MaxTokens.Should().Be(1000);
+        userConfig.RefillRate.Should().Be(10.0);
 
         var anonymousConfig = await service.GetConfigForRoleAsync("anonymous", TestCancellationToken);
-        Assert.Equal(600, anonymousConfig.MaxTokens); // 60 * 10
-        Assert.Equal(10.0, anonymousConfig.RefillRate); // 1.0 * 10
+        anonymousConfig.MaxTokens.Should().Be(600);
+        anonymousConfig.RefillRate.Should().Be(10.0);
     }
 
     [Fact]
@@ -250,8 +251,8 @@ public class RateLimitServiceTests
 
         // Assert
         // Should use injected config with multiplier: 100 * 10 = 1000
-        Assert.Equal(1000, result.MaxTokens);
-        Assert.Equal(10.0, result.RefillRate);
+        result.MaxTokens.Should().Be(1000);
+        result.RefillRate.Should().Be(10.0);
     }
 
     [Fact]
@@ -277,8 +278,8 @@ public class RateLimitServiceTests
 
         // Assert
         // K6 tests should now get 10x limits: 60 * 10 = 600
-        Assert.Equal(600, result.MaxTokens);
-        Assert.True(result.MaxTokens >= 600, "K6 tests need at least 600 tokens to avoid 429s");
+        result.MaxTokens.Should().Be(600);
+        (result.MaxTokens >= 600).Should().BeTrue("K6 tests need at least 600 tokens to avoid 429s");
     }
 
     private static IWebHostEnvironment CreateEnvironment(string environmentName)

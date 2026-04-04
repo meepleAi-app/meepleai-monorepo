@@ -17,7 +17,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@/lib/api';
-import type { EmbeddingStatus, KnowledgeBaseStatus } from '@/lib/api/schemas/knowledge-base.schemas';
+import type {
+  EmbeddingStatus,
+  KnowledgeBaseStatus,
+} from '@/lib/api/schemas/knowledge-base.schemas';
 
 // ============================================================================
 // Constants
@@ -83,7 +86,6 @@ const STAGE_LABELS: Record<EmbeddingStatus, string> = {
 function getStageLabel(status: EmbeddingStatus, data: KnowledgeBaseStatus | null): string {
   if (!data) return STAGE_LABELS.Pending;
 
-  // eslint-disable-next-line security/detect-object-injection -- status is from typed EmbeddingStatus union
   const base = STAGE_LABELS[status];
 
   if (status === 'Chunking' && data.totalChunks > 0) {
@@ -107,7 +109,7 @@ function getChunkProgress(data: KnowledgeBaseStatus | null): string {
 
 export function useEmbeddingStatus(
   gameId: string | null,
-  options: UseEmbeddingStatusOptions = {},
+  options: UseEmbeddingStatusOptions = {}
 ): UseEmbeddingStatusReturn {
   const {
     enabled = true,

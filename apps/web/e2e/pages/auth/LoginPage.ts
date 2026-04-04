@@ -10,10 +10,15 @@ import { BasePage } from '../base/BasePage';
 export class LoginPage extends BasePage {
   /**
    * Navigate to login page (implements abstract goto)
+   * Uses domcontentloaded to avoid networkidle timeout from background requests.
    */
   async goto(): Promise<void> {
-    await this.page.goto('/login');
-    await this.waitForLoad();
+    await this.page.goto('/login', { waitUntil: 'domcontentloaded' });
+    // Wait for login form to be interactive
+    await this.page.waitForSelector(
+      '[data-testid="login-submit"], input[type="email"], label:has-text("email")',
+      { timeout: 30_000 }
+    );
   }
 
   /**
@@ -30,7 +35,11 @@ export class LoginPage extends BasePage {
   async login(email: string, password: string): Promise<void> {
     await this.fill(this.page.getByLabel(/email/i), email);
     await this.fill(this.page.getByLabel(/password/i), password);
-    await this.click(this.page.locator('[data-testid="login-submit"]'));
+    await this.click(
+      this.page
+        .locator('[data-testid="login-submit"]')
+        .or(this.page.getByRole('button', { name: /^login$/i }))
+    );
   }
 
   /**

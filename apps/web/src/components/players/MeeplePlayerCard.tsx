@@ -36,6 +36,7 @@ import { Settings, UserPlus } from 'lucide-react';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import type { SessionPlayer } from '@/lib/api/schemas/play-records.schemas';
+import { buildPlayerCardProps } from '@/lib/card-mappers';
 
 // ============================================================================
 // Types
@@ -80,10 +81,12 @@ export function MeeplePlayerCard({
   onInvite,
   className,
 }: MeeplePlayerCardProps) {
-  // Compute profile href based on player type
-  const profileHref = isMeepleAiUser && player.userId
-    ? `/users/${player.userId}`
-    : `/players/${player.id}`;
+  // Map player to card props for consistency
+  const mapperProps = buildPlayerCardProps(player);
+
+  // Compute profile href based on player type (unused until navigation wiring)
+  const _profileHref =
+    isMeepleAiUser && player.userId ? `/users/${player.userId}` : `/players/${player.id}`;
 
   // ============================================================================
   // Quick Actions Configuration
@@ -123,17 +126,26 @@ export function MeeplePlayerCard({
       id={player.id}
       entity="player"
       variant={variant}
-      title={player.displayName}
+      title={mapperProps.title ?? player.displayName}
       subtitle={subtitle}
       className={className}
       onClick={onClick ? () => onClick(player.id) : undefined}
       // Issue #5004: Quick actions with conditional visibility
       entityQuickActions={entityQuickActions}
       showInfoButton
-      infoHref={profileHref}
+      entityId={player.id}
       infoTooltip="Vai al profilo"
       // Navigation footer
-      navigateTo={getNavigationLinks('player', { id: player.id })}
+      linkedEntities={getNavigationLinks('player', { id: player.id }).map(l => ({
+        entityType: l.entity,
+        count: 1,
+      }))}
+      onManaPipClick={entityType => {
+        const link = getNavigationLinks('player', { id: player.id }).find(
+          l => l.entity === entityType
+        );
+        if (link?.href) window.location.href = link.href;
+      }}
       data-testid={`player-card-${player.id}`}
     />
   );
@@ -142,11 +154,7 @@ export function MeeplePlayerCard({
 /**
  * MeeplePlayerCard Skeleton for loading state
  */
-export function MeeplePlayerCardSkeleton({
-  variant = 'grid',
-}: {
-  variant?: MeepleCardVariant;
-}) {
+export function MeeplePlayerCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant }) {
   return (
     <MeepleCard
       entity="player"

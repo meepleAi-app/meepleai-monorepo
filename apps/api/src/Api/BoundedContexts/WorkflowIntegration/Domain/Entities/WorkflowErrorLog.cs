@@ -51,7 +51,7 @@ public sealed class WorkflowErrorLog : AggregateRoot<Guid>
         NodeName = nodeName?.Trim();
         StackTrace = stackTrace;
         RetryCount = 0;
-        CreatedAt = DateTime.UtcNow;
+        CreatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
 
         AddDomainEvent(new WorkflowErrorLoggedEvent(
             id,

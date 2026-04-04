@@ -175,4 +175,3 @@ internal class OAuthAccountBuilder
     public static OAuthAccount CreateGitHubForUser(User user)
         => new OAuthAccountBuilder().ForUser(user).AsGitHub().Build();
 }
-

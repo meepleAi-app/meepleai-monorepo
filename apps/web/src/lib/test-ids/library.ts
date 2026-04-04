@@ -1,7 +1,7 @@
 /**
  * Test ID constants for Library-related components.
  *
- * Covers: PrivateGamesClient, AddPrivateGameWithBgg
+ * Covers: PrivateGamesClient
  *
  * Import from '@/lib/test-ids' in both components and tests.
  */
@@ -20,12 +20,4 @@ export const LIBRARY_TEST_IDS = {
   sortDirectionBtn: 'sort-direction-btn',
   pagination: 'pagination',
   confirmDeleteBtn: 'confirm-delete-btn',
-
-  // AddPrivateGameWithBgg
-  addGameChooseMode: 'add-game-choose-mode',
-  manualEntryBtn: 'manual-entry-btn',
-  addGameManualForm: 'add-game-manual-form',
-  addGameBggForm: 'add-game-bgg-form',
-  loadingBggDetails: 'loading-bgg-details',
-  backToSearchBtn: 'back-to-search-btn',
 } as const;

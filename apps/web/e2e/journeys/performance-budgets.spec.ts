@@ -38,8 +38,7 @@ async function measurePageLoad(page: any) {
     const fcp = paint.find(entry => entry.name === 'first-contentful-paint');
 
     return {
-      domContentLoaded:
-        navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
+      domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
       loadComplete: navigation.loadEventEnd - navigation.loadEventStart,
       totalLoad: navigation.loadEventEnd - navigation.fetchStart,
       fcp: fcp?.startTime || 0,
@@ -178,7 +177,7 @@ test.describe('Performance Budgets: Journey Pages', () => {
   test('Games Catalog (/games) should load under budget', async ({ page }) => {
     const startTime = Date.now();
 
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const loadTime = Date.now() - startTime;
@@ -238,7 +237,7 @@ test.describe('Performance Budgets: Critical Interactions', () => {
   });
 
   test('Search should respond quickly (<500ms)', async ({ page }) => {
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     // Mock: Search API
@@ -302,7 +301,7 @@ test.describe('Performance Budget Monitoring', () => {
 
     const pages = [
       { url: '/', name: 'Homepage' },
-      { url: '/games', name: 'Games Catalog' },
+      { url: '/library', name: 'Games Catalog' },
       { url: '/board-game-ai/ask', name: 'AI Chat' },
     ];
 

@@ -2,6 +2,8 @@
  * Game Night Components — Barrel Export
  */
 
+export { ActivityFeed } from './ActivityFeed';
+export type { ActivityEvent } from './ActivityFeed';
 export { RulesExplainer, type RulesExplainerProps } from './RulesExplainer';
 export { SetupWizard, type SetupWizardResult } from './SetupWizard';
 export { PlayerSetup, type SetupPlayer, type PlayerRole, PLAYER_COLORS } from './PlayerSetup';
@@ -17,3 +19,9 @@ export { SessionChatWidget } from './SessionChatWidget';
 export type { SessionChatWidgetProps, ChatMessage } from './SessionChatWidget';
 export { LiveSessionView } from './LiveSessionView';
 export type { LiveSessionViewProps } from './LiveSessionView';
+export { ScoreAssistant } from './ScoreAssistant';
+export { SaveCompleteDialog } from './SaveCompleteDialog';
+export { ResumeSessionPanel } from './ResumeSessionPanel';
+export { GameNightWizard } from './GameNightWizard';
+export { PlayerSetupDialog } from './PlayerSetupDialog';
+export type { PlayerSetup as PlayerSetupEntry } from './PlayerSetupDialog';

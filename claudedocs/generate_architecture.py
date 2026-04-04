@@ -281,7 +281,7 @@ ob_nw = (OZ_W - 26) // 3
 zone(OZ_X, R3_BOT, OZ_W, R3H, "Observability & Automation", OB, alpha=0.025)
 svc(OZ_X+8,             R3_BOT+R3H-44, ob_nw, 30, "Prometheus", "9090", OB, OB_BG, "P", "Metrics")
 svc(OZ_X+8+ob_nw+5,     R3_BOT+R3H-44, ob_nw, 30, "Grafana", "3001", GR, Color(0.04,0.10,0.04), "G", "Dashboards")
-svc(OZ_X+8+2*(ob_nw+5), R3_BOT+R3H-44, ob_nw, 30, "HyperDX", "8180", CY, Color(0.04,0.10,0.14), "H", "OTLP Traces")
+svc(OZ_X+8+2*(ob_nw+5), R3_BOT+R3H-44, ob_nw, 30, "Loki", "3100", CY, Color(0.04,0.10,0.14), "L", "Log Aggregation")
 svc(OZ_X+8,             R3_BOT+6, ob_nw, 30, "n8n", "5678", OB, OB_BG, "W", "Workflows")
 svc(OZ_X+8+ob_nw+5,     R3_BOT+6, ob_nw, 30, "Mailpit", "8025", OB, OB_BG, "M", "Dev SMTP")
 svc(OZ_X+8+2*(ob_nw+5), R3_BOT+6, ob_nw, 30, "Alertmanager", "9093", OB, OB_BG, "!", "Alerts")
@@ -396,17 +396,6 @@ elbow(apx(0.82), CH_TOP, ty[7], or_cx, r2_top_row, CY, w=1.3, label="POST /execu
 
 
 # ── OBSERVABILITY (subtle edge-routed paths) ──
-
-# API → HyperDX (OTLP push, right edge)
-c.saveState()
-cc = Color(CY.red, CY.green, CY.blue, 0.12)
-c.setStrokeColor(cc); c.setLineWidth(0.5); c.setDash(3, 3)
-edge_r = W - M - 4
-c.line(AP_X+AP_W-5, R1_BOT+2, edge_r, R1_BOT+2)
-c.line(edge_r, R1_BOT+2, edge_r, R3_BOT+R3H-28)
-c.line(edge_r, R3_BOT+R3H-28, OZ_X+8+2*(ob_nw+5)+ob_nw, R3_BOT+R3H-28)
-c.restoreState()
-lbl(edge_r-3, (R2_BOT+R2_BOT+R2H)/2, "OTLP", CY, "r")
 
 # Prometheus → API (scrape, left edge)
 c.saveState()

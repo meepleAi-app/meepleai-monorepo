@@ -167,8 +167,8 @@ public class ITextPdfTableExtractorTests
         try
         {
             // Act & Assert
-            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(
-                async () => await _extractor.ExtractTablesAsync(tempPdfPath, true, cts.Token));
+            var act = async () => await _extractor.ExtractTablesAsync(tempPdfPath, true, cts.Token);
+            var exception = (await act.Should().ThrowAsync<OperationCanceledException>()).Which;
 
             (exception is OperationCanceledException or TaskCanceledException).Should().BeTrue();
         }
@@ -190,8 +190,8 @@ public class ITextPdfTableExtractorTests
         try
         {
             // Act & Assert
-            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(
-                async () => await _extractor.ExtractStructuredContentAsync(tempPdfPath, cts.Token));
+            var act2 = async () => await _extractor.ExtractStructuredContentAsync(tempPdfPath, cts.Token);
+            var exception = (await act2.Should().ThrowAsync<OperationCanceledException>()).Which;
 
             (exception is OperationCanceledException or TaskCanceledException).Should().BeTrue();
         }

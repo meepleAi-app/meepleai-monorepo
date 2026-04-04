@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Evaluation;
@@ -25,13 +26,13 @@ public class EvaluationMetricsTests
             sampleCount: 50);
 
         // Assert
-        Assert.Equal(0.75, metrics.RecallAt5);
-        Assert.Equal(0.85, metrics.RecallAt10);
-        Assert.Equal(0.80, metrics.NdcgAt10);
-        Assert.Equal(0.90, metrics.Mrr);
-        Assert.Equal(1200.0, metrics.P95LatencyMs);
-        Assert.Equal(0.88, metrics.AnswerCorrectness);
-        Assert.Equal(50, metrics.SampleCount);
+        metrics.RecallAt5.Should().Be(0.75);
+        metrics.RecallAt10.Should().Be(0.85);
+        metrics.NdcgAt10.Should().Be(0.80);
+        metrics.Mrr.Should().Be(0.90);
+        metrics.P95LatencyMs.Should().Be(1200.0);
+        metrics.AnswerCorrectness.Should().Be(0.88);
+        metrics.SampleCount.Should().Be(50);
     }
 
     [Fact]
@@ -48,11 +49,11 @@ public class EvaluationMetricsTests
             sampleCount: 30);
 
         // Assert
-        Assert.Equal(1.0, metrics.RecallAt5);
-        Assert.Equal(1.0, metrics.RecallAt10);
-        Assert.Equal(1.0, metrics.NdcgAt10);
-        Assert.Equal(1.0, metrics.Mrr);
-        Assert.Equal(1.0, metrics.AnswerCorrectness);
+        metrics.RecallAt5.Should().Be(1.0);
+        metrics.RecallAt10.Should().Be(1.0);
+        metrics.NdcgAt10.Should().Be(1.0);
+        metrics.Mrr.Should().Be(1.0);
+        metrics.AnswerCorrectness.Should().Be(1.0);
     }
 
     [Fact]
@@ -69,13 +70,13 @@ public class EvaluationMetricsTests
             sampleCount: -5); // Should clamp to 0
 
         // Assert
-        Assert.Equal(0.0, metrics.RecallAt5);
-        Assert.Equal(0.0, metrics.RecallAt10);
-        Assert.Equal(0.0, metrics.NdcgAt10);
-        Assert.Equal(0.0, metrics.Mrr);
-        Assert.Equal(0.0, metrics.P95LatencyMs);
-        Assert.Equal(0.0, metrics.AnswerCorrectness);
-        Assert.Equal(0, metrics.SampleCount);
+        metrics.RecallAt5.Should().Be(0.0);
+        metrics.RecallAt10.Should().Be(0.0);
+        metrics.NdcgAt10.Should().Be(0.0);
+        metrics.Mrr.Should().Be(0.0);
+        metrics.P95LatencyMs.Should().Be(0.0);
+        metrics.AnswerCorrectness.Should().Be(0.0);
+        metrics.SampleCount.Should().Be(0);
     }
 
     [Fact]
@@ -85,13 +86,13 @@ public class EvaluationMetricsTests
         var metrics = EvaluationMetrics.Empty;
 
         // Assert
-        Assert.Equal(0.0, metrics.RecallAt5);
-        Assert.Equal(0.0, metrics.RecallAt10);
-        Assert.Equal(0.0, metrics.NdcgAt10);
-        Assert.Equal(0.0, metrics.Mrr);
-        Assert.Equal(0.0, metrics.P95LatencyMs);
-        Assert.Equal(0.0, metrics.AnswerCorrectness);
-        Assert.Equal(0, metrics.SampleCount);
+        metrics.RecallAt5.Should().Be(0.0);
+        metrics.RecallAt10.Should().Be(0.0);
+        metrics.NdcgAt10.Should().Be(0.0);
+        metrics.Mrr.Should().Be(0.0);
+        metrics.P95LatencyMs.Should().Be(0.0);
+        metrics.AnswerCorrectness.Should().Be(0.0);
+        metrics.SampleCount.Should().Be(0);
     }
 
     [Fact]
@@ -108,7 +109,7 @@ public class EvaluationMetricsTests
             sampleCount: 30); // Exactly 30 samples
 
         // Act & Assert
-        Assert.True(metrics.MeetsBaselineRequirements());
+        metrics.MeetsBaselineRequirements().Should().BeTrue();
     }
 
     [Fact]
@@ -125,7 +126,7 @@ public class EvaluationMetricsTests
             sampleCount: 29); // Below 30 threshold
 
         // Act & Assert
-        Assert.False(metrics.MeetsBaselineRequirements());
+        metrics.MeetsBaselineRequirements().Should().BeFalse();
     }
 
     [Fact]
@@ -142,7 +143,7 @@ public class EvaluationMetricsTests
             sampleCount: 30);
 
         // Act & Assert
-        Assert.True(metrics.MeetsPhase4Target());
+        metrics.MeetsPhase4Target().Should().BeTrue();
     }
 
     [Fact]
@@ -159,7 +160,7 @@ public class EvaluationMetricsTests
             sampleCount: 30);
 
         // Act & Assert
-        Assert.False(metrics.MeetsPhase4Target());
+        metrics.MeetsPhase4Target().Should().BeFalse();
     }
 
     [Fact]
@@ -176,7 +177,7 @@ public class EvaluationMetricsTests
             sampleCount: 50);
 
         // Act & Assert
-        Assert.True(metrics.MeetsPhase5Target());
+        metrics.MeetsPhase5Target().Should().BeTrue();
     }
 
     [Fact]
@@ -193,7 +194,7 @@ public class EvaluationMetricsTests
             sampleCount: 50);
 
         // Act & Assert
-        Assert.False(metrics.MeetsPhase5Target());
+        metrics.MeetsPhase5Target().Should().BeFalse();
     }
 
     [Fact]
@@ -210,7 +211,7 @@ public class EvaluationMetricsTests
             sampleCount: 50);
 
         // Act & Assert
-        Assert.False(metrics.MeetsPhase5Target());
+        metrics.MeetsPhase5Target().Should().BeFalse();
     }
 
     [Fact]
@@ -227,7 +228,7 @@ public class EvaluationMetricsTests
             sampleCount: 50);
 
         // Act & Assert
-        Assert.True(metrics.MeetsPhase5Target());
+        metrics.MeetsPhase5Target().Should().BeTrue();
     }
 
     [Theory]
@@ -247,10 +248,10 @@ public class EvaluationMetricsTests
             sampleCount: 30);
 
         // Assert
-        Assert.Equal(value, metrics.RecallAt5);
-        Assert.Equal(value, metrics.RecallAt10);
-        Assert.Equal(value, metrics.NdcgAt10);
-        Assert.Equal(value, metrics.Mrr);
-        Assert.Equal(value, metrics.AnswerCorrectness);
+        metrics.RecallAt5.Should().Be(value);
+        metrics.RecallAt10.Should().Be(value);
+        metrics.NdcgAt10.Should().Be(value);
+        metrics.Mrr.Should().Be(value);
+        metrics.AnswerCorrectness.Should().Be(value);
     }
 }

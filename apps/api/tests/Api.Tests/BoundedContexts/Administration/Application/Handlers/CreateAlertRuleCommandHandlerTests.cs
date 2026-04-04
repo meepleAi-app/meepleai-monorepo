@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
-using Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.Tests.Constants;
@@ -98,8 +97,9 @@ public class CreateAlertRuleCommandHandlerTests
         CreateAlertRuleCommand? command = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(command!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -124,8 +124,9 @@ public class CreateAlertRuleCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -149,8 +150,9 @@ public class CreateAlertRuleCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -174,8 +176,9 @@ public class CreateAlertRuleCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -198,8 +201,9 @@ public class CreateAlertRuleCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -222,8 +226,9 @@ public class CreateAlertRuleCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<AlertRule>(), It.IsAny<CancellationToken>()), Times.Never);
     }

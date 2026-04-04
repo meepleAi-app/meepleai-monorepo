@@ -1,12 +1,11 @@
-using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
-using Api.BoundedContexts.SystemConfiguration.Application.Services;
-using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Configuration;
+using Api.SharedKernel.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using RagStrategy = Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagStrategy;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 
@@ -44,12 +43,10 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
     }
 
     /// <inheritdoc/>
-    public LlmRoutingDecision SelectProvider(User? user, RagStrategy strategy, string? context = null)
+    public LlmRoutingDecision SelectProvider(LlmUserContext userContext, RagStrategy strategy, string? context = null, string? region = null)
     {
-        var isAnonymous = user == null;
-        var userRole = user?.Role ?? Role.User;
-        var userId = user?.Id.ToString() ?? "anonymous";
-        var tier = MapRoleToTier(userRole, isAnonymous);
+        var userId = userContext.UserId?.ToString() ?? "anonymous";
+        var tier = userContext.Tier;
 
         var settings = _aiSettings.Value;
 
@@ -60,7 +57,7 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         // Step 1: Check PreferredProvider override (still honored if explicitly set)
         if (TryGetPreferredDecision(settings, userId, out var preferredDecision))
         {
-            return preferredDecision!;
+            return preferredDecision! with { UserRegion = region };
         }
 
         // Step 2: Validate tier has access to the requested strategy
@@ -79,7 +76,10 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         var decision = CreateValidatedDecision(provider, modelId, strategy, tier, userId, settings);
 
         // Step 5: Apply budget mode override if active
-        return ApplyBudgetModeOverride(decision, userId);
+        var finalDecision = ApplyBudgetModeOverride(decision, userId);
+
+        // Step 6: Attach region hint (Issue #28: no-op for now, future multi-region routing)
+        return region is not null ? finalDecision with { UserRegion = region } : finalDecision;
     }
 
     /// <summary>
@@ -242,29 +242,6 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         // Both providers disabled
         throw new InvalidOperationException(
             $"Both AI providers are disabled. Cannot route strategy {strategy.GetDisplayName()}.");
-    }
-
-    /// <summary>
-    /// Map authentication Role to LlmUserTier.
-    /// When user is null (internal pipeline calls like ConversationQueryRewriter),
-    /// default to User tier so internal services aren't blocked by Anonymous tier
-    /// which has zero strategy access.
-    /// </summary>
-    private static LlmUserTier MapRoleToTier(Role userRole, bool isAnonymous)
-    {
-        if (isAnonymous)
-        {
-            // Internal pipeline calls (e.g., query rewriting) pass user=null.
-            // Use User tier as default so they can access basic strategies.
-            return LlmUserTier.User;
-        }
-
-        return userRole.Value switch
-        {
-            "admin" => LlmUserTier.Admin,
-            "editor" => LlmUserTier.Editor,
-            _ => LlmUserTier.User
-        };
     }
 
     /// <summary>

@@ -25,11 +25,7 @@ export interface PageTransitionProps {
   className?: string;
 }
 
-export function PageTransition({
-  children,
-  variant = 'fade',
-  className,
-}: PageTransitionProps) {
+export function PageTransition({ children, variant = 'fade', className }: PageTransitionProps) {
   const variants: Record<string, Variants> = {
     fade: {
       hidden: { opacity: 0 },
@@ -70,7 +66,6 @@ export function PageTransition({
     },
   };
 
-  // eslint-disable-next-line security/detect-object-injection -- Safe: variant is a typed union literal from props
   const selectedVariant = variants[variant];
 
   return (

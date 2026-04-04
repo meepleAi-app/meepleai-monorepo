@@ -4,14 +4,14 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 
 import { PenLine, Eraser, Trash2, Download } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
 
 import { WidgetCard } from './WidgetCard';
 

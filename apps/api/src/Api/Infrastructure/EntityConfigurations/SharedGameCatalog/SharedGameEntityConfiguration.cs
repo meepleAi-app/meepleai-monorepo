@@ -109,6 +109,16 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .IsRequired()
             .HasDefaultValue(false);
 
+        builder.Property(e => e.IsRagPublic)
+            .HasColumnName("is_rag_public")
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        // Optimistic concurrency (spec-panel C-3)
+        builder.Property(e => e.RowVersion)
+            .HasColumnName("row_version")
+            .IsRowVersion();
+
         // Global query filter for soft deletes
         builder.HasQueryFilter(e => !e.IsDeleted);
 
@@ -138,11 +148,11 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
         builder.ToTable(t =>
         {
             t.HasCheckConstraint("chk_shared_games_year_published",
-                "year_published > 1900 AND year_published <= 2100");
+                "year_published = 0 OR (year_published > 1900 AND year_published <= 2100)");
             t.HasCheckConstraint("chk_shared_games_players",
-                "min_players > 0 AND max_players >= min_players");
+                "(min_players = 0 AND max_players = 0) OR (min_players > 0 AND max_players >= min_players)");
             t.HasCheckConstraint("chk_shared_games_playing_time",
-                "playing_time_minutes > 0");
+                "playing_time_minutes >= 0");
             t.HasCheckConstraint("chk_shared_games_min_age",
                 "min_age >= 0");
             t.HasCheckConstraint("chk_shared_games_complexity",

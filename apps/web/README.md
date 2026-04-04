@@ -41,7 +41,6 @@ apps/web/
 ├── public/                              # Static assets
 ├── next.config.js                       # Next.js configuration (App Router defaults)
 ├── tailwind.config.js                   # Tailwind CSS 4 configuration
-├── jest.config.js                       # Jest configuration
 ├── playwright.config.ts                 # Playwright configuration
 ├── tsconfig.json                        # TypeScript project refs
 └── package.json                         # Dependencies

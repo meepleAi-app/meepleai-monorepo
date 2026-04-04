@@ -18,16 +18,19 @@ using GetSessionStatusQuery = Api.BoundedContexts.Authentication.Application.Que
 using ExtendSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.ExtendSessionCommand;
 using RevokeSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.RevokeSessionCommand;
 using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserSessionsQuery;
-using LoginWithApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LoginWithApiKeyCommand;
-using LogoutApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutApiKeyCommand;
 using LogoutAllDevicesCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutAllDevicesCommand;
 using GetSessionByTokenHashQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionByTokenHashQuery;
+using AcceptInvitationCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.AcceptInvitationCommand;
+using ActivateInvitedAccountCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.ActivateInvitedAccountCommand;
+using ValidateInvitationTokenQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.ValidateInvitationTokenQuery;
+using GetPendingInvitationsQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.GetPendingInvitationsQuery;
+using GetInvitationByIdQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.GetInvitationByIdQuery;
 
 namespace Api.Routing;
 
 /// <summary>
 /// Core authentication endpoints.
-/// Handles user registration, login, logout, API key authentication, and session management.
+/// Handles user registration, login, logout, and session management.
 ///
 /// Authentication pattern:
 /// - <c>RequireAdminSession()</c>: Custom extension that validates the session cookie and checks admin role
@@ -44,7 +47,6 @@ internal static class AuthenticationEndpoints
         MapRegisterEndpoint(group);
         MapLoginEndpoint(group);
         MapLogoutEndpoint(group);
-        MapApiKeyEndpoints(group);
         MapMeEndpoint(group);
 
         // Map session management endpoints
@@ -55,6 +57,12 @@ internal static class AuthenticationEndpoints
         group.MapOAuthEndpoints(CookieHelpers.WriteSessionCookie);
         group.MapPasswordResetEndpoints(CookieHelpers.WriteSessionCookie);
         group.MapEmailVerificationEndpoints(); // ISSUE-3071: Email verification
+
+        // ISSUE-124: Invitation acceptance endpoints (public, unauthenticated)
+        MapAcceptInvitationEndpoint(group);
+        MapValidateInvitationEndpoint(group);
+        MapActivateAccountEndpoint(group);
+        MapValidateInvitationGetEndpoint(group);
 
         return group;
     }
@@ -103,7 +111,8 @@ internal static class AuthenticationEndpoints
             logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
 
             return Results.Json(new { user = result.User, expiresAt = result.ExpiresAt });
-        }).RequireRateLimiting("AuthRegister");
+        }).RequireRateLimiting("AuthRegister")
+          .RequirePublicRegistration();
     }
 
     private static void MapLoginEndpoint(RouteGroupBuilder group)
@@ -190,93 +199,10 @@ internal static class AuthenticationEndpoints
         });
     }
 
-    private static void MapApiKeyEndpoints(RouteGroupBuilder group)
-    {
-        group.MapPost("/auth/apikey/login", async (
-            ApiKeyLoginPayload payload,
-            HttpContext context,
-            IMediator mediator,
-            ApiKeyCookieService apiKeyCookieService,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            if (string.IsNullOrWhiteSpace(payload.ApiKey))
-            {
-                logger.LogWarning("API key login failed: API key is empty");
-                return Results.BadRequest(new { error = "API key is required" });
-            }
-
-            var command = new LoginWithApiKeyCommand(ApiKey: payload.ApiKey);
-
-            logger.LogInformation("API key login attempt");
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            var protectedApiKey = apiKeyCookieService.Protect(payload.ApiKey);
-            CookieHelpers.WriteApiKeyCookie(context, protectedApiKey);
-            logger.LogInformation("User {UserId} validated API key {ApiKeyId} and cookie issued", result.User.Id, result.ApiKeyId);
-
-            return Results.Json(new
-            {
-                user = result.User,
-                message = "API key verified. You can keep using the secure cookie or send Authorization: ApiKey <value> on API calls."
-            });
-        })
-        .WithName("LoginWithApiKey")
-        .WithTags("Authentication", "API Keys")
-        .WithSummary("Validate an API key")
-        .WithDescription(@"Authenticates an API key, stores it inside an httpOnly cookie for browsers, and returns the associated profile.
-Clients can also store the key securely and send it via the `Authorization: ApiKey {key}` header.")
-        .Produces(200)
-        .Produces(400)
-        .Produces(401);
-
-        group.MapPost("/auth/apikey/logout", async (
-            HttpContext context,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            var command = new LogoutApiKeyCommand();
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            CookieHelpers.RemoveApiKeyCookie(context);
-            logger.LogInformation("API key cookie removed");
-
-            return Results.Json(new { ok = true, message = result.Message });
-        })
-        .WithName("LogoutApiKey")
-        .WithTags("Authentication", "API Keys")
-        .WithSummary("Logout API key authentication by removing httpOnly cookie")
-        .WithDescription("Removes the secure API key cookie so browsers no longer send it automatically. Use key management endpoints to revoke the key entirely.")
-        .Produces(200);
-    }
-
     private static void MapMeEndpoint(RouteGroupBuilder group)
     {
         group.MapGet("/auth/me", (HttpContext context) =>
         {
-            var authType = context.User.FindFirst("AuthType")?.Value;
-            if (string.Equals(authType, "ApiKey", StringComparison.Ordinal) && context.User.Identity?.IsAuthenticated is true)
-            {
-                var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                var email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-                var displayName = context.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-                var role = context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Results.Unauthorized();
-                }
-
-                if (string.IsNullOrEmpty(email))
-                {
-                    return Results.Unauthorized();
-                }
-
-                var user = new { id = userId, email, displayName = displayName ?? email, role = role ?? UserRole.User.ToString() };
-                return Results.Json(new { user, expiresAt = (DateTime?)null });
-            }
-
             var (authenticated, session, _) = context.TryGetActiveSession();
             if (authenticated)
             {
@@ -580,4 +506,203 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
         .Produces(400)
         .Produces(401);
     }
+
+    // ISSUE-124: Accept invitation (public, unauthenticated)
+    private static void MapAcceptInvitationEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/auth/accept-invitation", async (
+            HttpContext context,
+            IMediator mediator,
+            IConfigurationService configService,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            AcceptInvitationPayload? payload;
+            try
+            {
+                payload = await context.Request.ReadFromJsonAsync<AcceptInvitationPayload>(ct).ConfigureAwait(false);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return Results.BadRequest(new { error = "Invalid request payload" });
+            }
+
+            if (payload == null)
+            {
+                return Results.BadRequest(new { error = "Invalid request payload" });
+            }
+
+            if (string.IsNullOrWhiteSpace(payload.Token) ||
+                string.IsNullOrWhiteSpace(payload.Password) ||
+                string.IsNullOrWhiteSpace(payload.ConfirmPassword))
+            {
+                return Results.BadRequest(new { error = "Token, password, and confirmPassword are required" });
+            }
+
+            logger.LogInformation("Invitation acceptance attempt");
+
+            var command = new AcceptInvitationCommand(
+                payload.Token,
+                payload.Password,
+                payload.ConfirmPassword);
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            // Set auth cookie for immediate login (follows existing login pattern)
+            var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;
+            var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
+            CookieHelpers.WriteSessionCookie(context, result.SessionToken, expiresAt);
+            CookieHelpers.WriteUserRoleCookie(context, result.User.Role, expiresAt);
+
+            logger.LogInformation("User {UserId} created via invitation and logged in with role {Role}",
+                result.User.Id, result.User.Role);
+
+            return Results.Json(new { user = result.User, expiresAt });
+        })
+        .WithName("AcceptInvitation")
+        .WithTags("Authentication", "Invitations")
+        .WithSummary("Accept an invitation and create an account")
+        .WithDescription("Validates the invitation token, creates the user account, and returns a session for immediate login.")
+        .RequireRateLimiting("AuthRegister")
+        .Produces(200)
+        .Produces(400);
+    }
+
+    // ISSUE-124: Validate invitation token (public, unauthenticated)
+    private static void MapValidateInvitationEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/auth/validate-invitation", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            ValidateInvitationPayload? payload;
+            try
+            {
+                payload = await context.Request.ReadFromJsonAsync<ValidateInvitationPayload>(ct).ConfigureAwait(false);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return Results.BadRequest(new { error = "Invalid request payload" });
+            }
+
+            if (payload == null || string.IsNullOrWhiteSpace(payload.Token))
+            {
+                return Results.BadRequest(new { error = "Token is required" });
+            }
+
+            logger.LogInformation("Invitation token validation attempt");
+
+            var query = new ValidateInvitationTokenQuery(payload.Token);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .WithName("ValidateInvitationToken")
+        .WithTags("Authentication", "Invitations")
+        .WithSummary("Validate an invitation token")
+        .WithDescription("Checks whether an invitation token is valid without consuming it. Returns email and display name for valid tokens, or a uniform error reason (\"invalid\" or \"already_used\") to prevent state enumeration.")
+        .RequireRateLimiting("AuthRegister")
+        .Produces(200)
+        .Produces(400);
+    }
+
+    // ISSUE-124: Activate invited account (public, unauthenticated)
+    private static void MapActivateAccountEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/auth/activate-account", async (
+            HttpContext context,
+            IMediator mediator,
+            IConfigurationService configService,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            ActivateAccountPayload? payload;
+            try
+            {
+                payload = await context.Request.ReadFromJsonAsync<ActivateAccountPayload>(ct).ConfigureAwait(false);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return Results.BadRequest(new { error = "Invalid request payload" });
+            }
+
+            if (payload == null)
+            {
+                return Results.BadRequest(new { error = "Invalid request payload" });
+            }
+
+            if (string.IsNullOrWhiteSpace(payload.Token) || string.IsNullOrWhiteSpace(payload.Password))
+            {
+                return Results.BadRequest(new { error = "Token and password are required" });
+            }
+
+            logger.LogInformation("Account activation attempt via invitation token");
+
+            var command = new ActivateInvitedAccountCommand(payload.Token, payload.Password);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            // Set auth cookie for immediate login (follows existing login pattern)
+            var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;
+            var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
+            CookieHelpers.WriteSessionCookie(context, result.SessionToken, expiresAt);
+
+            logger.LogInformation("Account activated via invitation, session created");
+
+            return Results.Ok(new { sessionToken = result.SessionToken, requiresOnboarding = result.RequiresOnboarding });
+        })
+        .WithName("ActivateInvitedAccount")
+        .WithTags("Authentication", "Invitations")
+        .WithSummary("Activate an invited account by setting a password")
+        .WithDescription("Activates a pending invited user account. Sets the password, transitions the user to Active status, creates a session, and returns a session token for immediate login.")
+        .RequireRateLimiting("AuthRegister")
+        .Produces(200)
+        .Produces(400);
+    }
+
+    // ISSUE-124: Validate invitation token via GET (public, unauthenticated)
+    private static void MapValidateInvitationGetEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/auth/validate-invitation", async (
+            string token,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return Results.BadRequest(new { error = "Token is required" });
+            }
+
+            logger.LogInformation("Invitation token validation attempt (GET)");
+
+            var query = new ValidateInvitationTokenQuery(token);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .WithName("ValidateInvitationTokenGet")
+        .WithTags("Authentication", "Invitations")
+        .WithSummary("Validate an invitation token (GET)")
+        .WithDescription("Checks whether an invitation token is valid without consuming it. Accepts token as query parameter. Returns email and display name for valid tokens.")
+        .RequireRateLimiting("AuthRegister")
+        .Produces(200)
+        .Produces(400);
+    }
 }
+
+/// <summary>
+/// Payload for accepting an invitation (Issue #124).
+/// </summary>
+internal record AcceptInvitationPayload(string Token, string Password, string ConfirmPassword);
+
+/// <summary>
+/// Payload for validating an invitation token (Issue #124).
+/// </summary>
+internal record ValidateInvitationPayload(string Token);
+
+/// <summary>
+/// Payload for activating an invited account (Issue #124).
+/// </summary>
+internal record ActivateAccountPayload(string Token, string Password);

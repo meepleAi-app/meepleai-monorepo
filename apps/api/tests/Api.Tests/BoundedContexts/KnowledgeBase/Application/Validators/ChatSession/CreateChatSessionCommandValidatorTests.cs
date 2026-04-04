@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Validators;
 using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Validators.ChatSession;
 
@@ -147,7 +148,7 @@ public class CreateChatSessionCommandValidatorTests
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.UserId);
         result.ShouldHaveValidationErrorFor(x => x.GameId);
-        Assert.Equal(2, result.Errors.Count);
+        result.Errors.Count.Should().Be(2);
     }
 
     [Theory]

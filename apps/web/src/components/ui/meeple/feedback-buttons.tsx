@@ -7,7 +7,7 @@
  * @issue #3352 (AI Response Feedback System)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 
 import { ThumbsUp, ThumbsDown, Loader2, Check } from 'lucide-react';
 
@@ -67,6 +67,13 @@ export const FeedbackButtons = React.memo<FeedbackButtonsProps>(
     const [showComment, setShowComment] = useState(false);
     const [comment, setComment] = useState('');
     const [submittedFeedback, setSubmittedFeedback] = useState<FeedbackValue>(null);
+    const submittedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+      return () => {
+        if (submittedTimerRef.current) clearTimeout(submittedTimerRef.current);
+      };
+    }, []);
 
     const handlePositive = useCallback(async () => {
       if (disabled || isLoading) return;
@@ -79,7 +86,7 @@ export const FeedbackButtons = React.memo<FeedbackButtonsProps>(
       if (newValue) {
         setSubmittedFeedback(newValue);
         // Reset submitted state after animation
-        setTimeout(() => setSubmittedFeedback(null), 1500);
+        submittedTimerRef.current = setTimeout(() => setSubmittedFeedback(null), 1500);
       }
     }, [value, onFeedbackChange, disabled, isLoading]);
 
@@ -105,7 +112,7 @@ export const FeedbackButtons = React.memo<FeedbackButtonsProps>(
       setShowComment(false);
       setComment('');
       setSubmittedFeedback('not-helpful');
-      setTimeout(() => setSubmittedFeedback(null), 1500);
+      submittedTimerRef.current = setTimeout(() => setSubmittedFeedback(null), 1500);
     }, [value, onFeedbackChange, showCommentOnNegative, showComment, comment, disabled, isLoading]);
 
     const handleCommentSubmit = useCallback(async () => {
@@ -114,7 +121,7 @@ export const FeedbackButtons = React.memo<FeedbackButtonsProps>(
       setShowComment(false);
       setComment('');
       setSubmittedFeedback('not-helpful');
-      setTimeout(() => setSubmittedFeedback(null), 1500);
+      submittedTimerRef.current = setTimeout(() => setSubmittedFeedback(null), 1500);
     }, [onFeedbackChange, comment, disabled, isLoading]);
 
     const handleCommentKeyDown = useCallback(
@@ -241,11 +248,7 @@ export const FeedbackButtons = React.memo<FeedbackButtonsProps>(
                   'transition-colors'
                 )}
               >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Submit'
-                )}
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
               </button>
               <button
                 type="button"
@@ -261,9 +264,7 @@ export const FeedbackButtons = React.memo<FeedbackButtonsProps>(
               >
                 Cancel
               </button>
-              <span className="text-xs text-muted-foreground ml-auto">
-                {comment.length}/500
-              </span>
+              <span className="text-xs text-muted-foreground ml-auto">{comment.length}/500</span>
             </div>
           </div>
         )}

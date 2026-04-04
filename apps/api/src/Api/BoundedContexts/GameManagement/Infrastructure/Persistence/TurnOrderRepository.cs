@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Domain.Entities.TurnOrder;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,18 +13,17 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// Maps between the domain TurnOrder entity and TurnOrderEntity persistence model.
 /// Issue #4970: TurnOrder Entity + Endpoints + SSE.
 /// </summary>
-internal class TurnOrderRepository : ITurnOrderRepository
+internal class TurnOrderRepository : RepositoryBase, ITurnOrderRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
 
-    public TurnOrderRepository(MeepleAiDbContext dbContext)
+    public TurnOrderRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<TurnOrder?> GetBySessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.TurnOrders
+        var entity = await DbContext.TurnOrders
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.SessionId == sessionId, cancellationToken)
             .ConfigureAwait(false);
@@ -33,20 +34,20 @@ internal class TurnOrderRepository : ITurnOrderRepository
     public async Task AddAsync(TurnOrder turnOrder, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(turnOrder);
-        await _dbContext.TurnOrders.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.TurnOrders.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(TurnOrder turnOrder, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(turnOrder);
 
-        var tracked = _dbContext.ChangeTracker.Entries<TurnOrderEntity>()
+        var tracked = DbContext.ChangeTracker.Entries<TurnOrderEntity>()
             .FirstOrDefault(e => e.Entity.Id == entity.Id);
 
         if (tracked != null)
             tracked.State = EntityState.Detached;
 
-        _dbContext.TurnOrders.Update(entity);
+        DbContext.TurnOrders.Update(entity);
         return Task.CompletedTask;
     }
 

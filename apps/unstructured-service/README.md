@@ -310,7 +310,7 @@ Apache 2.0 (matches Unstructured library license)
 - [Unstructured Documentation](https://unstructured-io.github.io/unstructured/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [MeepleAI Architecture](../../docs/architecture/pdf-extraction-opensource-alternatives.md)
-- [Issue #952 (BGAI-001-v2)](https://github.com/DegrassiAaron/meepleai-monorepo/issues/952)
+- [Issue #952 (BGAI-001-v2)](https://github.com/meepleAi-app/meepleai-monorepo/issues/952)
 
 ---
 

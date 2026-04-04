@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Infrastructure;
 
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
@@ -19,7 +19,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
     }
 
     protected override SessionRepository CreateRepository(MeepleAiDbContext dbContext)
-        => new SessionRepository(dbContext);
+        => new SessionRepository(dbContext, MockEventCollector.Object);
 
     private async Task<Guid> CreateTestUserAsync(string email = "test@example.com")
     {

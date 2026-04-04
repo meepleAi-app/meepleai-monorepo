@@ -21,5 +21,9 @@ internal record CreateSharedGameCommand(
     string ThumbnailUrl,
     GameRulesDto? Rules,
     Guid CreatedBy,
-    int? BggId = null
+    int? BggId = null,
+    List<string>? Categories = null,
+    List<string>? Mechanics = null,
+    List<string>? Designers = null,
+    List<string>? Publishers = null
 ) : ICommand<Guid>;

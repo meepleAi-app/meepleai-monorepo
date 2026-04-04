@@ -2,9 +2,11 @@ using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.EntityRelationships.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Integration;
@@ -19,6 +21,7 @@ public sealed class EntityLinkRepositoryIntegrationTests : IAsyncLifetime
 {
     private MeepleAiDbContext _dbContext = null!;
     private EntityLinkRepository _repository = null!;
+    private readonly Mock<IDomainEventCollector> _eventCollectorMock = new();
 
     private readonly Guid _userId1 = Guid.NewGuid();
     private readonly Guid _userId2 = Guid.NewGuid();
@@ -29,7 +32,7 @@ public sealed class EntityLinkRepositoryIntegrationTests : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext($"EntityLinkRepoTest_{Guid.NewGuid()}");
-        _repository = new EntityLinkRepository(_dbContext);
+        _repository = new EntityLinkRepository(_dbContext, _eventCollectorMock.Object);
         await SeedTestDataAsync();
     }
 

@@ -326,7 +326,6 @@ public sealed class UserLibraryRepositoryIntegrationTests : IAsyncLifetime
             FileName = "test.pdf",
             FileSizeBytes = 1024,
             PageCount = 10,
-            ProcessingStatus = "Completed"
         };
         _dbContext.PdfDocuments.Add(pdfEntity);
 
@@ -397,7 +396,6 @@ public sealed class UserLibraryRepositoryIntegrationTests : IAsyncLifetime
             FileName = "test.pdf",
             FileSizeBytes = 1024,
             PageCount = 10,
-            ProcessingStatus = "Completed"
         };
         _dbContext.PdfDocuments.Add(pdfEntity);
 

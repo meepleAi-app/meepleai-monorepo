@@ -30,8 +30,9 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { trackSessionCreated } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
 import type {
   PlayerColor,
@@ -548,6 +549,11 @@ export function SessionCreationWizard() {
 
       // Start the session
       await api.liveSessions.startSession(sessionId);
+
+      // Track flywheel event: session successfully created and started
+      if (selectedGame?.id) {
+        trackSessionCreated({ gameId: selectedGame.id, playerCount: players.length });
+      }
 
       router.push(`/sessions/${sessionId}`);
     } catch (err) {

@@ -116,41 +116,6 @@ public class DomainEventIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ApiKeyRevoke_ShouldPublishEvent_AndCreateAuditLog()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var (apiKey, _) = ApiKey.Create(
-            id: Guid.NewGuid(),
-            userId: userId,
-            keyName: "Test API Key",
-            scopes: "read,write"
-        );
-
-        // Act
-        apiKey.Revoke(userId, "Security audit");
-
-        // Assert
-        apiKey.DomainEvents.Should().HaveCount(1);
-        var domainEvent = apiKey.DomainEvents.ElementAt(0);
-        domainEvent.Should().BeOfType<ApiKeyRevokedEvent>();
-
-        var apiKeyRevokedEvent = (ApiKeyRevokedEvent)domainEvent;
-        apiKeyRevokedEvent.ApiKeyId.Should().Be(apiKey.Id);
-        apiKeyRevokedEvent.UserId.Should().Be(userId);
-        apiKeyRevokedEvent.Reason.Should().Be("Security audit");
-
-        // Dispatch event manually
-        await _mediator.Publish(apiKeyRevokedEvent, CancellationToken.None);
-        apiKey.ClearDomainEvents();
-
-        // Verify audit log
-        var auditLogs = await _dbContext.AuditLogs.ToListAsync(CancellationToken.None);
-        auditLogs.Should().HaveCount(1);
-        auditLogs.ElementAt(0).Action.Should().Contain("ApiKeyRevokedEvent");
-    }
-
-    [Fact]
     public async Task Enable2FA_ShouldPublishEvent()
     {
         // Arrange

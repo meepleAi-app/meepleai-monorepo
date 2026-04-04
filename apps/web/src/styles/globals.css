@@ -4,6 +4,7 @@
 
 /* Import design system tokens */
 @import "./design-tokens.css";
+@import "./premium-gaming.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -28,6 +29,16 @@
   --animate-mc-unread-bounce: mc-unread-bounce 0.5s ease-out;
   --animate-mc-live-pulse: mc-live-pulse 2s ease-in-out infinite;
   --animate-mc-spin-slow: mc-spin-slow 8s linear infinite;
+
+  /* Library Empty State animations (Layout Redesign) */
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-glow-pulse: glow-pulse 3s ease-in-out infinite;
+
+  /* Neon Holo animations (spec: 2026-03-15) */
+  --animate-holo-slide: holo-slide 4s ease-in-out infinite;
+  --animate-holo-rotate: holo-rotate 6s linear infinite;
+  --animate-entity-pulse: entity-pulse 3s ease-in-out infinite;
+  --animate-status-blink: status-blink 2s ease-in-out infinite;
 }
 
 @keyframes fadeIn {
@@ -119,7 +130,46 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Library Empty State keyframes (Layout Redesign) */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-12px) rotate(-3deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+  75% { transform: translateY(-14px) rotate(-2deg); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px hsla(25, 95%, 60%, 0.1); }
+  50% { box-shadow: 0 0 40px hsla(25, 95%, 60%, 0.25); }
+}
+
+/* Neon Holo keyframes (spec: 2026-03-15) */
+@keyframes holo-slide {
+  0% { background-position: -200% 0; }
+  50% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes holo-rotate {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
+
+@keyframes entity-pulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px var(--entity-glow-color, transparent); }
+  50% { box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 25px var(--entity-glow-color, transparent); }
+}
+
+@keyframes status-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -224,6 +274,43 @@
   .nav-item-hover:hover {
     color: hsl(var(--primary));
   }
+
+  /* Neon Holo — holographic hover animations (spec: 2026-03-15) */
+  .holo-rainbow.animate {
+    animation: holo-slide 4s ease-in-out infinite;
+  }
+  .holo-border.animate {
+    animation: holo-rotate 6s linear infinite;
+  }
+
+  /* Reduced motion: disable all holo animations */
+  @media (prefers-reduced-motion: reduce) {
+    .holo-rainbow,
+    .holo-sparkle,
+    .holo-border {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  /* Light mode: disable rainbow and sparkle, soften border */
+  :root:not(.dark) .holo-rainbow,
+  :root:not(.dark) .holo-sparkle {
+    display: none;
+  }
+  :root:not(.dark) .holo-border {
+    opacity: 0 !important;
+  }
+  :root:not(.dark) .group:hover .holo-border {
+    opacity: 0.4 !important;
+  }
+
+  /* Keyboard focus activates holo effects (accessibility) */
+  .group:focus-visible .holo-rainbow,
+  .group:focus-visible .holo-sparkle,
+  .group:focus-visible .holo-border {
+    opacity: 1;
+  }
 }
 
 @layer utilities {
@@ -291,26 +378,6 @@
     transform: scale(1.01) !important;
   }
 
-  /* MeepleCard glassmorphism via ::before pseudo (matches mockup) */
-  [data-variant="grid"],
-  [data-variant="featured"] {
-    isolation: isolate; /* Contain ::before z-index:-1 within card */
-  }
-  [data-variant="grid"]::before,
-  [data-variant="featured"]::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(12px) saturate(180%);
-    z-index: -1;
-    border-radius: inherit;
-    pointer-events: none;
-  }
-  .dark [data-variant="grid"]::before,
-  .dark [data-variant="featured"]::before {
-    background: rgba(30, 25, 20, 0.7);
-  }
 }
 
 /* Accessibility - Reduce Motion Support (Issue #2848, #2905, Mobile UX Epic Issue 8) */
@@ -333,7 +400,9 @@
   .animate-pulse-meeple,
   .animate-pulse-slow,
   .animate-bounce-slow,
-  .animate-voice-pulse {
+  .animate-voice-pulse,
+  .animate-float,
+  .animate-glow-pulse {
     animation: none !important;
   }
 
@@ -406,6 +475,23 @@
   --color-meeple-dark: hsl(0 0% 18%);
   --color-meeple-border: hsl(30 12% 90%);
   --color-meeple-light-orange: hsl(30 100% 94%);
+
+  /* Entity color utilities (v0app design system) */
+  --color-entity-game:    hsl(var(--e-game));
+  --color-entity-player:  hsl(var(--e-player));
+  --color-entity-session: hsl(var(--e-session));
+  --color-entity-agent:   hsl(var(--e-agent));
+  --color-entity-kb:      hsl(var(--e-document));
+  --color-entity-chat:    hsl(var(--e-chat));
+  --color-entity-event:   hsl(var(--e-event));
+
+  /* Font family utilities */
+  --font-heading: var(--font-quicksand), system-ui, sans-serif;
+  --font-body: var(--font-nunito), system-ui, sans-serif;
+
+  /* Warm shadow utilities */
+  --shadow-warm: 0 4px 20px rgba(180, 130, 80, 0.12);
+  --shadow-warm-lg: 0 8px 32px rgba(180, 130, 80, 0.15);
 }
 
 :root {
@@ -488,7 +574,8 @@
   --text-inverse: hsl(var(--primary-foreground));
 
   --font-display: var(--font-quicksand, var(--font-sans));
-  --font-body: var(--font-inter, var(--font-sans));
+  --font-heading: var(--font-quicksand), system-ui, sans-serif;
+  --font-body: var(--font-nunito, var(--font-sans));
   --font-size-xs: var(--text-xs);
   --font-size-sm: var(--text-sm);
   --font-size-base: var(--text-base);
@@ -571,7 +658,8 @@
   --text-inverse: hsl(var(--primary-foreground));
 
   --font-display: var(--font-quicksand, var(--font-sans));
-  --font-body: var(--font-inter, var(--font-sans));
+  --font-heading: var(--font-quicksand), system-ui, sans-serif;
+  --font-body: var(--font-nunito, var(--font-sans));
   --font-size-xs: var(--text-xs);
   --font-size-sm: var(--text-sm);
   --font-size-base: var(--text-base);
@@ -583,4 +671,51 @@
   --font-weight-medium: var(--font-medium);
   --font-weight-semibold: var(--font-semibold);
   --font-weight-bold: var(--font-bold);
+}
+
+/* ─── SPA View Transitions (triggered by useViewTransition hook) ─── */
+
+::view-transition-old(root) {
+  animation: vt-fade-out 150ms ease-out;
+}
+
+::view-transition-new(root) {
+  animation: vt-fade-in 150ms ease-in;
+}
+
+@keyframes vt-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes vt-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+::view-transition-old(page-content) {
+  animation: vt-slide-out 200ms ease-out;
+}
+
+::view-transition-new(page-content) {
+  animation: vt-slide-in 200ms ease-in;
+}
+
+@keyframes vt-slide-out {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-20px); opacity: 0; }
+}
+
+@keyframes vt-slide-in {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-old(page-content),
+  ::view-transition-new(page-content) {
+    animation: none;
+  }
 }

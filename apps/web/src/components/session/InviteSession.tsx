@@ -8,15 +8,7 @@
 
 import { useState, useCallback } from 'react';
 
-import {
-  Check,
-  Copy,
-  Link2,
-  Loader2,
-  RefreshCw,
-  Share2,
-  Users,
-} from 'lucide-react';
+import { Check, Copy, Link2, Loader2, RefreshCw, Share2, Users } from 'lucide-react';
 
 import {
   Dialog,
@@ -36,6 +28,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 import type { InviteTokenResponse } from './types';
@@ -90,13 +83,10 @@ export function InviteSession({
         params.set('expiresInHours', expiresInHours.toString());
       }
 
-      const response = await fetch(
-        `/api/v1/game-sessions/${sessionId}/generate-invite?${params}`,
-        {
-          method: 'POST',
-          credentials: 'include',
-        }
-      );
+      const response = await fetch(`/api/v1/game-sessions/${sessionId}/generate-invite?${params}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
 
       if (!response.ok) {
         throw new Error('Failed to generate invite');
@@ -105,7 +95,7 @@ export function InviteSession({
       const data: InviteTokenResponse = await response.json();
       setInviteData(data);
     } catch (error) {
-      console.error('Failed to generate invite:', error);
+      logger.error('Failed to generate invite:', error);
     } finally {
       setIsGenerating(false);
     }
@@ -119,7 +109,7 @@ export function InviteSession({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logger.error('Failed to copy:', error);
     }
   }, [inviteData]);
 
@@ -134,7 +124,7 @@ export function InviteSession({
       });
     } catch (error) {
       // User cancelled or share failed
-      console.error('Share failed:', error);
+      logger.error('Share failed:', error);
     }
   }, [inviteData, sessionCode]);
 
@@ -174,9 +164,7 @@ export function InviteSession({
             <Link2 className="h-5 w-5 text-primary" />
             Invite Players
           </DialogTitle>
-          <DialogDescription>
-            Share this link to invite players to your session
-          </DialogDescription>
+          <DialogDescription>Share this link to invite players to your session</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -279,20 +267,13 @@ export function InviteSession({
 
               {/* Actions */}
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleGenerateInvite}
-                  className="flex-1 gap-2"
-                >
+                <Button variant="outline" onClick={handleGenerateInvite} className="flex-1 gap-2">
                   <RefreshCw className="h-4 w-4" />
                   New Link
                 </Button>
 
                 {typeof navigator !== 'undefined' && 'share' in navigator && (
-                  <Button
-                    onClick={handleNativeShare}
-                    className="flex-1 gap-2"
-                  >
+                  <Button onClick={handleNativeShare} className="flex-1 gap-2">
                     <Share2 className="h-4 w-4" />
                     Share
                   </Button>

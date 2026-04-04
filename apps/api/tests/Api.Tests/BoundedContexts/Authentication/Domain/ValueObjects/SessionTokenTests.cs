@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -16,9 +17,9 @@ public class SessionTokenTests
         var token = SessionToken.Generate();
 
         // Assert
-        Assert.NotNull(token);
-        Assert.NotNull(token.Value);
-        Assert.NotEmpty(token.Value);
+        token.Should().NotBeNull();
+        token.Value.Should().NotBeNull();
+        token.Value.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -29,9 +30,9 @@ public class SessionTokenTests
 
         // Assert - Base64 string should decode without exception
         var isValidBase64 = TryDecodeBase64(token.Value, out var bytes);
-        Assert.True(isValidBase64);
-        Assert.NotNull(bytes);
-        Assert.Equal(32, bytes.Length); // 32 bytes = 256 bits
+        isValidBase64.Should().BeTrue();
+        bytes.Should().NotBeNull();
+        bytes.Length.Should().Be(32); // 32 bytes = 256 bits
     }
 
     [Fact]
@@ -41,7 +42,7 @@ public class SessionTokenTests
         var token = SessionToken.Generate();
 
         // Assert - Base64 encoding of 32 bytes should be 44 characters (with padding)
-        Assert.Equal(44, token.Value.Length);
+        token.Value.Length.Should().Be(44);
     }
 
     [Fact]
@@ -53,9 +54,9 @@ public class SessionTokenTests
         var token3 = SessionToken.Generate();
 
         // Assert
-        Assert.NotEqual(token1.Value, token2.Value);
-        Assert.NotEqual(token1.Value, token3.Value);
-        Assert.NotEqual(token2.Value, token3.Value);
+        token2.Value.Should().NotBe(token1.Value);
+        token3.Value.Should().NotBe(token1.Value);
+        token3.Value.Should().NotBe(token2.Value);
     }
 
     [Fact]
@@ -73,7 +74,7 @@ public class SessionTokenTests
         }
 
         // Assert - All tokens should be unique
-        Assert.Equal(iterations, tokens.Count);
+        tokens.Count.Should().Be(iterations);
     }
 
     [Fact]
@@ -87,7 +88,7 @@ public class SessionTokenTests
         var reconstructedToken = SessionToken.FromStored(storedValue);
 
         // Assert
-        Assert.Equal(originalToken.Value, reconstructedToken.Value);
+        reconstructedToken.Value.Should().Be(originalToken.Value);
     }
 
     [Theory]
@@ -97,8 +98,9 @@ public class SessionTokenTests
     public void FromStored_WithEmptyValue_ThrowsValidationException(string invalidValue)
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => SessionToken.FromStored(invalidValue));
-        Assert.Contains("Session token cannot be empty", exception.Message);
+        var act = () => SessionToken.FromStored(invalidValue);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("Session token cannot be empty");
     }
 
     [Theory]
@@ -110,8 +112,9 @@ public class SessionTokenTests
         // Act & Assert
         // A cookie that cannot be Base-64 decoded is a corrupted or foreign token;
         // reject it at construction time rather than crashing later in ComputeHash().
-        var exception = Assert.Throws<ValidationException>(() => SessionToken.FromStored(invalidValue));
-        Assert.Contains("not a valid format", exception.Message);
+        var act = () => SessionToken.FromStored(invalidValue);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("not a valid format");
     }
 
     [Fact]
@@ -124,15 +127,15 @@ public class SessionTokenTests
         var hash = token.ComputeHash();
 
         // Assert
-        Assert.NotNull(hash);
-        Assert.NotEmpty(hash);
+        hash.Should().NotBeNull();
+        hash.Should().NotBeEmpty();
 
         // SHA256 produces 32 bytes, which Base64 encodes to 44 characters
-        Assert.Equal(44, hash.Length);
+        hash.Length.Should().Be(44);
 
         // Verify it's valid Base64
-        Assert.True(TryDecodeBase64(hash, out var hashBytes));
-        Assert.Equal(32, hashBytes!.Length); // 256 bits = 32 bytes
+        TryDecodeBase64(hash, out var hashBytes).Should().BeTrue();
+        hashBytes!.Length.Should().Be(32); // 256 bits = 32 bytes
     }
 
     [Fact]
@@ -146,7 +149,7 @@ public class SessionTokenTests
         var hash2 = token.ComputeHash();
 
         // Assert
-        Assert.Equal(hash1, hash2);
+        hash2.Should().Be(hash1);
     }
 
     [Fact]
@@ -161,7 +164,7 @@ public class SessionTokenTests
         var hash2 = token2.ComputeHash();
 
         // Assert
-        Assert.NotEqual(hash1, hash2);
+        hash2.Should().NotBe(hash1);
     }
 
     [Fact]
@@ -175,7 +178,7 @@ public class SessionTokenTests
         var result = token.MatchesHash(correctHash);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -190,7 +193,7 @@ public class SessionTokenTests
         var result = token1.MatchesHash(wrongHash);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Theory]
@@ -206,7 +209,7 @@ public class SessionTokenTests
         var result = token.MatchesHash(invalidHash);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -220,7 +223,7 @@ public class SessionTokenTests
         var result = token.MatchesHash(invalidHash);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -233,8 +236,8 @@ public class SessionTokenTests
         var stringValue = token.ToString();
 
         // Assert
-        Assert.Equal("[REDACTED]", stringValue);
-        Assert.DoesNotContain(token.Value, stringValue);
+        stringValue.Should().Be("[REDACTED]");
+        stringValue.Should().NotContain(token.Value);
     }
 
     [Fact]
@@ -245,7 +248,7 @@ public class SessionTokenTests
         var token2 = SessionToken.FromStored(token1.Value);
 
         // Act & Assert
-        Assert.Equal(token1, token2);
+        token2.Should().Be(token1);
     }
 
     [Fact]
@@ -256,7 +259,7 @@ public class SessionTokenTests
         var token2 = SessionToken.Generate();
 
         // Act & Assert
-        Assert.NotEqual(token1, token2);
+        token2.Should().NotBe(token1);
     }
 
     [Fact]
@@ -270,7 +273,7 @@ public class SessionTokenTests
         string tokenString = token;
 
         // Assert
-        Assert.Equal(expectedValue, tokenString);
+        tokenString.Should().Be(expectedValue);
     }
 
     private static bool TryDecodeBase64(string base64String, out byte[]? bytes)

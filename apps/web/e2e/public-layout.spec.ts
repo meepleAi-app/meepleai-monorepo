@@ -51,7 +51,7 @@ test.describe('PublicLayout - Desktop Navigation', () => {
     // Go to games page
     const giochiLink = page.getByRole('link', { name: /giochi/i }).first();
     await giochiLink.click();
-    await page.waitForURL('/games');
+    await page.waitForURL('/library');
 
     // Active link should have aria-current
     const activeLinks = page.getByRole('link', { name: /giochi/i });
@@ -160,7 +160,7 @@ test.describe('PublicLayout - Mobile Navigation', () => {
     await giochiLink.click();
 
     // Wait for navigation
-    await page.waitForURL('/games', { timeout: 5000 });
+    await page.waitForURL('/library', { timeout: 5000 });
 
     // Sheet should be closed
     await expect(dialog).not.toBeVisible();
@@ -387,7 +387,7 @@ test.describe('PublicLayout - Complete User Journey', () => {
     // Navigate to Giochi
     const giochiLink = page.getByRole('link', { name: /giochi/i }).first();
     await giochiLink.click();
-    await page.waitForURL('/games');
+    await page.waitForURL('/library');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'test-results/screenshots/journey-02-games.png' });
 

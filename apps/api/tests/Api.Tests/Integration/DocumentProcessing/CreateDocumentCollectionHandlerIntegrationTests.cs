@@ -2,7 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
-using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure;
@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Issue #2051: Multi-document collection creation with validation
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLifetime
@@ -60,21 +60,10 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
         Console.WriteLine($"Isolated database created: {_databaseName}");
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         services.AddScoped<IDocumentCollectionRepository, DocumentCollectionRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(CreateDocumentCollectionCommandHandler).Assembly));
 
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -177,7 +166,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
                 FilePath = $"/test/doc{i}.pdf",
                 FileSizeBytes = 5000,
                 PageCount = 10,
-                ProcessingStatus = "completed",
                 UploadedAt = DateTime.UtcNow,
                 UploadedByUserId = TestUserId
             };
@@ -215,8 +203,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             gameId, TestUserId, "Second", null, new List<InitialDocumentRequest>());
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _mediator.Send(cmd2, TestCancellationToken));
+        var act = () => _mediator.Send(cmd2, TestCancellationToken);
+        await act.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -245,7 +233,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
                     FilePath = $"/d{i}.pdf",
                     FileSizeBytes = 5000,
                     PageCount = 10,
-                    ProcessingStatus = "completed",
                     UploadedAt = DateTime.UtcNow,
                     UploadedByUserId = TestUserId
                 };
@@ -258,8 +245,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         var command = new CreateDocumentCollectionCommand(gameId, TestUserId, "TooMany", null, docs);
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _mediator!.Send(command, TestCancellationToken));
+        var act2 = () => _mediator!.Send(command, TestCancellationToken);
+        await act2.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -275,8 +262,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             });
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _mediator!.Send(command, TestCancellationToken));
+        var act3 = () => _mediator!.Send(command, TestCancellationToken);
+        await act3.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -288,8 +275,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             new List<InitialDocumentRequest> { new(Guid.NewGuid(), "base", 0) });
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _mediator!.Send(command, TestCancellationToken));
+        var act4 = () => _mediator!.Send(command, TestCancellationToken);
+        await act4.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -310,7 +297,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             FilePath = "/other.pdf",
             FileSizeBytes = 5000,
             PageCount = 10,
-            ProcessingStatus = "completed",
             UploadedAt = DateTime.UtcNow,
             UploadedByUserId = TestUserId
         };
@@ -322,8 +308,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             new List<InitialDocumentRequest> { new(pdfForOtherGame.Id, "base", 0) });
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _mediator!.Send(command, TestCancellationToken));
+        var act5 = () => _mediator!.Send(command, TestCancellationToken);
+        await act5.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -378,7 +364,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
                 FilePath = $"/test/{pdfId}.pdf",
                 FileSizeBytes = 5000,
                 PageCount = 10,
-                ProcessingStatus = "completed",
                 UploadedAt = DateTime.UtcNow,
                 UploadedByUserId = TestUserId
             };

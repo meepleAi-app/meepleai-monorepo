@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Api.Middleware;
 using Api.Observability;
 using Microsoft.Extensions.Logging;
 
@@ -165,7 +166,7 @@ internal static class RagExceptionHandler
     {
         // Log the error with context (always technical for diagnostics)
         logger.LogError(exception, "Error during {Context}: {ErrorType} - {ErrorMessage}",
-            context, exception.GetType().Name, exception.Message);
+            LogValueSanitizer.Sanitize(context), exception.GetType().Name, LogValueSanitizer.Sanitize(exception.Message));
 
         // Record exception in trace span if available
         if (activity != null)

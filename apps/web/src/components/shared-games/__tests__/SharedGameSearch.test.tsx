@@ -6,7 +6,6 @@
  * Tests:
  * - Search input and debounce behavior
  * - API search results display
- * - BGG fallback button and search
  * - No results state
  * - Loading states
  * - Game selection callback
@@ -14,10 +13,12 @@
  *
  * Note: Mocks api module directly due to singleton timing issues with MSW.
  * The api singleton is created at module import time before MSW can intercept.
+ *
+ * Note: BGG fallback was removed (restricted to admin only due to licensing).
  */
 
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { SharedGameSearch } from '../SharedGameSearch';
 
@@ -31,7 +32,6 @@ vi.mock('next/image', () => ({
 
 // Mock the api module directly (singleton timing issue with MSW)
 const mockSearchFn = vi.fn();
-const mockBggSearchFn = vi.fn();
 const mockGetCategories = vi.fn();
 const mockGetMechanics = vi.fn();
 
@@ -41,9 +41,6 @@ vi.mock('@/lib/api', () => ({
       search: (...args: unknown[]) => mockSearchFn(...args),
       getCategories: () => mockGetCategories(),
       getMechanics: () => mockGetMechanics(),
-    },
-    bgg: {
-      search: (...args: unknown[]) => mockBggSearchFn(...args),
     },
   },
 }));
@@ -90,19 +87,6 @@ const mockCatalogResults = {
   pageSize: 10,
 };
 
-// Mock BGG search results
-const mockBggResults = {
-  results: [
-    {
-      bggId: 999,
-      name: 'BGG Game Result',
-      yearPublished: 2020,
-      thumbnailUrl: 'https://example.com/bgg-game.jpg',
-    },
-  ],
-  totalCount: 1,
-};
-
 describe('SharedGameSearch', () => {
   const mockOnSelect = vi.fn();
 
@@ -112,7 +96,6 @@ describe('SharedGameSearch', () => {
 
     // Default mock: return catalog results
     mockSearchFn.mockResolvedValue(mockCatalogResults);
-    mockBggSearchFn.mockResolvedValue(mockBggResults);
     mockGetCategories.mockResolvedValue(mockCategories);
     mockGetMechanics.mockResolvedValue(mockMechanics);
   });
@@ -359,15 +342,14 @@ describe('SharedGameSearch', () => {
   });
 
   // ==========================================================================
-  // No Results / BGG Fallback
+  // No Results State
   // ==========================================================================
 
-  describe('No Results and BGG Fallback', () => {
-    beforeEach(() => {
+  describe('No Results', () => {
+    it('hides results card when catalog returns empty', async () => {
+      // Use real timers for async operations
       vi.useRealTimers();
-    });
 
-    it('shows BGG search button when no catalog results', async () => {
       // Override to return empty results
       mockSearchFn.mockResolvedValue({
         items: [],
@@ -381,76 +363,21 @@ describe('SharedGameSearch', () => {
 
       fireEvent.change(input, { target: { value: 'notfound' } });
 
+      // Wait for debounce + API call to complete
+      // When API returns empty, the results card is hidden (no loading, no results, no error)
       await waitFor(
         () => {
-          expect(screen.getByText('Nessun gioco trovato nel catalogo.')).toBeInTheDocument();
-          expect(screen.getByText('Cerca su BoardGameGeek')).toBeInTheDocument();
-        },
-        { timeout: 1000 }
-      );
-    });
-
-    it('searches BGG when button is clicked', async () => {
-      // Override to return empty catalog results
-      mockSearchFn.mockResolvedValue({
-        items: [],
-        total: 0,
-        page: 1,
-        pageSize: 20,
-      });
-      mockBggSearchFn.mockResolvedValue(mockBggResults);
-
-      render(<SharedGameSearch />);
-      const input = screen.getByPlaceholderText('Cerca un gioco...');
-
-      fireEvent.change(input, { target: { value: 'notfound' } });
-
-      await waitFor(
-        () => {
-          expect(screen.getByText('Cerca su BoardGameGeek')).toBeInTheDocument();
+          expect(mockSearchFn).toHaveBeenCalled();
         },
         { timeout: 1000 }
       );
 
-      fireEvent.click(screen.getByText('Cerca su BoardGameGeek'));
+      // After search completes with empty results, no game titles should be visible
+      expect(screen.queryByText('Catan')).not.toBeInTheDocument();
+      expect(screen.queryByText('Ticket to Ride')).not.toBeInTheDocument();
 
-      await waitFor(
-        () => {
-          expect(screen.getByText('BGG Game Result')).toBeInTheDocument();
-        },
-        { timeout: 1000 }
-      );
-    });
-
-    it('shows "BGG" badge for BGG results', async () => {
-      mockSearchFn.mockResolvedValue({
-        items: [],
-        total: 0,
-        page: 1,
-        pageSize: 20,
-      });
-      mockBggSearchFn.mockResolvedValue(mockBggResults);
-
-      render(<SharedGameSearch />);
-      const input = screen.getByPlaceholderText('Cerca un gioco...');
-
-      fireEvent.change(input, { target: { value: 'notfound' } });
-
-      await waitFor(
-        () => {
-          expect(screen.getByText('Cerca su BoardGameGeek')).toBeInTheDocument();
-        },
-        { timeout: 1000 }
-      );
-
-      fireEvent.click(screen.getByText('Cerca su BoardGameGeek'));
-
-      await waitFor(
-        () => {
-          expect(screen.getByText('BGG')).toBeInTheDocument();
-        },
-        { timeout: 1000 }
-      );
+      // Restore fake timers for other tests
+      vi.useFakeTimers();
     });
   });
 
@@ -466,7 +393,7 @@ describe('SharedGameSearch', () => {
     it('shows loading skeleton while searching', async () => {
       // Create a delayed promise
       let resolveSearch: (value: unknown) => void;
-      const delayedPromise = new Promise((resolve) => {
+      const delayedPromise = new Promise(resolve => {
         resolveSearch = resolve;
       });
       mockSearchFn.mockReturnValue(delayedPromise);
@@ -517,85 +444,6 @@ describe('SharedGameSearch', () => {
       await waitFor(
         () => {
           expect(screen.getByText('Errore nella ricerca. Riprova.')).toBeInTheDocument();
-        },
-        { timeout: 1000 }
-      );
-    });
-
-    it('shows BGG error message when BGG search fails', async () => {
-      mockSearchFn.mockResolvedValue({
-        items: [],
-        total: 0,
-        page: 1,
-        pageSize: 20,
-      });
-      mockBggSearchFn.mockRejectedValue(new Error('BGG unavailable'));
-
-      render(<SharedGameSearch />);
-      const input = screen.getByPlaceholderText('Cerca un gioco...');
-
-      fireEvent.change(input, { target: { value: 'notfound' } });
-
-      await waitFor(
-        () => {
-          expect(screen.getByText('Cerca su BoardGameGeek')).toBeInTheDocument();
-        },
-        { timeout: 1000 }
-      );
-
-      fireEvent.click(screen.getByText('Cerca su BoardGameGeek'));
-
-      await waitFor(
-        () => {
-          expect(
-            screen.getByText('BoardGameGeek non disponibile. Riprova più tardi.')
-          ).toBeInTheDocument();
-        },
-        { timeout: 1000 }
-      );
-    });
-  });
-
-  // ==========================================================================
-  // No Results State (After BGG)
-  // ==========================================================================
-
-  describe('No Results After BGG Search', () => {
-    beforeEach(() => {
-      vi.useRealTimers();
-    });
-
-    it('shows no results message after BGG returns empty', async () => {
-      mockSearchFn.mockResolvedValue({
-        items: [],
-        total: 0,
-        page: 1,
-        pageSize: 20,
-      });
-      mockBggSearchFn.mockResolvedValue({
-        results: [],
-        totalCount: 0,
-      });
-
-      render(<SharedGameSearch />);
-      const input = screen.getByPlaceholderText('Cerca un gioco...');
-
-      fireEvent.change(input, { target: { value: 'notfound' } });
-
-      await waitFor(
-        () => {
-          expect(screen.getByText('Cerca su BoardGameGeek')).toBeInTheDocument();
-        },
-        { timeout: 1000 }
-      );
-
-      fireEvent.click(screen.getByText('Cerca su BoardGameGeek'));
-
-      await waitFor(
-        () => {
-          expect(
-            screen.getByText('Nessun gioco trovato su BoardGameGeek.')
-          ).toBeInTheDocument();
         },
         { timeout: 1000 }
       );

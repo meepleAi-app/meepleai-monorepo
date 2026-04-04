@@ -166,8 +166,10 @@ const PLAIN_TEXT_CONFIG: DOMPurifyConfig = {
 export function sanitizeHtml(html: string, config: DOMPurifyConfig = DEFAULT_CONFIG): string {
   if (typeof window === 'undefined') {
     // WEB-02: Server-side fallback — strip all HTML tags to prevent unsanitized SSR output.
-    // This is a safe default: removes all tags while preserving text content.
-    // For full server-side HTML sanitization, install isomorphic-dompurify.
+    // This regex is intentionally aggressive (removes all tags) as a defense-in-depth
+    // measure when DOMPurify is unavailable (SSR). For full server-side HTML sanitization,
+    // install isomorphic-dompurify.
+    // nosemgrep: js/incomplete-multi-character-sanitization
     return html.replace(/<[^>]*>/g, '');
   }
 

@@ -3,6 +3,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Plugins.Pipeline.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -11,9 +13,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Repository implementation for custom RAG pipeline persistence.
 /// Issue #3453: Visual RAG Strategy Builder - Save/Load/Export.
 /// </summary>
-internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
+internal sealed class CustomRagPipelineRepository : RepositoryBase, ICustomRagPipelineRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<CustomRagPipelineRepository> _logger;
 
     private static readonly JsonSerializerOptions s_jsonOptions = new()
@@ -24,9 +25,10 @@ internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
 
     public CustomRagPipelineRepository(
         MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
         ILogger<CustomRagPipelineRepository> logger)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -55,8 +57,8 @@ internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
             IsTemplate = false
         };
 
-        _dbContext.Add(entity);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        DbContext.Add(entity);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Saved custom RAG pipeline {PipelineId} '{Name}' by user {UserId}",
@@ -77,7 +79,7 @@ internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
         string[] tags,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<CustomRagPipelineEntity>()
+        var entity = await DbContext.Set<CustomRagPipelineEntity>()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -96,7 +98,7 @@ internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
         entity.IsPublished = isPublished;
         entity.Tags = tags;
 
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Updated custom RAG pipeline {PipelineId}", id);
     }
@@ -106,7 +108,7 @@ internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<CustomRagPipelineEntity>()
+        var entity = await DbContext.Set<CustomRagPipelineEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -146,7 +148,7 @@ internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
         bool includePublished = true,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Set<CustomRagPipelineEntity>()
+        var query = DbContext.Set<CustomRagPipelineEntity>()
             .AsNoTracking()
             .Where(e => e.CreatedBy == userId);
 
@@ -194,7 +196,7 @@ internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
     public async Task<IReadOnlyList<CustomPipelineData>> GetTemplatesAsync(
         CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.Set<CustomRagPipelineEntity>()
+        var entities = await DbContext.Set<CustomRagPipelineEntity>()
             .AsNoTracking()
             .Where(e => e.IsTemplate)
             .OrderBy(e => e.Name)
@@ -237,7 +239,7 @@ internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<CustomRagPipelineEntity>()
+        var entity = await DbContext.Set<CustomRagPipelineEntity>()
             .FirstOrDefaultAsync(e => e.Id == id && e.CreatedBy == userId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -247,8 +249,8 @@ internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
             return false;
         }
 
-        _dbContext.Remove(entity);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        DbContext.Remove(entity);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Deleted custom RAG pipeline {PipelineId} by user {UserId}", id, userId);
         return true;
@@ -259,7 +261,7 @@ internal sealed class CustomRagPipelineRepository : ICustomRagPipelineRepository
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Set<CustomRagPipelineEntity>()
+        return await DbContext.Set<CustomRagPipelineEntity>()
             .AsNoTracking()
             .AnyAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);

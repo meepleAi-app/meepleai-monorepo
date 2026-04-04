@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import type { AuthUser } from '@/types/auth';
 
 interface GameSummary {
@@ -41,7 +42,7 @@ export function useGames(_user?: AuthUser) {
       }));
       setGames(fetchedGames);
     } catch (err) {
-      console.error('Failed to load games', err);
+      logger.error('Failed to load games', err);
       setError('Unable to load games. Please refresh and try again.');
     } finally {
       setLoading(false);
@@ -63,7 +64,7 @@ export function useGames(_user?: AuthUser) {
       setGames(prev => [...prev, newGame]);
       return newGame;
     } catch (err) {
-      console.error('Failed to create game', err);
+      logger.error('Failed to create game', err);
       setError('Unable to create game. Please try again.');
       throw err;
     } finally {

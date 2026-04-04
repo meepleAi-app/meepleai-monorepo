@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import type { PendingMigrationDto, MigrationAction } from '@/lib/api/schemas/migrations.schemas';
+import { logger } from '@/lib/logger';
 
 export interface MigrationChoiceModalProps {
   isOpen: boolean;
@@ -49,7 +50,7 @@ export function MigrationChoiceModal({
       await onChoose(migration.id, selectedAction);
       onClose();
     } catch (error) {
-      console.error('Migration choice error:', error);
+      logger.error('Migration choice error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -66,15 +67,18 @@ export function MigrationChoiceModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <RadioGroup value={selectedAction} onValueChange={(v) => setSelectedAction(v as MigrationAction)}>
+          <RadioGroup
+            value={selectedAction}
+            onValueChange={v => setSelectedAction(v as MigrationAction)}
+          >
             <div className="flex items-start space-x-3 space-y-0">
               <RadioGroupItem value="MigrateToShared" id="migrate" />
               <Label htmlFor="migrate" className="font-normal cursor-pointer">
                 <div>
                   <p className="font-semibold">Migrate to Shared Catalog</p>
                   <p className="text-sm text-muted-foreground">
-                    Remove your private copy and use the shared catalog version. Your notes and state
-                    will be preserved.
+                    Remove your private copy and use the shared catalog version. Your notes and
+                    state will be preserved.
                   </p>
                 </div>
               </Label>

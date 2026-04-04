@@ -1,6 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
-using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -11,7 +10,9 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using LibraryAgentConfiguration = Api.BoundedContexts.UserLibrary.Domain.ValueObjects.AgentConfiguration;
+using AgentDef = Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition;
 using Microsoft.Extensions.Logging;
+using FluentAssertions;
 using Moq;
 using Xunit;
 
@@ -26,34 +27,38 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public sealed class CreateGameAgentCommandHandlerTests
 {
     private readonly Mock<ISharedGameRepository> _gameRepoMock;
-    private readonly Mock<IAgentTypologyRepository> _typologyRepoMock;
+    private readonly Mock<IAgentDefinitionRepository> _definitionRepoMock;
     private readonly Mock<IUserLibraryRepository> _libraryRepoMock;
+    private readonly Mock<IVectorDocumentRepository> _vectorDocRepoMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<CreateGameAgentCommandHandler>> _loggerMock;
     private readonly CreateGameAgentCommandHandler _handler;
 
     private readonly Guid _gameId = Guid.NewGuid();
-    private readonly Guid _typologyId = Guid.NewGuid();
+    private readonly Guid _definitionId = Guid.NewGuid();
     private readonly Guid _userId = Guid.NewGuid();
 
     public CreateGameAgentCommandHandlerTests()
     {
         _gameRepoMock = new Mock<ISharedGameRepository>();
-        _typologyRepoMock = new Mock<IAgentTypologyRepository>();
+        _definitionRepoMock = new Mock<IAgentDefinitionRepository>();
         _libraryRepoMock = new Mock<IUserLibraryRepository>();
+        _vectorDocRepoMock = new Mock<IVectorDocumentRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<CreateGameAgentCommandHandler>>();
 
         _handler = new CreateGameAgentCommandHandler(
             _gameRepoMock.Object,
-            _typologyRepoMock.Object,
+            _definitionRepoMock.Object,
             _libraryRepoMock.Object,
+            _vectorDocRepoMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object);
 
-        // Default: game and approved typology found
+        // Default: game found, KB indexed, and active definition found
         SetupGameFound();
-        SetupApprovedTypology();
+        SetupCompletedKnowledgeBase();
+        SetupActiveDefinition();
     }
 
     // ──────────────────────────────────────────────────
@@ -71,11 +76,11 @@ public sealed class CreateGameAgentCommandHandlerTests
         var command = BuildCommand(userTier: "Free", userRole: "User");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.Contains("Agent limit reached (3)", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Upgrade your tier", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().ContainEquivalentOf("Agent limit reached (3)");
+        ex.Message.Should().ContainEquivalentOf("Upgrade your tier");
     }
 
     [Fact]
@@ -89,8 +94,8 @@ public sealed class CreateGameAgentCommandHandlerTests
         var command = BuildCommand(userTier: "Free", userRole: "User");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -117,8 +122,8 @@ public sealed class CreateGameAgentCommandHandlerTests
         // Act & Assert: admin bypasses quota — handler completes successfully
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal("ready", result.Status);
+        result.Should().NotBeNull();
+        result.Status.Should().Be("ready");
     }
 
     [Fact]
@@ -143,8 +148,8 @@ public sealed class CreateGameAgentCommandHandlerTests
         // Act & Assert: editor bypasses quota — handler completes successfully
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal("ready", result.Status);
+        result.Should().NotBeNull();
+        result.Status.Should().Be("ready");
     }
 
     [Fact]
@@ -164,10 +169,10 @@ public sealed class CreateGameAgentCommandHandlerTests
         var command = BuildCommand(userTier: "Free", userRole: "User");
 
         // Act & Assert: quota check passes; conflicts on "already exists" (not quota)
-        var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.DoesNotContain("Agent limit reached", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().NotContainEquivalentOf("Agent limit reached");
     }
 
     [Fact]
@@ -186,10 +191,10 @@ public sealed class CreateGameAgentCommandHandlerTests
         var command = BuildCommand(userTier: "Premium", userRole: "User");
 
         // Act & Assert: quota passes (premium allows 50); conflicts on "already exists"
-        var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.DoesNotContain("Agent limit reached", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().NotContainEquivalentOf("Agent limit reached");
     }
 
     // ──────────────────────────────────────────────────
@@ -199,7 +204,7 @@ public sealed class CreateGameAgentCommandHandlerTests
     private CreateGameAgentCommand BuildCommand(string userTier, string userRole)
         => new(
             GameId: _gameId,
-            TypologyId: _typologyId,
+            AgentDefinitionId: _definitionId,
             StrategyName: "Balanced",
             StrategyParameters: null,
             UserId: _userId,
@@ -228,21 +233,30 @@ public sealed class CreateGameAgentCommandHandlerTests
             .ReturnsAsync(game);
     }
 
-    private void SetupApprovedTypology()
+    private void SetupCompletedKnowledgeBase()
     {
-        var strategy = AgentStrategy.Custom("Balanced", new Dictionary<string, object>(StringComparer.Ordinal));
-        var typology = new AgentTypology(
-            _typologyId,
-            "Standard Typology",
-            "Test description",
-            "System prompt",
-            strategy,
-            Guid.NewGuid(),
-            TypologyStatus.Approved);
+        var indexingInfo = new VectorDocumentIndexingInfo(
+            VectorDocumentIndexingStatus.Completed,
+            ChunkCount: 10,
+            IndexingError: null);
 
-        _typologyRepoMock
-            .Setup(r => r.GetByIdAsync(_typologyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(typology);
+        _vectorDocRepoMock
+            .Setup(r => r.GetIndexingInfoByGameIdAsync(_gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(indexingInfo);
+    }
+
+    private void SetupActiveDefinition()
+    {
+        var definition = AgentDef.Create(
+            "Standard Definition",
+            "Test description",
+            AgentType.RulesInterpreter,
+            AgentDefinitionConfig.Default());
+        definition.Activate();
+
+        _definitionRepoMock
+            .Setup(r => r.GetByIdAsync(_definitionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(definition);
     }
 
     private static UserLibraryEntry CreateEntryWithAgent(Guid userId, Guid gameId)

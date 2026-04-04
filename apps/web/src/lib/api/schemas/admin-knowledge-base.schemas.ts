@@ -35,10 +35,12 @@ export type ReindexResponse = z.infer<typeof ReindexResponseSchema>;
 
 // ========== Purge / Cleanup ==========
 
-export const MaintenanceResultSchema = z.object({
-  affected: z.number().optional(),
-  message: z.string().optional(),
-}).passthrough();
+export const MaintenanceResultSchema = z
+  .object({
+    affected: z.number().optional(),
+    message: z.string().optional(),
+  })
+  .passthrough();
 
 export type MaintenanceResult = z.infer<typeof MaintenanceResultSchema>;
 
@@ -66,12 +68,12 @@ export const PostgresInfoSchema = z.object({
   estimatedChunksSizeMB: z.number(),
 });
 
-export const QdrantInfoSchema = z.object({
+export const VectorStoreInfoSchema = z.object({
   vectorCount: z.number(),
-  memoryBytes: z.number(),
-  memoryFormatted: z.string(),
   isAvailable: z.boolean(),
 });
+
+export type VectorStoreInfo = z.infer<typeof VectorStoreInfoSchema>;
 
 export const FileStorageInfoSchema = z.object({
   totalFiles: z.number(),
@@ -82,7 +84,7 @@ export const FileStorageInfoSchema = z.object({
 
 export const PdfStorageHealthSchema = z.object({
   postgres: PostgresInfoSchema,
-  qdrant: QdrantInfoSchema,
+  vectorStore: VectorStoreInfoSchema,
   fileStorage: FileStorageInfoSchema,
   overallHealth: z.string(),
   measuredAt: z.string(),
@@ -112,22 +114,42 @@ export const ProcessingMetricsSchema = z.object({
 
 export type ProcessingMetrics = z.infer<typeof ProcessingMetricsSchema>;
 
-// ========== Vector Collections ==========
+// ========== Vector Stats (pgvector) ==========
 
-export const VectorCollectionSchema = z.object({
-  name: z.string(),
+export const VectorGameBreakdownSchema = z.object({
+  gameId: z.string(),
+  gameName: z.string(),
   vectorCount: z.number(),
+  completedCount: z.number(),
+  failedCount: z.number(),
+  healthPercent: z.number(),
+});
+
+export const VectorStatsSchema = z.object({
+  totalVectors: z.number(),
   dimensions: z.number(),
-  storage: z.string(),
-  health: z.number(),
+  gamesIndexed: z.number(),
+  avgHealthPercent: z.number(),
+  sizeEstimateBytes: z.number(),
+  gameBreakdown: z.array(VectorGameBreakdownSchema),
 });
 
-export const VectorCollectionsResponseSchema = z.object({
-  collections: z.array(VectorCollectionSchema),
+export const VectorSearchResultItemSchema = z.object({
+  documentId: z.string(),
+  text: z.string(),
+  chunkIndex: z.number(),
+  pageNumber: z.number(),
 });
 
-export type VectorCollection = z.infer<typeof VectorCollectionSchema>;
-export type VectorCollectionsResponse = z.infer<typeof VectorCollectionsResponseSchema>;
+export const VectorSemanticSearchResultSchema = z.object({
+  results: z.array(VectorSearchResultItemSchema),
+  errorMessage: z.string().nullable(),
+});
+
+export type VectorGameBreakdown = z.infer<typeof VectorGameBreakdownSchema>;
+export type VectorStats = z.infer<typeof VectorStatsSchema>;
+export type VectorSearchResultItem = z.infer<typeof VectorSearchResultItemSchema>;
+export type VectorSemanticSearchResult = z.infer<typeof VectorSemanticSearchResultSchema>;
 
 // ========== PDF List (Admin) ==========
 
@@ -136,7 +158,7 @@ export const PdfListItemSchema = z.object({
   fileName: z.string(),
   gameTitle: z.string().nullable(),
   gameId: z.string().nullable(),
-  processingStatus: z.string(),
+  processingStatus: z.string().optional(),
   processingState: z.string(),
   progressPercentage: z.number(),
   fileSizeBytes: z.number(),
@@ -310,3 +332,63 @@ export const RecentLlmRequestsDtoSchema = z.object({
 });
 
 export type RecentLlmRequestsDto = z.infer<typeof RecentLlmRequestsDtoSchema>;
+
+// ─── KB Games Status (Admin KB Dashboard) ────────────────────────────────────
+
+export const GameKbStatusItemSchema = z.object({
+  gameId: z.string().uuid(),
+  gameName: z.string(),
+  kbStatus: z.enum(['complete', 'partial', 'none']),
+  documentCount: z.number(),
+  totalChunks: z.number(),
+  latestIndexedAt: z.string().nullable(),
+  hasAutoBackup: z.boolean(),
+});
+
+export const GameKbStatusesSchema = z.object({
+  items: z.array(GameKbStatusItemSchema),
+});
+
+export type GameKbStatusItem = z.infer<typeof GameKbStatusItemSchema>;
+export type GameKbStatuses = z.infer<typeof GameKbStatusesSchema>;
+
+// ─── RAG Backup Snapshots ────────────────────────────────────────────────────
+
+export const KbSnapshotInfoSchema = z.object({
+  id: z.string(),
+  exportedAt: z.string().nullable(),
+  totalDocuments: z.number().nullable(),
+  totalChunks: z.number().nullable(),
+});
+
+export const KbSnapshotListSchema = z.object({
+  snapshots: z.array(KbSnapshotInfoSchema).nullable(),
+  downloadUrl: z.string().nullable().optional(),
+  error: z.string().nullable().optional(),
+});
+
+export const KbExportResultSchema = z.object({
+  totalDocuments: z.number(),
+  totalChunks: z.number(),
+  totalEmbeddings: z.number(),
+  skipped: z.number(),
+  failed: z.number(),
+  isDryRun: z.boolean(),
+  snapshotId: z.string(),
+  errors: z.array(z.string()),
+});
+
+export const KbImportResultSchema = z.object({
+  totalDocuments: z.number(),
+  imported: z.number(),
+  skipped: z.number(),
+  failed: z.number(),
+  reEmbedded: z.number(),
+  warnings: z.array(z.string()),
+  errors: z.array(z.string()),
+});
+
+export type KbSnapshotInfo = z.infer<typeof KbSnapshotInfoSchema>;
+export type KbSnapshotList = z.infer<typeof KbSnapshotListSchema>;
+export type KbExportResult = z.infer<typeof KbExportResultSchema>;
+export type KbImportResult = z.infer<typeof KbImportResultSchema>;

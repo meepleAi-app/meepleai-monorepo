@@ -78,6 +78,23 @@ public sealed class ToolkitSessionState
     }
 
     /// <summary>
+    /// Restores all widget states from a JSON string (checkpoint restore).
+    /// Issue #278 - Session Checkpoint / Deep Save
+    /// </summary>
+    public void RestoreWidgetStates(string widgetStatesJson)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(widgetStatesJson);
+        _widgetStatesJson = widgetStatesJson;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Gets the raw widget states JSON (for checkpoint snapshots).
+    /// Issue #278 - Session Checkpoint / Deep Save
+    /// </summary>
+    public string GetWidgetStatesJson() => _widgetStatesJson;
+
+    /// <summary>
     /// Removes state for a widget (reset).
     /// </summary>
     public void ClearWidgetState(string widgetType)

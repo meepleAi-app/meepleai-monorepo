@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Application;
 
@@ -57,8 +58,8 @@ public class DeleteEntityLinkCommandHandlerTests
         var command = new DeleteEntityLinkCommand(link.Id, _ownerId, IsAdmin: false);
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(link.IsDeleted);
-        Assert.NotNull(link.DeletedAt);
+        link.IsDeleted.Should().BeTrue();
+        link.DeletedAt.Should().NotBeNull();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -72,7 +73,7 @@ public class DeleteEntityLinkCommandHandlerTests
         var command = new DeleteEntityLinkCommand(link.Id, _ownerId, IsAdmin: true);
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(link.IsDeleted);
+        link.IsDeleted.Should().BeTrue();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -86,7 +87,7 @@ public class DeleteEntityLinkCommandHandlerTests
         var command = new DeleteEntityLinkCommand(link.Id, _ownerId, IsAdmin: true);
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(link.IsDeleted);
+        link.IsDeleted.Should().BeTrue();
     }
 
     // ── Not found ─────────────────────────────────────────────────────────────
@@ -99,8 +100,9 @@ public class DeleteEntityLinkCommandHandlerTests
             .ReturnsAsync((EntityLink?)null);
 
         var command = new DeleteEntityLinkCommand(missingId, _ownerId, IsAdmin: false);
-        await Assert.ThrowsAsync<EntityLinkNotFoundException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<EntityLinkNotFoundException>();
 
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -115,10 +117,11 @@ public class DeleteEntityLinkCommandHandlerTests
             .ReturnsAsync(link);
 
         var command = new DeleteEntityLinkCommand(link.Id, _ownerId, IsAdmin: false);
-        await Assert.ThrowsAsync<UnauthorizedEntityLinkAccessException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<UnauthorizedEntityLinkAccessException>();
 
-        Assert.False(link.IsDeleted);
+        link.IsDeleted.Should().BeFalse();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -130,10 +133,11 @@ public class DeleteEntityLinkCommandHandlerTests
             .ReturnsAsync(link);
 
         var command = new DeleteEntityLinkCommand(link.Id, _ownerId, IsAdmin: false);
-        await Assert.ThrowsAsync<UnauthorizedEntityLinkAccessException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act3 = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act3.Should().ThrowAsync<UnauthorizedEntityLinkAccessException>();
 
-        Assert.False(link.IsDeleted);
+        link.IsDeleted.Should().BeFalse();
     }
 
     // ── Null guard ────────────────────────────────────────────────────────────
@@ -141,7 +145,8 @@ public class DeleteEntityLinkCommandHandlerTests
     [Fact]
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act4 = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act4.Should().ThrowAsync<ArgumentNullException>();
     }
 }

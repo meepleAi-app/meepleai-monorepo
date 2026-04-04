@@ -275,8 +275,9 @@ public abstract class PluginTestHarness<TPlugin> where TPlugin : IRagPlugin
 
         // Act & Assert
         // Plugin should either throw OperationCanceledException or handle cancellation gracefully
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await plugin.ExecuteAsync(input, null, cts.Token));
+        Func<Task> act = async () =>
+            await plugin.ExecuteAsync(input, null, cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     #endregion

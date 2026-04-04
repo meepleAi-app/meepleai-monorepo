@@ -1,6 +1,9 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -9,24 +12,23 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// EF Core implementation of IRagExecutionRepository.
 /// Issue #4458: RAG Execution History
 /// </summary>
-internal sealed class RagExecutionRepository : IRagExecutionRepository
+internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public RagExecutionRepository(MeepleAiDbContext context)
+    public RagExecutionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task AddAsync(RagExecution execution, CancellationToken cancellationToken = default)
     {
-        await _context.Set<RagExecution>().AddAsync(execution, cancellationToken).ConfigureAwait(false);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.Set<RagExecution>().AddAsync(execution, cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<RagExecution?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<RagExecution>()
+        return await DbContext.Set<RagExecution>()
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -44,7 +46,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
         DateTime? dateTo = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Set<RagExecution>().AsNoTracking().AsQueryable();
+        var query = DbContext.Set<RagExecution>().AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(strategy))
             query = query.Where(e => e.Strategy == strategy);
@@ -84,7 +86,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
         DateTime? dateTo = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Set<RagExecution>().AsNoTracking().AsQueryable();
+        var query = DbContext.Set<RagExecution>().AsNoTracking().AsQueryable();
 
         if (dateFrom.HasValue)
             query = query.Where(e => e.CreatedAt >= dateFrom.Value);
@@ -119,7 +121,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
 
     public async Task<int> DeleteOlderThanAsync(DateTime cutoff, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<RagExecution>()
+        return await DbContext.Set<RagExecution>()
             .Where(e => e.CreatedAt < cutoff)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -132,7 +134,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
         Guid? agentDefinitionId = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Set<RagExecution>()
+        var query = DbContext.Set<RagExecution>()
             .AsNoTracking()
             .Where(e => e.AgentDefinitionId != null)
             .Where(e => e.CreatedAt >= dateFrom && e.CreatedAt <= dateTo);
@@ -186,7 +188,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
         DateTime dateTo,
         CancellationToken cancellationToken = default)
     {
-        var rawResult = await _context.Set<RagExecution>()
+        var rawResult = await DbContext.Set<RagExecution>()
             .AsNoTracking()
             .Where(e => e.AgentDefinitionId == agentDefinitionId)
             .Where(e => e.CreatedAt >= dateFrom && e.CreatedAt <= dateTo)
@@ -223,7 +225,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
         if (agentDefinitionIds.Count == 0)
             return new Dictionary<Guid, List<AgentTimeSeriesPoint>>();
 
-        var rawResult = await _context.Set<RagExecution>()
+        var rawResult = await DbContext.Set<RagExecution>()
             .AsNoTracking()
             .Where(e => e.AgentDefinitionId != null && agentDefinitionIds.Contains(e.AgentDefinitionId.Value))
             .Where(e => e.CreatedAt >= dateFrom && e.CreatedAt <= dateTo)
@@ -254,4 +256,117 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
                     r.AvgLatencyMs,
                     r.Executions > 0 ? (double)r.SuccessCount / r.Executions : 0)).ToList());
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<StrategyAggregateMetrics>> GetAggregatedMetricsAsync(
+        DateOnly? startDate, DateOnly? endDate,
+        string? strategy = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = DbContext.Set<RagExecution>().AsNoTracking();
+
+        if (startDate.HasValue)
+            query = query.Where(e => e.CreatedAt >= startDate.Value.ToDateTime(TimeOnly.MinValue));
+        if (endDate.HasValue)
+            query = query.Where(e => e.CreatedAt <= endDate.Value.ToDateTime(TimeOnly.MaxValue));
+        if (!string.IsNullOrWhiteSpace(strategy))
+            query = query.Where(e => e.Strategy == strategy);
+
+        var groups = await query
+            .GroupBy(e => e.Strategy)
+            .Select(g => new
+            {
+                Strategy = g.Key,
+                TotalQueries = g.Count(),
+                AverageLatencyMs = g.Average(e => (double)e.TotalLatencyMs),
+                AverageConfidence = g.Average(e => e.Confidence ?? 0.0),
+                CacheHits = g.Count(e => e.CacheHit),
+                CacheMisses = g.Count(e => !e.CacheHit),
+                TotalTokensUsed = g.Sum(e => e.TotalTokens),
+                TotalCost = g.Sum(e => e.TotalCost),
+                ErrorCount = g.Count(e => e.Status == "Error"),
+                CragCorrect = g.Count(e => e.CragVerdict == "Correct"),
+                CragIncorrect = g.Count(e => e.CragVerdict == "Incorrect"),
+                CragAmbiguous = g.Count(e => e.CragVerdict == "Ambiguous"),
+                LastUpdated = g.Max(e => e.CreatedAt)
+            })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // Single query to fetch all latencies, then partition by strategy in memory (avoids N+1)
+        var allLatencies = await query
+            .OrderBy(e => e.TotalLatencyMs)
+            .Select(e => new { e.Strategy, Latency = (double)e.TotalLatencyMs })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var latenciesByStrategy = allLatencies
+            .GroupBy(x => x.Strategy, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Latency).ToList(), StringComparer.Ordinal);
+
+        var results = new List<StrategyAggregateMetrics>();
+        foreach (var g in groups)
+        {
+            var latencies = latenciesByStrategy.GetValueOrDefault(g.Strategy) ?? [];
+            var p95 = latencies.Count > 0 ? latencies[Math.Min((int)((latencies.Count - 1) * 0.95), latencies.Count - 1)] : 0.0;
+            var p99 = latencies.Count > 0 ? latencies[Math.Min((int)((latencies.Count - 1) * 0.99), latencies.Count - 1)] : 0.0;
+
+            results.Add(new StrategyAggregateMetrics(
+                Strategy: g.Strategy,
+                TotalQueries: g.TotalQueries,
+                AverageLatencyMs: g.AverageLatencyMs,
+                P95LatencyMs: p95,
+                P99LatencyMs: p99,
+                AverageConfidence: g.AverageConfidence,
+                CacheHits: g.CacheHits,
+                CacheMisses: g.CacheMisses,
+                TotalTokensUsed: g.TotalTokensUsed,
+                TotalCost: g.TotalCost,
+                AverageCostPerQuery: g.TotalQueries > 0 ? g.TotalCost / g.TotalQueries : 0,
+                ErrorCount: g.ErrorCount,
+                ErrorRate: g.TotalQueries > 0 ? (double)g.ErrorCount / g.TotalQueries : 0,
+                CragCorrect: g.CragCorrect,
+                CragIncorrect: g.CragIncorrect,
+                CragAmbiguous: g.CragAmbiguous,
+                LastUpdated: new DateTimeOffset(g.LastUpdated, TimeSpan.Zero)));
+        }
+        return results;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<TimeSeriesPoint>> GetTimeSeriesMetricsAsync(
+        string strategy,
+        DateOnly startDate, DateOnly endDate,
+        TimeSeriesGranularity granularity,
+        CancellationToken cancellationToken = default)
+    {
+        var start = startDate.ToDateTime(TimeOnly.MinValue);
+        var end = endDate.ToDateTime(TimeOnly.MaxValue);
+
+        var executions = await DbContext.Set<RagExecution>()
+            .AsNoTracking()
+            .Where(e => e.Strategy == strategy && e.CreatedAt >= start && e.CreatedAt <= end)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return executions
+            .GroupBy(e => TruncateTimestamp(e.CreatedAt, granularity))
+            .Select(g => new TimeSeriesPoint(
+                Bucket: new DateTimeOffset(g.Key, TimeSpan.Zero),
+                QueryCount: g.Count(),
+                AverageLatencyMs: g.Average(e => (double)e.TotalLatencyMs),
+                AverageConfidence: g.Average(e => e.Confidence ?? 0.0),
+                TotalCost: g.Sum(e => e.TotalCost)))
+            .OrderBy(p => p.Bucket)
+            .ToList();
+    }
+
+    private static DateTime TruncateTimestamp(DateTime dt, TimeSeriesGranularity granularity) =>
+        granularity switch
+        {
+            TimeSeriesGranularity.Hour => new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0, DateTimeKind.Utc),
+            TimeSeriesGranularity.Day => new DateTime(dt.Year, dt.Month, dt.Day, 0, 0, 0, DateTimeKind.Utc),
+            TimeSeriesGranularity.Week => new DateTime(dt.AddDays(-(int)dt.DayOfWeek).Year, dt.AddDays(-(int)dt.DayOfWeek).Month, dt.AddDays(-(int)dt.DayOfWeek).Day, 0, 0, 0, DateTimeKind.Utc),
+            _ => new DateTime(dt.Year, dt.Month, dt.Day, 0, 0, 0, DateTimeKind.Utc)
+        };
 }

@@ -10,6 +10,7 @@ using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Services;
@@ -70,9 +71,9 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             types: ["game_added"]);
 
         // Assert
-        Assert.Equal(1, totalCount);
-        Assert.Single(events);
-        Assert.All(events, e => Assert.Equal("game_added", e.Type));
+        totalCount.Should().Be(1);
+        events.Should().ContainSingle();
+        events.Should().OnlyContain(e => e.Type == "game_added");
     }
 
     [Fact]
@@ -91,10 +92,10 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             types: ["game_added", "session_completed"]);
 
         // Assert
-        Assert.Equal(2, totalCount);
-        Assert.Contains(events, e => e.Type == "game_added");
-        Assert.Contains(events, e => e.Type == "session_completed");
-        Assert.DoesNotContain(events, e => e.Type == "chat_saved");
+        totalCount.Should().Be(2);
+        events.Should().Contain(e => e.Type == "game_added");
+        events.Should().Contain(e => e.Type == "session_completed");
+        events.Should().NotContain(e => e.Type == "chat_saved");
     }
 
     [Fact]
@@ -111,8 +112,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             types: ["GAME_ADDED"]);
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal("game_added", events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be("game_added");
     }
 
     [Fact]
@@ -130,11 +131,11 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             _userId);
 
         // Assert
-        Assert.Equal(3, totalCount);
+        totalCount.Should().Be(3);
         var types = events.Select(e => e.Type).ToHashSet();
-        Assert.Contains("game_added", types);
-        Assert.Contains("session_completed", types);
-        Assert.Contains("chat_saved", types);
+        types.Should().Contain("game_added");
+        types.Should().Contain("session_completed");
+        types.Should().Contain("chat_saved");
     }
 
     #endregion
@@ -156,11 +157,12 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             searchTerm: "wing");
 
         // Assert
-        Assert.Equal(2, totalCount);
-        Assert.All(events, e =>
+        totalCount.Should().Be(2);
+        events.Should().AllSatisfy(e =>
         {
-            var gameEvt = Assert.IsType<GameAddedEvent>(e);
-            Assert.Contains("Wing", gameEvt.GameName, StringComparison.OrdinalIgnoreCase);
+            e.Should().BeOfType<GameAddedEvent>();
+            var gameEvt = (GameAddedEvent)e;
+            gameEvt.GameName.Should().ContainEquivalentOf("Wing");
         });
     }
 
@@ -177,7 +179,7 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             searchTerm: "TERRAFORMING");
 
         // Assert
-        Assert.Single(events);
+        events.Should().ContainSingle();
     }
 
     [Fact]
@@ -194,9 +196,10 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             searchTerm: "wingspan");
 
         // Assert
-        Assert.Equal(1, totalCount);
-        var chatEvt = Assert.IsType<ChatSavedEvent>(events[0]);
-        Assert.Contains("Wingspan", chatEvt.Topic, StringComparison.OrdinalIgnoreCase);
+        totalCount.Should().Be(1);
+        events[0].Should().BeOfType<ChatSavedEvent>();
+        var chatEvt = (ChatSavedEvent)events[0];
+        chatEvt.Topic.Should().ContainEquivalentOf("Wingspan");
     }
 
     [Fact]
@@ -215,11 +218,10 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             searchTerm: "gloom");
 
         // Assert
-        Assert.Equal(2, totalCount); // game_added + session_completed both match
-        Assert.All(events, e =>
-        {
-            Assert.True(e.Type == "game_added" || e.Type == "session_completed");
-        });
+        totalCount.Should().Be(2);
+        events.Should().OnlyContain(e =>
+            e.Type == "game_added" || e.Type == "session_completed"
+        );
     }
 
     [Fact]
@@ -235,8 +237,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             searchTerm: "nonexistent");
 
         // Assert
-        Assert.Equal(0, totalCount);
-        Assert.Empty(events);
+        totalCount.Should().Be(0);
+        events.Should().BeEmpty();
     }
 
     #endregion
@@ -262,15 +264,15 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             _userId, skip: 3, take: 3);
 
         // Assert
-        Assert.Equal(10, total1);
-        Assert.Equal(10, total2);
-        Assert.Equal(3, page1.Count);
-        Assert.Equal(3, page2.Count);
+        total1.Should().Be(10);
+        total2.Should().Be(10);
+        page1.Count.Should().Be(3);
+        page2.Count.Should().Be(3);
 
         // Pages should not overlap
         var page1Ids = page1.Select(e => e.Id).ToHashSet();
         var page2Ids = page2.Select(e => e.Id).ToHashSet();
-        Assert.Empty(page1Ids.Intersect(page2Ids));
+        page1Ids.Intersect(page2Ids).Should().BeEmpty();
     }
 
     [Fact]
@@ -285,8 +287,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             _userId, skip: 100, take: 20);
 
         // Assert
-        Assert.Equal(1, totalCount);
-        Assert.Empty(events);
+        totalCount.Should().Be(1);
+        events.Should().BeEmpty();
     }
 
     [Fact]
@@ -303,8 +305,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
         var (events, totalCount) = await _service.GetFilteredActivitiesAsync(_userId);
 
         // Assert
-        Assert.Equal(25, totalCount);
-        Assert.Equal(20, events.Count);
+        totalCount.Should().Be(25);
+        events.Count.Should().Be(20);
     }
 
     #endregion
@@ -324,8 +326,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
         var (events, _) = await _service.GetFilteredActivitiesAsync(_userId);
 
         // Assert
-        Assert.True(events[0].Timestamp >= events[1].Timestamp);
-        Assert.True(events[1].Timestamp >= events[2].Timestamp);
+        (events[0].Timestamp >= events[1].Timestamp).Should().BeTrue();
+        (events[1].Timestamp >= events[2].Timestamp).Should().BeTrue();
     }
 
     [Fact]
@@ -343,8 +345,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             order: SortDirection.Ascending);
 
         // Assert
-        Assert.True(events[0].Timestamp <= events[1].Timestamp);
-        Assert.True(events[1].Timestamp <= events[2].Timestamp);
+        (events[0].Timestamp <= events[1].Timestamp).Should().BeTrue();
+        (events[1].Timestamp <= events[2].Timestamp).Should().BeTrue();
     }
 
     #endregion
@@ -367,11 +369,12 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             searchTerm: "wingspan");
 
         // Assert - only game_added events matching "wingspan"
-        Assert.Equal(1, totalCount);
-        Assert.Single(events);
-        Assert.Equal("game_added", events[0].Type);
-        var gameEvt = Assert.IsType<GameAddedEvent>(events[0]);
-        Assert.Equal("Wingspan", gameEvt.GameName);
+        totalCount.Should().Be(1);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be("game_added");
+        events[0].Should().BeOfType<GameAddedEvent>();
+        var gameEvt = (GameAddedEvent)events[0];
+        gameEvt.GameName.Should().Be("Wingspan");
     }
 
     [Fact]
@@ -396,9 +399,9 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             order: SortDirection.Ascending);
 
         // Assert
-        Assert.Equal(5, totalCount); // 5 Wingspan game_added events
-        Assert.Equal(2, events.Count); // take=2
-        Assert.True(events[0].Timestamp <= events[1].Timestamp); // ascending
+        totalCount.Should().Be(5);
+        events.Count.Should().Be(2);
+        (events[0].Timestamp <= events[1].Timestamp).Should().BeTrue();
     }
 
     #endregion
@@ -419,8 +422,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             dateFrom: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 
         // Assert
-        Assert.Equal(1, totalCount);
-        Assert.Single(events);
+        totalCount.Should().Be(1);
+        events.Should().ContainSingle();
     }
 
     [Fact]
@@ -437,8 +440,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             dateTo: new DateTime(2025, 12, 31, 0, 0, 0, DateTimeKind.Utc));
 
         // Assert
-        Assert.Equal(1, totalCount);
-        Assert.Single(events);
+        totalCount.Should().Be(1);
+        events.Should().ContainSingle();
     }
 
     [Fact]
@@ -457,8 +460,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             dateTo: new DateTime(2025, 12, 31, 0, 0, 0, DateTimeKind.Utc));
 
         // Assert
-        Assert.Equal(1, totalCount);
-        Assert.Single(events);
+        totalCount.Should().Be(1);
+        events.Should().ContainSingle();
     }
 
     [Fact]
@@ -478,9 +481,9 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             dateTo: new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc));
 
         // Assert
-        Assert.Equal(1, totalCount);
-        Assert.Single(events);
-        Assert.Equal("game_added", events[0].Type);
+        totalCount.Should().Be(1);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be("game_added");
     }
 
     #endregion
@@ -494,8 +497,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
         var (events, totalCount) = await _service.GetFilteredActivitiesAsync(_userId);
 
         // Assert
-        Assert.Equal(0, totalCount);
-        Assert.Empty(events);
+        totalCount.Should().Be(0);
+        events.Should().BeEmpty();
     }
 
     [Fact]
@@ -512,8 +515,8 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             searchTerm: null);
 
         // Assert
-        Assert.Equal(1, totalCount);
-        Assert.Single(events);
+        totalCount.Should().Be(1);
+        events.Should().ContainSingle();
     }
 
     [Fact]
@@ -530,7 +533,7 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             types: []);
 
         // Assert
-        Assert.Equal(2, totalCount);
+        totalCount.Should().Be(2);
     }
 
     [Fact]
@@ -546,7 +549,7 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             searchTerm: "   ");
 
         // Assert
-        Assert.Equal(1, totalCount);
+        totalCount.Should().Be(1);
     }
 
     [Fact]
@@ -564,9 +567,9 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
             types: ["wishlist_added"]);
 
         // Assert
-        Assert.Equal(1, totalCount);
-        Assert.Single(events);
-        Assert.Equal("wishlist_added", events[0].Type);
+        totalCount.Should().Be(1);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be("wishlist_added");
     }
 
     #endregion

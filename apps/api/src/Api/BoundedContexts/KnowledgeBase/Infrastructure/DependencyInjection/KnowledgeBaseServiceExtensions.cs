@@ -1,18 +1,21 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
-using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
-using Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Handlers;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Reports.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Reranking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Projections;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
-using Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Caching;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.ContextEngineering;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
@@ -61,7 +64,6 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
         services.AddScoped<IConversationQueryRewriter, Application.Services.ConversationQueryRewriter>(); // Issue #5258: Query rewriting for multi-turn RAG
         services.AddScoped<IConversationSummarizer, Application.Services.ConversationSummarizer>(); // Issue #5259: Progressive conversation summarization
-        services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
         services.AddScoped<IRagPromptAssemblyService, RagPromptAssemblyService>(); // Replaces AgentPromptBuilder: RAG context + chat history + token budget
         services.AddScoped<IExpansionGameResolver, Infrastructure.Services.ExpansionGameResolver>(); // Issue #5588: Expansion priority in RAG search
@@ -71,12 +73,10 @@ internal static class KnowledgeBaseServiceExtensions
         // Scoped - uses ITierStrategyAccessRepository which depends on DbContext
         services.AddScoped<ITierStrategyAccessService, TierStrategyAccessService>();
 
-        // Issue #2404: Agent Mode Handlers (Scoped - use repositories and LLM services)
-        services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.PlayerModeHandler>();
-        services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.ChatModeHandler>();
+        // KB Domain abstraction over GM game session state (anti-corruption layer)
+        services.AddScoped<IGameSessionStateReader, GameSessionStateReaderAdapter>();
 
         // Issue #2405: Ledger Mode Handler + State Parser
-        services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.LedgerModeHandler>();
         services.AddScoped<IStateParser, NaturalLanguageStateParser>();
 
         // Issue #5453: Structured RAG fusion — query intent classification + structured retrieval
@@ -90,19 +90,6 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<IContextRetrievalStrategy, PositionSimilarityStrategy>();
         services.AddSingleton<IContextRetrievalStrategy, HybridSearchStrategy>();
 
-        // Issue #3772: Game State Parser for Decisore Agent
-        services.AddSingleton<IGameStateParserService, GameStateParserFactory>();
-
-        // Issue #3770: Move Generator for Decisore Agent
-        services.AddScoped<IMoveGeneratorService, ChessMoveGenerator>();
-        services.AddScoped<ILegalMoveValidator, LegalMoveValidator>();
-        services.AddScoped<IMoveScorer, HeuristicMoveScorer>();
-
-        // Issue #3769: Decisore Agent Strategic Analysis
-        services.AddScoped<IDecisoreAgentService, DecisoreAgentService>();
-
-        // Issue #3771: Multi-Model Ensemble Evaluation
-        services.AddScoped<IMultiModelEvaluator, MultiModelEvaluator>();
         services.AddSingleton<IContextRetrievalStrategy, CapabilityMatchingStrategy>();
         services.AddScoped<IContextSource, ConversationMemorySource>();
         services.AddScoped<GameStateSource>();
@@ -117,6 +104,24 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-3760: Arbitro Agent Service (AI-powered move validation)
         services.AddScoped<IArbitroAgentService, ArbitroAgentService>();
+
+        // RAG Enhancements: Adaptive query complexity classifier (heuristic + LLM fallback)
+        services.AddScoped<IQueryComplexityClassifier, QueryComplexityClassifier>();
+
+        // RAG Enhancements: CRAG retrieval relevance evaluator (heuristic + LLM fallback)
+        services.AddScoped<IRetrievalRelevanceEvaluator, RetrievalRelevanceEvaluator>();
+
+        // RAG Enhancements: FAST-model query expander for cost-optimized RAG-Fusion
+        services.AddScoped<IQueryExpander, QueryExpander>();
+
+        // RAG Enhancements: RAPTOR hierarchical indexer for multi-level document summaries
+        services.AddScoped<IRaptorIndexer, RaptorIndexer>();
+
+        // RAG Enhancements: Graph RAG entity extractor for knowledge graph construction
+        services.AddScoped<IEntityExtractor, EntityExtractor>();
+
+        // RAG Enhancements: Graph RAG retrieval service for entity context injection
+        services.AddScoped<IGraphRetrievalService, GraphRetrievalService>();
 
         // ISSUE-4336: Multi-Agent Router (intelligent routing between Tutor/Arbitro/Decisore)
         services.AddSingleton<Domain.Services.MultiAgentRouter.IntentClassifier>();
@@ -195,6 +200,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #5505: A/B test budget isolation (Scoped - uses Redis for daily budget + rate limits)
         services.AddScoped<IAbTestBudgetService, AbTestBudgetService>();
 
+        // Issue #27: User region detection from Accept-Language header (Scoped - uses IHttpContextAccessor)
+        services.AddScoped<IUserRegionDetector, UserRegionDetector>();
+
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService
         services.AddScoped<ILlmService, HybridLlmService>();
@@ -254,15 +262,16 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #3177: AGT-003 - Required by AgentTypology command handlers
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
+        // RAG Copyright KB Cards: Cross-BC read-only projection for copyright tier resolution
+        services.AddScoped<ICopyrightDataProjection, Projections.CopyrightDataProjection>();
+
         // Infrastructure - Repositories (Scoped - tied to DbContext lifetime)
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>(); // Issue #924: ChatThread support
         services.AddScoped<ILlmCostLogRepository, LlmCostLogRepository>(); // ISSUE-960: Cost tracking
         services.AddScoped<ILlmRequestLogRepository, LlmRequestLogRepository>(); // ISSUE-5072: Detailed request logging with 30-day retention
-        services.AddScoped<IAgentRepository, AgentRepository>(); // Issue #866: Agent management
         services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>(); // Issue #3808: AgentDefinition for AI Lab
-        services.AddScoped<IAgentTypologyRepository, AgentTypologyRepository>(); // Issue #3175, #3177: AgentTypology CRUD
         services.AddScoped<IAgentSessionRepository, AgentSessionRepository>(); // Issue #3184 (AGT-010): Agent session lifecycle
         services.AddScoped<IChatSessionRepository, ChatSessionRepository>(); // Issue #3483: Chat session persistence
         services.AddScoped<IAgentTestResultRepository, AgentTestResultRepository>(); // Issue #3379: Agent test results
@@ -274,6 +283,7 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #3493: PostgreSQL Schema Extensions for Multi-Agent System
         services.AddScoped<IConversationMemoryRepository, ConversationMemoryRepository>();
         services.AddScoped<IAgentGameStateSnapshotRepository, AgentGameStateSnapshotRepository>();
+
         services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
         services.AddScoped<IAbTestSessionRepository, AbTestSessionRepository>(); // Issue #5491: A/B test sessions
@@ -281,9 +291,10 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
         services.AddScoped<IAdminRagStrategyRepository, AdminRagStrategyRepository>(); // Issue #5314: Admin strategy CRUD
         services.AddScoped<IModelCompatibilityRepository, ModelCompatibilityRepository>(); // Issue #5496: Model compatibility matrix + change log
+        services.AddScoped<IKbUserFeedbackRepository, KbUserFeedbackRepository>(); // KB-06: User feedback on KB chat responses
 
         // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
-        services.AddScoped<IQdrantVectorStoreAdapter, PgVectorStoreAdapter>();
+        services.AddScoped<IVectorStoreAdapter, PgVectorStoreAdapter>();
         // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)
         services.AddSingleton<IChunkRepository, InMemoryChunkRepository>();
     }
@@ -299,7 +310,6 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<GetLlmCostReportQueryHandler>(); // ISSUE-960: Cost reporting
         services.AddScoped<GetQueryEfficiencyReportQueryHandler>(); // ISSUE-1725: Efficiency reporting
         services.AddScoped<GetMonthlyOptimizationReportQueryHandler>(); // ISSUE-1725: Monthly optimization
-        services.AddScoped<InvokeAgentCommandHandler>(); // Issue #867: Agent invocation
 
         services.AddScoped<RunEvaluationCommandHandler>();
         services.AddScoped<LoadDatasetCommandHandler>();
@@ -316,6 +326,24 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #5510: PII detection and redaction for OpenRouter-bound prompts
         services.AddOptions<PiiDetectorOptions>();
         services.AddSingleton<IPiiDetector, PiiDetector>();
+
+        // E4-1: Degraded agent service — BGG-only mode when no KB cards are available
+        services.AddScoped<IDegradedAgentService, DegradedAgentService>();
+
+        // Ownership/RAG access: cascading access check (admin → public → ownership)
+        services.AddScoped<IRagAccessService, RagAccessService>();
+
+        // RAG enhancements orchestrator — feature flag integration for advanced RAG features
+        services.AddScoped<IRagEnhancementService, RagEnhancementService>();
+
+        // Agent Memory context builder — injects house rules, group preferences into RAG prompts
+        services.AddScoped<IAgentMemoryContextBuilder, AgentMemoryContextBuilder>();
+
+        // RAG Copyright KB Cards: per-chunk copyright tier resolution
+        services.AddScoped<ICopyrightTierResolver, CopyrightTierResolver>();
+
+        // E4-3: Session query budget — Redis-backed per-session AI query tracking
+        services.AddScoped<ISessionQueryBudgetService, SessionQueryBudgetService>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)
@@ -470,6 +498,34 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithIdentity("model-availability-check-trigger", "knowledge-base")
                 .WithCronSchedule("0 0 */6 * * ?")
                 .WithDescription("Runs every 6 hours to verify configured LLM models are still available on OpenRouter"));
+        });
+
+        // KB-05: Daily KB coverage score computation for all shared games
+        services.AddQuartz(q =>
+        {
+            q.AddJob<KbCoverageComputeJob>(opts => opts
+                .WithIdentity("kb-coverage-compute-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("kb-coverage-compute-job", "knowledge-base")
+                .WithIdentity("kb-coverage-compute-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 2 * * ?")
+                .WithDescription("Calcola daily il coverage score KB per ogni gioco"));
+        });
+
+        // KB-09: Daily pre-calculation of suggested questions for all shared games with completed KB
+        services.AddQuartz(q =>
+        {
+            q.AddJob<KbSuggestedQuestionsJob>(opts => opts
+                .WithIdentity("kb-suggested-questions-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("kb-suggested-questions-job", "knowledge-base")
+                .WithIdentity("kb-suggested-questions-trigger", "knowledge-base")
+                .WithCronSchedule("0 30 3 * * ?")
+                .WithDescription("Genera daily le domande suggerite per ogni gioco con KB completata"));
         });
     }
 }

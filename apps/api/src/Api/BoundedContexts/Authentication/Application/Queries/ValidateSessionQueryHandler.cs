@@ -113,7 +113,9 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
             ExperiencePoints: user.ExperiencePoints,
             EmailVerified: user.EmailVerified,                           // Issue #3672
             EmailVerifiedAt: user.EmailVerifiedAt,                       // Issue #3672
-            VerificationGracePeriodEndsAt: user.VerificationGracePeriodEndsAt  // Issue #3672
+            VerificationGracePeriodEndsAt: user.VerificationGracePeriodEndsAt,  // Issue #3672
+            OnboardingCompleted: user.OnboardingCompleted,              // Issue #323
+            OnboardingSkipped: user.OnboardingSkipped                   // Issue #323
         );
     }
 }

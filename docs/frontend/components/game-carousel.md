@@ -390,7 +390,7 @@ apps/web/src/
 
 - [MeepleCard Component](./meeple-card.md) - Card component used within carousel
 - [Design System Cards](../../design-system/cards.md) - Design specifications
-- [Storybook Guide](../../07-frontend/storybook-guide.md) - How to use Storybook
+- [Storybook Guide](../../frontend/storybook-guide.md) - How to use Storybook
 
 ## Changelog
 

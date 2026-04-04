@@ -10,6 +10,7 @@
 import { useState } from 'react';
 
 import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
+import { logger } from '@/lib/logger';
 import type { GameStateSnapshot } from '@/types/game-state';
 
 interface UseRollbackOptions {
@@ -35,7 +36,7 @@ export function useRollback({ onConfirm }: UseRollbackOptions) {
       setIsDialogOpen(false);
       setSelectedSnapshot(null);
     } catch (error) {
-      console.error('Rollback failed:', error);
+      logger.error('Rollback failed:', error);
     } finally {
       setIsLoading(false);
     }

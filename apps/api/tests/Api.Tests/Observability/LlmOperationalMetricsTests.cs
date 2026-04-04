@@ -1,5 +1,6 @@
 using Api.Observability;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Observability;
@@ -16,12 +17,12 @@ public class LlmOperationalMetricsTests
     [Fact]
     public void AllLlmOperationalMetrics_ShouldBeInitialized()
     {
-        Assert.NotNull(MeepleAiMetrics.CircuitBreakerState);
-        Assert.NotNull(MeepleAiMetrics.OpenRouterBalanceUsd);
-        Assert.NotNull(MeepleAiMetrics.OpenRouterRpmUtilization);
-        Assert.NotNull(MeepleAiMetrics.LlmCostUsdTotal);
-        Assert.NotNull(MeepleAiMetrics.LlmRequestsTotal);
-        Assert.NotNull(MeepleAiMetrics.LlmLatencySeconds);
+        MeepleAiMetrics.CircuitBreakerState.Should().NotBeNull();
+        MeepleAiMetrics.OpenRouterBalanceUsd.Should().NotBeNull();
+        MeepleAiMetrics.OpenRouterRpmUtilization.Should().NotBeNull();
+        MeepleAiMetrics.LlmCostUsdTotal.Should().NotBeNull();
+        MeepleAiMetrics.LlmRequestsTotal.Should().NotBeNull();
+        MeepleAiMetrics.LlmLatencySeconds.Should().NotBeNull();
     }
 
     [Fact]
@@ -30,7 +31,7 @@ public class LlmOperationalMetricsTests
         var exception = Record.Exception(() =>
             MeepleAiMetrics.RecordCircuitBreakerState("openrouter", 0));
 
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Theory]
@@ -42,7 +43,7 @@ public class LlmOperationalMetricsTests
         var exception = Record.Exception(() =>
             MeepleAiMetrics.RecordCircuitBreakerState("test-provider", state));
 
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class LlmOperationalMetricsTests
         var exception = Record.Exception(() =>
             MeepleAiMetrics.RecordLlmRequest("openrouter", "gpt-4", "success", 1.5));
 
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public class LlmOperationalMetricsTests
         var exception = Record.Exception(() =>
             MeepleAiMetrics.RecordLlmRequest("openrouter", "gpt-4", "success", 2.0, costUsd: 0.03));
 
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -69,7 +70,7 @@ public class LlmOperationalMetricsTests
         var exception = Record.Exception(() =>
             MeepleAiMetrics.RecordLlmRequest("openrouter", "gpt-4", "error", 0.5));
 
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -78,7 +79,7 @@ public class LlmOperationalMetricsTests
         var exception = Record.Exception(() =>
             MeepleAiMetrics.RecordLlmRequest("openrouter", "gpt-4", "success", 1.0, costUsd: null));
 
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -87,7 +88,7 @@ public class LlmOperationalMetricsTests
         var exception = Record.Exception(() =>
             MeepleAiMetrics.RecordLlmRequest("openrouter", "gpt-4", "success", 1.0, costUsd: 0.0));
 
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -96,7 +97,7 @@ public class LlmOperationalMetricsTests
         var exception = Record.Exception(() =>
             MeepleAiMetrics.RecordOpenRouterOperationalState(50.0, 0.35));
 
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -105,18 +106,18 @@ public class LlmOperationalMetricsTests
         var exception = Record.Exception(() =>
             MeepleAiMetrics.RecordOpenRouterOperationalState(2.50, 0.95));
 
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
     public void LlmMetrics_ShouldFollowNamingConventions()
     {
         // All LLM operational metrics should use meepleai.llm.* or meepleai.openrouter.* namespace
-        Assert.NotNull(MeepleAiMetrics.CircuitBreakerState);
-        Assert.NotNull(MeepleAiMetrics.LlmCostUsdTotal);
-        Assert.NotNull(MeepleAiMetrics.LlmRequestsTotal);
-        Assert.NotNull(MeepleAiMetrics.LlmLatencySeconds);
-        Assert.NotNull(MeepleAiMetrics.OpenRouterBalanceUsd);
-        Assert.NotNull(MeepleAiMetrics.OpenRouterRpmUtilization);
+        MeepleAiMetrics.CircuitBreakerState.Should().NotBeNull();
+        MeepleAiMetrics.LlmCostUsdTotal.Should().NotBeNull();
+        MeepleAiMetrics.LlmRequestsTotal.Should().NotBeNull();
+        MeepleAiMetrics.LlmLatencySeconds.Should().NotBeNull();
+        MeepleAiMetrics.OpenRouterBalanceUsd.Should().NotBeNull();
+        MeepleAiMetrics.OpenRouterRpmUtilization.Should().NotBeNull();
     }
 }

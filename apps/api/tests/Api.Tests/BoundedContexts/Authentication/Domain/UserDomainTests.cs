@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain;
@@ -27,10 +28,10 @@ public class UserDomainTests
         var user = new User(id, email, "Test User", passwordHash, role);
 
         // Assert
-        Assert.Equal(id, user.Id);
-        Assert.Equal(email, user.Email);
-        Assert.Equal(role, user.Role);
-        Assert.False(user.IsTwoFactorEnabled);
+        user.Id.Should().Be(id);
+        user.Email.Should().Be(email);
+        user.Role.Should().Be(role);
+        user.IsTwoFactorEnabled.Should().BeFalse();
     }
 
     [Fact]
@@ -41,7 +42,7 @@ public class UserDomainTests
         var user = CreateTestUser(password);
 
         // Act & Assert
-        Assert.True(user.VerifyPassword(password));
+        user.VerifyPassword(password).Should().BeTrue();
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class UserDomainTests
         var user = CreateTestUser("CorrectPassword123!");
 
         // Act & Assert
-        Assert.False(user.VerifyPassword("WrongPassword!"));
+        user.VerifyPassword("WrongPassword!").Should().BeFalse();
     }
 
     [Fact]
@@ -64,9 +65,9 @@ public class UserDomainTests
         user.Enable2FA(TotpSecret.FromEncrypted("encrypted_secret_base64"));
 
         // Assert
-        Assert.True(user.IsTwoFactorEnabled);
-        Assert.NotNull(user.TotpSecret?.EncryptedValue);
-        Assert.NotNull(user.TwoFactorEnabledAt);
+        user.IsTwoFactorEnabled.Should().BeTrue();
+        user.TotpSecret?.EncryptedValue.Should().NotBeNull();
+        user.TwoFactorEnabledAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -80,21 +81,21 @@ public class UserDomainTests
         user.Disable2FA();
 
         // Assert
-        Assert.False(user.IsTwoFactorEnabled);
-        Assert.Null(user.TotpSecret?.EncryptedValue);
+        user.IsTwoFactorEnabled.Should().BeFalse();
+        user.TotpSecret?.EncryptedValue.Should().BeNull();
     }
 
     [Fact]
-    public void User_AssignRole_ByAdmin_UpdatesRole()
+    public void User_AssignRole_BySuperAdmin_UpdatesRole()
     {
         // Arrange
         var user = CreateTestUser(role: Role.User);
 
         // Act
-        user.AssignRole(Role.Editor, Role.Admin);
+        user.AssignRole(Role.Editor, Role.SuperAdmin);
 
         // Assert
-        Assert.Equal(Role.Editor, user.Role);
+        user.Role.Should().Be(Role.Editor);
     }
 
     [Fact]
@@ -104,20 +105,22 @@ public class UserDomainTests
         var user = CreateTestUser(role: Role.User);
 
         // Act & Assert
-        Assert.Throws<DomainException>(() =>
-            user.AssignRole(Role.Admin, Role.Editor));
+        var act = () =>
+            user.AssignRole(Role.Admin, Role.Editor);
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void User_AssignRole_AdminToAdmin_ThrowsException()
+    public void User_AssignRole_ByAdmin_ThrowsException()
     {
-        // Arrange
+        // Arrange — Only SuperAdmin can assign roles; Admin is not sufficient
         var user = CreateTestUser(role: Role.Admin);
 
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            user.AssignRole(Role.Admin, Role.Admin));
-        Assert.Contains("Cannot modify admin role through self-service", exception.Message);
+        // Act & Assert — Only SuperAdmin can assign roles, so Admin requester is rejected
+        var act = () =>
+            user.AssignRole(Role.Admin, Role.Admin);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("Only the SuperAdmin can assign roles");
     }
 
     // ChangePassword Tests
@@ -133,8 +136,8 @@ public class UserDomainTests
         user.ChangePassword(currentPassword, newPasswordHash);
 
         // Assert
-        Assert.True(user.VerifyPassword("NewPassword456!"));
-        Assert.False(user.VerifyPassword(currentPassword));
+        user.VerifyPassword("NewPassword456!").Should().BeTrue();
+        user.VerifyPassword(currentPassword).Should().BeFalse();
     }
 
     [Fact]
@@ -145,9 +148,10 @@ public class UserDomainTests
         var newPasswordHash = PasswordHash.Create("NewPassword456!");
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            user.ChangePassword("WrongPassword!", newPasswordHash));
-        Assert.Contains("Current password is incorrect", exception.Message);
+        var act = () =>
+            user.ChangePassword("WrongPassword!", newPasswordHash);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("Current password is incorrect");
     }
 
     // UpdatePassword Tests (Admin operation)
@@ -162,8 +166,8 @@ public class UserDomainTests
         user.UpdatePassword(newPasswordHash);
 
         // Assert
-        Assert.True(user.VerifyPassword("NewPassword456!"));
-        Assert.False(user.VerifyPassword("OldPassword123!"));
+        user.VerifyPassword("NewPassword456!").Should().BeTrue();
+        user.VerifyPassword("OldPassword123!").Should().BeFalse();
     }
 
     // UpdateEmail Tests
@@ -178,7 +182,7 @@ public class UserDomainTests
         user.UpdateEmail(newEmail);
 
         // Assert
-        Assert.Equal(newEmail, user.Email);
+        user.Email.Should().Be(newEmail);
     }
 
     [Fact]
@@ -193,7 +197,7 @@ public class UserDomainTests
         user.UpdateEmail(email);
 
         // Assert
-        Assert.Equal(originalEmail, user.Email);
+        user.Email.Should().Be(originalEmail);
     }
 
     // UpdateDisplayName Tests
@@ -208,7 +212,7 @@ public class UserDomainTests
         user.UpdateDisplayName(newName);
 
         // Assert
-        Assert.Equal(newName, user.DisplayName);
+        user.DisplayName.Should().Be(newName);
     }
 
     [Fact]
@@ -218,8 +222,9 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            user.UpdateDisplayName(null!));
+        var act = () =>
+            user.UpdateDisplayName(null!);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -229,8 +234,9 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            user.UpdateDisplayName(string.Empty));
+        var act = () =>
+            user.UpdateDisplayName(string.Empty);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -240,8 +246,9 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            user.UpdateDisplayName("   "));
+        var act = () =>
+            user.UpdateDisplayName("   ");
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -255,7 +262,7 @@ public class UserDomainTests
         user.UpdateDisplayName("Test User");
 
         // Assert
-        Assert.Equal(originalName, user.DisplayName);
+        user.DisplayName.Should().Be(originalName);
     }
 
     // UpdateRole Tests (Admin operation)
@@ -269,7 +276,7 @@ public class UserDomainTests
         user.UpdateRole(Role.Editor);
 
         // Assert
-        Assert.Equal(Role.Editor, user.Role);
+        user.Role.Should().Be(Role.Editor);
     }
 
     [Fact]
@@ -282,7 +289,7 @@ public class UserDomainTests
         user.UpdateRole(Role.User);
 
         // Assert
-        Assert.Equal(Role.User, user.Role);
+        user.Role.Should().Be(Role.User);
     }
 
     // RequiresTwoFactor Tests
@@ -294,7 +301,7 @@ public class UserDomainTests
         user.Enable2FA(TotpSecret.FromEncrypted("encrypted_secret"));
 
         // Act & Assert
-        Assert.True(user.RequiresTwoFactor());
+        user.RequiresTwoFactor().Should().BeTrue();
     }
 
     [Fact]
@@ -304,7 +311,7 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act & Assert
-        Assert.False(user.RequiresTwoFactor());
+        user.RequiresTwoFactor().Should().BeFalse();
     }
 
     // EnableTwoFactor Additional Tests
@@ -315,8 +322,9 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act & Assert - Domain throws ArgumentNullException for null aggregates
-        Assert.Throws<ArgumentNullException>(() =>
-            user.Enable2FA(null!));
+        var act = () =>
+            user.Enable2FA(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -326,8 +334,9 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            user.Enable2FA(TotpSecret.FromEncrypted(string.Empty)));
+        var act = () =>
+            user.Enable2FA(TotpSecret.FromEncrypted(string.Empty));
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -337,8 +346,9 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            user.Enable2FA(TotpSecret.FromEncrypted("   ")));
+        var act = () =>
+            user.Enable2FA(TotpSecret.FromEncrypted("   "));
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -349,9 +359,10 @@ public class UserDomainTests
         user.Enable2FA(TotpSecret.FromEncrypted("first_secret"));
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            user.Enable2FA(TotpSecret.FromEncrypted("second_secret")));
-        Assert.Contains("Two-factor authentication is already enabled", exception.Message);
+        var act = () =>
+            user.Enable2FA(TotpSecret.FromEncrypted("second_secret"));
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("Two-factor authentication is already enabled");
     }
 
     [Fact]
@@ -365,9 +376,9 @@ public class UserDomainTests
         user.Enable2FA(TotpSecret.FromEncrypted("encrypted_secret"));
 
         // Assert
-        Assert.NotNull(user.TwoFactorEnabledAt);
-        Assert.True(user.TwoFactorEnabledAt >= beforeEnable);
-        Assert.True(user.TwoFactorEnabledAt <= DateTime.UtcNow.AddSeconds(1));
+        user.TwoFactorEnabledAt.Should().NotBeNull();
+        (user.TwoFactorEnabledAt >= beforeEnable).Should().BeTrue();
+        (user.TwoFactorEnabledAt <= DateTime.UtcNow.AddSeconds(1)).Should().BeTrue();
     }
 
     // DisableTwoFactor Additional Tests
@@ -378,9 +389,10 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            user.Disable2FA());
-        Assert.Contains("Two-factor authentication is not enabled", exception.Message);
+        var act = () =>
+            user.Disable2FA();
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("Two-factor authentication is not enabled");
     }
 
     [Fact]
@@ -394,7 +406,7 @@ public class UserDomainTests
         user.Disable2FA();
 
         // Assert
-        Assert.Null(user.TwoFactorEnabledAt);
+        user.TwoFactorEnabledAt.Should().BeNull();
     }
 
     // Constructor Validation Tests
@@ -406,8 +418,9 @@ public class UserDomainTests
         var passwordHash = PasswordHash.Create("Password123!");
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new User(id, null!, "Test User", passwordHash, Role.User));
+        var act = () =>
+            new User(id, null!, "Test User", passwordHash, Role.User);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -419,8 +432,9 @@ public class UserDomainTests
         var passwordHash = PasswordHash.Create("Password123!");
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new User(id, email, null!, passwordHash, Role.User));
+        var act = () =>
+            new User(id, email, null!, passwordHash, Role.User);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -431,8 +445,9 @@ public class UserDomainTests
         var email = new Email("test@example.com");
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new User(id, email, "Test User", null!, Role.User));
+        var act = () =>
+            new User(id, email, "Test User", null!, Role.User);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -444,8 +459,9 @@ public class UserDomainTests
         var passwordHash = PasswordHash.Create("Password123!");
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new User(id, email, "Test User", passwordHash, null!));
+        var act = () =>
+            new User(id, email, "Test User", passwordHash, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -461,8 +477,8 @@ public class UserDomainTests
         var user = new User(id, email, "Test User", passwordHash, Role.User);
 
         // Assert
-        Assert.True(user.CreatedAt >= beforeCreate);
-        Assert.True(user.CreatedAt <= DateTime.UtcNow.AddSeconds(1));
+        (user.CreatedAt >= beforeCreate).Should().BeTrue();
+        (user.CreatedAt <= DateTime.UtcNow.AddSeconds(1)).Should().BeTrue();
     }
 
     [Fact]
@@ -472,9 +488,9 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Assert
-        Assert.False(user.IsTwoFactorEnabled);
-        Assert.Null(user.TotpSecret?.EncryptedValue);
-        Assert.Null(user.TwoFactorEnabledAt);
+        user.IsTwoFactorEnabled.Should().BeFalse();
+        user.TotpSecret?.EncryptedValue.Should().BeNull();
+        user.TwoFactorEnabledAt.Should().BeNull();
     }
 
     // Edge Cases and Multiple Operation Tests
@@ -489,9 +505,9 @@ public class UserDomainTests
         user.ChangePassword("Password2!", PasswordHash.Create("Password3!"));
 
         // Assert
-        Assert.True(user.VerifyPassword("Password3!"));
-        Assert.False(user.VerifyPassword("Password1!"));
-        Assert.False(user.VerifyPassword("Password2!"));
+        user.VerifyPassword("Password3!").Should().BeTrue();
+        user.VerifyPassword("Password1!").Should().BeFalse();
+        user.VerifyPassword("Password2!").Should().BeFalse();
     }
 
     [Fact]
@@ -506,8 +522,8 @@ public class UserDomainTests
         user.Enable2FA(TotpSecret.FromEncrypted("secret2"));
 
         // Assert
-        Assert.True(user.IsTwoFactorEnabled);
-        Assert.Equal("secret2", user.TotpSecret?.EncryptedValue);
+        user.IsTwoFactorEnabled.Should().BeTrue();
+        user.TotpSecret?.EncryptedValue.Should().Be("secret2");
     }
 
     [Fact]
@@ -521,7 +537,7 @@ public class UserDomainTests
         user.UpdateRole(Role.Admin);
 
         // Assert
-        Assert.Equal(Role.Admin, user.Role);
+        user.Role.Should().Be(Role.Admin);
     }
     [Fact]
     public void User_Enable2FA_WithBackupCodes_StoresCodesSuccessfully()
@@ -540,11 +556,11 @@ public class UserDomainTests
         user.Enable2FA(totpSecret, backupCodes);
 
         // Assert
-        Assert.True(user.IsTwoFactorEnabled);
-        Assert.NotNull(user.TotpSecret);
-        Assert.Equal(totpSecret, user.TotpSecret);
-        Assert.Equal(3, user.BackupCodes.Count);
-        Assert.NotNull(user.TwoFactorEnabledAt);
+        user.IsTwoFactorEnabled.Should().BeTrue();
+        user.TotpSecret.Should().NotBeNull();
+        user.TotpSecret.Should().Be(totpSecret);
+        user.BackupCodes.Count.Should().Be(3);
+        user.TwoFactorEnabledAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -558,9 +574,9 @@ public class UserDomainTests
         user.Enable2FA(totpSecret, null);
 
         // Assert
-        Assert.True(user.IsTwoFactorEnabled);
-        Assert.NotNull(user.TotpSecret);
-        Assert.Equal(0, user.GetUnusedBackupCodesCount());
+        user.IsTwoFactorEnabled.Should().BeTrue();
+        user.TotpSecret.Should().NotBeNull();
+        user.GetUnusedBackupCodesCount().Should().Be(0);
     }
 
     [Fact]
@@ -575,8 +591,8 @@ public class UserDomainTests
         user.Enable2FA(totpSecret, emptyBackupCodes);
 
         // Assert
-        Assert.True(user.IsTwoFactorEnabled);
-        Assert.Equal(0, user.GetUnusedBackupCodesCount());
+        user.IsTwoFactorEnabled.Should().BeTrue();
+        user.GetUnusedBackupCodesCount().Should().Be(0);
     }
 
     [Fact]
@@ -589,8 +605,9 @@ public class UserDomainTests
         var backupCodes = new List<BackupCode> { usedCode };
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => user.Enable2FA(totpSecret, backupCodes));
-        Assert.Contains("used backup codes", exception.Message);
+        var act = () => user.Enable2FA(totpSecret, backupCodes);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("used backup codes");
     }
 
     [Fact]
@@ -609,8 +626,8 @@ public class UserDomainTests
 
         // Assert
         var code = user.BackupCodes.ElementAt(0);
-        Assert.True(code.IsUsed);
-        Assert.Equal(usedAt, code.UsedAt);
+        code.IsUsed.Should().BeTrue();
+        code.UsedAt.Should().Be(usedAt);
     }
 
     [Fact]
@@ -623,9 +640,10 @@ public class UserDomainTests
         user.Enable2FA(totpSecret, backupCodes);
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            user.UseBackupCode("invalid_hash", DateTime.UtcNow));
-        Assert.Contains("not found", exception.Message);
+        var act = () =>
+            user.UseBackupCode("invalid_hash", DateTime.UtcNow);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("not found");
     }
 
     [Fact]
@@ -647,7 +665,7 @@ public class UserDomainTests
         var count = user.GetUnusedBackupCodesCount();
 
         // Assert
-        Assert.Equal(2, count);
+        count.Should().Be(2);
     }
 
     [Fact]
@@ -664,7 +682,7 @@ public class UserDomainTests
         var result = user.HasUnusedBackupCode(codeHash);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -682,7 +700,7 @@ public class UserDomainTests
         var result = user.HasUnusedBackupCode(codeHash);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -698,7 +716,7 @@ public class UserDomainTests
         var result = user.HasUnusedBackupCode("invalid_hash");
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
     [Fact]
     public void User_UpdateTier_ByAdmin_UpdatesTierSuccessfully()
@@ -710,7 +728,7 @@ public class UserDomainTests
         user.UpdateTier(UserTier.Premium, Role.Admin);
 
         // Assert
-        Assert.Equal(UserTier.Premium, user.Tier);
+        user.Tier.Should().Be(UserTier.Premium);
     }
 
     [Fact]
@@ -720,9 +738,10 @@ public class UserDomainTests
         var user = CreateTestUser(tier: UserTier.Free);
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            user.UpdateTier(UserTier.Premium, Role.User));
-        Assert.Contains("Only administrators can change user tiers", exception.Message);
+        var act = () =>
+            user.UpdateTier(UserTier.Premium, Role.User);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("Only administrators can change user tiers");
     }
 
     [Fact]
@@ -732,9 +751,10 @@ public class UserDomainTests
         var user = CreateTestUser(tier: UserTier.Free);
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            user.UpdateTier(UserTier.Normal, Role.Editor));
-        Assert.Contains("Only administrators can change user tiers", exception.Message);
+        var act = () =>
+            user.UpdateTier(UserTier.Normal, Role.Editor);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("Only administrators can change user tiers");
     }
 
     [Fact]
@@ -744,8 +764,9 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            user.UpdateTier(null!, Role.Admin));
+        var act = () =>
+            user.UpdateTier(null!, Role.Admin);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -755,8 +776,9 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            user.UpdateTier(UserTier.Premium, null!));
+        var act = () =>
+            user.UpdateTier(UserTier.Premium, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -770,7 +792,7 @@ public class UserDomainTests
         user.UpdateTier(UserTier.Normal, Role.Admin);
 
         // Assert
-        Assert.Equal(originalTier, user.Tier);
+        user.Tier.Should().Be(originalTier);
     }
 
     [Fact]
@@ -783,7 +805,7 @@ public class UserDomainTests
         user.UpdateTier(UserTier.Normal, Role.Admin);
 
         // Assert
-        Assert.Equal(UserTier.Normal, user.Tier);
+        user.Tier.Should().Be(UserTier.Normal);
     }
 
     [Fact]
@@ -796,7 +818,7 @@ public class UserDomainTests
         user.UpdateTier(UserTier.Free, Role.Admin);
 
         // Assert
-        Assert.Equal(UserTier.Free, user.Tier);
+        user.Tier.Should().Be(UserTier.Free);
     }
 
     [Fact]
@@ -806,7 +828,7 @@ public class UserDomainTests
         var user = CreateTestUser();
 
         // Assert
-        Assert.Equal(UserTier.Free, user.Tier);
+        user.Tier.Should().Be(UserTier.Free);
     }
 
     [Fact]
@@ -821,7 +843,7 @@ public class UserDomainTests
         var user = new User(id, email, "Test User", passwordHash, Role.User, UserTier.Premium);
 
         // Assert
-        Assert.Equal(UserTier.Premium, user.Tier);
+        user.Tier.Should().Be(UserTier.Premium);
     }
     private static User CreateTestUser(
         string password = "TestPassword123!",

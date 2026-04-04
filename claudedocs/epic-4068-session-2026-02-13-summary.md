@@ -160,13 +160,13 @@
 
 | Issue | Checkbox | Status | URL |
 |-------|----------|--------|-----|
-| #4177 | 20/23 (87%) → **23/23 (100%)** ✅ | COMPLETE | [Link](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4177) |
-| #4178 | 10/14 (71%) | In Progress | [Link](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4178) |
-| #4179 | 0/8 (0%) → **6/8 (75%)** | In Progress | [Link](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4179) |
-| #4181 | **12/12 (100%)** ✅ | COMPLETE | [Link](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4181) |
-| #4182 | 0/8 (0%) → **8/8 (100%)** ✅ | **COMPLETE** | [Link](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4182) |
-| #4184 | 3/12 (25%) → **7/12 (58%)** | In Progress | [Link](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4184) |
-| #4185 | 9/17 (53%) | In Progress | [Link](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4185) |
+| #4177 | 20/23 (87%) → **23/23 (100%)** ✅ | COMPLETE | [Link](https://github.com/meepleAi-app/meepleai-monorepo/issues/4177) |
+| #4178 | 10/14 (71%) | In Progress | [Link](https://github.com/meepleAi-app/meepleai-monorepo/issues/4178) |
+| #4179 | 0/8 (0%) → **6/8 (75%)** | In Progress | [Link](https://github.com/meepleAi-app/meepleai-monorepo/issues/4179) |
+| #4181 | **12/12 (100%)** ✅ | COMPLETE | [Link](https://github.com/meepleAi-app/meepleai-monorepo/issues/4181) |
+| #4182 | 0/8 (0%) → **8/8 (100%)** ✅ | **COMPLETE** | [Link](https://github.com/meepleAi-app/meepleai-monorepo/issues/4182) |
+| #4184 | 3/12 (25%) → **7/12 (58%)** | In Progress | [Link](https://github.com/meepleAi-app/meepleai-monorepo/issues/4184) |
+| #4185 | 9/17 (53%) | In Progress | [Link](https://github.com/meepleAi-app/meepleai-monorepo/issues/4185) |
 
 **Total Checkbox**: 0/144 → **71/144** (49%)
 

@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Extensions;
+using Api.Infrastructure.Serialization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,7 +23,7 @@ internal static class AdminBulkImportEndpoints
     {
         var group = app.MapGroup("/api/v1/admin/games/bulk-import")
             .WithTags("Admin - Bulk Import")
-            .RequireAuthorization(policy => policy.RequireRole("Admin"));
+            .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin"));
 
         // POST /api/v1/admin/games/bulk-import - Submit bulk import from JSON
         group.MapPost("/", HandleBulkImport)
@@ -68,7 +69,8 @@ internal static class AdminBulkImportEndpoints
         var command = new EnqueueBggBatchFromJsonCommand
         {
             JsonContent = request.JsonContent,
-            UserId = userId
+            UserId = userId,
+            AutoPublish = request.AutoPublish
         };
 
         var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
@@ -101,7 +103,7 @@ internal static class AdminBulkImportEndpoints
                 var progress = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
 
                 await httpContext.Response.WriteAsync(
-                    $"event: progress\ndata: {System.Text.Json.JsonSerializer.Serialize(progress)}\n\n",
+                    $"event: progress\ndata: {System.Text.Json.JsonSerializer.Serialize(progress, SseJsonOptions.Default)}\n\n",
                     cancellationToken).ConfigureAwait(false);
 
                 await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -112,7 +114,7 @@ internal static class AdminBulkImportEndpoints
                     if (consecutiveIdlePolls >= maxIdlePolls)
                     {
                         await httpContext.Response.WriteAsync(
-                            $"event: complete\ndata: {System.Text.Json.JsonSerializer.Serialize(progress)}\n\n",
+                            $"event: complete\ndata: {System.Text.Json.JsonSerializer.Serialize(progress, SseJsonOptions.Default)}\n\n",
                             cancellationToken).ConfigureAwait(false);
 
                         await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -139,4 +141,4 @@ internal static class AdminBulkImportEndpoints
 /// Accepts JSON content as a string containing an array of {bggId, name} objects.
 /// Issue #4354
 /// </summary>
-public sealed record BulkImportFromJsonRequest(string JsonContent);
+public sealed record BulkImportFromJsonRequest(string JsonContent, bool AutoPublish = false);

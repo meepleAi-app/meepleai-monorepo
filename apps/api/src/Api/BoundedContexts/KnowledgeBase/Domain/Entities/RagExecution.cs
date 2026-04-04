@@ -31,6 +31,7 @@ public sealed class RagExecution : AggregateRoot<Guid>
     public decimal TotalCost { get; private set; }
     public double? Confidence { get; private set; }
     public bool CacheHit { get; private set; }
+    public string? CragVerdict { get; private set; }
 
     // Status
     public string Status => _status;
@@ -63,7 +64,8 @@ public sealed class RagExecution : AggregateRoot<Guid>
         bool cacheHit,
         string status,
         string? errorMessage,
-        string? executionTrace)
+        string? executionTrace,
+        string? cragVerdict = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
         ArgumentException.ThrowIfNullOrWhiteSpace(strategy);
@@ -87,6 +89,7 @@ public sealed class RagExecution : AggregateRoot<Guid>
             TotalCost = totalCost,
             Confidence = confidence,
             CacheHit = cacheHit,
+            CragVerdict = cragVerdict,
             _status = status,
             ErrorMessage = errorMessage,
             _executionTrace = executionTrace,

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -19,13 +20,13 @@ public class SessionChatMessageTests
         var message = new SessionChatMessage("Hello", SessionChatMessage.UserRole, sequenceNumber: 0);
 
         // Assert
-        Assert.Equal("Hello", message.Content);
-        Assert.Equal(SessionChatMessage.UserRole, message.Role);
-        Assert.Equal(0, message.SequenceNumber);
-        Assert.True(message.IsUserMessage);
-        Assert.False(message.IsAssistantMessage);
-        Assert.False(message.IsSystemMessage);
-        Assert.NotEqual(Guid.Empty, message.Id);
+        message.Content.Should().Be("Hello");
+        message.Role.Should().Be(SessionChatMessage.UserRole);
+        message.SequenceNumber.Should().Be(0);
+        message.IsUserMessage.Should().BeTrue();
+        message.IsAssistantMessage.Should().BeFalse();
+        message.IsSystemMessage.Should().BeFalse();
+        message.Id.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -35,10 +36,10 @@ public class SessionChatMessageTests
         var message = new SessionChatMessage("Response", SessionChatMessage.AssistantRole, sequenceNumber: 1);
 
         // Assert
-        Assert.Equal(SessionChatMessage.AssistantRole, message.Role);
-        Assert.True(message.IsAssistantMessage);
-        Assert.False(message.IsUserMessage);
-        Assert.False(message.IsSystemMessage);
+        message.Role.Should().Be(SessionChatMessage.AssistantRole);
+        message.IsAssistantMessage.Should().BeTrue();
+        message.IsUserMessage.Should().BeFalse();
+        message.IsSystemMessage.Should().BeFalse();
     }
 
     [Fact]
@@ -48,10 +49,10 @@ public class SessionChatMessageTests
         var message = new SessionChatMessage("System prompt", SessionChatMessage.SystemRole, sequenceNumber: 0);
 
         // Assert
-        Assert.Equal(SessionChatMessage.SystemRole, message.Role);
-        Assert.True(message.IsSystemMessage);
-        Assert.False(message.IsUserMessage);
-        Assert.False(message.IsAssistantMessage);
+        message.Role.Should().Be(SessionChatMessage.SystemRole);
+        message.IsSystemMessage.Should().BeTrue();
+        message.IsUserMessage.Should().BeFalse();
+        message.IsAssistantMessage.Should().BeFalse();
     }
 
     [Theory]
@@ -60,9 +61,10 @@ public class SessionChatMessageTests
     public void SessionChatMessage_WithEmptyContent_ThrowsValidationException(string invalidContent)
     {
         // Act & Assert
-        var ex = Assert.Throws<ValidationException>(() =>
-            new SessionChatMessage(invalidContent, SessionChatMessage.UserRole, sequenceNumber: 0));
-        Assert.Contains("content cannot be empty", ex.Message);
+        Action act = () =>
+            new SessionChatMessage(invalidContent, SessionChatMessage.UserRole, sequenceNumber: 0);
+        var ex = act.Should().Throw<ValidationException>().Which;
+        ex.Message.Should().Contain("content cannot be empty");
     }
 
     [Fact]
@@ -72,9 +74,10 @@ public class SessionChatMessageTests
         var longContent = new string('a', 50001);
 
         // Act & Assert
-        var ex = Assert.Throws<ValidationException>(() =>
-            new SessionChatMessage(longContent, SessionChatMessage.UserRole, sequenceNumber: 0));
-        Assert.Contains("cannot exceed 50,000 characters", ex.Message);
+        Action act = () =>
+            new SessionChatMessage(longContent, SessionChatMessage.UserRole, sequenceNumber: 0);
+        var ex = act.Should().Throw<ValidationException>().Which;
+        ex.Message.Should().Contain("cannot exceed 50,000 characters");
     }
 
     [Fact]
@@ -87,7 +90,7 @@ public class SessionChatMessageTests
         var message = new SessionChatMessage(maxContent, SessionChatMessage.UserRole, sequenceNumber: 0);
 
         // Assert
-        Assert.Equal(50000, message.Content.Length);
+        message.Content.Length.Should().Be(50000);
     }
 
     [Theory]
@@ -99,9 +102,10 @@ public class SessionChatMessageTests
     public void SessionChatMessage_WithInvalidRole_ThrowsValidationException(string invalidRole)
     {
         // Act & Assert
-        var ex = Assert.Throws<ValidationException>(() =>
-            new SessionChatMessage("Content", invalidRole, sequenceNumber: 0));
-        Assert.Contains("Role must be", ex.Message);
+        Action act = () =>
+            new SessionChatMessage("Content", invalidRole, sequenceNumber: 0);
+        var ex = act.Should().Throw<ValidationException>().Which;
+        ex.Message.Should().Contain("Role must be");
     }
 
     [Fact]
@@ -111,7 +115,7 @@ public class SessionChatMessageTests
         var message = new SessionChatMessage("  Trimmed content  ", SessionChatMessage.UserRole, sequenceNumber: 0);
 
         // Assert
-        Assert.Equal("Trimmed content", message.Content);
+        message.Content.Should().Be("Trimmed content");
     }
 
     [Fact]
@@ -124,7 +128,7 @@ public class SessionChatMessageTests
         var message = new SessionChatMessage("Test", SessionChatMessage.UserRole, sequenceNumber: 0);
 
         // Assert
-        Assert.InRange(message.Timestamp, before, DateTime.UtcNow.AddSeconds(1));
+        message.Timestamp.Should().BeOnOrAfter(before).And.BeOnOrBefore(DateTime.UtcNow.AddSeconds(1));
     }
 
     [Fact]
@@ -141,7 +145,7 @@ public class SessionChatMessageTests
             timestamp: customTimestamp);
 
         // Assert
-        Assert.Equal(customTimestamp, message.Timestamp);
+        message.Timestamp.Should().Be(customTimestamp);
     }
 
     [Fact]
@@ -158,7 +162,7 @@ public class SessionChatMessageTests
             id: customId);
 
         // Assert
-        Assert.Equal(customId, message.Id);
+        message.Id.Should().Be(customId);
     }
 
     [Fact]
@@ -180,9 +184,9 @@ public class SessionChatMessageTests
             metadata: metadata);
 
         // Assert
-        Assert.NotNull(message.MetadataJson);
-        Assert.Contains("tokenCount", message.MetadataJson);
-        Assert.Contains("claude-3", message.MetadataJson);
+        message.MetadataJson.Should().NotBeNull();
+        message.MetadataJson.Should().Contain("tokenCount");
+        message.MetadataJson.Should().Contain("claude-3");
     }
 
     [Fact]
@@ -192,7 +196,7 @@ public class SessionChatMessageTests
         var message = new SessionChatMessage("Test", SessionChatMessage.UserRole, sequenceNumber: 0);
 
         // Assert
-        Assert.Null(message.MetadataJson);
+        message.MetadataJson.Should().BeNull();
     }
 
     [Fact]
@@ -214,8 +218,8 @@ public class SessionChatMessageTests
         var result = message.GetMetadata();
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
     }
 
     [Fact]
@@ -228,7 +232,7 @@ public class SessionChatMessageTests
         var result = message.GetMetadata();
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -246,13 +250,13 @@ public class SessionChatMessageTests
         var message = SessionChatMessage.FromPersistence(id, content, role, sequenceNumber, timestamp, metadataJson);
 
         // Assert
-        Assert.Equal(id, message.Id);
-        Assert.Equal(content, message.Content);
-        Assert.Equal(role, message.Role);
-        Assert.Equal(sequenceNumber, message.SequenceNumber);
-        Assert.Equal(timestamp, message.Timestamp);
-        Assert.Equal(metadataJson, message.MetadataJson);
-        Assert.True(message.IsAssistantMessage);
+        message.Id.Should().Be(id);
+        message.Content.Should().Be(content);
+        message.Role.Should().Be(role);
+        message.SequenceNumber.Should().Be(sequenceNumber);
+        message.Timestamp.Should().Be(timestamp);
+        message.MetadataJson.Should().Be(metadataJson);
+        message.IsAssistantMessage.Should().BeTrue();
     }
 
     [Fact]
@@ -268,7 +272,7 @@ public class SessionChatMessageTests
             null);
 
         // Assert
-        Assert.Null(message.MetadataJson);
+        message.MetadataJson.Should().BeNull();
     }
 
     [Fact]
@@ -282,9 +286,9 @@ public class SessionChatMessageTests
         var result = message.ToString();
 
         // Assert
-        Assert.Contains("[user]", result);
-        Assert.True(result.Length < longContent.Length + 20);
-        Assert.Contains("...", result);
+        result.Should().Contain("[user]");
+        (result.Length < longContent.Length + 20).Should().BeTrue();
+        result.Should().Contain("...");
     }
 
     [Fact]
@@ -297,8 +301,8 @@ public class SessionChatMessageTests
         var result = message.ToString();
 
         // Assert
-        Assert.Contains("[user]", result);
-        Assert.Contains("Short", result);
+        result.Should().Contain("[user]");
+        result.Should().Contain("Short");
     }
 
     [Theory]
@@ -311,7 +315,7 @@ public class SessionChatMessageTests
         var message = new SessionChatMessage("Content", role, sequenceNumber: 0);
 
         // Assert
-        Assert.Equal(role, message.Role);
+        message.Role.Should().Be(role);
     }
 
     [Fact]
@@ -324,6 +328,6 @@ public class SessionChatMessageTests
         var message = new SessionChatMessage("Content", SessionChatMessage.UserRole, sequenceNumber: -1);
 
         // Assert
-        Assert.Equal(-1, message.SequenceNumber);
+        message.SequenceNumber.Should().Be(-1);
     }
 }

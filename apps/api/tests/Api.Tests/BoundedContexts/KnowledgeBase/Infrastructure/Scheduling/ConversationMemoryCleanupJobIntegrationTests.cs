@@ -25,7 +25,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 /// Issue #3985: Integration Tests for Context Engineering Repositories.
 /// Validates cleanup job behavior against a real database instead of mocks.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Dependency", "PostgreSQL")]
@@ -52,18 +52,7 @@ public sealed class ConversationMemoryCleanupJobIntegrationTests : IAsyncLifetim
         _databaseName = $"test_cleanup_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();

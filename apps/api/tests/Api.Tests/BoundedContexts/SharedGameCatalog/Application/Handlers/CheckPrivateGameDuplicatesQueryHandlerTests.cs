@@ -10,6 +10,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -45,7 +46,7 @@ public class CheckPrivateGameDuplicatesQueryHandlerTests
         var query = new CheckPrivateGameDuplicatesQuery(TestPrivateGameId);
 
         // Assert
-        Assert.Equal(TestPrivateGameId, query.PrivateGameId);
+        query.PrivateGameId.Should().Be(TestPrivateGameId);
     }
 
     [Fact]
@@ -59,8 +60,8 @@ public class CheckPrivateGameDuplicatesQueryHandlerTests
             .ReturnsAsync((PrivateGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -78,13 +79,13 @@ public class CheckPrivateGameDuplicatesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.False(result.HasExactDuplicate);
-        Assert.Null(result.ExactDuplicateId);
-        Assert.Null(result.ExactDuplicateTitle);
-        Assert.False(result.HasFuzzyDuplicates);
-        Assert.Empty(result.FuzzyDuplicates);
-        Assert.Equal(ProposalApprovalAction.ApproveAsNew, result.RecommendedAction);
+        result.Should().NotBeNull();
+        result.HasExactDuplicate.Should().BeFalse();
+        result.ExactDuplicateId.Should().BeNull();
+        result.ExactDuplicateTitle.Should().BeNull();
+        result.HasFuzzyDuplicates.Should().BeFalse();
+        result.FuzzyDuplicates.Should().BeEmpty();
+        result.RecommendedAction.Should().Be(ProposalApprovalAction.ApproveAsNew);
 
         // Verify BggId lookup was NOT attempted
         _sharedGameRepoMock.Verify(
@@ -111,13 +112,13 @@ public class CheckPrivateGameDuplicatesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.False(result.HasExactDuplicate);
-        Assert.Null(result.ExactDuplicateId);
-        Assert.Null(result.ExactDuplicateTitle);
-        Assert.False(result.HasFuzzyDuplicates);
-        Assert.Empty(result.FuzzyDuplicates);
-        Assert.Equal(ProposalApprovalAction.ApproveAsNew, result.RecommendedAction);
+        result.Should().NotBeNull();
+        result.HasExactDuplicate.Should().BeFalse();
+        result.ExactDuplicateId.Should().BeNull();
+        result.ExactDuplicateTitle.Should().BeNull();
+        result.HasFuzzyDuplicates.Should().BeFalse();
+        result.FuzzyDuplicates.Should().BeEmpty();
+        result.RecommendedAction.Should().Be(ProposalApprovalAction.ApproveAsNew);
 
         _sharedGameRepoMock.Verify(
             r => r.GetByBggIdAsync(TestBggId, It.IsAny<CancellationToken>()),
@@ -159,13 +160,13 @@ public class CheckPrivateGameDuplicatesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.HasExactDuplicate);
-        Assert.Equal(existingSharedGame.Id, result.ExactDuplicateId);
-        Assert.Equal(existingSharedGame.Title, result.ExactDuplicateTitle);
-        Assert.False(result.HasFuzzyDuplicates); // Not implemented yet
-        Assert.Empty(result.FuzzyDuplicates);
-        Assert.Equal(ProposalApprovalAction.MergeKnowledgeBase, result.RecommendedAction);
+        result.Should().NotBeNull();
+        result.HasExactDuplicate.Should().BeTrue();
+        result.ExactDuplicateId.Should().Be(existingSharedGame.Id);
+        result.ExactDuplicateTitle.Should().Be(existingSharedGame.Title);
+        result.HasFuzzyDuplicates.Should().BeFalse(); // Not implemented yet
+        result.FuzzyDuplicates.Should().BeEmpty();
+        result.RecommendedAction.Should().Be(ProposalApprovalAction.MergeKnowledgeBase);
 
         _sharedGameRepoMock.Verify(
             r => r.GetByBggIdAsync(TestBggId, It.IsAny<CancellationToken>()),
@@ -176,8 +177,8 @@ public class CheckPrivateGameDuplicatesQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private static PrivateGame CreatePrivateGameWithBggId()

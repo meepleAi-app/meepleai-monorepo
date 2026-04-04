@@ -104,6 +104,14 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
             .HasColumnName("turn_order_json")
             .HasColumnType("jsonb");
 
+        builder.Property(e => e.DisputesJson)
+            .HasColumnName("disputes_json")
+            .HasColumnType("jsonb");
+
+        builder.Property(e => e.SetupChecklistJson)
+            .HasColumnName("setup_checklist_json")
+            .HasColumnType("jsonb");
+
         // --- Concurrency Token ---
 
         builder.Property(e => e.RowVersion)

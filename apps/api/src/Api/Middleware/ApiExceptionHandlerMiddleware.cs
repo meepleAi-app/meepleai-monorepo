@@ -2,6 +2,7 @@ using System;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
 
@@ -61,13 +62,20 @@ internal class ApiExceptionHandlerMiddleware
         _logger.LogError(ex,
             "Unhandled exception in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
             sanitizedPath,
-            context.Request.Method,
+            LogValueSanitizer.Sanitize(context.Request.Method),
             context.TraceIdentifier);
 
         // Special handling for FluentValidation exceptions (Issue #1449)
         if (ex is FluentValidation.ValidationException fluentValidationEx)
         {
             await HandleFluentValidationExceptionAsync(context, fluentValidationEx).ConfigureAwait(false);
+            return;
+        }
+
+        // E2-3: Tier limit enforcement — returns 403 with upgrade info
+        if (ex is TierLimitExceededException tierLimitEx)
+        {
+            await HandleTierLimitExceptionAsync(context, tierLimitEx).ConfigureAwait(false);
             return;
         }
 
@@ -140,6 +148,40 @@ internal class ApiExceptionHandlerMiddleware
     }
 
     /// <summary>
+    /// Handles TierLimitExceededException with HTTP 403 and structured upgrade info.
+    /// E2-3: Game Night Improvvisata — Enforce Tier Limits on Existing Endpoints.
+    /// </summary>
+    private async Task HandleTierLimitExceptionAsync(
+        HttpContext context,
+        TierLimitExceededException tierLimitException)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: tierLimitException,
+            httpStatusCode: StatusCodes.Status403Forbidden,
+            endpoint: endpoint,
+            isUnhandled: true);
+
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        context.Response.ContentType = "application/json";
+
+        var errorResponse = new
+        {
+            error = "tier_limit_exceeded",
+            message = tierLimitException.Message,
+            limitType = tierLimitException.LimitType,
+            current = tierLimitException.Current,
+            max = tierLimitException.Max,
+            upgradeUrl = tierLimitException.UpgradeUrl,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Extracts the route pattern from the HttpContext to avoid high cardinality metrics.
     /// Returns route template like "/api/v1/games/{id}" instead of "/api/v1/games/abc-123".
     /// </summary>
@@ -179,10 +221,10 @@ internal class ApiExceptionHandlerMiddleware
                 httpEx.ErrorCode,
                 httpEx.Message
             ),
-            NotFoundException notFoundEx => (
+            NotFoundException => (
                 StatusCodes.Status404NotFound,
                 "not_found",
-                notFoundEx.Message
+                "The requested resource was not found"
             ),
 
             // Domain exceptions (from SharedKernel)
@@ -191,10 +233,10 @@ internal class ApiExceptionHandlerMiddleware
                 "validation_error",
                 validationEx.Message
             ),
-            DomainException domainEx => (
+            DomainException => (
                 StatusCodes.Status400BadRequest,
                 "domain_error",
-                domainEx.Message
+                "The request could not be processed"
             ),
 
             // ASP.NET request binding exceptions (e.g., invalid JSON body)

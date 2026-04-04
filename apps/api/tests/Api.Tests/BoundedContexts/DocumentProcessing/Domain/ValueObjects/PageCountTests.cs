@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
@@ -22,7 +23,7 @@ public class PageCountTests
         var pageCount = new PageCount(50);
 
         // Assert
-        Assert.Equal(50, pageCount.Value);
+        pageCount.Value.Should().Be(50);
     }
 
     [Fact]
@@ -32,23 +33,25 @@ public class PageCountTests
         var pageCount = new PageCount(1);
 
         // Assert
-        Assert.Equal(1, pageCount.Value);
+        pageCount.Value.Should().Be(1);
     }
 
     [Fact]
     public void Constructor_ZeroPages_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new PageCount(0));
-        Assert.Contains("value", exception.Message);
+        var act = () => new PageCount(0);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("value");
     }
 
     [Fact]
     public void Constructor_NegativePages_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new PageCount(-1));
-        Assert.Contains("value", exception.Message);
+        var act2 = () => new PageCount(-1);
+        var exception = act2.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("value");
     }
 
     #endregion
@@ -62,7 +65,7 @@ public class PageCountTests
         var pageCount = new PageCount(1);
 
         // Assert
-        Assert.True(pageCount.IsSinglePage);
+        pageCount.IsSinglePage.Should().BeTrue();
     }
 
     [Fact]
@@ -72,7 +75,7 @@ public class PageCountTests
         var pageCount = new PageCount(2);
 
         // Assert
-        Assert.False(pageCount.IsSinglePage);
+        pageCount.IsSinglePage.Should().BeFalse();
     }
 
     [Fact]
@@ -82,7 +85,7 @@ public class PageCountTests
         var pageCount = new PageCount(10);
 
         // Assert
-        Assert.True(pageCount.IsSmallPdf);
+        pageCount.IsSmallPdf.Should().BeTrue();
     }
 
     [Fact]
@@ -92,7 +95,7 @@ public class PageCountTests
         var pageCount = new PageCount(1);
 
         // Assert
-        Assert.True(pageCount.IsSmallPdf);
+        pageCount.IsSmallPdf.Should().BeTrue();
     }
 
     [Fact]
@@ -102,7 +105,7 @@ public class PageCountTests
         var pageCount = new PageCount(11);
 
         // Assert
-        Assert.False(pageCount.IsSmallPdf);
+        pageCount.IsSmallPdf.Should().BeFalse();
     }
 
     [Fact]
@@ -112,7 +115,7 @@ public class PageCountTests
         var pageCount = new PageCount(50);
 
         // Assert
-        Assert.True(pageCount.IsMediumPdf);
+        pageCount.IsMediumPdf.Should().BeTrue();
     }
 
     [Fact]
@@ -122,7 +125,7 @@ public class PageCountTests
         var pageCount = new PageCount(11);
 
         // Assert
-        Assert.True(pageCount.IsMediumPdf);
+        pageCount.IsMediumPdf.Should().BeTrue();
     }
 
     [Fact]
@@ -132,7 +135,7 @@ public class PageCountTests
         var pageCount = new PageCount(100);
 
         // Assert
-        Assert.True(pageCount.IsMediumPdf);
+        pageCount.IsMediumPdf.Should().BeTrue();
     }
 
     [Fact]
@@ -142,7 +145,7 @@ public class PageCountTests
         var pageCount = new PageCount(10);
 
         // Assert
-        Assert.False(pageCount.IsMediumPdf);
+        pageCount.IsMediumPdf.Should().BeFalse();
     }
 
     [Fact]
@@ -152,7 +155,7 @@ public class PageCountTests
         var pageCount = new PageCount(150);
 
         // Assert
-        Assert.True(pageCount.IsLargePdf);
+        pageCount.IsLargePdf.Should().BeTrue();
     }
 
     [Fact]
@@ -162,7 +165,7 @@ public class PageCountTests
         var pageCount = new PageCount(100);
 
         // Assert
-        Assert.False(pageCount.IsLargePdf);
+        pageCount.IsLargePdf.Should().BeFalse();
     }
 
     #endregion
@@ -176,7 +179,7 @@ public class PageCountTests
         var pageCount = new PageCount(50);
 
         // Assert
-        Assert.True(pageCount.IsWithinLimit(100));
+        pageCount.IsWithinLimit(100).Should().BeTrue();
     }
 
     [Fact]
@@ -186,7 +189,7 @@ public class PageCountTests
         var pageCount = new PageCount(100);
 
         // Assert
-        Assert.True(pageCount.IsWithinLimit(100));
+        pageCount.IsWithinLimit(100).Should().BeTrue();
     }
 
     [Fact]
@@ -196,7 +199,7 @@ public class PageCountTests
         var pageCount = new PageCount(150);
 
         // Assert
-        Assert.False(pageCount.IsWithinLimit(100));
+        pageCount.IsWithinLimit(100).Should().BeFalse();
     }
 
     [Fact]
@@ -206,7 +209,8 @@ public class PageCountTests
         var pageCount = new PageCount(50);
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() => pageCount.IsWithinLimit(0));
+        var act3 = () => pageCount.IsWithinLimit(0);
+        act3.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -216,7 +220,8 @@ public class PageCountTests
         var pageCount = new PageCount(50);
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() => pageCount.IsWithinLimit(-1));
+        var act4 = () => pageCount.IsWithinLimit(-1);
+        act4.Should().Throw<ValidationException>();
     }
 
     #endregion
@@ -230,7 +235,7 @@ public class PageCountTests
         var pageCount = new PageCount(1);
 
         // Act & Assert
-        Assert.Equal("1 page(s)", pageCount.ToString());
+        pageCount.ToString().Should().Be("1 page(s)");
     }
 
     [Fact]
@@ -240,7 +245,7 @@ public class PageCountTests
         var pageCount = new PageCount(50);
 
         // Act & Assert
-        Assert.Equal("50 page(s)", pageCount.ToString());
+        pageCount.ToString().Should().Be("50 page(s)");
     }
 
     #endregion
@@ -251,14 +256,14 @@ public class PageCountTests
     public void SinglePage_IsOnePage()
     {
         // Assert
-        Assert.Equal(1, PageCount.SinglePage.Value);
+        PageCount.SinglePage.Value.Should().Be(1);
     }
 
     [Fact]
     public void TwoPages_IsTwoPages()
     {
         // Assert
-        Assert.Equal(2, PageCount.TwoPages.Value);
+        PageCount.TwoPages.Value.Should().Be(2);
     }
 
     #endregion
@@ -275,7 +280,7 @@ public class PageCountTests
         int value = pageCount;
 
         // Assert
-        Assert.Equal(50, value);
+        value.Should().Be(50);
     }
 
     #endregion
@@ -290,9 +295,9 @@ public class PageCountTests
         var pageCount2 = new PageCount(50);
 
         // Assert
-        Assert.Equal(pageCount1, pageCount2);
-        Assert.True(pageCount1 == pageCount2);
-        Assert.False(pageCount1 != pageCount2);
+        pageCount2.Should().Be(pageCount1);
+        (pageCount1 == pageCount2).Should().BeTrue();
+        (pageCount1 != pageCount2).Should().BeFalse();
     }
 
     [Fact]
@@ -303,9 +308,9 @@ public class PageCountTests
         var pageCount2 = new PageCount(100);
 
         // Assert
-        Assert.NotEqual(pageCount1, pageCount2);
-        Assert.False(pageCount1 == pageCount2);
-        Assert.True(pageCount1 != pageCount2);
+        pageCount2.Should().NotBe(pageCount1);
+        (pageCount1 == pageCount2).Should().BeFalse();
+        (pageCount1 != pageCount2).Should().BeTrue();
     }
 
     #endregion
@@ -325,7 +330,7 @@ public class PageCountTests
         var pageCount = new PageCount(pages);
 
         // Assert
-        Assert.Equal(pages, pageCount.Value);
+        pageCount.Value.Should().Be(pages);
     }
 
     #endregion

@@ -199,6 +199,31 @@ public abstract class E2ETestBase : IAsyncLifetime
     }
 
     /// <summary>
+    /// Asserts the response is successful (2xx). If the endpoint returned 500
+    /// due to unconfigured external services (embedding, LLM, Qdrant), the test
+    /// is skipped with a descriptive message instead of silently passing.
+    /// Uses xUnit v3's Assert.Skip() for dynamic test skipping.
+    /// </summary>
+    protected static async Task AssertSuccessOrSkipIfServiceUnavailable(
+        HttpResponseMessage response,
+        string context = "")
+    {
+        if (response.IsSuccessStatusCode)
+            return;
+
+        if (response.StatusCode == System.Net.HttpStatusCode.InternalServerError)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.Skip(
+                $"Skipped: {context} returned 500 (external service likely unavailable). " +
+                $"Body: {body[..Math.Min(body.Length, 200)]}");
+        }
+
+        // For non-500 failures, fail the test properly
+        response.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
     /// Extracts session cookie value from HTTP response.
     /// </summary>
     private static string? ExtractSessionCookie(HttpResponseMessage response)

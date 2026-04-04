@@ -49,6 +49,27 @@ public class UserEntity
     public int FailedLoginAttempts { get; set; }
     public DateTime? LockedUntil { get; set; }
 
+    // D3: Contributor flag — contributors get premium tier access
+    public bool IsContributor { get; set; }
+
+    // Issue #124: Onboarding interests
+    public List<string>? Interests { get; set; }
+
+    // Profile & Onboarding
+    public string? AvatarUrl { get; set; }
+    public string? Bio { get; set; }
+    public DateTime? OnboardingWizardSeenAt { get; set; }
+    public DateTime? OnboardingDismissedAt { get; set; }
+
+    // Issue #323: Onboarding completion tracking
+    public bool OnboardingCompleted { get; set; }
+    public bool OnboardingSkipped { get; set; }
+    public DateTime? OnboardingCompletedAt { get; set; }
+
+    // Admin Invitation Flow: tracks who invited this user and when the invitation expires
+    public Guid? InvitedByUserId { get; set; }
+    public DateTime? InvitationExpiresAt { get; set; }
+
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
     public ICollection<UserBackupCodeEntity> BackupCodes { get; set; } = new List<UserBackupCodeEntity>();

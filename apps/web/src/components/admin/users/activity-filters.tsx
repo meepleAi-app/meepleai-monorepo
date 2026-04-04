@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 
 export interface ActivityFiltersProps {
   onUserSearchChange?: (value: string) => void;
@@ -55,7 +55,7 @@ export function ActivityFilters({
             type="text"
             placeholder="Name or email..."
             value={userSearch}
-            onChange={(e) => handleUserSearchChange(e.target.value)}
+            onChange={e => handleUserSearchChange(e.target.value)}
             className="bg-white dark:bg-zinc-900"
           />
         </div>

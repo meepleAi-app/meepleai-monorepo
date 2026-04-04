@@ -79,8 +79,8 @@ internal static class CookieHelpers
         var secure = configuration.Secure ?? isHttps;
         var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
 
-        // Use same SameSite as session cookie
-        var sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
+        // SEC-I5: Use same SameSite as session cookie — Lax for CSRF protection
+        var sameSite = configuration.SameSite ?? SameSiteMode.Lax;
 
         var options = new CookieOptions
         {
@@ -144,26 +144,6 @@ internal static class CookieHelpers
         context.Response.Cookies.Delete(UserRoleCookieName, options);
     }
 
-    // API Key Cookie Methods
-
-    public static void WriteApiKeyCookie(HttpContext context, string apiKey, DateTime? expiresAt = null)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var options = CreateApiKeyCookieOptions(context, expiresAt);
-        const string apiKeyCookieName = "meeple_apikey";
-        context.Response.Cookies.Append(apiKeyCookieName, apiKey, options);
-    }
-
-    public static void RemoveApiKeyCookie(HttpContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var options = BuildApiKeyCookieOptions(context);
-        options.Expires = DateTimeOffset.UnixEpoch;
-
-        const string apiKeyCookieName = "meeple_apikey";
-        context.Response.Cookies.Delete(apiKeyCookieName, options);
-    }
-
     public static string GetSessionCookieName(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -196,7 +176,6 @@ internal static class CookieHelpers
         }
 
         var secure = configuration.Secure ?? isHttps;
-        var secureForced = false;
 
         // Use configured SameSite or sensible defaults
         SameSiteMode sameSite;
@@ -208,19 +187,15 @@ internal static class CookieHelpers
         }
         else
         {
-            // Production/HTTPS: Default to SameSite=None for cross-origin
+            // SEC-I5: Production — default SameSite=Lax for CSRF protection
+            // Lax allows same-site navigation (links, GET) but blocks cross-site POST.
+            // Only use SameSite=None if API and frontend are on different domains.
             if (!secure && !configuration.Secure.HasValue)
             {
                 secure = true;
-                secureForced = true;
             }
 
-            sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
-
-            if (secureForced && sameSite != SameSiteMode.None)
-            {
-                sameSite = SameSiteMode.None;
-            }
+            sameSite = configuration.SameSite ?? SameSiteMode.Lax;
         }
 
         var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
@@ -246,54 +221,6 @@ internal static class CookieHelpers
         return context.RequestServices
             .GetRequiredService<IOptions<SessionCookieConfiguration>>()
             .Value;
-    }
-
-    private static CookieOptions CreateApiKeyCookieOptions(HttpContext context, DateTime? expiresAt)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var options = BuildApiKeyCookieOptions(context);
-        if (expiresAt.HasValue)
-        {
-            options.Expires = new DateTimeOffset(expiresAt.Value, TimeSpan.Zero);
-        }
-        else
-        {
-            // Default: API key cookie expires in 90 days
-            options.Expires = DateTimeOffset.UtcNow.AddDays(90);
-        }
-        return options;
-    }
-
-    private static CookieOptions BuildApiKeyCookieOptions(HttpContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var configuration = GetSessionCookieConfiguration(context);
-        var isHttps = context.Request.IsHttps;
-
-        if (!isHttps && configuration.UseForwardedProto &&
-            context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto) &&
-            forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
-        {
-            isHttps = true;
-        }
-
-        var secure = configuration.Secure ?? isHttps;
-        var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
-
-        var options = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = secure,
-            SameSite = SameSiteMode.Strict,
-            Path = path
-        };
-
-        if (!string.IsNullOrWhiteSpace(configuration.Domain))
-        {
-            options.Domain = configuration.Domain;
-        }
-
-        return options;
     }
 
 }

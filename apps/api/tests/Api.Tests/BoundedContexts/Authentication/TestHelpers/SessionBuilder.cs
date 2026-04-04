@@ -138,4 +138,3 @@ internal class SessionBuilder
     /// </summary>
     public static Session CreateExpired() => new SessionBuilder().Expired().Build();
 }
-

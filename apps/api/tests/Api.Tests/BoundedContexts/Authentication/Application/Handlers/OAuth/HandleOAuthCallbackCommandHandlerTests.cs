@@ -20,6 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 
@@ -95,20 +96,20 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotNull(result.UserId);
-        Assert.True(result.IsNewUser);
-        Assert.NotNull(result.SessionToken);
+        result.Success.Should().BeTrue();
+        result.UserId.Should().NotBeNull();
+        result.IsNewUser.Should().BeTrue();
+        result.SessionToken.Should().NotBeNull();
 
         // Verify user was created in database
         var createdUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userInfo.Email.ToLowerInvariant(), TestCancellationToken);
-        Assert.NotNull(createdUser);
-        Assert.Equal(userInfo.Email.ToLowerInvariant(), createdUser.Email);
+        createdUser.Should().NotBeNull();
+        createdUser.Email.Should().Be(userInfo.Email.ToLowerInvariant());
 
         // Verify OAuth account was created
         var createdAccount = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.UserId == createdUser.Id, TestCancellationToken);
-        Assert.NotNull(createdAccount);
-        Assert.Equal(command.Provider.ToLowerInvariant(), createdAccount.Provider);
+        createdAccount.Should().NotBeNull();
+        createdAccount.Provider.Should().Be(command.Provider.ToLowerInvariant());
     }
 
     [Fact]
@@ -146,14 +147,14 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(existingUser.Id, result.UserId);
-        Assert.False(result.IsNewUser); // User already existed
+        result.Success.Should().BeTrue();
+        result.UserId.Should().Be(existingUser.Id);
+        result.IsNewUser.Should().BeFalse(); // User already existed
 
         // Verify OAuth account was linked
         var linkedAccount = await _dbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.UserId == existingUser.Id, TestCancellationToken);
-        Assert.NotNull(linkedAccount);
-        Assert.Equal(command.Provider.ToLowerInvariant(), linkedAccount.Provider);
+        linkedAccount.Should().NotBeNull();
+        linkedAccount.Provider.Should().Be(command.Provider.ToLowerInvariant());
     }
 
     [Fact]
@@ -206,13 +207,13 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(existingUser.Id, result.UserId);
-        Assert.False(result.IsNewUser);
+        result.Success.Should().BeTrue();
+        result.UserId.Should().Be(existingUser.Id);
+        result.IsNewUser.Should().BeFalse();
 
         // Verify token was updated
         var updatedAccount = await _dbContext.OAuthAccounts.FirstAsync(oa => oa.Id == existingAccount.Id, TestCancellationToken);
-        Assert.Equal("new_encrypted_token", updatedAccount.AccessTokenEncrypted);
+        updatedAccount.AccessTokenEncrypted.Should().Be("new_encrypted_token");
     }
 
     [Fact]
@@ -352,9 +353,9 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Invalid state", result.ErrorMessage);
-        Assert.Contains("CSRF", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Invalid state");
+        result.ErrorMessage.Should().Contain("CSRF");
 
         // Should not proceed to token exchange
         _oauthServiceMock.Verify(
@@ -380,8 +381,8 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("OAuth token exchange failed", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("OAuth token exchange failed");
     }
 
     [Fact]
@@ -407,8 +408,8 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Failed to get user information", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Failed to get user information");
     }
 
     [Fact]
@@ -435,8 +436,8 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("email", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().ContainEquivalentOf("email");
     }
 
     [Fact]
@@ -462,8 +463,8 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]

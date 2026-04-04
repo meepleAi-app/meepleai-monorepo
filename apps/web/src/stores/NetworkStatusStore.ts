@@ -17,6 +17,17 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
+/** Navigator with Network Information API - not available in all browsers */
+interface NavigatorWithConnection {
+  connection?: {
+    effectiveType?: string;
+    downlink?: number;
+    rtt?: number;
+    addEventListener(type: string, listener: () => void): void;
+    removeEventListener(type: string, listener: () => void): void;
+  };
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -164,8 +175,7 @@ export const useNetworkStatusStore = create<NetworkStatusStore>()(
           if (typeof navigator === 'undefined') return;
 
           // Navigator.connection is not available in all browsers
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const connection = (navigator as any).connection;
+          const connection = (navigator as NavigatorWithConnection).connection;
           if (!connection) return;
 
           set(state => {
@@ -223,8 +233,7 @@ export const useNetworkStatusStore = create<NetworkStatusStore>()(
           window.addEventListener('offline', handleOffline);
 
           // Navigator.connection events (if available)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const connection = (navigator as any).connection;
+          const connection = (navigator as NavigatorWithConnection).connection;
           if (connection) {
             connection.addEventListener('change', handleConnectionChange);
           }

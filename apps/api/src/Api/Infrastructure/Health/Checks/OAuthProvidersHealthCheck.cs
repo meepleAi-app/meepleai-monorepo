@@ -8,14 +8,11 @@ namespace Api.Infrastructure.Health.Checks;
 /// </summary>
 public class OAuthProvidersHealthCheck : IHealthCheck
 {
-    private readonly IConfiguration _configuration;
     private readonly ILogger<OAuthProvidersHealthCheck> _logger;
 
     public OAuthProvidersHealthCheck(
-        IConfiguration configuration,
         ILogger<OAuthProvidersHealthCheck> logger)
     {
-        _configuration = configuration;
         _logger = logger;
     }
 
@@ -25,20 +22,16 @@ public class OAuthProvidersHealthCheck : IHealthCheck
     {
         var missingProviders = new List<string>();
 
-        // Check Google OAuth
-        var googleClientId = _configuration["Authentication:Google:ClientId"];
-        var googleClientSecret = _configuration["Authentication:Google:ClientSecret"];
-        if (string.IsNullOrWhiteSpace(googleClientId) || string.IsNullOrWhiteSpace(googleClientSecret))
+        // Check OAuth providers via environment variables (loaded by SecretLoader)
+        string[] providers = ["Google", "Discord", "GitHub"];
+        foreach (var provider in providers)
         {
-            missingProviders.Add("Google");
-        }
-
-        // Check Discord OAuth
-        var discordClientId = _configuration["Authentication:Discord:ClientId"];
-        var discordClientSecret = _configuration["Authentication:Discord:ClientSecret"];
-        if (string.IsNullOrWhiteSpace(discordClientId) || string.IsNullOrWhiteSpace(discordClientSecret))
-        {
-            missingProviders.Add("Discord");
+            var clientId = Environment.GetEnvironmentVariable($"{provider.ToUpperInvariant()}_OAUTH_CLIENT_ID");
+            var clientSecret = Environment.GetEnvironmentVariable($"{provider.ToUpperInvariant()}_OAUTH_CLIENT_SECRET");
+            if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+            {
+                missingProviders.Add(provider);
+            }
         }
 
         if (missingProviders.Count > 0)

@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 
 import type { RuleSpecComment } from './types';
 
-
 interface CommentItemProps {
   comment: RuleSpecComment;
   currentUserId: string;
@@ -44,9 +43,18 @@ export function CommentItem({
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
   const { alert: showAlert, AlertDialogComponent } = useAlertDialog();
 
+  const normalizedRole = currentUserRole?.toLowerCase();
   const canEdit = comment.userId === currentUserId && !disabled;
-  const canDelete = (comment.userId === currentUserId || currentUserRole === 'Admin') && !disabled;
-  const canResolve = (currentUserRole === 'Admin' || currentUserRole === 'Editor') && !disabled;
+  const canDelete =
+    (comment.userId === currentUserId ||
+      normalizedRole === 'admin' ||
+      normalizedRole === 'superadmin') &&
+    !disabled;
+  const canResolve =
+    (normalizedRole === 'admin' ||
+      normalizedRole === 'superadmin' ||
+      normalizedRole === 'editor') &&
+    !disabled;
   const isDisabled = disabled || isSubmitting;
 
   const handleSaveEdit = async () => {

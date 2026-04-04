@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -240,8 +241,8 @@ public sealed class OpenRouterBudgetAlertBackgroundServiceTests : IDisposable
         await InvokeCheckBudgetAsync(sut);
 
         // Assert
-        Assert.NotNull(captured);
-        Assert.True(captured!.Severity.IsInfo);
+        captured.Should().NotBeNull();
+        captured!.Severity.IsInfo.Should().BeTrue();
     }
 
     [Fact]
@@ -266,8 +267,8 @@ public sealed class OpenRouterBudgetAlertBackgroundServiceTests : IDisposable
 
         // Assert — first alert is the 50% threshold (also fires), second is 80%
         // The last captured notification is for 80% (Warning)
-        Assert.NotNull(captured);
-        Assert.True(captured!.Severity.IsWarning);
+        captured.Should().NotBeNull();
+        captured!.Severity.IsWarning.Should().BeTrue();
     }
 
     [Fact]
@@ -291,8 +292,8 @@ public sealed class OpenRouterBudgetAlertBackgroundServiceTests : IDisposable
         await InvokeCheckBudgetAsync(sut);
 
         // Assert — last captured is the 100% threshold (Error)
-        Assert.NotNull(captured);
-        Assert.True(captured!.Severity.IsError);
+        captured.Should().NotBeNull();
+        captured!.Severity.IsError.Should().BeTrue();
     }
 
     // ── Deduplication: same threshold not re-alerted ──────────────────────────

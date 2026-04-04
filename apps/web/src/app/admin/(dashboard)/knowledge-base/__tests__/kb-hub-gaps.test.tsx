@@ -1,11 +1,13 @@
 /**
  * KB Admin Hub — Gap fixes tests
- * Verifies: Embedding Service card, Usage & Costs quick link, Qdrant search panel,
+ * Verifies: Embedding Service card, Usage & Costs quick link, vector search panel,
  * RAGPipelineFlow stage drill-down.
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React from 'react';
 
 // ── Mock Next.js Link ─────────────────────────────────────────────────────────
 
@@ -17,7 +19,7 @@ vi.mock('next/link', () => ({
 
 // ── Mock lucide-react icons used in hub ──────────────────────────────────────
 
-vi.mock('lucide-react', async (importOriginal) => {
+vi.mock('lucide-react', async importOriginal => {
   const actual = await importOriginal<typeof import('lucide-react')>();
   return {
     ...actual,
@@ -29,7 +31,9 @@ vi.mock('lucide-react', async (importOriginal) => {
 
 vi.mock('@/components/ui/data-display/card', () => ({
   Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className} data-testid="card">{children}</div>
+    <div className={className} data-testid="card">
+      {children}
+    </div>
   ),
   CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -63,23 +67,41 @@ const mockPipelineData = {
 
 // ── Admin client mock (single, shared across all suites) ──────────────────────
 
+const mockVectorStats = {
+  totalVectors: 1500,
+  dimensions: 768,
+  gamesIndexed: 2,
+  avgHealthPercent: 95,
+  sizeEstimateBytes: 15728640,
+  gameBreakdown: [
+    {
+      gameId: 'abc',
+      gameName: 'Catan',
+      vectorCount: 1000,
+      completedCount: 950,
+      failedCount: 50,
+      healthPercent: 95.0,
+    },
+    {
+      gameId: 'xyz',
+      gameName: 'Ticket to Ride',
+      vectorCount: 500,
+      completedCount: 480,
+      failedCount: 20,
+      healthPercent: 96.0,
+    },
+  ],
+};
+
 const mockAdminClient = {
-  getVectorCollections: vi.fn().mockResolvedValue({
-    collections: [
-      { name: 'game_rules', vectorCount: 1000, dimensions: 384, storage: '10 MB', health: 95 },
-      { name: 'faq_docs', vectorCount: 500, dimensions: 384, storage: '5 MB', health: 80 },
-    ],
-  }),
-  searchQdrantCollection: vi.fn().mockResolvedValue({
-    query: 'test query',
+  getVectorStats: vi.fn().mockResolvedValue(mockVectorStats),
+  searchVectors: vi.fn().mockResolvedValue({
     results: [
-      { id: 1, score: 0.92, payload: { text: 'This is the first result', gameId: 'abc' } },
-      { id: 2, score: 0.65, payload: { text: 'Second result content', gameId: 'xyz' } },
+      { documentId: 'doc1', text: 'This is the first result', chunkIndex: 0, pageNumber: 1 },
+      { documentId: 'doc2', text: 'Second result content', chunkIndex: 1, pageNumber: 2 },
     ],
-    total: 2,
+    errorMessage: null,
   }),
-  deleteQdrantCollection: vi.fn(),
-  rebuildQdrantIndex: vi.fn(),
   getPipelineHealth: vi.fn().mockResolvedValue(mockPipelineData),
 };
 
@@ -91,61 +113,61 @@ vi.mock('@/lib/api/core/httpClient', () => ({
   HttpClient: vi.fn().mockImplementation(() => ({})),
 }));
 
-vi.mock('@/components/admin/knowledge-base/vector-collection-card', () => ({
-  VectorCollectionCard: ({ name }: { name: string }) => (
-    <div data-testid={`collection-card-${name}`}>{name}</div>
-  ),
-}));
-
 vi.mock('@/components/ui/primitives/button', () => ({
-  Button: ({ children, onClick, disabled }: {
+  Button: ({
+    children,
+    onClick,
+    disabled,
+  }: {
     children: React.ReactNode;
     onClick?: () => void;
     disabled?: boolean;
   }) => (
-    <button onClick={onClick} disabled={disabled}>{children}</button>
+    <button onClick={onClick} disabled={disabled}>
+      {children}
+    </button>
   ),
 }));
 
 vi.mock('@/components/ui/primitives/input', () => ({
-  Input: ({ value, onChange, onKeyDown, placeholder }: {
+  Input: ({
+    value,
+    onChange,
+    onKeyDown,
+    placeholder,
+  }: {
     value: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
     placeholder?: string;
-  }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      onKeyDown={onKeyDown}
-      placeholder={placeholder}
-    />
-  ),
+  }) => <input value={value} onChange={onChange} onKeyDown={onKeyDown} placeholder={placeholder} />,
 }));
 
 vi.mock('@/components/ui/overlays/select', () => ({
-  Select: ({ value, onValueChange, children }: {
+  Select: ({
+    value,
+    onValueChange,
+    children,
+  }: {
     value: string;
     onValueChange: (v: string) => void;
     children: React.ReactNode;
   }) => (
-    <select
-      value={value}
-      onChange={(e) => onValueChange(e.target.value)}
-      data-testid="select"
-    >
+    <select value={value} onChange={e => onValueChange(e.target.value)} data-testid="select">
       {children}
     </select>
   ),
   SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectValue: ({ placeholder }: { placeholder?: string }) => <option value="">{placeholder}</option>,
+  SelectValue: ({ placeholder }: { placeholder?: string }) => (
+    <option value="">{placeholder}</option>
+  ),
   SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
     <option value={value}>{children}</option>
   ),
 }));
 
-vi.mock('@tanstack/react-query', async (importOriginal) => {
+vi.mock('@tanstack/react-query', async importOriginal => {
   const actual = await importOriginal<typeof import('@tanstack/react-query')>();
   return {
     ...actual,
@@ -168,10 +190,15 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
 
 // ── Hub page tests ────────────────────────────────────────────────────────────
 
+function renderWithQueryClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 describe('KnowledgeBasePage — Hub Gap Fixes', () => {
   it('renders Embedding Service card with correct link', async () => {
     const { default: KnowledgeBasePage } = await import('../page');
-    render(<KnowledgeBasePage />);
+    renderWithQueryClient(<KnowledgeBasePage />);
 
     const embeddingLink = screen.getByRole('link', { name: /embedding service/i });
     expect(embeddingLink).toBeDefined();
@@ -180,7 +207,7 @@ describe('KnowledgeBasePage — Hub Gap Fixes', () => {
 
   it('renders Usage & Costs quick link', async () => {
     const { default: KnowledgeBasePage } = await import('../page');
-    render(<KnowledgeBasePage />);
+    renderWithQueryClient(<KnowledgeBasePage />);
 
     const usageLink = screen.getByRole('link', { name: /usage.*costs/i });
     expect(usageLink).toBeDefined();
@@ -189,7 +216,7 @@ describe('KnowledgeBasePage — Hub Gap Fixes', () => {
 
   it('renders all 7 section cards (original 6 + Embedding)', async () => {
     const { default: KnowledgeBasePage } = await import('../page');
-    render(<KnowledgeBasePage />);
+    renderWithQueryClient(<KnowledgeBasePage />);
 
     const expectedSections = [
       'Documents',
@@ -208,7 +235,7 @@ describe('KnowledgeBasePage — Hub Gap Fixes', () => {
 
   it('renders 5 quick links including the new Usage & Costs', async () => {
     const { default: KnowledgeBasePage } = await import('../page');
-    render(<KnowledgeBasePage />);
+    renderWithQueryClient(<KnowledgeBasePage />);
 
     const expectedLinks = [
       { text: /rag executions log/i, href: '/admin/agents/analytics' },
@@ -225,37 +252,26 @@ describe('KnowledgeBasePage — Hub Gap Fixes', () => {
   });
 });
 
-// ── Qdrant Search Panel tests ─────────────────────────────────────────────────
+// ── Vector Search Panel tests ─────────────────────────────────────────────────
 
-describe('VectorCollectionsPage — Semantic Search Panel', () => {
+describe('VectorStorePage — Semantic Search Panel', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
     // Reset admin client mocks to defaults
-    mockAdminClient.getVectorCollections.mockResolvedValue({
-      collections: [
-        { name: 'game_rules', vectorCount: 1000, dimensions: 384, storage: '10 MB', health: 95 },
-        { name: 'faq_docs', vectorCount: 500, dimensions: 384, storage: '5 MB', health: 80 },
-      ],
-    });
-    mockAdminClient.searchQdrantCollection.mockResolvedValue({
-      query: 'test query',
+    mockAdminClient.getVectorStats.mockResolvedValue(mockVectorStats);
+    mockAdminClient.searchVectors.mockResolvedValue({
       results: [
-        { id: 1, score: 0.92, payload: { text: 'First result', gameId: 'abc' } },
-        { id: 2, score: 0.65, payload: { text: 'Second result', gameId: 'xyz' } },
+        { documentId: 'doc1', text: 'First result', chunkIndex: 0, pageNumber: 1 },
+        { documentId: 'doc2', text: 'Second result', chunkIndex: 1, pageNumber: 2 },
       ],
-      total: 2,
+      errorMessage: null,
     });
 
-    // Make useQuery return collections so the collection <select> has real <option> elements
+    // Make useQuery return vector stats
     const rq = await import('@tanstack/react-query');
     vi.mocked(rq.useQuery).mockReturnValue({
-      data: {
-        collections: [
-          { name: 'game_rules', vectorCount: 1000, dimensions: 384, storage: '10 MB', health: 95 },
-          { name: 'faq_docs', vectorCount: 500, dimensions: 384, storage: '5 MB', health: 80 },
-        ],
-      },
+      data: mockVectorStats,
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -264,15 +280,15 @@ describe('VectorCollectionsPage — Semantic Search Panel', () => {
   });
 
   it('renders the Semantic Search section heading', async () => {
-    const { default: VectorCollectionsPage } = await import('../vectors/page');
-    render(<VectorCollectionsPage />);
+    const { default: VectorStorePage } = await import('../vectors/page');
+    render(<VectorStorePage />);
 
     expect(screen.getByText('Semantic Search')).toBeDefined();
   });
 
   it('renders search input and Search button', async () => {
-    const { default: VectorCollectionsPage } = await import('../vectors/page');
-    render(<VectorCollectionsPage />);
+    const { default: VectorStorePage } = await import('../vectors/page');
+    render(<VectorStorePage />);
 
     const searchInput = screen.getByPlaceholderText('Enter a query to search vectors...');
     expect(searchInput).toBeDefined();
@@ -282,44 +298,36 @@ describe('VectorCollectionsPage — Semantic Search Panel', () => {
   });
 
   it('disables Search button when query is empty', async () => {
-    const { default: VectorCollectionsPage } = await import('../vectors/page');
-    render(<VectorCollectionsPage />);
+    const { default: VectorStorePage } = await import('../vectors/page');
+    render(<VectorStorePage />);
 
     const searchBtn = screen.getByRole('button', { name: /^search$/i });
     expect(searchBtn).toHaveProperty('disabled', true);
   });
 
-  it('enables Search button when query and collection are provided', async () => {
-    const { default: VectorCollectionsPage } = await import('../vectors/page');
-    render(<VectorCollectionsPage />);
+  it('enables Search button when query is provided', async () => {
+    const { default: VectorStorePage } = await import('../vectors/page');
+    render(<VectorStorePage />);
 
-    // Type in query
+    // Type in query — that is enough to enable the button (no collection required)
     const searchInput = screen.getByPlaceholderText('Enter a query to search vectors...');
     fireEvent.change(searchInput, { target: { value: 'board game rules' } });
-
-    // Select collection — selects[0] is collection, selects[1] is limit
-    const selects = screen.getAllByTestId('select');
-    fireEvent.change(selects[0], { target: { value: 'game_rules' } });
 
     const searchBtn = screen.getByRole('button', { name: /^search$/i });
     expect(searchBtn).toHaveProperty('disabled', false);
   });
 
   it('shows "No results found" message when results are empty', async () => {
-    mockAdminClient.searchQdrantCollection.mockResolvedValueOnce({
-      query: 'no match',
+    mockAdminClient.searchVectors.mockResolvedValueOnce({
       results: [],
-      total: 0,
+      errorMessage: null,
     });
 
-    const { default: VectorCollectionsPage } = await import('../vectors/page');
-    render(<VectorCollectionsPage />);
+    const { default: VectorStorePage } = await import('../vectors/page');
+    render(<VectorStorePage />);
 
     const searchInput = screen.getByPlaceholderText('Enter a query to search vectors...');
     fireEvent.change(searchInput, { target: { value: 'no match' } });
-
-    const selects = screen.getAllByTestId('select');
-    fireEvent.change(selects[0], { target: { value: 'game_rules' } });
 
     const searchBtn = screen.getByRole('button', { name: /^search$/i });
     fireEvent.click(searchBtn);
@@ -338,9 +346,7 @@ describe('RAGPipelineFlow — Stage Drill-Down', () => {
   });
 
   it('renders stage buttons as clickable', async () => {
-    const { RAGPipelineFlow } = await import(
-      '@/components/admin/knowledge-base/rag-pipeline-flow'
-    );
+    const { RAGPipelineFlow } = await import('@/components/admin/knowledge-base/rag-pipeline-flow');
     const { useQuery } = await import('@tanstack/react-query');
     vi.mocked(useQuery).mockReturnValue({
       data: mockPipelineData,
@@ -358,9 +364,7 @@ describe('RAGPipelineFlow — Stage Drill-Down', () => {
   });
 
   it('shows drill-down panel on stage click with metric details', async () => {
-    const { RAGPipelineFlow } = await import(
-      '@/components/admin/knowledge-base/rag-pipeline-flow'
-    );
+    const { RAGPipelineFlow } = await import('@/components/admin/knowledge-base/rag-pipeline-flow');
     const { useQuery } = await import('@tanstack/react-query');
     vi.mocked(useQuery).mockReturnValue({
       data: mockPipelineData,
@@ -387,9 +391,7 @@ describe('RAGPipelineFlow — Stage Drill-Down', () => {
   });
 
   it('collapses drill-down panel when same stage clicked again', async () => {
-    const { RAGPipelineFlow } = await import(
-      '@/components/admin/knowledge-base/rag-pipeline-flow'
-    );
+    const { RAGPipelineFlow } = await import('@/components/admin/knowledge-base/rag-pipeline-flow');
     const { useQuery } = await import('@tanstack/react-query');
     vi.mocked(useQuery).mockReturnValue({
       data: mockPipelineData,
@@ -417,9 +419,7 @@ describe('RAGPipelineFlow — Stage Drill-Down', () => {
   });
 
   it('switches drill-down panel when different stage clicked', async () => {
-    const { RAGPipelineFlow } = await import(
-      '@/components/admin/knowledge-base/rag-pipeline-flow'
-    );
+    const { RAGPipelineFlow } = await import('@/components/admin/knowledge-base/rag-pipeline-flow');
     const { useQuery } = await import('@tanstack/react-query');
     vi.mocked(useQuery).mockReturnValue({
       data: mockPipelineData,

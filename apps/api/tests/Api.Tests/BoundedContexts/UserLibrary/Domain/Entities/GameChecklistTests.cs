@@ -169,7 +169,7 @@ public sealed class GameChecklistTests
     }
 
     [Fact]
-    public void MarkAsCompleted_WhenAlreadyCompleted_DoesNotChangeUpdatedAt()
+    public async Task MarkAsCompleted_WhenAlreadyCompleted_DoesNotChangeUpdatedAt()
     {
         // Arrange
         var checklist = GameChecklist.Create(
@@ -178,7 +178,7 @@ public sealed class GameChecklistTests
         var originalUpdatedAt = checklist.UpdatedAt;
 
         // Wait a bit to ensure time difference
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         checklist.MarkAsCompleted();

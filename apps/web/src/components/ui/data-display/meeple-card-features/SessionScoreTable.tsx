@@ -131,7 +131,6 @@ export const SessionScoreTable = React.memo(function SessionScoreTable({
                   </td>
                   {visibleRounds.map(r => (
                     <td key={r} className="text-center px-1 py-0.5 tabular-nums">
-                      {/* eslint-disable-next-line security/detect-object-injection */}
                       {row?.scores[r] ?? '-'}
                     </td>
                   ))}

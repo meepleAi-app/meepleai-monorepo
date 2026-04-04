@@ -41,7 +41,7 @@ import {
   TableRow,
 } from '@/components/ui/data-display/table';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { usePlayerStatistics } from '@/lib/hooks/use-play-records';
+import { usePlayerStatistics } from '@/lib/domain-hooks/usePlayRecords';
 
 const CHART_COLORS = [
   'hsl(25 95% 45%)', // Orange
@@ -84,9 +84,7 @@ export function PlayerStatistics() {
   }
 
   const winRate =
-    stats.totalSessions > 0
-      ? ((stats.totalWins / stats.totalSessions) * 100).toFixed(1)
-      : '0.0';
+    stats.totalSessions > 0 ? ((stats.totalWins / stats.totalSessions) * 100).toFixed(1) : '0.0';
 
   // Prepare chart data
   const gamePlayData = Object.entries(stats.gamePlayCounts)
@@ -117,9 +115,7 @@ export function PlayerStatistics() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{stats.totalSessions}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across all games
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">Across all games</p>
           </CardContent>
         </Card>
 
@@ -130,9 +126,7 @@ export function PlayerStatistics() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{stats.totalWins}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Victory count
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">Victory count</p>
           </CardContent>
         </Card>
 
@@ -143,9 +137,7 @@ export function PlayerStatistics() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{winRate}%</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Success percentage
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">Success percentage</p>
           </CardContent>
         </Card>
 
@@ -155,12 +147,8 @@ export function PlayerStatistics() {
             <TrendingUp className="w-4 h-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {Object.keys(stats.gamePlayCounts).length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Unique games
-            </p>
+            <div className="text-3xl font-bold">{Object.keys(stats.gamePlayCounts).length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Unique games</p>
           </CardContent>
         </Card>
       </div>
@@ -211,18 +199,13 @@ export function PlayerStatistics() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
-                  }
+                  label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="hsl(25 95% 45%)"
                   dataKey="value"
                 >
                   {winDistributionData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={CHART_COLORS[index % CHART_COLORS.length]}
-                    />
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip

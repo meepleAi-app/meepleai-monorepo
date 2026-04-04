@@ -49,13 +49,25 @@ internal static class AdminDebugChatEndpoints
 
         try
         {
+            // Map inline config override if provided
+            var configOverride = req.configOverride != null
+                ? new Api.BoundedContexts.KnowledgeBase.Application.Queries.DebugQaConfigOverride(
+                    DenseWeight: req.configOverride.DenseWeight,
+                    TopK: req.configOverride.TopK,
+                    RerankingEnabled: req.configOverride.RerankingEnabled,
+                    Temperature: req.configOverride.Temperature,
+                    MaxTokens: req.configOverride.MaxTokens,
+                    Model: req.configOverride.Model)
+                : null;
+
             var query = new StreamDebugQaQuery(
                 req.gameId,
                 req.query,
                 req.chatId,
                 req.documentIds,
                 req.strategyOverride,
-                req.includePrompts);
+                req.includePrompts,
+                configOverride);
 
             await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
             {

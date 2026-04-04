@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 /**
  * IndexedDB Utility (Issue #2054)
  *
@@ -70,7 +72,7 @@ export class IndexedDBStore<T> {
 
     // SSR guard
     if (typeof indexedDB === 'undefined') {
-      console.warn('[IndexedDBStore] IndexedDB not available (SSR)');
+      logger.warn('[IndexedDBStore] IndexedDB not available (SSR)');
       return;
     }
 
@@ -78,7 +80,7 @@ export class IndexedDBStore<T> {
       const request = indexedDB.open(this.dbName, this.options.version);
 
       request.onerror = () => {
-        console.error('[IndexedDBStore] Failed to open database:', request.error);
+        logger.error('[IndexedDBStore] Failed to open database:', request.error);
         reject(request.error);
       };
 

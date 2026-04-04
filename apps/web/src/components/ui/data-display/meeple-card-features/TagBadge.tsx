@@ -12,7 +12,13 @@ import React from 'react';
 
 import { cva, type VariantProps } from 'class-variance-authority';
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 import { getTagPreset, type TagConfig, type TagPresetKey } from './tag-presets';
@@ -77,18 +83,18 @@ export const TagBadge = React.memo(function TagBadge({
     typeof tag === 'string' ? getTagPreset(tag) : (tag as TagConfig);
 
   if (!config) {
-    console.warn(`TagBadge: Unknown tag preset "${tag}"`);
+    logger.warn(`TagBadge: Unknown tag preset "${tag}"`);
     return null;
   }
 
   const { label, abbr, bgClass, textClass, icon: Icon, description } = config;
 
   // Determine label based on variant and iconOnly mode
-  const displayLabel =
-    variant === 'mobile' || iconOnly ? '' : variant === 'tablet' ? abbr : label;
+  const displayLabel = variant === 'mobile' || iconOnly ? '' : variant === 'tablet' ? abbr : label;
 
   // Icon size based on variant
-  const iconSize = variant === 'mobile' ? 'w-3 h-3' : variant === 'tablet' ? 'w-2.5 h-2.5' : 'w-3 h-3';
+  const iconSize =
+    variant === 'mobile' ? 'w-3 h-3' : variant === 'tablet' ? 'w-2.5 h-2.5' : 'w-3 h-3';
 
   return (
     <TooltipProvider>
@@ -106,7 +112,9 @@ export const TagBadge = React.memo(function TagBadge({
             data-testid={`tag-badge-${config.key}`}
             aria-label={ariaLabel || description}
           >
-            {showIcon && Icon && <Icon className={cn(iconSize, 'flex-shrink-0')} aria-hidden="true" />}
+            {showIcon && Icon && (
+              <Icon className={cn(iconSize, 'flex-shrink-0')} aria-hidden="true" />
+            )}
             {displayLabel && <span className="truncate">{displayLabel}</span>}
           </span>
         </TooltipTrigger>

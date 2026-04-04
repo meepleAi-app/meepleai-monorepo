@@ -1,14 +1,15 @@
 /**
- * Gaming Hub Dashboard - Issue #4584
- * Epic #4575: Gaming Hub Dashboard - Phase 2
+ * Gaming Hub Dashboard
  *
- * Authenticated user dashboard with gaming-focused hub
+ * Authenticated user dashboard with gaming-focused hub.
+ * Uses DashboardClient with HeroBanner, QuickActionsRow,
+ * and MeepleCard-based game sections.
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
 
-import { GamingHubClient } from '../gaming-hub-client';
-import { DashboardNavConfig } from './NavConfig';
+import { DashboardClient } from './dashboard-client';
+import { DashboardMobile } from './dashboard-mobile';
 
 import type { Metadata } from 'next';
 
@@ -28,8 +29,12 @@ export const dynamic = 'force-dynamic';
 export default function GamingHubDashboardPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <DashboardNavConfig />
-      <GamingHubClient />
+      <div className="md:hidden">
+        <DashboardMobile />
+      </div>
+      <div className="hidden md:block">
+        <DashboardClient />
+      </div>
     </RequireRole>
   );
 }

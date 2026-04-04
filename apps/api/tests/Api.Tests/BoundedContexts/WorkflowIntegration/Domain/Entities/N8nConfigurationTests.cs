@@ -1,6 +1,7 @@
 using Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 using Api.BoundedContexts.WorkflowIntegration.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Domain.Entities;
@@ -26,11 +27,11 @@ public class N8NConfigurationTests
         var config = new N8NConfiguration(id, name, baseUrl, apiKey, createdBy);
 
         // Assert
-        Assert.Equal(id, config.Id);
-        Assert.Equal(name, config.Name);
-        Assert.Equal(baseUrl.Value, config.BaseUrl.Value);
-        Assert.Equal(apiKey, config.ApiKeyEncrypted);
-        Assert.True(config.IsActive);
+        config.Id.Should().Be(id);
+        config.Name.Should().Be(name);
+        config.BaseUrl.Value.Should().Be(baseUrl.Value);
+        config.ApiKeyEncrypted.Should().Be(apiKey);
+        config.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -50,7 +51,7 @@ public class N8NConfigurationTests
         config.Activate();
 
         // Assert
-        Assert.True(config.IsActive);
+        config.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class N8NConfigurationTests
         config.Deactivate();
 
         // Assert
-        Assert.False(config.IsActive);
+        config.IsActive.Should().BeFalse();
     }
 }
 

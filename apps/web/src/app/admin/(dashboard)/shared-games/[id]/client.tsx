@@ -20,6 +20,7 @@ import {
   FileText,
   Link2,
   MoreHorizontal,
+  Settings2,
   Trash2,
   Unlink,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { GameProcessingQueue } from '@/components/admin/shared-games/GameProcessingQueue';
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -47,14 +49,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
-import { Button } from '@/components/ui/primitives/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
 import { api, type SharedGameDocument } from '@/lib/api';
 import { getAgentDefinitions } from '@/lib/api/admin-agent-client';
 
@@ -288,16 +290,30 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 hover:text-foreground transition-colors"
               >
-                BGG #{game.bggId}
+                ID #{game.bggId}
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
           </div>
         </div>
 
-        <Button variant="outline" size="sm" disabled title="Edit functionality coming soon">
-          Edit Game
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href={`/admin/shared-games/${gameId}/knowledge-base`}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Bot className="h-4 w-4" />
+              Knowledge Base
+            </Button>
+          </Link>
+          <Link href={`/admin/shared-games/${gameId}/rag-setup`}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Settings2 className="h-4 w-4" />
+              RAG Setup
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm" disabled title="Edit functionality coming soon">
+            Edit Game
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -349,7 +365,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
 
                     {game.averageRating && (
                       <>
-                        <dt className="text-muted-foreground">BGG Rating</dt>
+                        <dt className="text-muted-foreground">Rating</dt>
                         <dd className="font-medium flex items-center gap-1">
                           <span className="text-amber-500">★</span>
                           {game.averageRating.toFixed(1)}
@@ -621,6 +637,16 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
 
         {/* ── Documents Tab ───────────────────────────────────────────────── */}
         <TabsContent value="documents" className="space-y-6 mt-6">
+          {/* Link to RAG Setup dashboard (#256: deprecate inline wizard) */}
+          <div className="flex justify-end">
+            <Link href={`/admin/shared-games/${gameId}/rag-setup`}>
+              <Button size="sm">
+                <Settings2 className="mr-1.5 h-3.5 w-3.5" />
+                RAG Setup Dashboard
+              </Button>
+            </Link>
+          </div>
+
           {/* Upload */}
           <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
             <CardHeader>
@@ -633,6 +659,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
               <PdfUploadSection gameId={gameId} onPdfUploaded={() => refetchDocuments()} />
             </CardContent>
           </Card>
+
+          {/* Processing queue mini-widget */}
+          <GameProcessingQueue gameId={gameId} />
 
           {/* Document list */}
           <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">

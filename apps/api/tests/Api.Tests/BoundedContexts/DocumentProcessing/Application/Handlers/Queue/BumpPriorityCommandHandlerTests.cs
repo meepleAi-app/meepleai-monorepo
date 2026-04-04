@@ -1,5 +1,4 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
-using Api.BoundedContexts.DocumentProcessing.Application.Handlers.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
@@ -13,15 +12,15 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers.Queue;
 
 [Trait("Category", TestCategories.Unit)]
-public sealed class BumpPriorityCommandHandlerTests
+public sealed class SetPriorityCommandHandlerTests
 {
     private readonly Mock<IProcessingJobRepository> _jobRepositoryMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
-    private readonly BumpPriorityCommandHandler _handler;
+    private readonly SetPriorityCommandHandler _handler;
 
-    public BumpPriorityCommandHandlerTests()
+    public SetPriorityCommandHandlerTests()
     {
-        _handler = new BumpPriorityCommandHandler(
+        _handler = new SetPriorityCommandHandler(
             _jobRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
@@ -32,7 +31,7 @@ public sealed class BumpPriorityCommandHandlerTests
         // Arrange
         var jobId = Guid.NewGuid();
         var job = ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), (int)ProcessingPriority.Normal, 0);
-        var command = new BumpPriorityCommand(jobId, ProcessingPriority.Urgent);
+        var command = new SetPriorityCommand(jobId, ProcessingPriority.Urgent);
 
         _jobRepositoryMock
             .Setup(r => r.GetByIdAsync(jobId, It.IsAny<CancellationToken>()))
@@ -55,7 +54,7 @@ public sealed class BumpPriorityCommandHandlerTests
     public async Task Handle_JobNotFound_ThrowsNotFoundException()
     {
         // Arrange
-        var command = new BumpPriorityCommand(Guid.NewGuid(), ProcessingPriority.High);
+        var command = new SetPriorityCommand(Guid.NewGuid(), ProcessingPriority.High);
         _jobRepositoryMock
             .Setup(r => r.GetByIdAsync(command.JobId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ProcessingJob?)null);
@@ -72,7 +71,7 @@ public sealed class BumpPriorityCommandHandlerTests
         var job = ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), (int)ProcessingPriority.Normal, 0);
         job.Start();
 
-        var command = new BumpPriorityCommand(job.Id, ProcessingPriority.Urgent);
+        var command = new SetPriorityCommand(job.Id, ProcessingPriority.Urgent);
         _jobRepositoryMock
             .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);

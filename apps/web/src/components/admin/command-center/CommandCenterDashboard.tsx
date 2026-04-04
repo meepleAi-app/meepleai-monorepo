@@ -89,13 +89,55 @@ export interface PendingAction {
 
 const mockServices: ServiceData[] = [
   { id: 'api', name: 'API Gateway', status: 'online', latency: 42, uptime: 99.97, icon: Server },
-  { id: 'postgres', name: 'PostgreSQL', status: 'online', latency: 8, uptime: 99.99, icon: Database },
+  {
+    id: 'postgres',
+    name: 'PostgreSQL',
+    status: 'online',
+    latency: 8,
+    uptime: 99.99,
+    icon: Database,
+  },
   { id: 'redis', name: 'Redis Cache', status: 'online', latency: 2, uptime: 100, icon: Zap },
-  { id: 'qdrant', name: 'Qdrant Vector', status: 'online', latency: 15, uptime: 99.95, icon: HardDrive },
-  { id: 'embedding', name: 'Embedding Service', status: 'degraded', latency: 180, uptime: 98.5, icon: Bot },
-  { id: 'reranker', name: 'Reranker Service', status: 'online', latency: 95, uptime: 99.8, icon: Cpu },
-  { id: 'smoldocling', name: 'SmolDocling', status: 'maintenance', latency: 0, uptime: 95.2, icon: FileText },
-  { id: 'unstructured', name: 'Unstructured', status: 'online', latency: 250, uptime: 99.1, icon: FileText },
+  {
+    id: 'pgvector',
+    name: 'pgvector',
+    status: 'online',
+    latency: 15,
+    uptime: 99.95,
+    icon: HardDrive,
+  },
+  {
+    id: 'embedding',
+    name: 'Embedding Service',
+    status: 'degraded',
+    latency: 180,
+    uptime: 98.5,
+    icon: Bot,
+  },
+  {
+    id: 'reranker',
+    name: 'Reranker Service',
+    status: 'online',
+    latency: 95,
+    uptime: 99.8,
+    icon: Cpu,
+  },
+  {
+    id: 'smoldocling',
+    name: 'SmolDocling',
+    status: 'maintenance',
+    latency: 0,
+    uptime: 95.2,
+    icon: FileText,
+  },
+  {
+    id: 'unstructured',
+    name: 'Unstructured',
+    status: 'online',
+    latency: 250,
+    uptime: 99.1,
+    icon: FileText,
+  },
 ];
 
 const mockMetrics: SystemMetric[] = [
@@ -110,13 +152,37 @@ const mockMetrics: SystemMetric[] = [
 ];
 
 const mockAlerts: AlertData[] = [
-  { id: '1', severity: 'warning', message: 'Embedding service latency above threshold (180ms)', timestamp: new Date(Date.now() - 300000), source: 'embedding-service' },
-  { id: '2', severity: 'info', message: 'SmolDocling maintenance window in progress', timestamp: new Date(Date.now() - 600000), source: 'smoldocling' },
-  { id: '3', severity: 'critical', message: 'High memory usage on reranker-service (92%)', timestamp: new Date(Date.now() - 900000), source: 'reranker-service' },
+  {
+    id: '1',
+    severity: 'warning',
+    message: 'Embedding service latency above threshold (180ms)',
+    timestamp: new Date(Date.now() - 300000),
+    source: 'embedding-service',
+  },
+  {
+    id: '2',
+    severity: 'info',
+    message: 'SmolDocling maintenance window in progress',
+    timestamp: new Date(Date.now() - 600000),
+    source: 'smoldocling',
+  },
+  {
+    id: '3',
+    severity: 'critical',
+    message: 'High memory usage on reranker-service (92%)',
+    timestamp: new Date(Date.now() - 900000),
+    source: 'reranker-service',
+  },
 ];
 
 const mockPendingActions: PendingAction[] = [
-  { id: '1', type: 'approval', title: 'Game Approvals', count: 12, href: '/admin/shared-games/pending-approvals' },
+  {
+    id: '1',
+    type: 'approval',
+    title: 'Game Approvals',
+    count: 12,
+    href: '/admin/shared-games/pending-approvals',
+  },
   { id: '2', type: 'moderation', title: 'Content Review', count: 5, href: '/admin/games' },
   { id: '3', type: 'review', title: 'Share Requests', count: 8, href: '/admin/share-requests' },
 ];
@@ -127,18 +193,40 @@ const mockPendingActions: PendingAction[] = [
 
 const getStatusColor = (status: ServiceStatus) => {
   switch (status) {
-    case 'online': return { bg: 'bg-emerald-500', glow: 'shadow-emerald-500/50', text: 'text-emerald-400' };
-    case 'degraded': return { bg: 'bg-amber-500', glow: 'shadow-amber-500/50', text: 'text-amber-400' };
-    case 'offline': return { bg: 'bg-red-500', glow: 'shadow-red-500/50', text: 'text-red-400' };
-    case 'maintenance': return { bg: 'bg-blue-500', glow: 'shadow-blue-500/50', text: 'text-blue-400' };
+    case 'online':
+      return { bg: 'bg-emerald-500', glow: 'shadow-emerald-500/50', text: 'text-emerald-400' };
+    case 'degraded':
+      return { bg: 'bg-amber-500', glow: 'shadow-amber-500/50', text: 'text-amber-400' };
+    case 'offline':
+      return { bg: 'bg-red-500', glow: 'shadow-red-500/50', text: 'text-red-400' };
+    case 'maintenance':
+      return { bg: 'bg-blue-500', glow: 'shadow-blue-500/50', text: 'text-blue-400' };
   }
 };
 
 const getSeverityStyles = (severity: 'critical' | 'warning' | 'info') => {
   switch (severity) {
-    case 'critical': return { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: XCircle };
-    case 'warning': return { bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-400', icon: AlertTriangle };
-    case 'info': return { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: Activity };
+    case 'critical':
+      return {
+        bg: 'bg-red-500/10',
+        border: 'border-red-500/30',
+        text: 'text-red-400',
+        icon: XCircle,
+      };
+    case 'warning':
+      return {
+        bg: 'bg-amber-500/10',
+        border: 'border-amber-500/30',
+        text: 'text-amber-400',
+        icon: AlertTriangle,
+      };
+    case 'info':
+      return {
+        bg: 'bg-blue-500/10',
+        border: 'border-blue-500/30',
+        text: 'text-blue-400',
+        icon: Activity,
+      };
   }
 };
 
@@ -160,16 +248,12 @@ function StatusIndicator({ status }: { status: ServiceStatus }) {
 
   return (
     <div className="relative">
-      <div className={cn(
-        'w-3 h-3 rounded-full',
-        colors.bg,
-        status === 'online' && 'animate-pulse'
-      )} />
-      <div className={cn(
-        'absolute inset-0 w-3 h-3 rounded-full blur-sm',
-        colors.bg,
-        'opacity-60'
-      )} />
+      <div
+        className={cn('w-3 h-3 rounded-full', colors.bg, status === 'online' && 'animate-pulse')}
+      />
+      <div
+        className={cn('absolute inset-0 w-3 h-3 rounded-full blur-sm', colors.bg, 'opacity-60')}
+      />
     </div>
   );
 }
@@ -198,28 +282,26 @@ function ServiceCard({ service }: { service: ServiceData }) {
 
       <div className="p-4">
         <div className="flex items-start justify-between mb-3">
-          <div className={cn(
-            'w-10 h-10 rounded-lg flex items-center justify-center',
-            'bg-slate-800/80 border border-slate-700/50',
-            colors.text
-          )}>
+          <div
+            className={cn(
+              'w-10 h-10 rounded-lg flex items-center justify-center',
+              'bg-slate-800/80 border border-slate-700/50',
+              colors.text
+            )}
+          >
             <Icon className="w-5 h-5" />
           </div>
           <StatusIndicator status={service.status} />
         </div>
 
-        <h3 className="font-mono text-sm font-medium text-slate-200 mb-1">
-          {service.name}
-        </h3>
+        <h3 className="font-mono text-sm font-medium text-slate-200 mb-1">{service.name}</h3>
 
         <div className="flex items-center justify-between text-xs">
           <span className={cn('font-mono uppercase tracking-wider', colors.text)}>
             {service.status}
           </span>
           {service.latency !== undefined && service.latency > 0 && (
-            <span className="font-mono text-slate-500">
-              {service.latency}ms
-            </span>
+            <span className="font-mono text-slate-500">{service.latency}ms</span>
           )}
         </div>
 
@@ -227,11 +309,16 @@ function ServiceCard({ service }: { service: ServiceData }) {
           <div className="mt-3 pt-3 border-t border-slate-800">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-500">Uptime</span>
-              <span className={cn(
-                'font-mono',
-                service.uptime >= 99.9 ? 'text-emerald-400' :
-                service.uptime >= 99 ? 'text-amber-400' : 'text-red-400'
-              )}>
+              <span
+                className={cn(
+                  'font-mono',
+                  service.uptime >= 99.9
+                    ? 'text-emerald-400'
+                    : service.uptime >= 99
+                      ? 'text-amber-400'
+                      : 'text-red-400'
+                )}
+              >
                 {service.uptime}%
               </span>
             </div>
@@ -239,8 +326,11 @@ function ServiceCard({ service }: { service: ServiceData }) {
               <div
                 className={cn(
                   'h-full rounded-full transition-all duration-500',
-                  service.uptime >= 99.9 ? 'bg-emerald-500' :
-                  service.uptime >= 99 ? 'bg-amber-500' : 'bg-red-500'
+                  service.uptime >= 99.9
+                    ? 'bg-emerald-500'
+                    : service.uptime >= 99
+                      ? 'bg-amber-500'
+                      : 'bg-red-500'
                 )}
                 style={{ width: `${service.uptime}%` }}
               />
@@ -255,8 +345,12 @@ function ServiceCard({ service }: { service: ServiceData }) {
 /** KPI metric card with trend indicator */
 function MetricCard({ metric, index }: { metric: SystemMetric; index: number }) {
   const isPositiveTrend = metric.trend && metric.trend > 0;
-  const trendColor = metric.status === 'critical' ? 'text-red-400' :
-                     metric.status === 'warning' ? 'text-amber-400' : 'text-emerald-400';
+  const trendColor =
+    metric.status === 'critical'
+      ? 'text-red-400'
+      : metric.status === 'warning'
+        ? 'text-amber-400'
+        : 'text-emerald-400';
 
   return (
     <motion.div
@@ -278,12 +372,8 @@ function MetricCard({ metric, index }: { metric: SystemMetric; index: number }) 
       </p>
 
       <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-bold text-slate-100 font-mono">
-          {metric.value}
-        </span>
-        {metric.unit && (
-          <span className="text-sm text-slate-500 font-mono">{metric.unit}</span>
-        )}
+        <span className="text-2xl font-bold text-slate-100 font-mono">{metric.value}</span>
+        {metric.unit && <span className="text-sm text-slate-500 font-mono">{metric.unit}</span>}
       </div>
 
       {metric.trend !== undefined && (
@@ -307,11 +397,7 @@ function AlertItem({ alert, index }: { alert: AlertData; index: number }) {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.1 }}
-      className={cn(
-        'flex items-start gap-3 p-3 rounded-lg border',
-        styles.bg,
-        styles.border
-      )}
+      className={cn('flex items-start gap-3 p-3 rounded-lg border', styles.bg, styles.border)}
     >
       <Icon className={cn('w-5 h-5 mt-0.5 flex-shrink-0', styles.text)} />
       <div className="flex-1 min-w-0">
@@ -360,12 +446,16 @@ function PendingActionCard({ action }: { action: PendingAction }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className={cn(
-            'px-2.5 py-1 rounded-full text-xs font-bold font-mono',
-            action.count > 10 ? 'bg-red-500/20 text-red-400' :
-            action.count > 5 ? 'bg-amber-500/20 text-amber-400' :
-            'bg-emerald-500/20 text-emerald-400'
-          )}>
+          <span
+            className={cn(
+              'px-2.5 py-1 rounded-full text-xs font-bold font-mono',
+              action.count > 10
+                ? 'bg-red-500/20 text-red-400'
+                : action.count > 5
+                  ? 'bg-amber-500/20 text-amber-400'
+                  : 'bg-emerald-500/20 text-emerald-400'
+            )}
+          >
             {action.count}
           </span>
           <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-400 transition-colors" />
@@ -405,7 +495,9 @@ function TerminalLogs() {
     <div className="bg-slate-950 rounded-lg border border-slate-800 overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-800 bg-slate-900/50">
         <Terminal className="w-4 h-4 text-slate-500" />
-        <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">System Logs</span>
+        <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">
+          System Logs
+        </span>
         <div className="ml-auto flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-xs font-mono text-slate-500">LIVE</span>
@@ -420,9 +512,11 @@ function TerminalLogs() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               className={cn(
-                log.includes('[WARN]') ? 'text-amber-400' :
-                log.includes('[ERROR]') ? 'text-red-400' :
-                'text-slate-400'
+                log.includes('[WARN]')
+                  ? 'text-amber-400'
+                  : log.includes('[ERROR]')
+                    ? 'text-red-400'
+                    : 'text-slate-400'
               )}
             >
               {log}
@@ -475,11 +569,7 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
   };
 
   return (
-    <div className={cn(
-      'min-h-screen bg-slate-950 text-slate-100',
-      'font-sans',
-      className
-    )}>
+    <div className={cn('min-h-screen bg-slate-950 text-slate-100', 'font-sans', className)}>
       {/* Subtle grid background */}
       <div
         className="fixed inset-0 opacity-[0.02] pointer-events-none"
@@ -511,12 +601,17 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
             <div className="flex items-center gap-4">
               {/* System health indicator */}
               <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-900/60 border border-slate-700/50">
-                <div className={cn(
-                  'w-3 h-3 rounded-full',
-                  systemHealth.percentage >= 90 ? 'bg-emerald-500' :
-                  systemHealth.percentage >= 70 ? 'bg-amber-500' : 'bg-red-500',
-                  'animate-pulse'
-                )} />
+                <div
+                  className={cn(
+                    'w-3 h-3 rounded-full',
+                    systemHealth.percentage >= 90
+                      ? 'bg-emerald-500'
+                      : systemHealth.percentage >= 70
+                        ? 'bg-amber-500'
+                        : 'bg-red-500',
+                    'animate-pulse'
+                  )}
+                />
                 <div className="text-sm">
                   <span className="font-mono font-bold">{systemHealth.percentage}%</span>
                   <span className="text-slate-500 ml-2">System Health</span>
@@ -547,10 +642,9 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
                   'transition-all disabled:opacity-50'
                 )}
               >
-                <RefreshCw className={cn(
-                  'w-5 h-5 text-slate-400',
-                  isRefreshing && 'animate-spin'
-                )} />
+                <RefreshCw
+                  className={cn('w-5 h-5 text-slate-400', isRefreshing && 'animate-spin')}
+                />
               </button>
             </div>
           </div>

@@ -3,8 +3,12 @@ using Api.BoundedContexts.DocumentProcessing.Application.EventHandlers;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -12,9 +16,20 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.EventHandlers;
 
 [Trait("Category", TestCategories.Unit)]
-public sealed class QueueStreamEventHandlersTests
+public sealed class QueueStreamEventHandlersTests : IDisposable
 {
     private readonly Mock<IQueueStreamService> _streamServiceMock = new();
+    private readonly MeepleAiDbContext _db;
+
+    public QueueStreamEventHandlersTests()
+    {
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(databaseName: $"QueueStreamTests_{Guid.NewGuid()}")
+            .Options;
+        _db = new MeepleAiDbContext(options, Mock.Of<IMediator>(), Mock.Of<IDomainEventCollector>());
+    }
+
+    public void Dispose() => _db.Dispose();
 
     [Fact]
     public async Task JobQueuedStreamHandler_PublishesJobQueuedEvent()
@@ -97,7 +112,7 @@ public sealed class QueueStreamEventHandlersTests
     {
         // Arrange
         var loggerMock = new Mock<ILogger<JobCompletedStreamHandler>>();
-        var handler = new JobCompletedStreamHandler(_streamServiceMock.Object, loggerMock.Object);
+        var handler = new JobCompletedStreamHandler(_streamServiceMock.Object, _db, loggerMock.Object);
         var notification = new JobCompletedEvent(
             Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), TimeSpan.FromSeconds(45));
 
@@ -122,7 +137,7 @@ public sealed class QueueStreamEventHandlersTests
     {
         // Arrange
         var loggerMock = new Mock<ILogger<JobFailedStreamHandler>>();
-        var handler = new JobFailedStreamHandler(_streamServiceMock.Object, loggerMock.Object);
+        var handler = new JobFailedStreamHandler(_streamServiceMock.Object, _db, loggerMock.Object);
         var notification = new JobFailedEvent(
             Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
             "Extract failed", ProcessingStepType.Extract, 2);

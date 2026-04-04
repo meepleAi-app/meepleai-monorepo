@@ -87,4 +87,10 @@ public class NotificationEntity
     /// </summary>
     [Column("read_at")]
     public DateTime? ReadAt { get; set; }
+
+    /// <summary>
+    /// Optional correlation ID for cross-channel notification tracking.
+    /// </summary>
+    [Column("correlation_id")]
+    public Guid? CorrelationId { get; set; }
 }

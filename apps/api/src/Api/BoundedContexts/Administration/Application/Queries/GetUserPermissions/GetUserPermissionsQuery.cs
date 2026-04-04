@@ -1,5 +1,5 @@
 using MediatR;
-using Api.BoundedContexts.Administration.Domain.Enums;
+using Api.SharedKernel.Domain.Enums;
 using Api.SharedKernel.Domain.ValueObjects;
 using Auth = Api.BoundedContexts.Authentication.Domain.ValueObjects;
 

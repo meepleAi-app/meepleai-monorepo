@@ -1,5 +1,5 @@
 /**
- * GameSourceStep - Step 1: Search catalog/BGG or create custom game.
+ * GameSourceStep - Step 1: Search catalog or create custom game.
  * Issue #4819: AddGameSheet Step 1 - Game Source
  * Epic #4817: User Collection Wizard
  */
@@ -8,10 +8,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ExternalLink, Loader2, Plus, Search, X } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import { useAddGameWizardStore, type SelectedGameData } from '@/lib/stores/add-game-wizard-store';
@@ -34,8 +34,6 @@ export function GameSourceStep() {
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [results, setResults] = useState<GameSearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showBggButton, setShowBggButton] = useState(false);
-  const [bggLoading, setBggLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customSubmitting, setCustomSubmitting] = useState(false);
@@ -50,7 +48,6 @@ export function GameSourceStep() {
   useEffect(() => {
     if (!debouncedTerm.trim()) {
       setResults([]);
-      setShowBggButton(false);
       setError(null);
       return;
     }
@@ -61,7 +58,6 @@ export function GameSourceStep() {
     const searchCatalog = async () => {
       setLoading(true);
       setError(null);
-      setShowBggButton(false);
 
       try {
         const response = await api.sharedGames.search({
@@ -88,12 +84,10 @@ export function GameSourceStep() {
           );
         } else {
           setResults([]);
-          setShowBggButton(true);
         }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           setError('Errore nella ricerca. Riprova.');
-          setShowBggButton(true);
         }
       } finally {
         setLoading(false);
@@ -101,39 +95,6 @@ export function GameSourceStep() {
     };
 
     void searchCatalog();
-  }, [debouncedTerm]);
-
-  // BGG fallback search
-  const handleBggSearch = useCallback(async () => {
-    if (!debouncedTerm.trim()) return;
-
-    setBggLoading(true);
-    setError(null);
-
-    try {
-      const response = await api.bgg.search(debouncedTerm, false, 1, PAGE_SIZE);
-
-      if (response.results.length > 0) {
-        setResults(
-          response.results.map(item => ({
-            id: `bgg-${item.bggId}`,
-            title: item.name,
-            yearPublished: item.yearPublished ?? undefined,
-            thumbnailUrl: item.thumbnailUrl ?? undefined,
-            source: 'bgg' as const,
-            bggId: item.bggId,
-          }))
-        );
-        setShowBggButton(false);
-      } else {
-        setResults([]);
-        setError('Nessun gioco trovato su BoardGameGeek.');
-      }
-    } catch {
-      setError('BoardGameGeek non disponibile. Riprova più tardi.');
-    } finally {
-      setBggLoading(false);
-    }
   }, [debouncedTerm]);
 
   // Select game from search results
@@ -151,22 +112,6 @@ export function GameSourceStep() {
         categories: [],
         mechanics: [],
       };
-
-      // If BGG game, try to get full details
-      if (game.source === 'bgg' && game.bggId) {
-        try {
-          const details = await api.bgg.getGameDetails(game.bggId);
-          gameData.minPlayers = details.minPlayers ?? undefined;
-          gameData.maxPlayers = details.maxPlayers ?? undefined;
-          gameData.playingTimeMinutes = details.playingTime ?? undefined;
-          gameData.description = details.description ?? undefined;
-          gameData.imageUrl = details.imageUrl ?? game.thumbnailUrl;
-          gameData.thumbnailUrl = details.thumbnailUrl ?? game.thumbnailUrl;
-          gameData.yearPublished = details.yearPublished ?? undefined;
-        } catch {
-          // Use basic search data if details fail
-        }
-      }
 
       setSelectedGame(gameData);
       goNext();
@@ -210,7 +155,6 @@ export function GameSourceStep() {
   const handleClear = useCallback(() => {
     setSearchTerm('');
     setResults([]);
-    setShowBggButton(false);
     setError(null);
     inputRef.current?.focus();
   }, []);
@@ -224,9 +168,7 @@ export function GameSourceStep() {
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold text-slate-200 mb-1">Scegli Sorgente Gioco</h3>
-        <p className="text-sm text-slate-500">
-          Cerca nel catalogo, importa da BGG, o crea manualmente
-        </p>
+        <p className="text-sm text-slate-500">Cerca nel catalogo o crea manualmente</p>
       </div>
 
       {/* Selected game indicator */}
@@ -235,11 +177,7 @@ export function GameSourceStep() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-teal-300 truncate">{selectedGame.title}</p>
             <p className="text-xs text-slate-400">
-              {selectedGame.source === 'catalog'
-                ? 'Dal catalogo'
-                : selectedGame.source === 'bgg'
-                  ? 'Da BGG'
-                  : 'Personalizzato'}
+              {selectedGame.source === 'catalog' ? 'Dal catalogo' : 'Personalizzato'}
             </p>
           </div>
           <Badge variant="outline" className="text-teal-400 border-teal-500/30">
@@ -283,34 +221,12 @@ export function GameSourceStep() {
         <GameSearchResults results={results} loading={loading} onSelect={handleSelectGame} />
       )}
 
-      {/* BGG Fallback Button */}
-      {showBggButton && !loading && !showCustomForm && (
-        <div className="text-center py-3">
-          <p className="text-sm text-slate-500 mb-3">Nessun gioco trovato nel catalogo.</p>
-          <Button onClick={handleBggSearch} disabled={bggLoading} variant="outline" size="sm">
-            {bggLoading ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <ExternalLink className="h-4 w-4 mr-2" />
-            )}
-            Cerca su BoardGameGeek
-          </Button>
+      {/* No results after search */}
+      {!loading && !error && results.length === 0 && debouncedTerm.trim() && !showCustomForm && (
+        <div className="text-center py-4">
+          <p className="text-sm text-slate-500">Nessun risultato per &quot;{debouncedTerm}&quot;</p>
         </div>
       )}
-
-      {/* No results after search */}
-      {!loading &&
-        !showBggButton &&
-        !error &&
-        results.length === 0 &&
-        debouncedTerm.trim() &&
-        !showCustomForm && (
-          <div className="text-center py-4">
-            <p className="text-sm text-slate-500">
-              Nessun risultato per &quot;{debouncedTerm}&quot;
-            </p>
-          </div>
-        )}
 
       {/* Custom Game Form */}
       {showCustomForm && (

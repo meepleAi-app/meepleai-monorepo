@@ -1,0 +1,55 @@
+/* View Transitions API — Progressive Enhancement (Chrome/Edge) */
+@supports (view-transition-name: hero-to-session) {
+  .dashboard-hero {
+    view-transition-name: hero-to-session;
+  }
+  ::view-transition-old(hero-to-session) {
+    animation: dashboard-morph-out 300ms ease-out forwards;
+  }
+  ::view-transition-new(hero-to-session) {
+    animation: dashboard-morph-in 300ms ease-out forwards;
+  }
+}
+
+/* Fallback keyframes */
+@keyframes dashboard-morph-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.95); }
+}
+@keyframes dashboard-morph-in {
+  from { opacity: 0; transform: scale(1.05); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes dashboard-zone-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes dashboard-zone-fade-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+@keyframes dashboard-panel-slide-in {
+  from { opacity: 0; transform: translateY(20px); max-height: 0; }
+  to { opacity: 1; transform: translateY(0); max-height: 400px; }
+}
+@keyframes dashboard-panel-slide-out {
+  from { opacity: 1; transform: translateY(0); max-height: 400px; }
+  to { opacity: 0; transform: translateY(20px); max-height: 0; }
+}
+
+/* Session panel slot animation */
+.session-panel-enter {
+  animation: dashboard-panel-slide-in 300ms ease-out forwards;
+}
+.session-panel-exit {
+  animation: dashboard-panel-slide-out 300ms ease-out forwards;
+}
+
+/* Live dot pulse */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.live-dot {
+  animation: live-pulse 2s ease-in-out infinite;
+}

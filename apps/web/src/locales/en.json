@@ -96,6 +96,7 @@
     "login": {
       "emailLabel": "Email",
       "emailPlaceholder": "you@example.com",
+      "loadingMessage": "Loading...",
       "loggingIn": "Logging in...",
       "loginButton": "Login",
       "passwordLabel": "Password",
@@ -1031,7 +1032,7 @@
     "imageUrlPlaceholder": "https://example.com/image.jpg",
     "adding": "Adding...",
     "addPrivateGame": "Add Private Game",
-    "addFromBgg": "Add from BGG"
+    "addFromBgg": "Add from catalog"
   },
   "collection": {
     "addFromCatalog": "From catalog",

@@ -2,6 +2,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,25 +13,24 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// Repository implementation for ShareRequest aggregate.
 /// Issue #2724: CreateShareRequest Command infrastructure.
 /// </summary>
-internal sealed class ShareRequestRepository : IShareRequestRepository
+internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public ShareRequestRepository(MeepleAiDbContext context)
+    public ShareRequestRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task AddAsync(ShareRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         var entity = MapToEntity(request);
-        await _context.Set<ShareRequestEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.Set<ShareRequestEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<ShareRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.Set<ShareRequestEntity>()
+        var entity = await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(e => e.AttachedDocuments)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
@@ -40,7 +41,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
 
     public async Task<ShareRequest?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.Set<ShareRequestEntity>()
+        var entity = await DbContext.Set<ShareRequestEntity>()
             .Include(e => e.AttachedDocuments)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -61,7 +62,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         }
 
         // Batch query with tracking enabled for updates
-        var entities = await _context.Set<ShareRequestEntity>()
+        var entities = await DbContext.Set<ShareRequestEntity>()
             .Include(e => e.AttachedDocuments)
             .Where(e => idList.Contains(e.Id))
             .ToListAsync(cancellationToken)
@@ -78,7 +79,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         ArgumentNullException.ThrowIfNull(request);
 
         // Find the tracked entity (loaded by GetByIdForUpdateAsync)
-        var trackedEntity = _context.Set<ShareRequestEntity>()
+        var trackedEntity = DbContext.Set<ShareRequestEntity>()
             .Local
             .FirstOrDefault(e => e.Id == request.Id);
 
@@ -105,7 +106,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         {
             // No tracked entity found - attach a new one
             var entity = MapToEntity(request);
-            _context.Set<ShareRequestEntity>().Update(entity);
+            DbContext.Set<ShareRequestEntity>().Update(entity);
         }
     }
 
@@ -114,7 +115,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         Guid sourceGameId,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Set<ShareRequestEntity>()
+        return await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .AnyAsync(e =>
                 e.UserId == userId &&
@@ -130,7 +131,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.Set<ShareRequestEntity>()
+        var entities = await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(e => e.AttachedDocuments)
             .Where(e => e.UserId == userId)
@@ -145,7 +146,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         ShareRequestStatus status,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.Set<ShareRequestEntity>()
+        var entities = await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(e => e.AttachedDocuments)
             .Where(e => e.Status == (int)status)
@@ -160,7 +161,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         Guid adminId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.Set<ShareRequestEntity>()
+        var entities = await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(e => e.AttachedDocuments)
             .Where(e => e.ReviewingAdminId == adminId)
@@ -177,7 +178,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
     {
         var expirationThreshold = DateTime.UtcNow - duration;
 
-        var entities = await _context.Set<ShareRequestEntity>()
+        var entities = await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(e => e.AttachedDocuments)
             .Where(e =>
@@ -272,7 +273,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
 
     public async Task<int> CountApprovedByUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<ShareRequestEntity>()
+        return await DbContext.Set<ShareRequestEntity>()
             .Where(r => r.UserId == userId && r.Status == (int)ShareRequestStatus.Approved)
             .CountAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -283,7 +284,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         int count,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.Set<ShareRequestEntity>()
+        var entities = await DbContext.Set<ShareRequestEntity>()
             .Where(r => r.UserId == userId &&
                        (r.Status == (int)ShareRequestStatus.Approved ||
                         r.Status == (int)ShareRequestStatus.Rejected))
@@ -299,7 +300,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
 
     public async Task<int> CountPendingByUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<ShareRequestEntity>()
+        return await DbContext.Set<ShareRequestEntity>()
             .Where(r => r.UserId == userId &&
                        (r.Status == (int)ShareRequestStatus.Pending ||
                         r.Status == (int)ShareRequestStatus.InReview ||
@@ -319,7 +320,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
             0,
             DateTimeKind.Utc);
 
-        return await _context.Set<ShareRequestEntity>()
+        return await DbContext.Set<ShareRequestEntity>()
             .Where(r => r.UserId == userId && r.CreatedAt >= firstDayOfMonth)
             .CountAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -327,7 +328,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
 
     public async Task<DateTime?> GetLastRejectionDateAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var lastRejection = await _context.Set<ShareRequestEntity>()
+        var lastRejection = await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Where(r => r.UserId == userId && r.Status == (int)ShareRequestStatus.Rejected)
             .OrderByDescending(r => r.ResolvedAt)
@@ -342,7 +343,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
 
     public async Task<int> CountPendingAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Set<ShareRequestEntity>()
+        return await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .CountAsync(r => r.Status == (int)ShareRequestStatus.Pending, cancellationToken)
             .ConfigureAwait(false);
@@ -350,7 +351,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
 
     public async Task<int> CountInReviewAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Set<ShareRequestEntity>()
+        return await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .CountAsync(r => r.Status == (int)ShareRequestStatus.InReview, cancellationToken)
             .ConfigureAwait(false);
@@ -360,7 +361,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         DateTime threshold,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.Set<ShareRequestEntity>()
+        var entities = await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(e => e.AttachedDocuments)
             .Where(r => r.Status == (int)ShareRequestStatus.Pending && r.CreatedAt < threshold)
@@ -376,7 +377,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         var now = DateTime.UtcNow;
         var todayStart = now.Date;
 
-        var pendingRequests = await _context.Set<ShareRequestEntity>()
+        var pendingRequests = await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Where(r => r.Status == (int)ShareRequestStatus.Pending)
             .Select(r => new { r.CreatedAt, r.ContributionType })
@@ -410,7 +411,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         Guid privateGameId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _context.Set<ShareRequestEntity>()
+        var entity = await DbContext.Set<ShareRequestEntity>()
             .AsNoTracking()
             .Include(e => e.AttachedDocuments)
             .Where(r => r.SourcePrivateGameId == privateGameId &&

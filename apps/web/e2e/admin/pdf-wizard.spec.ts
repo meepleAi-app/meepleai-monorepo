@@ -19,7 +19,7 @@ import path from 'path';
 import { test, expect, Page } from '@playwright/test';
 
 // Constants
-const WIZARD_URL = '/admin/shared-games/create-from-pdf';
+const WIZARD_URL = '/admin/shared-games/import';
 const TEST_DATA_DIR = path.join(__dirname, '..', 'test-data');
 
 // Auth credentials (from .env.test or defaults)

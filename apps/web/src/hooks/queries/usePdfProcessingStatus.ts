@@ -7,6 +7,8 @@
  * reaches a terminal state (indexed | failed).
  */
 
+import { useRef } from 'react';
+
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
@@ -19,6 +21,13 @@ export const pdfStatusKeys = {
 
 const TERMINAL_STATUSES = new Set<PdfIndexingStatus['status']>(['indexed', 'failed']);
 
+/** Exported for testing — returns polling interval based on unchanged cycle count */
+export function getAdaptiveInterval(cycleCount: number): number {
+  if (cycleCount >= 20) return 10_000;
+  if (cycleCount >= 10) return 5_000;
+  return 3_000;
+}
+
 /**
  * Hook to poll PDF indexing status for a game.
  *
@@ -28,6 +37,9 @@ const TERMINAL_STATUSES = new Set<PdfIndexingStatus['status']>(['indexed', 'fail
 export function usePdfProcessingStatus(
   gameId: string | null | undefined
 ): UseQueryResult<PdfIndexingStatus, Error> {
+  const prevStatusRef = useRef<string | null>(null);
+  const cycleCountRef = useRef(0);
+
   return useQuery({
     queryKey: pdfStatusKeys.byGame(gameId ?? ''),
     queryFn: () => api.library.getPdfProcessingStatus(gameId!),
@@ -35,10 +47,19 @@ export function usePdfProcessingStatus(
     // Poll every 3 s; stop only when a terminal status is reached.
     // Keep polling on errors (e.g. transient 404 while the pipeline is starting up)
     // so the status appears once the backend catches up — do NOT stop on !status.
-    refetchInterval: (query) => {
+    refetchInterval: query => {
       const status = query.state.data?.status;
       if (status && TERMINAL_STATUSES.has(status)) return false;
-      return 3000;
+
+      // Adaptive interval: slow down when status isn't changing
+      if (status && status === prevStatusRef.current) {
+        cycleCountRef.current += 1;
+      } else {
+        cycleCountRef.current = 0;
+        prevStatusRef.current = status ?? null;
+      }
+
+      return getAdaptiveInterval(cycleCountRef.current);
     },
     // Don't auto-refetch on window focus — rely on polling only
     refetchOnWindowFocus: false,

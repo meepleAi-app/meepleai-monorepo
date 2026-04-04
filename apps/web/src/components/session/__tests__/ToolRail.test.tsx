@@ -42,13 +42,7 @@ function makeCustomTool(id: string): ToolItem {
 
 describe('ToolRail', () => {
   it('renders all base tool buttons', () => {
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="scoreboard"
-        onToolChange={vi.fn()}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="scoreboard" onToolChange={vi.fn()} />);
 
     // Both desktop tablist and mobile tablist render the same tools
     const tabbables = screen.getAllByRole('tab', { name: 'Punteggi' });
@@ -59,13 +53,7 @@ describe('ToolRail', () => {
   });
 
   it('marks active tool with aria-selected=true', () => {
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="dice"
-        onToolChange={vi.fn()}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="dice" onToolChange={vi.fn()} />);
 
     const diceButtons = screen.getAllByRole('tab', { name: 'Dadi' });
     diceButtons.forEach(btn => {
@@ -81,13 +69,7 @@ describe('ToolRail', () => {
     const user = userEvent.setup();
     const onToolChange = vi.fn();
 
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="scoreboard"
-        onToolChange={onToolChange}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="scoreboard" onToolChange={onToolChange} />);
 
     const diceButtons = screen.getAllByRole('tab', { name: 'Dadi' });
     await user.click(diceButtons[0]);
@@ -95,13 +77,7 @@ describe('ToolRail', () => {
   });
 
   it('does NOT render separator when no custom tools', () => {
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="scoreboard"
-        onToolChange={vi.fn()}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="scoreboard" onToolChange={vi.fn()} />);
 
     // The separator container should not be in the DOM
     expect(document.querySelector('[title="Tool custom"]')).toBeNull();
@@ -109,39 +85,21 @@ describe('ToolRail', () => {
 
   it('renders separator between base and custom tools', () => {
     const tools: ToolItem[] = [...BASE_TOOLS, makeCustomTool('timer')];
-    render(
-      <ToolRail
-        tools={tools}
-        activeTool="scoreboard"
-        onToolChange={vi.fn()}
-      />
-    );
+    render(<ToolRail tools={tools} activeTool="scoreboard" onToolChange={vi.fn()} />);
 
     expect(document.querySelector('[title="Tool custom"]')).not.toBeNull();
   });
 
   it('renders custom tool buttons', () => {
     const tools: ToolItem[] = [...BASE_TOOLS, makeCustomTool('timer'), makeCustomTool('counter')];
-    render(
-      <ToolRail
-        tools={tools}
-        activeTool="scoreboard"
-        onToolChange={vi.fn()}
-      />
-    );
+    render(<ToolRail tools={tools} activeTool="scoreboard" onToolChange={vi.fn()} />);
 
     expect(screen.getAllByRole('tab', { name: 'Custom timer' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('tab', { name: 'Custom counter' }).length).toBeGreaterThan(0);
   });
 
   it('desktop tablist has aria-orientation=vertical', () => {
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="scoreboard"
-        onToolChange={vi.fn()}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="scoreboard" onToolChange={vi.fn()} />);
 
     const tablists = screen.getAllByRole('tablist');
     const desktop = tablists.find(t => t.getAttribute('aria-orientation') === 'vertical');
@@ -149,13 +107,7 @@ describe('ToolRail', () => {
   });
 
   it('mobile tablist has aria-orientation=horizontal', () => {
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="scoreboard"
-        onToolChange={vi.fn()}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="scoreboard" onToolChange={vi.fn()} />);
 
     const tablists = screen.getAllByRole('tablist');
     const mobile = tablists.find(t => t.getAttribute('aria-orientation') === 'horizontal');
@@ -164,13 +116,7 @@ describe('ToolRail', () => {
 
   it('ArrowDown on desktop tablist cycles to next tool', () => {
     const onToolChange = vi.fn();
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="scoreboard"
-        onToolChange={onToolChange}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="scoreboard" onToolChange={onToolChange} />);
 
     // Find the vertical (desktop) tablist
     const tablists = screen.getAllByRole('tablist');
@@ -183,31 +129,19 @@ describe('ToolRail', () => {
 
   it('ArrowUp on desktop tablist cycles to previous tool (wrapping)', () => {
     const onToolChange = vi.fn();
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="scoreboard"
-        onToolChange={onToolChange}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="scoreboard" onToolChange={onToolChange} />);
 
     const tablists = screen.getAllByRole('tablist');
     const desktopRail = tablists.find(t => t.getAttribute('aria-orientation') === 'vertical')!;
 
     fireEvent.keyDown(desktopRail, { key: 'ArrowUp' });
-    // scoreboard is index 0, previous wraps to last (whiteboard, index 3)
-    expect(onToolChange).toHaveBeenCalledWith('whiteboard');
+    // scoreboard is index 0, previous wraps to last (camera, index 4)
+    expect(onToolChange).toHaveBeenCalledWith('camera');
   });
 
   it('ArrowRight on mobile tablist cycles to next tool', () => {
     const onToolChange = vi.fn();
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="dice"
-        onToolChange={onToolChange}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="dice" onToolChange={onToolChange} />);
 
     const tablists = screen.getAllByRole('tablist');
     const mobileNav = tablists.find(t => t.getAttribute('aria-orientation') === 'horizontal')!;
@@ -220,13 +154,7 @@ describe('ToolRail', () => {
   it('Enter key triggers onToolChange', async () => {
     const user = userEvent.setup();
     const onToolChange = vi.fn();
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="scoreboard"
-        onToolChange={onToolChange}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="scoreboard" onToolChange={onToolChange} />);
 
     const diceButtons = screen.getAllByRole('tab', { name: 'Dadi' });
     diceButtons[0].focus();
@@ -235,13 +163,7 @@ describe('ToolRail', () => {
   });
 
   it('short labels are rendered in mobile nav', () => {
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="scoreboard"
-        onToolChange={vi.fn()}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="scoreboard" onToolChange={vi.fn()} />);
 
     // Short labels appear in the mobile nav
     expect(screen.getAllByText('Score').length).toBeGreaterThan(0);
@@ -249,20 +171,20 @@ describe('ToolRail', () => {
   });
 
   it('collapse toggle button is rendered with correct aria-label', () => {
-    render(
-      <ToolRail
-        tools={BASE_TOOLS}
-        activeTool="scoreboard"
-        onToolChange={vi.fn()}
-      />
-    );
+    render(<ToolRail tools={BASE_TOOLS} activeTool="scoreboard" onToolChange={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Comprimi rail' })).toBeInTheDocument();
   });
 
-  it('exports BASE_TOOLS with 4 base tool definitions', () => {
-    expect(BASE_TOOLS).toHaveLength(4);
-    expect(BASE_TOOLS.map(t => t.id)).toEqual(['scoreboard', 'turn-order', 'dice', 'whiteboard']);
+  it('exports BASE_TOOLS with 5 base tool definitions', () => {
+    expect(BASE_TOOLS).toHaveLength(5);
+    expect(BASE_TOOLS.map(t => t.id)).toEqual([
+      'scoreboard',
+      'turn-order',
+      'dice',
+      'whiteboard',
+      'camera',
+    ]);
     BASE_TOOLS.forEach(t => expect(t.type).toBe('base'));
   });
 });

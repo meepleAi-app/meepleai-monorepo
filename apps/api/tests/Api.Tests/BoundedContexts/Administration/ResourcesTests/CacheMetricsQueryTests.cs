@@ -27,7 +27,7 @@ public class CacheMetricsQueryTests : IAsyncLifetime
 
         await _redis.StartAsync().ConfigureAwait(false);
 
-        _connection = await ConnectionMultiplexer.ConnectAsync(_redis.GetConnectionString())
+        _connection = await ConnectionMultiplexer.ConnectAsync($"{_redis.GetConnectionString()},allowAdmin=true")
             .ConfigureAwait(false);
 
         // Add some test data

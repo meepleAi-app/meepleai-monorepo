@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Quartz;
 using Quartz.Impl;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -37,16 +38,18 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
     public void Constructor_WithNullSchedulerFactory_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new QuartzReportSchedulerService(null!, _loggerMock.Object));
+        var act = () =>
+            new QuartzReportSchedulerService(null!, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new QuartzReportSchedulerService(_schedulerFactory, null!));
+        var act = () =>
+            new QuartzReportSchedulerService(_schedulerFactory, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -65,7 +68,7 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         // Assert
         var jobKey = new JobKey($"report-{report.Id}", "reports");
         var jobExists = await _scheduler.CheckExists(jobKey);
-        Assert.True(jobExists);
+        jobExists.Should().BeTrue();
 
         // Cleanup
         await _scheduler.DeleteJob(jobKey);
@@ -78,8 +81,8 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var report = CreateTestReport(scheduleExpression: null!);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.ScheduleReportAsync(report));
+        var act = () => _sut.ScheduleReportAsync(report);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -89,8 +92,8 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var report = CreateTestReport(scheduleExpression: "");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.ScheduleReportAsync(report));
+        var act = () => _sut.ScheduleReportAsync(report);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -100,8 +103,8 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var report = CreateTestReport(scheduleExpression: "   ");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.ScheduleReportAsync(report));
+        var act = () => _sut.ScheduleReportAsync(report);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -116,11 +119,11 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         // Assert
         var jobKey = new JobKey($"report-{report.Id}", "reports");
         var triggers = await _scheduler.GetTriggersOfJob(jobKey);
-        Assert.Single(triggers);
+        triggers.Should().ContainSingle();
 
         var trigger = triggers.First() as ICronTrigger;
-        Assert.NotNull(trigger);
-        Assert.Equal("0 0 * * * ?", trigger.CronExpressionString);
+        trigger.Should().NotBeNull();
+        trigger.CronExpressionString.Should().Be("0 0 * * * ?");
 
         // Cleanup
         await _scheduler.DeleteJob(jobKey);
@@ -139,7 +142,7 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var jobKey = new JobKey($"report-{report.Id}", "reports");
         var triggers = await _scheduler.GetTriggersOfJob(jobKey);
         var trigger = triggers.First() as ICronTrigger;
-        Assert.Equal("0 0 6 * * ?", trigger!.CronExpressionString);
+        trigger!.CronExpressionString.Should().Be("0 0 6 * * ?");
 
         // Cleanup
         await _scheduler.DeleteJob(jobKey);
@@ -158,7 +161,7 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var jobKey = new JobKey($"report-{report.Id}", "reports");
         var triggers = await _scheduler.GetTriggersOfJob(jobKey);
         var trigger = triggers.First() as ICronTrigger;
-        Assert.Equal("0 0 9 ? * MON", trigger!.CronExpressionString);
+        trigger!.CronExpressionString.Should().Be("0 0 9 ? * MON");
 
         // Cleanup
         await _scheduler.DeleteJob(jobKey);
@@ -176,9 +179,9 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         // Assert
         var jobKey = new JobKey($"report-{report.Id}", "reports");
         var jobDetail = await _scheduler.GetJobDetail(jobKey);
-        Assert.NotNull(jobDetail);
-        Assert.True(jobDetail.JobDataMap.ContainsKey("ReportId"));
-        Assert.Equal(report.Id.ToString(), jobDetail.JobDataMap.GetString("ReportId"));
+        jobDetail.Should().NotBeNull();
+        jobDetail.JobDataMap.ContainsKey("ReportId").Should().BeTrue();
+        jobDetail.JobDataMap.GetString("ReportId").Should().Be(report.Id.ToString());
 
         // Cleanup
         await _scheduler.DeleteJob(jobKey);
@@ -219,14 +222,14 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var report = CreateTestReport("0 0 9 * * ?");
         await _sut.ScheduleReportAsync(report);
         var jobKey = new JobKey($"report-{report.Id}", "reports");
-        Assert.True(await _scheduler.CheckExists(jobKey));
+        (await _scheduler.CheckExists(jobKey)).Should().BeTrue();
 
         // Act
         await _sut.UnscheduleReportAsync(report.Id);
 
         // Assert
         var jobExists = await _scheduler.CheckExists(jobKey);
-        Assert.False(jobExists);
+        jobExists.Should().BeFalse();
     }
 
     [Fact]
@@ -346,8 +349,8 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var status = await _sut.GetStatusAsync();
 
         // Assert
-        Assert.NotNull(status);
-        Assert.True(status.IsRunning);
+        status.Should().NotBeNull();
+        status.IsRunning.Should().BeTrue();
     }
 
     [Fact]
@@ -357,9 +360,9 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var status = await _sut.GetStatusAsync();
 
         // Assert
-        Assert.NotNull(status);
-        Assert.True(status.ActiveJobs >= 0);
-        Assert.True(status.TotalExecutions >= 0);
+        status.Should().NotBeNull();
+        (status.ActiveJobs >= 0).Should().BeTrue();
+        (status.TotalExecutions >= 0).Should().BeTrue();
     }
 
     [Fact]
@@ -375,8 +378,8 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var status = await _sut.GetStatusAsync();
 
         // Assert
-        Assert.NotNull(status);
-        Assert.True(status.IsRunning);
+        status.Should().NotBeNull();
+        status.IsRunning.Should().BeTrue();
 
         // Cleanup
         await _scheduler.DeleteJob(new JobKey($"report-{report1.Id}", "reports"));

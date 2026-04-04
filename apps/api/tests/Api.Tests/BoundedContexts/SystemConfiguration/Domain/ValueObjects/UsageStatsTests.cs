@@ -71,8 +71,9 @@ public class UsageStatsTests
     public void Constructor_WithNegativeInputTokens_ShouldThrowArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            new UsageStats(totalInputTokens: -1));
+        var act = () =>
+            new UsageStats(totalInputTokens: -1);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
         exception.ParamName.Should().Be("totalInputTokens");
     }
@@ -81,8 +82,9 @@ public class UsageStatsTests
     public void Constructor_WithNegativeOutputTokens_ShouldThrowArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            new UsageStats(totalOutputTokens: -1));
+        var act2 = () =>
+            new UsageStats(totalOutputTokens: -1);
+        var exception = act2.Should().Throw<ArgumentException>().Which;
 
         exception.ParamName.Should().Be("totalOutputTokens");
     }

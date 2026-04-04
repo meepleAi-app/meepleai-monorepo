@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 
@@ -23,10 +24,10 @@ public class RoutingMetricsCollectorTests
     {
         var snapshot = _collector.GetSnapshot();
 
-        Assert.Equal(0, snapshot.TotalDecisions);
-        Assert.Equal(0.0, snapshot.AverageConfidence);
-        Assert.Equal(0.0, snapshot.AverageRoutingLatencyMs);
-        Assert.Equal(0.0, snapshot.FallbackRate);
+        snapshot.TotalDecisions.Should().Be(0);
+        snapshot.AverageConfidence.Should().Be(0.0);
+        snapshot.AverageRoutingLatencyMs.Should().Be(0.0);
+        snapshot.FallbackRate.Should().Be(0.0);
     }
 
     [Fact]
@@ -37,7 +38,7 @@ public class RoutingMetricsCollectorTests
         _collector.RecordRoutingDecision(decision);
         var snapshot = _collector.GetSnapshot();
 
-        Assert.Equal(1, snapshot.TotalDecisions);
+        snapshot.TotalDecisions.Should().Be(1);
     }
 
     [Fact]
@@ -48,9 +49,9 @@ public class RoutingMetricsCollectorTests
         _collector.RecordRoutingDecision(decision);
         var snapshot = _collector.GetSnapshot();
 
-        Assert.Equal(1, snapshot.HighConfidenceCount);
-        Assert.Equal(0, snapshot.MediumConfidenceCount);
-        Assert.Equal(0, snapshot.LowConfidenceCount);
+        snapshot.HighConfidenceCount.Should().Be(1);
+        snapshot.MediumConfidenceCount.Should().Be(0);
+        snapshot.LowConfidenceCount.Should().Be(0);
     }
 
     [Fact]
@@ -61,8 +62,8 @@ public class RoutingMetricsCollectorTests
         _collector.RecordRoutingDecision(decision);
         var snapshot = _collector.GetSnapshot();
 
-        Assert.Equal(0, snapshot.HighConfidenceCount);
-        Assert.Equal(1, snapshot.MediumConfidenceCount);
+        snapshot.HighConfidenceCount.Should().Be(0);
+        snapshot.MediumConfidenceCount.Should().Be(1);
     }
 
     [Fact]
@@ -74,9 +75,9 @@ public class RoutingMetricsCollectorTests
         _collector.RecordRoutingDecision(decision);
         var snapshot = _collector.GetSnapshot();
 
-        Assert.Equal(0, snapshot.HighConfidenceCount);
-        Assert.Equal(0, snapshot.MediumConfidenceCount);
-        Assert.Equal(1, snapshot.LowConfidenceCount);
+        snapshot.HighConfidenceCount.Should().Be(0);
+        snapshot.MediumConfidenceCount.Should().Be(0);
+        snapshot.LowConfidenceCount.Should().Be(1);
     }
 
     [Fact]
@@ -88,8 +89,8 @@ public class RoutingMetricsCollectorTests
         _collector.RecordRoutingDecision(decision);
         var snapshot = _collector.GetSnapshot();
 
-        Assert.Equal(1, snapshot.FallbackCount);
-        Assert.Equal(1.0, snapshot.FallbackRate);
+        snapshot.FallbackCount.Should().Be(1);
+        snapshot.FallbackRate.Should().Be(1.0);
     }
 
     [Fact]
@@ -100,8 +101,8 @@ public class RoutingMetricsCollectorTests
 
         var snapshot = _collector.GetSnapshot();
 
-        Assert.Equal(2, snapshot.TotalDecisions);
-        Assert.Equal(0.90, snapshot.AverageConfidence, 2);
+        snapshot.TotalDecisions.Should().Be(2);
+        snapshot.AverageConfidence.Should().BeApproximately(0.90, 2);
     }
 
     [Fact]
@@ -113,8 +114,8 @@ public class RoutingMetricsCollectorTests
 
         var snapshot = _collector.GetSnapshot();
 
-        Assert.Equal(2, snapshot.AgentUsageDistribution["ArbitroAgent"]);
-        Assert.Equal(1, snapshot.AgentUsageDistribution["TutorAgent"]);
+        snapshot.AgentUsageDistribution["ArbitroAgent"].Should().Be(2);
+        snapshot.AgentUsageDistribution["TutorAgent"].Should().Be(1);
     }
 
     [Fact]
@@ -126,9 +127,9 @@ public class RoutingMetricsCollectorTests
 
         var snapshot = _collector.GetSnapshot();
 
-        Assert.Equal(1, snapshot.IntentDistribution[AgentIntent.MoveValidation]);
-        Assert.Equal(1, snapshot.IntentDistribution[AgentIntent.StrategicAnalysis]);
-        Assert.Equal(1, snapshot.IntentDistribution[AgentIntent.Tutorial]);
+        snapshot.IntentDistribution[AgentIntent.MoveValidation].Should().Be(1);
+        snapshot.IntentDistribution[AgentIntent.StrategicAnalysis].Should().Be(1);
+        snapshot.IntentDistribution[AgentIntent.Tutorial].Should().Be(1);
     }
 
     [Fact]
@@ -150,7 +151,7 @@ public class RoutingMetricsCollectorTests
         Task.WaitAll(tasks.ToArray());
         var snapshot = _collector.GetSnapshot();
 
-        Assert.Equal(threadCount * decisionsPerThread, snapshot.TotalDecisions);
+        snapshot.TotalDecisions.Should().Be(threadCount * decisionsPerThread);
     }
 
     private static AgentRoutingDecision CreateDecision(

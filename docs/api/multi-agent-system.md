@@ -370,7 +370,7 @@ curl -X POST http://localhost:8080/api/v1/agents/decisore/analyze \
 
 ## Related Documentation
 
-- [Context Engineering Framework](../01-context-engineering.md)
+- [Context Engineering Framework](../development/agent-architecture/01-context-engineering.md)
 - [Decisore Implementation Plan](../claudedocs/decisore-implementation-plan.md)
 - [Move Generator Spec](../claudedocs/issue-3770-move-generator-plan.md)
 - [Agent Builder Plan](../claudedocs/issue-3709-agent-builder-plan.md)

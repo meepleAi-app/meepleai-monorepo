@@ -46,7 +46,10 @@ export function useGameAgents({ gameId, enabled = true }: UseGameAgentsOptions) 
       if (!gameId) {
         throw new Error('Game ID is required');
       }
-      return api.games.getAgents(gameId);
+      // Use agents client (filters userOwned + activeOnly) — works for both
+      // shared catalog games AND private game UUIDs, unlike api.games.getAgents()
+      // which only handles shared catalog IDs.
+      return api.agents.getUserAgentsForGame(gameId);
     },
     enabled: enabled && gameId !== null,
     staleTime: 30_000, // 30 seconds - agent lists don't change frequently

@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe variant style Record access */
 /**
  * SimpleErrorMessage - Lightweight inline error message component
  *

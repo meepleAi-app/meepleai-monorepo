@@ -1,88 +1,111 @@
 /**
- * LibraryEmptyState — Inviting empty-state for private library with 0 games.
- * Issue #4945: Player Journey — empty state with onboarding CTA.
+ * LibraryEmptyState — Gaming immersive empty-state for private library.
+ * Animated floating icons, quick-start cards, and trending games row.
+ * Layout Redesign: replaces original plain empty state (in-place update).
  */
 
 'use client';
 
-import { Gamepad2, Search, Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
-import { Button } from '@/components/ui/primitives/button';
-import { useTranslation } from '@/hooks/useTranslation';
+import { TrendingGamesRow } from './TrendingGamesRow';
 
 interface LibraryEmptyStateProps {
-  /** Custom class for wrapper */
+  onExploreCatalog?: () => void;
+  onCreateCustom?: () => void;
   className?: string;
 }
 
-/**
- * Decorative meeple cluster shown when a user's private library is empty.
- * Guides new players toward the first action in the Player Journey.
- */
-export function LibraryEmptyState({ className }: LibraryEmptyStateProps) {
-  const { t } = useTranslation();
+const FLOATING_ICONS = [
+  { emoji: '🎲', className: 'left-[20%] top-[10%] text-[40px]', delay: '0s' },
+  { emoji: '♟️', className: 'left-[55%] top-[5%] text-[48px]', delay: '0.8s' },
+  { emoji: '🃏', className: 'left-[75%] top-[25%] text-[40px]', delay: '1.5s' },
+  { emoji: '🧩', className: 'left-[10%] top-[50%] text-[32px]', delay: '2.2s' },
+  { emoji: '🎯', className: 'left-[45%] top-[55%] text-[40px]', delay: '0.5s' },
+  { emoji: '🏰', className: 'left-[80%] top-[55%] text-[36px]', delay: '1.8s' },
+];
+
+const QUICK_START_CARDS = [
+  {
+    icon: '🔍',
+    title: 'Esplora il Catalogo',
+    description: 'Cerca tra migliaia di giochi e aggiungili alla tua libreria',
+    borderColor: 'border-t-primary',
+    action: 'catalog' as const,
+  },
+  {
+    icon: '✏️',
+    title: 'Crea Gioco Custom',
+    description: 'Aggiungi un gioco non presente nel catalogo',
+    borderColor: 'border-t-green-500',
+    action: 'custom' as const,
+  },
+];
+
+export function LibraryEmptyState({
+  onExploreCatalog,
+  onCreateCustom,
+  className,
+}: LibraryEmptyStateProps) {
+  const handleAction = (action: 'catalog' | 'custom') => {
+    if (action === 'catalog') onExploreCatalog?.();
+    else onCreateCustom?.();
+  };
 
   return (
     <div
-      role="region"
-      aria-label={t('privateGames.noGamesYet')}
-      className={`flex flex-col items-center justify-center py-16 ${className ?? ''}`}
+      className={cn('flex flex-col items-center text-center', className)}
       data-testid="empty-state"
     >
-      {/* Decorative meeple cluster */}
-      <div className="flex items-end gap-2 mb-8 opacity-25 select-none" aria-hidden="true">
-        <Gamepad2 className="h-8 w-8 text-orange-500 -rotate-12" />
-        <Gamepad2 className="h-12 w-12 text-orange-400" />
-        <Sparkles className="h-6 w-6 text-orange-300 mb-1" />
-        <Gamepad2 className="h-10 w-10 text-orange-500 rotate-6" />
-        <Gamepad2 className="h-7 w-7 text-orange-400 rotate-12" />
-      </div>
-
-      {/* Main card */}
-      <div
-        className={[
-          'max-w-lg w-full rounded-xl border-2 border-dashed border-orange-500/30',
-          'bg-card/50 backdrop-blur-sm px-8 py-10 text-center space-y-4',
-          'dark:bg-card/40',
-        ].join(' ')}
-      >
-        {/* Title */}
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {t('privateGames.noGamesYet')}
-        </h2>
-
-        {/* Description */}
-        <p className="text-muted-foreground text-sm leading-relaxed">
-          {t('privateGames.emptyStateDescription')}
-        </p>
-
-        {/* Primary CTA */}
-        <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
-          <Button
-            asChild
-            className="bg-orange-500 hover:bg-orange-600 text-white font-medium w-full sm:w-auto"
-            data-testid="empty-state-primary-cta"
+      {/* Animated illustration */}
+      <div className="relative mb-8 h-[180px] w-[280px]" aria-hidden="true">
+        {FLOATING_ICONS.map((icon, i) => (
+          <span
+            key={i}
+            className={cn('absolute animate-float drop-shadow-lg', icon.className)}
+            style={{ animationDelay: icon.delay }}
           >
-            <Link href="/library?action=add">
-              <span className="mr-1 font-bold">+</span> {t('privateGames.addFirstGame')}
-            </Link>
-          </Button>
-
-          {/* Secondary CTA */}
-          <Button
-            asChild
-            variant="outline"
-            className="w-full sm:w-auto"
-            data-testid="empty-state-secondary-cta"
-          >
-            <Link href="/library?tab=collection">
-              <Search className="h-4 w-4 mr-2" />
-              {t('privateGames.browseCatalog')}
-            </Link>
-          </Button>
+            {icon.emoji}
+          </span>
+        ))}
+        {/* Central glow ring */}
+        <div className="absolute left-1/2 top-1/2 flex h-[100px] w-[100px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-primary/20 bg-[radial-gradient(circle,hsla(25,95%,60%,0.15)_0%,transparent_70%)] animate-glow-pulse">
+          <span className="text-[40px]">📚</span>
         </div>
       </div>
+
+      {/* Title + subtitle */}
+      <h2 className="mb-2 bg-gradient-to-r from-foreground to-primary bg-clip-text font-quicksand text-2xl font-extrabold text-transparent sm:text-[26px]">
+        La tua collezione ti aspetta
+      </h2>
+      <p className="mb-7 max-w-[420px] text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
+        Aggiungi i tuoi giochi da tavolo preferiti, carica i manuali PDF e lascia che l&apos;AI ti
+        aiuti a padroneggiare ogni regola.
+      </p>
+
+      {/* Quick-start cards */}
+      <div className="mb-7 grid w-full max-w-[700px] grid-cols-1 gap-3.5 sm:grid-cols-3">
+        {QUICK_START_CARDS.map(card => (
+          <button
+            key={card.action}
+            onClick={() => handleAction(card.action)}
+            className={cn(
+              'flex flex-col items-center rounded-xl border border-border border-t-[3px] bg-card px-4 py-5 text-center',
+              'transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-warm-lg',
+              card.borderColor
+            )}
+          >
+            <span className="mb-2.5 text-[32px]">{card.icon}</span>
+            <span className="mb-1 font-quicksand text-sm font-bold">{card.title}</span>
+            <span className="text-[11px] leading-snug text-muted-foreground">
+              {card.description}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Trending games */}
+      <TrendingGamesRow className="max-w-[700px]" />
     </div>
   );
 }

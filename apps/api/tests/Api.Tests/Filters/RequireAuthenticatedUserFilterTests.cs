@@ -4,6 +4,7 @@ using Api.Infrastructure.Entities;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using System.Security.Claims;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -34,7 +35,7 @@ public class RequireAuthenticatedUserFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
     }
 
@@ -52,32 +53,30 @@ public class RequireAuthenticatedUserFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Once);
     }
 
     [Fact]
-    public async Task InvokeAsync_CallsNextDelegate_WhenApiKeyPresent()
+    public async Task InvokeAsync_ReturnsUnauthorized_WhenOnlyApiKeyPresent()
     {
+        // API key authentication was removed (PR #211). Session is now the only valid auth method.
         // Arrange
         var filter = new RequireAuthenticatedUserFilter();
         var context = CreateFilterContext(includeSession: false, includeApiKey: true);
-        var expectedResult = Results.Ok(new { success = true });
-        _nextMock.Setup(next => next(It.IsAny<EndpointFilterInvocationContext>()))
-            .ReturnsAsync(expectedResult);
 
         // Act
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
-        _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Once);
+        result.Should().NotBeNull();
+        _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
     }
 
     [Fact]
     public async Task InvokeAsync_CallsNextDelegate_WhenBothSessionAndApiKeyPresent()
     {
-        // Arrange (session takes priority)
+        // Arrange (session is the valid auth; API key claims are ignored)
         var filter = new RequireAuthenticatedUserFilter();
         var context = CreateFilterContext(includeSession: true, includeApiKey: true);
         var expectedResult = Results.Ok(new { success = true });
@@ -88,7 +87,7 @@ public class RequireAuthenticatedUserFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Once);
     }
 
@@ -110,23 +109,24 @@ public class RequireAuthenticatedUserFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
 
         // Verify session is in HttpContext.Items
-        Assert.True(context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)));
+        context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)).Should().BeTrue();
         var sessionInContext = context.HttpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        Assert.NotNull(sessionInContext);
-        Assert.Equal(testSession!.User!.Id, sessionInContext!.User!.Id);
+        sessionInContext.Should().NotBeNull();
+        sessionInContext!.User!.Id.Should().Be(testSession!.User!.Id);
     }
 
     [Fact]
-    public async Task InvokeAsync_UserClaimsAvailableInHttpContext_WhenApiKeyAuth()
+    public async Task InvokeAsync_ReturnsUnauthorized_WhenOnlyApiKeyClaimsPresent()
     {
+        // API key authentication was removed (PR #211). ClaimsPrincipal with "ApiKey" scheme
+        // is no longer sufficient — a valid session in HttpContext.Items is required.
         // Arrange
         var filter = new RequireAuthenticatedUserFilter();
         var httpContext = new DefaultHttpContext();
 
-        // Simulate API key authentication via ClaimsPrincipal
         var claims = new[]
         {
             new Claim(ClaimTypes.Name, "api-user"),
@@ -136,19 +136,13 @@ public class RequireAuthenticatedUserFilterTests
         httpContext.User = new ClaimsPrincipal(identity);
 
         var context = new DefaultEndpointFilterInvocationContext(httpContext);
-        var expectedResult = Results.Ok(new { success = true });
-        _nextMock.Setup(next => next(It.IsAny<EndpointFilterInvocationContext>()))
-            .ReturnsAsync(expectedResult);
 
         // Act
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
-        // Assert
-        Assert.Equal(expectedResult, result);
-
-        // Verify user is authenticated
-        Assert.True(context.HttpContext.User.Identity?.IsAuthenticated);
-        Assert.Equal("api-user", context.HttpContext.User.Identity?.Name);
+        // Assert — no session in Items → 401
+        result.Should().NotBeNull();
+        _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
     }
 
     private EndpointFilterInvocationContext CreateFilterContext(bool includeSession, bool includeApiKey)

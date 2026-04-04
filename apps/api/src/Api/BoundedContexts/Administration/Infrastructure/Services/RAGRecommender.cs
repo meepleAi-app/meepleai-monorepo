@@ -18,21 +18,16 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 internal sealed class RAGRecommender : IRAGRecommender
 {
     private readonly MeepleAiDbContext _dbContext;
-    private readonly IQdrantClientAdapter _qdrantClient;
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<RAGRecommender> _logger;
-    private const string GameEmbeddingsCollection = "game-embeddings";
     private const int TopGamesToAnalyze = 5;
-    private const int MaxRecommendations = 3;
 
     public RAGRecommender(
         MeepleAiDbContext dbContext,
-        IQdrantClientAdapter qdrantClient,
         IEmbeddingService embeddingService,
         ILogger<RAGRecommender> logger)
     {
         _dbContext = dbContext;
-        _qdrantClient = qdrantClient;
         _embeddingService = embeddingService;
         _logger = logger;
     }

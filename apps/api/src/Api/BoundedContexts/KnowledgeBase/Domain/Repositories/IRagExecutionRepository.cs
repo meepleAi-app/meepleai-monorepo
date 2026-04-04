@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 
@@ -59,6 +60,17 @@ public interface IRagExecutionRepository
         List<Guid> agentDefinitionIds,
         DateTime dateFrom,
         DateTime dateTo,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<StrategyAggregateMetrics>> GetAggregatedMetricsAsync(
+        DateOnly? startDate, DateOnly? endDate,
+        string? strategy = null,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<TimeSeriesPoint>> GetTimeSeriesMetricsAsync(
+        string strategy,
+        DateOnly startDate, DateOnly endDate,
+        TimeSeriesGranularity granularity,
         CancellationToken cancellationToken = default);
 }
 

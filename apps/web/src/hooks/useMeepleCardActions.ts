@@ -185,7 +185,7 @@ function useGameLibraryActions(
  * />
  */
 export function useMeepleCardActions(
-  entityType: 'game' | 'player' | 'session' | 'agent' | 'document' | 'chatSession' | 'event' | 'custom',
+  entityType: 'game' | 'player' | 'session' | 'agent' | 'kb' | 'chatSession' | 'event' | 'custom',
   entityId: string,
   context: MeepleCardContext,
   options: UseMeepleCardActionsOptions = {}

@@ -18,7 +18,8 @@
 .env
 .env.*
 
-# Test results
+# Test project and results
+tests/
 **/TestResults/
 **/*.trx
 **/*.coverage

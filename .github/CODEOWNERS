@@ -10,108 +10,108 @@
 # ============================================
 # Global Owners (fallback for unmatched files)
 # ============================================
-*                                   @DegrassiAaron
+*                                   @meepleAi-app
 
 # ============================================
 # Frontend (Next.js / React)
 # ============================================
-/apps/web/                          @DegrassiAaron
-/apps/web/src/components/           @DegrassiAaron
-/apps/web/src/pages/                @DegrassiAaron
-/apps/web/src/lib/                  @DegrassiAaron
-/apps/web/src/hooks/                @DegrassiAaron
-/apps/web/src/styles/               @DegrassiAaron
+/apps/web/                          @meepleAi-app
+/apps/web/src/components/           @meepleAi-app
+/apps/web/src/pages/                @meepleAi-app
+/apps/web/src/lib/                  @meepleAi-app
+/apps/web/src/hooks/                @meepleAi-app
+/apps/web/src/styles/               @meepleAi-app
 
 # Frontend Tests
-/apps/web/__tests__/                @DegrassiAaron
-/apps/web/e2e/                      @DegrassiAaron
+/apps/web/__tests__/                @meepleAi-app
+/apps/web/e2e/                      @meepleAi-app
 
 # Frontend Config
-/apps/web/package.json              @DegrassiAaron
-/apps/web/next.config.ts            @DegrassiAaron
-/apps/web/tailwind.config.ts        @DegrassiAaron
-/apps/web/tsconfig.json             @DegrassiAaron
+/apps/web/package.json              @meepleAi-app
+/apps/web/next.config.ts            @meepleAi-app
+/apps/web/tailwind.config.ts        @meepleAi-app
+/apps/web/tsconfig.json             @meepleAi-app
 
 # ============================================
 # Backend (.NET / C#)
 # ============================================
-/apps/api/                          @DegrassiAaron
-/apps/api/src/Api/BoundedContexts/  @DegrassiAaron
-/apps/api/src/Api/Routing/          @DegrassiAaron
-/apps/api/src/Api/Infrastructure/   @DegrassiAaron
+/apps/api/                          @meepleAi-app
+/apps/api/src/Api/BoundedContexts/  @meepleAi-app
+/apps/api/src/Api/Routing/          @meepleAi-app
+/apps/api/src/Api/Infrastructure/   @meepleAi-app
 
 # Backend Domain Contexts
-/apps/api/src/Api/BoundedContexts/Authentication/       @DegrassiAaron
-/apps/api/src/Api/BoundedContexts/GameManagement/       @DegrassiAaron
-/apps/api/src/Api/BoundedContexts/KnowledgeBase/        @DegrassiAaron
-/apps/api/src/Api/BoundedContexts/DocumentProcessing/   @DegrassiAaron
-/apps/api/src/Api/BoundedContexts/Administration/       @DegrassiAaron
+/apps/api/src/Api/BoundedContexts/Authentication/       @meepleAi-app
+/apps/api/src/Api/BoundedContexts/GameManagement/       @meepleAi-app
+/apps/api/src/Api/BoundedContexts/KnowledgeBase/        @meepleAi-app
+/apps/api/src/Api/BoundedContexts/DocumentProcessing/   @meepleAi-app
+/apps/api/src/Api/BoundedContexts/Administration/       @meepleAi-app
 
 # Backend Tests
-/apps/api/tests/                    @DegrassiAaron
+/apps/api/tests/                    @meepleAi-app
 
 # Backend Config
-/apps/api/*.csproj                  @DegrassiAaron
-/apps/api/appsettings*.json         @DegrassiAaron
+/apps/api/*.csproj                  @meepleAi-app
+/apps/api/appsettings*.json         @meepleAi-app
 
 # Database Migrations (requires careful review)
-/apps/api/src/Api/Migrations/       @DegrassiAaron
+/apps/api/src/Api/Migrations/       @meepleAi-app
 
 # ============================================
 # Infrastructure & DevOps
 # ============================================
-/infra/                             @DegrassiAaron
-/infra/docker-compose*.yml          @DegrassiAaron
-/infra/traefik/                     @DegrassiAaron
-/infra/prometheus/                  @DegrassiAaron
-/infra/grafana/                     @DegrassiAaron
+/infra/                             @meepleAi-app
+/infra/docker-compose*.yml          @meepleAi-app
+/infra/traefik/                     @meepleAi-app
+/infra/prometheus/                  @meepleAi-app
+/infra/grafana/                     @meepleAi-app
 
 # ============================================
 # CI/CD & GitHub Configuration
 # ============================================
-/.github/                           @DegrassiAaron
-/.github/workflows/                 @DegrassiAaron
-/.github/CODEOWNERS                 @DegrassiAaron
+/.github/                           @meepleAi-app
+/.github/workflows/                 @meepleAi-app
+/.github/CODEOWNERS                 @meepleAi-app
 
 # ============================================
 # Security-Sensitive Files
 # ============================================
 # These files require security-aware review
-/.github/workflows/security-scan.yml    @DegrassiAaron
-/SECURITY.md                            @DegrassiAaron
-/docs/06-security/                      @DegrassiAaron
+/.github/workflows/security-scan.yml    @meepleAi-app
+/SECURITY.md                            @meepleAi-app
+/docs/06-security/                      @meepleAi-app
 
 # ============================================
 # Documentation
 # ============================================
-/docs/                              @DegrassiAaron
-/README.md                          @DegrassiAaron
-/CONTRIBUTING.md                    @DegrassiAaron
-/CLAUDE.md                          @DegrassiAaron
+/docs/                              @meepleAi-app
+/README.md                          @meepleAi-app
+/CONTRIBUTING.md                    @meepleAi-app
+/CLAUDE.md                          @meepleAi-app
 
 # ============================================
 # Root Configuration Files
 # ============================================
-/.gitignore                         @DegrassiAaron
-/.gitattributes                     @DegrassiAaron
-/commitlint.config.js               @DegrassiAaron
-/.husky/                            @DegrassiAaron
+/.gitignore                         @meepleAi-app
+/.gitattributes                     @meepleAi-app
+/commitlint.config.js               @meepleAi-app
+/.husky/                            @meepleAi-app
 
 # ============================================
 # Schemas & API Contracts
 # ============================================
-/schemas/                           @DegrassiAaron
+/schemas/                           @meepleAi-app
 
 # ============================================
 # Tools & Scripts
 # ============================================
-/tools/                             @DegrassiAaron
-/scripts/                           @DegrassiAaron
+/tools/                             @meepleAi-app
+/scripts/                           @meepleAi-app
 
 # ============================================
 # Dependencies & Package Management
 # ============================================
 # These affect the entire project and need careful review
-/apps/web/pnpm-lock.yaml            @DegrassiAaron
-/apps/api/**/packages.lock.json     @DegrassiAaron
-/.github/dependabot.yml             @DegrassiAaron
+/apps/web/pnpm-lock.yaml            @meepleAi-app
+/apps/api/**/packages.lock.json     @meepleAi-app
+/.github/dependabot.yml             @meepleAi-app

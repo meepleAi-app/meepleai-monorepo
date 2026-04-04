@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 
@@ -34,7 +35,7 @@ public class LlmModelOverrideServiceTests
         var result = _sut.IsInBudgetMode();
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -47,10 +48,10 @@ public class LlmModelOverrideServiceTests
         _sut.EnableBudgetMode(reason);
 
         // Assert
-        Assert.True(_sut.IsInBudgetMode());
+        _sut.IsInBudgetMode().Should().BeTrue();
         var status = _sut.GetBudgetModeStatus();
-        Assert.Contains("ACTIVE", status, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(reason, status, StringComparison.OrdinalIgnoreCase);
+        status.Should().ContainEquivalentOf("ACTIVE");
+        status.Should().ContainEquivalentOf(reason);
     }
 
     [Fact]
@@ -58,15 +59,15 @@ public class LlmModelOverrideServiceTests
     {
         // Arrange
         _sut.EnableBudgetMode("Test reason");
-        Assert.True(_sut.IsInBudgetMode());
+        _sut.IsInBudgetMode().Should().BeTrue();
 
         // Act
         _sut.DisableBudgetMode();
 
         // Assert
-        Assert.False(_sut.IsInBudgetMode());
+        _sut.IsInBudgetMode().Should().BeFalse();
         var status = _sut.GetBudgetModeStatus();
-        Assert.Contains("INACTIVE", status, StringComparison.OrdinalIgnoreCase);
+        status.Should().ContainEquivalentOf("INACTIVE");
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class LlmModelOverrideServiceTests
         var result = _sut.GetOverrideModel(originalModel);
 
         // Assert
-        Assert.Equal(originalModel, result);
+        result.Should().Be(originalModel);
     }
 
     [Fact]
@@ -93,8 +94,8 @@ public class LlmModelOverrideServiceTests
         var result = _sut.GetOverrideModel(expensiveModel);
 
         // Assert
-        Assert.NotEqual(expensiveModel, result);
-        Assert.Equal("openai/gpt-4o-mini", result); // Default mapping
+        result.Should().NotBe(expensiveModel);
+        result.Should().Be("openai/gpt-4o-mini"); // Default mapping
     }
 
     [Fact]
@@ -108,7 +109,7 @@ public class LlmModelOverrideServiceTests
         var result = _sut.GetOverrideModel(unknownModel);
 
         // Assert
-        Assert.Equal(unknownModel, result); // No mapping → return original
+        result.Should().Be(unknownModel); // No mapping → return original
     }
 
     [Theory]
@@ -128,7 +129,7 @@ public class LlmModelOverrideServiceTests
         var result = _sut.GetOverrideModel(expensiveModel);
 
         // Assert
-        Assert.Equal(expectedCheaper, result);
+        result.Should().Be(expectedCheaper);
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public class LlmModelOverrideServiceTests
         var status = _sut.GetBudgetModeStatus();
 
         // Assert
-        Assert.Contains("INACTIVE", status, StringComparison.OrdinalIgnoreCase);
+        status.Should().ContainEquivalentOf("INACTIVE");
     }
 
     [Fact]
@@ -152,9 +153,9 @@ public class LlmModelOverrideServiceTests
         var status = _sut.GetBudgetModeStatus();
 
         // Assert
-        Assert.Contains("ACTIVE", status, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(reason, status, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("min", status, StringComparison.OrdinalIgnoreCase); // Duration in minutes
+        status.Should().ContainEquivalentOf("ACTIVE");
+        status.Should().ContainEquivalentOf(reason);
+        status.Should().ContainEquivalentOf("min"); // Duration in minutes
     }
 
     [Fact]
@@ -170,8 +171,8 @@ public class LlmModelOverrideServiceTests
         var secondStatus = _sut.GetBudgetModeStatus();
 
         // Assert
-        Assert.NotEqual(firstStatus, secondStatus);
-        Assert.Contains("Second reason", secondStatus, StringComparison.OrdinalIgnoreCase);
+        secondStatus.Should().NotBe(firstStatus);
+        secondStatus.Should().ContainEquivalentOf("Second reason");
     }
 
     [Fact]
@@ -192,6 +193,6 @@ public class LlmModelOverrideServiceTests
         var result = service.GetOverrideModel("custom/model-a");
 
         // Assert
-        Assert.Equal("custom/model-b", result);
+        result.Should().Be("custom/model-b");
     }
 }

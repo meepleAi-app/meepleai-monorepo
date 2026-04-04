@@ -11,6 +11,7 @@ import { use } from 'react';
 
 import dynamic from 'next/dynamic';
 
+import { ChatMobile } from '@/components/chat-unified/ChatMobile';
 import { ChatNavigationContext } from '@/components/chat-unified/ChatNavigationContext';
 
 const ChatThreadView = dynamic(
@@ -31,17 +32,20 @@ const ChatThreadView = dynamic(
   }
 );
 
-export default function ChatThreadPage({
-  params,
-}: {
-  params: Promise<{ threadId: string }>;
-}) {
+export default function ChatThreadPage({ params }: { params: Promise<{ threadId: string }> }) {
   const { threadId } = use(params);
 
   return (
     <>
       <ChatNavigationContext threadId={threadId} />
-      <ChatThreadView threadId={threadId} />
+      {/* Mobile */}
+      <div className="lg:hidden h-dvh">
+        <ChatMobile threadId={threadId} />
+      </div>
+      {/* Desktop */}
+      <div className="hidden lg:block h-dvh">
+        <ChatThreadView threadId={threadId} />
+      </div>
     </>
   );
 }

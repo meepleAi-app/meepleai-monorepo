@@ -14,7 +14,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Tests DeleteBehavior.Cascade for User and Game FK.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 public class ChunkedUploadSessionForeignKeyTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

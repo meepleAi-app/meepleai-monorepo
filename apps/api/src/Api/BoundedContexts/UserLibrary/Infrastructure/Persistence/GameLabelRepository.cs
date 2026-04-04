@@ -1,6 +1,8 @@
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.UserLibrary;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,18 +11,17 @@ namespace Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 /// <summary>
 /// EF Core implementation of GameLabel repository.
 /// </summary>
-internal class GameLabelRepository : IGameLabelRepository
+internal class GameLabelRepository : RepositoryBase, IGameLabelRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
 
-    public GameLabelRepository(MeepleAiDbContext dbContext)
+    public GameLabelRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<GameLabel?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.GameLabels
+        var entity = await DbContext.GameLabels
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
 
@@ -29,7 +30,7 @@ internal class GameLabelRepository : IGameLabelRepository
 
     public async Task<IReadOnlyList<GameLabel>> GetPredefinedLabelsAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.GameLabels
+        var entities = await DbContext.GameLabels
             .AsNoTracking()
             .Where(e => e.IsPredefined)
             .OrderBy(e => e.Name)
@@ -40,7 +41,7 @@ internal class GameLabelRepository : IGameLabelRepository
 
     public async Task<IReadOnlyList<GameLabel>> GetUserLabelsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.GameLabels
+        var entities = await DbContext.GameLabels
             .AsNoTracking()
             .Where(e => !e.IsPredefined && e.UserId == userId)
             .OrderBy(e => e.Name)
@@ -51,7 +52,7 @@ internal class GameLabelRepository : IGameLabelRepository
 
     public async Task<IReadOnlyList<GameLabel>> GetAvailableLabelsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.GameLabels
+        var entities = await DbContext.GameLabels
             .AsNoTracking()
             .Where(e => e.IsPredefined || e.UserId == userId)
             .OrderBy(e => e.IsPredefined ? 0 : 1) // Predefined first
@@ -63,7 +64,7 @@ internal class GameLabelRepository : IGameLabelRepository
 
     public async Task<IReadOnlyList<GameLabel>> GetLabelsForEntryAsync(Guid userLibraryEntryId, CancellationToken cancellationToken = default)
     {
-        var entities = await _dbContext.UserGameLabels
+        var entities = await DbContext.UserGameLabels
             .AsNoTracking()
             .Where(ugl => ugl.UserLibraryEntryId == userLibraryEntryId)
             .Include(ugl => ugl.Label)
@@ -79,7 +80,7 @@ internal class GameLabelRepository : IGameLabelRepository
     {
         var normalizedName = name.Trim();
 
-        return await _dbContext.GameLabels
+        return await DbContext.GameLabels
             .AsNoTracking()
             .AnyAsync(e =>
                 (e.IsPredefined || e.UserId == userId) &&
@@ -88,7 +89,7 @@ internal class GameLabelRepository : IGameLabelRepository
 
     public async Task<GameLabel?> GetAccessibleLabelAsync(Guid userId, Guid labelId, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.GameLabels
+        var entity = await DbContext.GameLabels
             .AsNoTracking()
             .FirstOrDefaultAsync(e =>
                 e.Id == labelId &&
@@ -102,7 +103,7 @@ internal class GameLabelRepository : IGameLabelRepository
         ArgumentNullException.ThrowIfNull(label);
 
         var entity = MapToPersistence(label);
-        await _dbContext.GameLabels.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.GameLabels.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task DeleteAsync(GameLabel label, CancellationToken cancellationToken = default)
@@ -110,7 +111,7 @@ internal class GameLabelRepository : IGameLabelRepository
         ArgumentNullException.ThrowIfNull(label);
 
         var entity = MapToPersistence(label);
-        _dbContext.GameLabels.Remove(entity);
+        DbContext.GameLabels.Remove(entity);
         return Task.CompletedTask;
     }
 

@@ -3,6 +3,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,18 +14,17 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// Repository implementation for Badge entity.
 /// ISSUE-2731: Infrastructure - EF Core Migrations e Repository
 /// </summary>
-internal sealed class BadgeRepository : IBadgeRepository
+internal sealed class BadgeRepository : RepositoryBase, IBadgeRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public BadgeRepository(MeepleAiDbContext context)
+    public BadgeRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task<List<Badge>> GetAllActiveAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _context.Set<BadgeEntity>()
+        var entities = await DbContext.Set<BadgeEntity>()
             .AsNoTracking()
             .Where(e => e.IsActive)
             .OrderBy(e => e.DisplayOrder)
@@ -41,7 +42,7 @@ internal sealed class BadgeRepository : IBadgeRepository
 
         var normalizedCode = code.ToUpperInvariant();
 
-        var entity = await _context.Set<BadgeEntity>()
+        var entity = await DbContext.Set<BadgeEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Code == normalizedCode, cancellationToken)
             .ConfigureAwait(false);
@@ -51,7 +52,7 @@ internal sealed class BadgeRepository : IBadgeRepository
 
     public async Task<Badge?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.Set<BadgeEntity>()
+        var entity = await DbContext.Set<BadgeEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);

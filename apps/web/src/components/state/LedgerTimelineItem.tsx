@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection, @typescript-eslint/no-non-null-assertion */
 /**
  * LedgerTimelineItem Component
  * Issue #2422: Ledger Mode History Timeline

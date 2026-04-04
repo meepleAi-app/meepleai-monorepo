@@ -16,6 +16,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Infrastructure.Services;
 
@@ -157,8 +158,9 @@ public class GameSessionOrchestratorServiceTests
         SetupSessionRepository(sessionId, null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _service.BuildContextAsync(sessionId));
+        var act =
+            () => _service.BuildContextAsync(sessionId);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -173,12 +175,12 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Null(result.PrimaryGameId);
-        Assert.Empty(result.ExpansionGameIds);
-        Assert.Empty(result.AllGameIds);
-        Assert.Empty(result.KbCardIds);
-        Assert.Equal(SessionDegradationLevel.NoAI, result.DegradationLevel);
+        result.SessionId.Should().Be(sessionId);
+        result.PrimaryGameId.Should().BeNull();
+        result.ExpansionGameIds.Should().BeEmpty();
+        result.AllGameIds.Should().BeEmpty();
+        result.KbCardIds.Should().BeEmpty();
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.NoAI);
     }
 
     [Fact]
@@ -205,15 +207,15 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Equal(gameId, result.PrimaryGameId);
-        Assert.Empty(result.ExpansionGameIds);
-        Assert.Single(result.AllGameIds);
-        Assert.Single(result.KbCardIds);
-        Assert.NotNull(result.PrimaryRules);
-        Assert.Equal("Test Game", result.PrimaryRules.GameTitle);
-        Assert.Empty(result.GamesWithoutPdf);
-        Assert.Equal(SessionDegradationLevel.Full, result.DegradationLevel);
+        result.SessionId.Should().Be(sessionId);
+        result.PrimaryGameId.Should().Be(gameId);
+        result.ExpansionGameIds.Should().BeEmpty();
+        result.AllGameIds.Should().ContainSingle();
+        result.KbCardIds.Should().ContainSingle();
+        result.PrimaryRules.Should().NotBeNull();
+        result.PrimaryRules.GameTitle.Should().Be("Test Game");
+        result.GamesWithoutPdf.Should().BeEmpty();
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.Full);
     }
 
     [Fact]
@@ -233,8 +235,8 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(SessionDegradationLevel.NoAI, result.DegradationLevel);
-        Assert.Contains(gameId, result.GamesWithoutPdf);
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.NoAI);
+        result.GamesWithoutPdf.Should().Contain(gameId);
     }
 
     [Fact]
@@ -272,9 +274,9 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(SessionDegradationLevel.BasicOnly, result.DegradationLevel);
-        Assert.Contains(primaryGameId, result.GamesWithoutPdf);
-        Assert.DoesNotContain(expansionId, result.GamesWithoutPdf);
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.BasicOnly);
+        result.GamesWithoutPdf.Should().Contain(primaryGameId);
+        result.GamesWithoutPdf.Should().NotContain(expansionId);
     }
 
     [Fact]
@@ -319,11 +321,11 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(SessionDegradationLevel.Partial, result.DegradationLevel);
-        Assert.Single(result.ExpansionGameIds);
-        Assert.Equal(expansionId, result.ExpansionGameIds[0]);
-        Assert.Contains(expansionId, result.GamesWithoutPdf);
-        Assert.DoesNotContain(primaryGameId, result.GamesWithoutPdf);
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.Partial);
+        result.ExpansionGameIds.Should().ContainSingle();
+        result.ExpansionGameIds[0].Should().Be(expansionId);
+        result.GamesWithoutPdf.Should().Contain(expansionId);
+        result.GamesWithoutPdf.Should().NotContain(primaryGameId);
     }
 
     // ========================================================================
@@ -355,8 +357,8 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert — should succeed with empty expansions
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Empty(result.ExpansionGameIds);
+        result.SessionId.Should().Be(sessionId);
+        result.ExpansionGameIds.Should().BeEmpty();
     }
 
     [Fact]
@@ -378,9 +380,9 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert — should succeed with no KB cards and NoAI degradation
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Empty(result.KbCardIds);
-        Assert.Equal(SessionDegradationLevel.NoAI, result.DegradationLevel);
+        result.SessionId.Should().Be(sessionId);
+        result.KbCardIds.Should().BeEmpty();
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.NoAI);
     }
 
     [Fact]
@@ -405,9 +407,9 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert — should succeed with null primary rules
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Null(result.PrimaryRules);
-        Assert.Equal(SessionDegradationLevel.Full, result.DegradationLevel);
+        result.SessionId.Should().Be(sessionId);
+        result.PrimaryRules.Should().BeNull();
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.Full);
     }
 
     // ========================================================================
@@ -423,7 +425,7 @@ public class GameSessionOrchestratorServiceTests
             expansionGameIds: new List<Guid>(),
             gamesWithoutPdf: new List<Guid> { Guid.NewGuid() });
 
-        Assert.Equal(SessionDegradationLevel.NoAI, result);
+        result.Should().Be(SessionDegradationLevel.NoAI);
     }
 
     [Fact]
@@ -438,7 +440,7 @@ public class GameSessionOrchestratorServiceTests
             expansionGameIds: new List<Guid> { expansionId },
             gamesWithoutPdf: new List<Guid> { primaryId });
 
-        Assert.Equal(SessionDegradationLevel.BasicOnly, result);
+        result.Should().Be(SessionDegradationLevel.BasicOnly);
     }
 
     [Fact]
@@ -453,7 +455,7 @@ public class GameSessionOrchestratorServiceTests
             expansionGameIds: new List<Guid> { expansionId },
             gamesWithoutPdf: new List<Guid> { expansionId });
 
-        Assert.Equal(SessionDegradationLevel.Partial, result);
+        result.Should().Be(SessionDegradationLevel.Partial);
     }
 
     [Fact]
@@ -468,7 +470,7 @@ public class GameSessionOrchestratorServiceTests
             expansionGameIds: new List<Guid> { expansionId },
             gamesWithoutPdf: new List<Guid>());
 
-        Assert.Equal(SessionDegradationLevel.Full, result);
+        result.Should().Be(SessionDegradationLevel.Full);
     }
 
     [Fact]
@@ -481,7 +483,7 @@ public class GameSessionOrchestratorServiceTests
             expansionGameIds: new List<Guid>(),
             gamesWithoutPdf: new List<Guid>());
 
-        Assert.Equal(SessionDegradationLevel.Full, result);
+        result.Should().Be(SessionDegradationLevel.Full);
     }
 
     // ========================================================================
@@ -500,7 +502,7 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.RefreshContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(sessionId, result.SessionId);
+        result.SessionId.Should().Be(sessionId);
         _liveSessionRepoMock.Verify(
             x => x.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -530,11 +532,11 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.NotNull(result.PrimaryRules);
-        Assert.Equal(gameId, result.PrimaryRules.GameId);
-        Assert.Equal("Catan", result.PrimaryRules.GameTitle);
-        Assert.Contains("Worker Placement", result.PrimaryRules.KeyMechanics);
-        Assert.Contains("Resource Management", result.PrimaryRules.KeyMechanics);
+        result.PrimaryRules.Should().NotBeNull();
+        result.PrimaryRules.GameId.Should().Be(gameId);
+        result.PrimaryRules.GameTitle.Should().Be("Catan");
+        result.PrimaryRules.KeyMechanics.Should().Contain("Worker Placement");
+        result.PrimaryRules.KeyMechanics.Should().Contain("Resource Management");
     }
 
     [Fact]
@@ -554,7 +556,7 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Null(result.PrimaryRules);
+        result.PrimaryRules.Should().BeNull();
     }
 
     // ========================================================================
@@ -564,72 +566,78 @@ public class GameSessionOrchestratorServiceTests
     [Fact]
     public void Constructor_NullLiveSessionRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             null!,
             _entityLinkRepoMock.Object,
             _rulebookRepoMock.Object,
             _vectorDocRepoMock.Object,
             _sharedGameRepoMock.Object,
-            _loggerMock.Object));
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullEntityLinkRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             _liveSessionRepoMock.Object,
             null!,
             _rulebookRepoMock.Object,
             _vectorDocRepoMock.Object,
             _sharedGameRepoMock.Object,
-            _loggerMock.Object));
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullRulebookRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             _liveSessionRepoMock.Object,
             _entityLinkRepoMock.Object,
             null!,
             _vectorDocRepoMock.Object,
             _sharedGameRepoMock.Object,
-            _loggerMock.Object));
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullVectorDocRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             _liveSessionRepoMock.Object,
             _entityLinkRepoMock.Object,
             _rulebookRepoMock.Object,
             null!,
             _sharedGameRepoMock.Object,
-            _loggerMock.Object));
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullSharedGameRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             _liveSessionRepoMock.Object,
             _entityLinkRepoMock.Object,
             _rulebookRepoMock.Object,
             _vectorDocRepoMock.Object,
             null!,
-            _loggerMock.Object));
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             _liveSessionRepoMock.Object,
             _entityLinkRepoMock.Object,
             _rulebookRepoMock.Object,
             _vectorDocRepoMock.Object,
             _sharedGameRepoMock.Object,
-            null!));
+            null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

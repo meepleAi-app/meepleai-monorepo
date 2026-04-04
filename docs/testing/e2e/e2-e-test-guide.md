@@ -550,7 +550,7 @@ dotnet test --filter "FullyQualifiedName~MyTest.MySpecificTestMethod"
 ## Contact & Support
 
 - **Documentation**: [docs/05-testing/](README.md)
-- **Issues**: [GitHub Issues](https://github.com/DegrassiAaron/meepleai-monorepo/issues)
+- **Issues**: [GitHub Issues](https://github.com/meepleAi-app/meepleai-monorepo/issues)
 - **Related Issue**: #2533 (E2E Test Documentation)
 
 ---

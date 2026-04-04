@@ -55,7 +55,12 @@ describe('SharedGamesClient - Issue #3026', () => {
       });
 
       it('should search with all filters', async () => {
-        vi.mocked(mockHttpClient.get).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+        vi.mocked(mockHttpClient.get).mockResolvedValue({
+          items: [],
+          total: 0,
+          page: 1,
+          pageSize: 20,
+        });
 
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
         await client.search({
@@ -73,7 +78,7 @@ describe('SharedGamesClient - Issue #3026', () => {
         });
 
         expect(mockHttpClient.get).toHaveBeenCalledWith(
-          expect.stringContaining('searchTerm=catan'),
+          expect.stringContaining('search=catan'),
           expect.any(Object)
         );
         expect(mockHttpClient.get).toHaveBeenCalledWith(
@@ -98,19 +103,19 @@ describe('SharedGamesClient - Issue #3026', () => {
         vi.mocked(mockHttpClient.get).mockResolvedValue(mockGame);
 
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
-        const result = await client.getById('game-123');
+        const validUuid = '00000000-0000-0000-0000-000000000123';
+        const result = await client.getById(validUuid);
 
         expect(result).toEqual(mockGame);
         expect(mockHttpClient.get).toHaveBeenCalledWith(
-          '/api/v1/shared-games/game-123',
+          `/api/v1/shared-games/${validUuid}`,
           expect.any(Object)
         );
       });
 
       it('should return null for non-existent game', async () => {
-        vi.mocked(mockHttpClient.get).mockResolvedValue(null);
-
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
+        // Non-UUID format is rejected by client-side validation
         const result = await client.getById('nonexistent');
 
         expect(result).toBeNull();
@@ -174,7 +179,12 @@ describe('SharedGamesClient - Issue #3026', () => {
       });
 
       it('should filter by status', async () => {
-        vi.mocked(mockHttpClient.get).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+        vi.mocked(mockHttpClient.get).mockResolvedValue({
+          items: [],
+          total: 0,
+          page: 1,
+          pageSize: 20,
+        });
 
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
         await client.getAll({ status: 0, page: 1, pageSize: 50 });
@@ -214,10 +224,9 @@ describe('SharedGamesClient - Issue #3026', () => {
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
         await client.update('game-123', { title: 'Updated Title' });
 
-        expect(mockHttpClient.put).toHaveBeenCalledWith(
-          '/api/v1/admin/shared-games/game-123',
-          { title: 'Updated Title' }
-        );
+        expect(mockHttpClient.put).toHaveBeenCalledWith('/api/v1/admin/shared-games/game-123', {
+          title: 'Updated Title',
+        });
       });
     });
 
@@ -262,7 +271,11 @@ describe('SharedGamesClient - Issue #3026', () => {
 
     describe('bulkImport', () => {
       it('should bulk import games', async () => {
-        const mockResult = { successCount: 5, failureCount: 0, importedIds: ['g1', 'g2', 'g3', 'g4', 'g5'] };
+        const mockResult = {
+          successCount: 5,
+          failureCount: 0,
+          importedIds: ['g1', 'g2', 'g3', 'g4', 'g5'],
+        };
         vi.mocked(mockHttpClient.post).mockResolvedValue(mockResult);
 
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
@@ -326,7 +339,12 @@ describe('SharedGamesClient - Issue #3026', () => {
 
     describe('getPendingApprovals', () => {
       it('should get games pending approval', async () => {
-        const mockResponse = { items: [{ ...mockGame, status: 1 }], total: 1, page: 1, pageSize: 20 };
+        const mockResponse = {
+          items: [{ ...mockGame, status: 1 }],
+          total: 1,
+          page: 1,
+          pageSize: 20,
+        };
         vi.mocked(mockHttpClient.get).mockResolvedValue(mockResponse);
 
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
@@ -340,7 +358,10 @@ describe('SharedGamesClient - Issue #3026', () => {
   describe('Delete Request Workflow', () => {
     describe('requestDelete', () => {
       it('should request game deletion', async () => {
-        vi.mocked(mockHttpClient.post).mockResolvedValue({ requestId: 'req-123', message: 'Request submitted' });
+        vi.mocked(mockHttpClient.post).mockResolvedValue({
+          requestId: 'req-123',
+          message: 'Request submitted',
+        });
 
         const client = createSharedGamesClient({ httpClient: mockHttpClient });
         const result = await client.requestDelete('game-123', { reason: 'Duplicate entry' });
@@ -351,7 +372,12 @@ describe('SharedGamesClient - Issue #3026', () => {
 
     describe('getPendingDeletes', () => {
       it('should get pending delete requests', async () => {
-        const mockResponse = { items: [{ id: 'req-1', gameId: 'game-123' }], total: 1, page: 1, pageSize: 20 };
+        const mockResponse = {
+          items: [{ id: 'req-1', gameId: 'game-123' }],
+          total: 1,
+          page: 1,
+          pageSize: 20,
+        };
         vi.mocked(mockHttpClient.get).mockResolvedValue(mockResponse);
 
         const client = createSharedGamesClient({ httpClient: mockHttpClient });

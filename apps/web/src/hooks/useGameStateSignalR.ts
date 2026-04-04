@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import * as signalR from '@microsoft/signalr';
 
+import { logger } from '@/lib/logger';
 import { useGameStateStore } from '@/lib/stores/game-state-store';
 import type { GameState, StateConflict, StateUpdateMessage } from '@/types/game-state';
 
@@ -63,7 +64,7 @@ export function useGameStateSignalR({
 
         // Handle reconnection
         connection.onreconnecting(error => {
-          console.warn('SignalR reconnecting...', error);
+          logger.warn(`SignalR reconnecting... ${error?.message ?? ''}`);
           setIsConnected(false);
           setConnectionError('Reconnecting...');
           setConnectionStatus(false, 'Reconnecting...');
@@ -76,12 +77,12 @@ export function useGameStateSignalR({
 
           // Rejoin session group
           connection.invoke('JoinSession', sessionId).catch(err => {
-            console.error('Failed to rejoin session:', err);
+            logger.error('Failed to rejoin session:', err);
           });
         });
 
         connection.onclose(error => {
-          console.error('SignalR disconnected:', error);
+          logger.error('SignalR disconnected:', error);
           setIsConnected(false);
           setConnectionError(error?.message || 'Connection closed');
           setConnectionStatus(false, error?.message);
@@ -122,7 +123,7 @@ export function useGameStateSignalR({
         setConnectionError(null);
         setConnectionStatus(true);
       } catch (err) {
-        console.error('SignalR connection failed:', err);
+        logger.error('SignalR connection failed:', err);
         const errorMsg = err instanceof Error ? err.message : 'Failed to connect';
         setConnectionError(errorMsg);
         setConnectionStatus(false, errorMsg);
@@ -136,9 +137,9 @@ export function useGameStateSignalR({
       if (connectionRef.current) {
         connectionRef.current
           .invoke('LeaveSession', sessionId)
-          .catch(err => console.error('Failed to leave session:', err));
+          .catch(err => logger.error('Failed to leave session:', err));
 
-        connectionRef.current.stop().catch(err => console.error('Failed to stop connection:', err));
+        connectionRef.current.stop().catch(err => logger.error('Failed to stop connection:', err));
         connectionRef.current = null;
       }
     };
@@ -160,7 +161,7 @@ export function useGameStateSignalR({
     try {
       await connectionRef.current.invoke('BroadcastStateChange', sessionId, change);
     } catch (err) {
-      console.error('Failed to broadcast change:', err);
+      logger.error('Failed to broadcast change:', err);
       throw err;
     }
   };

@@ -43,21 +43,21 @@ describe('ServiceHealthMatrix', () => {
     const services = [
       createMockService('postgres', 'Healthy', 15300),
       createMockService('redis', 'Healthy', 900),
-      createMockService('qdrant', 'Degraded', 1200000),
+      createMockService('pgvector', 'Degraded', 1200000),
     ];
 
     render(<ServiceHealthMatrix services={services} locale="it" />);
 
     expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
     expect(screen.getByText('Redis')).toBeInTheDocument();
-    expect(screen.getByText('Qdrant')).toBeInTheDocument();
+    expect(screen.getByText('pgvector')).toBeInTheDocument();
   });
 
   it('renders correct number of service cards', () => {
     const services = [
       createMockService('postgres', 'Healthy', 15300),
       createMockService('redis', 'Healthy', 900),
-      createMockService('qdrant', 'Healthy', 25000),
+      createMockService('pgvector', 'Healthy', 25000),
       createMockService('n8n', 'Healthy', 350000),
     ];
 
@@ -221,7 +221,7 @@ describe('ServiceHealthMatrix', () => {
     const services = [
       createMockService('postgres', 'Healthy', 15300),
       createMockService('redis', 'Degraded', 1200000, 'High latency'),
-      createMockService('qdrant', 'Unhealthy', 0, 'Connection refused'),
+      createMockService('pgvector', 'Unhealthy', 0, 'Connection refused'),
     ];
 
     render(<ServiceHealthMatrix services={services} locale="it" />);

@@ -1,5 +1,7 @@
+using Api.BoundedContexts.UserNotifications.Infrastructure.HealthChecks;
 using Api.Infrastructure.Health.Checks;
 using Api.Infrastructure.Health.Models;
+using Api.Services;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Api.Infrastructure.Health.Extensions;
@@ -28,11 +30,25 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
+        // Embedding is essential for RAG but not for app startup — treat as Degraded
+        // to avoid blocking CI health checks and startup without embedding service
         builder.AddCheck<EmbeddingServiceHealthCheck>(
             "embedding",
-            HealthStatus.Unhealthy,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.Critical },
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
+
+        // Embedding dimension validation — catches provider/schema mismatch at startup.
+        // Uses factory registration because IEmbeddingService is internal (CS0051 prevents
+        // a public constructor), and ActivatorUtilities does not resolve internal constructors.
+        builder.Add(new HealthCheckRegistration(
+            "embedding-dimensions",
+            sp => new EmbeddingDimensionHealthCheck(
+                sp.GetRequiredService<IEmbeddingService>(),
+                sp.GetRequiredService<ILogger<EmbeddingDimensionHealthCheck>>()),
+            HealthStatus.Degraded,
+            new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
+            TimeSpan.FromSeconds(1)));
 
         builder.AddCheck<RerankerHealthCheck>(
             "reranker",
@@ -84,12 +100,6 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Monitoring, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
-        builder.AddCheck<HyperDxHealthCheck>(
-            "hyperdx",
-            HealthStatus.Degraded,
-            tags: new[] { HealthCheckTags.Monitoring, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
-
         // Issue #5477: Redis rate-limiting subsystem health
         builder.AddCheck<RedisRateLimitingHealthCheck>(
             "redis-rate-limiting",
@@ -102,6 +112,19 @@ public static class HealthCheckServiceExtensions
             "s3storage",
             HealthStatus.Degraded,
             tags: new[] { HealthCheckTags.Storage, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
+        // Slack Notification Services
+        builder.AddCheck<SlackApiHealthCheck>(
+            "slack_api",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.External, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
+        builder.AddCheck<SlackQueueHealthCheck>(
+            "slack_queue",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.External, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
         return builder;

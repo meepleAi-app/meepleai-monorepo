@@ -61,7 +61,7 @@ public static class EmbeddingProviderTypeExtensions
         EmbeddingProviderType.OllamaNomic => "nomic-embed-text",
         EmbeddingProviderType.OllamaMxbai => "mxbai-embed-large",
         EmbeddingProviderType.HuggingFaceBgeM3 => "BAAI/bge-m3",
-        EmbeddingProviderType.External => "intfloat/multilingual-e5-large",
+        EmbeddingProviderType.External => "intfloat/multilingual-e5-base",
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown provider type")
     };
 
@@ -75,7 +75,7 @@ public static class EmbeddingProviderTypeExtensions
         EmbeddingProviderType.OllamaNomic => 768,
         EmbeddingProviderType.OllamaMxbai => 1024,
         EmbeddingProviderType.HuggingFaceBgeM3 => 1024,
-        EmbeddingProviderType.External => 1024,
+        EmbeddingProviderType.External => 768,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown provider type")
     };
 

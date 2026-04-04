@@ -127,7 +127,7 @@ describe('createBggClient', () => {
     it('should throw error when response is null', async () => {
       mockHttpClient.get.mockResolvedValueOnce(null);
 
-      await expect(bggClient.search('test')).rejects.toThrow('Failed to search BoardGameGeek');
+      await expect(bggClient.search('test')).rejects.toThrow('Ricerca giochi fallita');
     });
 
     it('should propagate httpClient errors', async () => {
@@ -156,7 +156,11 @@ describe('createBggClient', () => {
 
       const result = await bggClient.getGameDetails(13);
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith(BGG_ROUTES.gameDetails(13), expect.anything(), expect.anything());
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        BGG_ROUTES.gameDetails(13),
+        expect.anything(),
+        expect.anything()
+      );
       expect(result).toEqual(mockDetails);
     });
 
@@ -177,14 +181,18 @@ describe('createBggClient', () => {
 
       await bggClient.getGameDetails(1);
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith(BGG_ROUTES.gameDetails(1), expect.anything(), expect.anything());
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        BGG_ROUTES.gameDetails(1),
+        expect.anything(),
+        expect.anything()
+      );
     });
 
     it('should throw error when game not found', async () => {
       mockHttpClient.get.mockResolvedValueOnce(null);
 
       await expect(bggClient.getGameDetails(99999)).rejects.toThrow(
-        'Game with BGG ID 99999 not found'
+        'Gioco con ID 99999 non trovato'
       );
     });
 
@@ -198,13 +206,13 @@ describe('createBggClient', () => {
     it('should handle BGG ID = 0', async () => {
       mockHttpClient.get.mockResolvedValueOnce(null);
 
-      await expect(bggClient.getGameDetails(0)).rejects.toThrow('Game with BGG ID 0 not found');
+      await expect(bggClient.getGameDetails(0)).rejects.toThrow('Gioco con ID 0 non trovato');
     });
 
     it('should handle negative BGG ID', async () => {
       mockHttpClient.get.mockResolvedValueOnce(null);
 
-      await expect(bggClient.getGameDetails(-1)).rejects.toThrow('Game with BGG ID -1 not found');
+      await expect(bggClient.getGameDetails(-1)).rejects.toThrow('Gioco con ID -1 non trovato');
     });
 
     it('should handle float BGG ID (truncated to int)', async () => {

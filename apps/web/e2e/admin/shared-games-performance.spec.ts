@@ -21,7 +21,7 @@ test.describe('SharedGameCatalog Performance (Lighthouse)', () => {
   test.skip(({ browserName }) => browserName !== 'chromium', 'Lighthouse requires Chromium');
 
   test('Public search page should achieve Lighthouse scores', async ({ page, browser }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     // Wait for page to be fully interactive
     await expect(page.locator('input[placeholder*="Cerca"]')).toBeVisible();
@@ -50,7 +50,7 @@ test.describe('SharedGameCatalog Performance (Lighthouse)', () => {
   });
 
   test('Core Web Vitals should meet targets', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     // Measure Core Web Vitals using Performance API
     const webVitals = await page.evaluate(() => {
@@ -93,7 +93,7 @@ test.describe('SharedGameCatalog Performance (Lighthouse)', () => {
   });
 
   test('Search results should render within 200ms (P95 target)', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     // Measure search performance
     const searchInput = page.locator('input[placeholder*="Cerca"]');

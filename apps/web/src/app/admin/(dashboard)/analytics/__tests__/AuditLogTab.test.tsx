@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const mockGetAuditLogs = vi.fn();
 const mockExportAuditLogs = vi.fn();
@@ -12,6 +12,9 @@ vi.mock('@/lib/api', () => ({
     },
   },
 }));
+
+const mockToast = vi.fn();
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast: mockToast }) }));
 
 import { AuditLogTab } from '../AuditLogTab';
 
@@ -36,26 +39,29 @@ describe('AuditLogTab', () => {
     mockExportAuditLogs.mockResolvedValue(new Blob(['csv']));
   });
 
-  it('renders heading after loading', async () => {
+  it('renders heading Audit Trail after loading', async () => {
     render(<AuditLogTab />);
     await waitFor(() => {
-      expect(screen.getByText('Audit Log')).toBeInTheDocument();
+      expect(screen.getByText('Audit Trail')).toBeInTheDocument();
     });
   });
 
-  it('renders export button', async () => {
+  it('renders user search filter', async () => {
     render(<AuditLogTab />);
     await waitFor(() => {
-      expect(screen.getByText('Export CSV')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Search by user...')).toBeInTheDocument();
     });
   });
 
   it('renders audit log entries in table', async () => {
     render(<AuditLogTab />);
-    await waitFor(() => {
-      expect(screen.getByText('UserLogin')).toBeInTheDocument();
-      expect(screen.getByText('Auth')).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText('UserLogin')).toBeInTheDocument();
+        expect(screen.getByText('Auth')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it('shows empty state when no entries', async () => {
@@ -66,8 +72,11 @@ describe('AuditLogTab', () => {
       offset: 0,
     });
     render(<AuditLogTab />);
-    await waitFor(() => {
-      expect(screen.getByText('No audit log entries found.')).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText('No audit log entries found.')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 });

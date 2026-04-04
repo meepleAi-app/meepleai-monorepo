@@ -39,6 +39,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Label } from '@/components/ui/primitives/label';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -115,10 +116,9 @@ export function ExportSession({
         includeCardHistory: exportOptions.includeCardHistory.toString(),
       });
 
-      const response = await fetch(
-        `/api/v1/game-sessions/${sessionId}/export/pdf?${params}`,
-        { credentials: 'include' }
-      );
+      const response = await fetch(`/api/v1/game-sessions/${sessionId}/export/pdf?${params}`, {
+        credentials: 'include',
+      });
 
       if (!response.ok) {
         throw new Error('Failed to export PDF');
@@ -142,7 +142,7 @@ export function ExportSession({
 
       setIsExportOpen(false);
     } catch (error) {
-      console.error('Export failed:', error);
+      logger.error('Export failed:', error);
     } finally {
       setIsExporting(false);
     }
@@ -164,7 +164,7 @@ export function ExportSession({
       const data: ShareLinkResponse = await response.json();
       setShareLink(data.shareUrl);
     } catch (error) {
-      console.error('Failed to generate share link:', error);
+      logger.error('Failed to generate share link:', error);
     } finally {
       setIsGeneratingLink(false);
     }
@@ -178,7 +178,7 @@ export function ExportSession({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logger.error('Failed to copy:', error);
     }
   }, [shareLink]);
 
@@ -211,7 +211,7 @@ export function ExportSession({
       });
     } catch (error) {
       // User cancelled or share failed
-      console.error('Share failed:', error);
+      logger.error('Share failed:', error);
     }
   }, [shareLink, gameName]);
 
@@ -235,9 +235,7 @@ export function ExportSession({
               <Download className="h-5 w-5 text-primary" />
               Export Session
             </DialogTitle>
-            <DialogDescription>
-              Download a PDF report of this session
-            </DialogDescription>
+            <DialogDescription>Download a PDF report of this session</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -247,8 +245,8 @@ export function ExportSession({
                 <Checkbox
                   id="include-chart"
                   checked={exportOptions.includeScoreChart}
-                  onCheckedChange={(checked) =>
-                    setExportOptions((prev) => ({
+                  onCheckedChange={checked =>
+                    setExportOptions(prev => ({
                       ...prev,
                       includeScoreChart: checked === true,
                     }))
@@ -263,8 +261,8 @@ export function ExportSession({
                 <Checkbox
                   id="include-dice"
                   checked={exportOptions.includeDiceHistory}
-                  onCheckedChange={(checked) =>
-                    setExportOptions((prev) => ({
+                  onCheckedChange={checked =>
+                    setExportOptions(prev => ({
                       ...prev,
                       includeDiceHistory: checked === true,
                     }))
@@ -279,8 +277,8 @@ export function ExportSession({
                 <Checkbox
                   id="include-cards"
                   checked={exportOptions.includeCardHistory}
-                  onCheckedChange={(checked) =>
-                    setExportOptions((prev) => ({
+                  onCheckedChange={checked =>
+                    setExportOptions(prev => ({
                       ...prev,
                       includeCardHistory: checked === true,
                     }))
@@ -346,11 +344,7 @@ export function ExportSession({
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem onClick={handleCopyLink} className="gap-2">
-              {copied ? (
-                <Check className="h-4 w-4 text-green-500" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
+              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               {copied ? 'Copied!' : 'Copy Link'}
             </DropdownMenuItem>
           )}
@@ -358,20 +352,12 @@ export function ExportSession({
           <DropdownMenuSeparator />
 
           {/* Social Share */}
-          <DropdownMenuItem
-            onClick={handleShareTwitter}
-            disabled={!shareLink}
-            className="gap-2"
-          >
+          <DropdownMenuItem onClick={handleShareTwitter} disabled={!shareLink} className="gap-2">
             <Twitter className="h-4 w-4" />
             Share on Twitter
           </DropdownMenuItem>
 
-          <DropdownMenuItem
-            onClick={handleShareFacebook}
-            disabled={!shareLink}
-            className="gap-2"
-          >
+          <DropdownMenuItem onClick={handleShareFacebook} disabled={!shareLink} className="gap-2">
             <Facebook className="h-4 w-4" />
             Share on Facebook
           </DropdownMenuItem>
@@ -380,11 +366,7 @@ export function ExportSession({
           {typeof navigator !== 'undefined' && 'share' in navigator && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={handleNativeShare}
-                disabled={!shareLink}
-                className="gap-2"
-              >
+              <DropdownMenuItem onClick={handleNativeShare} disabled={!shareLink} className="gap-2">
                 <Share2 className="h-4 w-4" />
                 More Options...
               </DropdownMenuItem>

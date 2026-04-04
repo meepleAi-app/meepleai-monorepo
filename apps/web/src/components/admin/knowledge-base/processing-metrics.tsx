@@ -1,20 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import {
-  ActivityIcon,
-  AlertTriangleIcon,
-  ClockIcon,
-  HashIcon,
-  RefreshCwIcon,
-} from 'lucide-react';
+import { ActivityIcon, AlertTriangleIcon, ClockIcon, HashIcon, RefreshCwIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { createAdminClient } from '@/lib/api/clients/adminClient';
-import { HttpClient } from '@/lib/api/core/httpClient';
-
-const httpClient = new HttpClient();
-const adminClient = createAdminClient({ httpClient });
+import { useApiClient } from '@/lib/api/context';
 
 interface StepAverages {
   step: string;
@@ -28,7 +18,7 @@ interface StepPercentiles {
   p99: number;
 }
 
-interface ProcessingMetrics {
+interface ProcessingMetricsData {
   averages: Record<string, StepAverages>;
   percentiles: Record<string, StepPercentiles>;
   lastUpdated: string;
@@ -59,6 +49,7 @@ function barColor(seconds: number): string {
 }
 
 export function ProcessingMetrics() {
+  const apiClient = useApiClient();
   const {
     data: metrics,
     isLoading,
@@ -66,7 +57,7 @@ export function ProcessingMetrics() {
     isRefetching,
   } = useQuery({
     queryKey: ['admin', 'processing', 'metrics'],
-    queryFn: () => adminClient.getProcessingMetrics() as Promise<ProcessingMetrics | null>,
+    queryFn: () => apiClient.admin.getProcessingMetrics() as Promise<ProcessingMetricsData | null>,
     staleTime: 60_000,
     refetchInterval: 60_000,
   });
@@ -77,7 +68,10 @@ export function ProcessingMetrics() {
         <div className="h-8 w-48 bg-white/40 dark:bg-zinc-800/40 rounded animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-48 bg-white/40 dark:bg-zinc-800/40 rounded-lg animate-pulse" />
+            <div
+              key={i}
+              className="h-48 bg-white/40 dark:bg-zinc-800/40 rounded-lg animate-pulse"
+            />
           ))}
         </div>
       </div>
@@ -87,13 +81,15 @@ export function ProcessingMetrics() {
   if (!metrics) {
     return (
       <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50">
-        <p className="text-sm text-slate-600 dark:text-zinc-400">No processing metrics available</p>
+        <p className="text-sm text-slate-600 dark:text-zinc-400">
+          Nessuna metrica di elaborazione disponibile
+        </p>
       </div>
     );
   }
 
   const stepNames = Object.keys(metrics.averages);
-  const allP95 = stepNames.map((s) => metrics.percentiles[s]?.p95 ?? 0);
+  const allP95 = stepNames.map(s => metrics.percentiles[s]?.p95 ?? 0);
   const maxP95 = Math.max(...allP95, 1);
   const bottleneckStep = stepNames[allP95.indexOf(maxP95)];
 
@@ -103,12 +99,16 @@ export function ProcessingMetrics() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="font-quicksand text-xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
           <ActivityIcon className="h-5 w-5 text-blue-500" />
-          Processing Step Metrics
+          Metriche Elaborazione
         </h2>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 dark:text-zinc-500">
-            Updated {new Date(metrics.lastUpdated).toLocaleTimeString()}
-          </span>
+          <time
+            className="text-xs text-slate-500 dark:text-zinc-500"
+            dateTime={metrics.lastUpdated}
+            suppressHydrationWarning
+          >
+            Aggiornato {new Date(metrics.lastUpdated).toLocaleTimeString()}
+          </time>
           <Button
             variant="outline"
             size="sm"
@@ -117,14 +117,14 @@ export function ProcessingMetrics() {
             className="gap-2"
           >
             <RefreshCwIcon className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
-            Refresh
+            Aggiorna
           </Button>
         </div>
       </div>
 
       {/* Step Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {stepNames.map((stepName) => {
+        {stepNames.map(stepName => {
           const avg = metrics.averages[stepName];
           const pct = metrics.percentiles[stepName];
           const isBottleneck = stepName === bottleneckStep && (pct?.p95 ?? 0) > 0;
@@ -150,16 +150,28 @@ export function ProcessingMetrics() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 dark:border-zinc-700">
-              <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">Step</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">Avg</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">P50</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">P95</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">P99</th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">Samples</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+                Fase
+              </th>
+              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+                Media
+              </th>
+              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+                P50
+              </th>
+              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+                P95
+              </th>
+              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+                P99
+              </th>
+              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+                Campioni
+              </th>
             </tr>
           </thead>
           <tbody>
-            {stepNames.map((stepName) => {
+            {stepNames.map(stepName => {
               const avg = metrics.averages[stepName];
               const pct = metrics.percentiles[stepName];
               const isBottleneck = stepName === bottleneckStep && (pct?.p95 ?? 0) > 0;
@@ -174,7 +186,9 @@ export function ProcessingMetrics() {
                     {isBottleneck && <AlertTriangleIcon className="h-3.5 w-3.5 text-amber-500" />}
                     {avg?.step ?? stepName}
                   </td>
-                  <td className={`text-right px-4 py-3 font-mono ${durationColor(avg?.avgDuration ?? 0)}`}>
+                  <td
+                    className={`text-right px-4 py-3 font-mono ${durationColor(avg?.avgDuration ?? 0)}`}
+                  >
                     {formatDuration(avg?.avgDuration ?? 0)}
                   </td>
                   <td className={`text-right px-4 py-3 font-mono ${durationColor(pct?.p50 ?? 0)}`}>
@@ -232,13 +246,13 @@ function StepMetricCard({
           {isBottleneck && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
               <AlertTriangleIcon className="h-3 w-3" />
-              Bottleneck
+              Collo di bottiglia
             </span>
           )}
         </div>
         <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-500">
           <HashIcon className="h-3 w-3" />
-          {sampleSize} samples
+          {sampleSize} campioni
         </div>
       </div>
 

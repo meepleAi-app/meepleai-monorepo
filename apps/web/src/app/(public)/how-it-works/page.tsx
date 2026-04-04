@@ -49,10 +49,7 @@ export default function HowItWorksPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1
-            className="text-3xl font-bold text-foreground"
-            data-testid="how-it-works-heading"
-          >
+          <h1 className="text-3xl font-bold text-foreground" data-testid="how-it-works-heading">
             {t('pages.howItWorks.title')}
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl mx-auto">
@@ -66,7 +63,6 @@ export default function HowItWorksPage() {
             {STEP_KEYS.map((key, index) => (
               <div key={key} className="flex gap-4 items-start">
                 <div className="flex-shrink-0 w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-3xl">
-                  {/* eslint-disable-next-line security/detect-object-injection */}
                   {STEP_ICONS[key]}
                 </div>
                 <Card className="flex-grow">
@@ -97,11 +93,10 @@ export default function HowItWorksPage() {
             {t('pages.howItWorks.features.title')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {FEATURE_KEYS.map((key) => (
+            {FEATURE_KEYS.map(key => (
               <Card key={key} className="bg-card">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    {/* eslint-disable-next-line security/detect-object-injection */}
                     <span className="text-2xl">{FEATURE_ICONS[key]}</span>
                     {t(`pages.howItWorks.features.${key}.title`)}
                   </CardTitle>

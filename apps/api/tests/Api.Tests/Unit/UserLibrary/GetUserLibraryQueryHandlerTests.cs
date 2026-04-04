@@ -1,6 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
-using Api.BoundedContexts.UserLibrary.Application.Handlers;
+using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
@@ -12,10 +12,12 @@ using Api.Infrastructure.Entities.UserLibrary;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.UserLibrary;
 
@@ -38,17 +40,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         _mockLibraryRepo = new Mock<IUserLibraryRepository>();
         _mockSharedGameRepo = new Mock<ISharedGameRepository>();
 
-        // Create in-memory database for PdfDocuments cross-context query
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase($"test_db_{Guid.NewGuid()}")
-            .Options;
-
-        // Create mocks for DbContext dependencies
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector.Setup(e => e.GetAndClearEvents()).Returns(new List<IDomainEvent>());
-
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
         _handler = new GetUserLibraryQueryHandler(
             _mockLibraryRepo.Object,
@@ -82,16 +74,26 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var gameId = sharedGame.Id;
         var libraryEntry = new UserLibraryEntry(entryId, userId, gameId);
 
+        // Seed a Games record that maps SharedGameId → game record ID
+        // The handler resolves SharedGameId → games.Id before querying PDFs
+        var gameRecordId = Guid.NewGuid();
+        _dbContext.Games.Add(new GameEntity
+        {
+            Id = gameRecordId,
+            Name = "Test Game",
+            SharedGameId = gameId
+        });
+
         // Add fully indexed PDF document (ProcessingState = "Ready") to DbContext
+        // PDF GameId references the game record ID (not SharedGameId)
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = gameId,
+            GameId = gameRecordId,
             FileName = "rules.pdf",
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,
             UploadedByUserId = userId,
-            ProcessingStatus = "completed",
             ProcessingState = "Ready" // Issue #4998: fully indexed in RAG
         });
         await _dbContext.SaveChangesAsync();
@@ -122,13 +124,13 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Items);
+        result.Should().NotBeNull();
+        result.Items.Should().ContainSingle();
         var item = result.Items.First();
-        Assert.True(item.HasKb, "Should have hasKb=true when a PDF is fully indexed (Ready)");
-        Assert.Equal(1, item.KbCardCount);
-        Assert.Equal(1, item.KbIndexedCount);
-        Assert.Equal(0, item.KbProcessingCount);
+        item.HasKb.Should().BeTrue("Should have hasKb=true when a PDF is fully indexed (Ready)");
+        item.KbCardCount.Should().Be(1);
+        item.KbIndexedCount.Should().Be(1);
+        item.KbProcessingCount.Should().Be(0);
     }
 
     [Fact]
@@ -185,12 +187,12 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Items);
+        result.Should().NotBeNull();
+        result.Items.Should().ContainSingle();
         var item = result.Items.First();
-        Assert.False(item.HasKb, "Should have hasKb=false when no PDF exists");
-        Assert.Equal(0, item.KbCardCount);
-        Assert.Equal(0, item.KbIndexedCount);
+        item.HasKb.Should().BeFalse("Should have hasKb=false when no PDF exists");
+        item.KbCardCount.Should().Be(0);
+        item.KbIndexedCount.Should().Be(0);
     }
 
     [Fact]
@@ -234,7 +236,6 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             FilePath = "/pdfs/private-rules.pdf",
             FileSizeBytes = 2048,
             UploadedByUserId = userId,
-            ProcessingStatus = "completed",
             ProcessingState = "Ready"    // Fully indexed in RAG
         });
         await _dbContext.SaveChangesAsync();
@@ -269,14 +270,14 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Items);
+        result.Should().NotBeNull();
+        result.Items.Should().ContainSingle();
         var item = result.Items.First();
-        Assert.Equal(privateGameId, item.GameId);
-        Assert.True(item.HasKb, "Private game with a Ready PDF should have hasKb=true");
-        Assert.Equal(1, item.KbCardCount);
-        Assert.Equal(1, item.KbIndexedCount);
-        Assert.Equal(0, item.KbProcessingCount);
+        item.GameId.Should().Be(privateGameId);
+        item.HasKb.Should().BeTrue("Private game with a Ready PDF should have hasKb=true");
+        item.KbCardCount.Should().Be(1);
+        item.KbIndexedCount.Should().Be(1);
+        item.KbProcessingCount.Should().Be(0);
     }
 
     public void Dispose()

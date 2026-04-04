@@ -29,6 +29,8 @@ export type CreateAgentFlowInput = {
   agentName?: string;
   strategyName?: string;
   strategyParameters?: Record<string, unknown>;
+  /** Pre-selected KB document IDs from SearchAgentSheet wizard */
+  documentIds?: string[];
 };
 
 export type CreateAgentFlowResult = {

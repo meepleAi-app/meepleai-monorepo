@@ -105,7 +105,6 @@ public sealed class VectorDocumentReadyStateHandlerTests
             FilePath = "/test/test-rulebook.pdf",
             FileSizeBytes = 1024,
             ProcessingState = "Indexing",
-            ProcessingStatus = "processing"
         };
         dbContext.PdfDocuments.Add(pdfEntity);
         await dbContext.SaveChangesAsync();
@@ -121,6 +120,6 @@ public sealed class VectorDocumentReadyStateHandlerTests
             .FirstOrDefaultAsync(p => p.Id == _pdfDocumentId);
         updated.Should().NotBeNull();
         updated!.ProcessingState.Should().Be("Ready");
-        updated.ProcessingStatus.Should().Be("completed");
+        updated.ProcessingState.Should().Be("Ready");
     }
 }

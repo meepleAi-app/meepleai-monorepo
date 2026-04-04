@@ -1,0 +1,334 @@
+using Api.BoundedContexts.GameManagement.Domain.Entities.PauseSnapshot;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.Tests.Constants;
+using Xunit;
+using FluentAssertions;
+
+namespace Api.Tests.BoundedContexts.GameManagement.Domain;
+
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "GameManagement")]
+public class PauseSnapshotTests
+{
+    private static readonly Guid ValidSessionId = Guid.NewGuid();
+    private static readonly Guid ValidUserId = Guid.NewGuid();
+
+    private static List<PlayerScoreSnapshot> SampleScores() =>
+        new()
+        {
+            new PlayerScoreSnapshot("Alice", 42m, 1),
+            new PlayerScoreSnapshot("Bob", 37m, 2),
+        };
+
+    private static List<Guid> SampleAttachmentIds() =>
+        new() { Guid.NewGuid(), Guid.NewGuid() };
+
+    private static RuleDisputeEntry SampleDispute() =>
+        new(
+            Guid.NewGuid(),
+            "Can I play 2 cards per turn?",
+            "No — the rulebook states 1 card per turn.",
+            new List<string> { "Page 5" },
+            "Alice",
+            DateTime.UtcNow);
+
+    // ─── Create with valid data ──────────────────────────────────────────────
+
+    [Fact]
+    public void Create_WithValidData_SetsLiveGameSessionId()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 3, "Round 3", SampleScores(), ValidUserId, false);
+
+        snapshot.LiveGameSessionId.Should().Be(ValidSessionId);
+    }
+
+    [Fact]
+    public void Create_WithValidData_SetsCurrentTurn()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 5, null, SampleScores(), ValidUserId, false);
+
+        snapshot.CurrentTurn.Should().Be(5);
+    }
+
+    [Fact]
+    public void Create_WithValidData_SetsCurrentPhase()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, "Setup", SampleScores(), ValidUserId, false);
+
+        snapshot.CurrentPhase.Should().Be("Setup");
+    }
+
+    [Fact]
+    public void Create_WithValidData_SetsPlayerScores()
+    {
+        var scores = SampleScores();
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, scores, ValidUserId, false);
+
+        snapshot.PlayerScores.Count.Should().Be(2);
+        snapshot.PlayerScores.Should().Contain(s => s.PlayerName == "Alice" && s.Score == 42m);
+        snapshot.PlayerScores.Should().Contain(s => s.PlayerName == "Bob" && s.Score == 37m);
+    }
+
+    [Fact]
+    public void Create_WithValidData_SetsSavedByUserId()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
+
+        snapshot.SavedByUserId.Should().Be(ValidUserId);
+    }
+
+    [Fact]
+    public void Create_WithValidData_SetsIsAutoSave_True()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, true);
+
+        (snapshot.IsAutoSave).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Create_WithValidData_SetsIsAutoSave_False()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
+
+        (snapshot.IsAutoSave).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Create_WithAttachmentIds_SetsAttachmentIds()
+    {
+        var ids = SampleAttachmentIds();
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false,
+            attachmentIds: ids);
+
+        snapshot.AttachmentIds.Count.Should().Be(2);
+        snapshot.AttachmentIds[0].Should().Be(ids[0]);
+        snapshot.AttachmentIds[1].Should().Be(ids[1]);
+    }
+
+    [Fact]
+    public void Create_WithDisputes_SetsDisputes()
+    {
+        var dispute = SampleDispute();
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false,
+            disputes: new List<RuleDisputeEntry> { dispute });
+
+        snapshot.Disputes.Should().ContainSingle();
+        snapshot.Disputes[0].Description.Should().Be(dispute.Description);
+    }
+
+    [Fact]
+    public void Create_WithGameStateJson_SetsGameStateJson()
+    {
+        const string json = """{"board":"state"}""";
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false,
+            gameStateJson: json);
+
+        snapshot.GameStateJson.Should().Be(json);
+    }
+
+    [Fact]
+    public void Create_GeneratesNonEmptyId()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
+
+        snapshot.Id.Should().NotBe(Guid.Empty);
+    }
+
+    // ─── SavedAt ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Create_SetsSavedAt_ApproximatelyNow()
+    {
+        var before = DateTime.UtcNow.AddSeconds(-1);
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
+        var after = DateTime.UtcNow.AddSeconds(1);
+
+        snapshot.SavedAt.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
+    }
+
+    // ─── Null optional parameters ─────────────────────────────────────────────
+
+    [Fact]
+    public void Create_WithNullPlayerScores_DefaultsToEmptyList()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, null!, ValidUserId, false);
+
+        snapshot.PlayerScores.Should().NotBeNull();
+        snapshot.PlayerScores.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Create_WithNullAttachmentIds_DefaultsToEmptyList()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false,
+            attachmentIds: null);
+
+        snapshot.AttachmentIds.Should().NotBeNull();
+        snapshot.AttachmentIds.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Create_WithNullDisputes_DefaultsToEmptyList()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false,
+            disputes: null);
+
+        snapshot.Disputes.Should().NotBeNull();
+        snapshot.Disputes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Create_WithNullCurrentPhase_IsNull()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
+
+        snapshot.CurrentPhase.Should().BeNull();
+    }
+
+    // ─── AgentConversationSummary initially null ────────────────────────────
+
+    [Fact]
+    public void Create_AgentConversationSummary_IsInitiallyNull()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
+
+        snapshot.AgentConversationSummary.Should().BeNull();
+    }
+
+    // ─── UpdateSummary ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void UpdateSummary_SetsAgentConversationSummary()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
+
+        snapshot.UpdateSummary("Players are winning. Board state: round 3.");
+
+        snapshot.AgentConversationSummary.Should().Be("Players are winning. Board state: round 3.");
+    }
+
+    [Fact]
+    public void UpdateSummary_CanOverwritePreviousSummary()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
+
+        snapshot.UpdateSummary("First summary.");
+        snapshot.UpdateSummary("Updated summary.");
+
+        snapshot.AgentConversationSummary.Should().Be("Updated summary.");
+    }
+
+    [Fact]
+    public void UpdateSummary_WithEmptyString_Throws()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
+
+        ((Action)(() => snapshot.UpdateSummary(string.Empty))).Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void UpdateSummary_WithWhitespace_Throws()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
+
+        ((Action)(() => snapshot.UpdateSummary("   "))).Should().Throw<ArgumentException>();
+    }
+
+    // ─── IsAutoSave flag ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void Create_IsAutoSave_PreservedCorrectly_WhenTrue()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, isAutoSave: true);
+
+        (snapshot.IsAutoSave).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Create_IsAutoSave_PreservedCorrectly_WhenFalse()
+    {
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 1, null, SampleScores(), ValidUserId, isAutoSave: false);
+
+        (snapshot.IsAutoSave).Should().BeFalse();
+    }
+
+    // ─── Guard clauses ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void Create_WithEmptySessionId_Throws()
+    {
+        var act = () =>
+            PauseSnapshot.Create(Guid.Empty, 1, null, SampleScores(), ValidUserId, false);
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Create_WithEmptyUserId_Throws()
+    {
+        var act = () =>
+            PauseSnapshot.Create(ValidSessionId, 1, null, SampleScores(), Guid.Empty, false);
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Create_WithNegativeTurn_Throws()
+    {
+        var act = () =>
+            PauseSnapshot.Create(ValidSessionId, -1, null, SampleScores(), ValidUserId, false);
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void Create_WithZeroTurn_Succeeds()
+    {
+        // Turn 0 is valid (session just started)
+        var snapshot = PauseSnapshot.Create(
+            ValidSessionId, 0, null, SampleScores(), ValidUserId, false);
+
+        snapshot.CurrentTurn.Should().Be(0);
+    }
+
+    // ─── PlayerScoreSnapshot record ──────────────────────────────────────────
+
+    [Fact]
+    public void PlayerScoreSnapshot_StoresPlayerNameAndScore()
+    {
+        var record = new PlayerScoreSnapshot("Marco", 99.5m, 42);
+
+        record.PlayerName.Should().Be("Marco");
+        record.Score.Should().Be(99.5m);
+        record.PlayerId.Should().Be(42);
+    }
+
+    [Fact]
+    public void PlayerScoreSnapshot_WithNullPlayerId_IsOptional()
+    {
+        var record = new PlayerScoreSnapshot("Guest", 10m);
+
+        record.PlayerName.Should().Be("Guest");
+        record.PlayerId.Should().BeNull();
+    }
+}

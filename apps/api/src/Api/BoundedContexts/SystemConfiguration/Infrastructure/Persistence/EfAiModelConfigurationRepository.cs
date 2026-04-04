@@ -4,20 +4,24 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SystemConfiguration;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 
-public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepository
+public sealed class EfAiModelConfigurationRepository : RepositoryBase, IAiModelConfigurationRepository
 {
-    private readonly MeepleAiDbContext _db;
 
-    public EfAiModelConfigurationRepository(MeepleAiDbContext db) => _db = db;
+    public EfAiModelConfigurationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
+    {
+    }
 
     public async Task<AiModelConfiguration?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _db.AiModelConfigurations
+        var entity = await DbContext.AiModelConfigurations
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -27,7 +31,7 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
 
     public async Task<AiModelConfiguration?> GetByModelIdAsync(string modelId, CancellationToken cancellationToken = default)
     {
-        var entity = await _db.AiModelConfigurations
+        var entity = await DbContext.AiModelConfigurations
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.ModelId == modelId, cancellationToken)
             .ConfigureAwait(false);
@@ -37,7 +41,7 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
 
     public async Task<IReadOnlyList<AiModelConfiguration>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _db.AiModelConfigurations
+        var entities = await DbContext.AiModelConfigurations
             .AsNoTracking()
             .OrderBy(e => e.Priority)
             .ToListAsync(cancellationToken)
@@ -48,7 +52,7 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
 
     public async Task<IReadOnlyList<AiModelConfiguration>> GetActiveAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _db.AiModelConfigurations
+        var entities = await DbContext.AiModelConfigurations
             .AsNoTracking()
             .Where(e => e.IsActive)
             .OrderBy(e => e.Priority)
@@ -60,7 +64,7 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
 
     public async Task<AiModelConfiguration?> GetPrimaryAsync(CancellationToken cancellationToken = default)
     {
-        var entity = await _db.AiModelConfigurations
+        var entity = await DbContext.AiModelConfigurations
             .AsNoTracking()
             .Where(e => e.IsPrimary && e.IsActive)
             .OrderBy(e => e.Priority)
@@ -72,7 +76,7 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
 
     public async Task<bool> AnyAsync(CancellationToken cancellationToken = default)
     {
-        return await _db.AiModelConfigurations
+        return await DbContext.AiModelConfigurations
             .AnyAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -80,26 +84,26 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
     public async Task AddAsync(AiModelConfiguration entity, CancellationToken cancellationToken = default)
     {
         var dbEntity = MapToDb(entity);
-        await _db.AiModelConfigurations.AddAsync(dbEntity, cancellationToken).ConfigureAwait(false);
+        await DbContext.AiModelConfigurations.AddAsync(dbEntity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task AddRangeAsync(IEnumerable<AiModelConfiguration> entities, CancellationToken cancellationToken = default)
     {
         var dbEntities = entities.Select(MapToDb);
-        await _db.AiModelConfigurations.AddRangeAsync(dbEntities, cancellationToken).ConfigureAwait(false);
+        await DbContext.AiModelConfigurations.AddRangeAsync(dbEntities, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(AiModelConfiguration entity, CancellationToken cancellationToken = default)
     {
         var dbEntity = MapToDb(entity);
-        _db.AiModelConfigurations.Update(dbEntity);
+        DbContext.AiModelConfigurations.Update(dbEntity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(AiModelConfiguration entity, CancellationToken cancellationToken = default)
     {
         var dbEntity = MapToDb(entity);
-        _db.AiModelConfigurations.Remove(dbEntity);
+        DbContext.AiModelConfigurations.Remove(dbEntity);
         return Task.CompletedTask;
     }
 
@@ -112,7 +116,7 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
         var tierValue = (int)tier;
         var envValue = (int)environment;
 
-        var entity = await _db.AiModelConfigurations
+        var entity = await DbContext.AiModelConfigurations
             .AsNoTracking()
             .Where(e => e.ApplicableTier == tierValue
                      && e.EnvironmentType == envValue
@@ -132,7 +136,7 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
     {
         var tierValue = (int)tier;
 
-        var query = _db.AiModelConfigurations
+        var query = DbContext.AiModelConfigurations
             .AsNoTracking()
             .Where(e => e.ApplicableTier == tierValue && e.IsActive);
 
@@ -153,7 +157,7 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
     public async Task<IReadOnlyList<AiModelConfiguration>> GetAllTierRoutingsAsync(
         CancellationToken cancellationToken = default)
     {
-        var entities = await _db.AiModelConfigurations
+        var entities = await DbContext.AiModelConfigurations
             .AsNoTracking()
             .Where(e => e.ApplicableTier != null) // Only tier-specific configurations
             .OrderBy(e => e.ApplicableTier)

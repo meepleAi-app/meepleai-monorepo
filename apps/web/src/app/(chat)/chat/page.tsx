@@ -9,12 +9,13 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AlertTriangle, ChevronDown, ChevronRight, MessageCircle, Plus, Bot } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { ChatListMobile } from '@/components/chat-unified/ChatListMobile';
 import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -23,8 +24,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import { useChatSessionLimit, useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
-
-import { ChatNavConfig } from './NavConfig';
+import { useCardHand } from '@/stores/use-card-hand';
 
 // ─── Agent Group ─────────────────────────────────────────────────────────────
 
@@ -117,7 +117,11 @@ function renderChatSessionCard(
     chatPreview: session.lastMessagePreview
       ? { lastMessage: session.lastMessagePreview, sender: 'agent' as const }
       : undefined,
-    navigateTo: navLinks,
+    linkedEntities: navLinks.map(l => ({ entityType: l.entity, count: 1 })),
+    onManaPipClick: entityType => {
+      const link = navLinks.find(l => l.entity === entityType);
+      if (link?.href) window.location.href = link.href;
+    },
   };
 }
 
@@ -178,8 +182,18 @@ function AgentGroupSection({
 
 export default function ChatListPage() {
   const router = useRouter();
+  const { drawCard } = useCardHand();
   const { data, isLoading, error } = useRecentChatSessions(500);
   const { data: limitData } = useChatSessionLimit();
+
+  useEffect(() => {
+    drawCard({
+      id: 'section-chat',
+      entity: 'chatSession',
+      title: 'Chat',
+      href: '/chat',
+    });
+  }, [drawCard]);
 
   const groups = useMemo(() => {
     const sessions = data?.sessions ?? [];
@@ -200,80 +214,93 @@ export default function ChatListPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background py-8 px-4">
-        <div className="container mx-auto max-w-7xl">
-          <Alert variant="destructive">
-            <AlertDescription>Errore nel caricamento delle sessioni chat.</AlertDescription>
-          </Alert>
+      <>
+        {/* Mobile */}
+        <div className="lg:hidden">
+          <ChatListMobile />
         </div>
-      </div>
+        {/* Desktop */}
+        <div className="hidden lg:block min-h-screen bg-background py-8 px-4">
+          <div className="container mx-auto max-w-7xl">
+            <Alert variant="destructive">
+              <AlertDescription>Errore nel caricamento delle sessioni chat.</AlertDescription>
+            </Alert>
+          </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <ChatNavConfig />
-      <div className="container mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-quicksand font-bold text-foreground">Le tue Chat</h1>
-            <p className="text-muted-foreground font-nunito mt-1">
-              Tutte le conversazioni con gli agenti AI
-            </p>
+    <>
+      {/* Mobile */}
+      <div className="lg:hidden h-dvh">
+        <ChatListMobile />
+      </div>
+      {/* Desktop */}
+      <div className="hidden lg:block min-h-screen bg-background py-8 px-4">
+        <div className="container mx-auto max-w-7xl">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-quicksand font-bold text-foreground">Le tue Chat</h1>
+              <p className="text-muted-foreground font-nunito mt-1">
+                Tutte le conversazioni con gli agenti AI
+              </p>
+            </div>
+            <Button asChild className="font-nunito">
+              <Link href="/chat/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Nuova Chat
+              </Link>
+            </Button>
           </div>
-          <Button asChild className="font-nunito">
-            <Link href="/chat/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuova Chat
-            </Link>
-          </Button>
-        </div>
 
-        {/* Tier usage banner */}
-        {showBanner && limitData && (
-          <Alert className="mb-6 border-amber-200 bg-amber-50 text-amber-900">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="flex flex-col gap-2">
-              <span className="font-nunito font-medium">
-                Stai utilizzando {limitData.used} su {limitData.limit} chat ({usagePercent}%). Le
-                chat più vecchie verranno archiviate automaticamente quando raggiungi il limite.
-              </span>
-              <Progress value={usagePercent} className="h-2 bg-amber-200 [&>div]:bg-amber-500" />
-            </AlertDescription>
-          </Alert>
-        )}
+          {/* Tier usage banner */}
+          {showBanner && limitData && (
+            <Alert className="mb-6 border-amber-200 bg-amber-50 text-amber-900">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="flex flex-col gap-2">
+                <span className="font-nunito font-medium">
+                  Stai utilizzando {limitData.used} su {limitData.limit} chat ({usagePercent}%). Le
+                  chat più vecchie verranno archiviate automaticamente quando raggiungi il limite.
+                </span>
+                <Progress value={usagePercent} className="h-2 bg-amber-200 [&>div]:bg-amber-500" />
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {/* Loading */}
-        {isLoading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-32 rounded-lg bg-muted/40 animate-pulse"
-                aria-hidden="true"
+          {/* Loading */}
+          {isLoading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-32 rounded-lg bg-muted/40 animate-pulse"
+                  aria-hidden="true"
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Grouped list */}
+          {!isLoading && groups.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground font-nunito">
+              <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p>Nessuna chat trovata. Inizia una nuova conversazione!</p>
+            </div>
+          )}
+
+          {!isLoading &&
+            groups.map(group => (
+              <AgentGroupSection
+                key={group.key}
+                group={group}
+                onSessionClick={session => router.push(`/chat/${session.id}`)}
               />
             ))}
-          </div>
-        )}
-
-        {/* Grouped list */}
-        {!isLoading && groups.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground font-nunito">
-            <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
-            <p>Nessuna chat trovata. Inizia una nuova conversazione!</p>
-          </div>
-        )}
-
-        {!isLoading &&
-          groups.map(group => (
-            <AgentGroupSection
-              key={group.key}
-              group={group}
-              onSessionClick={session => router.push(`/chat/${session.id}`)}
-            />
-          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

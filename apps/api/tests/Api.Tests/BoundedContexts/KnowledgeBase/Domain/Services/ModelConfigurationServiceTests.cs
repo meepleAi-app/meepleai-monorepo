@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -32,8 +33,8 @@ public class ModelConfigurationServiceTests
         var models = _service.GetAllModels();
 
         // Assert
-        Assert.NotEmpty(models);
-        Assert.True(models.Count > 10, "Should have at least 10 models configured");
+        models.Should().NotBeEmpty();
+        (models.Count > 10).Should().BeTrue("Should have at least 10 models configured");
     }
 
     [Fact]
@@ -43,10 +44,10 @@ public class ModelConfigurationServiceTests
         var models = _service.GetAllModels();
 
         // Assert
-        Assert.Contains(models, m => m.Tier == ModelTier.Free);
-        Assert.Contains(models, m => m.Tier == ModelTier.Normal);
-        Assert.Contains(models, m => m.Tier == ModelTier.Premium);
-        Assert.Contains(models, m => m.Tier == ModelTier.Custom);
+        models.Should().Contain(m => m.Tier == ModelTier.Free);
+        models.Should().Contain(m => m.Tier == ModelTier.Normal);
+        models.Should().Contain(m => m.Tier == ModelTier.Premium);
+        models.Should().Contain(m => m.Tier == ModelTier.Custom);
     }
 
     [Fact]
@@ -58,10 +59,10 @@ public class ModelConfigurationServiceTests
         // Assert
         foreach (var model in models)
         {
-            Assert.False(string.IsNullOrWhiteSpace(model.Id), $"Model should have Id");
-            Assert.False(string.IsNullOrWhiteSpace(model.Name), $"Model {model.Id} should have Name");
-            Assert.False(string.IsNullOrWhiteSpace(model.Provider), $"Model {model.Id} should have Provider");
-            Assert.True(model.MaxTokens > 0, $"Model {model.Id} should have positive MaxTokens");
+            string.IsNullOrWhiteSpace(model.Id).Should().BeFalse($"Model should have Id");
+            string.IsNullOrWhiteSpace(model.Name).Should().BeFalse($"Model {model.Id} should have Name");
+            string.IsNullOrWhiteSpace(model.Provider).Should().BeFalse($"Model {model.Id} should have Provider");
+            (model.MaxTokens > 0).Should().BeTrue($"Model {model.Id} should have positive MaxTokens");
         }
     }
 
@@ -76,8 +77,8 @@ public class ModelConfigurationServiceTests
         var models = _service.GetModelsByTier(ModelTier.Free);
 
         // Assert
-        Assert.NotEmpty(models);
-        Assert.All(models, m => Assert.Equal(ModelTier.Free, m.Tier));
+        models.Should().NotBeEmpty();
+        models.Should().AllSatisfy(m => m.Tier.Should().Be(ModelTier.Free));
     }
 
     [Fact]
@@ -87,10 +88,10 @@ public class ModelConfigurationServiceTests
         var models = _service.GetModelsByTier(ModelTier.Normal);
 
         // Assert
-        Assert.NotEmpty(models);
-        Assert.All(models, m => Assert.True(m.Tier <= ModelTier.Normal));
-        Assert.Contains(models, m => m.Tier == ModelTier.Free);
-        Assert.Contains(models, m => m.Tier == ModelTier.Normal);
+        models.Should().NotBeEmpty();
+        models.Should().AllSatisfy(m => (m.Tier <= ModelTier.Normal).Should().BeTrue());
+        models.Should().Contain(m => m.Tier == ModelTier.Free);
+        models.Should().Contain(m => m.Tier == ModelTier.Normal);
     }
 
     [Fact]
@@ -100,9 +101,9 @@ public class ModelConfigurationServiceTests
         var models = _service.GetModelsByTier(ModelTier.Premium);
 
         // Assert
-        Assert.NotEmpty(models);
-        Assert.All(models, m => Assert.True(m.Tier <= ModelTier.Premium));
-        Assert.DoesNotContain(models, m => m.Tier == ModelTier.Custom);
+        models.Should().NotBeEmpty();
+        models.Should().AllSatisfy(m => (m.Tier <= ModelTier.Premium).Should().BeTrue());
+        models.Should().NotContain(m => m.Tier == ModelTier.Custom);
     }
 
     [Fact]
@@ -115,32 +116,42 @@ public class ModelConfigurationServiceTests
         var customTierModels = _service.GetModelsByTier(ModelTier.Custom);
 
         // Assert
-        Assert.Equal(allModels.Count, customTierModels.Count);
+        customTierModels.Count.Should().Be(allModels.Count);
     }
 
     [Fact]
-    public void GetModelsByTier_ResultsAreOrderedByTierThenName()
+    public void GetModelsByTier_ResultsAreOrderedByTierThenProviderThenName()
     {
         // Act
         var models = _service.GetModelsByTier(ModelTier.Premium);
 
-        // Assert
+        // Assert — ordering is: Tier asc → Cloud before Ollama → Name asc
         for (int i = 1; i < models.Count; i++)
         {
             var prev = models[i - 1];
             var curr = models[i];
 
-            if (prev.Tier == curr.Tier)
+            if (prev.Tier != curr.Tier)
             {
-                // Same tier: should be ordered by name
-                Assert.True(
-                    string.Compare(prev.Name, curr.Name, StringComparison.Ordinal) <= 0,
-                    $"Models with same tier should be ordered by name: {prev.Name} vs {curr.Name}");
+                // Different tier: lower tier should come first
+                (prev.Tier < curr.Tier).Should().BeTrue($"Lower tier should come first: {prev.Tier} vs {curr.Tier}");
             }
             else
             {
-                // Different tier: lower tier should come first
-                Assert.True(prev.Tier < curr.Tier);
+                // Same tier: cloud providers (sort key 0) before ollama (sort key 1)
+                var prevIsOllama = string.Equals(prev.Provider, "ollama", StringComparison.Ordinal);
+                var currIsOllama = string.Equals(curr.Provider, "ollama", StringComparison.Ordinal);
+
+                if (prevIsOllama != currIsOllama)
+                {
+                    // Cloud before Ollama
+                    prevIsOllama.Should().BeFalse($"Cloud models should come before Ollama within same tier: {prev.Name} ({prev.Provider}) vs {curr.Name} ({curr.Provider})");
+                }
+                else
+                {
+                    // Same provider group: should be ordered by name
+                    (string.Compare(prev.Name, curr.Name, StringComparison.Ordinal) <= 0).Should().BeTrue($"Models with same tier and provider group should be ordered by name: {prev.Name} vs {curr.Name}");
+                }
             }
         }
     }
@@ -159,9 +170,9 @@ public class ModelConfigurationServiceTests
         var model = _service.GetModelById(modelId);
 
         // Assert
-        Assert.NotNull(model);
-        Assert.Equal(modelId, model.Id);
-        Assert.Equal(ModelTier.Free, model.Tier);
+        model.Should().NotBeNull();
+        model.Id.Should().Be(modelId);
+        model.Tier.Should().Be(ModelTier.Free);
     }
 
     [Fact]
@@ -174,7 +185,7 @@ public class ModelConfigurationServiceTests
         var model = _service.GetModelById(modelId);
 
         // Assert
-        Assert.Null(model);
+        model.Should().BeNull();
     }
 
     [Theory]
@@ -188,8 +199,8 @@ public class ModelConfigurationServiceTests
         var model = _service.GetModelById(modelId);
 
         // Assert
-        Assert.NotNull(model);
-        Assert.Equal(expectedTier, model.Tier);
+        model.Should().NotBeNull();
+        model.Tier.Should().Be(expectedTier);
     }
 
     #endregion
@@ -214,9 +225,9 @@ public class ModelConfigurationServiceTests
         var result = _service.ValidateUserTierForModel(userTier, modelId);
 
         // Assert
-        Assert.Equal(expectedValid, result.IsValid);
-        Assert.Equal(userTier, result.UserTier);
-        Assert.Equal(modelId, result.ModelId);
+        result.IsValid.Should().Be(expectedValid);
+        result.UserTier.Should().Be(userTier);
+        result.ModelId.Should().Be(modelId);
     }
 
     [Fact]
@@ -229,9 +240,9 @@ public class ModelConfigurationServiceTests
         var result = _service.ValidateUserTierForModel(ModelTier.Custom, modelId);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Null(result.RequiredTier);
-        Assert.Contains("not found", result.Message);
+        result.IsValid.Should().BeFalse();
+        result.RequiredTier.Should().BeNull();
+        result.Message.Should().Contain("not found");
     }
 
     [Fact]
@@ -244,9 +255,9 @@ public class ModelConfigurationServiceTests
         var result = _service.ValidateUserTierForModel(ModelTier.Premium, modelId);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Equal(ModelTier.Premium, result.RequiredTier);
-        Assert.Equal("Access granted", result.Message);
+        result.IsValid.Should().BeTrue();
+        result.RequiredTier.Should().Be(ModelTier.Premium);
+        result.Message.Should().Be("Access granted");
     }
 
     [Fact]
@@ -259,10 +270,10 @@ public class ModelConfigurationServiceTests
         var result = _service.ValidateUserTierForModel(ModelTier.Free, modelId);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("Premium", result.Message);
-        Assert.Contains("Free", result.Message);
-        Assert.Contains("Access denied", result.Message);
+        result.IsValid.Should().BeFalse();
+        result.Message.Should().Contain("Premium");
+        result.Message.Should().Contain("Free");
+        result.Message.Should().Contain("Access denied");
     }
 
     #endregion
@@ -277,11 +288,11 @@ public class ModelConfigurationServiceTests
             .Where(m => m.Tier == ModelTier.Free);
 
         // Assert
-        Assert.All(freeModels, m =>
+        freeModels.Should().AllSatisfy(m =>
         {
-            Assert.Equal(0m, m.CostPer1kInputTokens);
-            Assert.Equal(0m, m.CostPer1kOutputTokens);
-            Assert.True(m.IsFree);
+            m.CostPer1kInputTokens.Should().Be(0m);
+            m.CostPer1kOutputTokens.Should().Be(0m);
+            m.IsFree.Should().BeTrue();
         });
     }
 
@@ -293,11 +304,9 @@ public class ModelConfigurationServiceTests
             .Where(m => m.Tier > ModelTier.Free && m.Provider != "ollama");
 
         // Assert
-        Assert.All(paidModels, m =>
+        paidModels.Should().AllSatisfy(m =>
         {
-            Assert.True(
-                m.CostPer1kInputTokens > 0 || m.CostPer1kOutputTokens > 0,
-                $"Paid model {m.Id} should have positive cost");
+            (m.CostPer1kInputTokens > 0 || m.CostPer1kOutputTokens > 0).Should().BeTrue($"Paid model {m.Id} should have positive cost");
         });
     }
 

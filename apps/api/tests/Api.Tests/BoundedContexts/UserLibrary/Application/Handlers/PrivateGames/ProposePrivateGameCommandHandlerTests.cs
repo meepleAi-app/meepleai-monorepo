@@ -3,7 +3,6 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
-using Api.BoundedContexts.UserLibrary.Application.Handlers.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -126,8 +125,9 @@ public sealed class ProposePrivateGameCommandHandlerTests
             .ReturnsAsync((PrivateGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _shareRequestRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<ShareRequest>(), It.IsAny<CancellationToken>()),
@@ -158,8 +158,9 @@ public sealed class ProposePrivateGameCommandHandlerTests
             .ReturnsAsync(privateGame);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act2 = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act2.Should().ThrowAsync<UnauthorizedAccessException>();
 
         _shareRequestRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<ShareRequest>(), It.IsAny<CancellationToken>()),
@@ -198,8 +199,9 @@ public sealed class ProposePrivateGameCommandHandlerTests
             .ReturnsAsync(existingProposal);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConflictException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act3 = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act3.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().Contain("pending proposal already exists");
 

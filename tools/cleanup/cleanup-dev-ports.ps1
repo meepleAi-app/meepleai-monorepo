@@ -89,10 +89,17 @@ function Get-ProcessOnPort {
     param([int]$Port)
 
     try {
-        $connections = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
-        if ($connections) {
-            return $connections | ForEach-Object {
-                $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
+        # Use netstat (fast) instead of Get-NetTCPConnection (slow, can hang >10s)
+        $netstatLines = netstat -ano 2>$null | Select-String "LISTENING" |
+            Where-Object { $_ -match ":$Port\s" }
+
+        if ($netstatLines) {
+            $pids = $netstatLines | ForEach-Object {
+                if ($_ -match '\s+(\d+)\s*$') { [int]$Matches[1] }
+            } | Sort-Object -Unique
+
+            return $pids | ForEach-Object {
+                $proc = Get-Process -Id $_ -ErrorAction SilentlyContinue
                 if ($proc) {
                     [PSCustomObject]@{
                         Port = $Port

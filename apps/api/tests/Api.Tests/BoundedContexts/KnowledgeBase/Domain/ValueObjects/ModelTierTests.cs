@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
 using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
@@ -17,18 +18,18 @@ public class ModelTierTests
     [Fact]
     public void ModelTier_HasCorrectValues()
     {
-        Assert.Equal(0, (int)ModelTier.Free);
-        Assert.Equal(1, (int)ModelTier.Normal);
-        Assert.Equal(2, (int)ModelTier.Premium);
-        Assert.Equal(3, (int)ModelTier.Custom);
+        ((int)ModelTier.Free).Should().Be(0);
+        ((int)ModelTier.Normal).Should().Be(1);
+        ((int)ModelTier.Premium).Should().Be(2);
+        ((int)ModelTier.Custom).Should().Be(3);
     }
 
     [Fact]
     public void ModelTier_Hierarchy_FreeIsLowest()
     {
-        Assert.True(ModelTier.Free < ModelTier.Normal);
-        Assert.True(ModelTier.Normal < ModelTier.Premium);
-        Assert.True(ModelTier.Premium < ModelTier.Custom);
+        (ModelTier.Free < ModelTier.Normal).Should().BeTrue();
+        (ModelTier.Normal < ModelTier.Premium).Should().BeTrue();
+        (ModelTier.Premium < ModelTier.Custom).Should().BeTrue();
     }
 
     #endregion
@@ -59,7 +60,7 @@ public class ModelTierTests
         var canAccess = userTier.CanAccess(modelTier);
 
         // Assert
-        Assert.Equal(expectedCanAccess, canAccess);
+        canAccess.Should().Be(expectedCanAccess);
     }
 
     #endregion
@@ -85,7 +86,7 @@ public class ModelTierTests
         var tier = ModelTierExtensions.Parse(value);
 
         // Assert
-        Assert.Equal(expectedTier, tier);
+        tier.Should().Be(expectedTier);
     }
 
     [Theory]
@@ -97,8 +98,9 @@ public class ModelTierTests
     public void Parse_InvalidTier_ThrowsArgumentException(string value)
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() => ModelTierExtensions.Parse(value));
-        Assert.Contains("Invalid model tier", ex.Message);
+        Action act = () => ModelTierExtensions.Parse(value);
+        var ex = act.Should().Throw<ArgumentException>().Which;
+        ex.Message.Should().Contain("Invalid model tier");
     }
 
     #endregion
@@ -121,10 +123,10 @@ public class ModelTierTests
         var success = ModelTierExtensions.TryParse(value, out var tier);
 
         // Assert
-        Assert.Equal(expectedSuccess, success);
+        success.Should().Be(expectedSuccess);
         if (expectedSuccess)
         {
-            Assert.Equal(expectedTier, tier);
+            tier.Should().Be(expectedTier);
         }
     }
 
@@ -143,7 +145,7 @@ public class ModelTierTests
         var displayName = tier.GetDisplayName();
 
         // Assert
-        Assert.Equal(expectedDisplayName, displayName);
+        displayName.Should().Be(expectedDisplayName);
     }
 
     #endregion

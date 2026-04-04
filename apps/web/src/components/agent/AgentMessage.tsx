@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { AgentMessage as AgentMessageType } from '@/types/agent';
 
@@ -35,7 +36,7 @@ export const AgentMessage = React.memo(function AgentMessage({ message }: AgentM
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy message:', error);
+      logger.error('Failed to copy message:', error);
     }
   };
 
@@ -73,9 +74,7 @@ export const AgentMessage = React.memo(function AgentMessage({ message }: AgentM
       >
         {/* Header: Role + Timestamp */}
         <div className="flex items-center justify-between mb-1.5 gap-2">
-          <span className="font-medium text-xs text-[#64748b]">
-            {isUser ? 'Tu' : 'Agent'}
-          </span>
+          <span className="font-medium text-xs text-[#64748b]">{isUser ? 'Tu' : 'Agent'}</span>
           <span className="text-[10px] text-[#94a3b8]">{formatTime(message.timestamp)}</span>
         </div>
 
@@ -85,10 +84,22 @@ export const AgentMessage = React.memo(function AgentMessage({ message }: AgentM
             <div className="prose prose-sm max-w-none">
               <ReactMarkdown
                 components={{
-                  p: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 last:mb-0">{children}</p>,
-                  ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
-                  ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
-                  code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
+                  p: ({ children }: { children?: React.ReactNode }) => (
+                    <p className="mb-2 last:mb-0">{children}</p>
+                  ),
+                  ul: ({ children }: { children?: React.ReactNode }) => (
+                    <ul className="list-disc pl-4 mb-2">{children}</ul>
+                  ),
+                  ol: ({ children }: { children?: React.ReactNode }) => (
+                    <ol className="list-decimal pl-4 mb-2">{children}</ol>
+                  ),
+                  code: ({
+                    children,
+                    className,
+                  }: {
+                    children?: React.ReactNode;
+                    className?: string;
+                  }) => {
                     const isInline = !className;
                     return isInline ? (
                       <code className="bg-[#e5e7eb] px-1 py-0.5 rounded text-xs font-mono">
@@ -126,9 +137,7 @@ export const AgentMessage = React.memo(function AgentMessage({ message }: AgentM
                     // Citation click handler will be implemented
                   }}
                 >
-                  <span className="text-[#1a73e8]">
-                    {citation.source || 'Source'}
-                  </span>
+                  <span className="text-[#1a73e8]">{citation.source || 'Source'}</span>
                   {citation.pageNumber && (
                     <span className="text-[#5f6368]">p.{citation.pageNumber}</span>
                   )}

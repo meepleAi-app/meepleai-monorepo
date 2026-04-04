@@ -35,14 +35,7 @@ import { UploadPrivatePDF } from './steps/UploadPrivatePDF';
 
 export function AddGameWizard() {
   const { t } = useTranslation();
-  const {
-    step,
-    allSteps,
-    shouldShowStep2,
-    reviewSummary,
-    error,
-    reset,
-  } = useAddGameWizard();
+  const { step, allSteps, shouldShowStep2, reviewSummary, error, reset } = useAddGameWizard();
 
   // Animation state
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -86,18 +79,14 @@ export function AddGameWizard() {
     return step - 1;
   }, [step, shouldShowStep2]);
 
-  const visualSteps = shouldShowStep2
-    ? allSteps
-    : allSteps.filter(s => s.number !== 2); // Hide Step 2 from UI
+  const visualSteps = shouldShowStep2 ? allSteps : allSteps.filter(s => s.number !== 2); // Hide Step 2 from UI
 
   const visualStepIndex = getVisualStepIndex();
 
   // Animation classes for step transitions
   const getStepAnimationClass = () => {
     if (!isTransitioning) return 'opacity-100 translate-x-0';
-    return direction === 'forward'
-      ? 'opacity-0 -translate-x-4'
-      : 'opacity-0 translate-x-4';
+    return direction === 'forward' ? 'opacity-0 -translate-x-4' : 'opacity-0 translate-x-4';
   };
 
   return (
@@ -112,7 +101,10 @@ export function AddGameWizard() {
             >
               {t('collection.addGameTitle')}
             </h1>
-            <p className="text-slate-600 dark:text-slate-400" data-testid={WIZARD_TEST_IDS.subtitle}>
+            <p
+              className="text-slate-600 dark:text-slate-400"
+              data-testid={WIZARD_TEST_IDS.subtitle}
+            >
               {t('collection.addGameSubtitle')}
             </p>
           </div>
@@ -196,8 +188,8 @@ export function AddGameWizard() {
           >
             {/* Screen reader announcement */}
             <span className="sr-only">
-              {/* eslint-disable-next-line security/detect-object-injection */}
-              Step {visualStepIndex + 1} of {visualSteps.length}: {visualSteps[visualStepIndex]?.description}
+              Step {visualStepIndex + 1} of {visualSteps.length}:{' '}
+              {visualSteps[visualStepIndex]?.description}
             </span>
 
             {step === 1 && <SearchSelectGame />}

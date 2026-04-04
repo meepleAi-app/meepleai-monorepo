@@ -100,7 +100,7 @@ internal sealed class UploadSharedGamePdfCommandHandler
         {
             Id = pdfDocumentId,
             SharedGameId = command.SharedGameId,
-            GameId = Guid.Empty, // Required column — use sentinel; real game is via SharedGameId
+            GameId = command.SharedGameId, // Issue #97: Use SharedGameId so Qdrant indexes with correct game_id
             FileName = fileName,
             FilePath = storageResult.FilePath!,
             FileSizeBytes = storageResult.FileSizeBytes,
@@ -108,7 +108,6 @@ internal sealed class UploadSharedGamePdfCommandHandler
             UploadedByUserId = command.AdminUserId,
             UploadedAt = DateTime.UtcNow,
             ProcessingState = "Pending",
-            ProcessingStatus = "pending",
             ProcessingPriority = "Admin",
             IsPublic = true,
             DocumentType = command.DocumentType.ToString().ToLowerInvariant()
@@ -143,7 +142,7 @@ internal sealed class UploadSharedGamePdfCommandHandler
             "Shared game PDF upload complete: PdfDocumentId={PdfDocumentId}, SharedGameDocumentId={SharedGameDocumentId}",
             pdfDocumentId, sharedGameDocId);
 
-        return new UploadSharedGamePdfResult(pdfDocumentId, sharedGameDocId, "processing");
+        return new UploadSharedGamePdfResult(pdfDocumentId, sharedGameDocId, "Pending");
     }
 
     private static void ValidateFile(IFormFile? file)

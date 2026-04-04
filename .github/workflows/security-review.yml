@@ -14,13 +14,13 @@ concurrency:
 jobs:
   create-reminder-issue:
     name: Create Quarterly Security Review Issue
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     permissions:
       issues: write
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Calculate Quarter
         id: quarter

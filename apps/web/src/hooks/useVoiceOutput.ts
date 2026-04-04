@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { detectLanguage } from '@/lib/voice/utils/language-detection';
 import { sanitizeForTts } from '@/lib/voice/utils/text-sanitizer';
 import { findBestVoice, isSpeechSynthesisSupported } from '@/lib/voice/utils/voice-detection';
 
@@ -33,10 +34,13 @@ export interface UseVoiceOutputOptions {
   maxTextLength?: number;
   /** Speech rate 0.5-2.0 (default: 1.0) */
   rate?: number;
+  /** Auto-detect response language for TTS (#330). Default: false */
+  autoDetectLanguage?: boolean;
 }
 
 export interface UseVoiceOutputReturn {
-  /** Speak the given text (sanitized and truncated automatically) */
+  /** Speak the given text (sanitized and truncated automatically).
+   *  If autoDetectLanguage is enabled, the language is detected from text content. */
   speak: (text: string) => void;
   /** Stop current speech immediately */
   stop: () => void;
@@ -59,7 +63,8 @@ export interface UseVoiceOutputReturn {
 const DEFAULT_LANGUAGE = 'it-IT';
 const DEFAULT_MAX_TEXT_LENGTH = 500;
 const DEFAULT_RATE = 1.0;
-const TRUNCATION_SUFFIX = '... leggi la risposta completa sullo schermo';
+const TRUNCATION_SUFFIX_IT = '... leggi la risposta completa sullo schermo';
+const TRUNCATION_SUFFIX_EN = '... read the full response on screen';
 
 /**
  * Firefox workaround: calling speechSynthesis.speak() too quickly after
@@ -78,6 +83,7 @@ export function useVoiceOutput(options: UseVoiceOutputOptions = {}): UseVoiceOut
     preferredVoiceURI,
     maxTextLength = DEFAULT_MAX_TEXT_LENGTH,
     rate = DEFAULT_RATE,
+    autoDetectLanguage = false,
   } = options;
 
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -88,6 +94,7 @@ export function useVoiceOutput(options: UseVoiceOutputOptions = {}): UseVoiceOut
   // Mutable refs for timers and cooldown tracking
   const lastCancelTimeRef = useRef<number>(0);
   const pendingSpeakRef = useRef<string | null>(null);
+  const pendingLangRef = useRef<string | null>(null);
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -151,11 +158,12 @@ export function useVoiceOutput(options: UseVoiceOutputOptions = {}): UseVoiceOut
   // ------------------------------------------------------------------
 
   const processText = useCallback(
-    (text: string): string => {
+    (text: string, lang?: string): string => {
       let processed = sanitizeForTts(text);
 
       if (processed.length > maxTextLength) {
-        processed = processed.substring(0, maxTextLength) + TRUNCATION_SUFFIX;
+        const suffix = lang?.startsWith('en') ? TRUNCATION_SUFFIX_EN : TRUNCATION_SUFFIX_IT;
+        processed = processed.substring(0, maxTextLength) + suffix;
       }
 
       return processed;
@@ -168,22 +176,28 @@ export function useVoiceOutput(options: UseVoiceOutputOptions = {}): UseVoiceOut
   // ------------------------------------------------------------------
 
   const speakNow = useCallback(
-    (text: string) => {
+    (text: string, langOverride?: string) => {
       if (!isSupported) return;
 
-      const processed = processText(text);
+      const effectiveLang = langOverride ?? language;
+      const processed = processText(text, effectiveLang);
       if (!processed) return;
 
       // Cancel any current speech first
       if (speechSynthesis.speaking) {
         speechSynthesis.cancel();
       }
-
       const utterance = new SpeechSynthesisUtterance(processed);
-      utterance.lang = language;
+      utterance.lang = effectiveLang;
       utterance.rate = Math.max(0.5, Math.min(2.0, rate));
 
-      if (selectedVoice) {
+      // When language differs from default, pick the best voice for that language
+      if (langOverride && langOverride !== language) {
+        const langVoice = findBestVoice(langOverride);
+        if (langVoice) {
+          utterance.voice = langVoice;
+        }
+      } else if (selectedVoice) {
         utterance.voice = selectedVoice;
       }
 
@@ -214,11 +228,17 @@ export function useVoiceOutput(options: UseVoiceOutputOptions = {}): UseVoiceOut
     (text: string) => {
       if (!isSupported) return;
 
+      // Auto-detect language when enabled (#330)
+      const langOverride = autoDetectLanguage
+        ? detectLanguage(text, language as 'it-IT' | 'en-US')
+        : undefined;
+
       const elapsed = Date.now() - lastCancelTimeRef.current;
 
       if (elapsed < CANCEL_COOLDOWN_MS) {
         // Firefox workaround: defer speaking until cooldown passes
         pendingSpeakRef.current = text;
+        pendingLangRef.current = langOverride ?? null;
 
         // Clear any existing cooldown timer
         if (cooldownTimerRef.current !== null) {
@@ -228,17 +248,20 @@ export function useVoiceOutput(options: UseVoiceOutputOptions = {}): UseVoiceOut
         cooldownTimerRef.current = setTimeout(() => {
           cooldownTimerRef.current = null;
           const pending = pendingSpeakRef.current;
+          const pendingLang = pendingLangRef.current;
           pendingSpeakRef.current = null;
+          pendingLangRef.current = null;
           if (pending) {
-            speakNow(pending);
+            speakNow(pending, pendingLang ?? undefined);
           }
         }, CANCEL_COOLDOWN_MS - elapsed);
       } else {
         pendingSpeakRef.current = null;
-        speakNow(text);
+        pendingLangRef.current = null;
+        speakNow(text, langOverride);
       }
     },
-    [isSupported, speakNow]
+    [isSupported, autoDetectLanguage, language, speakNow]
   );
 
   const stop = useCallback(() => {
@@ -250,6 +273,7 @@ export function useVoiceOutput(options: UseVoiceOutputOptions = {}): UseVoiceOut
       cooldownTimerRef.current = null;
     }
     pendingSpeakRef.current = null;
+    pendingLangRef.current = null;
 
     if (speechSynthesis.speaking || speechSynthesis.pending) {
       speechSynthesis.cancel();

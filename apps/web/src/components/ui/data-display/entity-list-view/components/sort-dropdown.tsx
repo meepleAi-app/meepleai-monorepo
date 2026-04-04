@@ -89,17 +89,15 @@ export function SortDropdown<T>({
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (!isOpen) return;
 
-    const currentIndex = options.findIndex((opt) => opt.value === value);
+    const currentIndex = options.findIndex(opt => opt.value === value);
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       const nextIndex = (currentIndex + 1) % options.length;
-      // eslint-disable-next-line security/detect-object-injection
       onChange(options[nextIndex].value);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       const prevIndex = (currentIndex - 1 + options.length) % options.length;
-      // eslint-disable-next-line security/detect-object-injection
       onChange(options[prevIndex].value);
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -107,7 +105,7 @@ export function SortDropdown<T>({
     }
   };
 
-  const currentOption = options.find((opt) => opt.value === value) ?? options[0];
+  const currentOption = options.find(opt => opt.value === value) ?? options[0];
   if (!currentOption) return null;
 
   const CurrentIcon = currentOption.icon;
@@ -121,7 +119,7 @@ export function SortDropdown<T>({
       {/* Trigger Button */}
       <button
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => setIsOpen(prev => !prev)}
         onKeyDown={handleKeyDown}
         className={cn(
           'flex items-center gap-2',
@@ -139,10 +137,7 @@ export function SortDropdown<T>({
         {CurrentIcon && <CurrentIcon className="w-4 h-4" />}
         <span className="text-sm font-medium hidden sm:inline">{currentOption.label}</span>
         <ChevronDown
-          className={cn(
-            'w-4 h-4 transition-transform duration-200',
-            isOpen && 'rotate-180'
-          )}
+          className={cn('w-4 h-4 transition-transform duration-200', isOpen && 'rotate-180')}
         />
       </button>
 
@@ -161,7 +156,7 @@ export function SortDropdown<T>({
             'py-1'
           )}
         >
-          {options.map((option) => {
+          {options.map(option => {
             const Icon = option.icon;
             const isActive = option.value === value;
 

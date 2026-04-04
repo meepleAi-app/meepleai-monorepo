@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Routing;
@@ -28,7 +29,7 @@ public class UnifiedAgentGatewayTests
 
         var decision = router.RouteQuery(query);
 
-        Assert.Equal(expectedAgent, decision.TargetAgent);
+        decision.TargetAgent.Should().Be(expectedAgent);
     }
 
     [Fact]
@@ -37,7 +38,8 @@ public class UnifiedAgentGatewayTests
         var classifier = new IntentClassifier();
         var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
-        Assert.Throws<ArgumentException>(() => router.RouteQuery(""));
+        var act = () => router.RouteQuery("");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -46,7 +48,8 @@ public class UnifiedAgentGatewayTests
         var classifier = new IntentClassifier();
         var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
-        Assert.Throws<ArgumentException>(() => router.RouteQuery("   "));
+        var act = () => router.RouteQuery("   ");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -57,9 +60,9 @@ public class UnifiedAgentGatewayTests
 
         var decision = router.RouteQuery("validate move e2 to e4");
 
-        Assert.NotNull(decision.TargetAgent);
+        decision.TargetAgent.Should().NotBeNull();
         Assert.NotEqual(AgentIntent.Unknown, decision.Intent);
-        Assert.True(decision.Confidence > 0);
+        (decision.Confidence > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -70,8 +73,7 @@ public class UnifiedAgentGatewayTests
 
         var decision = router.RouteQuery("validate move");
 
-        Assert.True(decision.Confidence >= 0.70,
-            $"Expected confidence >= 0.70, got {decision.Confidence:F3}");
+        (decision.Confidence >= 0.70).Should().BeTrue($"Expected confidence >= 0.70, got {decision.Confidence:F3}");
     }
 
     [Fact]
@@ -82,8 +84,8 @@ public class UnifiedAgentGatewayTests
 
         var decision = router.RouteQuery("hello world");
 
-        Assert.NotNull(decision.FallbackAgents);
-        Assert.NotEmpty(decision.FallbackAgents);
+        decision.FallbackAgents.Should().NotBeNull();
+        decision.FallbackAgents.Should().NotBeEmpty();
     }
 
     #endregion
@@ -94,29 +96,29 @@ public class UnifiedAgentGatewayTests
     public void QueryValidation_EmptyQuery_ShouldReject()
     {
         var query = "";
-        Assert.True(string.IsNullOrWhiteSpace(query), "Empty query should be detected as invalid");
+        (string.IsNullOrWhiteSpace(query)).Should().BeTrue("Empty query should be detected as invalid");
     }
 
     [Fact]
     public void QueryValidation_TooLongQuery_ShouldReject()
     {
         var query = new string('a', 2001);
-        Assert.True(query.Length > 2000, "Query exceeding 2000 chars should be detected as invalid");
+        (query.Length > 2000).Should().BeTrue("Query exceeding 2000 chars should be detected as invalid");
     }
 
     [Fact]
     public void QueryValidation_ValidQuery_ShouldAccept()
     {
         var query = "How do I play Catan?";
-        Assert.False(string.IsNullOrWhiteSpace(query));
-        Assert.True(query.Length <= 2000);
+        (string.IsNullOrWhiteSpace(query)).Should().BeFalse();
+        (query.Length <= 2000).Should().BeTrue();
     }
 
     [Fact]
     public void QueryValidation_MaxLengthQuery_ShouldAccept()
     {
         var query = new string('a', 2000);
-        Assert.True(query.Length <= 2000, "Query exactly at 2000 chars should be accepted");
+        (query.Length <= 2000).Should().BeTrue("Query exactly at 2000 chars should be accepted");
     }
 
     #endregion
@@ -141,7 +143,7 @@ public class UnifiedAgentGatewayTests
         foreach (var (query, expectedAgent) in testQueries)
         {
             var decision = router.RouteQuery(query);
-            Assert.Equal(expectedAgent, decision.TargetAgent);
+            decision.TargetAgent.Should().Be(expectedAgent);
         }
     }
 
@@ -153,7 +155,7 @@ public class UnifiedAgentGatewayTests
 
         var decision = router.RouteQuery("what time is it?");
 
-        Assert.Equal("TutorAgent", decision.TargetAgent);
+        decision.TargetAgent.Should().Be("TutorAgent");
     }
 
     #endregion
@@ -166,11 +168,11 @@ public class UnifiedAgentGatewayTests
         var expectedAgents = new[] { "TutorAgent", "ArbitroAgent", "StrategaAgent", "NarratoreAgent" };
 
         // Verify all four agents are present
-        Assert.Equal(4, expectedAgents.Length);
-        Assert.Contains("TutorAgent", expectedAgents);
-        Assert.Contains("ArbitroAgent", expectedAgents);
-        Assert.Contains("StrategaAgent", expectedAgents);
-        Assert.Contains("NarratoreAgent", expectedAgents);
+        expectedAgents.Length.Should().Be(4);
+        expectedAgents.Should().Contain("TutorAgent");
+        expectedAgents.Should().Contain("ArbitroAgent");
+        expectedAgents.Should().Contain("StrategaAgent");
+        expectedAgents.Should().Contain("NarratoreAgent");
     }
 
     [Fact]
@@ -178,11 +180,11 @@ public class UnifiedAgentGatewayTests
     {
         var intents = Enum.GetNames<AgentIntent>();
 
-        Assert.Contains("Unknown", intents);
-        Assert.Contains("Tutorial", intents);
-        Assert.Contains("RulesQuestion", intents);
-        Assert.Contains("MoveValidation", intents);
-        Assert.Contains("StrategicAnalysis", intents);
+        intents.Should().Contain("Unknown");
+        intents.Should().Contain("Tutorial");
+        intents.Should().Contain("RulesQuestion");
+        intents.Should().Contain("MoveValidation");
+        intents.Should().Contain("StrategicAnalysis");
     }
 
     [Fact]
@@ -192,10 +194,10 @@ public class UnifiedAgentGatewayTests
         var medium = 0.70;
         var minimum = 0.40;
 
-        Assert.True(high > medium, "High threshold must be greater than medium");
-        Assert.True(medium > minimum, "Medium threshold must be greater than minimum");
-        Assert.True(minimum > 0, "Minimum threshold must be positive");
-        Assert.True(high <= 1.0, "High threshold must not exceed 1.0");
+        (high > medium).Should().BeTrue("High threshold must be greater than medium");
+        (medium > minimum).Should().BeTrue("Medium threshold must be greater than minimum");
+        (minimum > 0).Should().BeTrue("Minimum threshold must be positive");
+        (high <= 1.0).Should().BeTrue("High threshold must not exceed 1.0");
     }
 
     #endregion
@@ -215,7 +217,7 @@ public class UnifiedAgentGatewayTests
 
         var decision = router.RouteQuery(query);
 
-        Assert.Equal(expectedIntent, decision.Intent);
+        decision.Intent.Should().Be(expectedIntent);
     }
 
     [Fact]
@@ -228,13 +230,12 @@ public class UnifiedAgentGatewayTests
         var ambiguous = router.RouteQuery("something about games");
 
         // High confidence should route directly or require confirmation
-        Assert.True(highConfidence.ShouldRoute || highConfidence.RequiresConfirmation,
-            "High confidence queries should either route or require confirmation");
+        (highConfidence.ShouldRoute || highConfidence.RequiresConfirmation).Should().BeTrue("High confidence queries should either route or require confirmation");
 
         // Ambiguous queries should have fallback agents
         if (!ambiguous.ShouldRoute && !ambiguous.RequiresConfirmation)
         {
-            Assert.NotNull(ambiguous.FallbackAgents);
+            ambiguous.FallbackAgents.Should().NotBeNull();
         }
     }
 

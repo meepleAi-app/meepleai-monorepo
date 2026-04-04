@@ -21,7 +21,7 @@ internal static class RuleConflictFaqEndpoints
 
         // Commands (Admin/Editor)
         faqGroup.MapPost("", HandleCreateFaq)
-            .RequireAuthorization(policy => policy.RequireRole("Admin", "Editor"))
+            .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin", "Editor"))
             .Produces<RuleConflictFaqDto>(201)
             .Produces(400)
             .Produces(404)
@@ -32,7 +32,7 @@ internal static class RuleConflictFaqEndpoints
             .WithDescription("Creates a new FAQ resolution for a specific rule conflict pattern. Admin/Editor only.");
 
         faqGroup.MapPut("{id}", HandleUpdateFaqResolution)
-            .RequireAuthorization(policy => policy.RequireRole("Admin", "Editor"))
+            .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin", "Editor"))
             .Produces<RuleConflictFaqDto>(200)
             .Produces(400)
             .Produces(404)
@@ -42,7 +42,7 @@ internal static class RuleConflictFaqEndpoints
             .WithDescription("Updates the resolution text of an existing FAQ entry. Admin/Editor only.");
 
         faqGroup.MapDelete("{id}", HandleDeleteFaq)
-            .RequireAuthorization(policy => policy.RequireRole("Admin"))
+            .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin"))
             .Produces(204)
             .Produces(404)
             .Produces(401)

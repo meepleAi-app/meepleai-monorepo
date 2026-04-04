@@ -137,26 +137,42 @@ const MOCK_PDF_DOCUMENT = {
  */
 async function setupAuth(page: Page) {
   // Catch-all for unmocked API calls (MUST be first)
-  await page.route(`${API_BASE}/api/**`, async (route) => {
+  await page.route(`${API_BASE}/api/**`, async route => {
     const method = route.request().method();
     if (method === 'GET') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
     } else if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
     } else if (method === 'DELETE') {
       await route.fulfill({ status: 204 });
     } else {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
     }
   });
 
   // Auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_USER) });
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(MOCK_USER),
+    });
   });
 
   // User profile
-  await page.route(`${API_BASE}/api/v1/users/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/users/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -176,14 +192,12 @@ async function setupAuth(page: Page) {
  */
 async function setupCatalogPage(page: Page, games = [MOCK_SHARED_GAME, MOCK_SHARED_GAME_2]) {
   // Shared games listing
-  await page.route(`${API_BASE}/api/v1/shared-games*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/shared-games*`, async route => {
     const url = route.request().url();
     // If it's a search with searchTerm, filter results
     if (url.includes('searchTerm=')) {
       const searchTerm = new URL(url).searchParams.get('searchTerm') ?? '';
-      const filtered = games.filter((g) =>
-        g.title.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const filtered = games.filter(g => g.title.toLowerCase().includes(searchTerm.toLowerCase()));
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -209,7 +223,7 @@ async function setupCatalogPage(page: Page, games = [MOCK_SHARED_GAME, MOCK_SHAR
   });
 
   // Library status (not in library by default)
-  await page.route(`${API_BASE}/api/v1/library/games/*/status`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/games/*/status`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -218,7 +232,7 @@ async function setupCatalogPage(page: Page, games = [MOCK_SHARED_GAME, MOCK_SHAR
   });
 
   // Batch status
-  await page.route(`${API_BASE}/api/v1/library/games/batch-status*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/games/batch-status*`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -227,7 +241,7 @@ async function setupCatalogPage(page: Page, games = [MOCK_SHARED_GAME, MOCK_SHAR
   });
 
   // Library quota
-  await page.route(`${API_BASE}/api/v1/library/quota`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/quota`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -236,7 +250,7 @@ async function setupCatalogPage(page: Page, games = [MOCK_SHARED_GAME, MOCK_SHAR
   });
 
   // Library stats
-  await page.route(`${API_BASE}/api/v1/library/stats`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/stats`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -245,7 +259,7 @@ async function setupCatalogPage(page: Page, games = [MOCK_SHARED_GAME, MOCK_SHAR
   });
 
   // Library list
-  await page.route(`${API_BASE}/api/v1/library`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library`, async route => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -253,12 +267,16 @@ async function setupCatalogPage(page: Page, games = [MOCK_SHARED_GAME, MOCK_SHAR
         body: JSON.stringify({ items: [], totalCount: 0, page: 1, pageSize: 20 }),
       });
     } else {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
     }
   });
 
   // Collection status (generic collection system)
-  await page.route(`${API_BASE}/api/v1/library/collections/**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/collections/**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -272,7 +290,7 @@ async function setupCatalogPage(page: Page, games = [MOCK_SHARED_GAME, MOCK_SHAR
  */
 async function setupWizardApiMocks(page: Page) {
   // Documents for a game (Step 2)
-  await page.route(`${API_BASE}/api/v1/games/*/pdfs`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games/*/pdfs`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -281,7 +299,7 @@ async function setupWizardApiMocks(page: Page) {
   });
 
   // PDF upload (Step 2)
-  await page.route(`${API_BASE}/api/v1/ingest/pdf`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/ingest/pdf`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -293,7 +311,7 @@ async function setupWizardApiMocks(page: Page) {
   });
 
   // BGG search (Step 1 fallback)
-  await page.route(`${API_BASE}/api/v1/bgg/search*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/bgg/search*`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -302,7 +320,7 @@ async function setupWizardApiMocks(page: Page) {
   });
 
   // BGG game details
-  await page.route(`${API_BASE}/api/v1/bgg/games/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/bgg/games/*`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -311,7 +329,7 @@ async function setupWizardApiMocks(page: Page) {
   });
 
   // Add private game (custom creation)
-  await page.route(`${API_BASE}/api/v1/private-games`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/private-games`, async route => {
     if (route.request().method() === 'POST') {
       const body = route.request().postDataJSON();
       await route.fulfill({
@@ -325,12 +343,16 @@ async function setupWizardApiMocks(page: Page) {
         }),
       });
     } else {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
     }
   });
 
   // Update private game
-  await page.route(`${API_BASE}/api/v1/private-games/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/private-games/*`, async route => {
     if (route.request().method() === 'PUT') {
       await route.fulfill({
         status: 200,
@@ -338,12 +360,16 @@ async function setupWizardApiMocks(page: Page) {
         body: JSON.stringify(MOCK_PRIVATE_GAME),
       });
     } else {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_PRIVATE_GAME) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_PRIVATE_GAME),
+      });
     }
   });
 
   // Add game to library (Step 3 save)
-  await page.route(`${API_BASE}/api/v1/library/games/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/games/*`, async route => {
     if (route.request().method() === 'POST') {
       await route.fulfill({
         status: 201,
@@ -363,7 +389,7 @@ async function setupWizardApiMocks(page: Page) {
  * and clicks "Aggiungi a Collezione".
  */
 async function openWizardFromGameCard(page: Page) {
-  await page.goto('/games');
+  await page.goto('/library');
   await page.waitForLoadState('domcontentloaded');
 
   // Find the first game card and open quick actions
@@ -450,7 +476,7 @@ test.describe('Add Game Wizard - E2E', () => {
 
     test('shows existing PDFs on Step 2 when game has documents', async ({ page }) => {
       // Override documents mock to return existing PDFs
-      await page.route(`${API_BASE}/api/v1/games/*/pdfs`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/games/*/pdfs`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -508,7 +534,7 @@ test.describe('Add Game Wizard - E2E', () => {
 
     test('shows empty state when no search results', async ({ page }) => {
       // Override catalog search to return empty
-      await page.route(`${API_BASE}/api/v1/shared-games*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/shared-games*`, async route => {
         const url = route.request().url();
         if (url.includes('searchTerm=')) {
           await route.fulfill({
@@ -543,7 +569,7 @@ test.describe('Add Game Wizard - E2E', () => {
   test.describe('Flow 3: BGG Import', () => {
     test('imports game from BGG when not in catalog', async ({ page }) => {
       // Override catalog search to return empty (forcing BGG fallback)
-      await page.route(`${API_BASE}/api/v1/shared-games*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/shared-games*`, async route => {
         const url = route.request().url();
         if (url.includes('searchTerm=')) {
           await route.fulfill({
@@ -642,7 +668,10 @@ test.describe('Add Game Wizard - E2E', () => {
     test('validates required fields on custom form', async ({ page }) => {
       await openWizardFromLibrary(page);
 
-      await page.getByText(/crea gioco personalizzato/i).first().click();
+      await page
+        .getByText(/crea gioco personalizzato/i)
+        .first()
+        .click();
       await expect(page.locator('#custom-game-title')).toBeVisible({ timeout: 3000 });
 
       // Try to submit with empty fields
@@ -663,7 +692,7 @@ test.describe('Add Game Wizard - E2E', () => {
   test.describe('Flow 5: Duplicate Detection', () => {
     test('shows in-library indicator for games already in collection', async ({ page }) => {
       // Override library status to show game is already in library
-      await page.route(`${API_BASE}/api/v1/library/games/*/status`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/library/games/*/status`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -672,7 +701,7 @@ test.describe('Add Game Wizard - E2E', () => {
       });
 
       // Override batch status
-      await page.route(`${API_BASE}/api/v1/library/games/batch-status*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/library/games/batch-status*`, async route => {
         const url = route.request().url();
         const gameIds = new URL(url).searchParams.get('gameIds')?.split(',') ?? [];
         const statuses: Record<string, { inLibrary: boolean }> = {};
@@ -686,7 +715,7 @@ test.describe('Add Game Wizard - E2E', () => {
         });
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('domcontentloaded');
 
       // Game cards should show "In Libreria" badge for games already in library
@@ -716,9 +745,7 @@ test.describe('Add Game Wizard - E2E', () => {
 
       // Should show unsaved changes confirmation
       await expect(page.getByText('Modifiche non salvate')).toBeVisible({ timeout: 3000 });
-      await expect(
-        page.getByText(/vuoi chiudere e perdere le modifiche/i)
-      ).toBeVisible();
+      await expect(page.getByText(/vuoi chiudere e perdere le modifiche/i)).toBeVisible();
 
       // Click "Annulla" to stay
       await page.getByRole('button', { name: /annulla/i }).click();
@@ -759,7 +786,7 @@ test.describe('Add Game Wizard - E2E', () => {
   test.describe('Edge Cases', () => {
     test('handles network error during catalog search', async ({ page }) => {
       // Override catalog search to fail
-      await page.route(`${API_BASE}/api/v1/shared-games*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/shared-games*`, async route => {
         const url = route.request().url();
         if (url.includes('searchTerm=')) {
           await route.abort('failed');
@@ -784,7 +811,7 @@ test.describe('Add Game Wizard - E2E', () => {
 
     test('handles network error during save', async ({ page }) => {
       // Override add-to-library to fail
-      await page.route(`${API_BASE}/api/v1/library/games/*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/library/games/*`, async route => {
         if (route.request().method() === 'POST') {
           await route.fulfill({
             status: 500,

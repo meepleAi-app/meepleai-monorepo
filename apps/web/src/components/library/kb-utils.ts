@@ -35,7 +35,6 @@ export const statusIndicators: Record<string, { label: string; color: string; do
 };
 
 export function getStatusIndicator(status: string) {
-  // eslint-disable-next-line security/detect-object-injection -- status is from server enum
   return statusIndicators[status] ?? statusIndicators.Pending;
 }
 

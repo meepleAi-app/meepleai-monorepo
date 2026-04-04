@@ -485,14 +485,14 @@ public sealed class GameSessionStateTests : IDisposable
     #region GetLatestSnapshot Tests
 
     [Fact]
-    public void GetLatestSnapshot_WithMultipleSnapshots_ReturnsLatest()
+    public async Task GetLatestSnapshot_WithMultipleSnapshots_ReturnsLatest()
     {
         // Arrange
         var state = CreateValidSessionState();
         state.CreateSnapshot(1, "Turn 1", "user@example.com");
-        Thread.Sleep(10); // Ensure different timestamps
+        await Task.Delay(50); // Ensure different timestamps
         state.CreateSnapshot(2, "Turn 2", "user@example.com");
-        Thread.Sleep(10);
+        await Task.Delay(50);
         var latestSnapshot = state.CreateSnapshot(3, "Turn 3", "user@example.com");
 
         // Act

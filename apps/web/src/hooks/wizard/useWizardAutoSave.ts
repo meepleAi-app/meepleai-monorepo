@@ -14,7 +14,11 @@ import { useEffect, useRef } from 'react';
 
 import { toast } from 'sonner';
 
-import { useGameImportWizardStore, type GameImportWizardState } from '@/stores/useGameImportWizardStore';
+import { logger } from '@/lib/logger';
+import {
+  useGameImportWizardStore,
+  type GameImportWizardState,
+} from '@/stores/useGameImportWizardStore';
 
 // localStorage key for wizard draft
 const WIZARD_DRAFT_KEY = 'game_import_wizard_draft';
@@ -39,7 +43,7 @@ function saveDraft(state: Partial<GameImportWizardState>) {
 
     localStorage.setItem(WIZARD_DRAFT_KEY, JSON.stringify(draft));
   } catch (error) {
-    console.error('Failed to save wizard draft:', error);
+    logger.error('Failed to save wizard draft:', error);
   }
 }
 
@@ -73,7 +77,7 @@ function loadDraft(): Partial<GameImportWizardState> | null {
       enrichedData: parsed.enrichedData,
     };
   } catch (error) {
-    console.error('Failed to load wizard draft:', error);
+    logger.error('Failed to load wizard draft:', error);
     return null;
   }
 }
@@ -85,7 +89,7 @@ export function clearDraft() {
   try {
     localStorage.removeItem(WIZARD_DRAFT_KEY);
   } catch (error) {
-    console.error('Failed to clear wizard draft:', error);
+    logger.error('Failed to clear wizard draft:', error);
   }
 }
 
@@ -116,7 +120,8 @@ export function useWizardAutoSave() {
     if (draft.currentStep) store.setStep(draft.currentStep);
     if (draft.uploadedPdf) store.setUploadedPdf(draft.uploadedPdf);
     if (draft.extractedMetadata) store.setExtractedMetadata(draft.extractedMetadata);
-    if (draft.selectedBggId) store.setSelectedBggId(draft.selectedBggId, draft.bggGameData ?? undefined);
+    if (draft.selectedBggId)
+      store.setSelectedBggId(draft.selectedBggId, draft.bggGameData ?? undefined);
     // Note: enrichedData is not directly restorable as it's typically computed in Step 4
 
     toast.success('Draft restored', {

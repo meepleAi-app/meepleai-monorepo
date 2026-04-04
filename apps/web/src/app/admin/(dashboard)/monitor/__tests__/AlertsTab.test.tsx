@@ -35,9 +35,14 @@ vi.mock('@/components/admin/alert-rules/AlertRuleList', () => ({
   ),
 }));
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 import { AlertsTab } from '../AlertsTab';
+
+vi.mock('../CreateAlertRuleDialog', () => ({
+  CreateAlertRuleDialog: ({ open }: { open: boolean }) =>
+    open ? <div>Nuova Alert Rule</div> : null,
+}));
 
 describe('AlertsTab', () => {
   beforeEach(() => {
@@ -77,7 +82,7 @@ describe('AlertsTab', () => {
     render(<AlertsTab />);
 
     await waitFor(() => {
-      expect(screen.getByText('Alert Rules')).toBeInTheDocument();
+      expect(screen.getByText('Regole di Alert')).toBeInTheDocument();
     });
   });
 
@@ -117,5 +122,17 @@ describe('AlertsTab', () => {
     });
 
     expect(screen.getByTestId('alert-rule-list')).toHaveAttribute('data-rules-count', '0');
+  });
+
+  it('mostra il bottone Nuova Regola', async () => {
+    render(<AlertsTab />);
+    expect(await screen.findByRole('button', { name: /nuova regola/i })).toBeInTheDocument();
+  });
+
+  it('apre il dialog CreateAlertRule al click', async () => {
+    render(<AlertsTab />);
+    const btn = await screen.findByRole('button', { name: /nuova regola/i });
+    fireEvent.click(btn);
+    expect(await screen.findByText('Nuova Alert Rule')).toBeInTheDocument();
   });
 });

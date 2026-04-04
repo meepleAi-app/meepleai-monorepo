@@ -8,15 +8,9 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Moq;
-using StackExchange.Redis;
 using Xunit;
 
 namespace Api.Tests.Integration.UserLibrary;
@@ -26,7 +20,7 @@ namespace Api.Tests.Integration.UserLibrary;
 /// Issue #3670: Phase 9 - Testing &amp; Polish.
 /// Tests: CRUD operations, authentication, authorization, validation.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserLibrary")]
 public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
@@ -46,47 +40,7 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     {
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, configBuilder) =>
-                {
-                    configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["OPENROUTER_API_KEY"] = "test-key",
-                        ["ConnectionStrings:Postgres"] = connectionString
-                    });
-                });
-
-                builder.ConfigureTestServices(services =>
-                {
-                    // Replace DbContext with test database
-                    services.RemoveAll(typeof(DbContextOptions<MeepleAiDbContext>));
-                    services.AddDbContext<MeepleAiDbContext>(options =>
-                        options.UseNpgsql(connectionString, o => o.UseVector()));
-
-                    // Mock Redis for HybridCache
-                    services.RemoveAll(typeof(IConnectionMultiplexer));
-                    var mockRedis = new Mock<IConnectionMultiplexer>();
-                    services.AddSingleton(mockRedis.Object);
-
-                    // Mock vector/embedding services
-                    services.RemoveAll(typeof(Api.Services.IQdrantService));
-                    services.RemoveAll(typeof(Api.Services.IEmbeddingService));
-                    services.AddScoped<Api.Services.IQdrantService>(_ => Mock.Of<Api.Services.IQdrantService>());
-                    services.AddScoped<Api.Services.IEmbeddingService>(_ => Mock.Of<Api.Services.IEmbeddingService>());
-
-                    // Mock IHybridCacheService
-                    services.RemoveAll(typeof(Api.Services.IHybridCacheService));
-                    services.AddScoped<Api.Services.IHybridCacheService>(_ => Mock.Of<Api.Services.IHybridCacheService>());
-
-                    // Ensure domain event collector is registered
-                    services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector,
-                        Api.SharedKernel.Application.Services.DomainEventCollector>();
-                });
-            });
+        _factory = IntegrationWebApplicationFactory.Create(connectionString);
 
         // Initialize database with migrations
         using (var scope = _factory.Services.CreateScope())
@@ -200,10 +154,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         // Note: May return Unauthorized in test environment due to auth middleware mocking
         var responseBody = await response.Content.ReadAsStringAsync();
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Created ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected Created or Unauthorized, got {response.StatusCode}. Body: {responseBody}");
+        (response.StatusCode == HttpStatusCode.Created ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected Created or Unauthorized, got {response.StatusCode}. Body: {responseBody}");
 
         if (response.StatusCode == HttpStatusCode.Created)
         {
@@ -255,10 +207,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Created ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected Created or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.Created ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected Created or Unauthorized, got {response.StatusCode}");
 
         if (response.StatusCode == HttpStatusCode.Created)
         {
@@ -297,11 +247,9 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert
         // FluentValidation returns 422 UnprocessableEntity (Issue #1449)
-        Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest ||
+        (response.StatusCode == HttpStatusCode.BadRequest ||
             response.StatusCode == HttpStatusCode.UnprocessableEntity ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected BadRequest/UnprocessableEntity or Unauthorized, got {response.StatusCode}");
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected BadRequest/UnprocessableEntity or Unauthorized, got {response.StatusCode}");
     }
 
     #endregion
@@ -340,10 +288,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected OK or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected OK or Unauthorized, got {response.StatusCode}");
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -373,10 +319,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     #endregion
@@ -425,10 +369,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected OK or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected OK or Unauthorized, got {response.StatusCode}");
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -496,10 +438,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Forbidden ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected Forbidden or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.Forbidden ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected Forbidden or Unauthorized, got {response.StatusCode}");
     }
 
     #endregion
@@ -538,10 +478,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NoContent ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NoContent or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NoContent ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NoContent or Unauthorized, got {response.StatusCode}");
 
         if (response.StatusCode == HttpStatusCode.NoContent)
         {
@@ -603,10 +541,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Forbidden ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected Forbidden or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.Forbidden ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected Forbidden or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -628,10 +564,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     #endregion

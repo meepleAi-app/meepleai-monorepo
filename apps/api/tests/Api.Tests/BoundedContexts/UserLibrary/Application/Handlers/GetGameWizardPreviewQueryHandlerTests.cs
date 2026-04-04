@@ -4,7 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
-using Api.BoundedContexts.UserLibrary.Application.Handlers;
+using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -140,7 +140,7 @@ public class GetGameWizardPreviewQueryHandlerTests
         result.Documents.Should().HaveCount(1);
         result.DocumentCount.Should().Be(1);
         result.Documents[0].FileName.Should().Be("catan-rules.pdf");
-        result.Documents[0].Status.Should().Be("pending");
+        result.Documents[0].Status.Should().Be("Pending");
         result.Documents[0].DocumentType.Should().Be("base");
     }
 

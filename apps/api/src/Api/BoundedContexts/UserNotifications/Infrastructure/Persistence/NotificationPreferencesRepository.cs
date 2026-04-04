@@ -68,7 +68,14 @@ internal class NotificationPreferencesRepository : RepositoryBase, INotification
             entity.EmailOnDocumentReady, entity.EmailOnDocumentFailed, entity.EmailOnRetryAvailable,
             entity.PushOnDocumentReady, entity.PushOnDocumentFailed, entity.PushOnRetryAvailable,
             entity.InAppOnDocumentReady, entity.InAppOnDocumentFailed, entity.InAppOnRetryAvailable,
-            entity.PushEndpoint, entity.PushP256dhKey, entity.PushAuthKey
+            entity.PushEndpoint, entity.PushP256dhKey, entity.PushAuthKey,
+            entity.InAppOnGameNightInvitation, entity.EmailOnGameNightInvitation,
+            entity.PushOnGameNightInvitation, entity.EmailOnGameNightReminder,
+            entity.PushOnGameNightReminder,
+            entity.SlackEnabled, entity.SlackOnDocumentReady, entity.SlackOnDocumentFailed,
+            entity.SlackOnRetryAvailable, entity.SlackOnGameNightInvitation,
+            entity.SlackOnGameNightReminder, entity.SlackOnShareRequestCreated,
+            entity.SlackOnShareRequestApproved, entity.SlackOnBadgeEarned
         );
     }
 
@@ -89,7 +96,21 @@ internal class NotificationPreferencesRepository : RepositoryBase, INotification
             InAppOnRetryAvailable = domain.InAppOnRetryAvailable,
             PushEndpoint = domain.PushEndpoint,
             PushP256dhKey = domain.PushP256dhKey,
-            PushAuthKey = domain.PushAuthKey
+            PushAuthKey = domain.PushAuthKey,
+            InAppOnGameNightInvitation = domain.InAppOnGameNightInvitation,
+            EmailOnGameNightInvitation = domain.EmailOnGameNightInvitation,
+            PushOnGameNightInvitation = domain.PushOnGameNightInvitation,
+            EmailOnGameNightReminder = domain.EmailOnGameNightReminder,
+            PushOnGameNightReminder = domain.PushOnGameNightReminder,
+            SlackEnabled = domain.SlackEnabled,
+            SlackOnDocumentReady = domain.SlackOnDocumentReady,
+            SlackOnDocumentFailed = domain.SlackOnDocumentFailed,
+            SlackOnRetryAvailable = domain.SlackOnRetryAvailable,
+            SlackOnGameNightInvitation = domain.SlackOnGameNightInvitation,
+            SlackOnGameNightReminder = domain.SlackOnGameNightReminder,
+            SlackOnShareRequestCreated = domain.SlackOnShareRequestCreated,
+            SlackOnShareRequestApproved = domain.SlackOnShareRequestApproved,
+            SlackOnBadgeEarned = domain.SlackOnBadgeEarned
         };
     }
 }

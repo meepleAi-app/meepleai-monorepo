@@ -56,7 +56,7 @@ async function setupDifficultyRatingMocks(page: Page) {
   const userVotes: Record<string, number> = {};
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -73,7 +73,7 @@ async function setupDifficultyRatingMocks(page: Page) {
   });
 
   // Mock games endpoint
-  await page.route(`${API_BASE}/api/v1/games`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games`, async route => {
     const url = route.request().url();
     const difficultyMin = url.match(/difficultyMin=([^&]+)/)?.[1];
     const difficultyMax = url.match(/difficultyMax=([^&]+)/)?.[1];
@@ -81,14 +81,10 @@ async function setupDifficultyRatingMocks(page: Page) {
     let filteredGames = [...games];
 
     if (difficultyMin) {
-      filteredGames = filteredGames.filter(
-        (g) => g.difficulty.average >= parseFloat(difficultyMin)
-      );
+      filteredGames = filteredGames.filter(g => g.difficulty.average >= parseFloat(difficultyMin));
     }
     if (difficultyMax) {
-      filteredGames = filteredGames.filter(
-        (g) => g.difficulty.average <= parseFloat(difficultyMax)
-      );
+      filteredGames = filteredGames.filter(g => g.difficulty.average <= parseFloat(difficultyMax));
     }
 
     await route.fulfill({
@@ -99,13 +95,13 @@ async function setupDifficultyRatingMocks(page: Page) {
   });
 
   // Mock single game endpoint
-  await page.route(`${API_BASE}/api/v1/games/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games/*`, async route => {
     const url = route.request().url();
     const gameIdMatch = url.match(/games\/([^/?]+)/);
     const gameId = gameIdMatch?.[1];
 
     if (gameId && !url.includes('/difficulty')) {
-      const game = games.find((g) => g.id === gameId);
+      const game = games.find(g => g.id === gameId);
       if (game) {
         await route.fulfill({
           status: 200,
@@ -122,7 +118,7 @@ async function setupDifficultyRatingMocks(page: Page) {
   });
 
   // Mock difficulty vote endpoint
-  await page.route(`${API_BASE}/api/v1/games/*/difficulty`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games/*/difficulty`, async route => {
     const url = route.request().url();
     const gameIdMatch = url.match(/games\/([^/]+)\/difficulty/);
     const gameId = gameIdMatch?.[1];
@@ -156,45 +152,42 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should display difficulty rating on game card', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Should show difficulty indicator
       await expect(
-        page.locator('[data-testid="difficulty-rating"], .difficulty-rating').first().or(
-          page.getByText(/difficulty|complexity|weight/i).first()
-        )
+        page
+          .locator('[data-testid="difficulty-rating"], .difficulty-rating')
+          .first()
+          .or(page.getByText(/difficulty|complexity|weight/i).first())
       ).toBeVisible({ timeout: 5000 });
     });
 
     test('should show difficulty scale', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Should show difficulty number or scale
-      await expect(
-        page.getByText(/3\.2|medium|intermediate/i)
-      ).toBeVisible();
+      await expect(page.getByText(/3\.2|medium|intermediate/i)).toBeVisible();
     });
 
     test('should show vote count', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Should show number of votes
-      await expect(
-        page.getByText(/1,?250|votes|rating/i)
-      ).toBeVisible();
+      await expect(page.getByText(/1,?250|votes|rating/i)).toBeVisible();
     });
 
     test('should show difficulty distribution', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // May show distribution chart or breakdown
@@ -206,13 +199,13 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should allow user to vote on difficulty', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Find difficulty voting control
-      const voteButton = page.getByRole('button', { name: /rate|vote|difficulty/i }).or(
-        page.locator('[data-testid="difficulty-vote"]')
-      );
+      const voteButton = page
+        .getByRole('button', { name: /rate|vote|difficulty/i })
+        .or(page.locator('[data-testid="difficulty-vote"]'));
 
       if (await voteButton.isVisible()) {
         await voteButton.click();
@@ -227,7 +220,7 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should submit difficulty vote', async ({ page }) => {
       const mocks = await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       const voteButton = page.getByRole('button', { name: /rate|vote/i });
@@ -254,7 +247,7 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should show user current vote', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // After voting, should show user's vote
@@ -264,7 +257,7 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should allow changing vote', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Should be able to update vote
@@ -280,7 +273,7 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should compare difficulty between games', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Sort by difficulty to compare
@@ -298,12 +291,14 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should show difficulty indicator colors', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Easy games may be green, hard may be red
       await expect(
-        page.locator('.difficulty-easy, .difficulty-hard, [data-difficulty]').or(page.locator('body'))
+        page
+          .locator('.difficulty-easy, .difficulty-hard, [data-difficulty]')
+          .or(page.locator('body'))
       ).toBeVisible();
     });
   });
@@ -312,13 +307,13 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should filter games by difficulty', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Find difficulty filter
-      const difficultyFilter = page.getByRole('combobox', { name: /difficulty/i }).or(
-        page.locator('[data-testid="difficulty-filter"]')
-      );
+      const difficultyFilter = page
+        .getByRole('combobox', { name: /difficulty/i })
+        .or(page.locator('[data-testid="difficulty-filter"]'));
 
       if (await difficultyFilter.isVisible()) {
         await difficultyFilter.click();
@@ -334,14 +329,14 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should filter by difficulty range', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // May have slider or min/max inputs
       const minInput = page.locator('input[name="difficultyMin"]');
       const maxInput = page.locator('input[name="difficultyMax"]');
 
-      if (await minInput.isVisible() && await maxInput.isVisible()) {
+      if ((await minInput.isVisible()) && (await maxInput.isVisible())) {
         await minInput.fill('2');
         await maxInput.fill('4');
         await page.waitForLoadState('networkidle');
@@ -354,13 +349,11 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should show difficulty labels', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Should show difficulty labels (Easy, Medium, Hard)
-      await expect(
-        page.getByText(/easy|medium|hard|beginner|advanced/i).first()
-      ).toBeVisible();
+      await expect(page.getByText(/easy|medium|hard|beginner|advanced/i).first()).toBeVisible();
     });
   });
 
@@ -368,7 +361,7 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
     test('should explain difficulty scale', async ({ page }) => {
       await setupDifficultyRatingMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Look for info tooltip or help
@@ -377,9 +370,7 @@ test.describe('GAME-07: Game Difficulty Rating', () => {
         await infoButton.click();
 
         // Should explain the scale
-        await expect(
-          page.getByText(/scale|rating|1.*5|easy.*hard/i)
-        ).toBeVisible();
+        await expect(page.getByText(/scale|rating|1.*5|easy.*hard/i)).toBeVisible();
       }
     });
   });

@@ -31,9 +31,10 @@
 import { MessageCircle, RefreshCw, Download, Trash2 } from 'lucide-react';
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import type { DocumentIndexingStatus } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import type { KbIndexingStatus } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+import { buildKbCardProps } from '@/lib/card-mappers';
 
 // ============================================================================
 // Types
@@ -63,9 +64,9 @@ export interface MeepleKbCardProps {
 // ============================================================================
 
 /**
- * Map PdfDocumentDto.processingStatus string to DocumentIndexingStatus.
+ * Map PdfDocumentDto.processingStatus string to KbIndexingStatus.
  */
-function mapDocumentStatus(processingStatus: string): DocumentIndexingStatus {
+function mapDocumentStatus(processingStatus: string): KbIndexingStatus {
   switch (processingStatus) {
     case 'Completed':
     case 'Ready':
@@ -101,6 +102,7 @@ export function MeepleKbCard({
   const documentStatus = mapDocumentStatus(document.processingStatus);
   const isProcessing = documentStatus === 'processing';
   const isIndexed = documentStatus === 'indexed';
+  const mapperProps = buildKbCardProps(document);
 
   // ============================================================================
   // Quick Actions Configuration
@@ -155,23 +157,33 @@ export function MeepleKbCard({
   return (
     <MeepleCard
       id={document.id}
-      entity="document"
+      entity="kb"
       variant={variant}
       title={document.fileName}
       subtitle={subtitle}
       documentStatus={documentStatus}
+      pageCount={mapperProps.pageCount}
+      identityChip1={mapperProps.identityChip1}
+      stateLabel={mapperProps.stateLabel}
       className={className}
-      onClick={() => window.location.href = `/documents/${document.id}`}
+      onClick={() => (window.location.href = `/documents/${document.id}`)}
       // Issue #5001: Quick actions with conditional visibility
       entityQuickActions={entityQuickActions}
       showInfoButton
-      infoHref={`/documents/${document.id}`}
+      entityId={document.id}
       infoTooltip="Vai al dettaglio"
       // Navigation footer: Game + Agent links
-      navigateTo={getNavigationLinks('document', {
+      linkedEntities={getNavigationLinks('kb', {
         id: document.id,
         gameId: document.gameId,
-      })}
+      }).map(l => ({ entityType: l.entity, count: 1 }))}
+      onManaPipClick={entityType => {
+        const link = getNavigationLinks('kb', {
+          id: document.id,
+          gameId: document.gameId,
+        }).find(l => l.entity === entityType);
+        if (link?.href) window.location.href = link.href;
+      }}
       data-testid={`kb-card-${document.id}`}
     />
   );
@@ -180,19 +192,9 @@ export function MeepleKbCard({
 /**
  * MeepleKbCard Skeleton for loading state
  */
-export function MeepleKbCardSkeleton({
-  variant = 'grid',
-}: {
-  variant?: MeepleCardVariant;
-}) {
+export function MeepleKbCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant }) {
   return (
-    <MeepleCard
-      entity="document"
-      variant={variant}
-      title=""
-      loading
-      data-testid="kb-card-skeleton"
-    />
+    <MeepleCard entity="kb" variant={variant} title="" loading data-testid="kb-card-skeleton" />
   );
 }
 

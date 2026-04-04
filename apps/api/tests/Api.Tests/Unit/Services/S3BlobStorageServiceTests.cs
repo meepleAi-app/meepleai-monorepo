@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.Services;
 
@@ -65,10 +66,10 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.StoreAsync(stream, fileName, gameId);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotNull(result.FileId);
-        Assert.Contains("game123", result.FilePath);
-        Assert.Equal(content.Length, result.FileSizeBytes);
+        result.Success.Should().BeTrue();
+        result.FileId.Should().NotBeNull();
+        result.FilePath.Should().Contain("game123");
+        result.FileSizeBytes.Should().Be(content.Length);
 
         _mockS3Client.Verify(x => x.PutObjectAsync(
             It.Is<PutObjectRequest>(r =>
@@ -96,9 +97,9 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.StoreAsync(stream, fileName, gameId);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.FileId);
-        Assert.Contains("S3 error", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.FileId.Should().BeNull();
+        result.ErrorMessage.Should().Contain("S3 error");
     }
 
     [Fact]
@@ -137,8 +138,8 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.RetrieveAsync(fileId, gameId);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.CanRead);
+        result.Should().NotBeNull();
+        result.CanRead.Should().BeTrue();
 
         _mockS3Client.Verify(x => x.ListObjectsV2Async(
             It.Is<ListObjectsV2Request>(r =>
@@ -170,7 +171,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.RetrieveAsync(fileId, gameId);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -203,7 +204,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.RetrieveAsync(fileId, gameId);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -241,7 +242,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.DeleteAsync(fileId, gameId);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
 
         _mockS3Client.Verify(x => x.DeleteObjectAsync(
             It.Is<DeleteObjectRequest>(r =>
@@ -272,7 +273,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.DeleteAsync(fileId, gameId);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
 
         _mockS3Client.Verify(x => x.DeleteObjectAsync(
             It.IsAny<DeleteObjectRequest>(),
@@ -291,7 +292,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = _sut.GetStoragePath(fileId, gameId, fileName);
 
         // Assert
-        Assert.Equal($"pdf_uploads/{gameId}/{fileId}_test.pdf", result);
+        result.Should().Be($"pdf_uploads/{gameId}/{fileId}_test.pdf");
     }
 
     [Fact]
@@ -303,8 +304,9 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var fileName = "test.pdf";
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            _sut.GetStoragePath(fileId, invalidGameId, fileName));
+        var act = () =>
+            _sut.GetStoragePath(fileId, invalidGameId, fileName);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -332,7 +334,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.ExistsAsync(fileId, gameId);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -357,7 +359,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.ExistsAsync(fileId, gameId);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -371,7 +373,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.ExistsAsync(fileId, invalidGameId);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -404,8 +406,8 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.GetPresignedDownloadUrlAsync(fileId, gameId);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedUrl, result);
+        result.Should().NotBeNull();
+        result.Should().Be(expectedUrl);
 
         _mockS3Client.Verify(x => x.GetPreSignedURLAsync(
             It.Is<GetPreSignedUrlRequest>(r =>
@@ -437,7 +439,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.GetPresignedDownloadUrlAsync(fileId, gameId);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
 
         _mockS3Client.Verify(x => x.GetPreSignedURLAsync(
             It.IsAny<GetPreSignedUrlRequest>()),
@@ -475,7 +477,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = await _sut.GetPresignedDownloadUrlAsync(fileId, gameId, customExpiry);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedUrl, result);
+        result.Should().NotBeNull();
+        result.Should().Be(expectedUrl);
     }
 }

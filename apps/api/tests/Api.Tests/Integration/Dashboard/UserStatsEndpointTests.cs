@@ -1,4 +1,3 @@
-using Api.BoundedContexts.Administration.Application.Handlers.UserStats;
 using Api.BoundedContexts.Administration.Application.Queries.UserStats;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -21,7 +20,7 @@ namespace Api.Tests.Integration.Dashboard;
 /// Integration tests for GET /api/v1/users/me/stats endpoint (Issue #4585, #4578)
 /// Epic #4575: Gaming Hub Dashboard - Phase 3
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class UserStatsEndpointTests : IAsyncLifetime
 {

@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Api.Infrastructure.EntityConfigurations.KnowledgeBase;
 
@@ -31,14 +33,22 @@ internal class ModelCompatibilityEntryEntityConfiguration : IEntityTypeConfigura
             .IsRequired()
             .HasMaxLength(50);
 
+        // Fix: Npgsql cannot write string[] to jsonb directly — use JSON ValueConverter
+        var stringArrayConverter = new ValueConverter<string[], string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Deserialize<string[]>(v, (JsonSerializerOptions?)null) ?? Array.Empty<string>()
+        );
+
         builder.Property(e => e.Alternatives)
-            .HasColumnType("jsonb");
+            .HasColumnType("jsonb")
+            .HasConversion(stringArrayConverter);
 
         builder.Property(e => e.ContextWindow)
             .IsRequired();
 
         builder.Property(e => e.Strengths)
-            .HasColumnType("jsonb");
+            .HasColumnType("jsonb")
+            .HasConversion(stringArrayConverter);
 
         builder.Property(e => e.IsCurrentlyAvailable)
             .IsRequired()

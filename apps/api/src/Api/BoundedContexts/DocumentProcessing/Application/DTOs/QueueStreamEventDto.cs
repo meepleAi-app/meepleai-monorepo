@@ -53,13 +53,25 @@ internal sealed record LogEntryData(string Level, string Message);
 
 /// <summary>
 /// Data payload for job-completed events.
+/// Enriched with game info at the SSE stream handler layer.
 /// </summary>
-internal sealed record JobCompletedData(double TotalDurationSeconds);
+internal sealed record JobCompletedData(
+    double TotalDurationSeconds,
+    string? FileName,
+    Guid? SharedGameId,
+    string? GameName);
 
 /// <summary>
 /// Data payload for job-failed events.
+/// Enriched with game info at the SSE stream handler layer.
 /// </summary>
-internal sealed record JobFailedData(string Error, string? FailedAtStep, int RetryCount);
+internal sealed record JobFailedData(
+    string Error,
+    string? FailedAtStep,
+    int RetryCount,
+    string? FileName,
+    Guid? SharedGameId,
+    string? GameName);
 
 /// <summary>
 /// Data payload for job-queued events (queue-wide stream).

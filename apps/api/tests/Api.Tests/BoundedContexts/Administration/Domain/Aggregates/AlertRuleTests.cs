@@ -141,12 +141,12 @@ public sealed class AlertRuleTests
     #region Update Tests
 
     [Fact]
-    public void Update_UpdatesAllFields()
+    public async Task Update_UpdatesAllFields()
     {
         // Arrange
         var rule = CreateTestRule();
         var originalUpdatedAt = rule.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         rule.Update(
@@ -172,13 +172,13 @@ public sealed class AlertRuleTests
     #region Enable/Disable Tests
 
     [Fact]
-    public void Enable_WhenDisabled_EnablesRule()
+    public async Task Enable_WhenDisabled_EnablesRule()
     {
         // Arrange
         var rule = CreateTestRule();
         rule.Disable("admin");
         var originalUpdatedAt = rule.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         rule.Enable("admin2");
@@ -190,13 +190,13 @@ public sealed class AlertRuleTests
     }
 
     [Fact]
-    public void Enable_WhenAlreadyEnabled_DoesNotUpdateTimestamp()
+    public async Task Enable_WhenAlreadyEnabled_DoesNotUpdateTimestamp()
     {
         // Arrange
         var rule = CreateTestRule();
         rule.IsEnabled.Should().BeTrue();
         var originalUpdatedAt = rule.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         rule.Enable("admin2");
@@ -207,12 +207,12 @@ public sealed class AlertRuleTests
     }
 
     [Fact]
-    public void Disable_WhenEnabled_DisablesRule()
+    public async Task Disable_WhenEnabled_DisablesRule()
     {
         // Arrange
         var rule = CreateTestRule();
         var originalUpdatedAt = rule.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         rule.Disable("admin2");
@@ -224,13 +224,13 @@ public sealed class AlertRuleTests
     }
 
     [Fact]
-    public void Disable_WhenAlreadyDisabled_DoesNotUpdateTimestamp()
+    public async Task Disable_WhenAlreadyDisabled_DoesNotUpdateTimestamp()
     {
         // Arrange
         var rule = CreateTestRule();
         rule.Disable("admin");
         var originalUpdatedAt = rule.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         rule.Disable("admin2");
@@ -245,12 +245,12 @@ public sealed class AlertRuleTests
     #region SetMetadata Tests
 
     [Fact]
-    public void SetMetadata_SetsMetadataValue()
+    public async Task SetMetadata_SetsMetadataValue()
     {
         // Arrange
         var rule = CreateTestRule();
         var originalUpdatedAt = rule.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         rule.SetMetadata("{\"team\":\"platform\"}", "admin");

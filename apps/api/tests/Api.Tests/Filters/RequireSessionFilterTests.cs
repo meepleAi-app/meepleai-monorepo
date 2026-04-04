@@ -3,6 +3,7 @@ using Api.Filters;
 using Api.Infrastructure.Entities;
 using Microsoft.AspNetCore.Http;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -58,8 +59,9 @@ public class RequireSessionFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.NotNull(result);
-        var httpResult = Assert.IsAssignableFrom<IResult>(result);
+        result.Should().NotBeNull();
+        result.Should().BeAssignableTo<IResult>();
+        var httpResult = (IResult)result;
 
         // Verify that next delegate was NOT called
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
@@ -79,7 +81,7 @@ public class RequireSessionFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
 
         // Verify that next delegate WAS called once
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Once);
@@ -101,14 +103,14 @@ public class RequireSessionFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
 
         // Verify that the session in HttpContext.Items is the same one we set
-        Assert.True(context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)));
+        context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)).Should().BeTrue();
         var sessionInContext = context.HttpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        Assert.NotNull(sessionInContext);
-        Assert.NotNull(sessionInContext.User);
-        Assert.Equal(testSession.User!.Id, sessionInContext.User.Id);
+        sessionInContext.Should().NotBeNull();
+        sessionInContext.User.Should().NotBeNull();
+        sessionInContext.User.Id.Should().Be(testSession.User!.Id);
     }
 
     [Fact]
@@ -126,7 +128,7 @@ public class RequireSessionFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
 
         // Verify that next delegate was NOT called
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
@@ -147,7 +149,7 @@ public class RequireSessionFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
 
         // Verify that next delegate was NOT called
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);

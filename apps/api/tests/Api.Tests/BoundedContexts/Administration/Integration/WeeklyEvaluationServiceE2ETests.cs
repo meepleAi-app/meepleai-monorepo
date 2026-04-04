@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Services;
 using Api.BoundedContexts.Administration.Application.Queries.PromptEvaluation;
 using MediatR;
@@ -86,7 +87,7 @@ public sealed class WeeklyEvaluationServiceE2ETests
         _output($"  - Report Window: {config.Value.ReportWindowDays} days");
         _output($"  - Initial Delay: {config.Value.InitialDelayMinutes} minutes");
 
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 
     /// <summary>
@@ -127,9 +128,12 @@ public sealed class WeeklyEvaluationServiceE2ETests
         await Task.Delay(TestConstants.Timing.SmallDelay, cts.Token); // Wait briefly
         await service.StopAsync(CancellationToken.None);
 
-        // Assert
+        // Assert — when disabled, the mediator should never be invoked
+        mockMediator.Verify(
+            m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "Disabled service should not send any mediator requests");
         _output("✓ Service stopped immediately (disabled via config)");
-        // Service should not execute any queries when disabled (verified by logs)
     }
 
     /// <summary>
@@ -166,7 +170,7 @@ public sealed class WeeklyEvaluationServiceE2ETests
         // Assert
         _output("✓ Service created with invalid config (will log warning and stop)");
         _output($"  - Interval Days: {invalidConfig.Value.IntervalDays} (invalid)");
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 
     /// <summary>
@@ -203,7 +207,7 @@ public sealed class WeeklyEvaluationServiceE2ETests
         // Assert
         _output("✓ Service created with invalid report window (will log warning and stop)");
         _output($"  - Report Window Days: {invalidConfig.Value.ReportWindowDays} (invalid)");
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 }
 

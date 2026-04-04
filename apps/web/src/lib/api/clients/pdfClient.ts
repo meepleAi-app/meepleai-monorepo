@@ -77,7 +77,8 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     async uploadPdf(
       gameId: string,
       file: File,
-      onProgress?: (percent: number) => void
+      onProgress?: (percent: number) => void,
+      options?: { isPrivateGame?: boolean }
     ): Promise<{ documentId: string; fileName: string }> {
       const baseUrl = getApiBase();
       const url = `${baseUrl}/api/v1/ingest/pdf`;
@@ -126,7 +127,11 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('gameId', gameId);
+        if (options?.isPrivateGame) {
+          formData.append('privateGameId', gameId);
+        } else {
+          formData.append('gameId', gameId);
+        }
         xhr.send(formData);
       });
     },
@@ -305,7 +310,12 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
       return (
         result ?? {
           postgres: { totalDocuments: 0, totalChunks: 0, estimatedChunksSizeMB: 0 },
-          qdrant: { vectorCount: 0, memoryBytes: 0, memoryFormatted: '0 B', isAvailable: false },
+          vectorStore: {
+            vectorCount: 0,
+            memoryBytes: 0,
+            memoryFormatted: '0 B',
+            isAvailable: false,
+          },
           fileStorage: {
             totalFiles: 0,
             totalSizeBytes: 0,
@@ -399,7 +409,7 @@ export interface PdfStorageHealth {
     totalChunks: number;
     estimatedChunksSizeMB: number;
   };
-  qdrant: {
+  vectorStore: {
     vectorCount: number;
     memoryBytes: number;
     memoryFormatted: string;

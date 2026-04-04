@@ -2,6 +2,8 @@ using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,13 +13,12 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// EF Core implementation of IGameStrategyRepository.
 /// Issue #4903: Game strategies API endpoint.
 /// </summary>
-internal sealed class GameStrategyRepository : IGameStrategyRepository
+internal sealed class GameStrategyRepository : RepositoryBase, IGameStrategyRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public GameStrategyRepository(MeepleAiDbContext context)
+    public GameStrategyRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task<(IReadOnlyList<GameStrategy> Items, int TotalCount)> GetBySharedGameIdAsync(
@@ -26,7 +27,7 @@ internal sealed class GameStrategyRepository : IGameStrategyRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.GameStrategies
+        var query = DbContext.GameStrategies
             .AsNoTracking()
             .Where(s => s.SharedGameId == sharedGameId);
 

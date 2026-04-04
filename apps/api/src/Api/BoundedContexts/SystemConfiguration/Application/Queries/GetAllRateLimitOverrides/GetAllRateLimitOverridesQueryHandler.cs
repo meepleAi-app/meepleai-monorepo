@@ -1,5 +1,5 @@
-using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
+using Api.BoundedContexts.SystemConfiguration.Application.Services;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using MediatR;
@@ -11,20 +11,20 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Queries.GetAllRate
 /// Handler for GetAllRateLimitOverridesQuery.
 /// Retrieves all rate limit overrides with user information and paginates results.
 /// </summary>
-public sealed class GetAllRateLimitOverridesQueryHandler
+internal sealed class GetAllRateLimitOverridesQueryHandler
     : IRequestHandler<GetAllRateLimitOverridesQuery, PagedRateLimitOverridesResult>
 {
     private readonly IUserRateLimitOverrideRepository _overrideRepository;
-    private readonly IUserRepository _userRepository;
+    private readonly IUserProfileReadService _userProfileReadService;
     private readonly ILogger<GetAllRateLimitOverridesQueryHandler> _logger;
 
     public GetAllRateLimitOverridesQueryHandler(
         IUserRateLimitOverrideRepository overrideRepository,
-        IUserRepository userRepository,
+        IUserProfileReadService userProfileReadService,
         ILogger<GetAllRateLimitOverridesQueryHandler> logger)
     {
         _overrideRepository = overrideRepository;
-        _userRepository = userRepository;
+        _userProfileReadService = userProfileReadService;
         _logger = logger;
     }
 
@@ -56,46 +56,34 @@ public sealed class GetAllRateLimitOverridesQueryHandler
             .Take(request.PageSize)
             .ToList();
 
-        // Get user info for each override
-        // Store full User entity to avoid re-fetching in mapping loop
+        // Batch-fetch user info for all unique user IDs
         var userIds = pagedOverrides.Select(o => o.UserId).Distinct().ToList();
-        var users = new Dictionary<Guid, Api.BoundedContexts.Authentication.Domain.Entities.User?>();
+        var userProfiles = await _userProfileReadService.GetByIdsAsync(userIds, cancellationToken).ConfigureAwait(false);
+        var userDictionary = userProfiles.ToDictionary(u => u.Id);
 
-        foreach (var userId in userIds)
+        foreach (var userId in userIds.Where(id => !userDictionary.ContainsKey(id)))
         {
-            var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
-            users[userId] = user;
-
-            if (user == null)
-            {
-                _logger.LogWarning("User {UserId} not found for rate limit override", userId);
-            }
+            _logger.LogWarning("User {UserId} not found for rate limit override", userId);
         }
 
-        // Get admin info for createdBy
+        // Batch-fetch admin info for all unique admin IDs
         var adminIds = pagedOverrides.Select(o => o.CreatedByAdminId).Distinct().ToList();
-        var admins = new Dictionary<Guid, string>();
+        var adminProfiles = await _userProfileReadService.GetByIdsAsync(adminIds, cancellationToken).ConfigureAwait(false);
+        var adminDictionary = adminProfiles.ToDictionary(u => u.Id);
 
-        foreach (var adminId in adminIds)
-        {
-            var admin = await _userRepository.GetByIdAsync(adminId, cancellationToken).ConfigureAwait(false);
-            admins[adminId] = admin?.DisplayName ?? "[Unknown Admin]";
-        }
-
-        // Map to DTOs - reuse cached User entities to avoid re-fetching
+        // Map to DTOs
         var dtos = new List<RateLimitOverrideListDto>();
 
         foreach (var o in pagedOverrides)
         {
-            var user = users[o.UserId];
+            userDictionary.TryGetValue(o.UserId, out var user);
 
             // Handle deleted users
             var userName = user?.DisplayName ?? "[Deleted User]";
-            var userEmail = user?.Email.Value ?? "[deleted@unknown.com]";
-            var authTier = user?.Tier ?? Api.SharedKernel.Domain.ValueObjects.UserTier.Free;
+            var userEmail = user?.Email ?? "[deleted@unknown.com]";
+            var sysTier = MapUserTier(user);
 
-            // Map Authentication tier to SystemConfiguration tier
-            var sysTier = MapUserTier(user, authTier);
+            adminDictionary.TryGetValue(o.CreatedByAdminId, out var admin);
 
             dtos.Add(new RateLimitOverrideListDto
             {
@@ -111,7 +99,7 @@ public sealed class GetAllRateLimitOverridesQueryHandler
                 IsExpired = o.IsExpired(),
                 Reason = o.Reason,
                 CreatedAt = o.CreatedAt,
-                CreatedByAdminName = admins[o.CreatedByAdminId]
+                CreatedByAdminName = admin?.DisplayName ?? "[Unknown Admin]"
             });
         }
 
@@ -129,23 +117,24 @@ public sealed class GetAllRateLimitOverridesQueryHandler
     }
 
     /// <summary>
-    /// Maps Authentication tier to SystemConfiguration tier.
+    /// Maps UserProfile tier/role strings to SystemConfiguration UserTier.
     /// Based on RateLimitEvaluator.MapUserTier logic.
     /// </summary>
-    private static UserTier MapUserTier(
-        Api.BoundedContexts.Authentication.Domain.Entities.User? user,
-        Api.SharedKernel.Domain.ValueObjects.UserTier authTier)
+    private static UserTier MapUserTier(UserProfileDto? user)
     {
+        if (user == null) return UserTier.Free;
+
         // Check if user is admin via Role (Admin is Role-based, not Tier-based)
-        if (user != null && user.Role.Value.Equals("admin", StringComparison.OrdinalIgnoreCase))
+        if (user.Role.Equals("admin", StringComparison.OrdinalIgnoreCase) ||
+            user.Role.Equals("superadmin", StringComparison.OrdinalIgnoreCase))
         {
             return UserTier.Admin;
         }
 
-        // Map Authentication.UserTier to SystemConfiguration.UserTier
+        // Map tier string to SystemConfiguration.UserTier
         // Authentication: "free", "normal", "premium"
         // SystemConfiguration: Free(0), Premium(1), Pro(2), Admin(3)
-        return authTier.Value switch
+        return user.Tier.ToLowerInvariant() switch
         {
             "free" => UserTier.Free,
             "normal" => UserTier.Premium,

@@ -2,15 +2,16 @@
 
 import { useState } from 'react';
 
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { useGameCategories } from '@/hooks/queries/useSharedGames';
 
 export interface GameFiltersProps {
   onSearchChange?: (value: string) => void;
@@ -25,6 +26,8 @@ export function GameFilters({
   onStatusChange,
   onPlayersChange,
 }: GameFiltersProps) {
+  const { data: categories = [] } = useGameCategories();
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [status, setStatus] = useState('all');
@@ -56,14 +59,14 @@ export function GameFilters({
         {/* Search */}
         <div className="md:col-span-2">
           <Label htmlFor="game-search" className="text-sm font-medium mb-2">
-            Search Games
+            Cerca Giochi
           </Label>
           <Input
             id="game-search"
             type="text"
-            placeholder="Search by title, publisher..."
+            placeholder="Cerca per titolo, descrizione..."
             value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={e => handleSearchChange(e.target.value)}
             className="bg-white dark:bg-zinc-900"
           />
         </div>
@@ -71,18 +74,19 @@ export function GameFilters({
         {/* Category */}
         <div>
           <Label htmlFor="category" className="text-sm font-medium mb-2">
-            Category
+            Categoria
           </Label>
           <Select value={category} onValueChange={handleCategoryChange}>
             <SelectTrigger id="category" className="bg-white dark:bg-zinc-900">
-              <SelectValue placeholder="Select category" />
+              <SelectValue placeholder="Seleziona categoria" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="strategy">Strategy</SelectItem>
-              <SelectItem value="party">Party</SelectItem>
-              <SelectItem value="cooperative">Cooperative</SelectItem>
-              <SelectItem value="deck-building">Deck Building</SelectItem>
+              <SelectItem value="all">Tutte</SelectItem>
+              {categories.map(cat => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -90,17 +94,18 @@ export function GameFilters({
         {/* Status */}
         <div>
           <Label htmlFor="status" className="text-sm font-medium mb-2">
-            Status
+            Stato
           </Label>
           <Select value={status} onValueChange={handleStatusChange}>
             <SelectTrigger id="status" className="bg-white dark:bg-zinc-900">
-              <SelectValue placeholder="Select status" />
+              <SelectValue placeholder="Seleziona stato" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
+              <SelectItem value="all">Tutti</SelectItem>
+              <SelectItem value="published">Pubblicato</SelectItem>
+              <SelectItem value="pending">In Attesa</SelectItem>
+              <SelectItem value="draft">Bozza</SelectItem>
+              <SelectItem value="archived">Archiviato</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -111,17 +116,17 @@ export function GameFilters({
         {/* Player Count */}
         <div>
           <Label htmlFor="players" className="text-sm font-medium mb-2">
-            Player Count
+            Giocatori
           </Label>
           <Select value={players} onValueChange={handlePlayersChange}>
             <SelectTrigger id="players" className="bg-white dark:bg-zinc-900">
-              <SelectValue placeholder="Any player count" />
+              <SelectValue placeholder="Qualsiasi" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Any</SelectItem>
-              <SelectItem value="1-2">1-2 Players</SelectItem>
-              <SelectItem value="3-4">3-4 Players</SelectItem>
-              <SelectItem value="5+">5+ Players</SelectItem>
+              <SelectItem value="all">Qualsiasi</SelectItem>
+              <SelectItem value="1-2">1-2 Giocatori</SelectItem>
+              <SelectItem value="3-4">3-4 Giocatori</SelectItem>
+              <SelectItem value="5+">5+ Giocatori</SelectItem>
             </SelectContent>
           </Select>
         </div>

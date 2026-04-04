@@ -41,30 +41,19 @@ class MetricsCollector {
   /**
    * Record a retry attempt
    */
-  recordRetry(
-    endpoint: string,
-    statusCode: number | undefined,
-    delayMs: number
-  ): void {
+  recordRetry(endpoint: string, statusCode: number | undefined, delayMs: number): void {
     this.metrics.totalRetries++;
     this.metrics.totalRetryDelayMs += delayMs;
-    this.metrics.avgRetryDelayMs =
-      this.metrics.totalRetryDelayMs / this.metrics.totalRetries;
+    this.metrics.avgRetryDelayMs = this.metrics.totalRetryDelayMs / this.metrics.totalRetries;
 
     // Track by status code (0 for network errors)
     const code = statusCode || 0;
     // Safe: code is a validated number, not user-controlled string
-    // eslint-disable-next-line security/detect-object-injection
-    this.metrics.retriesByStatusCode[code] =
-      // eslint-disable-next-line security/detect-object-injection
-      (this.metrics.retriesByStatusCode[code] || 0) + 1;
+    this.metrics.retriesByStatusCode[code] = (this.metrics.retriesByStatusCode[code] || 0) + 1;
 
     // Track by endpoint
     // Safe: endpoint is used for aggregation only, values are sanitized before output
-    // eslint-disable-next-line security/detect-object-injection
-    this.metrics.retriesByEndpoint[endpoint] =
-      // eslint-disable-next-line security/detect-object-injection
-      (this.metrics.retriesByEndpoint[endpoint] || 0) + 1;
+    this.metrics.retriesByEndpoint[endpoint] = (this.metrics.retriesByEndpoint[endpoint] || 0) + 1;
   }
 
   /**

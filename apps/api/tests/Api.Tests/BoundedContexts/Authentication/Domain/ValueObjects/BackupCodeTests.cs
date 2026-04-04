@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -23,10 +24,10 @@ public class BackupCodeTests
         var backupCode = BackupCode.FromHashed(hashedValue);
 
         // Assert
-        Assert.NotNull(backupCode);
-        Assert.Equal(hashedValue, backupCode.HashedValue);
-        Assert.False(backupCode.IsUsed);
-        Assert.Null(backupCode.UsedAt);
+        backupCode.Should().NotBeNull();
+        backupCode.HashedValue.Should().Be(hashedValue);
+        backupCode.IsUsed.Should().BeFalse();
+        backupCode.UsedAt.Should().BeNull();
     }
 
     [Theory]
@@ -36,10 +37,11 @@ public class BackupCodeTests
     public void FromHashed_WithInvalidHash_ShouldThrowValidationException(string? invalidHash)
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            BackupCode.FromHashed(invalidHash!));
+        var act = () =>
+            BackupCode.FromHashed(invalidHash!);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("Backup code", exception.Message);
+        exception.Message.Should().Contain("Backup code");
     }
 
     [Fact]
@@ -53,10 +55,10 @@ public class BackupCodeTests
         var backupCode = BackupCode.FromHashed(hashedValue, isUsed: true, usedAt: usedAt);
 
         // Assert
-        Assert.NotNull(backupCode);
-        Assert.Equal(hashedValue, backupCode.HashedValue);
-        Assert.True(backupCode.IsUsed);
-        Assert.Equal(usedAt, backupCode.UsedAt);
+        backupCode.Should().NotBeNull();
+        backupCode.HashedValue.Should().Be(hashedValue);
+        backupCode.IsUsed.Should().BeTrue();
+        backupCode.UsedAt.Should().Be(usedAt);
     }
 
     [Fact]
@@ -66,10 +68,11 @@ public class BackupCodeTests
         var hashedValue = "hashed_backup_code_123";
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            BackupCode.FromHashed(hashedValue, isUsed: true, usedAt: null));
+        var act = () =>
+            BackupCode.FromHashed(hashedValue, isUsed: true, usedAt: null);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("Used backup code must have UsedAt timestamp", exception.Message);
+        exception.Message.Should().Contain("Used backup code must have UsedAt timestamp");
     }
 
     [Fact]
@@ -83,8 +86,8 @@ public class BackupCodeTests
         backupCode.MarkAsUsed(usedAt);
 
         // Assert
-        Assert.True(backupCode.IsUsed);
-        Assert.Equal(usedAt, backupCode.UsedAt);
+        backupCode.IsUsed.Should().BeTrue();
+        backupCode.UsedAt.Should().Be(usedAt);
     }
 
     [Fact]
@@ -95,10 +98,11 @@ public class BackupCodeTests
         backupCode.MarkAsUsed(DateTime.UtcNow);
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            backupCode.MarkAsUsed(DateTime.UtcNow));
+        var act = () =>
+            backupCode.MarkAsUsed(DateTime.UtcNow);
+        var exception = act.Should().Throw<DomainException>().Which;
 
-        Assert.Contains("already been used", exception.Message);
+        exception.Message.Should().Contain("already been used");
     }
 
     [Fact]
@@ -111,7 +115,7 @@ public class BackupCodeTests
         var result = backupCode.ToString();
 
         // Assert
-        Assert.Equal("[BACKUP_CODE_UNUSED]", result);
+        result.Should().Be("[BACKUP_CODE_UNUSED]");
     }
 
     [Fact]
@@ -125,8 +129,8 @@ public class BackupCodeTests
         var result = backupCode.ToString();
 
         // Assert
-        Assert.Contains("[BACKUP_CODE_USED:", result);
-        Assert.Contains("2025-11-14", result);
+        result.Should().Contain("[BACKUP_CODE_USED:");
+        result.Should().Contain("2025-11-14");
     }
 
     [Fact]
@@ -140,7 +144,7 @@ public class BackupCodeTests
         string result = backupCode; // Implicit conversion
 
         // Assert
-        Assert.Equal(hashedValue, result);
+        result.Should().Be(hashedValue);
     }
 
     [Fact]
@@ -152,7 +156,7 @@ public class BackupCodeTests
         var code2 = BackupCode.FromHashed(hashedValue);
 
         // Act & Assert
-        Assert.Equal(code1, code2);
+        code2.Should().Be(code1);
     }
 
     [Fact]
@@ -163,7 +167,7 @@ public class BackupCodeTests
         var code2 = BackupCode.FromHashed("hashed_backup_code_2");
 
         // Act & Assert
-        Assert.NotEqual(code1, code2);
+        code2.Should().NotBe(code1);
     }
 
     [Fact]
@@ -175,6 +179,6 @@ public class BackupCodeTests
         var usedCode = BackupCode.FromHashed(hashedValue, isUsed: true, usedAt: DateTime.UtcNow);
 
         // Act & Assert
-        Assert.NotEqual(unusedCode, usedCode);
+        usedCode.Should().NotBe(unusedCode);
     }
 }

@@ -137,10 +137,10 @@ export function EntityLinkCard({
         {showBggBadge && (
           <span
             className="inline-flex items-center gap-0.5 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-500"
-            title="Imported from BoardGameGeek"
+            title="Imported from external source"
           >
             <Globe className="h-2.5 w-2.5" aria-hidden="true" />
-            BGG
+            Ext
           </span>
         )}
 

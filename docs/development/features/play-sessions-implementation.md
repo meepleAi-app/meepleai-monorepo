@@ -400,9 +400,9 @@ dotnet ef database update
 
 ## Related Documentation
 
-- [Play Sessions API Docs](../../03-api/bounded-contexts/game-management/play-sessions.md)
-- [CQRS Pattern](../../01-architecture/patterns/cqrs.md)
-- [Testing Standards](../../05-testing/backend/backend-testing-patterns.md)
+- [Play Sessions API Docs](../../api/bounded-contexts/game-management/play-sessions.md)
+- [CQRS Pattern](../../architecture/patterns/cqrs.md)
+- [Testing Standards](../../testing/backend/backend-testing-patterns.md)
 - [Frontend Guidelines](../coding-standards.md)
 
 ---

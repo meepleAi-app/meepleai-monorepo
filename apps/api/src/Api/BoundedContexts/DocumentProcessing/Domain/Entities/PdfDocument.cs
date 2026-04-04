@@ -23,9 +23,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #4215: New granular state tracking (7 states)
     public PdfProcessingState ProcessingState { get; private set; }
 
-    // Deprecated: Keep for backward compatibility (migrate all usages in Issue #4216)
-    public string ProcessingStatus { get; private set; }
-
     public DateTime? ProcessedAt { get; private set; }
     public int? PageCount { get; private set; }
     public string? ProcessingError { get; private set; }
@@ -38,6 +35,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
     // Issue #2029: Language detection for PDF filtering
     public LanguageCode Language { get; private set; }
+
+    // E5-1: Language confidence from detection and manual override
+    public double? LanguageConfidence { get; private set; }
+    public string? LanguageOverride { get; private set; }
+    public string? EffectiveLanguage => LanguageOverride ?? Language?.Value;
 
     // Issue #2051: Multi-document collection support
     public Guid? CollectionId { get; private set; }
@@ -68,6 +70,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public DateTime? CopyrightDisclaimerAcceptedAt { get; private set; }
     public Guid? CopyrightDisclaimerAcceptedBy { get; private set; }
     public bool IsActiveForRag { get; private set; } = true;
+
+    // RAG Copyright KB Cards: license tier for citation rendering
+    public LicenseType LicenseType { get; private set; } = LicenseType.Copyrighted;
 
     // Issue #5447: User-editable version label (e.g., "2nd Edition", "v1.3 Errata")
     public string? VersionLabel { get; private set; }
@@ -117,8 +122,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
         // Issue #4215: Initialize with new granular state
         ProcessingState = PdfProcessingState.Pending;
-        ProcessingStatus = "pending"; // Backward compat
-
         // Issue #4216: Initialize retry tracking
         RetryCount = 0;
 
@@ -148,7 +151,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         FileSize fileSize,
         Guid uploadedByUserId,
         DateTime uploadedAt,
-        string processingStatus,
         DateTime? processedAt,
         int? pageCount,
         string? processingError,
@@ -176,7 +178,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         DateTime? copyrightDisclaimerAcceptedAt = null,
         Guid? copyrightDisclaimerAcceptedBy = null,
         bool isActiveForRag = true,
-        string? versionLabel = null)
+        string? versionLabel = null,
+        double? languageConfidence = null,
+        string? languageOverride = null)
     {
         var document = new PdfDocument
         {
@@ -189,12 +193,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             UploadedByUserId = uploadedByUserId,
             UploadedAt = uploadedAt,
 
-            // Issue #4215: Prefer enum state, fallback to string parsing
-            ProcessingState = processingState ?? ParseProcessingState(processingStatus),
-
-#pragma warning disable CS0618 // Type or member is obsolete
-            ProcessingStatus = processingStatus,
-#pragma warning restore CS0618
+            // Issue #4215: Use enum state, default to Pending
+            ProcessingState = processingState ?? PdfProcessingState.Pending,
 
             ProcessedAt = processedAt,
             PageCount = pageCount,
@@ -237,7 +237,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             IsActiveForRag = isActiveForRag,
 
             // Issue #5447: Version label
-            VersionLabel = versionLabel
+            VersionLabel = versionLabel,
+
+            // E5-1: Language confidence and override
+            LanguageConfidence = languageConfidence,
+            LanguageOverride = languageOverride
         };
 
         // Issue #4219: Calculate ETA after reconstitution
@@ -367,18 +371,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         // Issue #4219: Record timing when entering a new state
         RecordStateStartTime(newState);
 
-        // Sync deprecated property for backward compatibility
-        ProcessingStatus = newState switch
-        {
-            PdfProcessingState.Pending => "pending",
-            PdfProcessingState.Uploading or PdfProcessingState.Extracting or
-            PdfProcessingState.Chunking or PdfProcessingState.Embedding or
-            PdfProcessingState.Indexing => "processing",
-            PdfProcessingState.Ready => "completed",
-            PdfProcessingState.Failed => "failed",
-            _ => "pending"
-        };
-
         // Emit domain event for real-time updates (Issue #4218)
         AddDomainEvent(new PdfStateChangedEvent(Id, previousState, newState, UploadedByUserId));
     }
@@ -496,22 +488,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Parses legacy string status to enum state.
-    /// Issue #4215: Backward compatibility helper.
-    /// </summary>
-    private static PdfProcessingState ParseProcessingState(string status)
-    {
-        return status switch
-        {
-            "pending" => PdfProcessingState.Pending,
-            "processing" => PdfProcessingState.Extracting, // Default to mid-pipeline
-            "completed" => PdfProcessingState.Ready,
-            "failed" => PdfProcessingState.Failed,
-            _ => PdfProcessingState.Pending
-        };
-    }
-
-    /// <summary>
     /// Sets the SHA-256 content hash for deduplication.
     /// </summary>
     public void SetContentHash(string hash)
@@ -548,10 +524,14 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Accepts the copyright disclaimer for this document.
     /// Issue #5446: Required before processing starts.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the disclaimer has already been accepted.</exception>
     public void AcceptCopyrightDisclaimer(Guid userId)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("User ID cannot be empty", nameof(userId));
+
+        if (CopyrightDisclaimerAcceptedAt.HasValue)
+            throw new InvalidOperationException("Copyright disclaimer has already been accepted");
 
         CopyrightDisclaimerAcceptedAt = DateTime.UtcNow;
         CopyrightDisclaimerAcceptedBy = userId;
@@ -605,6 +585,31 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     {
         ArgumentNullException.ThrowIfNull(languageCode);
         Language = languageCode;
+    }
+
+    /// <summary>
+    /// Sets the detected language with confidence score from automatic detection.
+    /// E5-1: Language Intelligence for Game Night Improvvisata.
+    /// </summary>
+    /// <param name="languageCode">ISO 639-1 language code (e.g., "de", "it")</param>
+    /// <param name="confidence">Detection confidence between 0.0 and 1.0</param>
+    public void SetDetectedLanguage(string languageCode, double confidence)
+    {
+        if (confidence < 0.0 || confidence > 1.0)
+            throw new ArgumentOutOfRangeException(nameof(confidence), "Confidence must be between 0.0 and 1.0");
+
+        Language = new LanguageCode(languageCode);
+        LanguageConfidence = confidence;
+    }
+
+    /// <summary>
+    /// Manually overrides the detected language. Pass null or empty to clear the override.
+    /// E5-1: Language Intelligence for Game Night Improvvisata.
+    /// </summary>
+    /// <param name="languageCode">ISO 639-1 language code, or null/empty to clear</param>
+    public void OverrideLanguage(string? languageCode)
+    {
+        LanguageOverride = string.IsNullOrWhiteSpace(languageCode) ? null : languageCode;
     }
 
     // Issue #2051: Assign document to collection
@@ -694,8 +699,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             // Issue #4215: Copy processing state
             ProcessingState = source.ProcessingState,
 
-            ProcessingStatus = source.ProcessingStatus,
-
             ProcessedAt = source.ProcessedAt,
             PageCount = source.PageCount,
             ProcessingError = null, // Clear errors on copy
@@ -727,7 +730,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             ExtractingStartedAt = source.ExtractingStartedAt,
             ChunkingStartedAt = source.ChunkingStartedAt,
             EmbeddingStartedAt = source.EmbeddingStartedAt,
-            IndexingStartedAt = source.IndexingStartedAt
+            IndexingStartedAt = source.IndexingStartedAt,
+
+            // E5-1: Copy language confidence and override
+            LanguageConfidence = source.LanguageConfidence,
+            LanguageOverride = source.LanguageOverride
         };
 
         // Issue #4219: Calculate ETA for copied document

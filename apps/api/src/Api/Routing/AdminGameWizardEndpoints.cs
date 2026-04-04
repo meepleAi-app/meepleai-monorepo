@@ -19,7 +19,7 @@ internal static class AdminGameWizardEndpoints
     {
         var group = endpoints.MapGroup("/admin/games/wizard")
             .WithTags("Admin - Game Wizard")
-            .RequireAuthorization(policy => policy.RequireRole("Admin"));
+            .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin"));
 
         // POST /api/v1/admin/games/wizard/create - Create game from BGG data
         group.MapPost("/create", HandleCreateGame)
@@ -186,14 +186,17 @@ internal static class AdminGameWizardEndpoints
                 var isComplete = string.Equals(pdfState, "Ready", StringComparison.Ordinal);
                 var isFailed = string.Equals(pdfState, "Failed", StringComparison.Ordinal);
 
+                // Agent system removed (Task 10: Agent cleanup)
+                var agentExists = false;
+
                 var progressEvent = new WizardProgressEvent
                 {
                     CurrentStep = pdfState,
                     PdfState = pdfState,
-                    AgentExists = false, // Will be populated by Phase 4 auto-agent creation
-                    OverallPercent = MapStateToPercent(pdfState, false),
-                    Message = BuildProgressMessage(pdfState, false, pdfInfo?.FileName),
-                    IsComplete = isComplete,
+                    AgentExists = agentExists,
+                    OverallPercent = MapStateToPercent(pdfState, agentExists),
+                    Message = BuildProgressMessage(pdfState, agentExists, pdfInfo?.FileName),
+                    IsComplete = isComplete && agentExists,
                     ErrorMessage = isFailed ? pdfInfo?.ProcessingError : null,
                     Priority = pdfInfo?.ProcessingPriority ?? "Normal",
                     Timestamp = DateTime.UtcNow

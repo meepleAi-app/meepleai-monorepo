@@ -42,6 +42,7 @@ import {
   useUpdateAgentConfiguration,
 } from '@/hooks/queries/useModels';
 import { api } from '@/lib/api';
+import type { UpdateAgentConfigurationRequest } from '@/lib/api/schemas/agent-config.schemas';
 
 // ============================================================================
 // Types
@@ -145,8 +146,7 @@ export function AgentSettingsDrawer({
 
     // Patch config if anything changed
     if (Object.keys(configPayload).length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      patchConfig(configPayload as any, {
+      patchConfig(configPayload as UpdateAgentConfigurationRequest, {
         onSuccess: () => {
           toast.success('Configurazione aggiornata!', {
             description: 'Le modifiche si applicano alla prossima domanda.',

@@ -847,7 +847,7 @@ cd node_exporter-*.*-arm64
 **Related Documentation**:
 - [Deployment Guide](README.md)
 - [Secret Management](secrets/README.md)
-- [CI/CD Pipeline](../02-development/README.md#cicd-pipeline)
+- [CI/CD Pipeline](../development/README.md#cicd-pipeline)
 
 ---
 

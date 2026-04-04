@@ -81,7 +81,9 @@ const DEFAULT_PARAMS: ActivityTimelineParams = {
 function parseSearchParamsToTimeline(searchParams: URLSearchParams): ActivityTimelineParams {
   const filterValue = searchParams.get('filter');
   const types = filterValue
-    ? filterValue.split(',').filter((t): t is ActivityEventType => VALID_TYPES.includes(t as ActivityEventType))
+    ? filterValue
+        .split(',')
+        .filter((t): t is ActivityEventType => VALID_TYPES.includes(t as ActivityEventType))
     : [];
 
   const search = searchParams.get('search') || '';
@@ -124,7 +126,7 @@ export function useActivityTimelineParams(): UseActivityTimelineParamsReturn {
 
   const updateUrl = useCallback(
     (newParams: ActivityTimelineParams) => {
-      const currentPath = pathname ?? '/dashboard';
+      const currentPath = pathname ?? '/library';
       const urlParams = buildTimelineSearchParams(newParams);
       const queryString = urlParams.toString();
       const newUrl = queryString ? `${currentPath}?${queryString}` : currentPath;
@@ -150,7 +152,7 @@ export function useActivityTimelineParams(): UseActivityTimelineParamsReturn {
   const toggleType = useCallback(
     (type: ActivityEventType) => {
       const newTypes = params.types.includes(type)
-        ? params.types.filter((t) => t !== type)
+        ? params.types.filter(t => t !== type)
         : [...params.types, type];
       updateUrl({ ...params, types: newTypes, skip: 0 });
     },

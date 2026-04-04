@@ -8,6 +8,8 @@
  * - Error recovery
  */
 
+import { logger } from '@/lib/logger';
+
 import type { SSEEvent } from './types';
 
 export interface SSEHandlerOptions {
@@ -55,7 +57,7 @@ export class SSEHandler {
           const parsed: SSEEvent = JSON.parse(event.data);
           this.options.onMessage(parsed);
         } catch (error) {
-          console.error('[SSEHandler] Failed to parse event:', error);
+          logger.error('[SSEHandler] Failed to parse event:', error);
         }
       };
 
@@ -68,7 +70,7 @@ export class SSEHandler {
           const delay = Math.min(Math.pow(2, this.reconnectAttempts) * 1000, 30000);
           this.reconnectAttempts += 1;
 
-          console.warn(
+          logger.warn(
             `[SSEHandler] Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts}/${this.options.maxReconnectAttempts})`
           );
 
@@ -77,7 +79,7 @@ export class SSEHandler {
             this.connect();
           }, delay);
         } else {
-          console.error('[SSEHandler] Max reconnection attempts reached');
+          logger.error('[SSEHandler] Max reconnection attempts reached');
           this.disconnect();
         }
       };

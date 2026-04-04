@@ -13,5 +13,6 @@ internal record UnifiedAgentQueryCommand(
     Guid UserId,
     Guid? GameId = null,
     Guid? ChatThreadId = null,
-    Guid? PreferredAgentId = null
+    Guid? PreferredAgentId = null,
+    string? UserRole = null
 ) : IStreamingQuery<RagStreamingEvent>;

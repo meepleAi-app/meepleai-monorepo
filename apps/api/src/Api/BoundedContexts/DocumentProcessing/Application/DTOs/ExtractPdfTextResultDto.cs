@@ -8,11 +8,11 @@ internal record ExtractPdfTextResultDto(
     string? ErrorMessage,
     int? CharacterCount,
     int? PageCount,
-    string? ProcessingStatus)
+    string? ProcessingState)
 {
     public static ExtractPdfTextResultDto CreateSuccess(int characterCount, int pageCount)
-        => new(true, null, characterCount, pageCount, "completed");
+        => new(true, null, characterCount, pageCount, "Ready");
 
     public static ExtractPdfTextResultDto CreateFailure(string errorMessage)
-        => new(false, errorMessage, null, null, "failed");
+        => new(false, errorMessage, null, null, "Failed");
 }

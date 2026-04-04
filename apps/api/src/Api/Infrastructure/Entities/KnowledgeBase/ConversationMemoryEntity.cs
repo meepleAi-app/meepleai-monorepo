@@ -39,7 +39,7 @@ public class ConversationMemoryEntity
     [Column("timestamp")]
     public DateTime Timestamp { get; set; }
 
-    [Column("embedding", TypeName = "vector(1536)")]
+    [Column("embedding", TypeName = "vector(1024)")]
     public Vector? Embedding { get; set; }
 
     // Navigation properties

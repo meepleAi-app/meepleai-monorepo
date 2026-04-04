@@ -1,9 +1,13 @@
+using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameToolkit.Application.Commands;
 using Api.BoundedContexts.GameToolkit.Application.DTOs;
-using Api.BoundedContexts.GameToolkit.Application.Handlers;
 using Api.BoundedContexts.GameToolkit.Domain.Enums;
+using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -14,267 +18,214 @@ namespace Api.Tests.BoundedContexts.GameToolkit.Application.Handlers;
 [Trait("BoundedContext", "GameToolkit")]
 public class GenerateToolkitFromKbHandlerTests
 {
+    private readonly Mock<IHybridSearchService> _hybridSearchMock;
     private readonly Mock<ILlmService> _llmMock;
-    private readonly Mock<IEmbeddingService> _embeddingMock;
-    private readonly Mock<IQdrantService> _qdrantMock;
+    private readonly Mock<Api.BoundedContexts.KnowledgeBase.Application.Services.IRagAccessService> _ragAccessMock;
+    private readonly Mock<IGameRepository> _gameRepoMock;
     private readonly Mock<ILogger<GenerateToolkitFromKbHandler>> _loggerMock;
     private readonly GenerateToolkitFromKbHandler _handler;
 
+    private static readonly Guid GameId = Guid.Parse("11111111-0000-0000-0000-000000000001");
+    private static readonly Guid UserId = Guid.Parse("22222222-0000-0000-0000-000000000001");
+    private static readonly Guid KbCardId = Guid.Parse("33333333-0000-0000-0000-000000000001");
+
     public GenerateToolkitFromKbHandlerTests()
     {
+        _hybridSearchMock = new Mock<IHybridSearchService>();
         _llmMock = new Mock<ILlmService>();
-        _embeddingMock = new Mock<IEmbeddingService>();
-        _qdrantMock = new Mock<IQdrantService>();
+        _ragAccessMock = new Mock<Api.BoundedContexts.KnowledgeBase.Application.Services.IRagAccessService>();
+        _gameRepoMock = new Mock<IGameRepository>();
         _loggerMock = new Mock<ILogger<GenerateToolkitFromKbHandler>>();
 
         _handler = new GenerateToolkitFromKbHandler(
+            _hybridSearchMock.Object,
             _llmMock.Object,
-            _embeddingMock.Object,
-            _qdrantMock.Object,
+            _ragAccessMock.Object,
+            _gameRepoMock.Object,
             _loggerMock.Object);
     }
-
-    // ========================================================================
-    // Null / argument validation
-    // ========================================================================
 
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
-    }
-
-    // ========================================================================
-    // Embedding failure → default suggestion
-    // ========================================================================
-
-    [Fact]
-    public async Task Handle_WhenEmbeddingFails_ReturnsDefaultSuggestion()
-    {
-        var command = new GenerateToolkitFromKbCommand(Guid.NewGuid(), Guid.NewGuid());
-
-        _embeddingMock
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(EmbeddingResult.CreateFailure("service unavailable"));
-
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-        AssertIsDefaultSuggestion(result);
-        Assert.Contains("Embedding generation failed", result.Reasoning);
-        _qdrantMock.Verify(q => q.SearchAsync(
-            It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(),
-            It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()), Times.Never);
+        var act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
-    public async Task Handle_WhenEmbeddingReturnsEmptyList_ReturnsDefaultSuggestion()
+    public async Task Handle_GameNotFound_ThrowsNotFoundException()
     {
-        var command = new GenerateToolkitFromKbCommand(Guid.NewGuid(), Guid.NewGuid());
+        _gameRepoMock
+            .Setup(r => r.GetByIdAsync(GameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Game?)null);
 
-        _embeddingMock
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]>()));
+        var command = new GenerateToolkitFromKbCommand(GameId, UserId);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-        AssertIsDefaultSuggestion(result);
-        Assert.Contains("Embedding generation failed", result.Reasoning);
-    }
-
-    // ========================================================================
-    // Qdrant search returns no results → default suggestion
-    // ========================================================================
-
-    [Fact]
-    public async Task Handle_WhenQdrantSearchFails_ReturnsDefaultSuggestion()
-    {
-        var command = new GenerateToolkitFromKbCommand(Guid.NewGuid(), Guid.NewGuid());
-        SetupSuccessfulEmbedding();
-
-        _qdrantMock
-            .Setup(q => q.SearchAsync(
-                It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(SearchResult.CreateFailure("collection not found"));
-
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-        AssertIsDefaultSuggestion(result);
-        Assert.Contains("No game rules found", result.Reasoning);
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>();
     }
 
     [Fact]
-    public async Task Handle_WhenQdrantSearchReturnsEmptyResults_ReturnsDefaultSuggestion()
+    public async Task Handle_NoAccessibleKbCards_ThrowsInvalidOperationException()
     {
-        var command = new GenerateToolkitFromKbCommand(Guid.NewGuid(), Guid.NewGuid());
-        SetupSuccessfulEmbedding();
+        SetupGameRepo("Catan");
+        _ragAccessMock
+            .Setup(r => r.GetAccessibleKbCardsAsync(UserId, GameId, UserRole.Admin, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid>());
 
-        _qdrantMock
-            .Setup(q => q.SearchAsync(
-                It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
+        var command = new GenerateToolkitFromKbCommand(GameId, UserId);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-        AssertIsDefaultSuggestion(result);
-        Assert.Contains("No game rules found", result.Reasoning);
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*knowledge base*");
     }
 
-    // ========================================================================
-    // LLM returns null → default suggestion
-    // ========================================================================
-
     [Fact]
-    public async Task Handle_WhenLlmReturnsNull_ReturnsDefaultSuggestion()
+    public async Task Handle_HappyPath_ReturnsSuggestionWithConfidenceFields()
     {
-        var command = new GenerateToolkitFromKbCommand(Guid.NewGuid(), Guid.NewGuid());
-        SetupSuccessfulEmbedding();
-        SetupSuccessfulQdrantSearch();
+        SetupGameRepo("Catan");
+        SetupRagAccess([KbCardId]);
+        SetupHybridSearch(new HybridSearchResult
+        {
+            ChunkId = "chunk-1",
+            Content = "Players roll two D6 dice on their turn.",
+            PdfDocumentId = KbCardId.ToString(),
+            GameId = GameId,
+            ChunkIndex = 0,
+            HybridScore = 0.85f,
+            Mode = SearchMode.Hybrid
+        });
 
-        _llmMock
-            .Setup(l => l.GenerateJsonAsync<AiToolkitSuggestionDto>(
-                It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((AiToolkitSuggestionDto?)null);
-
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-        AssertIsDefaultSuggestion(result);
-        Assert.Contains("AI generation failed", result.Reasoning);
-    }
-
-    // ========================================================================
-    // Successful generation
-    // ========================================================================
-
-    [Fact]
-    public async Task Handle_WhenAllServicesSucceed_ReturnsLlmSuggestion()
-    {
-        var gameId = Guid.NewGuid();
-        var command = new GenerateToolkitFromKbCommand(gameId, Guid.NewGuid());
-        SetupSuccessfulEmbedding();
-        SetupSuccessfulQdrantSearch();
-
-        var expected = new AiToolkitSuggestionDto(
+        var expectedSuggestion = new AiToolkitSuggestionDto(
             ToolkitName: "Catan Toolkit",
-            DiceTools: [new("Resource Dice", DiceType.D6, 2, null, true, "#FF0000")],
-            CounterTools: [new("Wood", 0, 99, 0, true, null, "#8B4513")],
-            TimerTools: [new("Turn Timer", 120, TimerType.CountDown, true, null, false, 30)],
-            ScoringTemplate: new(["Victory Points", "Longest Road"], "VP", ScoreType.Points),
-            TurnTemplate: new(TurnOrderType.RoundRobin, ["Roll", "Trade", "Build"]),
-            Overrides: new(true, true, true),
-            Reasoning: "Catan uses 2d6 for resources, multiple trackable resources, and point-based scoring."
+            DiceTools: [new("Dadi", DiceType.D6, 2, null, false, null)],
+            CounterTools: [],
+            TimerTools: [],
+            ScoringTemplate: new(["VP"], "points", ScoreType.Points),
+            TurnTemplate: new(TurnOrderType.RoundRobin, []),
+            Overrides: new(false, false, false),
+            Reasoning: "Players use 2xD6 as stated in the rules."
         );
 
         _llmMock
             .Setup(l => l.GenerateJsonAsync<AiToolkitSuggestionDto>(
                 It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expected);
+                RequestSource.RagPipeline, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedSuggestion);
 
+        var command = new GenerateToolkitFromKbCommand(GameId, UserId);
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal("Catan Toolkit", result.ToolkitName);
-        Assert.Single(result.DiceTools);
-        Assert.Equal("Resource Dice", result.DiceTools[0].Name);
-        Assert.Single(result.CounterTools);
-        Assert.Equal("Wood", result.CounterTools[0].Name);
-        Assert.Single(result.TimerTools);
-        Assert.NotNull(result.ScoringTemplate);
-        Assert.NotNull(result.TurnTemplate);
-        Assert.Contains("Catan", result.Reasoning);
+        result.Should().NotBeNull();
+        result.ToolkitName.Should().Be("Catan Toolkit");
+        result.DiceTools.Should().ContainSingle();
+        result.ConfidenceScore.Should().BeGreaterThan(0f);
+        result.ChunksAnalyzed.Should().BeGreaterThan(0);
+        result.KbCoveragePercent.Should().BeGreaterThanOrEqualTo(0f);
+        // 1 chunk < 5 threshold → confidence scaled down → RequiresHumanReview = true
+        result.RequiresHumanReview.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Handle_PassesGameIdToQdrantSearch()
+    public async Task Handle_LlmReturnsNull_RetriesAndThrowsIfBothFail()
     {
-        var gameId = Guid.NewGuid();
-        var command = new GenerateToolkitFromKbCommand(gameId, Guid.NewGuid());
-        SetupSuccessfulEmbedding();
-        SetupSuccessfulQdrantSearch();
+        SetupGameRepo("Catan");
+        SetupRagAccess([KbCardId]);
+        SetupHybridSearch(new HybridSearchResult
+        {
+            ChunkId = "chunk-1",
+            Content = "rule text",
+            PdfDocumentId = KbCardId.ToString(),
+            GameId = GameId,
+            ChunkIndex = 0,
+            HybridScore = 0.8f,
+            Mode = SearchMode.Hybrid
+        });
 
         _llmMock
             .Setup(l => l.GenerateJsonAsync<AiToolkitSuggestionDto>(
                 It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateMinimalSuggestion());
+                RequestSource.RagPipeline, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AiToolkitSuggestionDto?)null);
 
-        await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var command = new GenerateToolkitFromKbCommand(GameId, UserId);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        _qdrantMock.Verify(q => q.SearchAsync(
-            gameId.ToString(),
-            It.IsAny<float[]>(),
-            30,
-            null,
-            It.IsAny<CancellationToken>()), Times.Once);
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*LLM*");
+
+        // Verify retry happened (LLM called twice — primary + retry)
+        _llmMock.Verify(
+            l => l.GenerateJsonAsync<AiToolkitSuggestionDto>(
+                It.IsAny<string>(), It.IsAny<string>(),
+                RequestSource.RagPipeline, It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
 
     [Fact]
-    public async Task Handle_UsesAgentTaskRequestSource()
+    public async Task Handle_HighConfidence_SetsRequiresHumanReviewFalse()
     {
-        var command = new GenerateToolkitFromKbCommand(Guid.NewGuid(), Guid.NewGuid());
-        SetupSuccessfulEmbedding();
-        SetupSuccessfulQdrantSearch();
+        SetupGameRepo("Catan");
+        SetupRagAccess([KbCardId]);
+
+        // 8 unique chunks with high scores → confidence >= 0.6
+        var chunks = Enumerable.Range(1, 8).Select(i => new HybridSearchResult
+        {
+            ChunkId = $"chunk-{i}",
+            Content = $"rule text {i}",
+            PdfDocumentId = KbCardId.ToString(),
+            GameId = GameId,
+            ChunkIndex = i - 1,
+            HybridScore = 0.82f,
+            Mode = SearchMode.Hybrid
+        }).ToList();
+
+        _hybridSearchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), GameId, SearchMode.Hybrid, It.IsAny<int>(),
+                It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(chunks);
 
         _llmMock
             .Setup(l => l.GenerateJsonAsync<AiToolkitSuggestionDto>(
                 It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateMinimalSuggestion());
+                RequestSource.RagPipeline, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AiToolkitSuggestionDto(
+                "Catan", [], [], [], null, null, null, "High coverage."));
 
-        await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var result = await _handler.Handle(
+            new GenerateToolkitFromKbCommand(GameId, UserId),
+            TestContext.Current.CancellationToken);
 
-        _llmMock.Verify(l => l.GenerateJsonAsync<AiToolkitSuggestionDto>(
-            It.IsAny<string>(), It.IsAny<string>(),
-            RequestSource.AgentTask,
-            It.IsAny<CancellationToken>()), Times.Once);
+        result.RequiresHumanReview.Should().BeFalse();
+        result.ConfidenceScore.Should().BeGreaterThanOrEqualTo(0.6f);
     }
 
-    // ========================================================================
-    // Helpers
-    // ========================================================================
+    // ---- Helpers ----
 
-    private void SetupSuccessfulEmbedding()
+    private void SetupGameRepo(string title)
     {
-        _embeddingMock
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[] { 0.1f, 0.2f, 0.3f } }));
+        var game = new Game(GameId, new GameTitle(title));
+        _gameRepoMock
+            .Setup(r => r.GetByIdAsync(GameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
     }
 
-    private void SetupSuccessfulQdrantSearch()
+    private void SetupRagAccess(List<Guid> cardIds)
     {
-        _qdrantMock
-            .Setup(q => q.SearchAsync(
-                It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
-            {
-                new() { Score = 0.95f, Text = "Each player rolls 2 dice to gather resources.", PdfId = "pdf1", Page = 1, ChunkIndex = 0 },
-                new() { Score = 0.88f, Text = "Victory points are earned by building settlements and cities.", PdfId = "pdf1", Page = 2, ChunkIndex = 1 }
-            }));
+        _ragAccessMock
+            .Setup(r => r.GetAccessibleKbCardsAsync(UserId, GameId, UserRole.Admin, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cardIds);
     }
 
-    private static AiToolkitSuggestionDto CreateMinimalSuggestion() => new(
-        ToolkitName: "Test Toolkit",
-        DiceTools: [],
-        CounterTools: [],
-        TimerTools: [],
-        ScoringTemplate: null,
-        TurnTemplate: null,
-        Overrides: null,
-        Reasoning: "Test reasoning"
-    );
-
-    private static void AssertIsDefaultSuggestion(AiToolkitSuggestionDto result)
+    private void SetupHybridSearch(HybridSearchResult chunk)
     {
-        Assert.NotNull(result);
-        Assert.Equal("Game Toolkit", result.ToolkitName);
-        Assert.Single(result.DiceTools);
-        Assert.Equal(DiceType.D6, result.DiceTools[0].DiceType);
-        Assert.Equal(2, result.DiceTools[0].Quantity);
-        Assert.NotNull(result.ScoringTemplate);
-        Assert.NotNull(result.TurnTemplate);
+        _hybridSearchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), GameId, SearchMode.Hybrid, It.IsAny<int>(),
+                It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult> { chunk });
     }
 }

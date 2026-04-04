@@ -42,6 +42,7 @@ function makeCitation(overrides: Partial<Citation> = {}): Citation {
     pageNumber: 5,
     snippet: 'The player with the most points wins.',
     relevanceScore: 0.9,
+    copyrightTier: 'full',
     ...overrides,
   };
 }
@@ -66,7 +67,9 @@ describe('PdfPageModal', () => {
   });
 
   it('displays citation page number in the dialog title', () => {
-    render(<PdfPageModal citation={makeCitation({ pageNumber: 12 })} open={true} onClose={onClose} />);
+    render(
+      <PdfPageModal citation={makeCitation({ pageNumber: 12 })} open={true} onClose={onClose} />
+    );
     // Title text includes "Sorgente — Pagina 12"
     expect(screen.getByRole('heading', { name: /pagina 12/i })).toBeInTheDocument();
   });
@@ -84,7 +87,13 @@ describe('PdfPageModal', () => {
   });
 
   it('calls getPdfDownloadUrl with the citation documentId', () => {
-    render(<PdfPageModal citation={makeCitation({ documentId: 'my-doc-id' })} open={true} onClose={onClose} />);
+    render(
+      <PdfPageModal
+        citation={makeCitation({ documentId: 'my-doc-id' })}
+        open={true}
+        onClose={onClose}
+      />
+    );
     expect(mockGetPdfDownloadUrl).toHaveBeenCalledWith('my-doc-id');
   });
 
@@ -101,7 +110,9 @@ describe('PdfPageModal', () => {
   });
 
   it('prev page button is disabled on page 1', () => {
-    render(<PdfPageModal citation={makeCitation({ pageNumber: 1 })} open={true} onClose={onClose} />);
+    render(
+      <PdfPageModal citation={makeCitation({ pageNumber: 1 })} open={true} onClose={onClose} />
+    );
     const prevBtn = screen.getByRole('button', { name: /pagina precedente/i });
     expect(prevBtn).toBeDisabled();
   });

@@ -43,7 +43,7 @@ export function GameSearchResults({ results, loading, onSelect }: GameSearchResu
 
   return (
     <div className="space-y-1">
-      {results.map((game) => (
+      {results.map(game => (
         <button
           key={game.id}
           type="button"
@@ -73,7 +73,7 @@ export function GameSearchResults({ results, loading, onSelect }: GameSearchResu
                 variant={game.source === 'catalog' ? 'default' : 'secondary'}
                 className="text-[10px] flex-shrink-0 px-1.5 py-0"
               >
-                {game.source === 'catalog' ? 'Catalogo' : 'BGG'}
+                {game.source === 'catalog' ? 'Catalogo' : 'Importato'}
               </Badge>
             </div>
             <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">

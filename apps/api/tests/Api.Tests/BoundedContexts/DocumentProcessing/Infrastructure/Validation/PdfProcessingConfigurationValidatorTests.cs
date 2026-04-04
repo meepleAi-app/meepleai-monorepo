@@ -71,7 +71,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Quality.MinimumThreshold must be between 0.0 and 1.0", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Quality.MinimumThreshold must be between 0.0 and 1.0");
     }
 
     [Theory]
@@ -90,7 +90,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Quality.WarningThreshold must be between 0.0 and 1.0", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Quality.WarningThreshold must be between 0.0 and 1.0");
     }
 
     [Theory]
@@ -109,7 +109,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Quality.MinCharsPerPage must be ≥100", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Quality.MinCharsPerPage must be ≥100");
     }
 
     [Theory]
@@ -142,8 +142,8 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Quality.MinimumThreshold", result.FailureMessage);
-        Assert.Contains("must be >= Quality.WarningThreshold", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Quality.MinimumThreshold");
+        result.FailureMessage.Should().Contain("must be >= Quality.WarningThreshold");
     }
 
     [Theory]
@@ -202,7 +202,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("MaxFileSizeBytes must be between", result.FailureMessage);
+        result.FailureMessage.Should().Contain("MaxFileSizeBytes must be between");
     }
     [Theory]
     [InlineData("http://localhost:8001")]
@@ -236,7 +236,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Extractor.Unstructured.ApiUrl is required", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Extractor.Unstructured.ApiUrl is required");
     }
 
     [Theory]
@@ -254,7 +254,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Extractor.Unstructured.ApiUrl must be a valid absolute URL", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Extractor.Unstructured.ApiUrl must be a valid absolute URL");
     }
     [Theory]
     [InlineData(0)]
@@ -272,7 +272,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Extractor.Unstructured.TimeoutSeconds must be between 1 and 300", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Extractor.Unstructured.TimeoutSeconds must be between 1 and 300");
     }
 
     [Theory]
@@ -290,7 +290,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Extractor.Unstructured.MaxRetries must be between 0 and 10", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Extractor.Unstructured.MaxRetries must be between 0 and 10");
     }
     [Theory]
     [InlineData("http://localhost:8002")]
@@ -324,7 +324,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Extractor.SmolDocling.ApiUrl is required", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Extractor.SmolDocling.ApiUrl is required");
     }
 
     [Theory]
@@ -342,7 +342,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Extractor.SmolDocling.ApiUrl must be a valid absolute URL", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Extractor.SmolDocling.ApiUrl must be a valid absolute URL");
     }
     [Theory]
     [InlineData(0)]
@@ -360,7 +360,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Extractor.SmolDocling.TimeoutSeconds must be between 1 and 300", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Extractor.SmolDocling.TimeoutSeconds must be between 1 and 300");
     }
 
     [Theory]
@@ -378,7 +378,7 @@ public class PdfProcessingConfigurationValidatorTests
 
         // Assert
         result.Succeeded.Should().BeFalse();
-        Assert.Contains("Extractor.SmolDocling.MaxRetries must be between 0 and 10", result.FailureMessage);
+        result.FailureMessage.Should().Contain("Extractor.SmolDocling.MaxRetries must be between 0 and 10");
     }
     private static PdfProcessingOptions CreateValidOptions()
     {

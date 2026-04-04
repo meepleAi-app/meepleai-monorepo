@@ -39,7 +39,7 @@ export function ScoreInput({
   currentRound,
   onSubmit,
   onUndo,
-  syncStatus = 'idle'
+  syncStatus = 'idle',
 }: ScoreInputProps) {
   const [participantId, setParticipantId] = useState<string>('');
   const [roundNumber, setRoundNumber] = useState<number | null>(currentRound ?? null);
@@ -88,7 +88,7 @@ export function ScoreInput({
         participantId,
         roundNumber,
         category,
-        scoreValue: score
+        scoreValue: score,
       });
       // Clear score after submit
       setScoreValue('');
@@ -104,21 +104,20 @@ export function ScoreInput({
     saving: {
       icon: <Loader2 className="h-3 w-3 animate-spin" />,
       text: 'Saving...',
-      color: 'text-amber-600 dark:text-amber-400'
+      color: 'text-amber-600 dark:text-amber-400',
     },
     synced: {
       icon: <Check className="h-3 w-3" />,
       text: 'Synced',
-      color: 'text-emerald-600 dark:text-emerald-400'
+      color: 'text-emerald-600 dark:text-emerald-400',
     },
     error: {
       icon: <AlertCircle className="h-3 w-3" />,
       text: 'Error',
-      color: 'text-red-600 dark:text-red-400'
-    }
+      color: 'text-red-600 dark:text-red-400',
+    },
   };
 
-  // eslint-disable-next-line security/detect-object-injection -- syncStatus is typed union of valid keys
   const currentSyncStatus = syncStatusConfig[syncStatus];
 
   return (
@@ -143,7 +142,7 @@ export function ScoreInput({
             Player
           </Label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {participants.map((p) => (
+            {participants.map(p => (
               <button
                 key={p.id}
                 type="button"
@@ -167,7 +166,10 @@ export function ScoreInput({
           {/* Round Selector */}
           {rounds.length > 0 && (
             <div className="space-y-2">
-              <Label htmlFor="round" className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              <Label
+                htmlFor="round"
+                className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400"
+              >
                 Round
               </Label>
               <Select
@@ -181,7 +183,7 @@ export function ScoreInput({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {rounds.map((r) => (
+                  {rounds.map(r => (
                     <SelectItem key={r} value={r.toString()}>
                       Round {r}
                     </SelectItem>
@@ -195,10 +197,16 @@ export function ScoreInput({
           {/* Category Selector */}
           {categories.length > 0 && (
             <div className="space-y-2">
-              <Label htmlFor="category" className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              <Label
+                htmlFor="category"
+                className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400"
+              >
                 Category
               </Label>
-              <Select value={category ?? 'none'} onValueChange={(v: string) => setCategory(v === 'none' ? null : v)}>
+              <Select
+                value={category ?? 'none'}
+                onValueChange={(v: string) => setCategory(v === 'none' ? null : v)}
+              >
                 <SelectTrigger
                   id="category"
                   className="h-12 border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold"
@@ -207,7 +215,7 @@ export function ScoreInput({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No Category</SelectItem>
-                  {categories.map((cat) => (
+                  {categories.map(cat => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
                     </SelectItem>
@@ -220,7 +228,10 @@ export function ScoreInput({
 
         {/* Score Input with Quick Actions */}
         <div className="space-y-3">
-          <Label htmlFor="score" className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+          <Label
+            htmlFor="score"
+            className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400"
+          >
             Score
           </Label>
 

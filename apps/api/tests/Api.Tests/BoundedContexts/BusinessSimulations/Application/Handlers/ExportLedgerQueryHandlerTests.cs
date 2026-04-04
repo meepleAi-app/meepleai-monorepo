@@ -321,8 +321,8 @@ public sealed class ExportLedgerQueryHandlerTests
     public async Task Handle_NullRequest_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, CancellationToken.None));
+        var act = () => _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

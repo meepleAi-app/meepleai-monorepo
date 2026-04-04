@@ -120,6 +120,9 @@ export function useQueueSSE(enabled: boolean = true) {
       if (!isMountedRef.current) return;
       setConnectionState('connected');
       reconnectAttemptsRef.current = 0;
+      // Fix: invalidate queue on every (re)connect to catch events missed during disconnection.
+      // SSE has no replay mechanism, so a gap in connection means missed state transitions.
+      invalidateQueue();
     };
 
     eventSource.onerror = () => {
@@ -142,7 +145,7 @@ export function useQueueSSE(enabled: boolean = true) {
         setConnectionState('error');
       }
     };
-  }, [enabled, cleanup, handleEvent]);
+  }, [enabled, cleanup, handleEvent, invalidateQueue]);
 
   // Keep connectRef up-to-date to avoid stale closures in reconnect timers
   connectRef.current = connect;

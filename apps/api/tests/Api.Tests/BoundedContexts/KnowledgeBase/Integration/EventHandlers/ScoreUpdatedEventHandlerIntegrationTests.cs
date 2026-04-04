@@ -30,7 +30,7 @@ namespace Api.Tests.Integration.KnowledgeBase.EventHandlers;
 /// Validates event flow: SessionTracking.ScoreUpdatedEvent → AgentSession state sync.
 /// Issue #3189 (AGT-015): GST Integration - Agent State Sync with Game Events.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
@@ -51,14 +51,7 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync($"test_score_handler_{Guid.NewGuid():N}");
 
         // Setup DI container with real MediatR pipeline (Issue #3258)
-        var services = new ServiceCollection();
-
-        // Register DbContext first
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
-
-        // Register domain event collector (required by repository)
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
 
         // Register repository
         services.AddScoped<IAgentSessionRepository, AgentSessionRepository>();
@@ -66,14 +59,8 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         // Register UnitOfWork (required by command handler)
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // Register MediatR with all handlers from the KnowledgeBase bounded context (Issue #3258 - proper integration test)
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Api.BoundedContexts.KnowledgeBase.Application.Handlers.UpdateAgentSessionStateCommandHandler).Assembly));
-
         // HybridCache (required by event handlers) - Issue #2620
         services.AddHybridCache();
-        services.AddScoped(_ => Mock.Of<Api.Services.IHybridCacheService>());
-
-        services.AddLogging(builder => builder.AddConsole());
 
         _serviceProvider = services.BuildServiceProvider();
 
@@ -101,13 +88,12 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         // Arrange - Seed FK parent entities (Issue #3258)
         var gameSessionId = Guid.NewGuid();
         var participantId = Guid.NewGuid();
-        var (agentId, userId, gameId, typologyId) = await SeedParentEntitiesAsync(gameSessionId);
+        var (agentDefinitionId, userId, gameId) = await SeedParentEntitiesAsync(gameSessionId);
 
         var agentSession = new AgentSessionBuilder()
-            .WithAgentId(agentId)
+            .WithAgentDefinitionId(agentDefinitionId)
             .WithUserId(userId)
             .WithGameId(gameId)
-            .WithTypologyId(typologyId)
             .WithGameSessionId(gameSessionId)
             .WithMinimalState()
             .Build();
@@ -154,24 +140,22 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         // Note: DB has unique constraint on (GameSessionId, UserId), so we need different users
         var gameSessionId = Guid.NewGuid();
         var participantId = Guid.NewGuid();
-        var (agentId, userId1, gameId, typologyId) = await SeedParentEntitiesAsync(gameSessionId);
+        var (agentDefinitionId, userId1, gameId) = await SeedParentEntitiesAsync(gameSessionId);
 
         // Create a second user for the second session (Issue #3258 - unique constraint fix)
         var userId2 = await SeedAdditionalUserAsync();
 
         var session1 = new AgentSessionBuilder()
-            .WithAgentId(agentId)
+            .WithAgentDefinitionId(agentDefinitionId)
             .WithUserId(userId1)
             .WithGameId(gameId)
-            .WithTypologyId(typologyId)
             .WithGameSessionId(gameSessionId)
             .WithMinimalState()
             .Build();
         var session2 = new AgentSessionBuilder()
-            .WithAgentId(agentId)
+            .WithAgentDefinitionId(agentDefinitionId)
             .WithUserId(userId2)
             .WithGameId(gameId)
-            .WithTypologyId(typologyId)
             .WithGameSessionId(gameSessionId)
             .WithMinimalState()
             .Build();
@@ -228,15 +212,14 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         // Arrange - Seed FK parent entities (Issue #3258)
         var gameSessionId = Guid.NewGuid();
         var participantId = Guid.NewGuid();
-        var (agentId, userId, gameId, typologyId) = await SeedParentEntitiesAsync(gameSessionId);
+        var (agentDefinitionId, userId, gameId) = await SeedParentEntitiesAsync(gameSessionId);
 
         var initialScores = new Dictionary<Guid, decimal> { { participantId, 10m } };
         var initialState = GameState.Create(1, Guid.NewGuid(), initialScores, "playing", "initial");
         var agentSession = new AgentSessionBuilder()
-            .WithAgentId(agentId)
+            .WithAgentDefinitionId(agentDefinitionId)
             .WithUserId(userId)
             .WithGameId(gameId)
-            .WithTypologyId(typologyId)
             .WithGameSessionId(gameSessionId)
             .WithInitialState(initialState)
             .Build();
@@ -273,7 +256,7 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
     /// Creates: Game, User, Agent, GameSession, Typology (all as EF Core entities).
     /// Returns: Tuple of IDs for use in AgentSessionBuilder.
     /// </summary>
-    private async Task<(Guid agentId, Guid userId, Guid gameId, Guid typologyId)> SeedParentEntitiesAsync(Guid gameSessionId)
+    private async Task<(Guid agentDefinitionId, Guid userId, Guid gameId)> SeedParentEntitiesAsync(Guid gameSessionId)
     {
         // Create Game (EF Core entity)
         var game = new GameEntity
@@ -296,33 +279,13 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         };
         _dbContext.Users.Add(user);
 
-        // Create AgentTypology (EF Core entity) - Issue #3258 FK fix
-        var typology = new AgentTypologyEntity
-        {
-            Id = Guid.NewGuid(),
-            Name = "Test Typology",
-            Description = "Test typology for integration tests",
-            BasePrompt = "You are a test agent",
-            DefaultStrategyJson = "{}",
-            Status = 2, // Approved
-            CreatedBy = user.Id,
-            CreatedAt = DateTime.UtcNow,
-            IsDeleted = false
-        };
-        _dbContext.AgentTypologies.Add(typology);
-
-        // Create Agent (EF Core entity)
-        var agent = new AgentEntity
-        {
-            Id = Guid.NewGuid(),
-            Name = "Test Agent",
-            Type = "RagAgent",
-            StrategyName = "HybridSearch",
-            StrategyParametersJson = "{}",
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-        _dbContext.Agents.Add(agent);
+        // Create AgentDefinition (EF Core domain entity — FK required by agent_sessions)
+        var agentDefinition = AgentDefinition.Create(
+            name: $"Test Agent {Guid.NewGuid():N}",
+            description: "Seeded for integration test",
+            type: AgentType.RagAgent,
+            config: AgentDefinitionConfig.Create(model: "test-model", maxTokens: 1024, temperature: 0.7f));
+        _dbContext.AgentDefinitions.Add(agentDefinition);
 
         // Create GameSession (EF Core entity)
         var gameSession = new GameSessionEntity
@@ -336,7 +299,7 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
-        return (agent.Id, user.Id, game.Id, typology.Id);
+        return (agentDefinition.Id, user.Id, game.Id);
     }
 
     /// <summary>

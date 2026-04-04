@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/primitives/label';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 import { ApiError } from '@/lib/api';
 import { categorizeError, type CategorizedError, extractCorrelationId } from '@/lib/errorUtils';
+import { logger } from '@/lib/logger';
 import { retryWithBackoff, isRetryableError } from '@/lib/retryUtils';
 
 // Dynamic import to prevent SSR issues with react-pdf
@@ -92,7 +93,6 @@ function formatFileSize(bytes: number): string {
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  // eslint-disable-next-line security/detect-object-injection
   return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
 }
 
@@ -164,7 +164,7 @@ export function PdfUploadForm({
         setValidationErrors({});
       }
     } catch (error) {
-      console.error('Validation error:', error);
+      logger.error('Validation error:', error);
       setValidationErrors({ general: 'Failed to validate file. Please try again.' });
       setFile(null);
       e.target.value = '';

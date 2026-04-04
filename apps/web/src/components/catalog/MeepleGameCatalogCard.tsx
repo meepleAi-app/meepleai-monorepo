@@ -31,7 +31,7 @@ import dynamic from 'next/dynamic';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { mapToIndexingStatus } from '@/components/library/kb-utils';
 
-// Dynamic imports to avoid DOMMatrix SSR error on statically generated /games/catalog
+// Dynamic imports to avoid DOMMatrix SSR error on statically generated pages
 const KbDrawerSheet = dynamic(
   () => import('@/components/library/KbDrawerSheet').then(m => m.KbDrawerSheet),
   { ssr: false }
@@ -55,7 +55,6 @@ import {
 } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
 import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
-import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 import { useGameInLibraryStatus } from '@/hooks/queries';
 import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
 import { api } from '@/lib/api';
@@ -202,40 +201,32 @@ export function MeepleGameCatalogCard({
     staleTime: 2 * 60 * 1000,
   });
 
-  // Navigation footer: drawers when in library, link to detail page otherwise
-  const catalogNavLinks: ResolvedNavigationLink[] = useMemo(
+  // Navigation footer: drawers when in library, single kb link otherwise
+  const catalogLinkedEntities = useMemo(
     () =>
       inLibrary
         ? [
-            {
-              entity: 'document' as MeepleEntityType,
-              label: 'KB',
-              onClick: () => setKbDrawerOpen(true),
-            },
-            {
-              entity: 'agent' as MeepleEntityType,
-              label: 'Agents',
-              onClick: () => setAgentDrawerOpen(true),
-            },
-            {
-              entity: 'chatSession' as MeepleEntityType,
-              label: 'Chats',
-              onClick: () => setChatDrawerOpen(true),
-            },
-            {
-              entity: 'session' as MeepleEntityType,
-              label: 'Sessions',
-              onClick: () => setSessionDrawerOpen(true),
-            },
+            { entityType: 'kb' as MeepleEntityType, count: 1 },
+            { entityType: 'agent' as MeepleEntityType, count: 1 },
+            { entityType: 'chatSession' as MeepleEntityType, count: 1 },
+            { entityType: 'session' as MeepleEntityType, count: 1 },
           ]
-        : [
-            {
-              entity: 'document' as MeepleEntityType,
-              label: 'Regolamento',
-              href: `/games/${game.id}`,
-            },
-          ],
-    [game.id, inLibrary]
+        : [{ entityType: 'kb' as MeepleEntityType, count: 1 }],
+    [inLibrary]
+  );
+
+  const handleCatalogPipClick = useCallback(
+    (entityType: MeepleEntityType) => {
+      if (inLibrary) {
+        if (entityType === 'kb') setKbDrawerOpen(true);
+        else if (entityType === 'agent') setAgentDrawerOpen(true);
+        else if (entityType === 'chatSession') setChatDrawerOpen(true);
+        else if (entityType === 'session') setSessionDrawerOpen(true);
+      } else {
+        window.location.href = `/library/games/${game.id}`;
+      }
+    },
+    [inLibrary, game.id]
   );
 
   // Build metadata array
@@ -258,7 +249,7 @@ export function MeepleGameCatalogCard({
     subtitleParts.push(String(game.yearPublished));
   }
   if (game.bggId) {
-    subtitleParts.push(`BGG: ${game.bggId}`);
+    subtitleParts.push(`ID: ${game.bggId}`);
   }
   const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : 'N/A';
 
@@ -319,11 +310,12 @@ export function MeepleGameCatalogCard({
         flipTrigger="button"
         className={className}
         kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
-        navigateTo={catalogNavLinks}
+        linkedEntities={catalogLinkedEntities}
+        onManaPipClick={handleCatalogPipClick}
         data-testid={`catalog-game-card-${game.id}`}
         entityQuickActions={catalogQuickActions}
         showInfoButton
-        infoHref={`/games/${game.id}`}
+        entityId={game.id}
         infoTooltip="Vai al dettaglio"
       />
 

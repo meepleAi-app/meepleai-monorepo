@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.Infrastructure;
 /// Coverage Target: ≥90% for HybridCacheService
 /// Execution Time Target: <10s
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2307")]
 public sealed class HybridCacheServiceIntegrationTests : IAsyncLifetime

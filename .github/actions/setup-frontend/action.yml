@@ -22,13 +22,13 @@ runs:
   using: 'composite'
   steps:
     - name: Setup pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v5
       with:
         version: ${{ inputs.pnpm-version }}
         run_install: false
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
         # Note: Built-in cache disabled because actions/setup-node doesn't include
@@ -40,7 +40,7 @@ runs:
       run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
     - name: Cache pnpm modules
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ env.STORE_PATH }}
         key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}

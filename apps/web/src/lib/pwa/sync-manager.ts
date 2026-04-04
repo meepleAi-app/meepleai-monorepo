@@ -7,6 +7,8 @@
  * - Retry logic with exponential backoff
  */
 
+import { logger } from '@/lib/logger';
+
 import {
   getPendingActions,
   removeAction,
@@ -166,8 +168,7 @@ class SyncManager {
 
   private handleOnline = async () => {
     if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.log('[SyncManager] Back online');
+      logger.debug('[SyncManager] Back online');
     }
     this.updateState({ isOnline: true });
 
@@ -177,8 +178,7 @@ class SyncManager {
 
   private handleOffline = () => {
     if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.log('[SyncManager] Went offline');
+      logger.debug('[SyncManager] Went offline');
     }
     this.updateState({ isOnline: false });
   };
@@ -196,16 +196,14 @@ class SyncManager {
   public async syncAll(): Promise<SyncResult> {
     if (this.syncInProgress) {
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[SyncManager] Sync already in progress');
+        logger.debug('[SyncManager] Sync already in progress');
       }
       return { success: false, synced: 0, failed: 0, errors: [] };
     }
 
     if (!navigator.onLine) {
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[SyncManager] Cannot sync: offline');
+        logger.debug('[SyncManager] Cannot sync: offline');
       }
       return { success: false, synced: 0, failed: 0, errors: [] };
     }
@@ -225,8 +223,7 @@ class SyncManager {
       this.updateState({ pendingCount: pendingActions.length });
 
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log(`[SyncManager] Syncing ${pendingActions.length} pending actions`);
+        logger.debug(`[SyncManager] Syncing ${pendingActions.length} pending actions`);
       }
 
       for (const action of pendingActions) {
@@ -248,7 +245,7 @@ class SyncManager {
             await incrementActionRetry(action.id);
           } else {
             // Remove action after max retries
-            console.warn(`[SyncManager] Action ${action.id} exceeded max retries, removing`);
+            logger.warn(`[SyncManager] Action ${action.id} exceeded max retries, removing`);
             await removeAction(action.id);
           }
         }
@@ -264,7 +261,7 @@ class SyncManager {
         lastSyncAt: Date.now(),
       });
     } catch (error) {
-      console.error('[SyncManager] Sync error:', error);
+      logger.error('[SyncManager] Sync error:', error);
       result.success = false;
       this.updateState({ status: 'failed' });
     } finally {
@@ -341,7 +338,7 @@ class SyncManager {
         }
       }
     } catch (error) {
-      console.warn('[SyncManager] Failed to update local session:', error);
+      logger.warn(`[SyncManager] Failed to update local session: ${error}`);
     }
   }
 
@@ -354,7 +351,7 @@ class SyncManager {
       !('serviceWorker' in navigator) ||
       !('sync' in window.ServiceWorkerRegistration.prototype)
     ) {
-      console.warn('[SyncManager] Background sync not supported');
+      logger.warn('[SyncManager] Background sync not supported');
       return false;
     }
 
@@ -366,12 +363,11 @@ class SyncManager {
         }
       ).sync.register('session-sync');
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log('[SyncManager] Background sync registered');
+        logger.debug('[SyncManager] Background sync registered');
       }
       return true;
     } catch (error) {
-      console.error('[SyncManager] Failed to register background sync:', error);
+      logger.error('[SyncManager] Failed to register background sync:', error);
       return false;
     }
   }

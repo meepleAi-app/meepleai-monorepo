@@ -22,7 +22,7 @@ import { useNotificationSSE } from '../useNotificationSSE';
 const mockAddNotification = vi.fn();
 const mockFetchUnreadCount = vi.fn();
 
-vi.mock('@/store/notification/store', () => ({
+vi.mock('@/stores/notification/store', () => ({
   useNotificationStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) => {
     const state = {
       addNotification: mockAddNotification,
@@ -138,23 +138,31 @@ describe('useNotificationSSE', () => {
     es1.simulateError();
     expect(es1.closed).toBe(true);
 
-    act(() => { vi.advanceTimersByTime(1000); });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
     expect(MockEventSource.instances).toHaveLength(2);
 
     // Second error → reconnect after 2s
     const es2 = MockEventSource.instances[1];
     es2.simulateError();
 
-    act(() => { vi.advanceTimersByTime(1999); });
+    act(() => {
+      vi.advanceTimersByTime(1999);
+    });
     expect(MockEventSource.instances).toHaveLength(2); // Not yet
-    act(() => { vi.advanceTimersByTime(1); });
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
     expect(MockEventSource.instances).toHaveLength(3);
 
     // Third error → reconnect after 4s
     const es3 = MockEventSource.instances[2];
     es3.simulateError();
 
-    act(() => { vi.advanceTimersByTime(4000); });
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
     expect(MockEventSource.instances).toHaveLength(4);
   });
 
@@ -165,7 +173,9 @@ describe('useNotificationSSE', () => {
     for (let i = 0; i < 5; i++) {
       const es = MockEventSource.instances[MockEventSource.instances.length - 1];
       es.simulateError();
-      act(() => { vi.advanceTimersByTime(30000); }); // Advance past any backoff
+      act(() => {
+        vi.advanceTimersByTime(30000);
+      }); // Advance past any backoff
     }
 
     // 1 initial + 5 reconnects = 6
@@ -174,7 +184,9 @@ describe('useNotificationSSE', () => {
     // 6th error → should NOT reconnect
     const lastEs = MockEventSource.instances[5];
     lastEs.simulateError();
-    act(() => { vi.advanceTimersByTime(60000); });
+    act(() => {
+      vi.advanceTimersByTime(60000);
+    });
 
     // Still 6 instances (no new connection)
     expect(MockEventSource.instances).toHaveLength(6);
@@ -207,7 +219,9 @@ describe('useNotificationSSE', () => {
     // First error + reconnect
     const es1 = MockEventSource.instances[0];
     es1.simulateError();
-    act(() => { vi.advanceTimersByTime(1000); });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
 
     // Second connection succeeds
     const es2 = MockEventSource.instances[1];
@@ -215,7 +229,9 @@ describe('useNotificationSSE', () => {
 
     // Error again → should use 1s delay (reset), not 4s
     es2.simulateError();
-    act(() => { vi.advanceTimersByTime(1000); });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
     expect(MockEventSource.instances).toHaveLength(3);
   });
 
@@ -228,7 +244,9 @@ describe('useNotificationSSE', () => {
     unmount();
 
     // After unmount, timer shouldn't create new connection
-    act(() => { vi.advanceTimersByTime(30000); });
+    act(() => {
+      vi.advanceTimersByTime(30000);
+    });
     // Only 1 instance (no reconnect after unmount)
     expect(MockEventSource.instances).toHaveLength(1);
   });

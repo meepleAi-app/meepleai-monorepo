@@ -166,7 +166,7 @@ groups:
           description: |
             RAG error rate: {{ $value | humanize }} errors/sec.
             This may affect Q&A accuracy and semantic search.
-            Check Qdrant connection and embedding service health.
+            Check pgvector (PostgreSQL) connection and embedding service health.
           runbook_url: "https://docs.meepleai.dev/runbooks/rag-errors"
           dashboard_url: "http://localhost:3001/d/ai-rag-operations"
 

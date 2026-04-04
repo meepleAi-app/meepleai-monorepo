@@ -27,8 +27,12 @@
 
 import { AnchorHTMLAttributes } from 'react';
 
-export interface AccessibleSkipLinkProps
-  extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
+import { logger } from '@/lib/logger';
+
+export interface AccessibleSkipLinkProps extends Omit<
+  AnchorHTMLAttributes<HTMLAnchorElement>,
+  'href'
+> {
   /**
    * Target ID to skip to (must include #)
    * @example "#main-content"
@@ -88,7 +92,7 @@ export function AccessibleSkipLink({
         block: 'start',
       });
     } else if (process.env.NODE_ENV === 'development') {
-      console.error(
+      logger.error(
         `AccessibleSkipLink: Target element "${href}" not found. Make sure the target element exists with id="${targetId}".`
       );
     }

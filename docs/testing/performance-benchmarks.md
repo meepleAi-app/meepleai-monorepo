@@ -354,4 +354,4 @@ public async ValueTask InitializeAsync()
 
 - [Testcontainers Best Practices](./testcontainers-best-practices.md)
 - [Integration Testing Guide](./integration-testing.md)
-- [CI Configuration](../06-deployment/ci-configuration.md)
+- [CI Configuration](../deployment/ci-configuration.md)

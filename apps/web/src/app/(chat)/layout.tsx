@@ -1,44 +1,23 @@
 /**
  * Chat Route Group Layout
- * Issue #5044 — Chat MiniNav + ActionBar
  *
- * Wraps all /chat/* pages with NavigationProvider so that pages can
- * call useSetNavConfig() to register MiniNav tabs and ActionBar actions.
- *
- * Includes MiniNav (L2) and NavActionBar (L3) rendered inline.
- * Both components return null when their respective configs are empty,
- * so this is non-breaking for pages that don't set nav config.
+ * Uses UserShell for the chat experience.
+ * (chat) is a sibling of (authenticated), so it needs its own shell wrapper.
  */
 
-import { type ReactNode, Suspense } from 'react';
+import { type ReactNode } from 'react';
 
-import { NavActionBar } from '@/components/layout/ActionBar/NavActionBar';
-import { MiniNav } from '@/components/layout/MiniNav/MiniNav';
-import { NavigationProvider } from '@/context/NavigationContext';
-
-function ChatLayoutInner({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex flex-col min-h-0 flex-1">
-      {/* MiniNav (L2) — sticky at top. Renders null when no tabs configured. */}
-      <div className="sticky top-12 md:top-0 z-30">
-        <Suspense>
-          <MiniNav />
-        </Suspense>
-      </div>
-
-      {/* Page content */}
-      <div className="flex-1">{children}</div>
-
-      {/* NavActionBar (L3) — desktop: sticky bottom, mobile: fixed bottom */}
-      <NavActionBar />
-    </div>
-  );
-}
+import { ChatContextBar } from '@/components/chat-unified/ChatContextBar';
+import { ContextBarRegistrar } from '@/components/layout/ContextBar';
+import { UserShell } from '@/components/layout/UserShell';
 
 export default function ChatLayout({ children }: { children: ReactNode }) {
   return (
-    <NavigationProvider>
-      <ChatLayoutInner>{children}</ChatLayoutInner>
-    </NavigationProvider>
+    <UserShell>
+      <ContextBarRegistrar>
+        <ChatContextBar />
+      </ContextBarRegistrar>
+      {children}
+    </UserShell>
   );
 }

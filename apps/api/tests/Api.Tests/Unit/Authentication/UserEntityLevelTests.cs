@@ -63,7 +63,7 @@ public sealed class UserEntityLevelTests
         );
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => user.SetLevel(-1));
+        ((Action)(() => user.SetLevel(-1))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public sealed class UserEntityLevelTests
         );
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => user.AddExperience(-10));
+        ((Action)(() => user.AddExperience(-10))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public sealed class UserEntityLevelTests
         );
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => user.SetLevel(101));
+        var exception = ((Action)(() => user.SetLevel(101))).Should().Throw<ArgumentException>().Which;
         exception.Message.Should().Contain("cannot exceed 100");
     }
 

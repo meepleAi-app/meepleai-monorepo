@@ -1,0 +1,36 @@
+# Traefik Dynamic Configuration - Staging Middlewares
+# Issue #176: Staging-specific CORS and security config for meepleai.app
+#
+# Environment-specific CORS:
+# - Development: localhost:3000, localhost:8080 (see middlewares.yml)
+# - Staging: meepleai.app (this file)
+# - Production: meepleai.io (see middlewares.prod.yml)
+
+http:
+  middlewares:
+    # CORS for API services - Staging
+    cors-api:
+      headers:
+        accessControlAllowOriginList:
+          - "https://meepleai.app"
+          - "https://www.meepleai.app"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+          - "Accept"
+          - "Origin"
+          - "X-CSRF-Token"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 7200
+        accessControlExposeHeaders:
+          - "X-Request-Id"
+          - "X-RateLimit-Limit"
+          - "X-RateLimit-Remaining"

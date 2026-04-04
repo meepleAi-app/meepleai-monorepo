@@ -102,6 +102,67 @@ internal sealed class TextChunkSearchService : ITextChunkSearchService
         }
     }
 
+    public async Task<List<TextChunkMatch>> SearchRaptorSummariesAsync(
+        Guid gameId,
+        string query,
+        int topK,
+        CancellationToken ct)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(query) || topK <= 0)
+                return [];
+
+            var queryTerms = query
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(t => t.ToLowerInvariant())
+                .Where(t => t.Length > 1)
+                .ToArray();
+
+            if (queryTerms.Length == 0)
+                return [];
+
+            var summaries = await _dbContext.RaptorSummaries
+                .AsNoTracking()
+                .Where(s => s.GameId == gameId)
+                .OrderByDescending(s => s.TreeLevel)
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            var scored = summaries
+                .Select(s =>
+                {
+                    var lowerText = s.SummaryText.ToLowerInvariant();
+                    var matchCount = queryTerms.Count(term => lowerText.Contains(term));
+                    var score = queryTerms.Length > 0 ? (float)matchCount / queryTerms.Length : 0f;
+                    return new { Summary = s, Score = score };
+                })
+                .Where(x => x.Score > 0f)
+                .OrderByDescending(x => x.Score)
+                .ThenByDescending(x => x.Summary.TreeLevel)
+                .Take(topK)
+                .Select(x => new TextChunkMatch(
+                    x.Summary.PdfDocumentId,
+                    x.Summary.SummaryText,
+                    ChunkIndex: -1, // RAPTOR summaries don't have chunk indices
+                    PageNumber: null,
+                    x.Score))
+                .ToList();
+
+            _logger.LogDebug(
+                "RAPTOR summary search returned {Count} results for game {GameId}",
+                scored.Count, gameId);
+
+            return scored;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "RAPTOR summary search failed for game {GameId}, returning empty", gameId);
+            return [];
+        }
+    }
+
     /// <summary>
     /// Sanitizes a user query for safe use with plainto_tsquery.
     /// plainto_tsquery handles most sanitization, but we trim excess whitespace.

@@ -19,7 +19,9 @@ internal record UserDto(
     int ExperiencePoints,
     bool EmailVerified = false,                        // Issue #3672 (default for backward compatibility)
     DateTime? EmailVerifiedAt = null,                  // Issue #3672
-    DateTime? VerificationGracePeriodEndsAt = null     // Issue #3672
+    DateTime? VerificationGracePeriodEndsAt = null,    // Issue #3672
+    bool OnboardingCompleted = false,                  // Issue #323
+    bool OnboardingSkipped = false                     // Issue #323
 );
 
 /// <summary>

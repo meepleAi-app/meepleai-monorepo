@@ -9,9 +9,9 @@ $branchesToCheck = @(
     "config-05",
     "config-07-testing-documentation",
     "sec-11-phase3-justification-comments",
-    "DegrassiAaron/issue428",
-    "DegrassiAaron/issue420",
-    "DegrassiAaron/issue418"
+    "meepleAi-app/issue428",
+    "meepleAi-app/issue420",
+    "meepleAi-app/issue418"
 )
 
 Write-Host "Checking branches for merged PRs..." -ForegroundColor Cyan

@@ -13,9 +13,11 @@ module.exports = {
       // shadcn/ui semantic tokens also use HSL format
       fontFamily: {
         quicksand: ['var(--font-quicksand)', 'sans-serif'],
-        nunito: ['var(--font-nunito)', 'sans-serif'],
-        heading: ['var(--font-heading)', 'sans-serif'],
-        body: ['var(--font-body)', 'sans-serif'],
+        inter: ['var(--font-inter)', 'sans-serif'],
+        // Backward compat: existing font-nunito classes still work
+        nunito: ['var(--font-inter)', 'sans-serif'],
+        heading: ['var(--font-quicksand)', 'sans-serif'],
+        body: ['var(--font-inter)', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in',
@@ -31,11 +33,17 @@ module.exports = {
         // MeepleCard v2 animations (Issue #4604)
         'mc-shimmer': 'mc-shimmer 0.8s ease-out forwards',
         'mc-float-up': 'mc-float-up 0.35s ease-out both',
+        'mc-slide-in-right': 'mc-slide-in-right 200ms cubic-bezier(0.4,0,0.2,1) both',
         'mc-badge-pulse': 'mc-badge-pulse 2s ease-in-out infinite',
         'mc-pulse-glow': 'mc-pulse-glow 2s ease-in-out infinite',
         'mc-unread-bounce': 'mc-unread-bounce 0.5s ease-out',
         'mc-live-pulse': 'mc-live-pulse 2s ease-in-out infinite',
         'mc-spin-slow': 'mc-spin-slow 8s linear infinite',
+        // Neon Holo animations (spec: 2026-03-15)
+        'holo-slide': 'holo-slide 4s ease-in-out infinite',
+        'holo-rotate': 'holo-rotate 6s linear infinite',
+        'entity-pulse': 'entity-pulse 3s ease-in-out infinite',
+        'status-blink': 'status-blink 2s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -81,6 +89,10 @@ module.exports = {
           '0%': { opacity: '0', transform: 'translateY(12px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'mc-slide-in-right': {
+          from: { opacity: '0', transform: 'translateX(20px)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
+        },
         'mc-badge-pulse': {
           '0%, 100%': { transform: 'scale(1)' },
           '50%': { transform: 'scale(1.08)' },
@@ -101,6 +113,28 @@ module.exports = {
         'mc-spin-slow': {
           '0%': { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(360deg)' },
+        },
+        // Neon Holo keyframes
+        'holo-slide': {
+          '0%': { backgroundPosition: '-200% 0' },
+          '50%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+        'holo-rotate': {
+          '0%': { filter: 'hue-rotate(0deg)' },
+          '100%': { filter: 'hue-rotate(360deg)' },
+        },
+        'entity-pulse': {
+          '0%, 100%': {
+            boxShadow: '0 4px 20px rgba(0,0,0,0.4), 0 0 15px var(--entity-glow-color, transparent)',
+          },
+          '50%': {
+            boxShadow: '0 4px 20px rgba(0,0,0,0.4), 0 0 25px var(--entity-glow-color, transparent)',
+          },
+        },
+        'status-blink': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
         },
       },
     },

@@ -361,8 +361,8 @@ public class ContributorTests
         // Assert
         documentAdditions.Should().HaveCount(2);
         metadataUpdates.Should().HaveCount(2);
-        documentAdditions.All(c => c.Type == ContributionRecordType.DocumentAddition).Should().BeTrue();
-        metadataUpdates.All(c => c.Type == ContributionRecordType.MetadataUpdate).Should().BeTrue();
+        (documentAdditions.All(c => c.Type == ContributionRecordType.DocumentAddition)).Should().BeTrue();
+        (metadataUpdates.All(c => c.Type == ContributionRecordType.MetadataUpdate)).Should().BeTrue();
     }
 
     [Fact]
@@ -397,18 +397,18 @@ public class ContributorTests
     }
 
     [Fact]
-    public void GetLatestContribution_ReturnsMostRecentContribution()
+    public async Task GetLatestContribution_ReturnsMostRecentContribution()
     {
         // Arrange
         var contributor = CreateTestContributor();
         contributor.RecordDocumentAddition(new List<Guid> { Guid.NewGuid() }, "First");
 
         // Small delay to ensure different timestamps
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         contributor.RecordMetadataUpdate("Second");
 
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         var lastContribution = contributor.RecordContentEnhancement("Third");
 

@@ -282,7 +282,7 @@ users.MapGet("/me/games", async (
 Creare tutti i componenti modulari riutilizzabili per la nuova Gaming Hub Dashboard seguendo il design system glassmorphic.
 
 **Acceptance Criteria**:
-- [ ] Struttura: `components/dashboard-v2/` creata
+- [ ] Struttura: `components/dashboard/` creata
 - [ ] Component: `quick-stats.tsx` - Container 4 stat cards
 - [ ] Component: `stat-card.tsx` - Single stat display (icon, value, label)
 - [ ] Component: `recent-sessions.tsx` - Sessions list container
@@ -299,7 +299,7 @@ Creare tutti i componenti modulari riutilizzabili per la nuova Gaming Hub Dashbo
 
 **Technical Specs**:
 ```tsx
-// components/dashboard-v2/stat-card.tsx
+// components/dashboard/stat-card.tsx
 interface StatCardProps {
   icon: string;
   value: number | string;
@@ -320,20 +320,20 @@ export function StatCard({ icon, value, label, sublabel }: StatCardProps) {
   );
 }
 
-// components/dashboard-v2/session-row.tsx
+// components/dashboard/session-row.tsx
 interface SessionRowProps {
   session: SessionSummaryDto;
   onViewDetails?: (id: string) => void;
 }
 
-// components/dashboard-v2/game-collection-grid.tsx
+// components/dashboard/game-collection-grid.tsx
 interface GameCollectionGridProps {
   games: GameDto[];
   isLoading?: boolean;
   onLoadMore?: () => void;
 }
 
-// components/dashboard-v2/filter-bar.tsx
+// components/dashboard/filter-bar.tsx
 interface FilterBarProps {
   categories: string[];
   currentCategory: string;
@@ -342,7 +342,7 @@ interface FilterBarProps {
   onSortChange: (sort: string) => void;
 }
 
-// components/dashboard-v2/empty-states.tsx
+// components/dashboard/empty-states.tsx
 type EmptyStateVariant = 'no-games' | 'no-sessions' | 'no-upcoming';
 
 interface EmptyStateProps {
@@ -352,15 +352,15 @@ interface EmptyStateProps {
 ```
 
 **Files to Create**:
-- `components/dashboard-v2/quick-stats.tsx`
-- `components/dashboard-v2/stat-card.tsx`
-- `components/dashboard-v2/recent-sessions.tsx`
-- `components/dashboard-v2/session-row.tsx`
-- `components/dashboard-v2/game-collection-grid.tsx`
-- `components/dashboard-v2/filter-bar.tsx`
-- `components/dashboard-v2/empty-states.tsx`
-- `components/dashboard-v2/index.ts` (barrel export)
-- `components/dashboard-v2/__tests__/` (directory con test)
+- `components/dashboard/quick-stats.tsx`
+- `components/dashboard/stat-card.tsx`
+- `components/dashboard/recent-sessions.tsx`
+- `components/dashboard/session-row.tsx`
+- `components/dashboard/game-collection-grid.tsx`
+- `components/dashboard/filter-bar.tsx`
+- `components/dashboard/empty-states.tsx`
+- `components/dashboard/index.ts` (barrel export)
+- `components/dashboard/__tests__/` (directory con test)
 
 **Labels**: `phase-2`, `frontend`, `components`, `ui`
 **Estimate**: 4h
@@ -697,7 +697,7 @@ import {
   GameCollectionGrid,
   FilterBar,
   EmptyStates,
-} from '@/components/dashboard-v2';
+} from '@/components/dashboard';
 
 export function GamingHubClient() {
   const {
@@ -957,7 +957,7 @@ Creare test unitari completi per tutti i componenti dashboard-v2 usando Vitest e
 
 **Technical Specs**:
 ```tsx
-// components/dashboard-v2/__tests__/stat-card.test.tsx
+// components/dashboard/__tests__/stat-card.test.tsx
 import { render, screen } from '@testing-library/react';
 import { StatCard } from '../stat-card';
 

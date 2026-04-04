@@ -1,4 +1,4 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers.AgentDefinition;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -37,7 +37,10 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
             AgentDefinitionEntity.Create("Agent2", "Desc2", AgentType.CitationAgent, AgentDefinitionConfig.Default()),
             AgentDefinitionEntity.Create("Agent3", "Desc3", AgentType.RagAgent, AgentDefinitionConfig.Default())
         };
-        definitions[2].Deactivate(); // One inactive
+        // Create() sets IsActive=false; activate the first two so we have 2 active + 1 inactive
+        definitions[0].Activate();
+        definitions[1].Activate();
+        // definitions[2] remains inactive (default from Create)
 
         _mockRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -62,8 +65,9 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
     {
         // Arrange
         var activeAgent = AgentDefinitionEntity.Create("Active", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        activeAgent.Activate(); // Create() defaults to inactive; explicitly activate
         var inactiveAgent = AgentDefinitionEntity.Create("Inactive", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        inactiveAgent.Deactivate();
+        // inactiveAgent is already inactive from Create() — no need to call Deactivate()
 
         _mockRepository
             .Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))

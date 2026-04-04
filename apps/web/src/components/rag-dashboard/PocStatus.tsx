@@ -65,9 +65,9 @@ const POC_FEATURES: FeatureCategory[] = [
     features: [
       {
         name: 'Semantic Search (Vector)',
-        description: 'Qdrant vector database con cosine similarity',
+        description: 'pgvector (PostgreSQL) con cosine similarity',
         status: 'implemented',
-        details: 'sentence-transformers 384d, HNSW (m=16, ef=200), scalar 8-bit quantization',
+        details: 'sentence-transformers 768d (e5-base), HNSW index, IVFFlat quantization',
         file: 'VectorSearchDomainService.cs',
       },
       {
@@ -365,8 +365,8 @@ const POC_FEATURES: FeatureCategory[] = [
         file: 'docker-compose.yml',
       },
       {
-        name: 'Qdrant Vector DB',
-        description: 'Vector storage con HNSW + quantization',
+        name: 'pgvector (PostgreSQL)',
+        description: 'Vector storage con HNSW index in PostgreSQL',
         status: 'implemented',
         file: 'docker-compose.yml',
       },

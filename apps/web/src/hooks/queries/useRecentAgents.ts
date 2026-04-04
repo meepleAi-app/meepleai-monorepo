@@ -7,10 +7,11 @@ import { useQuery } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
 
-export function useRecentAgents(limit: number = 3) {
+export function useRecentAgents(limit: number = 3, enabled: boolean = true) {
   return useQuery({
     queryKey: ['agents', 'recent', limit],
     queryFn: () => api.agents.getRecent(limit),
     staleTime: 2 * 60 * 1000, // 2 minutes
+    enabled,
   });
 }

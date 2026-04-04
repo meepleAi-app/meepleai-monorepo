@@ -1,10 +1,11 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Services;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -51,10 +52,10 @@ public class InvalidateCacheByTagCommandHandlerTests
         var command = new InvalidateCacheByTagCommand("");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("Tag cannot be empty", exception.Message);
+        exception.Message.Should().Contain("Tag cannot be empty");
 
         _mockHybridCache.Verify(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -66,10 +67,10 @@ public class InvalidateCacheByTagCommandHandlerTests
         var command = new InvalidateCacheByTagCommand("   ");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("Tag cannot be empty", exception.Message);
+        exception.Message.Should().Contain("Tag cannot be empty");
 
         _mockHybridCache.Verify(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -97,7 +98,7 @@ public class InvalidateCacheByTagCommandHandlerTests
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

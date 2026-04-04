@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
@@ -58,9 +59,9 @@ public class LinkOAuthAccountCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotNull(result.OAuthAccountId);
-        Assert.Null(result.ErrorMessage);
+        result.Success.Should().BeTrue();
+        result.OAuthAccountId.Should().NotBeNull();
+        result.ErrorMessage.Should().BeNull();
         _oauthAccountRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<OAuthAccount>(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -89,9 +90,9 @@ public class LinkOAuthAccountCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotNull(result.OAuthAccountId);
-        Assert.NotEqual(Guid.Empty, result.OAuthAccountId.Value);
+        result.Success.Should().BeTrue();
+        result.OAuthAccountId.Should().NotBeNull();
+        result.OAuthAccountId.Value.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -138,9 +139,9 @@ public class LinkOAuthAccountCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.OAuthAccountId);
-        Assert.Equal("User not found", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.OAuthAccountId.Should().BeNull();
+        result.ErrorMessage.Should().Be("User not found");
         _oauthAccountRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<OAuthAccount>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -167,9 +168,9 @@ public class LinkOAuthAccountCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.OAuthAccountId);
-        Assert.Contains("already linked", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.OAuthAccountId.Should().BeNull();
+        result.ErrorMessage.Should().Contain("already linked");
         _oauthAccountRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<OAuthAccount>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -199,9 +200,9 @@ public class LinkOAuthAccountCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.OAuthAccountId);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.OAuthAccountId.Should().BeNull();
+        result.ErrorMessage.Should().NotBeNull();
         _oauthAccountRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<OAuthAccount>(), It.IsAny<CancellationToken>()),
             Times.Never);

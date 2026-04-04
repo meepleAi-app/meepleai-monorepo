@@ -37,7 +37,7 @@ export function BggPreviewCard({ game }: BggPreviewCardProps) {
       rating={game.rating}
       ratingMax={10}
       metadata={metadata}
-      badge={`BGG #${game.id}`}
+      badge={`ID #${game.id}`}
       showPreview={!!game.description}
       previewData={{
         description: game.description,

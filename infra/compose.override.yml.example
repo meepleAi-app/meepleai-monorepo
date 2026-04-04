@@ -102,16 +102,8 @@ services:
   #     POSTGRES_WORK_MEM: 32MB
   #     POSTGRES_MAINTENANCE_WORK_MEM: 512MB
 
-  # Example: Increase Qdrant resources for vector-heavy operations
-  # qdrant:
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: '4.0'
-  #         memory: 8G
-  #       reservations:
-  #         cpus: '2.0'
-  #         memory: 4G
+  # Note: Qdrant removed — vector search now uses pgvector (PostgreSQL extension).
+  # Tune PostgreSQL resources above to handle vector-heavy operations.
 
   # ====================
   # 4. SERVICE DISABLING

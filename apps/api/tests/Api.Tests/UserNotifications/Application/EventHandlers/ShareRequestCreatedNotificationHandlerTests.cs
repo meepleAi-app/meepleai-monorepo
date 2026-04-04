@@ -6,11 +6,9 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Application.EventHandlers;
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
-using Api.Services;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -22,13 +20,11 @@ namespace Api.Tests.UserNotifications.Application.EventHandlers;
 
 public sealed class ShareRequestCreatedNotificationHandlerTests
 {
-    private readonly Mock<INotificationRepository> _notificationRepo;
+    private readonly Mock<INotificationDispatcher> _dispatcher;
     private readonly Mock<IUserRepository> _userRepo;
     private readonly Mock<IShareRequestRepository> _shareRequestRepo;
     private readonly Mock<ISharedGameRepository> _sharedGameRepo;
-    private readonly Mock<IEmailService> _emailService;
     private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<ILogger<ShareRequestCreatedNotificationHandler>> _logger;
     private readonly ShareRequestCreatedNotificationHandler _sut;
 
     private readonly Guid _shareRequestId = Guid.NewGuid();
@@ -37,174 +33,78 @@ public sealed class ShareRequestCreatedNotificationHandlerTests
 
     public ShareRequestCreatedNotificationHandlerTests()
     {
-        _notificationRepo = new Mock<INotificationRepository>();
+        _dispatcher = new Mock<INotificationDispatcher>();
         _userRepo = new Mock<IUserRepository>();
         _shareRequestRepo = new Mock<IShareRequestRepository>();
         _sharedGameRepo = new Mock<ISharedGameRepository>();
-        _emailService = new Mock<IEmailService>();
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        _logger = new Mock<ILogger<ShareRequestCreatedNotificationHandler>>();
 
         _sut = new ShareRequestCreatedNotificationHandler(
             _dbContext,
-            _notificationRepo.Object,
+            _dispatcher.Object,
             _userRepo.Object,
             _shareRequestRepo.Object,
             _sharedGameRepo.Object,
-            _emailService.Object,
-            _logger.Object);
+            new Mock<ILogger<ShareRequestCreatedNotificationHandler>>().Object);
     }
 
     [Fact]
-    public async Task Handle_CreatesInAppNotificationAndSendsEmail()
+    public async Task Handle_DispatchesNotificationWithCorrectType()
     {
         // Arrange
-        var user = new UserBuilder()
-            .WithEmail("test@example.com")
-            .WithDisplayName("Test User")
-            .Build();
-        var shareRequest = ShareRequest.Create(
-            _userId,
-            _sourceGameId,
-            ContributionType.NewGame,
-            "Test notes");
-        var sourceGame = SharedGame.Create(
-            title: "Test Game",
-            yearPublished: 2020,
-            description: "Test description",
-            minPlayers: 1,
-            maxPlayers: 4,
-            playingTimeMinutes: 60,
-            minAge: 13,
-            complexityRating: 2.5m,
-            averageRating: 7.5m,
-            imageUrl: "https://example.com/image.jpg",
-            thumbnailUrl: "https://example.com/thumb.jpg",
-            rules: null,
-            createdBy: Guid.NewGuid(),
-            bggId: null);
+        var user = new UserBuilder().WithEmail("test@example.com").WithDisplayName("Test User").Build();
+        var shareRequest = ShareRequest.Create(_userId, _sourceGameId, ContributionType.NewGame, "Test notes");
+        var sourceGame = SharedGame.Create("Test Game", 2020, "Test description", 1, 4, 60, 13, 2.5m, 7.5m,
+            "https://example.com/image.jpg", "https://example.com/thumb.jpg", null, Guid.NewGuid(), null);
 
-        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
-        _shareRequestRepo.Setup(r => r.GetByIdAsync(_shareRequestId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(shareRequest);
-        _sharedGameRepo.Setup(r => r.GetByIdAsync(_sourceGameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(sourceGame);
+        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _shareRequestRepo.Setup(r => r.GetByIdAsync(_shareRequestId, It.IsAny<CancellationToken>())).ReturnsAsync(shareRequest);
+        _sharedGameRepo.Setup(r => r.GetByIdAsync(_sourceGameId, It.IsAny<CancellationToken>())).ReturnsAsync(sourceGame);
 
-        var domainEvent = new ShareRequestCreatedEvent(
-            _shareRequestId,
-            _userId,
-            _sourceGameId,
-            ContributionType.NewGame);
+        var domainEvent = new ShareRequestCreatedEvent(_shareRequestId, _userId, _sourceGameId, ContributionType.NewGame);
 
         // Act
         await _sut.Handle(domainEvent, CancellationToken.None);
 
         // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.Is<Notification>(n =>
-                n.UserId == _userId &&
-                n.Type.Value == NotificationType.ShareRequestCreated.Value &&
-                n.Severity.Value == NotificationSeverity.Info.Value),
-            It.IsAny<CancellationToken>()), Times.Once);
-
-        _emailService.Verify(e => e.SendShareRequestCreatedEmailAsync(
-            user.Email,
-            user.DisplayName,
-            It.IsAny<string>(),
-            "new game",
-            _shareRequestId,
+        _dispatcher.Verify(d => d.DispatchAsync(
+            It.Is<NotificationMessage>(m =>
+                m.Type == NotificationType.ShareRequestCreated &&
+                m.RecipientUserId == _userId &&
+                m.Payload is ShareRequestPayload),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Handle_WhenUserNotFound_SkipsNotification()
     {
-        // Arrange
-        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((User?)null);
+        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>())).ReturnsAsync((User?)null);
 
-        var domainEvent = new ShareRequestCreatedEvent(
-            _shareRequestId,
-            _userId,
-            _sourceGameId,
-            ContributionType.NewGame);
+        var domainEvent = new ShareRequestCreatedEvent(_shareRequestId, _userId, _sourceGameId, ContributionType.NewGame);
 
-        // Act
         await _sut.Handle(domainEvent, CancellationToken.None);
 
-        // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.IsAny<Notification>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-        _emailService.Verify(e => e.SendShareRequestCreatedEmailAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<Guid>(),
-            It.IsAny<CancellationToken>()), Times.Never);
+        _dispatcher.Verify(d => d.DispatchAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_WhenEmailFails_ContinuesSuccessfully()
+    public async Task Handle_WhenDispatcherFails_BaseHandlerPropagates()
     {
-        // Arrange
-        var user = new UserBuilder()
-            .WithEmail("test@example.com")
-            .WithDisplayName("Test User")
-            .Build();
-        var shareRequest = ShareRequest.Create(
-            _userId,
-            _sourceGameId,
-            ContributionType.NewGame,
-            "Test notes");
-        var sourceGame = SharedGame.Create(
-            title: "Test Game",
-            yearPublished: 2020,
-            description: "Test description",
-            minPlayers: 1,
-            maxPlayers: 4,
-            playingTimeMinutes: 60,
-            minAge: 13,
-            complexityRating: 2.5m,
-            averageRating: 7.5m,
-            imageUrl: "https://example.com/image.jpg",
-            thumbnailUrl: "https://example.com/thumb.jpg",
-            rules: null,
-            createdBy: Guid.NewGuid(),
-            bggId: null);
+        var user = new UserBuilder().WithEmail("test@example.com").WithDisplayName("Test User").Build();
+        var shareRequest = ShareRequest.Create(_userId, _sourceGameId, ContributionType.NewGame, "Test notes");
+        var sourceGame = SharedGame.Create("Test Game", 2020, "Test", 1, 4, 60, 13, 2.5m, 7.5m,
+            "https://example.com/image.jpg", "https://example.com/thumb.jpg", null, Guid.NewGuid(), null);
 
-        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
-        _shareRequestRepo.Setup(r => r.GetByIdAsync(_shareRequestId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(shareRequest);
-        _sharedGameRepo.Setup(r => r.GetByIdAsync(_sourceGameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(sourceGame);
-        _emailService.Setup(e => e.SendShareRequestCreatedEmailAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<Guid>(),
-                It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("SMTP error"));
+        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _shareRequestRepo.Setup(r => r.GetByIdAsync(_shareRequestId, It.IsAny<CancellationToken>())).ReturnsAsync(shareRequest);
+        _sharedGameRepo.Setup(r => r.GetByIdAsync(_sourceGameId, It.IsAny<CancellationToken>())).ReturnsAsync(sourceGame);
+        _dispatcher.Setup(d => d.DispatchAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("dispatch error"));
 
-        var domainEvent = new ShareRequestCreatedEvent(
-            _shareRequestId,
-            _userId,
-            _sourceGameId,
-            ContributionType.NewGame);
+        var domainEvent = new ShareRequestCreatedEvent(_shareRequestId, _userId, _sourceGameId, ContributionType.NewGame);
 
-        // Act
+        // DomainEventHandlerBase re-throws, so this should throw
         var act = async () => await _sut.Handle(domainEvent, CancellationToken.None);
-
-        // Assert - Should not throw (graceful email failure)
-        await act.Should().NotThrowAsync();
-
-        // Verify notification was still created
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.IsAny<Notification>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

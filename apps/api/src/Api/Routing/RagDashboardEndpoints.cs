@@ -4,6 +4,8 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
+using Api.Helpers;
+using Api.Middleware;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -147,7 +149,7 @@ internal static class RagDashboardEndpoints
         logger.LogInformation(
             "User {UserId} saving RAG config for strategy {Strategy}",
             session!.User!.Id,
-            config.ActiveStrategy);
+            LogSanitizer.Sanitize(config.ActiveStrategy));
 
         var command = new SaveRagConfigCommand
         {
@@ -172,7 +174,7 @@ internal static class RagDashboardEndpoints
         logger.LogInformation(
             "User {UserId} resetting RAG config for strategy {Strategy}",
             session!.User!.Id,
-            strategy ?? "all");
+            LogSanitizer.Sanitize(strategy ?? "all"));
 
         var command = new ResetRagConfigCommand
         {
@@ -310,7 +312,7 @@ internal static class RagDashboardEndpoints
 
             logger.LogInformation(
                 "Admin {AdminId} running live RAG test for game {GameId}: '{Query}'",
-                session!.User!.Id, gameId, request.Query);
+                session!.User!.Id, gameId, LogValueSanitizer.Sanitize(request.Query));
 
             var streamQuery = new StreamQaQuery(GameId: gameId.Value.ToString(), Query: request.Query);
 

@@ -6,7 +6,7 @@ import { Boxes, Plus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { useWidgetSync } from '@/lib/hooks/useWidgetSync';
+import { useWidgetSync } from '@/lib/domain-hooks/useWidgetSync';
 
 import { WidgetCard } from './WidgetCard';
 

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -9,18 +11,16 @@ namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 /// EF Core implementation of ISessionChatRepository.
 /// Issue #4760
 /// </summary>
-public class SessionChatRepository : ISessionChatRepository
+public class SessionChatRepository : RepositoryBase, ISessionChatRepository
 {
-    private readonly MeepleAiDbContext _context;
-
-    public SessionChatRepository(MeepleAiDbContext context)
+    public SessionChatRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context;
     }
 
     public async Task<SessionChatMessage?> GetByIdAsync(Guid messageId, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.SessionChatMessages
+        var entity = await DbContext.SessionChatMessages
             .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -33,7 +33,7 @@ public class SessionChatRepository : ISessionChatRepository
         int? offset = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.SessionChatMessages
+        var query = DbContext.SessionChatMessages
             .Where(m => m.SessionId == sessionId)
             .OrderBy(m => m.SequenceNumber);
 
@@ -55,7 +55,7 @@ public class SessionChatRepository : ISessionChatRepository
     public async Task<int> GetNextSequenceNumberAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
         // Must include deleted messages to avoid sequence number reuse
-        var maxSequence = await _context.SessionChatMessages
+        var maxSequence = await DbContext.SessionChatMessages
             .IgnoreQueryFilters()
             .Where(m => m.SessionId == sessionId)
             .MaxAsync(m => (int?)m.SequenceNumber, cancellationToken)
@@ -66,7 +66,7 @@ public class SessionChatRepository : ISessionChatRepository
 
     public async Task<int> GetCountBySessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
-        return await _context.SessionChatMessages
+        return await DbContext.SessionChatMessages
             .CountAsync(m => m.SessionId == sessionId, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -74,13 +74,13 @@ public class SessionChatRepository : ISessionChatRepository
     public async Task AddAsync(SessionChatMessage message, CancellationToken cancellationToken = default)
     {
         var entity = SessionChatMessageMapper.ToEntity(message);
-        await _context.SessionChatMessages.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.SessionChatMessages.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(SessionChatMessage message, CancellationToken cancellationToken = default)
     {
         var entity = SessionChatMessageMapper.ToEntity(message);
-        var tracked = _context.ChangeTracker.Entries<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>()
+        var tracked = DbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>()
             .FirstOrDefault(e => e.Entity.Id == entity.Id);
 
         if (tracked is not null)
@@ -89,7 +89,7 @@ public class SessionChatRepository : ISessionChatRepository
         }
         else
         {
-            _context.SessionChatMessages.Update(entity);
+            DbContext.SessionChatMessages.Update(entity);
         }
 
         return Task.CompletedTask;
@@ -97,6 +97,6 @@ public class SessionChatRepository : ISessionChatRepository
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

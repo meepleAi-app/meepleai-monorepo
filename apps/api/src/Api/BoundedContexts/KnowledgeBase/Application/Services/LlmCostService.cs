@@ -1,9 +1,9 @@
 using Api.BoundedContexts.Administration.Application.Services;
-using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.BusinessSimulations.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Services;
 using MediatR;
@@ -37,7 +37,7 @@ internal sealed class LlmCostService : ILlmCostService
     /// <inheritdoc/>
     public async Task LogSuccessAsync(
         LlmCompletionResult result,
-        User? user,
+        LlmUserContext userContext,
         long latencyMs,
         RequestSource source,
         CancellationToken ct = default)
@@ -49,8 +49,8 @@ internal sealed class LlmCostService : ILlmCostService
             {
                 var costLogRepo = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
                 await costLogRepo.LogCostAsync(
-                    user?.Id,
-                    user?.Role.Value ?? "Anonymous",
+                    userContext.UserId,
+                    userContext.RoleName ?? "Anonymous",
                     new LlmCostCalculation
                     {
                         ModelId = result.Cost.ModelId,
@@ -74,7 +74,7 @@ internal sealed class LlmCostService : ILlmCostService
             await UpdateModelUsageStatsAsync(result, ct).ConfigureAwait(false);
 
             // 3. Record user budget usage
-            if (user?.Id != null)
+            if (userContext.UserId != null)
             {
                 using var budgetScope = _scopeFactory.CreateScope();
                 var budgetService = budgetScope.ServiceProvider.GetService<IUserBudgetService>();
@@ -83,20 +83,20 @@ internal sealed class LlmCostService : ILlmCostService
                     var requestCost = result.Cost.TotalCost;
                     var requestTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
                     await budgetService
-                        .RecordUsageAsync(user.Id, requestCost, requestTokens, ct)
+                        .RecordUsageAsync(userContext.UserId.Value, requestCost, requestTokens, ct)
                         .ConfigureAwait(false);
                 }
             }
 
             // 4. Publish token usage ledger event
             var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
-            if (totalCost > 0 && user?.Id != null)
+            if (totalCost > 0 && userContext.UserId != null)
             {
                 using var publishScope = _scopeFactory.CreateScope();
                 var publisher = publishScope.ServiceProvider.GetRequiredService<IPublisher>();
                 await publisher.Publish(
                     new TokenUsageLedgerEvent(
-                        UserId: user.Id,
+                        UserId: userContext.UserId.Value,
                         ModelId: result.Cost.ModelId,
                         TokensConsumed: result.Usage.PromptTokens + result.Usage.CompletionTokens,
                         CostUsd: totalCost,
@@ -111,7 +111,7 @@ internal sealed class LlmCostService : ILlmCostService
                 model: result.Cost.ModelId,
                 provider: result.Cost.Provider,
                 source: source.ToString(),
-                userId: user?.Id,
+                userId: userContext.UserId,
                 promptTokens: result.Usage.PromptTokens,
                 completionTokens: result.Usage.CompletionTokens,
                 costUsd: result.Cost.TotalCost,
@@ -133,7 +133,7 @@ internal sealed class LlmCostService : ILlmCostService
     /// <inheritdoc/>
     public async Task LogFailureAsync(
         string? errorMessage,
-        User? user,
+        LlmUserContext userContext,
         long latencyMs,
         RequestSource source,
         CancellationToken ct = default)
@@ -144,8 +144,8 @@ internal sealed class LlmCostService : ILlmCostService
             {
                 var costLogRepo = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
                 await costLogRepo.LogCostAsync(
-                    user?.Id,
-                    user?.Role.Value ?? "Anonymous",
+                    userContext.UserId,
+                    userContext.RoleName ?? "Anonymous",
                     LlmCostCalculation.Empty,
                     endpoint: "completion",
                     success: false,
@@ -162,7 +162,7 @@ internal sealed class LlmCostService : ILlmCostService
                 model: string.Empty,
                 provider: string.Empty,
                 source: source.ToString(),
-                userId: user?.Id,
+                userId: userContext.UserId,
                 promptTokens: 0,
                 completionTokens: 0,
                 costUsd: 0,

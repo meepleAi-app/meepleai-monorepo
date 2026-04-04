@@ -39,7 +39,7 @@ async function setupMultiLanguageMocks(page: Page) {
   };
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -57,7 +57,7 @@ async function setupMultiLanguageMocks(page: Page) {
   });
 
   // Mock supported languages endpoint
-  await page.route(`${API_BASE}/api/v1/system/languages`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/system/languages`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -69,7 +69,7 @@ async function setupMultiLanguageMocks(page: Page) {
   });
 
   // Mock session creation with language
-  await page.route(`${API_BASE}/api/v1/game-sessions`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/game-sessions`, async route => {
     const body = await route.request().postDataJSON();
     if (body?.language) {
       currentLanguage = body.language;
@@ -87,7 +87,7 @@ async function setupMultiLanguageMocks(page: Page) {
   });
 
   // Mock chat endpoint with language-specific responses
-  await page.route(`${API_BASE}/api/v1/agents/ask*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/agents/ask*`, async route => {
     const body = await route.request().postDataJSON();
     const lang = body?.language || currentLanguage;
 
@@ -105,7 +105,7 @@ async function setupMultiLanguageMocks(page: Page) {
   });
 
   // Mock games endpoint
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -114,7 +114,7 @@ async function setupMultiLanguageMocks(page: Page) {
   });
 
   // Mock threads endpoint
-  await page.route(`${API_BASE}/api/v1/chat/threads**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/chat/threads**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -124,7 +124,9 @@ async function setupMultiLanguageMocks(page: Page) {
 
   return {
     getCurrentLanguage: () => currentLanguage,
-    setCurrentLanguage: (lang: string) => { currentLanguage = lang; },
+    setCurrentLanguage: (lang: string) => {
+      currentLanguage = lang;
+    },
     supportedLanguages: SUPPORTED_LANGUAGES,
   };
 }
@@ -139,9 +141,9 @@ test.describe('SESS-09: Multi-language Sessions', () => {
 
       // Should show language selector
       await expect(
-        page.getByRole('combobox', { name: /language/i }).or(
-          page.locator('[data-testid="language-selector"]')
-        )
+        page
+          .getByRole('combobox', { name: /language/i })
+          .or(page.locator('[data-testid="language-selector"]'))
       ).toBeVisible({ timeout: 5000 });
     });
 
@@ -194,18 +196,16 @@ test.describe('SESS-09: Multi-language Sessions', () => {
       }
 
       // Send a message
-      const chatInput = page.getByPlaceholder(/message|question/i).or(
-        page.locator('textarea').first()
-      );
+      const chatInput = page
+        .getByPlaceholder(/message|question/i)
+        .or(page.locator('textarea').first());
 
       if (await chatInput.isVisible()) {
         await chatInput.fill('How does the bishop move?');
         await page.keyboard.press('Enter');
 
         // Response should be in Italian
-        await expect(
-          page.getByText(/alfiere|diagonale|caselle/i)
-        ).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText(/alfiere|diagonale|caselle/i)).toBeVisible({ timeout: 5000 });
       }
     });
 
@@ -237,7 +237,7 @@ test.describe('SESS-09: Multi-language Sessions', () => {
       }
 
       // Navigate away and back
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       await page.goto('/chat');
@@ -288,9 +288,7 @@ test.describe('SESS-09: Multi-language Sessions', () => {
         await page.keyboard.press('Enter');
 
         // Response should be in French
-        await expect(
-          page.getByText(/échecs|fou|diagonale/i)
-        ).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText(/échecs|fou|diagonale/i)).toBeVisible({ timeout: 5000 });
       }
     });
 

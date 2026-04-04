@@ -34,7 +34,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
-
 // =============================================================================
 // Architecture Node Types
 // =============================================================================
@@ -93,7 +92,7 @@ const ARCH_NODES: ArchNode[] = [
     icon: Search,
     category: 'layer',
     description: 'Hybrid search: vector + keyword + metadata filtering',
-    connections: ['crag', 'qdrant', 'postgres'],
+    connections: ['crag', 'pgvector', 'postgres'],
     color: 'hsl(142, 76%, 36%)',
     position: { x: 500, y: 50 },
   },
@@ -183,11 +182,11 @@ const ARCH_NODES: ArchNode[] = [
     position: { x: 350, y: 180 },
   },
   {
-    id: 'qdrant',
-    label: 'Qdrant',
+    id: 'pgvector',
+    label: 'pgvector',
     icon: Database,
     category: 'storage',
-    description: 'Vector database for document embeddings',
+    description: 'PostgreSQL pgvector extension for document embeddings',
     connections: [],
     color: 'hsl(280, 60%, 50%)',
     position: { x: 450, y: 180 },
@@ -239,12 +238,14 @@ function ArchitectureNode({ node, isSelected, isFiltered, zoom, onClick }: NodeP
         node.category === 'layer' && 'z-10',
         !isFiltered && 'opacity-30 pointer-events-none'
       )}
-      style={{
-        left: node.position.x * zoom,
-        top: node.position.y * zoom,
-        width: scaledSize,
-        '--node-color': node.color,
-      } as React.CSSProperties}
+      style={
+        {
+          left: node.position.x * zoom,
+          top: node.position.y * zoom,
+          width: scaledSize,
+          '--node-color': node.color,
+        } as React.CSSProperties
+      }
       data-selected={isSelected}
       onClick={onClick}
       whileHover={{ scale: 1.05 }}
@@ -265,10 +266,7 @@ function ArchitectureNode({ node, isSelected, isFiltered, zoom, onClick }: NodeP
           ['--tw-ring-color' as string]: node.color,
         }}
       >
-        <div
-          className="rounded-full p-2"
-          style={{ backgroundColor: `${node.color}20` }}
-        >
+        <div className="rounded-full p-2" style={{ backgroundColor: `${node.color}20` }}>
           <span style={{ color: node.color }}>
             <Icon className="h-5 w-5" />
           </span>
@@ -309,10 +307,7 @@ function DetailPanel({ node, onClose }: DetailPanelProps) {
       className="absolute right-4 top-4 w-72 p-4 rounded-xl bg-card border border-border shadow-lg z-20"
     >
       <div className="flex items-start gap-3 mb-3">
-        <div
-          className="rounded-lg p-2"
-          style={{ backgroundColor: `${node.color}20` }}
-        >
+        <div className="rounded-lg p-2" style={{ backgroundColor: `${node.color}20` }}>
           <span style={{ color: node.color }}>
             <Icon className="h-6 w-6" />
           </span>
@@ -323,10 +318,7 @@ function DetailPanel({ node, onClose }: DetailPanelProps) {
             {node.category}
           </Badge>
         </div>
-        <button
-          onClick={onClose}
-          className="text-muted-foreground hover:text-foreground"
-        >
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
           ×
         </button>
       </div>
@@ -427,9 +419,7 @@ export function ArchitectureExplorer({ className }: ArchitectureExplorerProps) {
               >
                 <ZoomOut className="h-4 w-4" />
               </button>
-              <span className="text-xs font-mono w-12 text-center">
-                {Math.round(zoom * 100)}%
-              </span>
+              <span className="text-xs font-mono w-12 text-center">{Math.round(zoom * 100)}%</span>
               <button
                 onClick={() => setZoom(z => Math.min(1.5, z + 0.1))}
                 className="p-1 rounded hover:bg-muted"
@@ -492,10 +482,7 @@ export function ArchitectureExplorer({ className }: ArchitectureExplorerProps) {
           {/* Detail Panel */}
           <AnimatePresence>
             {selectedNodeData && (
-              <DetailPanel
-                node={selectedNodeData}
-                onClose={() => setSelectedNode(null)}
-              />
+              <DetailPanel node={selectedNodeData} onClose={() => setSelectedNode(null)} />
             )}
           </AnimatePresence>
         </div>

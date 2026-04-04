@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe form state object access */
 'use client';
 
 /**

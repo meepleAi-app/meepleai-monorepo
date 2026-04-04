@@ -1,4 +1,4 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Models;
 using Api.Services;
@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -20,7 +21,6 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public class StreamSetupGuideQueryHandlerTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly Mock<IQdrantService> _qdrantServiceMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
     private readonly IConfiguration _configuration;
@@ -31,7 +31,6 @@ public class StreamSetupGuideQueryHandlerTests
     public StreamSetupGuideQueryHandlerTests()
     {
         _embeddingServiceMock = new Mock<IEmbeddingService>();
-        _qdrantServiceMock = new Mock<IQdrantService>();
         _llmServiceMock = new Mock<ILlmService>();
         _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
         _loggerMock = new Mock<ILogger<StreamSetupGuideQueryHandler>>();
@@ -43,7 +42,6 @@ public class StreamSetupGuideQueryHandlerTests
 
         _handler = new StreamSetupGuideQueryHandler(
             _embeddingServiceMock.Object,
-            _qdrantServiceMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
             _configuration,
@@ -68,56 +66,44 @@ public class StreamSetupGuideQueryHandlerTests
         }
 
         // Assert
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         // State update events
         var stateUpdates = events.Where(e => e.Type == StreamingEventType.StateUpdate).ToList();
-        Assert.NotEmpty(stateUpdates);
-        var firstState = Assert.IsType<StreamingStateUpdate>(stateUpdates[0].Data);
-        Assert.Equal("Preparing setup guide...", firstState.message);
+        stateUpdates.Should().NotBeEmpty();
+        var firstState = stateUpdates[0].Data.Should().BeOfType<StreamingStateUpdate>().Which;
+        firstState.message.Should().Be("Preparing setup guide...");
 
         // Setup step events
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.NotEmpty(stepEvents);
+        stepEvents.Should().NotBeEmpty();
 
         foreach (var stepEvent in stepEvents)
         {
-            var step = Assert.IsType<StreamingSetupStep>(stepEvent.Data);
-            Assert.NotNull(step.step);
-            Assert.True(step.step.stepNumber > 0);
-            Assert.NotEmpty(step.step.title);
-            Assert.NotEmpty(step.step.instruction);
+            var step = stepEvent.Data.Should().BeOfType<StreamingSetupStep>().Which;
+            step.step.Should().NotBeNull();
+            (step.step.stepNumber > 0).Should().BeTrue();
+            step.step.title.Should().NotBeEmpty();
+            step.step.instruction.Should().NotBeEmpty();
         }
 
         // Complete event
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.True(complete.estimatedReadingTimeMinutes >= 5);
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        (complete.estimatedReadingTimeMinutes >= 5).Should().BeTrue();
     }
 
     [Fact]
-    public async Task Handle_LlmGeneratesSteps_ParsesCorrectly()
+    public async Task Handle_LlmGeneratesSteps_QdrantRemoved_ReturnsDefaultSteps()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // so the LLM is never called. Default steps are returned instead of LLM-parsed steps.
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
-        var llmResponse = @"STEP 1: Place the Board
-Put the game board in the center of the table where all players can reach it.
-
-STEP 2: Sort Components
-Organize all cards, tokens, and pieces by type.
-
-STEP 3: Distribute Starting Materials
-Give each player 5 cards and 3 tokens as shown in the rulebook.
-
-STEP 4: Determine First Player
-The youngest player goes first.";
-
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
-        SetupLlmMock(llmResponse, totalTokens: 100);
+        SetupLlmMock("STEP 1: Place the Board\nPut the game board in the center.", totalTokens: 100);
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -126,44 +112,30 @@ The youngest player goes first.";
             events.Add(evt);
         }
 
-        // Assert
+        // Assert — Default steps returned (5 steps, not LLM-parsed)
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(4, stepEvents.Count);
+        stepEvents.Count.Should().Be(5);
 
-        var step1 = Assert.IsType<StreamingSetupStep>(stepEvents[0].Data).step;
-        Assert.Equal(1, step1.stepNumber);
-        Assert.Equal("Place the Board", step1.title);
-        Assert.Contains("game board in the center", step1.instruction, StringComparison.OrdinalIgnoreCase);
-
-        var step2 = Assert.IsType<StreamingSetupStep>(stepEvents[1].Data).step;
-        Assert.Equal(2, step2.stepNumber);
-        Assert.Equal("Sort Components", step2.title);
+        var step1 = stepEvents[0].Data.Should().BeOfType<StreamingSetupStep>().Which.step;
+        step1.stepNumber.Should().Be(1);
+        step1.title.Should().Be("Prepare Components");
 
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.Equal(100, complete.totalTokens);
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        complete.totalTokens.Should().Be(0); // No LLM call, so 0 tokens
     }
 
     [Fact]
-    public async Task Handle_OptionalSteps_MarkedCorrectly()
+    public async Task Handle_OptionalSteps_QdrantRemoved_ReturnsDefaultStepsAllRequired()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // so the LLM is never called. Default steps are returned (all non-optional).
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
-        var llmResponse = @"STEP 1: Required Setup
-This is a required step.
-
-STEP 2: [OPTIONAL] Advanced Variant
-This step is optional for advanced players.
-
-STEP 3: Final Setup
-This is required.";
-
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
-        SetupLlmMock(llmResponse);
+        SetupLlmMock("STEP 1: Required\nThis is required.\n\nSTEP 2: [OPTIONAL] Advanced\nOptional step.");
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -172,19 +144,16 @@ This is required.";
             events.Add(evt);
         }
 
-        // Assert
+        // Assert — Default steps returned (5 steps, all non-optional)
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(3, stepEvents.Count);
+        stepEvents.Count.Should().Be(5);
 
-        var step1 = Assert.IsType<StreamingSetupStep>(stepEvents[0].Data).step;
-        Assert.False(step1.isOptional);
-
-        var step2 = Assert.IsType<StreamingSetupStep>(stepEvents[1].Data).step;
-        Assert.True(step2.isOptional);
-        Assert.Equal("Advanced Variant", step2.title); // [OPTIONAL] prefix removed
-
-        var step3 = Assert.IsType<StreamingSetupStep>(stepEvents[2].Data).step;
-        Assert.False(step3.isOptional);
+        // All default steps are non-optional
+        foreach (var stepEvent in stepEvents)
+        {
+            var step = stepEvent.Data.Should().BeOfType<StreamingSetupStep>().Which.step;
+            step.isOptional.Should().BeFalse();
+        }
     }
     [Fact]
     public async Task Handle_EmbeddingFails_ReturnsDefaultSteps()
@@ -212,15 +181,15 @@ This is required.";
         // When embedding fails, handler returns default steps with Success=true (graceful degradation)
         // So we check for the initial "Preparing" state update instead
         var stateUpdate = events.FirstOrDefault(e => e.Type == StreamingEventType.StateUpdate);
-        Assert.NotNull(stateUpdate);
-        var stateData = Assert.IsType<StreamingStateUpdate>(stateUpdate.Data);
-        Assert.Equal("Preparing setup guide...", stateData.message);
+        stateUpdate.Should().NotBeNull();
+        var stateData = stateUpdate.Data.Should().BeOfType<StreamingStateUpdate>().Which;
+        stateData.message.Should().Be("Preparing setup guide...");
 
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default has 5 steps
+        stepEvents.Count.Should().Be(5); // Default has 5 steps
 
-        var step1 = Assert.IsType<StreamingSetupStep>(stepEvents[0].Data).step;
-        Assert.Equal("Prepare Components", step1.title);
+        var step1 = stepEvents[0].Data.Should().BeOfType<StreamingSetupStep>().Which.step;
+        step1.title.Should().Be("Prepare Components");
 
         // Should NOT call LLM
         _llmServiceMock.Verify(
@@ -230,21 +199,13 @@ This is required.";
     }
 
     [Fact]
-    public async Task Handle_QdrantReturnsNoResults_ReturnsDefaultSteps()
+    public async Task Handle_NoVectorResults_ReturnsDefaultSteps()
     {
-        // Arrange
+        // Arrange — Qdrant removed; handler always gets no vector results
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
         SetupEmbeddingMock();
-
-        _qdrantServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SearchResult
-            {
-                Success = true,
-                Results = new List<SearchResultItem>() // Empty results
-            });
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -255,9 +216,9 @@ This is required.";
 
         // Assert
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
 
-        // Should NOT call LLM
+        // Should NOT call LLM when no vector results
         _llmServiceMock.Verify(
             x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Never
@@ -272,7 +233,6 @@ This is required.";
         var query = new StreamSetupGuideQuery(gameId);
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
 
         _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
@@ -287,7 +247,7 @@ This is required.";
 
         // Assert
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
     }
 
     [Fact]
@@ -298,7 +258,6 @@ This is required.";
         var query = new StreamSetupGuideQuery(gameId);
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock(""); // Empty response
 
         // Act
@@ -310,20 +269,18 @@ This is required.";
 
         // Assert
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
     }
 
     [Fact]
     public async Task Handle_ExceptionDuringGeneration_ReturnsDefaultSteps()
     {
-        // Arrange
+        // Arrange — Qdrant removed; embedding failure triggers graceful degradation
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
-        SetupEmbeddingMock();
-
-        _qdrantServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
+        _embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Unexpected error"));
 
         // Act
@@ -335,10 +292,10 @@ This is required.";
 
         // Assert
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
 
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
+        completeEvent.Should().NotBeNull();
     }
     [Fact]
     public async Task Handle_EmptyGameId_ReturnsError()
@@ -354,11 +311,11 @@ This is required.";
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
-        var error = Assert.IsType<StreamingError>(events[0].Data);
-        Assert.Equal("Game ID is required.", error.errorMessage);
-        Assert.Equal("EMPTY_GAME_ID", error.errorCode);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
+        var error = events[0].Data.Should().BeOfType<StreamingError>().Which;
+        error.errorMessage.Should().Be("Game ID is required.");
+        error.errorCode.Should().Be("EMPTY_GAME_ID");
     }
 
     [Fact]
@@ -375,8 +332,8 @@ This is required.";
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
     }
 
     [Fact]
@@ -393,8 +350,8 @@ This is required.";
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
     }
     [Fact]
     public async Task Handle_CancellationRequested_StopsStreaming()
@@ -431,13 +388,14 @@ This is required.";
         }
 
         // Assert
-        Assert.InRange(events.Count, 1, 5); // Should stop early
-        Assert.True(cts.IsCancellationRequested);
+        events.Count.Should().BeInRange(1, 5); // Should stop early
+        cts.IsCancellationRequested.Should().BeTrue();
     }
     [Fact]
-    public async Task Handle_PromptDatabaseEnabled_UsesTemplateService()
+    public async Task Handle_PromptDatabaseEnabled_QdrantRemoved_ReturnsDefaultSteps()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // so the LLM is never called and default steps are returned regardless of prompt config.
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
@@ -447,14 +405,12 @@ This is required.";
             .ReturnsAsync(customPrompt);
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock("STEP 1: Test\nTest instruction");
 
         // Create handler with prompt database enabled
         var configWithPromptDb = CreateConfiguration(promptDatabaseEnabled: true);
         var handlerWithPromptDb = new StreamSetupGuideQueryHandler(
             _embeddingServiceMock.Object,
-            _qdrantServiceMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
             configWithPromptDb,
@@ -469,28 +425,25 @@ This is required.";
             events.Add(evt);
         }
 
-        // Assert
-        _promptTemplateServiceMock.Verify(
-            x => x.GetActivePromptAsync("setup-guide-system-prompt", It.IsAny<CancellationToken>()),
-            Times.Once
-        );
+        // Assert — Qdrant removed, so search always fails → default steps, LLM never called
+        var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
+        stepEvents.Count.Should().Be(5); // Default steps
 
-        // Verify LLM was called with custom prompt
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionAsync(customPrompt, It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
-            Times.Once
+            x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
     }
 
     [Fact]
-    public async Task Handle_PromptDatabaseDisabled_UsesHardcodedPrompt()
+    public async Task Handle_PromptDatabaseDisabled_QdrantRemoved_ReturnsDefaultSteps()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // so the LLM is never called and default steps are returned.
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock("STEP 1: Test\nTest instruction");
 
         // Use default handler (prompt database disabled in constructor)
@@ -501,23 +454,26 @@ This is required.";
             events.Add(evt);
         }
 
-        // Assert
+        // Assert — Qdrant removed, so search always fails → default steps, LLM never called
+        var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
+        stepEvents.Count.Should().Be(5); // Default steps
+
         _promptTemplateServiceMock.Verify(
             x => x.GetActivePromptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
 
-        // Verify LLM was called with hardcoded fallback prompt
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionAsync(It.Is<string>(s => s.Contains("board game setup assistant")), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
-            Times.Once
+            x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
     }
 
     [Fact]
-    public async Task Handle_PromptTemplateFails_FallsBackToHardcodedPrompt()
+    public async Task Handle_PromptTemplateFails_QdrantRemoved_ReturnsDefaultSteps()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // so the LLM is never called and default steps are returned regardless of prompt template failures.
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
@@ -526,14 +482,12 @@ This is required.";
             .ThrowsAsync(new Exception("Database error"));
 
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock("STEP 1: Test\nTest instruction");
 
         // Create handler with prompt database enabled
         var configWithPromptDb = CreateConfiguration(promptDatabaseEnabled: true);
         var handlerWithPromptDb = new StreamSetupGuideQueryHandler(
             _embeddingServiceMock.Object,
-            _qdrantServiceMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
             configWithPromptDb,
@@ -548,10 +502,13 @@ This is required.";
             events.Add(evt);
         }
 
-        // Assert - should fallback to hardcoded prompt
+        // Assert — Qdrant removed, so search always fails → default steps, LLM never called
+        var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
+        stepEvents.Count.Should().Be(5); // Default steps
+
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionAsync(It.Is<string>(s => s.Contains("board game setup assistant")), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
-            Times.Once
+            x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never
         );
     }
     [Fact]
@@ -563,7 +520,6 @@ This is required.";
 
         var llmResponse = "STEP 1: Quick Setup\nJust one step.";
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
         SetupLlmMock(llmResponse);
 
         // Act
@@ -575,34 +531,22 @@ This is required.";
 
         // Assert
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.True(complete.estimatedReadingTimeMinutes >= 5); // Minimum 5 minutes
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        (complete.estimatedReadingTimeMinutes >= 5).Should().BeTrue(); // Minimum 5 minutes
     }
 
     [Fact]
-    public async Task Handle_MultipleSteps_CalculatesTimeCorrectly()
+    public async Task Handle_MultipleSteps_QdrantRemoved_DefaultStepsCalculateTimeCorrectly()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, SearchSetupContextAsync always returns false,
+        // so the LLM is never called. Default steps (5) are returned.
+        // 5 steps * 2 min/step = 10 minutes.
         var gameId = "game123";
         var query = new StreamSetupGuideQuery(gameId);
 
-        // 4 steps = 4 * 2 = 8 minutes
-        var llmResponse = @"STEP 1: First
-Instruction 1
-
-STEP 2: Second
-Instruction 2
-
-STEP 3: Third
-Instruction 3
-
-STEP 4: Fourth
-Instruction 4";
-
         SetupEmbeddingMock();
-        SetupQdrantMock(gameId, CreateSampleSearchResults());
-        SetupLlmMock(llmResponse);
+        SetupLlmMock("STEP 1: First\nInstruction 1");
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -611,48 +555,16 @@ Instruction 4";
             events.Add(evt);
         }
 
-        // Assert
+        // Assert — Default 5 steps returned
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(4, stepEvents.Count);
+        stepEvents.Count.Should().Be(5);
 
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.Equal(8, complete.estimatedReadingTimeMinutes); // 4 steps * 2 min/step
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        complete.estimatedReadingTimeMinutes.Should().Be(10); // 5 steps * 2 min/step
     }
 
-    [Fact]
-    public async Task Handle_ConfidenceScoreFromSearchResults()
-    {
-        // Arrange
-        var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
-
-        var searchResults = new List<SearchResultItem>
-        {
-            new SearchResultItem { Text = "Rule 1", PdfId = Guid.NewGuid().ToString(), Page = 1, Score = 0.75f },
-            new SearchResultItem { Text = "Rule 2", PdfId = Guid.NewGuid().ToString(), Page = 2, Score = 0.92f },
-            new SearchResultItem { Text = "Rule 3", PdfId = Guid.NewGuid().ToString(), Page = 3, Score = 0.81f }
-        };
-
-        SetupEmbeddingMock();
-        SetupQdrantMock(gameId, searchResults);
-        SetupLlmMock("STEP 1: Test\nInstruction");
-
-        // Act
-        var events = new List<RagStreamingEvent>();
-        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
-        {
-            events.Add(evt);
-        }
-
-        // Assert
-        var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.True(complete.confidence.HasValue);
-        Assert.Equal(0.92, complete.confidence.Value, 0.001); // Max score
-    }
     private static IConfiguration CreateConfiguration(bool promptDatabaseEnabled)
     {
         var configBuilder = new ConfigurationBuilder();
@@ -675,7 +587,6 @@ STEP 3: Distribute Materials
 Give each player their starting items.";
 
         SetupEmbeddingMock();
-        SetupQdrantMock("game123", CreateSampleSearchResults());
         SetupLlmMock(llmResponse);
     }
 
@@ -691,16 +602,6 @@ Give each player their starting items.";
             });
     }
 
-    private void SetupQdrantMock(string gameId, List<SearchResultItem> results)
-    {
-        _qdrantServiceMock
-            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<List<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SearchResult
-            {
-                Success = true,
-                Results = results
-            });
-    }
 
     private void SetupLlmMock(string response, int totalTokens = 50)
     {
@@ -714,27 +615,5 @@ Give each player their starting items.";
             ));
     }
 
-    private List<SearchResultItem> CreateSampleSearchResults()
-    {
-        return new List<SearchResultItem>
-        {
-            new SearchResultItem
-            {
-                Text = "Setup instructions for the game.",
-                PdfId = Guid.NewGuid().ToString(),
-                Page = 1,
-                ChunkIndex = 0,
-                Score = 0.9f
-            },
-            new SearchResultItem
-            {
-                Text = "Player starting conditions.",
-                PdfId = Guid.NewGuid().ToString(),
-                Page = 2,
-                ChunkIndex = 1,
-                Score = 0.85f
-            }
-        };
-    }
 }
 

@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -24,21 +25,21 @@ public sealed class OpenRouterErrorParserTests
     public void TryParseRateLimitError_NonRateLimitStatus_ReturnsNull(int statusCode)
     {
         var result = OpenRouterErrorParser.TryParseRateLimitError("{}", statusCode);
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
     public void TryParseRateLimitError_EmptyBody_429_ReturnsNull()
     {
         var result = OpenRouterErrorParser.TryParseRateLimitError("", 429);
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
     public void TryParseRateLimitError_WhitespaceBody_429_ReturnsNull()
     {
         var result = OpenRouterErrorParser.TryParseRateLimitError("   ", 429);
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     // ─── HTTP 402 PaymentRequired ────────────────────────────────────────────
@@ -48,12 +49,12 @@ public sealed class OpenRouterErrorParserTests
     {
         var result = OpenRouterErrorParser.TryParseRateLimitError("{}", 402);
 
-        Assert.NotNull(result);
-        Assert.Equal(RateLimitErrorType.PaymentRequired, result.ErrorType);
-        Assert.Null(result.ResetTimestampMs);
-        Assert.Null(result.ModelId);
-        Assert.Null(result.Limit);
-        Assert.Null(result.Remaining);
+        result.Should().NotBeNull();
+        result.ErrorType.Should().Be(RateLimitErrorType.PaymentRequired);
+        result.ResetTimestampMs.Should().BeNull();
+        result.ModelId.Should().BeNull();
+        result.Limit.Should().BeNull();
+        result.Remaining.Should().BeNull();
     }
 
     // ─── RPD limit ───────────────────────────────────────────────────────────
@@ -79,12 +80,12 @@ public sealed class OpenRouterErrorParserTests
 
         var result = OpenRouterErrorParser.TryParseRateLimitError(body, 429);
 
-        Assert.NotNull(result);
-        Assert.Equal(RateLimitErrorType.Rpd, result.ErrorType);
-        Assert.Equal(1741305600000L, result.ResetTimestampMs);
-        Assert.Equal("meta-llama/llama-3.3-70b-instruct:free", result.ModelId);
-        Assert.Equal(1000, result.Limit);
-        Assert.Equal(0, result.Remaining);
+        result.Should().NotBeNull();
+        result.ErrorType.Should().Be(RateLimitErrorType.Rpd);
+        result.ResetTimestampMs.Should().Be(1741305600000L);
+        result.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
+        result.Limit.Should().Be(1000);
+        result.Remaining.Should().Be(0);
     }
 
     // ─── RPM limit ───────────────────────────────────────────────────────────
@@ -110,10 +111,10 @@ public sealed class OpenRouterErrorParserTests
 
         var result = OpenRouterErrorParser.TryParseRateLimitError(body, 429);
 
-        Assert.NotNull(result);
-        Assert.Equal(RateLimitErrorType.Rpm, result.ErrorType);
-        Assert.Equal(1741305660000L, result.ResetTimestampMs);
-        Assert.Equal("meta-llama/llama-3.3-70b-instruct:free", result.ModelId);
+        result.Should().NotBeNull();
+        result.ErrorType.Should().Be(RateLimitErrorType.Rpm);
+        result.ResetTimestampMs.Should().Be(1741305660000L);
+        result.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
     }
 
     // ─── Unknown 429 ─────────────────────────────────────────────────────────
@@ -125,9 +126,9 @@ public sealed class OpenRouterErrorParserTests
 
         var result = OpenRouterErrorParser.TryParseRateLimitError(body, 429);
 
-        Assert.NotNull(result);
-        Assert.Equal(RateLimitErrorType.Unknown, result.ErrorType);
-        Assert.Null(result.ModelId);
+        result.Should().NotBeNull();
+        result.ErrorType.Should().Be(RateLimitErrorType.Unknown);
+        result.ModelId.Should().BeNull();
     }
 
     [Fact]
@@ -135,8 +136,8 @@ public sealed class OpenRouterErrorParserTests
     {
         var result = OpenRouterErrorParser.TryParseRateLimitError("not-json", 429);
 
-        Assert.NotNull(result);
-        Assert.Equal(RateLimitErrorType.Unknown, result.ErrorType);
+        result.Should().NotBeNull();
+        result.ErrorType.Should().Be(RateLimitErrorType.Unknown);
     }
 
     // ─── Missing metadata headers ────────────────────────────────────────────
@@ -155,11 +156,11 @@ public sealed class OpenRouterErrorParserTests
 
         var result = OpenRouterErrorParser.TryParseRateLimitError(body, 429);
 
-        Assert.NotNull(result);
-        Assert.Equal(RateLimitErrorType.Rpd, result.ErrorType);
-        Assert.Null(result.ResetTimestampMs);
-        Assert.Null(result.Limit);
-        Assert.Null(result.Remaining);
+        result.Should().NotBeNull();
+        result.ErrorType.Should().Be(RateLimitErrorType.Rpd);
+        result.ResetTimestampMs.Should().BeNull();
+        result.Limit.Should().BeNull();
+        result.Remaining.Should().BeNull();
     }
 
     // ─── Case-insensitive classification ─────────────────────────────────────
@@ -173,8 +174,8 @@ public sealed class OpenRouterErrorParserTests
 
         var result = OpenRouterErrorParser.TryParseRateLimitError(body, 429);
 
-        Assert.NotNull(result);
-        Assert.Equal(RateLimitErrorType.Rpd, result.ErrorType);
+        result.Should().NotBeNull();
+        result.ErrorType.Should().Be(RateLimitErrorType.Rpd);
     }
 
     // ─── Root-level error (no "error" wrapper) ───────────────────────────────
@@ -191,7 +192,7 @@ public sealed class OpenRouterErrorParserTests
 
         var result = OpenRouterErrorParser.TryParseRateLimitError(body, 429);
 
-        Assert.NotNull(result);
-        Assert.Equal(RateLimitErrorType.Rpm, result.ErrorType);
+        result.Should().NotBeNull();
+        result.ErrorType.Should().Be(RateLimitErrorType.Rpm);
     }
 }

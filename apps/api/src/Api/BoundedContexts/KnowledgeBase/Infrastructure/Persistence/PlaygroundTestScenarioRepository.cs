@@ -1,6 +1,8 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -9,18 +11,17 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Repository for PlaygroundTestScenario aggregate.
 /// Issue #4396: PlaygroundTestScenario Entity + CRUD
 /// </summary>
-public sealed class PlaygroundTestScenarioRepository : IPlaygroundTestScenarioRepository
+public sealed class PlaygroundTestScenarioRepository : RepositoryBase, IPlaygroundTestScenarioRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public PlaygroundTestScenarioRepository(MeepleAiDbContext context)
+    public PlaygroundTestScenarioRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task<PlaygroundTestScenario?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Set<PlaygroundTestScenario>()
+        return await DbContext.Set<PlaygroundTestScenario>()
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == id, ct).ConfigureAwait(false);
     }
@@ -31,7 +32,7 @@ public sealed class PlaygroundTestScenarioRepository : IPlaygroundTestScenarioRe
         bool activeOnly = true,
         CancellationToken ct = default)
     {
-        var query = _context.Set<PlaygroundTestScenario>().AsNoTracking();
+        var query = DbContext.Set<PlaygroundTestScenario>().AsNoTracking();
 
         if (activeOnly)
             query = query.Where(s => s.IsActive);
@@ -50,13 +51,13 @@ public sealed class PlaygroundTestScenarioRepository : IPlaygroundTestScenarioRe
 
     public async Task AddAsync(PlaygroundTestScenario scenario, CancellationToken ct = default)
     {
-        await _context.Set<PlaygroundTestScenario>().AddAsync(scenario, ct).ConfigureAwait(false);
-        await _context.SaveChangesAsync(ct).ConfigureAwait(false);
+        await DbContext.Set<PlaygroundTestScenario>().AddAsync(scenario, ct).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(PlaygroundTestScenario scenario, CancellationToken ct = default)
     {
-        _context.Set<PlaygroundTestScenario>().Update(scenario);
-        await _context.SaveChangesAsync(ct).ConfigureAwait(false);
+        DbContext.Set<PlaygroundTestScenario>().Update(scenario);
+        await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 }

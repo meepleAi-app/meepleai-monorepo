@@ -35,13 +35,14 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        var act = async () =>
         {
             await foreach (var _ in _service.SubscribeAsync(sessionId, userId, null, cts.Token))
             {
                 // Should timeout waiting for events
             }
-        });
+        };
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
@@ -25,10 +26,17 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     private string _strategyJson = "{}";
     private string _promptsJson = "[]";
     private string _toolsJson = "[]";
+    private AgentDefinitionStatus _status;
     private bool _isActive;
     private DateTime _createdAt;
     private DateTime? _updatedAt;
     private string _kbCardIdsJson = "[]";
+    private string _chatLanguage = "auto";
+    private readonly bool _isSystemDefined;
+    private readonly string? _typologySlug;
+    private Guid? _gameId;
+    private int _invocationCount;
+    private DateTime? _lastInvokedAt;
 
     /// <summary>
     /// Gets the agent name.
@@ -117,6 +125,49 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         }
     }
 
+    /// <summary>Seeded by the system; not editable by users.</summary>
+    public bool IsSystemDefined => _isSystemDefined;
+
+    /// <summary>"arbitro" | "game-master" | "chat" — fast lookup for system agents.</summary>
+    public string? TypologySlug => _typologySlug;
+
+    /// <summary>Optional game association.</summary>
+    public Guid? GameId => _gameId;
+
+    /// <summary>Total number of times this agent was invoked.</summary>
+    public int InvocationCount => _invocationCount;
+
+    /// <summary>Timestamp of last invocation.</summary>
+    public DateTime? LastInvokedAt => _lastInvokedAt;
+
+    /// <summary>
+    /// Gets the chat language preference for this agent.
+    /// "auto" means detect from user input; otherwise an ISO 639-1 code (e.g. "it", "en").
+    /// </summary>
+    public string ChatLanguage => _chatLanguage;
+
+    /// <summary>
+    /// Sets the chat language for this agent.
+    /// </summary>
+    /// <param name="languageCode">"auto" or a valid ISO 639-1 code (2 lowercase letters).</param>
+    public void SetChatLanguage(string languageCode)
+    {
+        ArgumentNullException.ThrowIfNull(languageCode);
+
+        if (!string.Equals(languageCode, "auto", StringComparison.Ordinal) && (languageCode.Length != 2 || !languageCode.All(char.IsLower)))
+            throw new ArgumentException("ChatLanguage must be 'auto' or a valid ISO 639-1 code (2 lowercase letters)", nameof(languageCode));
+
+        _chatLanguage = languageCode;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, $"ChatLanguage updated to '{languageCode}'"));
+    }
+
+    /// <summary>
+    /// Gets the lifecycle status (Draft, Testing, Published).
+    /// </summary>
+    public AgentDefinitionStatus Status => _status;
+
     /// <summary>
     /// Gets whether the agent is active.
     /// </summary>
@@ -155,8 +206,14 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         string promptsJson,
         string toolsJson,
         bool isActive,
+        AgentDefinitionStatus status,
         DateTime createdAt,
-        DateTime? updatedAt) : base(id)
+        DateTime? updatedAt,
+        bool isSystemDefined = false,
+        string? typologySlug = null,
+        Guid? gameId = null,
+        int invocationCount = 0,
+        DateTime? lastInvokedAt = null) : base(id)
     {
         _name = name;
         _description = description;
@@ -167,8 +224,53 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _promptsJson = promptsJson;
         _toolsJson = toolsJson;
         _isActive = isActive;
+        _status = status;
         _createdAt = createdAt;
         _updatedAt = updatedAt;
+        _isSystemDefined = isSystemDefined;
+        _typologySlug = typologySlug;
+        _gameId = gameId;
+        _invocationCount = invocationCount;
+        _lastInvokedAt = lastInvokedAt;
+    }
+
+    /// <summary>
+    /// Creates a system-defined agent definition (not editable by users).
+    /// Uses the internal constructor to set IsSystemDefined and TypologySlug.
+    /// </summary>
+    public static AgentDefinition CreateSystem(
+        string name,
+        string description,
+        AgentType type,
+        AgentDefinitionConfig config,
+        string typologySlug,
+        AgentStrategy? strategy = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Agent name cannot be empty", nameof(name));
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentNullException.ThrowIfNull(config);
+
+        var agentStrategy = strategy ?? AgentStrategy.HybridSearch();
+        var definition = new AgentDefinition(
+            id: Guid.NewGuid(),
+            name: name.Trim(),
+            description: description?.Trim() ?? string.Empty,
+            typeValue: type.Value,
+            typeDescription: type.Description,
+            config: config,
+            strategyJson: System.Text.Json.JsonSerializer.Serialize(agentStrategy),
+            promptsJson: "[]",
+            toolsJson: "[]",
+            isActive: false,
+            status: AgentDefinitionStatus.Draft,
+            createdAt: DateTime.UtcNow,
+            updatedAt: null,
+            isSystemDefined: true,
+            typologySlug: typologySlug);
+
+        definition.AddDomainEvent(new AgentDefinitionCreatedEvent(definition.Id, name));
+        return definition;
     }
 
     /// <summary>
@@ -213,7 +315,8 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
             _strategyJson = JsonSerializer.Serialize(agentStrategy),
             _promptsJson = JsonSerializer.Serialize(promptsList),
             _toolsJson = JsonSerializer.Serialize(toolsList),
-            _isActive = true,
+            _isActive = false,
+            _status = AgentDefinitionStatus.Draft,
             _createdAt = DateTime.UtcNow
         };
 
@@ -360,5 +463,56 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _updatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new AgentDefinitionDeactivatedEvent(Id));
+    }
+
+    /// <summary>
+    /// Transitions the agent definition to Testing status.
+    /// Only allowed from Draft status.
+    /// </summary>
+    public void StartTesting()
+    {
+        if (_status == AgentDefinitionStatus.Published)
+            throw new InvalidOperationException("Cannot move Published definition back to Testing. Unpublish first.");
+
+        _status = AgentDefinitionStatus.Testing;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Status changed to Testing"));
+    }
+
+    /// <summary>
+    /// Publishes the agent definition, making it visible to regular users.
+    /// Only allowed from Testing status (not directly from Draft).
+    /// </summary>
+    public void Publish()
+    {
+        if (_status == AgentDefinitionStatus.Draft)
+            throw new InvalidOperationException("Cannot publish directly from Draft. Move to Testing first.");
+
+        _status = AgentDefinitionStatus.Published;
+        _isActive = true;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Status changed to Published"));
+    }
+
+    /// <summary>
+    /// Unpublishes the agent definition, returning it to Draft status.
+    /// </summary>
+    public void Unpublish()
+    {
+        _status = AgentDefinitionStatus.Draft;
+        _isActive = false;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Status changed to Draft"));
+    }
+
+    /// <summary>Records a new invocation, incrementing count and updating timestamp.</summary>
+    public void RecordInvocation()
+    {
+        _invocationCount++;
+        _lastInvokedAt = DateTime.UtcNow;
+        _updatedAt = DateTime.UtcNow;
     }
 }

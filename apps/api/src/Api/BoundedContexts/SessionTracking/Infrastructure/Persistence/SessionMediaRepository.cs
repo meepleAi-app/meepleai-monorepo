@@ -1,6 +1,8 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -9,18 +11,16 @@ namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 /// EF Core implementation of ISessionMediaRepository.
 /// Issue #4760
 /// </summary>
-public class SessionMediaRepository : ISessionMediaRepository
+public class SessionMediaRepository : RepositoryBase, ISessionMediaRepository
 {
-    private readonly MeepleAiDbContext _context;
-
-    public SessionMediaRepository(MeepleAiDbContext context)
+    public SessionMediaRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context;
     }
 
     public async Task<SessionMedia?> GetByIdAsync(Guid mediaId, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.SessionMedia
+        var entity = await DbContext.SessionMedia
             .FirstOrDefaultAsync(m => m.Id == mediaId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -31,7 +31,7 @@ public class SessionMediaRepository : ISessionMediaRepository
         Guid sessionId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.SessionMedia
+        var entities = await DbContext.SessionMedia
             .Where(m => m.SessionId == sessionId)
             .OrderByDescending(m => m.CreatedAt)
             .ToListAsync(cancellationToken)
@@ -44,7 +44,7 @@ public class SessionMediaRepository : ISessionMediaRepository
         Guid snapshotId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.SessionMedia
+        var entities = await DbContext.SessionMedia
             .Where(m => m.SnapshotId == snapshotId)
             .OrderByDescending(m => m.CreatedAt)
             .ToListAsync(cancellationToken)
@@ -55,7 +55,7 @@ public class SessionMediaRepository : ISessionMediaRepository
 
     public async Task<int> GetCountBySessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
-        return await _context.SessionMedia
+        return await DbContext.SessionMedia
             .CountAsync(m => m.SessionId == sessionId, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -63,13 +63,13 @@ public class SessionMediaRepository : ISessionMediaRepository
     public async Task AddAsync(SessionMedia media, CancellationToken cancellationToken = default)
     {
         var entity = SessionMediaMapper.ToEntity(media);
-        await _context.SessionMedia.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.SessionMedia.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(SessionMedia media, CancellationToken cancellationToken = default)
     {
         var entity = SessionMediaMapper.ToEntity(media);
-        var tracked = _context.ChangeTracker.Entries<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity>()
+        var tracked = DbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity>()
             .FirstOrDefault(e => e.Entity.Id == entity.Id);
 
         if (tracked is not null)
@@ -78,7 +78,7 @@ public class SessionMediaRepository : ISessionMediaRepository
         }
         else
         {
-            _context.SessionMedia.Update(entity);
+            DbContext.SessionMedia.Update(entity);
         }
 
         return Task.CompletedTask;
@@ -86,6 +86,6 @@ public class SessionMediaRepository : ISessionMediaRepository
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

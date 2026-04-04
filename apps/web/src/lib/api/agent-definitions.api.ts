@@ -120,6 +120,7 @@ export const agentDefinitionsApi = {
       prompts: current.prompts,
       tools: current.tools,
       kbCardIds: current.kbCardIds,
+      chatLanguage: current.chatLanguage ?? 'auto',
     };
     return this.update(id, updateData);
   },
@@ -145,6 +146,27 @@ export const agentDefinitionsApi = {
   },
 
   /**
+   * Start testing an agent definition (Draft → Testing)
+   */
+  async startTesting(id: string): Promise<void> {
+    await httpClient.post(`${BASE_URL}/${id}/start-testing`, {});
+  },
+
+  /**
+   * Publish an agent definition (Testing → Published)
+   */
+  async publish(id: string): Promise<void> {
+    await httpClient.post(`${BASE_URL}/${id}/publish`, {});
+  },
+
+  /**
+   * Unpublish an agent definition (Published → Draft)
+   */
+  async unpublish(id: string): Promise<void> {
+    await httpClient.post(`${BASE_URL}/${id}/unpublish`, {});
+  },
+
+  /**
    * Clone an agent definition
    * Issue #3713: Agent Catalog actions
    */
@@ -159,6 +181,7 @@ export const agentDefinitionsApi = {
       prompts: source.prompts,
       tools: source.tools,
       kbCardIds: source.kbCardIds,
+      chatLanguage: source.chatLanguage ?? 'auto',
     });
   },
 };

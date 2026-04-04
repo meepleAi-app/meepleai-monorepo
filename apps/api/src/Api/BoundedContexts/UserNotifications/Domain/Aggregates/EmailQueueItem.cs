@@ -30,6 +30,7 @@ internal sealed class EmailQueueItem : AggregateRoot<Guid>
     public DateTime CreatedAt { get; private set; }
     public DateTime? ProcessedAt { get; private set; }
     public DateTime? FailedAt { get; private set; }
+    public Guid? CorrelationId { get; private set; }
 
 #pragma warning disable CS8618
     private EmailQueueItem() : base() { }
@@ -40,7 +41,8 @@ internal sealed class EmailQueueItem : AggregateRoot<Guid>
         Guid userId,
         string to,
         string subject,
-        string htmlBody)
+        string htmlBody,
+        Guid? correlationId = null)
         : base(id)
     {
         UserId = userId;
@@ -55,14 +57,15 @@ internal sealed class EmailQueueItem : AggregateRoot<Guid>
         CreatedAt = DateTime.UtcNow;
         ProcessedAt = null;
         FailedAt = null;
+        CorrelationId = correlationId;
     }
 
     /// <summary>
     /// Factory method to create a new email queue item.
     /// </summary>
-    public static EmailQueueItem Create(Guid userId, string to, string subject, string htmlBody)
+    public static EmailQueueItem Create(Guid userId, string to, string subject, string htmlBody, Guid? correlationId = null)
     {
-        return new EmailQueueItem(Guid.NewGuid(), userId, to, subject, htmlBody);
+        return new EmailQueueItem(Guid.NewGuid(), userId, to, subject, htmlBody, correlationId);
     }
 
     /// <summary>
@@ -133,6 +136,7 @@ internal sealed class EmailQueueItem : AggregateRoot<Guid>
             throw new InvalidOperationException($"Cannot reset email in status '{Status.Value}'");
 
         Status = EmailQueueStatus.Pending;
+        RetryCount = 0;
         NextRetryAt = null;
         ErrorMessage = null;
     }
@@ -154,7 +158,8 @@ internal sealed class EmailQueueItem : AggregateRoot<Guid>
         string? errorMessage,
         DateTime createdAt,
         DateTime? processedAt,
-        DateTime? failedAt)
+        DateTime? failedAt,
+        Guid? correlationId = null)
     {
         var item = new EmailQueueItem(id, userId, to, subject, htmlBody);
         item.Status = status;
@@ -165,6 +170,7 @@ internal sealed class EmailQueueItem : AggregateRoot<Guid>
         item.CreatedAt = createdAt;
         item.ProcessedAt = processedAt;
         item.FailedAt = failedAt;
+        item.CorrelationId = correlationId;
         return item;
     }
 }

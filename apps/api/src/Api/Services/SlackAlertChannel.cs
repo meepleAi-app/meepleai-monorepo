@@ -40,15 +40,16 @@ internal class SlackAlertChannel : IAlertChannel
             return false;
         }
 
-        if (string.IsNullOrEmpty(_config.WebhookUrl))
-        {
-            _logger.LogWarning("Slack webhook URL is not configured");
-            return false;
-        }
-
         try
         {
-            var payload = BuildSlackPayload(alertType, severity, message, metadata);
+            var (resolvedWebhookUrl, resolvedChannel) = ResolveRoute(severity, metadata);
+
+            if (string.IsNullOrEmpty(resolvedWebhookUrl))
+            {
+                _logger.LogWarning("Slack webhook URL is not configured (no default or route match)");
+                return false;
+            }
+            var payload = BuildSlackPayload(alertType, severity, message, metadata, resolvedChannel);
             // CA2000 suppression: HttpClient from IHttpClientFactory MUST NOT be disposed manually.
             // The factory manages HttpMessageHandler pooling and lifetime. See: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
 #pragma warning disable CA2000 // Dispose objects before losing scope - False positive: IHttpClientFactory manages HttpClient lifetime
@@ -56,7 +57,7 @@ internal class SlackAlertChannel : IAlertChannel
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
             var response = await httpClient.PostAsJsonAsync(
-                _config.WebhookUrl,
+                resolvedWebhookUrl,
                 payload,
                 cancellationToken).ConfigureAwait(false);
 
@@ -64,7 +65,7 @@ internal class SlackAlertChannel : IAlertChannel
             {
                 _logger.LogInformation(
                     "Slack alert sent to {Channel} for {AlertType}",
-                    _config.Channel,
+                    resolvedChannel,
                     alertType);
                 return true;
             }
@@ -89,11 +90,44 @@ internal class SlackAlertChannel : IAlertChannel
         }
     }
 
+    private (string WebhookUrl, string Channel) ResolveRoute(
+        string severity, IDictionary<string, object>? metadata)
+    {
+        string? category = null;
+        if (metadata?.TryGetValue("_slack_category", out var categoryValue) == true)
+            category = categoryValue?.ToString();
+
+        // Critical severity always routes to critical channel if configured
+        if (string.Equals(severity, "critical", StringComparison.OrdinalIgnoreCase)
+            && TryGetRoute("critical", out var criticalRoute))
+            return criticalRoute;
+
+        // Category-based routing
+        if (category != null && TryGetRoute(category, out var categoryRoute))
+            return categoryRoute;
+
+        // Default
+        return (_config.WebhookUrl, _config.Channel);
+    }
+
+    private bool TryGetRoute(string key, out (string WebhookUrl, string Channel) route)
+    {
+        route = default;
+        if (_config.ChannelRouting?.TryGetValue(key, out var entry) == true
+            && !string.IsNullOrEmpty(entry.WebhookUrl))
+        {
+            route = (entry.WebhookUrl, entry.Channel);
+            return true;
+        }
+        return false;
+    }
+
     private object BuildSlackPayload(
         string alertType,
         string severity,
         string message,
-        IDictionary<string, object>? metadata)
+        IDictionary<string, object>? metadata,
+        string? channelOverride = null)
     {
         var color = severity.ToUpper(CultureInfo.InvariantCulture) switch
         {
@@ -126,7 +160,7 @@ internal class SlackAlertChannel : IAlertChannel
 
         return new
         {
-            channel = _config.Channel,
+            channel = channelOverride ?? _config.Channel,
             username = "MeepleAI Alerts",
             icon_emoji = emoji,
             attachments = new[]

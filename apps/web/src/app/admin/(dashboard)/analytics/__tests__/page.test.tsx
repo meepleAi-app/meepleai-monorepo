@@ -7,6 +7,9 @@ vi.mock('../AuditLogTab', () => ({ AuditLogTab: () => <div data-testid="audit-ta
 vi.mock('../ReportsTab', () => ({ ReportsTab: () => <div data-testid="reports-tab" /> }));
 vi.mock('../ApiKeysTab', () => ({ ApiKeysTab: () => <div data-testid="api-keys-tab" /> }));
 vi.mock('../NavConfig', () => ({ AdminAnalyticsNavConfig: () => null }));
+vi.mock('@/components/admin/layout/AdminTabPersistence', () => ({
+  AdminTabPersistence: () => null,
+}));
 
 import AdminAnalyticsPage from '../page';
 
@@ -52,9 +55,9 @@ describe('AdminAnalyticsPage', () => {
   it('renders heading and description', async () => {
     const page = await AdminAnalyticsPage({ searchParams: Promise.resolve({}) });
     render(page);
-    expect(screen.getByText('Analytics')).toBeInTheDocument();
+    expect(screen.getByText('Analitiche')).toBeInTheDocument();
     expect(
-      screen.getByText('Usage statistics, AI analytics, audit logs, and reports.')
+      screen.getByText('Statistiche di utilizzo, analitiche AI, log di audit e report.')
     ).toBeInTheDocument();
   });
 });

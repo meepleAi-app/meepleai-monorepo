@@ -19,7 +19,6 @@ import {
   User,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   AlertDialog,
@@ -32,6 +31,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 import type { AttachmentType, SessionAttachmentDto } from './PhotoUploadModal';

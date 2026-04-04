@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Entities;
 
@@ -21,9 +22,9 @@ public class CopyrightDisclaimerTests
 
         document.AcceptCopyrightDisclaimer(userId);
 
-        Assert.NotNull(document.CopyrightDisclaimerAcceptedAt);
-        Assert.Equal(userId, document.CopyrightDisclaimerAcceptedBy);
-        Assert.True(document.HasAcceptedDisclaimer);
+        document.CopyrightDisclaimerAcceptedAt.Should().NotBeNull();
+        document.CopyrightDisclaimerAcceptedBy.Should().Be(userId);
+        document.HasAcceptedDisclaimer.Should().BeTrue();
     }
 
     [Fact]
@@ -31,7 +32,7 @@ public class CopyrightDisclaimerTests
     {
         var document = CreateDocument();
 
-        Assert.Throws<ArgumentException>(() => document.AcceptCopyrightDisclaimer(Guid.Empty));
+        ((Action)(() => document.AcceptCopyrightDisclaimer(Guid.Empty))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -39,24 +40,21 @@ public class CopyrightDisclaimerTests
     {
         var document = CreateDocument();
 
-        Assert.False(document.HasAcceptedDisclaimer);
-        Assert.Null(document.CopyrightDisclaimerAcceptedAt);
-        Assert.Null(document.CopyrightDisclaimerAcceptedBy);
+        document.HasAcceptedDisclaimer.Should().BeFalse();
+        document.CopyrightDisclaimerAcceptedAt.Should().BeNull();
+        document.CopyrightDisclaimerAcceptedBy.Should().BeNull();
     }
 
     [Fact]
-    public void AcceptCopyrightDisclaimer_CalledTwice_UpdatesTimestamp()
+    public void AcceptCopyrightDisclaimer_CalledTwice_ThrowsInvalidOperationException()
     {
+        // Issue #5446: Accepting the disclaimer twice must be rejected (use ConflictException at app layer).
         var document = CreateDocument();
         var userId = Guid.NewGuid();
 
         document.AcceptCopyrightDisclaimer(userId);
-        var firstAcceptedAt = document.CopyrightDisclaimerAcceptedAt;
 
-        document.AcceptCopyrightDisclaimer(userId);
-
-        Assert.True(document.HasAcceptedDisclaimer);
-        Assert.True(document.CopyrightDisclaimerAcceptedAt >= firstAcceptedAt);
+        ((Action)(() => document.AcceptCopyrightDisclaimer(userId))).Should().Throw<InvalidOperationException>();
     }
 
     #endregion
@@ -68,7 +66,7 @@ public class CopyrightDisclaimerTests
     {
         var document = CreateDocument();
 
-        Assert.True(document.IsActiveForRag);
+        document.IsActiveForRag.Should().BeTrue();
     }
 
     [Fact]
@@ -78,7 +76,7 @@ public class CopyrightDisclaimerTests
 
         document.SetActiveForRag(false);
 
-        Assert.False(document.IsActiveForRag);
+        document.IsActiveForRag.Should().BeFalse();
     }
 
     [Fact]
@@ -89,7 +87,7 @@ public class CopyrightDisclaimerTests
 
         document.SetActiveForRag(true);
 
-        Assert.True(document.IsActiveForRag);
+        document.IsActiveForRag.Should().BeTrue();
     }
 
     [Fact]
@@ -101,7 +99,7 @@ public class CopyrightDisclaimerTests
         document.SetActiveForRag(true);
         document.SetActiveForRag(false);
 
-        Assert.False(document.IsActiveForRag);
+        document.IsActiveForRag.Should().BeFalse();
     }
 
     #endregion
@@ -122,7 +120,6 @@ public class CopyrightDisclaimerTests
             fileSize: new FileSize(1024),
             uploadedByUserId: Guid.NewGuid(),
             uploadedAt: DateTime.UtcNow,
-            processingStatus: "pending",
             processedAt: null,
             pageCount: null,
             processingError: null,
@@ -131,10 +128,10 @@ public class CopyrightDisclaimerTests
             copyrightDisclaimerAcceptedBy: acceptedBy,
             isActiveForRag: false);
 
-        Assert.Equal(acceptedAt, document.CopyrightDisclaimerAcceptedAt);
-        Assert.Equal(acceptedBy, document.CopyrightDisclaimerAcceptedBy);
-        Assert.True(document.HasAcceptedDisclaimer);
-        Assert.False(document.IsActiveForRag);
+        document.CopyrightDisclaimerAcceptedAt.Should().Be(acceptedAt);
+        document.CopyrightDisclaimerAcceptedBy.Should().Be(acceptedBy);
+        document.HasAcceptedDisclaimer.Should().BeTrue();
+        document.IsActiveForRag.Should().BeFalse();
     }
 
     [Fact]
@@ -148,14 +145,13 @@ public class CopyrightDisclaimerTests
             fileSize: new FileSize(1024),
             uploadedByUserId: Guid.NewGuid(),
             uploadedAt: DateTime.UtcNow,
-            processingStatus: "pending",
             processedAt: null,
             pageCount: null,
             processingError: null,
             language: LanguageCode.English);
 
-        Assert.False(document.HasAcceptedDisclaimer);
-        Assert.True(document.IsActiveForRag);
+        document.HasAcceptedDisclaimer.Should().BeFalse();
+        document.IsActiveForRag.Should().BeTrue();
     }
 
     #endregion

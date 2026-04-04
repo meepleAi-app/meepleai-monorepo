@@ -1,15 +1,15 @@
 using System.Globalization;
-using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain;
-using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
 using Microsoft.Extensions.Options;
+using RagStrategy = Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagStrategy;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -29,6 +29,7 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
     private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker;
     private readonly IEmergencyOverrideService? _emergencyOverrideService;
     private readonly IOpenRouterRateLimitTracker? _rateLimitTracker;
+    private readonly IUserRegionDetector? _userRegionDetector;
     private readonly ILogger<LlmProviderSelector> _logger;
 
     public LlmProviderSelector(
@@ -41,7 +42,8 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
         IProviderHealthCheckService? healthCheckService = null,
         IFreeModelQuotaTracker? freeModelQuotaTracker = null,
         IEmergencyOverrideService? emergencyOverrideService = null,
-        IOpenRouterRateLimitTracker? rateLimitTracker = null)
+        IOpenRouterRateLimitTracker? rateLimitTracker = null,
+        IUserRegionDetector? userRegionDetector = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -53,6 +55,7 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
         _freeModelQuotaTracker = freeModelQuotaTracker;
         _emergencyOverrideService = emergencyOverrideService;
         _rateLimitTracker = rateLimitTracker;
+        _userRegionDetector = userRegionDetector;
 
         if (_clients.Count == 0)
         {
@@ -68,7 +71,7 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
 
     /// <inheritdoc/>
     public async Task<ProviderSelectionResult> SelectProviderAsync(
-        User? user,
+        LlmUserContext userContext,
         RagStrategy strategy,
         RequestSource source,
         CancellationToken ct = default)
@@ -86,7 +89,7 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
         else
         {
             // Issue #3435: Strategy-based routing
-            decision = _routingStrategy.SelectProvider(user, strategy);
+            decision = _routingStrategy.SelectProvider(userContext, strategy);
 
             // Issue #5476: Emergency override — force all traffic to Ollama
             if (_emergencyOverrideService != null
@@ -151,6 +154,13 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
                 Reason: $"Fallback from {decision.ProviderName} (circuit open or unhealthy)");
         }
 
+        // Issue #27: Attach region hint from request context (populated but not used for routing)
+        var userRegion = _userRegionDetector?.DetectRegion();
+        if (userRegion is not null)
+        {
+            decision = decision with { UserRegion = userRegion };
+        }
+
         return new ProviderSelectionResult(client, decision);
     }
 
@@ -176,7 +186,11 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
                 var decision = new LlmRoutingDecision(
                     ProviderName: fallbackClient.ProviderName,
                     ModelId: modelId,
-                    Reason: $"Fallback from {failedProvider}");
+                    Reason: $"Fallback from {failedProvider}")
+                {
+                    // Issue #27: Preserve region hint across fallback decisions
+                    UserRegion = _userRegionDetector?.DetectRegion()
+                };
                 return new ProviderSelectionResult(fallbackClient, decision);
             }
         }

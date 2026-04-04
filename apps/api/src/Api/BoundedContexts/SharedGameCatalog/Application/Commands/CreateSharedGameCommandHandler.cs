@@ -67,6 +67,23 @@ internal sealed class CreateSharedGameCommandHandler : ICommandHandler<CreateSha
             command.CreatedBy,
             command.BggId);
 
+        // Associate metadata entities
+        if (command.Categories is { Count: > 0 })
+            foreach (var name in command.Categories)
+                sharedGame.AddCategory(name);
+
+        if (command.Mechanics is { Count: > 0 })
+            foreach (var name in command.Mechanics)
+                sharedGame.AddMechanic(name);
+
+        if (command.Designers is { Count: > 0 })
+            foreach (var name in command.Designers)
+                sharedGame.AddDesigner(name);
+
+        if (command.Publishers is { Count: > 0 })
+            foreach (var name in command.Publishers)
+                sharedGame.AddPublisher(name);
+
         await _repository.AddAsync(sharedGame, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

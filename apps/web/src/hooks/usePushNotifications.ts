@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 
 interface UsePushNotificationsResult {
   isSubscribed: boolean;
@@ -45,8 +45,8 @@ export function usePushNotifications(): UsePushNotificationsResult {
 
     if (supported) {
       navigator.serviceWorker.ready
-        .then((registration) => registration.pushManager.getSubscription())
-        .then((subscription) => {
+        .then(registration => registration.pushManager.getSubscription())
+        .then(subscription => {
           setIsSubscribed(subscription !== null);
         })
         .catch(() => {

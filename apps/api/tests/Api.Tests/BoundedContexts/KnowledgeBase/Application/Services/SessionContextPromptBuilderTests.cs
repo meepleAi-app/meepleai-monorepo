@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -23,8 +24,8 @@ public class SessionContextPromptBuilderTests
         var preamble = SessionContextPromptBuilder.BuildSessionPreamble(context);
 
         // Assert
-        Assert.Contains("Catan", preamble);
-        Assert.Contains("Gioco attivo: Catan", preamble);
+        preamble.Should().Contain("Catan");
+        preamble.Should().Contain("Gioco attivo: Catan");
     }
 
     [Fact]
@@ -37,9 +38,9 @@ public class SessionContextPromptBuilderTests
         var preamble = SessionContextPromptBuilder.BuildSessionPreamble(context);
 
         // Assert
-        Assert.Contains("Espansioni attive:", preamble);
-        Assert.Contains("Catan: Seafarers", preamble);
-        Assert.Contains("Catan: Cities & Knights", preamble);
+        preamble.Should().Contain("Espansioni attive:");
+        preamble.Should().Contain("Catan: Seafarers");
+        preamble.Should().Contain("Catan: Cities & Knights");
     }
 
     [Fact]
@@ -52,7 +53,7 @@ public class SessionContextPromptBuilderTests
         var preamble = SessionContextPromptBuilder.BuildSessionPreamble(context);
 
         // Assert
-        Assert.Contains("Fase corrente: Trading", preamble);
+        preamble.Should().Contain("Fase corrente: Trading");
     }
 
     [Fact]
@@ -65,9 +66,9 @@ public class SessionContextPromptBuilderTests
         var preamble = SessionContextPromptBuilder.BuildSessionPreamble(context);
 
         // Assert
-        Assert.Contains("Meccaniche principali:", preamble);
-        Assert.Contains("Dice Rolling", preamble);
-        Assert.Contains("Trading", preamble);
+        preamble.Should().Contain("Meccaniche principali:");
+        preamble.Should().Contain("Dice Rolling");
+        preamble.Should().Contain("Trading");
     }
 
     [Fact]
@@ -80,9 +81,9 @@ public class SessionContextPromptBuilderTests
         var preamble = SessionContextPromptBuilder.BuildSessionPreamble(context);
 
         // Assert
-        Assert.Contains("ATTENZIONE: Non hai dati analizzati per:", preamble);
-        Assert.Contains("Catan: Traders & Barbarians", preamble);
-        Assert.Contains("dichiaralo", preamble);
+        preamble.Should().Contain("ATTENZIONE: Non hai dati analizzati per:");
+        preamble.Should().Contain("Catan: Traders & Barbarians");
+        preamble.Should().Contain("dichiaralo");
     }
 
     [Fact]
@@ -95,7 +96,7 @@ public class SessionContextPromptBuilderTests
         var preamble = SessionContextPromptBuilder.BuildSessionPreamble(context);
 
         // Assert
-        Assert.DoesNotContain("Espansioni attive:", preamble);
+        preamble.Should().NotContain("Espansioni attive:");
     }
 
     [Fact]
@@ -108,7 +109,7 @@ public class SessionContextPromptBuilderTests
         var preamble = SessionContextPromptBuilder.BuildSessionPreamble(context);
 
         // Assert
-        Assert.DoesNotContain("Fase corrente:", preamble);
+        preamble.Should().NotContain("Fase corrente:");
     }
 
     [Fact]
@@ -121,16 +122,17 @@ public class SessionContextPromptBuilderTests
         var preamble = SessionContextPromptBuilder.BuildSessionPreamble(context);
 
         // Assert
-        Assert.Contains("=== CONTESTO SESSIONE DI GIOCO ===", preamble);
-        Assert.Contains("=== FINE CONTESTO SESSIONE ===", preamble);
+        preamble.Should().Contain("=== CONTESTO SESSIONE DI GIOCO ===");
+        preamble.Should().Contain("=== FINE CONTESTO SESSIONE ===");
     }
 
     [Fact]
     public void BuildSessionPreamble_NullContext_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            SessionContextPromptBuilder.BuildSessionPreamble(null!));
+        Action act = () =>
+            SessionContextPromptBuilder.BuildSessionPreamble(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -140,8 +142,8 @@ public class SessionContextPromptBuilderTests
         var message = SessionContextPromptBuilder.GetNoAiDegradationMessage();
 
         // Assert
-        Assert.False(string.IsNullOrWhiteSpace(message));
-        Assert.Contains("Knowledge Base", message);
+        string.IsNullOrWhiteSpace(message).Should().BeFalse();
+        message.Should().Contain("Knowledge Base");
     }
 
     [Fact]
@@ -154,8 +156,8 @@ public class SessionContextPromptBuilderTests
         var preamble = SessionContextPromptBuilder.BuildSessionPreamble(context);
 
         // Assert
-        Assert.Contains("Riassunto regole:", preamble);
-        Assert.Contains("Build settlements", preamble);
+        preamble.Should().Contain("Riassunto regole:");
+        preamble.Should().Contain("Build settlements");
     }
 
     // --- Factory methods ---

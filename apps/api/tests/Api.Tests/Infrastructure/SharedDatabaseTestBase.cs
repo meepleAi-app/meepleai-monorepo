@@ -43,8 +43,10 @@ public abstract class SharedDatabaseTestBase : IAsyncLifetime
 
     // Issue #2577: Global lock for EF Core migrations to prevent race conditions
     // When 34+ test classes run in parallel, concurrent MigrateAsync() calls can cause
-    // "column already exists" errors even with isolated databases
-    private static readonly SemaphoreSlim MigrationLock = new(1, 1);
+    // "column already exists" errors even with isolated databases.
+    // Issue #CI-Optimization: Increased to 4 concurrent migrations to support parallel
+    // collection groups while still preventing metadata conflicts.
+    private static readonly SemaphoreSlim MigrationLock = new(4, 4);
 
     /// <summary>
     /// Database context for test operations.

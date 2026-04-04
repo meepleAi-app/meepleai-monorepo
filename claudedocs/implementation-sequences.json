@@ -10,7 +10,7 @@
         {
           "number": 4070,
           "title": "Epic #3: Navbar Restructuring",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4070",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4070",
           "labels": ["p1-high", "epic"],
           "priority": "high",
           "area": "frontend",
@@ -21,7 +21,7 @@
         {
           "number": 4068,
           "title": "Epic #1: MeepleCard Enhancements",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4068",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4068",
           "labels": ["p1-high", "epic"],
           "priority": "high",
           "area": "frontend",
@@ -32,7 +32,7 @@
         {
           "number": 3919,
           "title": "Frontend: AI Insights Widget Component",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3919",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3919",
           "labels": ["kind/feature", "area/ai", "frontend", "priority: high"],
           "priority": "high",
           "area": "frontend-ai",
@@ -43,7 +43,7 @@
         {
           "number": 3809,
           "title": "Frontend: Agent Builder Form & CRUD",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3809",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3809",
           "labels": ["kind/feature", "area/ai", "priority: high", "area/frontend"],
           "priority": "high",
           "area": "frontend",
@@ -54,7 +54,7 @@
         {
           "number": 3778,
           "title": "[Integration] Unified Multi-Agent Dashboard UI",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3778",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3778",
           "labels": ["area/ai", "frontend", "priority: high"],
           "priority": "high",
           "area": "frontend",
@@ -65,7 +65,7 @@
         {
           "number": 3709,
           "title": "[Epic 3] Agent Builder UI",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3709",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3709",
           "labels": ["kind/feature", "area/ai", "frontend"],
           "priority": "medium",
           "area": "frontend",
@@ -76,7 +76,7 @@
         {
           "number": 3710,
           "title": "[Epic 3] Agent Playground",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3710",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3710",
           "labels": ["kind/feature", "area/ai", "frontend"],
           "priority": "medium",
           "area": "frontend",
@@ -87,7 +87,7 @@
         {
           "number": 3711,
           "title": "[Epic 3] Strategy Editor",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3711",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3711",
           "labels": ["kind/feature", "area/ai", "frontend"],
           "priority": "medium",
           "area": "frontend",
@@ -98,7 +98,7 @@
         {
           "number": 3712,
           "title": "[Epic 3] Visual Pipeline Builder",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3712",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3712",
           "labels": ["kind/feature", "area/ai", "frontend", "complexity: large"],
           "priority": "medium",
           "area": "frontend",
@@ -109,7 +109,7 @@
         {
           "number": 3713,
           "title": "[Epic 3] Agent Catalog & Usage Stats",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3713",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3713",
           "labels": ["kind/feature", "area/ai", "frontend", "backend"],
           "priority": "medium",
           "area": "frontend",
@@ -120,7 +120,7 @@
         {
           "number": 3894,
           "title": "EntityListView - Test Coverage & Polish (Post-Epic Cleanup)",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3894",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3894",
           "labels": [],
           "priority": "low",
           "area": "frontend",
@@ -131,7 +131,7 @@
         {
           "number": 3355,
           "title": "[Editor] Game/Document Version History and Comparison UI",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3355",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3355",
           "labels": ["kind/feature", "area/ui", "frontend", "priority: medium"],
           "priority": "medium",
           "area": "frontend",
@@ -179,7 +179,7 @@
         {
           "number": 4069,
           "title": "Epic #2: Agent System",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4069",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4069",
           "labels": ["epic", "p0-critical"],
           "priority": "critical",
           "area": "backend",
@@ -190,7 +190,7 @@
         {
           "number": 3708,
           "title": "[Epic 3] AgentDefinition Data Model",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3708",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3708",
           "labels": ["kind/feature", "area/db", "area/ai", "backend"],
           "priority": "high",
           "area": "backend",
@@ -201,7 +201,7 @@
         {
           "number": 3776,
           "title": "[Integration] Multi-Agent Orchestration & Routing System",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3776",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3776",
           "labels": ["area/ai", "priority: high", "backend"],
           "priority": "high",
           "area": "backend",
@@ -212,7 +212,7 @@
         {
           "number": 3777,
           "title": "[Integration] Agent Switching Logic & Context Preservation",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3777",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3777",
           "labels": ["area/ai", "priority: high", "backend"],
           "priority": "high",
           "area": "backend",
@@ -223,7 +223,7 @@
         {
           "number": 4071,
           "title": "Epic #4: PDF Status Tracking",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4071",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4071",
           "labels": ["p1-high", "epic"],
           "priority": "high",
           "area": "backend",
@@ -234,7 +234,7 @@
         {
           "number": 4208,
           "title": "[Epic #4] Backend - PDF Processing State Machine & Error Handling",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4208",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4208",
           "labels": ["backend", "p1-high", "size:L"],
           "priority": "high",
           "area": "backend",
@@ -245,7 +245,7 @@
         {
           "number": 4209,
           "title": "[Epic #4] Backend - SSE Progress Stream for Public PDFs",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4209",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4209",
           "labels": ["backend", "p1-high", "size:L"],
           "priority": "high",
           "area": "backend",
@@ -256,7 +256,7 @@
         {
           "number": 4212,
           "title": "[Epic #4] Backend - Processing Duration Metrics & ETA Calculation",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4212",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4212",
           "labels": ["backend", "p1-high", "size:M"],
           "priority": "high",
           "area": "backend",
@@ -267,7 +267,7 @@
         {
           "number": 4210,
           "title": "[Epic #4] Frontend - Real-time Progress UI Components",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4210",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4210",
           "labels": ["frontend", "p1-high", "size:L"],
           "priority": "high",
           "area": "frontend",
@@ -278,7 +278,7 @@
         {
           "number": 4211,
           "title": "[Epic #4] Frontend - SSE Connection Management & Polling Fallback",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4211",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4211",
           "labels": ["frontend", "p1-high", "size:M"],
           "priority": "high",
           "area": "frontend",
@@ -289,7 +289,7 @@
         {
           "number": 4213,
           "title": "[Epic #4] Frontend - Configurable Notifications System",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4213",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4213",
           "labels": ["frontend", "p1-high", "size:L"],
           "priority": "high",
           "area": "frontend",
@@ -300,7 +300,7 @@
         {
           "number": 3769,
           "title": "[Decisore Agent] Strategic Analysis Engine - Game State Evaluation",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3769",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3769",
           "labels": ["area/ai", "priority: high", "backend"],
           "priority": "high",
           "area": "ai",
@@ -311,7 +311,7 @@
         {
           "number": 3770,
           "title": "[Decisore Agent] Move Suggestion Algorithm with Priority Ranking",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3770",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3770",
           "labels": ["area/ai", "priority: high", "backend"],
           "priority": "high",
           "area": "ai",
@@ -322,7 +322,7 @@
         {
           "number": 3772,
           "title": "[Decisore Agent] Game State Parser & Context Assembly",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3772",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3772",
           "labels": ["area/ai", "priority: high", "backend"],
           "priority": "high",
           "area": "ai",
@@ -333,7 +333,7 @@
         {
           "number": 3773,
           "title": "[Decisore Agent] REST API Endpoint - /api/v1/agents/decisore/suggest",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3773",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3773",
           "labels": ["area/ai", "area/api", "priority: high", "backend"],
           "priority": "high",
           "area": "backend",
@@ -344,7 +344,7 @@
         {
           "number": 3774,
           "title": "[Decisore Agent] Performance Tuning - <10s Target for Expert Moves",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3774",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3774",
           "labels": ["area/ai", "priority: high", "backend"],
           "priority": "high",
           "area": "ai",
@@ -355,7 +355,7 @@
         {
           "number": 4124,
           "title": "Backend: AI Insights Runtime Validation (Performance + Accuracy)",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4124",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/4124",
           "labels": [],
           "priority": "medium",
           "area": "backend",
@@ -366,7 +366,7 @@
         {
           "number": 3779,
           "title": "[Integration] E2E Testing Suite - All Agent Workflows",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3779",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3779",
           "labels": ["area/ai", "kind/test", "tests", "priority: high"],
           "priority": "high",
           "area": "testing",
@@ -377,7 +377,7 @@
         {
           "number": 3874,
           "title": "[Arbitro Agent] Performance Benchmark Tests",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3874",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3874",
           "labels": ["area/ai", "backend", "performance", "testing"],
           "priority": "medium",
           "area": "testing",
@@ -388,7 +388,7 @@
         {
           "number": 3368,
           "title": "[Infra] k6 Load Testing Infrastructure",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3368",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3368",
           "labels": ["area/infra", "kind/test", "priority: medium"],
           "priority": "medium",
           "area": "infra",
@@ -399,7 +399,7 @@
         {
           "number": 3367,
           "title": "[Infra] Log Aggregation System (Beyond Structured Logs)",
-          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3367",
+          "url": "https://github.com/meepleAi-app/meepleai-monorepo/issues/3367",
           "labels": ["area/infra", "kind/feature", "area/ops", "priority: medium"],
           "priority": "medium",
           "area": "infra",

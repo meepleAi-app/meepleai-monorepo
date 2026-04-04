@@ -33,7 +33,6 @@ internal class ConfigurationHealthCheck : IHealthCheck
         // Core Infrastructure
         ValidateDatabaseConfiguration(errors, warnings, data);
         ValidateRedisConfiguration(errors, warnings, data);
-        ValidateQdrantConfiguration(errors, warnings, data);
 
         // AI Services
         ValidateEmbeddingConfiguration(errors, warnings, data);
@@ -141,31 +140,6 @@ internal class ConfigurationHealthCheck : IHealthCheck
         }
     }
 
-    private void ValidateQdrantConfiguration(List<string> errors, List<string> warnings, Dictionary<string, object> data)
-    {
-        var qdrantUrl = _configuration["QDRANT_URL"];
-        var collectionName = _configuration["Qdrant:CollectionName"] ?? "meepleai_documents";
-
-        if (string.IsNullOrEmpty(qdrantUrl))
-        {
-            if (_environment.IsProduction())
-            {
-                errors.Add("Qdrant URL not configured (required in production)");
-            }
-            else
-            {
-                warnings.Add("Qdrant URL not configured, using default http://localhost:6333");
-            }
-            data["qdrant_configured"] = false;
-        }
-        else
-        {
-            data["qdrant_configured"] = true;
-            data["qdrant_url"] = MaskSensitiveUrl(qdrantUrl);
-        }
-
-        data["qdrant_collection"] = collectionName;
-    }
 
     private void ValidateEmbeddingConfiguration(List<string> errors, List<string> warnings, Dictionary<string, object> data)
     {
@@ -288,7 +262,7 @@ internal class ConfigurationHealthCheck : IHealthCheck
         {
             ["postgres-password"] = new[] { "/run/secrets/postgres-password", "POSTGRES_PASSWORD" },
             ["redis-password"] = new[] { "/run/secrets/redis-password", "REDIS_PASSWORD" },
-            ["jwt-secret"] = new[] { "/run/secrets/jwt-secret", "JWT_SECRET", "Jwt:Secret" }
+            ["jwt-secret"] = new[] { "/run/secrets/jwt-secret", "JWT_SECRET_KEY", "JWT_SECRET", "Jwt:Secret" }
         };
 
         foreach (var (secretName, sources) in requiredSecrets)

@@ -1,4 +1,5 @@
 using Api.Observability;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -32,14 +33,14 @@ public class TwoFactorMetricsTests
     public void AllTwoFactorMetrics_ShouldBeInitialized()
     {
         // Assert - All metrics should be non-null static readonly fields
-        Assert.NotNull(MeepleAiMetrics.TwoFactorFailedTotpAttempts);
-        Assert.NotNull(MeepleAiMetrics.TwoFactorFailedBackupAttempts);
-        Assert.NotNull(MeepleAiMetrics.TwoFactorReplayAttacksBlocked);
-        Assert.NotNull(MeepleAiMetrics.TwoFactorSuccessfulTotpVerifications);
-        Assert.NotNull(MeepleAiMetrics.TwoFactorSuccessfulBackupCodeUses);
-        Assert.NotNull(MeepleAiMetrics.TwoFactorSetupTotal);
-        Assert.NotNull(MeepleAiMetrics.TwoFactorEnableTotal);
-        Assert.NotNull(MeepleAiMetrics.TwoFactorDisableTotal);
+        MeepleAiMetrics.TwoFactorFailedTotpAttempts.Should().NotBeNull();
+        MeepleAiMetrics.TwoFactorFailedBackupAttempts.Should().NotBeNull();
+        MeepleAiMetrics.TwoFactorReplayAttacksBlocked.Should().NotBeNull();
+        MeepleAiMetrics.TwoFactorSuccessfulTotpVerifications.Should().NotBeNull();
+        MeepleAiMetrics.TwoFactorSuccessfulBackupCodeUses.Should().NotBeNull();
+        MeepleAiMetrics.TwoFactorSetupTotal.Should().NotBeNull();
+        MeepleAiMetrics.TwoFactorEnableTotal.Should().NotBeNull();
+        MeepleAiMetrics.TwoFactorDisableTotal.Should().NotBeNull();
     }
 
     /// <summary>
@@ -57,7 +58,7 @@ public class TwoFactorMetricsTests
         );
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     /// <summary>
@@ -75,7 +76,7 @@ public class TwoFactorMetricsTests
         );
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     /// <summary>
@@ -93,7 +94,7 @@ public class TwoFactorMetricsTests
         );
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     /// <summary>
@@ -111,7 +112,7 @@ public class TwoFactorMetricsTests
         );
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     /// <summary>
@@ -129,7 +130,7 @@ public class TwoFactorMetricsTests
         );
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     /// <summary>
@@ -147,7 +148,7 @@ public class TwoFactorMetricsTests
         );
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     /// <summary>
@@ -165,7 +166,7 @@ public class TwoFactorMetricsTests
         );
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     /// <summary>
@@ -183,7 +184,7 @@ public class TwoFactorMetricsTests
         );
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     /// <summary>
@@ -198,8 +199,8 @@ public class TwoFactorMetricsTests
         var ex2 = Record.Exception(() =>
             MeepleAiMetrics.Record2FALifecycle("setup", userId: null));
 
-        Assert.Null(ex1);
-        Assert.Null(ex2);
+        ex1.Should().BeNull();
+        ex2.Should().BeNull();
     }
 
     /// <summary>
@@ -220,7 +221,7 @@ public class TwoFactorMetricsTests
             .ToList();
 
         // Assert - All 2FA metrics should follow naming convention
-        Assert.NotEmpty(counterFields);
-        Assert.True(counterFields.Count == 8, $"Expected 8 2FA metrics, found {counterFields.Count}");
+        counterFields.Should().NotBeEmpty();
+        (counterFields.Count == 8).Should().BeTrue($"Expected 8 2FA metrics, found {counterFields.Count}");
     }
 }

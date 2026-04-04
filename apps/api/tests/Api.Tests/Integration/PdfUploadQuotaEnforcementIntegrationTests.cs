@@ -39,7 +39,7 @@ namespace Api.Tests.Integration;
 /// conflicts between tests. Redis state persists within a single container lifecycle,
 /// so parallel execution could cause unpredictable quota counts.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
 public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
@@ -69,15 +69,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         // Use SharedTestcontainersFixture Redis (no separate container needed!)
         var redisConnectionString = _fixture.RedisConnectionString;
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Register Redis
         _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
@@ -91,14 +83,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Register domain event infrastructure
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-        // Register MediatR
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
 
         // Register configuration service mock
         var configServiceMock = new Mock<IConfigurationService>();

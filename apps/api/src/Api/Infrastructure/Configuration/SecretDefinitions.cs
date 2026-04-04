@@ -64,11 +64,6 @@ internal static class SecretDefinitions
             "REDIS_PASSWORD"
         ),
 
-        ["qdrant"] = new(
-            SecretLevel.Optional, // Qdrant replaced by pgvector — secret no longer required
-            "QDRANT_API_KEY"
-        ),
-
         ["jwt"] = new(
             SecretLevel.Critical,
             "JWT_SECRET_KEY",
@@ -80,7 +75,9 @@ internal static class SecretDefinitions
             SecretLevel.Critical,
             "ADMIN_EMAIL",
             "ADMIN_PASSWORD",
-            "ADMIN_DISPLAY_NAME"
+            "ADMIN_DISPLAY_NAME",
+            "INITIAL_ADMIN_EMAIL",
+            "INITIAL_ADMIN_DISPLAY_NAME"
         ),
 
         ["embedding-service"] = new(
@@ -164,6 +161,11 @@ internal static class SecretDefinitions
             SecretLevel.Optional,
             "N8N_ENCRYPTION_KEY",
             "N8N_BASIC_AUTH_PASSWORD"
+        ),
+
+        ["mediatr"] = new(
+            SecretLevel.Optional,
+            "MEDIATR_LICENSE_KEY"
         )
     };
 

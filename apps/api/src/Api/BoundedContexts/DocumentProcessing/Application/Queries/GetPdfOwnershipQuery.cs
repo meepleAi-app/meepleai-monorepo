@@ -19,5 +19,5 @@ internal record PdfOwnershipResult(
     Guid Id,
     Guid UploadedByUserId,
     Guid GameId,
-    string ProcessingStatus
+    string ProcessingState
 );

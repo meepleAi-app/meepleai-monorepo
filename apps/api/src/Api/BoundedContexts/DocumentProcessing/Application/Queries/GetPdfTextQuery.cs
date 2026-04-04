@@ -18,7 +18,7 @@ internal record PdfTextResult(
     Guid Id,
     string FileName,
     string? ExtractedText,
-    string ProcessingStatus,
+    string ProcessingState,
     DateTime? ProcessedAt,
     int? PageCount,
     int? CharacterCount,

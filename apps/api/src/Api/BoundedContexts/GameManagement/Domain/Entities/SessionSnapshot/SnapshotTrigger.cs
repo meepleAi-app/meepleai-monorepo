@@ -27,5 +27,8 @@ internal enum SnapshotTrigger
     SessionPaused = 6,
 
     /// <summary>Automatic snapshot created before restoring a previous snapshot.</summary>
-    PreRestore = 7
+    PreRestore = 7,
+
+    /// <summary>Automatic snapshot triggered by the auto-save background service.</summary>
+    AutoSave = 8
 }

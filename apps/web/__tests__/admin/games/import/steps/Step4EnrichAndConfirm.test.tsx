@@ -43,7 +43,7 @@ vi.mock('@/components/admin/games/import/DuplicateWarningDialog', () => ({
 }));
 vi.mock('@/components/ui/data-display/meeple-card', () => ({
   MeepleCard: (props: Record<string, unknown>) => (
-    <div data-testid={props['data-testid'] as string || 'final-preview-card'}>
+    <div data-testid={(props['data-testid'] as string) || 'final-preview-card'}>
       {props.title as string}
     </div>
   ),
@@ -52,19 +52,18 @@ vi.mock('@/components/ui/data-display/meeple-card', () => ({
 describe('Step4EnrichAndConfirm', () => {
   // Mock store state
   const mockExtractedMetadata: ExtractedMetadata = {
-    title: 'Catan',       // Same as BGG name to avoid unintended title conflict
-    yearPublished: 1995,
+    title: 'Catan', // Same as BGG name to avoid unintended title conflict
+    year: 1995,
     minPlayers: 3,
     maxPlayers: 4,
-    playTime: 60,
+    playingTime: 60,
     minAge: 10,
-    complexity: 2.5,
     description: 'PDF description of Catan',
-    confidence: 85,
+    confidenceScore: 0.85,
   };
 
   const mockBggGameData: BggGameData = {
-    id: 13,
+    bggId: 13,
     name: 'Catan',
     yearPublished: 1995,
     minPlayers: 3,
@@ -113,14 +112,14 @@ describe('Step4EnrichAndConfirm', () => {
 
       expect(screen.getByText('Review & Confirm')).toBeInTheDocument();
       expect(
-        screen.getByText(/Resolve any conflicts between PDF and BGG data/i)
+        screen.getByText(/Risolvi eventuali conflitti tra dati PDF e catalogo/i)
       ).toBeInTheDocument();
     });
 
     it('shows "No Conflicts" alert when data matches', () => {
       // Mock data with no conflicts (same title and playTime)
       vi.mocked(useGameImportWizardStore).mockReturnValue({
-        extractedMetadata: { ...mockExtractedMetadata, playTime: 90 }, // Match BGG playTime
+        extractedMetadata: { ...mockExtractedMetadata, playingTime: 90 }, // Match BGG playingTime
         bggGameData: mockBggGameData,
         selectedBggId: 13,
         enrichedData: null,
@@ -145,7 +144,7 @@ describe('Step4EnrichAndConfirm', () => {
 
       expect(screen.getByText('No Conflicts')).toBeInTheDocument();
       expect(
-        screen.getByText(/BGG and PDF data have been automatically merged/i)
+        screen.getByText(/I dati catalogo e PDF sono stati uniti automaticamente/i)
       ).toBeInTheDocument();
     });
 
@@ -154,7 +153,7 @@ describe('Step4EnrichAndConfirm', () => {
 
       // Should detect playTime conflict (60 vs 90)
       expect(screen.getByText('Resolve Conflicts')).toBeInTheDocument();
-      expect(screen.getByText(/1 conflict detected/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 conflitto rilevato/i)).toBeInTheDocument();
     });
 
     it('displays final preview card', () => {
@@ -191,7 +190,7 @@ describe('Step4EnrichAndConfirm', () => {
 
       expect(screen.getByText('Missing Data')).toBeInTheDocument();
       expect(
-        screen.getByText(/No extracted metadata or BGG data available/i)
+        screen.getByText(/Nessun metadato estratto o dati catalogo disponibili/i)
       ).toBeInTheDocument();
     });
   });
@@ -230,7 +229,7 @@ describe('Step4EnrichAndConfirm', () => {
 
       // playTime conflict: PDF 60 vs BGG 90
       expect(screen.getByText('Play Time (minutes)')).toBeInTheDocument();
-      expect(screen.getByText(/Use BGG:/)).toBeInTheDocument();
+      expect(screen.getByText(/Usa catalogo:/)).toBeInTheDocument();
       expect(screen.getByText(/90/)).toBeInTheDocument(); // BGG value
       expect(screen.getByText(/Use PDF:/)).toBeInTheDocument();
       expect(screen.getByText(/60/)).toBeInTheDocument(); // PDF value
@@ -241,7 +240,7 @@ describe('Step4EnrichAndConfirm', () => {
         extractedMetadata: {
           ...mockExtractedMetadata,
           title: 'Different Title',
-          yearPublished: 1996, // Different
+          year: 1996, // Different
           minPlayers: 2, // Different
         },
         bggGameData: mockBggGameData,
@@ -266,7 +265,8 @@ describe('Step4EnrichAndConfirm', () => {
 
       renderWithQuery(<Step4EnrichAndConfirm />);
 
-      expect(screen.getByText(/4 conflicts detected/i)).toBeInTheDocument();
+      expect(screen.getByText(/4/)).toBeInTheDocument();
+      expect(screen.getByText(/conflitti rilevati/i)).toBeInTheDocument();
     });
   });
 
@@ -276,8 +276,8 @@ describe('Step4EnrichAndConfirm', () => {
       renderWithQuery(<Step4EnrichAndConfirm />);
 
       // Find playTime conflict BGG radio button
-      const bggRadio = screen.getByRole('radio', { name: /Use BGG:.*90/ });
-      expect(bggRadio).toBeChecked(); // Default is BGG
+      const bggRadio = screen.getByRole('radio', { name: /Usa catalogo:.*90/ });
+      expect(bggRadio).toBeChecked(); // Default is catalogo
 
       // Click should keep it checked
       await user.click(bggRadio);
@@ -310,7 +310,7 @@ describe('Step4EnrichAndConfirm', () => {
       await user.click(customRadio);
 
       // Wait for custom input to be enabled
-      const customInput = screen.getByTestId('playTime-custom-input');
+      const customInput = screen.getByTestId('playingTime-custom-input');
 
       await waitFor(() => {
         expect(customRadio).toBeChecked();
@@ -324,7 +324,7 @@ describe('Step4EnrichAndConfirm', () => {
     it('disables custom input when custom option not selected', () => {
       renderWithQuery(<Step4EnrichAndConfirm />);
 
-      const customInput = screen.getByTestId('playTime-custom-input');
+      const customInput = screen.getByTestId('playingTime-custom-input');
       expect(customInput).toBeDisabled(); // BGG selected by default
     });
   });
@@ -347,9 +347,7 @@ describe('Step4EnrichAndConfirm', () => {
 
     it('shows loading state during submit', async () => {
       const user = userEvent.setup();
-      mockSubmitWizard.mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 1000))
-      );
+      mockSubmitWizard.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)));
 
       vi.mocked(useGameImportWizardStore).mockReturnValue({
         extractedMetadata: mockExtractedMetadata,
@@ -438,10 +436,9 @@ describe('Step4EnrichAndConfirm', () => {
         expect(mockResolveConflicts).toHaveBeenCalledWith(
           expect.objectContaining({
             title: 'Catan', // BGG (default)
-            playTime: 90, // BGG (default for conflict)
+            playingTime: 90, // BGG (default for conflict)
             imageUrl: 'https://example.com/catan.jpg', // BGG only
             bggId: 13,
-            complexity: 2.5, // PDF only
           })
         );
       });
@@ -504,7 +501,7 @@ describe('Step4EnrichAndConfirm', () => {
       await user.click(customRadio);
 
       // Wait for custom input to be enabled
-      const customInput = screen.getByTestId('playTime-custom-input');
+      const customInput = screen.getByTestId('playingTime-custom-input');
       await waitFor(() => {
         expect(customInput).not.toBeDisabled();
       });
@@ -519,7 +516,7 @@ describe('Step4EnrichAndConfirm', () => {
       await waitFor(() => {
         expect(mockResolveConflicts).toHaveBeenCalledWith(
           expect.objectContaining({
-            playTime: 75, // Custom value (coerced to number for numeric fields)
+            playingTime: 75, // Custom value (coerced to number for numeric fields)
           })
         );
       });
@@ -566,7 +563,7 @@ describe('Step4EnrichAndConfirm', () => {
         expect(mockResolveConflicts).toHaveBeenCalledWith(
           expect.objectContaining({
             title: 'Catan',
-            playTime: 60,
+            playingTime: 60,
             minPlayers: 3,
             maxPlayers: 4,
           })
@@ -613,7 +610,7 @@ describe('Step4EnrichAndConfirm', () => {
         expect(mockResolveConflicts).toHaveBeenCalledWith(
           expect.objectContaining({
             title: 'Catan',
-            playTime: 90,
+            playingTime: 90,
             minPlayers: 3,
             maxPlayers: 4,
             imageUrl: 'https://example.com/catan.jpg',

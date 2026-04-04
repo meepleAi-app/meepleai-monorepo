@@ -5,6 +5,7 @@ using Api.Observability;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -53,8 +54,8 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Equal(expectedResponse.answer, response.answer);
-        Assert.Empty(response.snippets);
+        response.answer.Should().Be(expectedResponse.answer);
+        response.snippets.Should().BeEmpty();
     }
 
     [Fact]
@@ -81,7 +82,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Equal(expectedResponse.answer, response.answer);
+        response.answer.Should().Be(expectedResponse.answer);
     }
 
     [Fact]
@@ -108,7 +109,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Contains(expectedResponse.answer, response.answer);
+        response.answer.Should().Contain(expectedResponse.answer);
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Contains(expectedResponse.answer, response.answer);
+        response.answer.Should().Contain(expectedResponse.answer);
     }
 
     [Fact]
@@ -162,7 +163,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Equal(expectedResponse.answer, response.answer);
+        response.answer.Should().Be(expectedResponse.answer);
     }
 
     [Fact]
@@ -197,7 +198,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Contains(expectedResponse.script, response.script);
+        response.script.Should().Contain(expectedResponse.script);
     }
 
     [Fact]
@@ -259,8 +260,8 @@ public class RagExceptionHandlerTests
         // Assert
         if (activity != null)
         {
-            Assert.Equal(ActivityStatusCode.Error, activity.Status);
-            Assert.Contains("Test error", activity.StatusDescription ?? "");
+            activity.Status.Should().Be(ActivityStatusCode.Error);
+            (activity.StatusDescription ?? "" ?? "").Should().Contain("Test error");
         }
     }
 
@@ -319,7 +320,7 @@ public class RagExceptionHandlerTests
             errorResponseFactory);
 
         // Assert
-        Assert.True(logActionCalled);
+        logActionCalled.Should().BeTrue();
     }
 
     [Fact]
@@ -332,7 +333,7 @@ public class RagExceptionHandlerTests
         var logAction = RagExceptionHandler.GetLogAction("HttpRequestException", "RAG query", _testGameId);
 
         // Assert
-        Assert.NotNull(logAction);
+        logAction.Should().NotBeNull();
         // Verify it doesn't throw
         logAction(_mockLogger.Object, exception);
     }
@@ -347,7 +348,7 @@ public class RagExceptionHandlerTests
         var logAction = RagExceptionHandler.GetLogAction("TaskCanceledException", "RAG query", _testGameId);
 
         // Assert
-        Assert.NotNull(logAction);
+        logAction.Should().NotBeNull();
         logAction(_mockLogger.Object, exception);
     }
 
@@ -361,7 +362,7 @@ public class RagExceptionHandlerTests
         var logAction = RagExceptionHandler.GetLogAction("InvalidOperationException", "RAG query", _testGameId);
 
         // Assert
-        Assert.NotNull(logAction);
+        logAction.Should().NotBeNull();
         logAction(_mockLogger.Object, exception);
     }
 
@@ -375,7 +376,7 @@ public class RagExceptionHandlerTests
         var logAction = RagExceptionHandler.GetLogAction("DbUpdateException", "RAG query", _testGameId);
 
         // Assert
-        Assert.NotNull(logAction);
+        logAction.Should().NotBeNull();
         logAction(_mockLogger.Object, exception);
     }
 
@@ -389,7 +390,7 @@ public class RagExceptionHandlerTests
         var logAction = RagExceptionHandler.GetLogAction("ArgumentException", "RAG query", _testGameId);
 
         // Assert
-        Assert.NotNull(logAction);
+        logAction.Should().NotBeNull();
         logAction(_mockLogger.Object, exception);
     }
 
@@ -417,7 +418,7 @@ public class RagExceptionHandlerTests
             errorFactories);
 
         // Assert
-        Assert.Equal(expectedResponse.answer, response.answer);
+        response.answer.Should().Be(expectedResponse.answer);
     }
 
     // Issue #1444: Tests for HandleServiceException method
@@ -437,8 +438,8 @@ public class RagExceptionHandlerTests
             failureFactory);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Network error", result.ErrorMessage ?? "");
+        result.Success.Should().BeFalse();
+        (result.ErrorMessage ?? "" ?? "").Should().Contain("Network error");
     }
 
     [Fact]
@@ -456,8 +457,8 @@ public class RagExceptionHandlerTests
             failureFactory);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("timed out", result.ErrorMessage ?? "");
+        result.Success.Should().BeFalse();
+        (result.ErrorMessage ?? "" ?? "").Should().Contain("timed out");
     }
 
     [Fact]
@@ -479,8 +480,8 @@ public class RagExceptionHandlerTests
         // Assert
         if (activity != null)
         {
-            Assert.Equal(ActivityStatusCode.Error, activity.Status);
-            Assert.Contains("Configuration error", activity.StatusDescription ?? "");
+            activity.Status.Should().Be(ActivityStatusCode.Error);
+            (activity.StatusDescription ?? "" ?? "").Should().Contain("Configuration error");
         }
     }
 
@@ -500,8 +501,8 @@ public class RagExceptionHandlerTests
             useUserFriendlyMessage: false);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("validation failed", result.ErrorMessage ?? "");
+        result.Success.Should().BeFalse();
+        (result.ErrorMessage ?? "" ?? "").Should().Contain("validation failed");
     }
 
     [Fact]
@@ -538,13 +539,13 @@ public class RagExceptionHandlerTests
         var exception = new InvalidOperationException("Test error");
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            RagExceptionHandler.LogAndRethrow(
+        var act = () => RagExceptionHandler.LogAndRethrow(
                 exception,
                 _mockLogger.Object,
-                "test operation"));
+                "test operation");
+        var ex = act.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Equal(exception, ex);
+        ex.Should().Be(exception);
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Error,
@@ -563,14 +564,14 @@ public class RagExceptionHandlerTests
         var additionalContext = new object[] { "gameId", "123", "query", "test" };
 
         // Act & Assert
-        var ex = Assert.Throws<HttpRequestException>(() =>
-            RagExceptionHandler.LogAndRethrow(
+        var act = () => RagExceptionHandler.LogAndRethrow(
                 exception,
                 _mockLogger.Object,
                 "search operation",
-                additionalContext));
+                additionalContext);
+        var ex = act.Should().Throw<HttpRequestException>().Which;
 
-        Assert.Equal(exception, ex);
+        ex.Should().Be(exception);
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Error,
@@ -593,8 +594,8 @@ public class RagExceptionHandlerTests
         var message = RagExceptionHandler.GetUserFriendlyMessage(exception, "Default message");
 
         // Assert
-        Assert.Contains("timed out", message);
-        Assert.Contains("try again", message);
+        message.Should().Contain("timed out");
+        message.Should().Contain("try again");
     }
 
     [Fact]
@@ -607,7 +608,7 @@ public class RagExceptionHandlerTests
         var message = RagExceptionHandler.GetUserFriendlyMessage(exception, "Default message");
 
         // Assert
-        Assert.Contains("timed out", message);
+        message.Should().Contain("timed out");
     }
 
     [Fact]
@@ -620,8 +621,8 @@ public class RagExceptionHandlerTests
         var message = RagExceptionHandler.GetUserFriendlyMessage(exception, "Default message");
 
         // Assert
-        Assert.Contains("Network error", message);
-        Assert.Contains("502", message);
+        message.Should().Contain("Network error");
+        message.Should().Contain("502");
     }
 
     [Fact]
@@ -635,7 +636,7 @@ public class RagExceptionHandlerTests
         var message = RagExceptionHandler.GetUserFriendlyMessage(exception, defaultMessage);
 
         // Assert
-        Assert.Equal(defaultMessage, message);
+        message.Should().Be(defaultMessage);
     }
 
     [Fact]
@@ -648,8 +649,8 @@ public class RagExceptionHandlerTests
         var message = RagExceptionHandler.GetUserFriendlyMessage(exception, "Default message");
 
         // Assert
-        Assert.Contains("Configuration error", message);
-        Assert.Contains("contact support", message);
+        message.Should().Contain("Configuration error");
+        message.Should().Contain("contact support");
     }
 
     [Fact]
@@ -662,7 +663,7 @@ public class RagExceptionHandlerTests
         var message = RagExceptionHandler.GetUserFriendlyMessage(exception, "Default message");
 
         // Assert
-        Assert.Contains("Invalid request parameters", message);
+        message.Should().Contain("Invalid request parameters");
     }
 
     // Helper class for testing Result pattern

@@ -33,8 +33,6 @@ pnpm test:coverage
 # Accessibility tests only
 pnpm test:a11y
 
-# Fallback to Jest (if needed)
-pnpm test:jest
 ```
 
 ## Configuration Files
@@ -224,16 +222,13 @@ bash scripts/migrate-jest-to-vitest.sh
 bash scripts/fix-vitest-imports.sh
 ```
 
-## Dual System (Temporary)
+## Migration Complete
 
-During migration, both Jest and Vitest are available:
+Jest has been fully removed. Vitest is the sole test runner:
 
 ```bash
-pnpm test        # Vitest (default)
-pnpm test:jest   # Jest (fallback)
+pnpm test        # Vitest (all unit/integration tests)
 ```
-
-**Removal Plan**: Delete Jest after 100% Vitest validation (Phase 5, deferred).
 
 ## Coverage Configuration
 

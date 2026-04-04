@@ -126,10 +126,10 @@ else {
 # Step 2: Start Infrastructure Services
 Write-Header "🏗️  Starting Infrastructure Services"
 
-Write-Step "Starting PostgreSQL, Redis, Qdrant..."
+Write-Step "Starting PostgreSQL, Redis..."
 
 try {
-    docker compose --profile $Profile up -d postgres redis qdrant 2>&1 | Out-Null
+    docker compose --profile $Profile up -d postgres redis 2>&1 | Out-Null
     Write-Success "Infrastructure services started"
 }
 catch {
@@ -147,7 +147,7 @@ if ($WaitForHealthy) {
 
     while ($waited -lt $maxWait) {
         $status = docker compose ps --format json | ConvertFrom-Json
-        $infraServices = $status | Where-Object { $_.Service -in @('postgres', 'redis', 'qdrant') }
+        $infraServices = $status | Where-Object { $_.Service -in @('postgres', 'redis') }
         $allHealthy = $infraServices | Where-Object { $_.Health -ne 'healthy' } | Measure-Object | Select-Object -ExpandProperty Count
 
         if ($allHealthy -eq 0) {

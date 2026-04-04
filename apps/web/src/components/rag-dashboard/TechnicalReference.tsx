@@ -89,10 +89,10 @@ const INFRASTRUCTURE_SERVICES: InfraService[] = [
     color: 'hsl(221 83% 53%)',
   },
   {
-    name: 'Qdrant Vector DB',
-    container: 'meepleai-qdrant',
-    port: '6333/6334',
-    description: 'Vector database per semantic search con HNSW',
+    name: 'pgvector (PostgreSQL)',
+    container: 'meepleai-postgres',
+    port: '5432',
+    description: 'Vector database per semantic search con pgvector HNSW',
     icon: <Search className="h-5 w-5" />,
     color: 'hsl(262 83% 62%)',
   },
@@ -224,10 +224,10 @@ Range valori: -1 a 1 (per vettori normalizzati: 0 a 1)
   0.0  = vettori ortogonali (nessuna relazione)
   -1.0 = vettori opposti
 
-Configurazione Qdrant:
-  VectorDimensions = 3072  // text-embedding-3-large
-  DistanceMetric = Cosine
-  HNSW: M=16, EfConstruct=200`,
+Configurazione pgvector:
+  VectorDimensions = 768  // e5-base
+  DistanceMetric = Cosine (<=>)
+  HNSW: m=16, ef_construction=200`,
   },
   tsvector: {
     title: 'PostgreSQL tsvector',

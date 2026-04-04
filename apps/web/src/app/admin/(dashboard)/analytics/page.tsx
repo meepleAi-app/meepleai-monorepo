@@ -17,7 +17,6 @@ import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersisten
 import { AiUsageTab } from './AiUsageTab';
 import { ApiKeysTab } from './ApiKeysTab';
 import { AuditLogTab } from './AuditLogTab';
-import { AdminAnalyticsNavConfig } from './NavConfig';
 import { OverviewTab } from './OverviewTab';
 import { ReportsTab } from './ReportsTab';
 
@@ -96,13 +95,12 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
 
   return (
     <div className="space-y-5">
-      <AdminAnalyticsNavConfig />
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Analytics
+          Analitiche
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Usage statistics, AI analytics, audit logs, and reports.
+          Statistiche di utilizzo, analitiche AI, log di audit e report.
         </p>
       </div>
 

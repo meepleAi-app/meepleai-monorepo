@@ -27,7 +27,7 @@ Object.assign(navigator, {
 });
 
 // Import after mocking
-import { LayerDeepDocs } from '../LayerDeepDocs';
+import { LayerDeepDocs } from '../reference/LayerDeepDocs';
 
 describe('LayerDeepDocs', () => {
   beforeEach(() => {
@@ -238,9 +238,7 @@ describe('LayerDeepDocs', () => {
     it('should have copy button', () => {
       render(<LayerDeepDocs />);
 
-      const copyButtons = screen.getAllByRole('button').filter(
-        btn => btn.querySelector('svg')
-      );
+      const copyButtons = screen.getAllByRole('button').filter(btn => btn.querySelector('svg'));
       expect(copyButtons.length).toBeGreaterThan(0);
     });
 

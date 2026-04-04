@@ -36,7 +36,6 @@ log:
   level: INFO  # DEBUG, INFO, WARN, ERROR
   filePath: "/var/log/traefik/traefik.log"
   format: json  # json or common
-  # PRODUCTION: Send logs to HyperDX or similar
   # maxSize: 100  # MB
   # maxBackups: 3
   # maxAge: 28  # days

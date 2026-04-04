@@ -68,7 +68,7 @@ Sostituire la dashboard attuale (`/dashboard`) con una nuova **Gaming Hub Dashbo
 ### Phase 2: Frontend Components
 **Goal**: Nuovi component dashboard modulari
 
-- [ ] **Issue #TBD-6**: Create `components/dashboard-v2/` structure
+- [ ] **Issue #TBD-6**: Create `components/dashboard/` structure
   - `quick-stats.tsx` - 4 stat cards
   - `stat-card.tsx` - Reusable stat card component
   - `recent-sessions.tsx` - Sessions list

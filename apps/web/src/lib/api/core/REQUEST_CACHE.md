@@ -379,7 +379,7 @@ Request → Generate Cache Key → Check Cache
 
 ## References
 
-- **Issue**: [#1454](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1454)
+- **Issue**: [#1454](https://github.com/meepleAi-app/meepleai-monorepo/issues/1454)
 - **PR**: TBD
 - **Acceptance Criteria**: ✅ All met
 

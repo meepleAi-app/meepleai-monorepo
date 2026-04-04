@@ -36,7 +36,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   MessageCircle,
   Settings,
@@ -45,6 +45,7 @@ import {
   Trash2,
   Bot,
   Heart,
+  HeartHandshake,
   Gamepad2,
   Trophy,
 } from 'lucide-react';
@@ -61,14 +62,20 @@ import type {
   GameBackData,
   GameBackActions,
 } from '@/components/ui/data-display/meeple-card-features/GameBackContent';
+import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
 import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
+import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
+import { buildLinkedEntities } from '@/lib/card-mappers';
+import { useViewTransition } from '@/lib/domain-hooks/useViewTransition';
 
 import { AgentDrawerSheet } from './AgentDrawerSheet';
 import { ChatDrawerSheet } from './ChatDrawerSheet';
+import { DeclareOwnershipButton } from './DeclareOwnershipButton';
 import { getDocumentStatus, mapToIndexingStatus } from './kb-utils';
 import { KbDrawerSheet } from './KbDrawerSheet';
+import { RagAccessBadge } from './RagAccessBadge';
 import { SessionDrawerSheet } from './SessionDrawerSheet';
 
 // ============================================================================
@@ -132,7 +139,6 @@ function mapGameStateToStatus(
     InPrestito: 'borrowed',
   };
 
-  // eslint-disable-next-line security/detect-object-injection -- state is validated enum type
   return stateMap[state];
 }
 
@@ -173,10 +179,15 @@ export function MeepleLibraryGameCard({
   flippable,
   className,
 }: MeepleLibraryGameCardProps) {
+  const { navigateWithTransition } = useViewTransition();
+  const queryClient = useQueryClient();
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   // Issue #4777: Agent creation sheet state
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
   const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
+
+  // Wishlist dialog state (US-10)
+  const [wishlistDialogOpen, setWishlistDialogOpen] = useState(false);
 
   // Drawer states
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
@@ -234,6 +245,11 @@ export function MeepleLibraryGameCard({
     }
   }, [isTogglingFavorite, toggleFavoriteMutation, game.gameId, game.isFavorite, game.gameTitle]);
 
+  const handleOwnershipDeclared = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
+    queryClient.invalidateQueries({ queryKey: libraryKeys.gameDetail(game.gameId) });
+  }, [queryClient, game.gameId]);
+
   const handleSelect = (id: string, _selected: boolean) => {
     if (onSelect) {
       onSelect(id, false); // shiftKey handled by parent
@@ -244,58 +260,78 @@ export function MeepleLibraryGameCard({
   // Quick Actions Configuration
   // ============================================================================
 
-  const entityQuickActions = [
-    {
-      icon: MessageCircle,
-      label: 'Chat con Agent',
-      onClick: () => {
-        window.location.href = `/chat/new?game=${game.gameId}`;
+  const entityQuickActions = useMemo(
+    () => [
+      {
+        icon: MessageCircle,
+        label: 'Chat con Agent',
+        onClick: () => {
+          navigateWithTransition(`/chat/new?game=${game.gameId}`);
+        },
+        // Show whenever hasKb is true; always clickable so the chat page can handle agent selection
+        hidden: !game.hasKb,
       },
-      // Show whenever hasKb is true; always clickable so the chat page can handle agent selection
-      hidden: !game.hasKb,
-    },
-    {
-      icon: Settings,
-      label: 'Configura Agent',
-      onClick: () => onConfigureAgent(game.gameId, game.gameTitle),
-    },
-    {
-      icon: Upload,
-      label: 'Carica PDF',
-      onClick: () => onUploadPdf(game.gameId, game.gameTitle),
-    },
-    {
-      icon: Edit2,
-      label: 'Modifica Note',
-      onClick: () => onEditNotes(game.gameId, game.gameTitle, game.notes),
-    },
-    {
-      icon: Heart,
-      label: game.isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti',
-      onClick: handleToggleFavorite,
-      disabled: isTogglingFavorite,
-    },
-    {
-      icon: Trash2,
-      label: 'Rimuovi dalla Libreria',
-      onClick: () => onRemove(game.gameId, game.gameTitle),
-    },
-  ];
+      {
+        icon: Settings,
+        label: 'Configura Agent',
+        onClick: () => onConfigureAgent(game.gameId, game.gameTitle),
+      },
+      {
+        icon: Upload,
+        label: 'Carica PDF',
+        onClick: () => onUploadPdf(game.gameId, game.gameTitle),
+      },
+      {
+        icon: Edit2,
+        label: 'Modifica Note',
+        onClick: () => onEditNotes(game.gameId, game.gameTitle, game.notes),
+      },
+      {
+        icon: Heart,
+        label: game.isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti',
+        onClick: handleToggleFavorite,
+        disabled: isTogglingFavorite,
+      },
+      {
+        icon: HeartHandshake,
+        label: 'Aggiungi alla Wishlist',
+        onClick: () => setWishlistDialogOpen(true),
+      },
+      {
+        icon: Trash2,
+        label: 'Rimuovi dalla Libreria',
+        onClick: () => onRemove(game.gameId, game.gameTitle),
+      },
+    ],
+    [
+      game.gameId,
+      game.gameTitle,
+      game.hasKb,
+      game.isFavorite,
+      game.notes,
+      handleToggleFavorite,
+      isTogglingFavorite,
+      navigateWithTransition,
+      onConfigureAgent,
+      onUploadPdf,
+      onEditNotes,
+      onRemove,
+    ]
+  );
 
   // ============================================================================
   // Metadata Configuration
   // ============================================================================
 
   const metadata: MeepleCardMetadata[] = [
-    { icon: Gamepad2, value: formatPlayCount(0) }, // TODO: Add play count from game data
-    { icon: Trophy, value: formatWinRate(null) }, // TODO: Add win rate from game data
+    { icon: Gamepad2, value: formatPlayCount(0) },
+    { icon: Trophy, value: formatWinRate(null) },
   ];
 
   // Add agent status if configured
   if (agentConfigured) {
     metadata.push({
       icon: Bot,
-      // eslint-disable-next-line security/detect-object-injection -- agentModel is validated enum
       value: `Agent: ${modelDisplayName[agentModel]}`,
     });
   }
@@ -325,6 +361,9 @@ export function MeepleLibraryGameCard({
   // Badge: Show favorite if applicable
   const badge = game.isFavorite ? '❤️ Preferito' : undefined;
 
+  // Show RAG access status for games with KB
+  const showRagBadge = game.hasKb || game.currentState === 'Owned';
+
   // Flip data — notes go into default BackContent as description
   const flipData: MeepleCardFlipData | undefined =
     flippable && game.notes ? { description: game.notes } : undefined;
@@ -338,7 +377,7 @@ export function MeepleLibraryGameCard({
       minPlayers: game.minPlayers,
       maxPlayers: game.maxPlayers,
       averageRating: game.averageRating,
-      timesPlayed: 0, // TODO: wire from game data when available
+      // timesPlayed, winRate, totalPlayTimeMinutes: populated when session aggregate API is available
       hasKb: game.hasKb,
       kbCardCount: game.kbCardCount,
       kbDocuments: kbDocuments?.map(d => ({
@@ -364,11 +403,9 @@ export function MeepleLibraryGameCard({
     return {
       onChatAgent: game.hasKb
         ? () => {
-            window.location.href = `/chat/new?game=${game.gameId}`;
+            navigateWithTransition(`/chat/new?game=${game.gameId}`);
           }
         : undefined,
-      onViewKb: () => setKbDrawerOpen(true),
-      onEditNotes: () => onEditNotes(game.gameId, game.gameTitle, game.notes),
       onToggleFavorite: handleToggleFavorite,
       isFavorite: game.isFavorite,
     };
@@ -376,11 +413,9 @@ export function MeepleLibraryGameCard({
     flippable,
     game.hasKb,
     game.gameId,
-    game.gameTitle,
-    game.notes,
     game.isFavorite,
     handleToggleFavorite,
-    onEditNotes,
+    navigateWithTransition,
   ]);
 
   // ============================================================================
@@ -406,7 +441,7 @@ export function MeepleLibraryGameCard({
             ? undefined
             : flippable
               ? undefined // Let FlipCard handle clicks
-              : () => (window.location.href = `/library/games/${game.gameId}`)
+              : () => navigateWithTransition(`/library/games/${game.gameId}`)
         }
         flippable={flippable}
         flipData={flipData}
@@ -417,21 +452,22 @@ export function MeepleLibraryGameCard({
         className={className}
         // KB status badge from real document data
         kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
-        // Navigation footer: open drawers instead of navigating
-        navigateTo={[
-          { entity: 'document' as const, label: 'KB', onClick: () => setKbDrawerOpen(true) },
-          { entity: 'agent' as const, label: 'Agents', onClick: () => setAgentDrawerOpen(true) },
-          {
-            entity: 'chatSession' as const,
-            label: 'Chats',
-            onClick: () => setChatDrawerOpen(true),
-          },
-          {
-            entity: 'session' as const,
-            label: 'Sessions',
-            onClick: () => setSessionDrawerOpen(true),
-          },
-        ]}
+        // Navigation footer: mana pips for linked entities
+        linkedEntities={buildLinkedEntities({
+          agentCount: agentConfigured ? 1 : 0,
+          kbCount: game.kbCardCount,
+        })}
+        onManaPipClick={entityType => {
+          if (entityType === 'kb') {
+            setKbDrawerOpen(true);
+          } else if (entityType === 'agent') {
+            setAgentDrawerOpen(true);
+          } else if (entityType === 'chatSession') {
+            setChatDrawerOpen(true);
+          } else if (entityType === 'session') {
+            setSessionDrawerOpen(true);
+          }
+        }}
         // Issue #4777, #4999: Agent action footer
         hasAgent={agentConfigured}
         hasKb={game.hasKb}
@@ -440,13 +476,26 @@ export function MeepleLibraryGameCard({
         // Issue #4045: Quick actions + Info button
         entityQuickActions={entityQuickActions}
         showInfoButton
-        infoHref={`/library/games/${game.gameId}`}
+        entityId={game.gameId}
         infoTooltip="Vai al dettaglio"
         // Bulk selection
         selectable={selectionMode}
         selected={isSelected}
         onSelect={handleSelect}
       />
+
+      {/* Ownership + RAG Access indicators */}
+      {(game.currentState === 'Nuovo' || showRagBadge) && (
+        <div className="flex items-center gap-2 mt-1 px-1">
+          <DeclareOwnershipButton
+            gameId={game.gameId}
+            gameName={game.gameTitle}
+            gameState={game.currentState}
+            onOwnershipDeclared={handleOwnershipDeclared}
+          />
+          {showRagBadge && <RagAccessBadge hasRagAccess={game.hasRagAccess} isRagPublic={false} />}
+        </div>
+      )}
 
       {/* KB Drawer */}
       <KbDrawerSheet
@@ -486,6 +535,14 @@ export function MeepleLibraryGameCard({
         onClose={() => setAgentSheetOpen(false)}
         initialGameId={game.gameId}
         initialGameTitle={game.gameTitle}
+      />
+
+      {/* US-10: Add to Wishlist dialog */}
+      <AddToWishlistDialog
+        gameId={game.gameId}
+        gameName={game.gameTitle}
+        open={wishlistDialogOpen}
+        onOpenChange={setWishlistDialogOpen}
       />
     </>
   );

@@ -1,6 +1,7 @@
 using Api.Middleware;
 using Microsoft.Extensions.Options;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Middleware;
@@ -29,7 +30,7 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Succeeded);
+        result.Succeeded.Should().BeTrue();
     }
 
     [Fact]
@@ -46,8 +47,8 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("CSP policy cannot be null or empty when CSP is enabled", result.FailureMessage);
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("CSP policy cannot be null or empty when CSP is enabled");
     }
 
     [Fact]
@@ -64,8 +65,8 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("CSP policy cannot be null or empty when CSP is enabled", result.FailureMessage);
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("CSP policy cannot be null or empty when CSP is enabled");
     }
 
     [Fact]
@@ -82,8 +83,8 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("HSTS policy must contain 'max-age=' directive", result.FailureMessage);
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("HSTS policy must contain 'max-age=' directive");
     }
 
     [Fact]
@@ -100,8 +101,8 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("HSTS preload requires includeSubDomains directive", result.FailureMessage);
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("HSTS preload requires includeSubDomains directive");
     }
 
     [Fact]
@@ -118,8 +119,8 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("HSTS preload requires max-age of at least 31536000", result.FailureMessage);
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("HSTS preload requires max-age of at least 31536000");
     }
 
     [Fact]
@@ -136,7 +137,7 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Succeeded);
+        result.Succeeded.Should().BeTrue();
     }
 
     [Fact]
@@ -153,8 +154,8 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("X-Frame-Options must be DENY, SAMEORIGIN, or ALLOW-FROM", result.FailureMessage);
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("X-Frame-Options must be DENY, SAMEORIGIN, or ALLOW-FROM");
     }
 
     [Theory]
@@ -176,7 +177,7 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Succeeded);
+        result.Succeeded.Should().BeTrue();
     }
 
     [Fact]
@@ -193,8 +194,8 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("X-Content-Type-Options must be 'nosniff'", result.FailureMessage);
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("X-Content-Type-Options must be 'nosniff'");
     }
 
     [Theory]
@@ -214,7 +215,7 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Succeeded);
+        result.Succeeded.Should().BeTrue();
     }
 
     [Fact]
@@ -231,8 +232,8 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("Referrer-Policy value 'invalid-policy' is not a valid policy", result.FailureMessage);
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("Referrer-Policy value 'invalid-policy' is not a valid policy");
     }
 
     [Theory]
@@ -257,7 +258,7 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Succeeded);
+        result.Succeeded.Should().BeTrue();
     }
 
     [Fact]
@@ -274,8 +275,8 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("Permissions-Policy cannot be null or empty when enabled", result.FailureMessage);
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("Permissions-Policy cannot be null or empty when enabled");
     }
 
     [Fact]
@@ -296,10 +297,10 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("CSP policy cannot be null or empty", result.FailureMessage);
-        Assert.Contains("HSTS policy must contain 'max-age='", result.FailureMessage);
-        Assert.Contains("X-Frame-Options policy cannot be null or empty", result.FailureMessage);
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain("CSP policy cannot be null or empty");
+        result.FailureMessage.Should().Contain("HSTS policy must contain 'max-age='");
+        result.FailureMessage.Should().Contain("X-Frame-Options policy cannot be null or empty");
     }
 
     [Fact]
@@ -320,6 +321,6 @@ public class SecurityHeadersOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         // Assert - Should succeed because headers are disabled
-        Assert.True(result.Succeeded);
+        result.Succeeded.Should().BeTrue();
     }
 }

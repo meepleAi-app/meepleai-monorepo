@@ -285,9 +285,9 @@ Draft → Submitted → UnderReview (lock acquired)
 ## Related Documentation
 
 **ADRs**:
-- [ADR-018: PostgreSQL FTS](../../01-architecture/adr/adr-018-postgresql-fts-for-shared-catalog.md)
-- [ADR-019: Soft-Delete Workflow](../../01-architecture/adr/adr-019-shared-catalog-delete-workflow.md)
-- [ADR-025: SharedGameCatalog Bounded Context](../../01-architecture/adr/adr-025-shared-catalog-bounded-context.md)
+- [ADR-018: PostgreSQL FTS](../../architecture/adr/adr-018-postgresql-fts-for-shared-catalog.md)
+- [ADR-019: Soft-Delete Workflow](../../architecture/adr/adr-019-shared-catalog-delete-workflow.md)
+- [ADR-025: SharedGameCatalog Bounded Context](../../architecture/adr/adr-025-shared-catalog-bounded-context.md)
 
 **Contexts**:
 - [GameManagement](./game-management.md) - Private → Shared linking

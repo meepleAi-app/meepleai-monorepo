@@ -29,6 +29,10 @@ export const GameSchema = z.object({
   averageRating: z.number().nullable().optional(),
   // Issue #2373: SharedGameCatalog integration
   sharedGameId: z.string().uuid().nullable().optional(),
+  // Issue #3481: Publication workflow fields
+  isPublished: z.boolean().optional(),
+  approvalStatus: z.string().nullable().optional(),
+  publishedAt: z.string().nullable().optional(),
 });
 
 export type Game = z.infer<typeof GameSchema>;
@@ -108,7 +112,7 @@ export const BggSearchResultSchema = z.object({
   bggId: z.number().int().positive(),
   name: z.string().min(1),
   yearPublished: z.number().int().nullable(),
-  thumbnailUrl: z.string().url().nullable(),
+  thumbnailUrl: z.string().nullable(),
   type: z.string().min(1),
 });
 
@@ -135,20 +139,20 @@ export const BggGameDetailsSchema = z.object({
   yearPublished: z.number().int().nullable(),
   minPlayers: z.number().int().positive().nullable(),
   maxPlayers: z.number().int().positive().nullable(),
-  playingTime: z.number().int().positive().nullable(),
-  minPlayTime: z.number().int().positive().nullable(),
-  maxPlayTime: z.number().int().positive().nullable(),
-  minAge: z.number().int().positive().nullable(),
+  playingTime: z.number().int().nonnegative().nullable(),
+  minPlayTime: z.number().int().nonnegative().nullable(),
+  maxPlayTime: z.number().int().nonnegative().nullable(),
+  minAge: z.number().int().nonnegative().nullable(),
   averageRating: z.number().nullable(),
   bayesAverageRating: z.number().nullable(),
   usersRated: z.number().int().nonnegative().nullable(),
   averageWeight: z.number().nullable(),
-  thumbnailUrl: z.string().url().nullable(),
-  imageUrl: z.string().url().nullable(),
-  categories: z.array(z.string()),
-  mechanics: z.array(z.string()),
-  designers: z.array(z.string()),
-  publishers: z.array(z.string()),
+  thumbnailUrl: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  categories: z.array(z.string()).default([]),
+  mechanics: z.array(z.string()).default([]),
+  designers: z.array(z.string()).default([]),
+  publishers: z.array(z.string()).default([]),
 });
 
 export type BggGameDetails = z.infer<typeof BggGameDetailsSchema>;

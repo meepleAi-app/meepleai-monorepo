@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Domain.Entities.WhiteboardState;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,18 +14,17 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// Strokes are stored as a JSONB array; the domain aggregate is reconstructed via Restore().
 /// Issue #4971: WhiteboardState Entity + Endpoints + SSE.
 /// </summary>
-internal class WhiteboardStateRepository : IWhiteboardStateRepository
+internal class WhiteboardStateRepository : RepositoryBase, IWhiteboardStateRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
 
-    public WhiteboardStateRepository(MeepleAiDbContext dbContext)
+    public WhiteboardStateRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<WhiteboardState?> GetBySessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.WhiteboardStates
+        var entity = await DbContext.WhiteboardStates
             .AsNoTracking()
             .FirstOrDefaultAsync(w => w.SessionId == sessionId, cancellationToken)
             .ConfigureAwait(false);
@@ -34,20 +35,20 @@ internal class WhiteboardStateRepository : IWhiteboardStateRepository
     public async Task AddAsync(WhiteboardState whiteboardState, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(whiteboardState);
-        await _dbContext.WhiteboardStates.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.WhiteboardStates.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(WhiteboardState whiteboardState, CancellationToken cancellationToken = default)
     {
         var entity = MapToPersistence(whiteboardState);
 
-        var tracked = _dbContext.ChangeTracker.Entries<WhiteboardStateEntity>()
+        var tracked = DbContext.ChangeTracker.Entries<WhiteboardStateEntity>()
             .FirstOrDefault(e => e.Entity.Id == entity.Id);
 
         if (tracked != null)
             tracked.State = EntityState.Detached;
 
-        _dbContext.WhiteboardStates.Update(entity);
+        DbContext.WhiteboardStates.Update(entity);
         return Task.CompletedTask;
     }
 

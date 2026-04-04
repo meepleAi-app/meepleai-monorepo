@@ -82,8 +82,6 @@ export function Layout({
       <main
         className={cn(
           'flex-1',
-          // Header spacing
-          'pt-16', // Header height
           // Bottom spacing for navigation elements
           bottomPadding,
           // Content constraints
@@ -163,7 +161,6 @@ export function PageContent({ children, className, maxWidth = 'full' }: PageCont
     <div
       className={cn(
         'w-full',
-        // eslint-disable-next-line security/detect-object-injection -- maxWidth is from typed PageMaxWidth union
         maxWidthClasses[maxWidth],
         maxWidth !== 'full' && 'mx-auto',
         className

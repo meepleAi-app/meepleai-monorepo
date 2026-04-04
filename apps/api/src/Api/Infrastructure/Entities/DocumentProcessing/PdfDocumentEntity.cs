@@ -25,9 +25,6 @@ public class PdfDocumentEntity
     // Issue #4215: Granular 7-state tracking
     public string ProcessingState { get; set; } = "Pending"; // Enum stored as string: Pending, Uploading, Extracting, Chunking, Embedding, Indexing, Ready, Failed
 
-    // Deprecated: Keep for backward compatibility (migrate in Issue #4216)
-    public string ProcessingStatus { get; set; } = "pending"; // pending, processing, completed, failed
-
     public DateTime? ProcessedAt { get; set; }
     public int? PageCount { get; set; }
     public int? CharacterCount { get; set; }
@@ -51,6 +48,10 @@ public class PdfDocumentEntity
 
     // AI-09: Multi-language support
     public string Language { get; set; } = "en"; // ISO 639-1 code: en, it, de, fr, es
+
+    // E5-1: Language confidence from detection and manual override
+    public double? LanguageConfidence { get; set; }
+    public string? LanguageOverride { get; set; }
 
     // AI-14: Hybrid search - PostgreSQL full-text search vector (automatically maintained by trigger)
     // This column is populated by the tsvector_update_pdf_documents trigger
@@ -88,11 +89,17 @@ public class PdfDocumentEntity
     public Guid? CopyrightDisclaimerAcceptedBy { get; set; }
     public bool IsActiveForRag { get; set; } = true;
 
+    // RAG Copyright KB Cards: license tier for citation rendering (0=Copyrighted, 1=CreativeCommons, 2=PublicDomain)
+    public int LicenseType { get; set; } // Default: 0 = Copyrighted
+
     // Issue #5447: User-editable version label
     public string? VersionLabel { get; set; }
 
     // Admin Wizard: Processing priority (Normal=0, Admin=10)
     public string ProcessingPriority { get; set; } = "Normal";
+
+    // Issue #117: Batch upload grouping
+    public Guid? BatchId { get; set; }
 
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; set; }

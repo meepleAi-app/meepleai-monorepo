@@ -10,7 +10,7 @@ import { useCallback, useState } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';

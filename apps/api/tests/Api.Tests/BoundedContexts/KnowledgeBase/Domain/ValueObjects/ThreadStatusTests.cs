@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -22,9 +23,9 @@ public class ThreadStatusTests
         var status = ThreadStatus.From(value);
 
         // Assert
-        Assert.Equal(ThreadStatus.Active, status);
-        Assert.True(status.IsActive);
-        Assert.False(status.IsClosed);
+        status.Should().Be(ThreadStatus.Active);
+        status.IsActive.Should().BeTrue();
+        status.IsClosed.Should().BeFalse();
     }
 
     [Theory]
@@ -38,9 +39,9 @@ public class ThreadStatusTests
         var status = ThreadStatus.From(value);
 
         // Assert
-        Assert.Equal(ThreadStatus.Closed, status);
-        Assert.True(status.IsClosed);
-        Assert.False(status.IsActive);
+        status.Should().Be(ThreadStatus.Closed);
+        status.IsClosed.Should().BeTrue();
+        status.IsActive.Should().BeFalse();
     }
 
     [Theory]
@@ -50,8 +51,8 @@ public class ThreadStatusTests
     public void ThreadStatus_From_WithEmptyValue_ThrowsDomainException(string? value)
     {
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => ThreadStatus.From(value!));
-        Assert.Contains("cannot be empty", exception.Message);
+        var exception = ((Action)(() => ThreadStatus.From(value!))).Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("cannot be empty");
     }
 
     [Theory]
@@ -61,8 +62,8 @@ public class ThreadStatusTests
     public void ThreadStatus_From_WithInvalidValue_ThrowsDomainException(string value)
     {
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => ThreadStatus.From(value));
-        Assert.Contains("Invalid thread status", exception.Message);
+        var exception = ((Action)(() => ThreadStatus.From(value))).Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("Invalid thread status");
     }
 
     [Fact]
@@ -73,9 +74,9 @@ public class ThreadStatusTests
         var status2 = ThreadStatus.From("active");
 
         // Act & Assert
-        Assert.Equal(status1, status2);
-        Assert.True(status1 == status2);
-        Assert.False(status1 != status2);
+        status2.Should().Be(status1);
+        (status1 == status2).Should().BeTrue();
+        (status1 != status2).Should().BeFalse();
     }
 
     [Fact]
@@ -86,9 +87,9 @@ public class ThreadStatusTests
         var status2 = ThreadStatus.Closed;
 
         // Act & Assert
-        Assert.NotEqual(status1, status2);
-        Assert.False(status1 == status2);
-        Assert.True(status1 != status2);
+        status2.Should().NotBe(status1);
+        (status1 == status2).Should().BeFalse();
+        (status1 != status2).Should().BeTrue();
     }
 
     [Fact]
@@ -101,7 +102,7 @@ public class ThreadStatusTests
         var result = status.ToString();
 
         // Assert
-        Assert.Equal("active", result);
+        result.Should().Be("active");
     }
 
     [Fact]
@@ -114,7 +115,7 @@ public class ThreadStatusTests
         string value = status;
 
         // Assert
-        Assert.Equal("closed", value);
+        value.Should().Be("closed");
     }
 }
 

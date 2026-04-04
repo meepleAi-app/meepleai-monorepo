@@ -115,6 +115,11 @@ export async function enqueuePdf(
 
 export type ProcessingPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
 
+export const PRIORITY_LOW = 0;
+export const PRIORITY_NORMAL = 10;
+export const PRIORITY_HIGH = 20;
+export const PRIORITY_URGENT = 30;
+
 export interface QueueConfigDto {
   isPaused: boolean;
   maxConcurrentWorkers: number;
@@ -148,7 +153,7 @@ export interface PdfTextResult {
   processingError: string | null;
 }
 
-export async function bumpPriority(jobId: string, newPriority: ProcessingPriority): Promise<void> {
+export async function setPriority(jobId: string, newPriority: ProcessingPriority): Promise<void> {
   await apiClient.patch(`/api/v1/admin/queue/${jobId}/priority`, { newPriority });
 }
 
@@ -305,5 +310,52 @@ export function useDashboardMetrics(period: MetricsPeriod = '24h') {
     queryFn: () => getDashboardMetrics(period),
     staleTime: 30_000,
     refetchInterval: 60_000,
+  });
+}
+
+// ── Chunk Preview ─────────────────────────────────────────────────────
+
+export interface ChunkPreviewDto {
+  embeddingId: string;
+  textContent: string;
+  chunkIndex: number;
+  pageNumber: number;
+  model: string;
+  createdAt: string;
+}
+
+export interface PaginatedChunksResult {
+  chunks: ChunkPreviewDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function fetchChunksPreview(
+  pdfDocumentId: string,
+  page = 1,
+  pageSize = 20,
+  search?: string
+): Promise<PaginatedChunksResult> {
+  const query = new URLSearchParams();
+  query.set('page', page.toString());
+  query.set('pageSize', pageSize.toString());
+  if (search) query.set('search', search);
+
+  const url = `/api/v1/admin/sandbox/pdfs/${pdfDocumentId}/chunks/preview?${query.toString()}`;
+  const result = await apiClient.get<PaginatedChunksResult>(url);
+  return result ?? { chunks: [], total: 0, page: 1, pageSize };
+}
+
+export function useChunksPreview(
+  pdfDocumentId: string | null,
+  page: number,
+  pageSize: number,
+  search?: string
+) {
+  return useQuery({
+    queryKey: ['chunks-preview', pdfDocumentId, page, pageSize, search],
+    queryFn: () => fetchChunksPreview(pdfDocumentId!, page, pageSize, search),
+    enabled: !!pdfDocumentId,
   });
 }

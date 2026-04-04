@@ -58,7 +58,7 @@ export function ShareRequestCard({ request }: ShareRequestCardProps) {
           {
             icon: ExternalLink,
             label: 'View Game',
-            onClick: () => router.push(`/games/catalog/${request.resultingSharedGameId}`),
+            onClick: () => router.push(`/library/games/${request.resultingSharedGameId}`),
           },
         ]
       : []),
@@ -98,9 +98,7 @@ export function ShareRequestCard({ request }: ShareRequestCardProps) {
       metadata={metadata.length > 0 ? metadata : undefined}
       quickActions={quickActions}
       showPreview={previewParts.length > 0}
-      previewData={
-        previewParts.length > 0 ? { description: previewParts.join('\n\n') } : undefined
-      }
+      previewData={previewParts.length > 0 ? { description: previewParts.join('\n\n') } : undefined}
       data-testid={`share-request-card-${request.id}`}
     />
   );

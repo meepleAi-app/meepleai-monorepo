@@ -3,6 +3,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,24 +14,23 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// Repository implementation for RulebookAnalysis entities.
 /// Issue #2402: Rulebook Analysis Service
 /// </summary>
-internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
+internal sealed class RulebookAnalysisRepository : RepositoryBase, IRulebookAnalysisRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public RulebookAnalysisRepository(MeepleAiDbContext context)
+    public RulebookAnalysisRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context;
     }
 
     public async Task AddAsync(RulebookAnalysis analysis, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(analysis);
-        await _context.RulebookAnalyses.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.RulebookAnalyses.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<RulebookAnalysis?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.RulebookAnalyses
+        var entity = await DbContext.RulebookAnalyses
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -42,7 +43,7 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
         Guid pdfDocumentId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _context.RulebookAnalyses
+        var entity = await DbContext.RulebookAnalyses
             .AsNoTracking()
             .FirstOrDefaultAsync(
                 a => a.SharedGameId == sharedGameId
@@ -58,7 +59,7 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
         Guid sharedGameId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.RulebookAnalyses
+        var entities = await DbContext.RulebookAnalyses
             .AsNoTracking()
             .Where(a => a.SharedGameId == sharedGameId)
             .OrderByDescending(a => a.IsActive)
@@ -73,7 +74,7 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
         Guid pdfDocumentId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.RulebookAnalyses
+        var entities = await DbContext.RulebookAnalyses
             .AsNoTracking()
             .Where(a => a.PdfDocumentId == pdfDocumentId)
             .OrderByDescending(a => a.Version)
@@ -86,7 +87,7 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
     public void Update(RulebookAnalysis analysis)
     {
         var entity = MapToEntity(analysis);
-        _context.RulebookAnalyses.Update(entity);
+        DbContext.RulebookAnalyses.Update(entity);
     }
 
     public async Task DeactivateAllAsync(
@@ -94,7 +95,7 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
         Guid pdfDocumentId,
         CancellationToken cancellationToken = default)
     {
-        await _context.RulebookAnalyses
+        await DbContext.RulebookAnalyses
             .Where(a => a.SharedGameId == sharedGameId
                         && a.PdfDocumentId == pdfDocumentId
                         && a.IsActive)
@@ -106,7 +107,7 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
 
     public async Task<string> GetPdfTextAsync(Guid pdfDocumentId, CancellationToken cancellationToken = default)
     {
-        var pdfDocument = await _context.PdfDocuments
+        var pdfDocument = await DbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.Id == pdfDocumentId)
             .Select(p => new { p.ExtractedText })
@@ -118,7 +119,7 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
 
     public async Task<string?> GetPdfDocumentCategoryAsync(Guid pdfDocumentId, CancellationToken cancellationToken = default)
     {
-        return await _context.PdfDocuments
+        return await DbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.Id == pdfDocumentId)
             .Select(p => p.DocumentCategory)
@@ -128,11 +129,11 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
 
     public async Task<List<GamePdfPair>> GetGamePdfPairsWithReadyTextAsync(CancellationToken cancellationToken = default)
     {
-        var pairs = await _context.SharedGames
+        var pairs = await DbContext.SharedGames
             .AsNoTracking()
             .Where(g => !g.IsDeleted)
             .Join(
-                _context.PdfDocuments.Where(p => p.ProcessingState == "Ready" && p.ExtractedText != null && p.ExtractedText != ""),
+                DbContext.PdfDocuments.Where(p => p.ProcessingState == "Ready" && p.ExtractedText != null && p.ExtractedText != ""),
                 g => g.Id, p => p.SharedGameId,
                 (g, p) => new GamePdfPair(g.Id, g.Title, p.Id))
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -142,7 +143,7 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
 
     public async Task<HashSet<string>> GetActiveAnalysisKeysAsync(CancellationToken cancellationToken = default)
     {
-        var activeKeys = await _context.RulebookAnalyses
+        var activeKeys = await DbContext.RulebookAnalyses
             .AsNoTracking()
             .Where(a => a.IsActive)
             .Select(a => a.SharedGameId + ":" + a.PdfDocumentId)

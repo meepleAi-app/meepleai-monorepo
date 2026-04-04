@@ -21,14 +21,25 @@ public class SharedGameEntity
     public string ImageUrl { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
     public int Status { get; set; } // 0=Draft, 1=Published, 2=Archived
+    public int GameDataStatus { get; set; } = 5; // Default Complete (5) for existing games
     public string? RulesContent { get; set; }
     public string? RulesLanguage { get; set; }
+    public string? RulesExternalUrl { get; set; }
+    public string? BggRawData { get; set; } // jsonb - raw BGG API response for repopulation
+    public bool HasUploadedPdf { get; set; }
     // SearchVector managed by PostgreSQL trigger - not mapped by EF Core
     public Guid CreatedBy { get; set; }
     public Guid? ModifiedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? ModifiedAt { get; set; }
     public bool IsDeleted { get; set; }
+    public bool IsRagPublic { get; set; }
+
+    /// <summary>
+    /// Optimistic concurrency token. Managed by the database.
+    /// Spec-panel recommendation C-3.
+    /// </summary>
+    public byte[]? RowVersion { get; set; }
 
     // Navigation properties (many-to-many)
     public ICollection<GameDesignerEntity> Designers { get; set; } = new List<GameDesignerEntity>();

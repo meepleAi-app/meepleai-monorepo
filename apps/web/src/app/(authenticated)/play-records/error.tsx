@@ -13,6 +13,7 @@ import { AlertTriangle, ArrowLeft, RefreshCcw } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/primitives/button';
+import { logger } from '@/lib/logger';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -21,7 +22,7 @@ interface ErrorProps {
 
 export default function PlayRecordsError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error('Play Records Error:', error);
+    logger.error('Play Records Error:', error);
   }, [error]);
 
   return (

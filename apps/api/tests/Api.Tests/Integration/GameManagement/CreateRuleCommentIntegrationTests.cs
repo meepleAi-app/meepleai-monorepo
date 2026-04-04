@@ -1,6 +1,6 @@
 using Api.Tests.Infrastructure;
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
@@ -31,7 +31,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Execution Time Target: <60s
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
@@ -57,25 +57,7 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
         _databaseName = $"test_createcomment_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        // Register domain event infrastructure
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-        // Register MediatR
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(CreateRuleCommentCommandHandler).Assembly));
-
-        // Register TimeProvider
-        services.AddSingleton(TimeProvider.System);
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Register handler explicitly
         services.AddScoped<CreateRuleCommentCommandHandler>();

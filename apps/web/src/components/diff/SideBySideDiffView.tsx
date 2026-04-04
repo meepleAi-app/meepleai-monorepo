@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe Map/array access operations */
 import React, { useState, useCallback } from 'react';
 
 import { DiffCodePanel } from './DiffCodePanel';

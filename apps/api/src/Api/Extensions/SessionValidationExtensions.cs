@@ -77,14 +77,13 @@ internal static class SessionValidationExtensions
                         value is SessionStatusDto session &&
                         session.IsValid &&
                         session.User != null;
-        var hasApiKey = context.User.Identity?.IsAuthenticated is true;
 
-        if (!hasSession && !hasApiKey)
+        if (!hasSession)
         {
             return (false, null, Results.Unauthorized());
         }
 
-        return (true, hasSession ? (SessionStatusDto)value! : null, null);
+        return (true, (SessionStatusDto)value!, null);
     }
 
     /// <summary>
@@ -107,12 +106,32 @@ internal static class SessionValidationExtensions
         RequireRole(this SessionStatusDto session, UserRole requiredRole)
     {
         if (session.User == null ||
-            !string.Equals(session.User.Role, requiredRole.ToString(), StringComparison.OrdinalIgnoreCase))
+            !Enum.TryParse<UserRole>(session.User.Role, ignoreCase: true, out var userRole) ||
+            !HasSufficientRole(userRole, requiredRole))
         {
             return (false, Results.Forbid());
         }
 
         return (true, null);
+    }
+
+    /// <summary>
+    /// Checks if the user's role meets or exceeds the required role level.
+    /// Hierarchy: SuperAdmin (4) > Admin (3) > Editor (2) > Creator (1) > User (0)
+    /// </summary>
+    private static bool HasSufficientRole(UserRole userRole, UserRole requiredRole)
+    {
+        static int RoleLevel(UserRole role) => role switch
+        {
+            UserRole.SuperAdmin => 4,
+            UserRole.Admin => 3,
+            UserRole.Editor => 2,
+            UserRole.Creator => 1,
+            UserRole.User => 0,
+            _ => -1
+        };
+
+        return RoleLevel(userRole) >= RoleLevel(requiredRole);
     }
 
     /// <summary>
@@ -156,22 +175,8 @@ internal static class SessionValidationExtensions
     public static (bool IsAuthorized, IResult? ErrorResult)
         RequireAdminOrEditorRole(this SessionStatusDto session)
     {
-        if (session.User == null)
-        {
-            return (false, Results.Forbid());
-        }
-
-        var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(),
-            StringComparison.OrdinalIgnoreCase);
-        var isEditor = string.Equals(session.User.Role, UserRole.Editor.ToString(),
-            StringComparison.OrdinalIgnoreCase);
-
-        if (!isAdmin && !isEditor)
-        {
-            return (false, Results.Forbid());
-        }
-
-        return (true, null);
+        // Editor is the minimum required role; HasSufficientRole handles hierarchy
+        return session.RequireRole(UserRole.Editor);
     }
 
     /// <summary>

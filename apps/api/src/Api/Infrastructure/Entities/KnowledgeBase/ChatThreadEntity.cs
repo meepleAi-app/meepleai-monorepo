@@ -23,6 +23,12 @@ public class ChatThreadEntity
     public string? ConversationSummary { get; set; }
     public int LastSummarizedMessageCount { get; set; }
 
+    /// <summary>
+    /// JSON-serialized list of VectorDocument IDs selected for RAG.
+    /// Null = use all VectorDocuments for the game (default).
+    /// </summary>
+    public string? SelectedKnowledgeBaseIdsJson { get; set; }
+
     // Navigation properties
     public UserEntity? User { get; set; }
     public GameEntity? Game { get; set; }

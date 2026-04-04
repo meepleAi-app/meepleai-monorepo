@@ -1,4 +1,14 @@
-// Session Toolkit Components - Barrel Export
+// Session Components - Consolidated Barrel Export
+
+// Session cards (formerly components/sessions/)
+export { SessionQuotaBar, type SessionQuotaBarProps } from './SessionQuotaBar';
+export {
+  MeepleSessionCard,
+  MeepleSessionCardSkeleton,
+  type MeepleSessionCardProps,
+} from './MeepleSessionCard';
+
+// Session Toolkit Components
 
 export { LiveIndicator } from './LiveIndicator';
 export { LiveScoreSheet } from './LiveScoreSheet';
@@ -19,7 +29,8 @@ export type { TurnOrderToolProps } from './TurnOrderTool';
 export type { ToolItem, ToolRailProps } from './ToolRail';
 export type { SessionToolLayoutProps } from './SessionToolLayout';
 export type { TurnIndicatorBarProps } from './TurnIndicatorBar';
-export { ParticipantCard } from './ParticipantCard';
+export { MeepleParticipantCard } from './MeepleParticipantCard';
+export type { MeepleParticipantCardProps } from './MeepleParticipantCard';
 export { ScoreInput } from './ScoreInput';
 export { Scoreboard } from './Scoreboard';
 export { SessionDetailModal } from './SessionDetailModal';
@@ -50,6 +61,15 @@ export { CameraToolContent } from './CameraToolContent';
 export type { CameraToolContentProps } from './CameraToolContent';
 export { PauseSessionDialog } from './PauseSessionDialog';
 export type { PauseSessionDialogProps } from './PauseSessionDialog';
+export { ActivityFeedEvent } from './ActivityFeedEvent';
+export { ActivityFeed } from './ActivityFeed';
+export { SimpleDiceRoller } from './SimpleDiceRoller';
+export { LiveSessionLayout } from './LiveSessionLayout';
+export { MobileStatusBar } from './MobileStatusBar';
+export { ActivityFeedInputBar } from './ActivityFeedInputBar';
+export { MobileScorebar } from './MobileScorebar';
+export { TurnSummaryButton } from './TurnSummaryButton';
+export type { TurnSummaryButtonProps } from './TurnSummaryButton';
 
 export type {
   Participant,

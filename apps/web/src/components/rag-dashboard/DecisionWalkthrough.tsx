@@ -122,7 +122,7 @@ const SCENARIOS: WalkthroughScenario[] = [
         tokensUsed: 1200,
         latencyMs: 400,
         details: [
-          'Vector search: 5 candidates (Qdrant)',
+          'Vector search: 5 candidates (pgvector)',
           'BM25 search: 5 candidates (PostgreSQL FTS)',
           'RRF fusion: Combined and ranked',
           'Top results: Rulebook p.12, FAQ v2.3, Strategy Guide',
@@ -391,10 +391,7 @@ function StepCard({ step, isActive, isComplete, stepNumber }: StepCardProps) {
                 className="overflow-hidden"
               >
                 <div className="mt-3 p-3 rounded-lg bg-muted/50 border">
-                  <div
-                    className="text-sm font-medium mb-2"
-                    style={{ color: step.color }}
-                  >
+                  <div className="text-sm font-medium mb-2" style={{ color: step.color }}>
                     Decision: {step.decision}
                   </div>
                   <ul className="space-y-1 text-xs text-muted-foreground">

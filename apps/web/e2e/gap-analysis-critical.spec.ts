@@ -80,7 +80,7 @@ test.describe('Gap Analysis: Critical Features', () => {
    */
   test.describe('Wishlist System', () => {
     test('Wishlist - Add game via heart icon on card', async ({ page }) => {
-      await page.goto('/games');
+      await page.goto('/library');
 
       const gameCard = page.locator('[data-testid="meeple-card"]').first();
       const wishlistButton = gameCard.locator('[data-testid="wishlist-toggle"]');

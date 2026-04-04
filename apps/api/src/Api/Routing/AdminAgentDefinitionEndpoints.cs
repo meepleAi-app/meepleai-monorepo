@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.RagExecution;
 using Api.Extensions;
 using Api.Filters;
+using Api.Middleware;
 using MediatR;
 
 namespace Api.Routing;
@@ -31,7 +32,7 @@ internal static class AdminAgentDefinitionEndpoints
 
             logger.LogInformation(
                 "Admin creating AgentDefinition: {Name}",
-                request.Name);
+                LogValueSanitizer.Sanitize(request.Name));
 
             var command = new CreateAgentDefinitionCommand(
                 Name: request.Name,
@@ -168,6 +169,51 @@ internal static class AdminAgentDefinitionEndpoints
         .WithTags("AgentDefinition", "Admin")
         .WithSummary("Delete agent definition (Admin - AI Lab)")
         .WithDescription("Delete an agent definition");
+
+        // POST /api/v1/admin/agent-definitions/{id}/start-testing
+        // Transition agent definition to Testing status
+        group.MapPost("/{id:guid}/start-testing", async (
+            Guid id,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            await mediator.Send(new StartTestingAgentDefinitionCommand(id), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .WithName("AdminStartTestingAgentDefinition")
+        .WithTags("AgentDefinition", "Admin")
+        .WithSummary("Start testing agent definition (Admin - AI Lab)")
+        .WithDescription("Transition an agent definition from Draft to Testing status");
+
+        // POST /api/v1/admin/agent-definitions/{id}/publish
+        // Publish agent definition
+        group.MapPost("/{id:guid}/publish", async (
+            Guid id,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            await mediator.Send(new PublishAgentDefinitionCommand(id), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .WithName("AdminPublishAgentDefinition")
+        .WithTags("AgentDefinition", "Admin")
+        .WithSummary("Publish agent definition (Admin - AI Lab)")
+        .WithDescription("Publish an agent definition, making it visible to regular users");
+
+        // POST /api/v1/admin/agent-definitions/{id}/unpublish
+        // Unpublish agent definition
+        group.MapPost("/{id:guid}/unpublish", async (
+            Guid id,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            await mediator.Send(new UnpublishAgentDefinitionCommand(id), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .WithName("AdminUnpublishAgentDefinition")
+        .WithTags("AgentDefinition", "Admin")
+        .WithSummary("Unpublish agent definition (Admin - AI Lab)")
+        .WithDescription("Unpublish an agent definition, returning it to Draft status");
 
         // GET /api/v1/admin/agent-definitions/catalog-stats
         // Get agent catalog usage statistics aggregated from execution data

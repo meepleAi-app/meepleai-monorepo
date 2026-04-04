@@ -12,7 +12,7 @@ internal class AlertEntityConfiguration : IEntityTypeConfiguration<AlertEntity>
         builder.ToTable("alerts");
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
-        builder.Property(e => e.AlertType).HasColumnName("alert_type").HasMaxLength(50).IsRequired();
+        builder.Property(e => e.AlertType).HasColumnName("alert_type").HasMaxLength(100).IsRequired();
         builder.Property(e => e.Severity).HasColumnName("severity").HasMaxLength(20).IsRequired();
         builder.Property(e => e.Message).HasColumnName("message").IsRequired();
         builder.Property(e => e.Metadata).HasColumnName("metadata").HasColumnType("jsonb");

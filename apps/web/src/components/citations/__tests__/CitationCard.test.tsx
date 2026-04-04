@@ -25,6 +25,7 @@ const mockCitation: Citation = {
   snippet:
     'Development cards can be played at any time during your turn except on the turn they were purchased.',
   relevanceScore: 0.95,
+  copyrightTier: 'full',
 };
 
 describe('CitationCard - Issue #2308', () => {

@@ -9,27 +9,15 @@ export { default as CategoryConfigTab } from './CategoryConfigTab';
 export { default as FeatureFlagsTab } from './FeatureFlagsTab';
 
 // Issue #874: Enhanced dashboard components
-export { AdminLayout, type AdminLayoutProps } from './AdminLayout';
 export { StatCard, type StatCardProps } from './StatCard';
 export { MetricsGrid, type MetricsGridProps } from './MetricsGrid';
 
 // Issue #2803: Unified Activity Feed/Timeline component
-// ActivityFeed is the primary component with configurable icon modes and i18n
 export { ActivityFeed, type ActivityFeedProps } from './ActivityFeed';
-// ActivityTimeline is a re-export alias for backward compatibility
-export { ActivityTimeline, type ActivityTimelineProps } from './ActivityTimeline';
 // ActivityEvent type is centralized in utils/activityUtils
 export type { ActivityEvent } from './utils/activityUtils';
 
-// Issue #881: Modular admin layout components
-export {
-  AdminSidebar,
-  defaultNavigation,
-  type AdminSidebarProps,
-  type NavItem,
-  type NavItemBadge,
-} from './AdminSidebar';
-export { AdminHeader, type AdminHeaderProps, type AdminUser } from './AdminHeader';
+// Issue #881: Modular admin layout components (AdminHeader/AdminSidebar/AdminLayout removed — replaced by UserShell)
 export {
   AdminBreadcrumbs,
   type AdminBreadcrumbsProps,

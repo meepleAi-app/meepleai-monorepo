@@ -7,4 +7,5 @@
 export { NotificationBell } from './NotificationBell';
 export { NotificationPanel } from './NotificationPanel';
 export { NotificationItem } from './NotificationItem';
-export { NotificationCenter } from '@/components/layout/Navbar/NotificationCenter';
+export { NotificationCenter } from './NotificationCenter';
+export { NotificationPreferences } from './NotificationPreferences';

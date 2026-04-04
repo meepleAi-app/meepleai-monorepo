@@ -41,4 +41,9 @@ public enum RequestSource
     /// Issue #5505: Separate budget isolation and rate limiting.
     /// </summary>
     ABTesting,
+
+    /// <summary>
+    /// RAG query classification — lightweight LLM call for adaptive routing.
+    /// </summary>
+    RagClassification,
 }

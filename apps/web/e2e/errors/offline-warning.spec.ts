@@ -21,7 +21,7 @@ const API_BASE =
  */
 async function setupOfflineWarningMocks(page: Page) {
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -38,7 +38,7 @@ async function setupOfflineWarningMocks(page: Page) {
   });
 
   // Mock games endpoint
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -47,7 +47,7 @@ async function setupOfflineWarningMocks(page: Page) {
   });
 
   // Mock chat endpoint
-  await page.route(`${API_BASE}/api/v1/chat/threads**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/chat/threads**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -71,9 +71,9 @@ test.describe('ERR-07: Offline Mode Warning', () => {
 
       // Should show offline indicator
       await expect(
-        page.getByText(/offline|no.*connection|network.*unavailable/i).or(
-          page.locator('[data-testid="offline-indicator"]')
-        )
+        page
+          .getByText(/offline|no.*connection|network.*unavailable/i)
+          .or(page.locator('[data-testid="offline-indicator"]'))
       ).toBeVisible({ timeout: 5000 });
     });
 
@@ -91,9 +91,7 @@ test.describe('ERR-07: Offline Mode Warning', () => {
 
       // Offline indicator should disappear or show reconnected
       await expect(
-        page.getByText(/reconnected|back.*online|connection.*restored/i).or(
-          page.locator('body')
-        )
+        page.getByText(/reconnected|back.*online|connection.*restored/i).or(page.locator('body'))
       ).toBeVisible({ timeout: 5000 });
     });
   });
@@ -109,9 +107,7 @@ test.describe('ERR-07: Offline Mode Warning', () => {
 
       // Should show persistent banner/indicator
       const offlineBanner = page.locator('[data-testid="offline-banner"], .offline-warning');
-      await expect(
-        offlineBanner.or(page.getByText(/offline/i))
-      ).toBeVisible();
+      await expect(offlineBanner.or(page.getByText(/offline/i))).toBeVisible();
     });
 
     test('should show offline icon in header', async ({ page, context }) => {
@@ -170,7 +166,7 @@ test.describe('ERR-07: Offline Mode Warning', () => {
 
       // Try to send a message
       const chatInput = page.getByPlaceholder(/message/i);
-      if (await chatInput.isVisible() && await chatInput.isEnabled()) {
+      if ((await chatInput.isVisible()) && (await chatInput.isEnabled())) {
         await chatInput.fill('Test message while offline');
         await page.keyboard.press('Enter');
 
@@ -210,9 +206,7 @@ test.describe('ERR-07: Offline Mode Warning', () => {
       await page.waitForTimeout(2000);
 
       // Should show reconnected or return to normal
-      await expect(
-        page.getByText(/reconnected|online/i).or(page.locator('body'))
-      ).toBeVisible();
+      await expect(page.getByText(/reconnected|online/i).or(page.locator('body'))).toBeVisible();
     });
 
     test('should retry pending actions on reconnect', async ({ page, context }) => {
@@ -225,7 +219,7 @@ test.describe('ERR-07: Offline Mode Warning', () => {
       await context.setOffline(true);
 
       const chatInput = page.getByPlaceholder(/message/i);
-      if (await chatInput.isVisible() && await chatInput.isEnabled()) {
+      if ((await chatInput.isVisible()) && (await chatInput.isEnabled())) {
         await chatInput.fill('Queued message');
         await page.keyboard.press('Enter');
       }
@@ -258,7 +252,7 @@ test.describe('ERR-07: Offline Mode Warning', () => {
       await setupOfflineWarningMocks(page);
 
       // Load page first while online
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Go offline
@@ -278,13 +272,11 @@ test.describe('ERR-07: Offline Mode Warning', () => {
 
       // Try to access feature requiring network
       const newChatButton = page.getByRole('button', { name: /new.*chat|start/i });
-      if (await newChatButton.isVisible() && await newChatButton.isEnabled()) {
+      if ((await newChatButton.isVisible()) && (await newChatButton.isEnabled())) {
         await newChatButton.click();
 
         // Should show offline-specific error
-        await expect(
-          page.getByText(/offline|unavailable|connect/i)
-        ).toBeVisible();
+        await expect(page.getByText(/offline|unavailable|connect/i)).toBeVisible();
       }
     });
   });

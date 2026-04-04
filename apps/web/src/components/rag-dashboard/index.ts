@@ -8,20 +8,20 @@
 export { RagDashboard } from './RagDashboard';
 export { StatsGrid } from './StatsGrid';
 export { QuerySimulator } from './QuerySimulator';
-export { TokenFlowVisualizer } from './TokenFlowVisualizer';
+export { TokenFlowVisualizer } from './metrics/TokenFlowVisualizer';
 export { CostCalculator } from './CostCalculator';
 export { ArchitectureExplorer } from './ArchitectureExplorer';
 export { AgentRagIntegration } from './AgentRagIntegration';
 export { VariantComparisonTool } from './VariantComparisonTool';
-export { LayerDeepDocs } from './LayerDeepDocs';
+export { LayerDeepDocs } from './reference/LayerDeepDocs';
 export { PromptTemplateBuilder } from './PromptTemplateBuilder';
-export { AgentRoleConfigurator } from './AgentRoleConfigurator';
+export { AgentRoleConfigurator } from './config/AgentRoleConfigurator';
 export { DecisionWalkthrough } from './DecisionWalkthrough';
 export { ModelSelectionOptimizer } from './ModelSelectionOptimizer';
-export { PerformanceMetricsTable } from './PerformanceMetricsTable';
+export { PerformanceMetricsTable } from './metrics/PerformanceMetricsTable';
 export { TechnicalReference } from './TechnicalReference';
 export { PocStatus } from './PocStatus';
-export { ParameterGuide } from './ParameterGuide';
+export { ParameterGuide } from './reference/ParameterGuide';
 
 export * from './types';
 export * from './types-configurable';
@@ -50,7 +50,7 @@ export type {
   StrategyModelMapping,
   AgentClassificationData,
 } from './rag-data';
-export { RagConfigurationForm } from './RagConfigurationForm';
+export { RagConfigurationForm } from './config/RagConfigurationForm';
 export { StrategyCard } from './StrategyCard';
 export { StrategySelector } from './StrategySelector';
 

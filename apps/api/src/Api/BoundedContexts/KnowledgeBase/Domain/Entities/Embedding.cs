@@ -16,6 +16,9 @@ internal sealed class Embedding : Entity<Guid>
     public int ChunkIndex { get; private set; }
     public int PageNumber { get; private set; }
     public DateTime CreatedAt { get; private set; }
+    public string Language { get; private set; } = "en";
+    public Guid? SourceChunkId { get; private set; }
+    public bool IsTranslation { get; private set; }
 
     /// <summary>
     /// Private constructor for EF Core.
@@ -36,7 +39,10 @@ internal sealed class Embedding : Entity<Guid>
         Vector vector,
         string model,
         int chunkIndex,
-        int pageNumber) : base(id)
+        int pageNumber,
+        string language = "en",
+        Guid? sourceChunkId = null,
+        bool isTranslation = false) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -57,6 +63,9 @@ internal sealed class Embedding : Entity<Guid>
         ChunkIndex = chunkIndex;
         PageNumber = pageNumber;
         CreatedAt = DateTime.UtcNow;
+        Language = language ?? "en";
+        SourceChunkId = sourceChunkId;
+        IsTranslation = isTranslation;
     }
 
     /// <summary>

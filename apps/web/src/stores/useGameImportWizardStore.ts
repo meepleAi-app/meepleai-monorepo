@@ -10,27 +10,27 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { toast } from '@/components/layout';
+import { api } from '@/lib/api';
 
 /**
  * Metadata extracted from uploaded PDF
  */
 export interface ExtractedMetadata {
   title?: string;
-  yearPublished?: number;
+  year?: number;
   minPlayers?: number;
   maxPlayers?: number;
-  playTime?: number;
+  playingTime?: number;
   minAge?: number;
-  complexity?: number;
   description?: string;
-  confidence?: number; // 0-100 (UI representation of backend 0.0-1.0 ConfidenceScore)
+  confidenceScore?: number; // Backend sends 0.0-1.0; UI can multiply by 100 for display
 }
 
 /**
  * BoardGameGeek game data
  */
 export interface BggGameData {
-  id: number;
+  bggId: number;
   name: string;
   yearPublished?: number;
   minPlayers?: number;
@@ -49,12 +49,11 @@ export interface EnrichedGameData {
   title: string;
   minPlayers?: number;
   maxPlayers?: number;
-  playTime?: number;
-  complexity?: number;
+  playingTime?: number;
   description?: string;
   bggId?: number;
   imageUrl?: string;
-  yearPublished?: number;
+  year?: number;
   minAge?: number;
 }
 
@@ -219,7 +218,7 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
         set({ isProcessing: true, error: null });
 
         try {
-          const { uploadedPdf, enrichedData } = get();
+          const { uploadedPdf, enrichedData, selectedBggId } = get();
 
           // Validate final state
           if (!uploadedPdf) {
@@ -230,28 +229,21 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
             throw new Error('Game title is required');
           }
 
-          // Submit to backend API
-          // Backend endpoint from Issue #4157 (PR #4225)
-          // POST /api/v1/admin/games/wizard/confirm-import
-          const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-
-          const response = await fetch(`${API_BASE}/api/v1/admin/games/wizard/confirm-import`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              pdfId: uploadedPdf.id,
-              gameData: enrichedData,
-            }),
+          // Submit via API client to correct endpoint
+          // POST /api/v1/admin/shared-games/wizard/create
+          const result = await api.sharedGames.wizardCreateGame({
+            pdfDocumentId: uploadedPdf.id,
+            extractedTitle: enrichedData.title,
+            minPlayers: enrichedData.minPlayers,
+            maxPlayers: enrichedData.maxPlayers,
+            playingTimeMinutes: enrichedData.playingTime,
+            minAge: enrichedData.minAge,
+            selectedBggId: selectedBggId ?? enrichedData.bggId,
           });
 
-          if (!response.ok) {
-            throw new Error(`Import failed: ${response.statusText}`);
-          }
-
-          await response.json();
-
-          toast.success(`Game "${enrichedData.title}" imported successfully!`);
+          toast.success(
+            `Game "${enrichedData.title}" imported successfully! (${result.approvalStatus})`
+          );
 
           // Reset wizard on success
           get().reset();

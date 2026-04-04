@@ -27,7 +27,7 @@ export function WelcomeFallback() {
 export function WelcomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams?.get('redirectTo') ?? '/dashboard';
+  const redirectTo = searchParams?.get('redirectTo') ?? '/library';
 
   const [progress, setProgress] = useState(0);
   const [mounted, setMounted] = useState(false);

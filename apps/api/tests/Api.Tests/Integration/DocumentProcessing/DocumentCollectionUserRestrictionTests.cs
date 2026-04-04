@@ -14,7 +14,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Tests DeleteBehavior.Restrict for CreatedBy user reference.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
@@ -84,9 +84,8 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
             exception = ex;
         }
 
-        Assert.NotNull(exception);
-        Assert.True(exception is DbUpdateException or InvalidOperationException,
-            $"Expected DbUpdateException or InvalidOperationException but got {exception.GetType().Name}: {exception.Message}");
+        exception.Should().NotBeNull();
+        (exception is DbUpdateException or InvalidOperationException).Should().BeTrue($"Expected DbUpdateException or InvalidOperationException but got {exception.GetType().Name}: {exception.Message}");
     }
 
     /// <summary>
@@ -129,9 +128,8 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
             exception = ex;
         }
 
-        Assert.NotNull(exception);
-        Assert.True(exception is DbUpdateException or InvalidOperationException,
-            $"Expected DbUpdateException or InvalidOperationException but got {exception.GetType().Name}: {exception.Message}");
+        exception.Should().NotBeNull();
+        (exception is DbUpdateException or InvalidOperationException).Should().BeTrue($"Expected DbUpdateException or InvalidOperationException but got {exception.GetType().Name}: {exception.Message}");
     }
 
     [Fact]

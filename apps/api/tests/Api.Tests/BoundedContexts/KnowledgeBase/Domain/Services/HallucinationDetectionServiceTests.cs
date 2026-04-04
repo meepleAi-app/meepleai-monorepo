@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -31,10 +32,10 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "The game supports 2-4 players.", "en", TestCancellationToken);
 
-        Assert.True(result.IsValid);
-        Assert.Empty(result.DetectedKeywords);
-        Assert.Equal(HallucinationSeverity.None, result.Severity);
-        Assert.Equal("en", result.Language);
+        result.IsValid.Should().BeTrue();
+        result.DetectedKeywords.Should().BeEmpty();
+        result.Severity.Should().Be(HallucinationSeverity.None);
+        result.Language.Should().Be("en");
     }
 
     [Fact]
@@ -43,9 +44,9 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "I don't know how many players can play.", "en", TestCancellationToken);
 
-        Assert.False(result.IsValid);
-        Assert.Contains("I don't know", result.DetectedKeywords);
-        Assert.Equal(HallucinationSeverity.High, result.Severity);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain("I don't know");
+        result.Severity.Should().Be(HallucinationSeverity.High);
     }
 
     [Fact]
@@ -54,8 +55,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "I'm not sure about the setup rules.", "en", TestCancellationToken);
 
-        Assert.False(result.IsValid);
-        Assert.Contains("I'm not sure", result.DetectedKeywords);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain("I'm not sure");
     }
 
     // ========== Italian Tests (Primary language) ==========
@@ -66,9 +67,9 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "Il gioco supporta da 2 a 4 giocatori.", "it", TestCancellationToken);
 
-        Assert.True(result.IsValid);
-        Assert.Empty(result.DetectedKeywords);
-        Assert.Equal("it", result.Language);
+        result.IsValid.Should().BeTrue();
+        result.DetectedKeywords.Should().BeEmpty();
+        result.Language.Should().Be("it");
     }
 
     [Fact]
@@ -77,9 +78,9 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "Non lo so quanti giocatori possono giocare.", "it", TestCancellationToken);
 
-        Assert.False(result.IsValid);
-        Assert.Contains("non lo so", result.DetectedKeywords);
-        Assert.Equal(HallucinationSeverity.High, result.Severity);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain("non lo so");
+        result.Severity.Should().Be(HallucinationSeverity.High);
     }
 
     [Fact]
@@ -88,8 +89,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "La regola è poco chiaro nel manuale.", "it", TestCancellationToken);
 
-        Assert.False(result.IsValid);
-        Assert.Contains("poco chiaro", result.DetectedKeywords);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain("poco chiaro");
     }
 
     // ========== German Tests ==========
@@ -100,8 +101,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "Das Spiel unterstützt 2-4 Spieler.", "de", TestCancellationToken);
 
-        Assert.True(result.IsValid);
-        Assert.Equal("de", result.Language);
+        result.IsValid.Should().BeTrue();
+        result.Language.Should().Be("de");
     }
 
     [Fact]
@@ -110,8 +111,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "Ich weiß nicht wie viele Spieler.", "de", TestCancellationToken);
 
-        Assert.False(result.IsValid);
-        Assert.Contains("Ich weiß nicht", result.DetectedKeywords);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain("Ich weiß nicht");
     }
 
     // ========== French Tests ==========
@@ -122,8 +123,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "Le jeu supporte 2-4 joueurs.", "fr", TestCancellationToken);
 
-        Assert.True(result.IsValid);
-        Assert.Equal("fr", result.Language);
+        result.IsValid.Should().BeTrue();
+        result.Language.Should().Be("fr");
     }
 
     [Fact]
@@ -132,8 +133,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "Je ne sais pas combien de joueurs.", "fr", TestCancellationToken);
 
-        Assert.False(result.IsValid);
-        Assert.Contains("Je ne sais pas", result.DetectedKeywords);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain("Je ne sais pas");
     }
 
     // ========== Spanish Tests ==========
@@ -144,8 +145,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "El juego admite de 2 a 4 jugadores.", "es", TestCancellationToken);
 
-        Assert.True(result.IsValid);
-        Assert.Equal("es", result.Language);
+        result.IsValid.Should().BeTrue();
+        result.Language.Should().Be("es");
     }
 
     [Fact]
@@ -154,8 +155,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "No lo sé cuántos jugadores pueden jugar.", "es", TestCancellationToken);
 
-        Assert.False(result.IsValid);
-        Assert.Contains("No lo sé", result.DetectedKeywords);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain("No lo sé");
     }
 
     // ========== Edge Cases ==========
@@ -165,8 +166,8 @@ public class HallucinationDetectionServiceTests
     {
         var result = await _service.DetectHallucinationsAsync("", "en", TestCancellationToken);
 
-        Assert.True(result.IsValid);
-        Assert.Empty(result.DetectedKeywords);
+        result.IsValid.Should().BeTrue();
+        result.DetectedKeywords.Should().BeEmpty();
     }
 
     [Fact]
@@ -175,7 +176,7 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "Valid response", language: null, TestCancellationToken);
 
-        Assert.Equal("en", result.Language);
+        result.Language.Should().Be("en");
     }
 
     [Fact]
@@ -184,9 +185,9 @@ public class HallucinationDetectionServiceTests
         var text = "I'm not sure, unclear, and possibly incorrect.";
         var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
 
-        Assert.False(result.IsValid);
-        Assert.Equal(3, result.DetectedKeywords.Count);
-        Assert.Equal(HallucinationSeverity.Medium, result.Severity);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Count.Should().Be(3);
+        result.Severity.Should().Be(HallucinationSeverity.Medium);
     }
 
     [Fact]
@@ -195,8 +196,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(
             "I DON'T KNOW the answer.", "en", TestCancellationToken);
 
-        Assert.False(result.IsValid);
-        Assert.Single(result.DetectedKeywords);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().ContainSingle();
     }
 
     [Fact]
@@ -205,8 +206,8 @@ public class HallucinationDetectionServiceTests
         var enCount = _service.GetForbiddenKeywordCount("en");
         var itCount = _service.GetForbiddenKeywordCount("it");
 
-        Assert.True(enCount >= 10);
-        Assert.True(itCount >= 10);
+        (enCount >= 10).Should().BeTrue();
+        (itCount >= 10).Should().BeTrue();
     }
 
     // ========== Additional Comprehensive Tests (BGAI-031) ==========
@@ -219,9 +220,9 @@ public class HallucinationDetectionServiceTests
             "I don't know the rules.", "pt", TestCancellationToken);
 
         // Assert - Falls back to English
-        Assert.Equal("en", result.Language);
-        Assert.False(result.IsValid);
-        Assert.Contains("I don't know", result.DetectedKeywords);
+        result.Language.Should().Be("en");
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain("I don't know");
     }
 
     [Fact]
@@ -232,9 +233,9 @@ public class HallucinationDetectionServiceTests
             "The setup is unclear.", "en", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Single(result.DetectedKeywords);
-        Assert.Equal(HallucinationSeverity.Low, result.Severity);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().ContainSingle();
+        result.Severity.Should().Be(HallucinationSeverity.Low);
     }
 
     [Fact]
@@ -245,9 +246,9 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(3, result.DetectedKeywords.Count);
-        Assert.Equal(HallucinationSeverity.Medium, result.Severity);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Count.Should().Be(3);
+        result.Severity.Should().Be(HallucinationSeverity.Medium);
     }
 
     [Fact]
@@ -258,9 +259,9 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(5, result.DetectedKeywords.Count);
-        Assert.Equal(HallucinationSeverity.High, result.Severity);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Count.Should().Be(5);
+        result.Severity.Should().Be(HallucinationSeverity.High);
     }
 
     [Fact]
@@ -271,8 +272,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Empty(result.DetectedKeywords);
+        result.IsValid.Should().BeTrue();
+        result.DetectedKeywords.Should().BeEmpty();
     }
 
     [Fact]
@@ -283,7 +284,7 @@ public class HallucinationDetectionServiceTests
         var counts = languages.Select(lang => _service.GetForbiddenKeywordCount(lang)).ToList();
 
         // Assert - All languages have keywords defined
-        Assert.All(counts, count => Assert.True(count > 0));
+        counts.Should().AllSatisfy(count => (count > 0).Should().BeTrue());
     }
 
     [Fact]
@@ -298,8 +299,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(longText, "en", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("I don't know", result.DetectedKeywords);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain("I don't know");
     }
 
     [Fact]
@@ -310,11 +311,11 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(text, "it", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(3, result.DetectedKeywords.Count);
-        Assert.Contains("non lo so", result.DetectedKeywords);
-        Assert.Contains("non sono sicuro", result.DetectedKeywords);
-        Assert.Contains("poco chiaro", result.DetectedKeywords);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Count.Should().Be(3);
+        result.DetectedKeywords.Should().Contain("non lo so");
+        result.DetectedKeywords.Should().Contain("non sono sicuro");
+        result.DetectedKeywords.Should().Contain("poco chiaro");
     }
 
     [Fact]
@@ -329,8 +330,8 @@ public class HallucinationDetectionServiceTests
         var result2 = await _service.DetectHallucinationsAsync(text2, "de", TestCancellationToken);
 
         // Assert - Both should detect
-        Assert.False(result1.IsValid);
-        Assert.False(result2.IsValid);
+        result1.IsValid.Should().BeFalse();
+        result2.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -345,8 +346,8 @@ public class HallucinationDetectionServiceTests
         var result2 = await _service.DetectHallucinationsAsync(text2, "fr", TestCancellationToken);
 
         // Assert - Both variations should be detected
-        Assert.False(result1.IsValid);
-        Assert.False(result2.IsValid);
+        result1.IsValid.Should().BeFalse();
+        result2.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -357,8 +358,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(text, "es", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("No lo sé", result.DetectedKeywords);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain("No lo sé");
     }
 
     [Fact]
@@ -369,8 +370,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
 
         // Assert
-        Assert.Contains("2 hallucination indicator(s) detected", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("en", result.Message, StringComparison.OrdinalIgnoreCase);
+        result.Message.Should().ContainEquivalentOf("2 hallucination indicator(s) detected");
+        result.Message.Should().ContainEquivalentOf("en");
     }
 
     [Fact]
@@ -381,8 +382,8 @@ public class HallucinationDetectionServiceTests
         var resultIt = await _service.DetectHallucinationsAsync("Testo valido.", "it", TestCancellationToken);
 
         // Assert - Different languages may have different keyword counts
-        Assert.True(resultEn.TotalKeywordsChecked > 0);
-        Assert.True(resultIt.TotalKeywordsChecked > 0);
+        (resultEn.TotalKeywordsChecked > 0).Should().BeTrue();
+        (resultIt.TotalKeywordsChecked > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -404,8 +405,8 @@ public class HallucinationDetectionServiceTests
             var result = await _service.DetectHallucinationsAsync(text, language: null, TestCancellationToken);
 
             // Assert
-            Assert.False(result.IsValid);
-            Assert.Equal(HallucinationSeverity.High, result.Severity);
+            result.IsValid.Should().BeFalse();
+            result.Severity.Should().Be(HallucinationSeverity.High);
         }
     }
 
@@ -416,8 +417,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(null!, "en", TestCancellationToken);
 
         // Assert - Null treated as empty (implementation detail)
-        Assert.True(result.IsValid);
-        Assert.Empty(result.DetectedKeywords);
+        result.IsValid.Should().BeTrue();
+        result.DetectedKeywords.Should().BeEmpty();
     }
 
     [Fact]
@@ -427,8 +428,8 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync("   \t\n   ", "en", TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Empty(result.DetectedKeywords);
+        result.IsValid.Should().BeTrue();
+        result.DetectedKeywords.Should().BeEmpty();
     }
 
     [Fact]
@@ -443,12 +444,12 @@ public class HallucinationDetectionServiceTests
         var result3 = await _service.DetectHallucinationsAsync(text, "en", TestCancellationToken);
 
         // Assert - All results identical
-        Assert.False(result1.IsValid);
-        Assert.False(result2.IsValid);
-        Assert.False(result3.IsValid);
-        Assert.Equal(result1.DetectedKeywords.Count, result2.DetectedKeywords.Count);
-        Assert.Equal(result2.DetectedKeywords.Count, result3.DetectedKeywords.Count);
-        Assert.Equal(result1.Severity, result2.Severity);
+        result1.IsValid.Should().BeFalse();
+        result2.IsValid.Should().BeFalse();
+        result3.IsValid.Should().BeFalse();
+        result2.DetectedKeywords.Count.Should().Be(result1.DetectedKeywords.Count);
+        result3.DetectedKeywords.Count.Should().Be(result2.DetectedKeywords.Count);
+        result2.Severity.Should().Be(result1.Severity);
     }
 
     [Theory]
@@ -466,9 +467,9 @@ public class HallucinationDetectionServiceTests
         var result = await _service.DetectHallucinationsAsync(text, language, TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(keyword, result.DetectedKeywords, StringComparer.OrdinalIgnoreCase);
-        Assert.Equal(HallucinationSeverity.High, result.Severity);
+        result.IsValid.Should().BeFalse();
+        result.DetectedKeywords.Should().Contain(keyword);
+        result.Severity.Should().Be(HallucinationSeverity.High);
     }
 }
 

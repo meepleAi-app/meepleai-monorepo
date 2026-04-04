@@ -26,7 +26,6 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     {
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new LegacyPersistenceChatMessageDtoConverter() }
     };
 
     public async Task<ChatThread?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -355,6 +354,13 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             lastSummarizedProp?.SetValue(thread, entity.LastSummarizedMessageCount);
         }
 
+        // Hydrate selected KB IDs
+        if (!string.IsNullOrEmpty(entity.SelectedKnowledgeBaseIdsJson))
+        {
+            var kbIdsProp = typeof(ChatThread).GetProperty("SelectedKnowledgeBaseIdsJson");
+            kbIdsProp?.SetValue(thread, entity.SelectedKnowledgeBaseIdsJson);
+        }
+
         return thread;
     }
 
@@ -396,7 +402,8 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             LastMessageAt = domainEntity.LastMessageAt,
             MessagesJson = messagesJson,
             ConversationSummary = domainEntity.ConversationSummary, // Issue #5259
-            LastSummarizedMessageCount = domainEntity.LastSummarizedMessageCount
+            LastSummarizedMessageCount = domainEntity.LastSummarizedMessageCount,
+            SelectedKnowledgeBaseIdsJson = domainEntity.SelectedKnowledgeBaseIdsJson
         };
     }
 
@@ -440,86 +447,4 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         int? TokenCount = null
     );
 
-    /// <summary>
-    /// Custom JSON converter to handle legacy messages without Id/SequenceNumber fields.
-    /// Allows deserialization of both old format (no Id/SequenceNumber) and new format.
-    /// </summary>
-    private sealed class LegacyPersistenceChatMessageDtoConverter : System.Text.Json.Serialization.JsonConverter<PersistenceChatMessageDto>
-    {
-        public override PersistenceChatMessageDto Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            using var doc = JsonDocument.ParseValue(ref reader);
-            var root = doc.RootElement;
-
-            // Required fields
-            var content = root.GetProperty("Content").GetString() ?? string.Empty;
-            var role = root.GetProperty("Role").GetString() ?? string.Empty;
-            var timestamp = root.GetProperty("Timestamp").GetDateTime();
-
-            // Optional fields with defaults for legacy data
-            var id = root.TryGetProperty("Id", out var idProp) && idProp.ValueKind != JsonValueKind.Null
-                ? idProp.GetGuid()
-                : Guid.Empty; // Will be generated later
-
-            var sequenceNumber = root.TryGetProperty("SequenceNumber", out var seqProp)
-                ? seqProp.GetInt32()
-                : 0; // Will be generated later
-
-            var updatedAt = root.TryGetProperty("UpdatedAt", out var updatedAtProp) && updatedAtProp.ValueKind != JsonValueKind.Null
-                ? updatedAtProp.GetDateTime()
-                : (DateTime?)null;
-
-            var isDeleted = root.TryGetProperty("IsDeleted", out var isDeletedProp) && isDeletedProp.GetBoolean();
-
-            var deletedAt = root.TryGetProperty("DeletedAt", out var deletedAtProp) && deletedAtProp.ValueKind != JsonValueKind.Null
-                ? deletedAtProp.GetDateTime()
-                : (DateTime?)null;
-
-            var deletedByUserId = root.TryGetProperty("DeletedByUserId", out var deletedByUserIdProp) && deletedByUserIdProp.ValueKind != JsonValueKind.Null
-                ? deletedByUserIdProp.GetGuid()
-                : (Guid?)null;
-
-            var isInvalidated = root.TryGetProperty("IsInvalidated", out var isInvalidatedProp) && isInvalidatedProp.GetBoolean();
-
-            // Issue #4362: Agent-specific metadata (optional)
-            var agentType = root.TryGetProperty("AgentType", out var agentTypeProp) && agentTypeProp.ValueKind != JsonValueKind.Null
-                ? agentTypeProp.GetString()
-                : null;
-
-            var confidence = root.TryGetProperty("Confidence", out var confidenceProp) && confidenceProp.ValueKind != JsonValueKind.Null
-                ? confidenceProp.GetSingle()
-                : (float?)null;
-
-            var citationsJson = root.TryGetProperty("CitationsJson", out var citationsProp) && citationsProp.ValueKind != JsonValueKind.Null
-                ? citationsProp.GetString()
-                : null;
-
-            var tokenCount = root.TryGetProperty("TokenCount", out var tokenCountProp) && tokenCountProp.ValueKind != JsonValueKind.Null
-                ? tokenCountProp.GetInt32()
-                : (int?)null;
-
-            return new PersistenceChatMessageDto(
-                Id: id,
-                Content: content,
-                Role: role,
-                Timestamp: timestamp,
-                SequenceNumber: sequenceNumber,
-                UpdatedAt: updatedAt,
-                IsDeleted: isDeleted,
-                DeletedAt: deletedAt,
-                DeletedByUserId: deletedByUserId,
-                IsInvalidated: isInvalidated,
-                AgentType: agentType,
-                Confidence: confidence,
-                CitationsJson: citationsJson,
-                TokenCount: tokenCount
-            );
-        }
-
-        public override void Write(Utf8JsonWriter writer, PersistenceChatMessageDto value, JsonSerializerOptions options)
-        {
-            // Use default serialization for writing
-            JsonSerializer.Serialize(writer, value, options);
-        }
-    }
 }

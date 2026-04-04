@@ -19,19 +19,14 @@
 
 import { useState, useCallback } from 'react';
 
-import { Users, Clock } from 'lucide-react';
-
 import { AgentCreationSheet } from '@/components/agent/config';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
-import {
-  MeepleCard,
-  type MeepleCardVariant,
-  type MeepleCardMetadata,
-} from '@/components/ui/data-display/meeple-card';
+import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import { getNavigationLinks } from '@/config/entity-navigation';
-import { useEntityActions } from '@/hooks/use-entity-actions';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { useEntityActions } from '@/hooks/useEntityActions';
 import type { Game } from '@/lib/api';
+import { buildGameCardProps } from '@/lib/card-mappers';
 
 // ============================================================================
 // Types
@@ -46,30 +41,6 @@ export interface MeepleGameCardProps {
   onClick?: (gameId: string) => void;
   /** Additional CSS classes */
   className?: string;
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Format player count range
- */
-function formatPlayerCount(min: number | null, max: number | null): string {
-  if (min === null && max === null) return 'N/A';
-  if (min === max) return `${min}`;
-  return `${min || '?'}–${max || '?'}`;
-}
-
-/**
- * Format play time range
- */
-function formatPlayTime(min: number | null, max: number | null): string {
-  if (min === null && max === null) return 'N/A';
-  const minTime = min || 0;
-  const maxTime = max || 0;
-  if (minTime === maxTime) return `${minTime}m`;
-  return `${minTime}–${maxTime}m`;
 }
 
 // ============================================================================
@@ -115,24 +86,8 @@ export function MeepleGameCard({
     onAddToCollection: handleAddToCollection,
   });
 
-  // Build metadata
-  const metadata: MeepleCardMetadata[] = [];
-
-  const playerCount = formatPlayerCount(game.minPlayers, game.maxPlayers);
-  if (playerCount !== 'N/A') {
-    metadata.push({ icon: Users, value: playerCount });
-  }
-
-  const playTime = formatPlayTime(game.minPlayTimeMinutes, game.maxPlayTimeMinutes);
-  if (playTime !== 'N/A') {
-    metadata.push({ icon: Clock, value: playTime });
-  }
-
-  // Build subtitle with publisher and year
-  const subtitleParts: string[] = [];
-  if (game.publisher) subtitleParts.push(game.publisher);
-  if (game.yearPublished) subtitleParts.push(String(game.yearPublished));
-  const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : undefined;
+  // Build card props from mapper
+  const mapperProps = buildGameCardProps(game);
 
   return (
     <>
@@ -141,20 +96,38 @@ export function MeepleGameCard({
         entity="game"
         variant={variant}
         title={game.title}
-        subtitle={subtitle}
-        imageUrl={game.imageUrl || undefined}
-        rating={game.averageRating || undefined}
-        ratingMax={10}
-        metadata={metadata}
+        subtitle={mapperProps.subtitle}
+        imageUrl={mapperProps.imageUrl}
+        rating={mapperProps.rating}
+        ratingMax={mapperProps.ratingMax}
+        playerCountDisplay={mapperProps.playerCountDisplay}
+        playTimeDisplay={mapperProps.playTimeDisplay}
         onClick={onClick ? () => onClick(game.id) : undefined}
         className={className}
         // Issue #4041: Quick actions + Info button
         entityQuickActions={entityActions.quickActions}
         showInfoButton
-        infoHref={`/games/${game.id}`}
+        entityId={game.id}
         infoTooltip="Vai al dettaglio"
         // Epic #4688: Navigation footer — only for authenticated users
-        navigateTo={user ? getNavigationLinks('game', { id: game.id }) : undefined}
+        linkedEntities={
+          user
+            ? getNavigationLinks('game', { id: game.id }).map(l => ({
+                entityType: l.entity,
+                count: 1,
+              }))
+            : undefined
+        }
+        onManaPipClick={
+          user
+            ? entityType => {
+                const link = getNavigationLinks('game', { id: game.id }).find(
+                  l => l.entity === entityType
+                );
+                if (link?.href) window.location.href = link.href;
+              }
+            : undefined
+        }
         // Issue #4777, #4999: Agent action footer
         // Catalog context: show "Aggiungi" CTA via !hasKb + onAddToCollection
         hasAgent={false}

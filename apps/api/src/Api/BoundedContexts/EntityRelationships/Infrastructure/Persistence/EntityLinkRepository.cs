@@ -2,6 +2,8 @@ using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.EntityRelationships.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.EntityRelationships.Infrastructure.Persistence;
@@ -10,18 +12,17 @@ namespace Api.BoundedContexts.EntityRelationships.Infrastructure.Persistence;
 /// EF Core implementation of IEntityLinkRepository (Issue #5132).
 /// Uses the direct domain-entity mapping — no persistence entity.
 /// </summary>
-internal sealed class EntityLinkRepository : IEntityLinkRepository
+internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkRepository
 {
-    private readonly MeepleAiDbContext _db;
 
-    public EntityLinkRepository(MeepleAiDbContext db)
+    public EntityLinkRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _db = db;
     }
 
     public async Task<EntityLink?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _db.EntityLinks
+        return await DbContext.EntityLinks
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -32,7 +33,7 @@ internal sealed class EntityLinkRepository : IEntityLinkRepository
         Guid? ownerUserId = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _db.EntityLinks
+        var query = DbContext.EntityLinks
             .Where(x => x.SourceEntityType == sourceEntityType && x.SourceEntityId == sourceEntityId);
 
         if (ownerUserId.HasValue)
@@ -50,7 +51,7 @@ internal sealed class EntityLinkRepository : IEntityLinkRepository
         Guid? ownerUserId = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _db.EntityLinks
+        var query = DbContext.EntityLinks
             .Where(x => x.SourceEntityType == sourceEntityType && x.SourceEntityId == sourceEntityId);
 
         if (ownerUserId.HasValue)
@@ -69,7 +70,7 @@ internal sealed class EntityLinkRepository : IEntityLinkRepository
         EntityLinkType linkType,
         CancellationToken cancellationToken = default)
     {
-        return await _db.EntityLinks
+        return await DbContext.EntityLinks
             .AnyAsync(x =>
                 x.SourceEntityType == sourceEntityType &&
                 x.SourceEntityId == sourceEntityId &&
@@ -85,7 +86,7 @@ internal sealed class EntityLinkRepository : IEntityLinkRepository
         Guid entityId,
         CancellationToken cancellationToken = default)
     {
-        return await _db.EntityLinks
+        return await DbContext.EntityLinks
             .CountAsync(x =>
                 (x.SourceEntityType == entityType && x.SourceEntityId == entityId) ||
                 (x.IsBidirectional && x.TargetEntityType == entityType && x.TargetEntityId == entityId),
@@ -102,7 +103,7 @@ internal sealed class EntityLinkRepository : IEntityLinkRepository
         CancellationToken cancellationToken = default)
     {
         // Bidirectional query: entity as source OR as target of a bilateral link
-        var query = _db.EntityLinks.Where(x =>
+        var query = DbContext.EntityLinks.Where(x =>
             (x.SourceEntityType == entityType && x.SourceEntityId == entityId) ||
             (x.IsBidirectional && x.TargetEntityType == entityType && x.TargetEntityId == entityId));
 
@@ -128,13 +129,13 @@ internal sealed class EntityLinkRepository : IEntityLinkRepository
 
     public async Task AddAsync(EntityLink entityLink, CancellationToken cancellationToken = default)
     {
-        await _db.EntityLinks
+        await DbContext.EntityLinks
             .AddAsync(entityLink, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public void Remove(EntityLink entityLink)
     {
-        _db.EntityLinks.Remove(entityLink);
+        DbContext.EntityLinks.Remove(entityLink);
     }
 }

@@ -1,0 +1,255 @@
+/**
+ * GameTableZoneKnowledge — Knowledge Base zone for the Game Table
+ *
+ * Renders KB documents list with upload button, chat preview with last thread,
+ * and agent readiness status. Each section is a dark card row.
+ *
+ * Issue #3513 — Game Table Detail
+ */
+
+'use client';
+
+import React from 'react';
+
+import { FileText, MessageSquare, Activity, ChevronRight, Upload, BookOpen } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+import { DocumentSelectionPanel } from '@/components/library/DocumentSelectionPanel';
+import { Badge } from '@/components/ui/data-display/badge';
+import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
+import type { AgentStatus } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
+import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { Button } from '@/components/ui/primitives/button';
+import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
+import { useGameAgents } from '@/hooks/queries/useGameAgents';
+import { useGameKbStatus } from '@/hooks/use-game-kb-status';
+import { useAgentStatus } from '@/hooks/useAgentStatus';
+import { useGameTableDrawer } from '@/lib/stores/game-table-drawer-store';
+
+import { HouseRulesSection } from './HouseRulesSection';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface GameTableZoneKnowledgeProps {
+  gameId: string;
+  /** @deprecated Use gameId — the agent is now resolved automatically via useGameAgents */
+  agentId?: string;
+}
+
+// ============================================================================
+// Styling constants
+// ============================================================================
+
+const CARD_ROW = 'bg-[#21262d] rounded-lg p-3 border border-[#30363d]';
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Map useAgentStatus ragStatus string to AgentStatusBadge status.
+ */
+function mapRagStatusToBadge(ragStatus: string | undefined, isReady: boolean): AgentStatus {
+  if (!ragStatus) return 'idle';
+  const lower = ragStatus.toLowerCase();
+  if (lower === 'ready' && isReady) return 'active';
+  if (lower === 'processing' || lower === 'training') return 'training';
+  if (lower === 'error' || lower === 'failed') return 'error';
+  return 'idle';
+}
+
+// ============================================================================
+// Component
+// ============================================================================
+
+export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps): React.ReactNode {
+  const router = useRouter();
+
+  // Resolve the actual agent ID for this game
+  const { data: agents = [] } = useGameAgents({ gameId });
+  const resolvedAgentId = agents.length > 0 ? agents[0].id : null;
+
+  const { data: docs = [], isLoading: docsLoading } = useAgentKbDocs(gameId);
+  const { data: threads = [], isLoading: threadsLoading } = useAgentThreads(resolvedAgentId ?? '');
+  const { status: agentStatus, isLoading: statusLoading } = useAgentStatus(resolvedAgentId ?? '');
+  const drawerOpen = useGameTableDrawer(s => s.open);
+  const { data: kbStatus } = useGameKbStatus(gameId);
+
+  const lastThread = resolvedAgentId && threads.length > 0 ? threads[0] : null;
+
+  return (
+    <div className="space-y-3">
+      {/* KB Coverage Badge + Suggested Questions */}
+      {kbStatus?.isIndexed && (
+        <div className={CARD_ROW} data-testid="kb-status-section">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge
+              variant="secondary"
+              className="gap-1 text-teal-600 border-teal-200 bg-teal-50"
+              data-testid="kb-coverage-badge"
+            >
+              <BookOpen className="h-3 w-3" />
+              KB {kbStatus.coverageLevel}
+            </Badge>
+          </div>
+
+          {kbStatus.suggestedQuestions.length > 0 && (
+            <div className="mt-1">
+              <p className="text-xs text-[#8b949e] font-nunito mb-2">Domande frequenti:</p>
+              <div className="flex flex-wrap gap-2" data-testid="suggested-questions">
+                {kbStatus.suggestedQuestions.map((q, i) => (
+                  <button
+                    key={i}
+                    className="text-xs px-3 py-1 rounded-full border border-[#30363d] bg-[#30363d] text-[#e6edf3] hover:bg-[#444d56] transition-colors"
+                    data-testid="suggested-question-btn"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* KB Documents */}
+      <div className={CARD_ROW} data-testid="kb-docs-section">
+        <div className="flex items-center gap-2 mb-2">
+          <FileText className="h-4 w-4 text-amber-400" />
+          <span className="text-sm font-quicksand font-semibold text-[#e6edf3]">Documenti KB</span>
+          <span className="ml-auto text-xs text-[#8b949e] font-nunito" data-testid="doc-count">
+            {docsLoading ? '...' : docs.length}
+          </span>
+        </div>
+
+        {docsLoading ? (
+          <div className="space-y-2">
+            {[1, 2].map(i => (
+              <div
+                key={i}
+                className="h-6 bg-[#30363d] rounded animate-pulse"
+                data-testid="doc-skeleton"
+              />
+            ))}
+          </div>
+        ) : docs.length === 0 ? (
+          <p className="text-xs text-[#8b949e] font-nunito">Nessun documento caricato</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {docs.map(doc => (
+              <li
+                key={doc.id}
+                className="flex items-center justify-between text-sm"
+                data-testid="kb-doc-item"
+              >
+                <span className="text-[#e6edf3] font-nunito truncate mr-2">{doc.fileName}</span>
+                <KbStatusBadge status={doc.status} size="sm" />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* PDF Upload button */}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="w-full justify-between text-amber-400 hover:text-amber-300 hover:bg-[#30363d] mt-2"
+          onClick={() => router.push(`/library/${gameId}?action=upload-pdf`)}
+          data-testid="upload-pdf-btn"
+        >
+          <span className="flex items-center gap-2">
+            <Upload className="h-3.5 w-3.5" />
+            Carica PDF
+          </span>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* House Rules */}
+      <HouseRulesSection gameId={gameId} />
+
+      {/* Chat preview — only when an agent exists */}
+      {resolvedAgentId && (
+        <div className={CARD_ROW} data-testid="chat-preview-section">
+          <div className="flex items-center gap-2 mb-2">
+            <MessageSquare className="h-4 w-4 text-amber-400" />
+            <span className="text-sm font-quicksand font-semibold text-[#e6edf3]">Chat</span>
+          </div>
+
+          {threadsLoading ? (
+            <div className="h-6 bg-[#30363d] rounded animate-pulse" data-testid="chat-skeleton" />
+          ) : lastThread ? (
+            <div className="space-y-2">
+              <p
+                className="text-xs text-[#8b949e] font-nunito truncate"
+                data-testid="last-thread-preview"
+              >
+                {lastThread.firstMessagePreview || 'Conversazione recente'}
+              </p>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full justify-between text-amber-400 hover:text-amber-300 hover:bg-[#30363d]"
+                onClick={() => drawerOpen({ type: 'chat', agentId: resolvedAgentId })}
+                data-testid="open-chat-btn"
+              >
+                Apri chat
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-[#8b949e] font-nunito">Nessuna conversazione</p>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full justify-between text-amber-400 hover:text-amber-300 hover:bg-[#30363d]"
+                onClick={() => drawerOpen({ type: 'chat', agentId: resolvedAgentId })}
+                data-testid="open-chat-btn"
+              >
+                Inizia chat
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Agent status — only when an agent exists */}
+      {resolvedAgentId && (
+        <div className={`${CARD_ROW} flex items-center gap-3`} data-testid="agent-status-section">
+          <Activity className="h-4 w-4 text-amber-400 shrink-0" />
+          <span className="text-sm font-quicksand font-semibold text-[#e6edf3]">Agente</span>
+          <div className="ml-auto">
+            {statusLoading ? (
+              <div
+                className="h-5 w-16 bg-[#30363d] rounded animate-pulse"
+                data-testid="status-skeleton"
+              />
+            ) : (
+              <AgentStatusBadge
+                status={mapRagStatusToBadge(agentStatus?.ragStatus, agentStatus?.isReady ?? false)}
+                showLabel
+                size="sm"
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Agent Document Selection — only when an agent exists */}
+      {resolvedAgentId && (
+        <details className="mt-3">
+          <summary className="text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-300 select-none">
+            Gestisci documenti agente
+          </summary>
+          <div className="mt-2 bg-[#21262d] rounded-lg border border-[#30363d] p-3">
+            <DocumentSelectionPanel gameId={gameId} />
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}

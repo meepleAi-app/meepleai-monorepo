@@ -13,7 +13,6 @@
  * Used by:
  * - TopNavbar (shadow on scroll via isScrolled)
  * - FloatingActionBar (auto-hide via direction)
- * - SmartFAB (hide on fast scroll via direction)
  *
  * Performance:
  * - Single passive scroll listener shared across consumers

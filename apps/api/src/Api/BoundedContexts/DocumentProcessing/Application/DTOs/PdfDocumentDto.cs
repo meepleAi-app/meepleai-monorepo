@@ -10,7 +10,6 @@ internal record PdfDocumentDto(
     string FileName,
     string FilePath,
     long FileSizeBytes,
-    string ProcessingStatus,
     DateTime UploadedAt,
     DateTime? ProcessedAt,
     int? PageCount,

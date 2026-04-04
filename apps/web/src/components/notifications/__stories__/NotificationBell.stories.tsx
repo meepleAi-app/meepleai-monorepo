@@ -14,7 +14,7 @@
 import { useEffect } from 'react';
 
 import type { NotificationDto } from '@/lib/api';
-import { useNotificationStore } from '@/store/notification/store';
+import { useNotificationStore } from '@/stores/notification/store';
 
 import { NotificationBell } from '../NotificationBell';
 
@@ -199,13 +199,6 @@ export const DifferentSeverities: Story = {
           severity: 'success',
           title: 'Upload Successful',
           message: 'Your PDF has been processed',
-        }),
-        createMockNotification({
-          id: '2',
-          severity: 'info',
-          title: 'New Comment',
-          message: 'Someone commented on your shared link',
-          type: 'new_comment',
         }),
         createMockNotification({
           id: '3',

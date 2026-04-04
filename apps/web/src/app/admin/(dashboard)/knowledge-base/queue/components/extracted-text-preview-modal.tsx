@@ -65,8 +65,8 @@ export function ExtractedTextPreviewModal({
             {/* Meta row */}
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <Badge variant="outline">{data.processingStatus}</Badge>
-              {data.pageCount != null && <span>{data.pageCount} pages</span>}
-              {data.characterCount != null && (
+              {data.pageCount !== null && <span>{data.pageCount} pages</span>}
+              {data.characterCount !== null && (
                 <span>{data.characterCount.toLocaleString()} chars</span>
               )}
               {data.processedAt && (

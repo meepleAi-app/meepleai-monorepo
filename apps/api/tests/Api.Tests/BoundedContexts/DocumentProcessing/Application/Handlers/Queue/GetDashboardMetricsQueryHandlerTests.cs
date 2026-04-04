@@ -1,4 +1,4 @@
-using Api.BoundedContexts.DocumentProcessing.Application.Handlers.Queue;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.DocumentProcessing;
@@ -455,6 +455,18 @@ public sealed class GetDashboardMetricsQueryHandlerTests
 
     #region Helper Methods
 
+    /// <summary>
+    /// Maps legacy test status values to the authoritative ProcessingState values.
+    /// Handler queries ProcessingState ("Ready"/"Failed"), not legacy ProcessingStatus.
+    /// </summary>
+    private static string MapToProcessingState(string status) => status switch
+    {
+        "completed" => "Ready",
+        "failed" => "Failed",
+        "pending" => "Pending",
+        _ => "Pending"
+    };
+
     private static PdfDocumentEntity CreatePdfDocument(
         string ProcessingStatus,
         DateTime uploadedAt,
@@ -469,7 +481,7 @@ public sealed class GetDashboardMetricsQueryHandlerTests
             FileSizeBytes = 1024,
             UploadedByUserId = userId,
             UploadedAt = uploadedAt,
-            ProcessingStatus = ProcessingStatus
+            ProcessingState = MapToProcessingState(ProcessingStatus)
         };
     }
 

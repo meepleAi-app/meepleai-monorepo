@@ -53,28 +53,41 @@ internal class BggRateLimitMiddleware
 
     public async Task InvokeAsync(HttpContext context, IRateLimitService rateLimitService)
     {
+        // Evaluate BGG rate limit logic in isolation — _next is called exactly once, outside the try/catch.
+        // This prevents the catch from intercepting downstream exceptions and causing double-invocation.
+        var callNext = await EvaluateBggRateLimitAsync(context, rateLimitService).ConfigureAwait(false);
+
+        if (callNext)
+        {
+            await _next(context).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Evaluates BGG rate limits. Returns true if the pipeline should continue (_next should be called),
+    /// or false if the response has already been written (401/429).
+    /// Fails open on error (returns true). Never calls _next.
+    /// </summary>
+    private async Task<bool> EvaluateBggRateLimitAsync(HttpContext context, IRateLimitService rateLimitService)
+    {
         try
         {
             // Filter: Only apply to BGG API endpoints
             if (!IsBggApiRequest(context))
-            {
-                await _next(context).ConfigureAwait(false);
-                return;
-            }
+                return true;
 
             // Extract user identity from active session
             var (authenticated, session, _) = context.TryGetActiveSession();
 
             if (!authenticated || session?.User is null)
             {
-                // Unauthenticated BGG requests not allowed
                 context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                 await context.Response.WriteAsJsonAsync(new
                 {
                     error = "Authentication required",
                     message = "BGG API access requires authentication"
                 }, context.RequestAborted).ConfigureAwait(false);
-                return;
+                return false;
             }
 
             var user = session.User;
@@ -83,11 +96,9 @@ internal class BggRateLimitMiddleware
             // Admin bypass
             if (_options.AdminBypass && userRole == Role.Admin)
             {
-                // Add headers indicating unlimited access
                 context.Response.Headers["X-RateLimit-Limit"] = "unlimited";
                 context.Response.Headers["X-RateLimit-Remaining"] = "unlimited";
-                await _next(context).ConfigureAwait(false);
-                return;
+                return true;
             }
 
             // Get tier-based limit (Editor role gets special limit)
@@ -113,7 +124,6 @@ internal class BggRateLimitMiddleware
 
             if (!result.Allowed)
             {
-                // Rate limit exceeded - return 429
                 context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
                 context.Response.Headers["Retry-After"] = result.RetryAfterSeconds.ToString(CultureInfo.InvariantCulture);
 
@@ -134,18 +144,17 @@ internal class BggRateLimitMiddleware
                     maxRequests,
                     result.RetryAfterSeconds);
 
-                return;
+                return false;
             }
 
-            // Request allowed - continue pipeline
-            await _next(context).ConfigureAwait(false);
+            return true;
         }
         catch (Exception ex)
         {
             // Fail-open strategy: Log error but allow request
             _logger.LogError(ex, "BGG rate limit check failed. Failing open to prevent service disruption.");
             context.Response.Headers["X-RateLimit-Status"] = "Error";
-            await _next(context).ConfigureAwait(false);
+            return true;
         }
     }
 

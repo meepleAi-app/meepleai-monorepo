@@ -67,7 +67,7 @@ vi.mock('../QuerySimulator', () => ({
   QuerySimulator: () => <div data-testid="query-simulator">QuerySimulator</div>,
 }));
 
-vi.mock('../TokenFlowVisualizer', () => ({
+vi.mock('../metrics/TokenFlowVisualizer', () => ({
   TokenFlowVisualizer: () => <div data-testid="token-flow">TokenFlowVisualizer</div>,
 }));
 
@@ -79,7 +79,7 @@ vi.mock('../ArchitectureExplorer', () => ({
   ArchitectureExplorer: () => <div data-testid="architecture-explorer">ArchitectureExplorer</div>,
 }));
 
-vi.mock('../LayerDeepDocs', () => ({
+vi.mock('../reference/LayerDeepDocs', () => ({
   LayerDeepDocs: () => <div data-testid="layer-docs">LayerDeepDocs</div>,
 }));
 
@@ -99,7 +99,7 @@ vi.mock('../PromptTemplateBuilder', () => ({
   PromptTemplateBuilder: () => <div data-testid="prompt-builder">PromptTemplateBuilder</div>,
 }));
 
-vi.mock('../AgentRoleConfigurator', () => ({
+vi.mock('../config/AgentRoleConfigurator', () => ({
   AgentRoleConfigurator: () => <div data-testid="agent-role-config">AgentRoleConfigurator</div>,
 }));
 
@@ -107,7 +107,7 @@ vi.mock('../ModelSelectionOptimizer', () => ({
   ModelSelectionOptimizer: () => <div data-testid="model-optimizer">ModelSelectionOptimizer</div>,
 }));
 
-vi.mock('../PerformanceMetricsTable', () => ({
+vi.mock('../metrics/PerformanceMetricsTable', () => ({
   PerformanceMetricsTable: () => (
     <div data-testid="performance-metrics">PerformanceMetricsTable</div>
   ),
@@ -121,7 +121,7 @@ vi.mock('../TechnicalReference', () => ({
   TechnicalReference: () => <div data-testid="technical-reference">TechnicalReference</div>,
 }));
 
-vi.mock('../ParameterGuide', () => ({
+vi.mock('../reference/ParameterGuide', () => ({
   ParameterGuide: () => <div data-testid="parameter-guide">ParameterGuide</div>,
 }));
 
@@ -552,7 +552,6 @@ describe('RagDashboard', () => {
       const githubLink = screen.getByText('GitHub');
       expect(githubLink).toHaveAttribute('href', 'https://github.com/meepleai');
     });
-
   });
 
   // =========================================================================

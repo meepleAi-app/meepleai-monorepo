@@ -16,12 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import {
-  Bell,
-  CheckCheck,
-  Filter,
-  Loader2,
-} from 'lucide-react';
+import { Bell, CheckCheck, Filter, Loader2 } from 'lucide-react';
 
 import { CatalogPagination } from '@/components/catalog/CatalogPagination';
 import { NotificationItem } from '@/components/notifications/NotificationItem';
@@ -29,10 +24,7 @@ import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
 import type { NotificationDto, NotificationType } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import {
-  useNotificationStore,
-  selectNotifications,
-} from '@/store/notification/store';
+import { useNotificationStore, selectNotifications } from '@/stores/notification/store';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -40,11 +32,9 @@ type TabValue = 'all' | 'unread';
 
 const TYPE_LABELS: Record<NotificationType | 'all', string> = {
   all: 'Tutti',
-  pdf_upload_completed: 'PDF completati',
+  document_ready: 'Documenti pronti',
   rule_spec_generated: 'Regole generate',
-  processing_failed: 'Errori',
-  processing_job_completed: 'KB pronta',
-  new_comment: 'Commenti',
+  document_processing_failed: 'Errori elaborazione',
   shared_link_accessed: 'Link condivisi',
 };
 
@@ -106,9 +96,7 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-3xl font-bold mb-1">Notifiche</h1>
           <p className="text-muted-foreground text-sm">
-            {unreadCount > 0
-              ? `${unreadCount} non lette`
-              : 'Nessuna notifica non letta'}
+            {unreadCount > 0 ? `${unreadCount} non lette` : 'Nessuna notifica non letta'}
           </p>
         </div>
         {hasUnread && (

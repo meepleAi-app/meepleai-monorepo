@@ -2,13 +2,13 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, main-staging]
+    branches: [main, main-dev, main-staging, frontend-dev, backend-dev]
   workflow_dispatch:
   workflow_call:  # Allow reuse by deploy-staging.yml
 
 # Cancel in-progress runs for same PR/branch
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.run_id }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 # Minimal required permissions
@@ -17,28 +17,21 @@ permissions:
   pull-requests: write
   checks: write
 
+  actions: read
 jobs:
   # Quick path filtering to skip unchanged areas
   changes:
     name: Detect Changes
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
+      python: ${{ steps.filter.outputs.python }}
       infra: ${{ steps.filter.outputs.infra }}
+      runner: ${{ steps.select-runner.outputs.runner }}
     steps:
-      - name: Verify ARM64 runner
-        if: vars.RUNNER != ''
-        run: |
-          ARCH=$(uname -m)
-          echo "Runner architecture: $ARCH"
-          if [ "$ARCH" != "aarch64" ]; then
-            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
-            exit 1
-          fi
-
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -50,14 +43,23 @@ jobs:
             backend:
               - 'apps/api/**'
               - 'global.json'
+            python:
+              - 'apps/orchestration-service/**'
             infra:
               - 'infra/**'
               - 'docker-compose*.yml'
 
+      - name: Select runner (GitHub-hosted for all CI jobs)
+        id: select-runner
+        run: |
+          echo "runner=ubuntu-latest" >> $GITHUB_OUTPUT
+          echo "🏃 Using GitHub-hosted runner"
+
   # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
   frontend:
     name: Frontend - Build & Test
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ needs.changes.outputs.runner }}
+    timeout-minutes: 30
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -65,7 +67,7 @@ jobs:
         working-directory: apps/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
@@ -99,19 +101,84 @@ jobs:
 
       - name: Upload Coverage
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: apps/web/coverage/lcov.info
           flags: frontend
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 
-  # Backend: Build, Unit Tests, Integration Tests
-  backend:
-    name: Backend - Build & Test
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+  # Backend Unit Tests (fast, no service containers needed)
+  backend-unit:
+    name: Backend - Unit Tests
+    runs-on: ${{ needs.changes.outputs.runner }}
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - name: Setup Backend
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run Unit Tests
+        timeout-minutes: 30
+        env:
+          CI: true
+        run: |
+          echo "🧪 Running unit tests..."
+          dotnet test \
+            --filter "Category=Unit" \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --configuration Release \
+            --blame-hang-timeout 5min \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./coverage/unit-coverage.xml
+          echo "✅ Unit tests passed"
+
+      - name: Upload Coverage
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: apps/api/coverage/unit-coverage.xml
+          flags: backend-unit
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
+
+  # Backend Integration Tests (requires service containers, runs in parallel with unit tests)
+  # Phase 2+3: 4 parallel threads per shard, 3-shard matrix for ~4-12x total speedup
+  backend-integration:
+    name: Backend - Integration (${{ matrix.shard.name }})
+    runs-on: ${{ needs.changes.outputs.runner }}
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: "KnowledgeBase"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)"
+            coverage_file: "integration-coverage-shard1.xml"
+          - name: "Games"
+            filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"
+            coverage_file: "integration-coverage-shard2.xml"
+          - name: "Core"
+            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            coverage_file: "integration-coverage-shard3.xml"
 
     services:
       postgres:
@@ -120,14 +187,17 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
           POSTGRES_DB: meepleai_test
-        # Issue #2693: Increase max_connections from 100 (default) to 500 for parallel tests
-        # --shm-size=512mb provides shared memory for the increased connection pool
+        # Fix: Default max_connections=100 causes "too many clients" with 4 parallel test threads.
+        # Each shard runs ~35 test classes, each with its own connection pool.
+        # 200 connections provides headroom for parallel execution.
+        # Note: GitHub Actions service containers pass extra options as Docker args,
+        # but postgres command args must go after the image entrypoint.
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-          --shm-size=512mb
+          --shm-size=256mb
         ports:
           - 5432:5432
 
@@ -159,29 +229,8 @@ jobs:
         working-directory: apps/api
 
     steps:
-      - name: Verify ARM64 runner
-        if: vars.RUNNER != ''
-        run: |
-          ARCH=$(uname -m)
-          echo "Runner architecture: $ARCH"
-          if [ "$ARCH" != "aarch64" ]; then
-            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
-            exit 1
-          fi
-
-      - name: Pre-job disk check (self-hosted)
-        if: vars.RUNNER != ''
-        run: |
-          # Requires GNU df (--output flag)
-          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
-          echo "Disk usage: ${USAGE}%"
-          if [ "$USAGE" -gt 90 ]; then
-            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
-            docker system prune -af --filter "until=24h" 2>/dev/null || true
-          fi
-
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install PDF Dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
@@ -191,21 +240,6 @@ jobs:
         with:
           dotnet-version: '9.0.x'
           working-directory: apps/api
-
-      - name: Cache Docker Images
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-${{ runner.arch }}-docker-${{ hashFiles('**/Dockerfile', 'docker-compose*.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-docker-
-
-      - name: Pull Test Container Images
-        run: |
-          echo "📦 Pulling test container images for cache..."
-          docker pull pgvector/pgvector:pg16 || true  # Issue #3547: Use pgvector image
-          docker pull redis:7-alpine || true
-          echo "✅ Test images pulled and cached"
 
       - name: Pre-Test Cleanup
         shell: bash
@@ -234,91 +268,101 @@ jobs:
           echo "✅ Redis ready"
 
           echo "⏳ Waiting for Qdrant..."
-          # Health check configured with 150s retries (30×5s)
-          # Manual wait as backup with extended timeout (120s)
-          for i in {1..60}; do
+          # Services block has 30 retries × 5s health check — just verify it's reachable
+          for i in {1..15}; do
             if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant ready"
-              exit 0
+              break
             fi
             sleep 2
           done
-          echo "⚠️ Qdrant health check timeout - relying on container health check"
+
+      - name: Create CI Secret Files
+        working-directory: .
+        run: |
+          echo "🔧 Creating CI secret files for integration tests..."
+          mkdir -p infra/secrets
+          printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=testpass\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
+          printf 'REDIS_PASSWORD=redis-ci-test\n' > infra/secrets/redis.secret
+          printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'QDRANT_URL=http://localhost:6333\n' > infra/secrets/qdrant.secret
+          printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
+          echo "✅ CI secret files created"
+
+      - name: Verify PostgreSQL Connection Limits
+        env:
+          PGPASSWORD: testpass
+        run: |
+          echo "🔧 Verifying PostgreSQL max_connections..."
+          psql -h localhost -U postgres -d meepleai_test -c "SHOW max_connections;"
+          echo "✅ Default max_connections=100 — connection pools limited via MaxPoolSize in conn strings"
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      # Stage 2: Backend Unit Tests
-      # Stage 4: Backend Integration Tests (Testcontainers)
-      # Both stages run sequentially in this job with service containers
-      - name: Run Tests
-        # Issue #2967: ARM64 self-hosted runner is 30-40% slower than x86-64.
-        # Tests use || true so individual failures don't fail the step.
-        # continue-on-error prevents timeout from failing the entire job.
-        timeout-minutes: 60
-        continue-on-error: true
+      # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
+      # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
+      # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
+      # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
+      # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
+      - name: Run Integration Tests
+        timeout-minutes: 30
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           POSTGRES_DB: meepleai_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
-          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
+          # MaxPoolSize=2 + ClearAllPools() in teardown prevents accumulation within max_connections=100
+          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=2;Timeout=30;Command Timeout=60
           QDRANT_URL: http://localhost:6333
-          REDIS_URL: localhost:6379
+          REDIS_URL: localhost:6379,allowAdmin=true
           OPENROUTER_API_KEY: test-key
           CI: true
           # Issue #3102: Disable rate limiting middleware for integration tests to prevent 429 errors
           DISABLE_RATE_LIMITING: "true"
+          # Issue #CI-Optimization: Pass external service URLs so SharedTestcontainersFixture
+          # skips container startup and uses CI service containers directly
+          # MaxPoolSize=2 + ClearAllPools() in test teardown — matches fixture code
+          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=2;Timeout=30;Command Timeout=60
+          TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
-          # Run Unit tests
+          echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (4 parallel threads)..."
           dotnet test \
-            --filter "Category=Unit" \
+            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
+            --settings tests/Api.Tests/integration.runsettings \
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \
+            --blame-hang-timeout 5min \
+            --blame-hang-dump-type mini \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/unit-coverage.xml || true
-
-          # Run Integration tests
-          # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
-          # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
-          # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
-          # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
-          # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
-          dotnet test \
-            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent" \
-            --logger "console;verbosity=minimal" \
-            --no-build \
-            --configuration Release \
-            -p:CollectCoverage=true \
-            -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/integration-coverage.xml || true
+            -p:CoverletOutput=./coverage/${{ matrix.shard.coverage_file }}
+          echo "✅ Integration tests passed - shard: ${{ matrix.shard.name }}"
 
       - name: Upload Coverage
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-          files: |
-            apps/api/coverage/unit-coverage.xml
-            apps/api/coverage/integration-coverage.xml
-          flags: backend
+          files: apps/api/coverage/${{ matrix.shard.coverage_file }}
+          flags: backend-integration-${{ matrix.shard.name }}
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 
   # Python Services: Pytest for orchestration-service
   python-tests:
     name: Python - Orchestration Service Tests
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ needs.changes.outputs.runner }}
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs.python == 'true' || needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         working-directory: apps/orchestration-service
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -347,7 +391,7 @@ jobs:
 
       - name: Upload Python Coverage
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: apps/orchestration-service/coverage.xml
           flags: python,arbitro
@@ -358,7 +402,7 @@ jobs:
   # Full E2E suite with 4-shard parallel execution runs separately in e2e-tests.yml
   e2e:
     name: E2E - Critical Paths
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ needs.changes.outputs.runner }}
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
 
@@ -404,29 +448,8 @@ jobs:
         working-directory: apps/web
 
     steps:
-      - name: Verify ARM64 runner
-        if: vars.RUNNER != ''
-        run: |
-          ARCH=$(uname -m)
-          echo "Runner architecture: $ARCH"
-          if [ "$ARCH" != "aarch64" ]; then
-            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
-            exit 1
-          fi
-
-      - name: Pre-job disk check (self-hosted)
-        if: vars.RUNNER != ''
-        run: |
-          # Requires GNU df (--output flag)
-          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
-          echo "Disk usage: ${USAGE}%"
-          if [ "$USAGE" -gt 90 ]; then
-            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
-            docker system prune -af --filter "until=24h" 2>/dev/null || true
-          fi
-
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # ===== Backend Setup =====
       - name: Wait for Services
@@ -455,6 +478,23 @@ jobs:
             sleep 1
           done
 
+      - name: Create CI Secret Files
+        working-directory: .
+        run: |
+          mkdir -p infra/secrets
+          printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=postgres_test_password\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
+          printf 'REDIS_PASSWORD=redis-ci-test\n' > infra/secrets/redis.secret
+          printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'QDRANT_URL=http://localhost:6333\n' > infra/secrets/qdrant.secret
+          printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
+
+      - name: Fix dotnet directory permissions
+        run: |
+          if [ -d "/usr/share/dotnet" ]; then
+            sudo chown -R $(whoami) /usr/share/dotnet || true
+          fi
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
@@ -475,7 +515,7 @@ jobs:
 
       - name: Run Database Migrations
         working-directory: apps/api/src/Api
-        run: dotnet ef database update
+        run: dotnet ef database update --no-build --configuration Release
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"
@@ -486,11 +526,11 @@ jobs:
       - name: Start Backend API
         working-directory: apps/api/src/Api
         run: |
-          dotnet run --no-build --configuration Release --no-launch-profile &
+          dotnet run --no-build --configuration Release --no-launch-profile > /tmp/api.log 2>&1 &
           echo $! > api.pid
-          sleep 15
+          echo "API started with PID $(cat api.pid)"
         env:
-          ASPNETCORE_ENVIRONMENT: Testing
+          ASPNETCORE_ENVIRONMENT: CI
           ASPNETCORE_URLS: "http://localhost:8080"
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"
@@ -500,10 +540,39 @@ jobs:
           REDIS_URL: "localhost:6379"
           QDRANT_URL: "http://localhost:6333"
           OPENROUTER_API_KEY: "test-key-for-ci-placeholder"
+          LOCAL_EMBEDDING_URL: "http://localhost:8000"  # Override default docker hostname
 
-      - name: Backend Health Check
+      - name: Wait for API Health
         working-directory: .
-        run: curl --retry 10 --retry-delay 3 --retry-max-time 60 http://localhost:8080/health
+        timeout-minutes: 2
+        run: |
+          echo "⏳ Waiting for API to be healthy..."
+          for i in {1..40}; do
+            if curl -sf http://localhost:8080/health/live > /dev/null 2>&1; then
+              echo "✅ API live after ~$((i*3))s"
+              curl -sf http://localhost:8080/health/ready > /dev/null 2>&1 && echo "✅ Core services ready" || echo "⚠️ Some core services degraded (non-blocking)"
+              exit 0
+            fi
+            if [ $((i % 5)) -eq 0 ]; then
+              echo "  Still waiting... (attempt $i/40)"
+              if [ -f apps/api/src/Api/api.pid ] && ! kill -0 $(cat apps/api/src/Api/api.pid) 2>/dev/null; then
+                echo "❌ API process died. Last 30 lines of log:"
+                tail -30 /tmp/api.log 2>/dev/null || echo "(no log file)"
+                exit 1
+              fi
+            fi
+            sleep 3
+          done
+          echo "❌ API failed to start within 2 minutes"
+          echo "=== Last 50 lines of API log ==="
+          tail -50 /tmp/api.log 2>/dev/null || echo "(no log file)"
+          echo "=== Checking if process is alive ==="
+          if [ -f apps/api/src/Api/api.pid ]; then
+            kill -0 $(cat apps/api/src/Api/api.pid) 2>/dev/null && echo "Process alive but not responding" || echo "Process dead"
+          fi
+          echo "=== Checking port 8080 ==="
+          ss -tlnp | grep 8080 || echo "Nothing listening on 8080"
+          exit 1
 
       # ===== Frontend Setup =====
       - name: Setup Frontend
@@ -540,23 +609,133 @@ jobs:
   # Final status check
   ci-success:
     name: CI Success
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [frontend, backend, python-tests, e2e]
+    runs-on: ubuntu-latest
+    needs: [frontend, backend-unit, backend-integration, python-tests, e2e]
     if: always()
     steps:
       - name: Check Status
         run: |
-          if [ "${{ needs.frontend.result }}" == "failure" ] || \
-             [ "${{ needs.backend.result }}" == "failure" ] || \
-             [ "${{ needs.python-tests.result }}" == "failure" ] || \
-             [ "${{ needs.e2e.result }}" == "failure" ]; then
-            echo "❌ CI Failed"
-            exit 1
+          # Required jobs (block CI)
+          for job in frontend backend-unit python-tests e2e; do
+            result="${{ needs.frontend.result }}"
+            case "$job" in
+              backend-unit) result="${{ needs.backend-unit.result }}" ;;
+              python-tests) result="${{ needs.python-tests.result }}" ;;
+              e2e) result="${{ needs.e2e.result }}" ;;
+            esac
+            if [ "$result" == "failure" ] || [ "$result" == "cancelled" ]; then
+              echo "❌ CI Failed: $job=$result"
+              exit 1
+            fi
+          done
+
+          # Advisory jobs (warn but don't block — integration tests depend on CI service containers)
+          integration_result="${{ needs.backend-integration.result }}"
+          if [ "$integration_result" == "failure" ]; then
+            echo "⚠️ CI Warning: backend-integration=$integration_result (non-blocking, may be infrastructure)"
           fi
+
           echo "✅ CI Passed"
 
-      - name: Post-CI cleanup (self-hosted)
-        if: always() && !contains(runner.name, 'GitHub Actions')
-        run: |
-          docker container prune -f 2>/dev/null || true
-          docker image prune -f 2>/dev/null || true
+  # Deploy preview comment for PRs targeting staging
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [changes, ci-success]
+    if: github.base_ref == 'main-staging' && needs.ci-success.result == 'success'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Generate Preview Comment
+        uses: actions/github-script@v8
+        env:
+          FRONTEND_CHANGED: ${{ needs.changes.outputs.frontend }}
+          BACKEND_CHANGED: ${{ needs.changes.outputs.backend }}
+          INFRA_CHANGED: ${{ needs.changes.outputs.infra }}
+        with:
+          script: |
+            const frontendChanged = process.env.FRONTEND_CHANGED === 'true';
+            const backendChanged = process.env.BACKEND_CHANGED === 'true';
+            const infraChanged = process.env.INFRA_CHANGED === 'true';
+
+            // Build services list
+            const services = [];
+            if (backendChanged) services.push('🔧 **API** — will be rebuilt and redeployed');
+            if (frontendChanged) services.push('🎨 **Web** — will be rebuilt and redeployed');
+            if (infraChanged) services.push('🏗️ **Infra** — configuration changes detected');
+            if (services.length === 0) services.push('ℹ️ No service changes detected');
+
+            const body = [
+              '## 🚀 Deploy Preview — Staging',
+              '',
+              '> This PR targets `main-staging`. Merging will trigger an automatic deployment to [meepleai.app](https://meepleai.app).',
+              '',
+              '### Services Affected',
+              services.join('\n'),
+              '',
+              '### CI Status',
+              '✅ All checks passed — ready to deploy',
+              '',
+              '---',
+              '*🤖 Generated by CI — Deploy Preview*'
+            ].join('\n');
+
+            // Find existing preview comment to update (avoid duplicates)
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c =>
+              c.body && c.body.includes('Generated by CI — Deploy Preview')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body
+              });
+              console.log('Updated existing deploy preview comment');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+              console.log('Created new deploy preview comment');
+            }
+
+  notify-end:
+    if: >-
+      always()
+      && github.event_name != 'workflow_call'
+      && contains(join(needs.*.result, ','), 'failure')
+      && (
+        github.event_name == 'workflow_dispatch'
+        || github.base_ref == 'main-staging'
+        || github.base_ref == 'main'
+      )
+    needs: [changes, frontend, backend-unit, backend-integration, python-tests, e2e, ci-success, deploy-preview]
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: failed
+      workflow_name: "CI"
+      environment: ci
+      is_critical: false
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+      SLACK_CRITICAL_WEBHOOK_URL: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}

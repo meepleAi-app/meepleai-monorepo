@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
@@ -14,7 +15,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Integration tests for LlmRequestLogRepository using shared PostgreSQL Testcontainer.
 /// Issue #5076: Phase 1 test suite — verifies persistence, 30-day retention, and cleanup.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "5076")]
@@ -27,7 +28,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
     }
 
     protected override LlmRequestLogRepository CreateRepository(MeepleAiDbContext dbContext)
-        => new(dbContext, Mock.Of<ILogger<LlmRequestLogRepository>>());
+        => new(dbContext, MockEventCollector.Object, Mock.Of<ILogger<LlmRequestLogRepository>>());
 
     // ─── LogRequestAsync ─────────────────────────────────────────────────────
 
@@ -54,27 +55,28 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
             isStreaming: false,
             isFreeModel: false,
             sessionId: "test-session",
+            userRegion: null,
             cancellationToken: TestCancellationToken);
 
         // Assert
         var logs = await DbContext.LlmRequestLogs.ToListAsync(TestCancellationToken);
-        Assert.Single(logs);
+        logs.Should().ContainSingle();
 
         var log = logs[0];
-        Assert.Equal("openai/gpt-4o", log.ModelId);
-        Assert.Equal("openrouter", log.Provider);
-        Assert.Equal(nameof(RequestSource.RagPipeline), log.RequestSource);
-        Assert.Equal(500, log.PromptTokens);
-        Assert.Equal(200, log.CompletionTokens);
-        Assert.Equal(700, log.TotalTokens);
-        Assert.Equal(0.0025m, log.CostUsd);
-        Assert.Equal(480, log.LatencyMs);
-        Assert.True(log.Success);
-        Assert.Null(log.ErrorMessage);
-        Assert.False(log.IsStreaming);
-        Assert.False(log.IsFreeModel);
-        Assert.Equal("test-session", log.SessionId);
-        Assert.True(log.RequestedAt >= before && log.RequestedAt <= DateTime.UtcNow);
+        log.ModelId.Should().Be("openai/gpt-4o");
+        log.Provider.Should().Be("openrouter");
+        log.RequestSource.Should().Be(nameof(RequestSource.RagPipeline));
+        log.PromptTokens.Should().Be(500);
+        log.CompletionTokens.Should().Be(200);
+        log.TotalTokens.Should().Be(700);
+        log.CostUsd.Should().Be(0.0025m);
+        log.LatencyMs.Should().Be(480);
+        log.Success.Should().BeTrue();
+        log.ErrorMessage.Should().BeNull();
+        log.IsStreaming.Should().BeFalse();
+        log.IsFreeModel.Should().BeFalse();
+        log.SessionId.Should().Be("test-session");
+        (log.RequestedAt >= before && log.RequestedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -87,13 +89,12 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         await Repository.LogRequestAsync(
             "model", "provider", RequestSource.Manual,
             null, null, 0, 0, 0m, 0, false, null, false, false, null,
-            TestCancellationToken);
+            userRegion: null, cancellationToken: TestCancellationToken);
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
         var expectedExpiry = log.RequestedAt.AddDays(30);
-        Assert.True(Math.Abs((log.ExpiresAt - expectedExpiry).TotalSeconds) < 2,
-            $"ExpiresAt {log.ExpiresAt} should be ~30 days after RequestedAt {log.RequestedAt}");
+        (Math.Abs((log.ExpiresAt - expectedExpiry).TotalSeconds) < 2).Should().BeTrue($"ExpiresAt {log.ExpiresAt} should be ~30 days after RequestedAt {log.RequestedAt}");
     }
 
     [Fact]
@@ -108,12 +109,12 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
             null, null, 100, 0, 0m, 100, success: false,
             errorMessage: "Rate limit exceeded",
             isStreaming: false, isFreeModel: false, sessionId: null,
-            TestCancellationToken);
+            userRegion: null, cancellationToken: TestCancellationToken);
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
-        Assert.False(log.Success);
-        Assert.Equal("Rate limit exceeded", log.ErrorMessage);
+        log.Success.Should().BeFalse();
+        log.ErrorMessage.Should().Be("Rate limit exceeded");
     }
 
     [Theory]
@@ -131,11 +132,11 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         await Repository.LogRequestAsync(
             "model", "provider", source,
             null, null, 0, 0, 0m, 0, true, null, false, false, null,
-            TestCancellationToken);
+            userRegion: null, cancellationToken: TestCancellationToken);
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
-        Assert.Equal(source.ToString(), log.RequestSource);
+        log.RequestSource.Should().Be(source.ToString());
     }
 
     // ─── DeleteExpiredAsync ───────────────────────────────────────────────────
@@ -176,9 +177,9 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         var deleted = await Repository.DeleteExpiredAsync(now, TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, deleted);
+        deleted.Should().Be(2);
         var remaining = await DbContext.LlmRequestLogs.CountAsync(TestCancellationToken);
-        Assert.Equal(1, remaining);
+        remaining.Should().Be(1);
     }
 
     [Fact]
@@ -201,7 +202,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         var deleted = await Repository.DeleteExpiredAsync(now, TestCancellationToken);
 
         // Assert
-        Assert.Equal(0, deleted);
+        deleted.Should().Be(0);
     }
 
     [Fact]
@@ -214,6 +215,88 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         var deleted = await Repository.DeleteExpiredAsync(DateTime.UtcNow, TestCancellationToken);
 
         // Assert
-        Assert.Equal(0, deleted);
+        deleted.Should().Be(0);
+    }
+
+    // ─── GetActiveAiUserCountAsync ────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetActiveAiUserCountAsync_ReturnsDistinctUserCount()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var userId1 = Guid.NewGuid();
+        var userId2 = Guid.NewGuid();
+
+        // User1: 2 requests, User2: 1 request, System: 1 request (null userId)
+        await Repository.LogRequestAsync("model", "openrouter", RequestSource.Manual,
+            userId1, "user", 100, 50, 0.01m, 200, true, null, false, false, null, null, TestCancellationToken);
+        await Repository.LogRequestAsync("model", "openrouter", RequestSource.RagPipeline,
+            userId1, "user", 200, 100, 0.02m, 300, true, null, false, false, null, null, TestCancellationToken);
+        await Repository.LogRequestAsync("model", "ollama", RequestSource.Manual,
+            userId2, "admin", 50, 25, 0m, 100, true, null, false, true, null, null, TestCancellationToken);
+        await Repository.LogRequestAsync("model", "ollama", RequestSource.AgentTask,
+            null, null, 50, 25, 0m, 100, true, null, false, true, null, null, TestCancellationToken);
+
+        // Act
+        var count = await Repository.GetActiveAiUserCountAsync(
+            DateTime.UtcNow.AddDays(-30), TestCancellationToken);
+
+        // Assert — 2 distinct users (null userId excluded)
+        count.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetActiveAiUserCountAsync_ExcludesAnonymizedRecords()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var userId = Guid.NewGuid();
+
+        await Repository.LogRequestAsync("model", "openrouter", RequestSource.Manual,
+            userId, "user", 100, 50, 0.01m, 200, true, null, false, false, null, null, TestCancellationToken);
+
+        // Pseudonymize all records
+        await Repository.PseudonymizeOldLogsAsync(
+            DateTime.UtcNow.AddMinutes(1), "test-salt", TestCancellationToken);
+
+        // Act
+        var count = await Repository.GetActiveAiUserCountAsync(
+            DateTime.UtcNow.AddDays(-30), TestCancellationToken);
+
+        // Assert — anonymized records excluded
+        count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetActiveAiUserCountAsync_EmptyTable_ReturnsZero()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+
+        // Act
+        var count = await Repository.GetActiveAiUserCountAsync(
+            DateTime.UtcNow.AddDays(-30), TestCancellationToken);
+
+        // Assert
+        count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetActiveAiUserCountAsync_ExcludesOldRecords()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var userId = Guid.NewGuid();
+
+        await Repository.LogRequestAsync("model", "openrouter", RequestSource.Manual,
+            userId, "user", 100, 50, 0.01m, 200, true, null, false, false, null, null, TestCancellationToken);
+
+        // Act — query with future 'from' date (all records are "old")
+        var count = await Repository.GetActiveAiUserCountAsync(
+            DateTime.UtcNow.AddMinutes(1), TestCancellationToken);
+
+        // Assert
+        count.Should().Be(0);
     }
 }

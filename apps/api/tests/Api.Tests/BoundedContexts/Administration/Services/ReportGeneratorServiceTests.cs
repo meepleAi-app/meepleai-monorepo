@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Services;
@@ -53,12 +54,12 @@ public sealed class ReportGeneratorServiceTests : IDisposable
 
         var result = await _sut.GenerateAsync(template, format, parameters, CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.NotNull(result.FileName);
-        Assert.True(result.FileSizeBytes > 0);
-        Assert.Contains(template.ToString(), result.FileName);
-        Assert.Contains(format.ToString().ToLowerInvariant(), result.FileName.ToLowerInvariant());
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().NotBeNull();
+        (result.FileSizeBytes > 0).Should().BeTrue();
+        result.FileName.Should().Contain(template.ToString());
+        result.FileName.ToLowerInvariant().Should().Contain(format.ToString().ToLowerInvariant());
     }
 
     [Fact]
@@ -77,9 +78,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             CancellationToken.None);
 
         var content = System.Text.Encoding.UTF8.GetString(result.Content);
-        Assert.Contains("\"uptime\"", content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("\"errorRate\"", content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("\"responseTime\"", content, StringComparison.OrdinalIgnoreCase);
+        content.Should().ContainEquivalentOf("\"uptime\"");
+        content.Should().ContainEquivalentOf("\"errorRate\"");
+        content.Should().ContainEquivalentOf("\"responseTime\"");
     }
 
     [Fact]
@@ -98,8 +99,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             CancellationToken.None);
 
         var content = System.Text.Encoding.UTF8.GetString(result.Content);
-        Assert.Contains("\"activeUsers\"", content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("\"totalLogins\"", content, StringComparison.OrdinalIgnoreCase);
+        content.Should().ContainEquivalentOf("\"activeUsers\"");
+        content.Should().ContainEquivalentOf("\"totalLogins\"");
     }
 
     [Fact]
@@ -118,8 +119,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             CancellationToken.None);
 
         var content = System.Text.Encoding.UTF8.GetString(result.Content);
-        Assert.Contains("\"totalCost\"", content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("\"tokenUsage\"", content, StringComparison.OrdinalIgnoreCase);
+        content.Should().ContainEquivalentOf("\"totalCost\"");
+        content.Should().ContainEquivalentOf("\"tokenUsage\"");
     }
 
     [Fact]
@@ -138,8 +139,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             CancellationToken.None);
 
         var content = System.Text.Encoding.UTF8.GetString(result.Content);
-        Assert.Contains("\"totalDocuments\"", content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("\"vectorEmbeddings\"", content, StringComparison.OrdinalIgnoreCase);
+        content.Should().ContainEquivalentOf("\"totalDocuments\"");
+        content.Should().ContainEquivalentOf("\"vectorEmbeddings\"");
     }
 
     [Fact]
@@ -154,9 +155,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             CancellationToken.None);
 
         var content = System.Text.Encoding.UTF8.GetString(result.Content);
-        Assert.Contains(",", content);
-        Assert.Contains("\n", content);
-        Assert.EndsWith(".csv", result.FileName);
+        content.Should().Contain(",");
+        content.Should().Contain("\n");
+        result.FileName.Should().EndWith(".csv");
     }
 
     [Fact]
@@ -171,9 +172,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             CancellationToken.None);
 
         var content = System.Text.Encoding.UTF8.GetString(result.Content);
-        Assert.StartsWith("{", content.TrimStart());
-        Assert.EndsWith("}", content.TrimEnd());
-        Assert.EndsWith(".json", result.FileName);
+        content.TrimStart().Should().StartWith("{");
+        content.TrimEnd().Should().EndWith("}");
+        result.FileName.Should().EndWith(".json");
     }
 
     [Fact]
@@ -187,13 +188,13 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters,
             CancellationToken.None);
 
-        Assert.True(result.Content.Length >= 4);
-        Assert.Equal(0x25, result.Content[0]); // %
-        Assert.Equal(0x50, result.Content[1]); // P
-        Assert.Equal(0x44, result.Content[2]); // D
-        Assert.Equal(0x46, result.Content[3]); // F
-        Assert.EndsWith(".pdf", result.FileName);
-        Assert.True(result.FileSizeBytes > 1000);
+        (result.Content.Length >= 4).Should().BeTrue();
+        result.Content[0].Should().Be(0x25); // %
+        result.Content[1].Should().Be(0x50); // P
+        result.Content[2].Should().Be(0x44); // D
+        result.Content[3].Should().Be(0x46); // F
+        result.FileName.Should().EndWith(".pdf");
+        (result.FileSizeBytes > 1000).Should().BeTrue();
     }
 
     [Fact]
@@ -202,8 +203,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var invalidTemplate = (ReportTemplate)999;
         var parameters = new Dictionary<string, object>();
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
-            await _sut.GenerateAsync(invalidTemplate, ReportFormat.Csv, parameters, CancellationToken.None));
+        var act = async () =>
+            await _sut.GenerateAsync(invalidTemplate, ReportFormat.Csv, parameters, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -214,8 +216,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             ["invalidParam"] = "value"
         };
 
-        await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Csv, parameters, CancellationToken.None));
+        var act = async () =>
+            await _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Csv, parameters, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -223,10 +226,11 @@ public sealed class ReportGeneratorServiceTests : IDisposable
     {
         var parameters = new Dictionary<string, object>();
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _sut.GenerateAsync(ReportTemplate.UserActivity, ReportFormat.Csv, parameters, CancellationToken.None));
+        var act = async () =>
+            await _sut.GenerateAsync(ReportTemplate.UserActivity, ReportFormat.Csv, parameters, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("startDate", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("startDate");
     }
 
     [Fact]
@@ -236,8 +240,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Csv, parameters, cts.Token));
+        var act = async () =>
+            await _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Csv, parameters, cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     #endregion
@@ -255,8 +260,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
 
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.SystemHealth, parameters);
 
-        Assert.True(isValid);
-        Assert.Null(errorMessage);
+        isValid.Should().BeTrue();
+        errorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -269,9 +274,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
 
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.UserActivity, parameters);
 
-        Assert.False(isValid);
-        Assert.NotNull(errorMessage);
-        Assert.Contains("startDate", errorMessage, StringComparison.OrdinalIgnoreCase);
+        isValid.Should().BeFalse();
+        errorMessage.Should().NotBeNull();
+        errorMessage.Should().ContainEquivalentOf("startDate");
     }
 
     [Fact]
@@ -284,9 +289,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
 
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.AIUsage, parameters);
 
-        Assert.False(isValid);
-        Assert.NotNull(errorMessage);
-        Assert.Contains("endDate", errorMessage, StringComparison.OrdinalIgnoreCase);
+        isValid.Should().BeFalse();
+        errorMessage.Should().NotBeNull();
+        errorMessage.Should().ContainEquivalentOf("endDate");
     }
 
     [Fact]
@@ -300,9 +305,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
 
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.ContentMetrics, parameters);
 
-        Assert.False(isValid);
-        Assert.NotNull(errorMessage);
-        Assert.Contains("after", errorMessage, StringComparison.OrdinalIgnoreCase);
+        isValid.Should().BeFalse();
+        errorMessage.Should().NotBeNull();
+        errorMessage.Should().ContainEquivalentOf("after");
     }
 
     [Fact]
@@ -316,9 +321,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
 
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.SystemHealth, parameters);
 
-        Assert.False(isValid);
-        Assert.NotNull(errorMessage);
-        Assert.Contains("range", errorMessage, StringComparison.OrdinalIgnoreCase);
+        isValid.Should().BeFalse();
+        errorMessage.Should().NotBeNull();
+        errorMessage.Should().ContainEquivalentOf("range");
     }
 
     #endregion

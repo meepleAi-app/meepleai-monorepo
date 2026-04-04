@@ -2,7 +2,7 @@
 
 **Date**: 2026-02-13
 **Status**: ✅ **85% MERGED TO PRODUCTION (main-dev)**
-**PR**: https://github.com/DegrassiAaron/meepleai-monorepo/pull/4267
+**PR**: https://github.com/meepleAi-app/meepleai-monorepo/pull/4267
 **Duration**: 10 hours (1.25 working days)
 
 ---

@@ -117,7 +117,9 @@ export function createSSEResponse(events: string[], options: SSEOptions = {}): R
 
   // Warn if delay is too high (slow tests)
   if (eventDelay > 100) {
-    console.warn(`[SSE Helper] High eventDelay (${eventDelay}ms) may slow down tests significantly`);
+    console.warn(
+      `[SSE Helper] High eventDelay (${eventDelay}ms) may slow down tests significantly`
+    );
   }
 
   // Async generator for sequential event delivery
@@ -144,7 +146,9 @@ export function createSSEResponse(events: string[], options: SSEOptions = {}): R
   }
 
   // Create ReadableStream from async generator
-  const stream = ReadableStream.from(generateEvents());
+  // ReadableStream.from() exists in modern browsers/Node but TypeScript DOM lib is behind
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stream = (ReadableStream as any).from(generateEvents());
 
   return new Response(stream, {
     status: 200,

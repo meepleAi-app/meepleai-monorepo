@@ -1,11 +1,14 @@
+using Api.Infrastructure.Entities;
 using System.Net;
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -36,7 +39,7 @@ public class TutorQueryCommandHandlerTests
             .Setup(f => f.CreateClient("OrchestrationService"))
             .Returns(httpClient);
 
-        _handler = new TutorQueryCommandHandler(_httpClientFactoryMock.Object, _loggerMock.Object);
+        _handler = new TutorQueryCommandHandler(_httpClientFactoryMock.Object, CreatePermissiveRagAccessServiceMock(), _loggerMock.Object);
     }
 
     [Fact]
@@ -79,13 +82,13 @@ public class TutorQueryCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("tutor", result.AgentType);
-        Assert.Equal("To set up the game, follow these steps...", result.Response);
-        Assert.Equal(0.95, result.Confidence);
-        Assert.Single(result.Citations);
-        Assert.Equal("setup_guide.pdf:p1", result.Citations[0]);
-        Assert.Equal(250.0, result.ExecutionTimeMs);
+        result.Should().NotBeNull();
+        result.AgentType.Should().Be("tutor");
+        result.Response.Should().Be("To set up the game, follow these steps...");
+        result.Confidence.Should().Be(0.95);
+        result.Citations.Should().ContainSingle();
+        result.Citations[0].Should().Be("setup_guide.pdf:p1");
+        result.ExecutionTimeMs.Should().Be(250.0);
     }
 
     [Fact]
@@ -107,11 +110,11 @@ public class TutorQueryCommandHandlerTests
             .ThrowsAsync(new HttpRequestException("Service unavailable"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Equal("Tutor agent service unavailable", exception.Message);
-        Assert.IsType<HttpRequestException>(exception.InnerException);
+        exception.Message.Should().Be("Tutor agent service unavailable");
+        exception.InnerException.Should().BeOfType<HttpRequestException>();
     }
 
     [Fact]
@@ -139,8 +142,8 @@ public class TutorQueryCommandHandlerTests
 
         // Act & Assert - JsonSerializer.Deserialize throws JsonException
         // which is caught and re-thrown by handler's catch block
-        await Assert.ThrowsAnyAsync<Exception>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Exception>();
     }
 
     [Fact]
@@ -168,11 +171,11 @@ public class TutorQueryCommandHandlerTests
 
         // Act & Assert - EnsureSuccessStatusCode throws HttpRequestException
         // which is caught and wrapped in InvalidOperationException by handler
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Equal("Tutor agent service unavailable", exception.Message);
-        Assert.IsType<HttpRequestException>(exception.InnerException);
+        exception.Message.Should().Be("Tutor agent service unavailable");
+        exception.InnerException.Should().BeOfType<HttpRequestException>();
     }
 
     [Theory]
@@ -218,8 +221,8 @@ public class TutorQueryCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(confidence, result.Confidence);
-        Assert.Equal(response, result.Response);
+        result.Confidence.Should().Be(confidence);
+        result.Response.Should().Be(response);
     }
 
     [Fact]
@@ -260,7 +263,7 @@ public class TutorQueryCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Empty(result.Citations);
+        result.Citations.Should().BeEmpty();
     }
 
     [Fact]
@@ -308,10 +311,10 @@ public class TutorQueryCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(3, result.Citations.Count);
-        Assert.Contains("rulebook.pdf:p12", result.Citations);
-        Assert.Contains("faq.pdf:p3", result.Citations);
-        Assert.Contains("errata.pdf:p1", result.Citations);
+        result.Citations.Count.Should().Be(3);
+        result.Citations.Should().Contain("rulebook.pdf:p12");
+        result.Citations.Should().Contain("faq.pdf:p3");
+        result.Citations.Should().Contain("errata.pdf:p1");
     }
 
     [Fact]
@@ -369,5 +372,11 @@ public class TutorQueryCommandHandlerTests
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+    private static IRagAccessService CreatePermissiveRagAccessServiceMock()
+    {
+        var mock = new Mock<IRagAccessService>();
+        mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
     }
 }

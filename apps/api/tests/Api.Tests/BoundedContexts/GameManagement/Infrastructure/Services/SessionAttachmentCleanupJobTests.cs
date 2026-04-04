@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Infrastructure.Services;
 
@@ -129,31 +130,34 @@ public sealed class SessionAttachmentCleanupJobTests
     [Fact]
     public void Constructor_NullScopeFactory_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new SessionAttachmentCleanupJob(
                 null!,
                 CreateConfiguration(),
-                _loggerMock.Object));
+                _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullConfiguration_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new SessionAttachmentCleanupJob(
                 CreateScopeFactory(),
                 null!,
-                _loggerMock.Object));
+                _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullLogger_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new SessionAttachmentCleanupJob(
                 CreateScopeFactory(),
                 CreateConfiguration(),
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion

@@ -1,21 +1,24 @@
 using System.Diagnostics;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Api.Infrastructure.HealthChecks;
 
 /// <summary>
-/// ISSUE #2424: Health check for SharedGameCatalog Full-Text Search performance.
+/// ISSUE #2424: Health check for SharedGameCatalog Full-Text Search performance
+/// and enrichment queue depth monitoring.
 ///
 /// Validates:
 /// - PostgreSQL FTS index (ix_shared_games_fts) usage
 /// - Search query performance (P95 target less than 200ms)
 /// - Category/Mechanic taxonomy data availability
+/// - Enrichment queue depth (Degraded if greater than 500 pending items)
 ///
 /// Health Status:
-/// - Healthy: P95 less than 200ms (target met)
-/// - Degraded: P95 200-500ms (acceptable but suboptimal)
+/// - Healthy: P95 less than 200ms (target met) and queue depth less than or equal to 500
+/// - Degraded: P95 200-500ms OR queue depth greater than 500
 /// - Unhealthy: P95 greater than 500ms OR query failure
 /// </summary>
 internal sealed class SharedGameCatalogHealthCheck : IHealthCheck
@@ -69,39 +72,65 @@ internal sealed class SharedGameCatalogHealthCheck : IHealthCheck
                 .CountAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-            // Determine health status based on performance
-            if (ftsLatencyMs < 200)
+            // Test 4: Check enrichment queue depth
+            var enrichmentQueueDepth = await _context.BggImportQueue
+                .AsNoTracking()
+                .Where(q => q.Status == BggImportStatus.Queued || q.Status == BggImportStatus.Processing)
+                .CountAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            const int queueDegradedThreshold = 500;
+            var queueDegraded = enrichmentQueueDepth > queueDegradedThreshold;
+
+            if (queueDegraded)
             {
-                // Healthy: Target met (P95 < 200ms)
+                _logger.LogWarning(
+                    "Enrichment queue depth {Depth} exceeds threshold {Threshold}",
+                    enrichmentQueueDepth, queueDegradedThreshold);
+            }
+
+            // Determine health status based on performance and queue depth
+            if (ftsLatencyMs < 200 && !queueDegraded)
+            {
+                // Healthy: Target met (P95 < 200ms) and queue within bounds
                 return HealthCheckResult.Healthy(
                     $"SharedGameCatalog FTS operational. " +
                     $"Latency: {ftsLatencyMs:F2}ms (target: <200ms). " +
-                    $"Games: {publishedGamesCount}, Categories: {categoriesCount}, Mechanics: {mechanicsCount}",
+                    $"Games: {publishedGamesCount}, Categories: {categoriesCount}, Mechanics: {mechanicsCount}. " +
+                    $"Enrichment queue: {enrichmentQueueDepth}",
                     new Dictionary<string, object>(StringComparer.Ordinal)
                     {
                         ["fts_latency_ms"] = ftsLatencyMs,
                         ["published_games_count"] = publishedGamesCount,
                         ["categories_count"] = categoriesCount,
                         ["mechanics_count"] = mechanicsCount,
+                        ["enrichment_queue_depth"] = enrichmentQueueDepth,
                         ["performance_status"] = "optimal"
                     });
             }
             else if (ftsLatencyMs < 500)
             {
-                // Degraded: Acceptable but suboptimal (200-500ms)
+                // Degraded: FTS suboptimal (200-500ms) or queue depth exceeded
+                var reasons = new List<string>();
+                if (ftsLatencyMs >= 200)
+                    reasons.Add($"FTS latency {ftsLatencyMs:F2}ms (target: <200ms)");
+                if (queueDegraded)
+                    reasons.Add($"Enrichment queue depth {enrichmentQueueDepth} (threshold: {queueDegradedThreshold})");
+
                 _logger.LogWarning(
-                    "SharedGameCatalog FTS degraded performance: {Latency}ms (target: <200ms)",
-                    ftsLatencyMs);
+                    "SharedGameCatalog degraded: {Reasons}",
+                    string.Join("; ", reasons));
 
                 return HealthCheckResult.Degraded(
-                    $"SharedGameCatalog FTS performance degraded. " +
-                    $"Latency: {ftsLatencyMs:F2}ms (target: <200ms). " +
-                    $"Consider re-indexing or database maintenance.",
+                    $"SharedGameCatalog degraded. {string.Join(". ", reasons)}.",
                     data: new Dictionary<string, object>(StringComparer.Ordinal)
                     {
                         ["fts_latency_ms"] = ftsLatencyMs,
+                        ["enrichment_queue_depth"] = enrichmentQueueDepth,
                         ["performance_status"] = "degraded",
-                        ["recommendation"] = "Consider VACUUM ANALYZE on shared_games table"
+                        ["recommendation"] = queueDegraded
+                            ? "Enrichment queue backlog detected — verify BGG worker is running"
+                            : "Consider VACUUM ANALYZE on shared_games table"
                     });
             }
             else
@@ -114,10 +143,12 @@ internal sealed class SharedGameCatalogHealthCheck : IHealthCheck
                 return HealthCheckResult.Unhealthy(
                     $"SharedGameCatalog FTS performance critical. " +
                     $"Latency: {ftsLatencyMs:F2}ms (target: <200ms). " +
+                    $"Enrichment queue: {enrichmentQueueDepth}. " +
                     $"Immediate database maintenance required.",
                     data: new Dictionary<string, object>(StringComparer.Ordinal)
                     {
                         ["fts_latency_ms"] = ftsLatencyMs,
+                        ["enrichment_queue_depth"] = enrichmentQueueDepth,
                         ["performance_status"] = "critical",
                         ["recommendation"] = "Run VACUUM ANALYZE and verify ix_shared_games_fts index"
                     });

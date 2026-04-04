@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Indexing;
@@ -17,10 +18,10 @@ public class QuantizationConfigurationTests
         var config = QuantizationConfiguration.Default();
 
         // Assert - ADR-016 Phase 3 specified values
-        Assert.Equal(QuantizationType.Int8, config.Type);
-        Assert.Equal(0.99, config.Quantile);
-        Assert.True(config.AlwaysRam);
-        Assert.True(config.IsEnabled);
+        config.Type.Should().Be(QuantizationType.Int8);
+        config.Quantile.Should().Be(0.99);
+        config.AlwaysRam.Should().BeTrue();
+        config.IsEnabled.Should().BeTrue();
     }
 
     [Fact]
@@ -30,8 +31,8 @@ public class QuantizationConfigurationTests
         var config = QuantizationConfiguration.Disabled();
 
         // Assert
-        Assert.Equal(QuantizationType.None, config.Type);
-        Assert.False(config.IsEnabled);
+        config.Type.Should().Be(QuantizationType.None);
+        config.IsEnabled.Should().BeFalse();
     }
 
     [Fact]
@@ -44,10 +45,10 @@ public class QuantizationConfigurationTests
             alwaysRam: false);
 
         // Assert
-        Assert.Equal(QuantizationType.Int8, config.Type);
-        Assert.Equal(0.95, config.Quantile);
-        Assert.False(config.AlwaysRam);
-        Assert.True(config.IsEnabled);
+        config.Type.Should().Be(QuantizationType.Int8);
+        config.Quantile.Should().Be(0.95);
+        config.AlwaysRam.Should().BeFalse();
+        config.IsEnabled.Should().BeTrue();
     }
 
     [Fact]
@@ -60,25 +61,27 @@ public class QuantizationConfigurationTests
             alwaysRam: true);
 
         // Assert
-        Assert.Equal(QuantizationType.Binary, config.Type);
-        Assert.True(config.AlwaysRam);
-        Assert.True(config.IsEnabled);
+        config.Type.Should().Be(QuantizationType.Binary);
+        config.AlwaysRam.Should().BeTrue();
+        config.IsEnabled.Should().BeTrue();
     }
 
     [Fact]
     public void Create_WithQuantileAboveMax_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert - quantile must be between 0.9 and 0.999
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            QuantizationConfiguration.Create(quantile: 1.0));
+        Action act = () =>
+            QuantizationConfiguration.Create(quantile: 1.0);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void Create_WithQuantileBelowMin_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            QuantizationConfiguration.Create(quantile: 0.8));
+        Action act = () =>
+            QuantizationConfiguration.Create(quantile: 0.8);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -88,9 +91,9 @@ public class QuantizationConfigurationTests
         var config = QuantizationConfiguration.MemoryOptimized();
 
         // Assert
-        Assert.Equal(QuantizationType.Int8, config.Type);
-        Assert.Equal(0.95, config.Quantile);
-        Assert.False(config.AlwaysRam);
+        config.Type.Should().Be(QuantizationType.Int8);
+        config.Quantile.Should().Be(0.95);
+        config.AlwaysRam.Should().BeFalse();
     }
 
     [Fact]
@@ -100,9 +103,9 @@ public class QuantizationConfigurationTests
         var config = QuantizationConfiguration.HighAccuracy();
 
         // Assert
-        Assert.Equal(QuantizationType.Int8, config.Type);
-        Assert.Equal(0.999, config.Quantile);
-        Assert.True(config.AlwaysRam);
+        config.Type.Should().Be(QuantizationType.Int8);
+        config.Quantile.Should().Be(0.999);
+        config.AlwaysRam.Should().BeTrue();
     }
 
     [Fact]
@@ -113,8 +116,8 @@ public class QuantizationConfigurationTests
         var config2 = QuantizationConfiguration.Create(QuantizationType.Int8, 0.99, true);
 
         // Act & Assert
-        Assert.Equal(config1, config2);
-        Assert.True(config1.Equals(config2));
+        config2.Should().Be(config1);
+        config1.Equals(config2).Should().BeTrue();
     }
 
     [Fact]
@@ -125,7 +128,7 @@ public class QuantizationConfigurationTests
         var config2 = QuantizationConfiguration.Create(QuantizationType.Binary);
 
         // Act & Assert
-        Assert.NotEqual(config1, config2);
+        config2.Should().NotBe(config1);
     }
 
     [Fact]
@@ -136,7 +139,7 @@ public class QuantizationConfigurationTests
         var config2 = QuantizationConfiguration.Default();
 
         // Act & Assert
-        Assert.Equal(config1.GetHashCode(), config2.GetHashCode());
+        config2.GetHashCode().Should().Be(config1.GetHashCode());
     }
 
     [Fact]
@@ -149,10 +152,9 @@ public class QuantizationConfigurationTests
         var result = config.ToString();
 
         // Assert
-        Assert.Contains("Int8", result, StringComparison.OrdinalIgnoreCase);
+        result.Should().ContainEquivalentOf("Int8");
         // Quantile can be formatted with '.' or ',' depending on locale
-        Assert.True(result.Contains("0.99") || result.Contains("0,99"),
-            $"Expected quantile value in ToString output: {result}");
+        (result.Contains("0.99") || result.Contains("0,99")).Should().BeTrue($"Expected quantile value in ToString output: {result}");
     }
 
     [Fact]
@@ -165,6 +167,6 @@ public class QuantizationConfigurationTests
         var result = config.ToString();
 
         // Assert
-        Assert.Contains("disabled", result, StringComparison.OrdinalIgnoreCase);
+        result.Should().ContainEquivalentOf("disabled");
     }
 }

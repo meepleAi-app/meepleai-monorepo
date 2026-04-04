@@ -28,7 +28,7 @@ export function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reason = searchParams?.get('reason') ?? null;
-  const from = searchParams?.get('from') ?? '/dashboard';
+  const from = searchParams?.get('from') ?? '/library';
 
   const isSessionExpired = reason === 'session_expired';
 

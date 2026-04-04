@@ -1,0 +1,72 @@
+# Integration: Local API + Web → staging services via SSH tunnel
+#
+# RECOMMENDED: Use local dotnet run + pnpm dev (not Docker containers)
+#   1. bash infra/scripts/integration-tunnel.sh start
+#   2. bash infra/scripts/integration-start.sh
+#
+# Docker mode is NOT recommended for Windows (host.docker.internal cannot reach
+# SSH tunnels bound to localhost). Use it only on Linux or with extra_hosts workaround.
+#
+# Secrets: infra/secrets/*.secret (synced from staging)
+#   Required: database.secret, redis.secret, jwt.secret,
+#             openrouter.secret, admin.secret, services-auth.secret
+
+services:
+  # Dummy postgres/redis — integration uses remote via SSH tunnel
+  postgres:
+    entrypoint: ["sh", "-c", "sleep infinity"]
+    restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 2s
+      retries: 1
+      start_period: 0s
+  redis:
+    entrypoint: ["sh", "-c", "sleep infinity"]
+    command: []
+    restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 2s
+      retries: 1
+      start_period: 0s
+
+  api:
+    ports: ["127.0.0.1:8080:8080"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    env_file:
+      - ./secrets/database.secret
+      - ./secrets/redis.secret
+      - ./secrets/jwt.secret
+      - ./secrets/openrouter.secret
+      - ./secrets/admin.secret
+      - ./secrets/services-auth.secret
+    environment:
+      ASPNETCORE_ENVIRONMENT: Integration
+      ASPNETCORE_URLS: http://+:8080
+      SkipMigrations: "true"
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_PORT: "15432"
+      POSTGRES_SSL_MODE: Disable
+      REDIS_HOST: host.docker.internal
+      REDIS_PORT: "16379"
+      # AI services via meepleai.app
+      EMBEDDING_PROVIDER: external
+      Embedding__Provider: External
+      EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      EMBEDDING_DIMENSIONS: 768
+      Embedding__Dimensions: 768
+      LOCAL_EMBEDDING_URL: https://meepleai.app/services/embedding
+      Embedding__LocalServiceUrl: https://meepleai.app/services/embedding
+      RERANKER_URL: https://meepleai.app/services/reranker
+      EMBEDDING_FALLBACK_ENABLED: "false"
+      Embedding__FallbackEnabled: "false"
+    volumes:
+      - ./secrets:/app/infra/secrets:ro
+
+  web:
+    ports: ["127.0.0.1:3000:3000"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_BASE: http://localhost:8080

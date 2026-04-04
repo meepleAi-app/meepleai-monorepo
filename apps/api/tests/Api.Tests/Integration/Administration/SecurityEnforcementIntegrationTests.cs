@@ -24,7 +24,7 @@ namespace Api.Tests.Integration.Administration;
 /// Tests permission requirements, audit log integrity, and role-based access.
 /// Issue #3697: Epic 1 - Testing & Integration (Phase 4)
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]
@@ -58,20 +58,9 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
         _databaseName = $"test_security_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -173,10 +162,10 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
         retrieved.Action.Should().Be("test_action");
         retrieved.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
 
-        // Verify repository has no Update method (append-only pattern)
-        var repositoryType = typeof(AuditLogRepository);
-        var updateMethod = repositoryType.GetMethod("UpdateAsync") ?? repositoryType.GetMethod("Update");
-        updateMethod.Should().BeNull("Audit logs should be append-only (no update allowed)");
+        // Verify UpdateAsync throws InvalidOperationException (append-only pattern)
+        // The method exists to satisfy the interface but enforces immutability by throwing
+        var updateAct = () => _auditLogRepository!.UpdateAsync(retrieved!, TestCancellationToken);
+        await updateAct.Should().ThrowAsync<InvalidOperationException>("Audit logs should be append-only (update must throw)");
     }
 
     [Fact]

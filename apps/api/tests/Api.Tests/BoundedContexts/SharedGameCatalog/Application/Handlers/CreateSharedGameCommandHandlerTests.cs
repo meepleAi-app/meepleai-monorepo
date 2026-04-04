@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -64,7 +65,7 @@ public class CreateSharedGameCommandHandlerTests
         var gameId = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, gameId);
+        gameId.Should().NotBe(Guid.Empty);
 
         _repositoryMock.Verify(
             r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()),
@@ -73,11 +74,11 @@ public class CreateSharedGameCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedGame);
-        Assert.Equal("Catan", capturedGame.Title);
-        Assert.Equal(1995, capturedGame.YearPublished);
-        Assert.Equal(13, capturedGame.BggId);
-        Assert.Single(capturedGame.DomainEvents);
+        capturedGame.Should().NotBeNull();
+        capturedGame.Title.Should().Be("Catan");
+        capturedGame.YearPublished.Should().Be(1995);
+        capturedGame.BggId.Should().Be(13);
+        capturedGame.DomainEvents.Should().ContainSingle();
     }
 
     [Fact]
@@ -105,8 +106,9 @@ public class CreateSharedGameCommandHandlerTests
             .ReturnsAsync(true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _repositoryMock.Verify(
             r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()),
@@ -143,7 +145,128 @@ public class CreateSharedGameCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedGame);
-        Assert.Null(capturedGame.Rules);
+        capturedGame.Should().NotBeNull();
+        capturedGame.Rules.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WithCategories_AssociatesCategoriesWithGame()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var command = new CreateSharedGameCommand(
+            Title: "Ticket to Ride",
+            YearPublished: 2004,
+            Description: "A cross-country train adventure game",
+            MinPlayers: 2,
+            MaxPlayers: 5,
+            PlayingTimeMinutes: 75,
+            MinAge: 8,
+            ComplexityRating: null,
+            AverageRating: null,
+            ImageUrl: "https://example.com/ttr.jpg",
+            ThumbnailUrl: "https://example.com/ttr-thumb.jpg",
+            Rules: null,
+            CreatedBy: userId,
+            BggId: null,
+            Categories: ["Strategy", "Family"]);
+
+        SharedGame? capturedGame = null;
+        _repositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
+            .Callback<SharedGame, CancellationToken>((g, _) => capturedGame = g)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        capturedGame.Should().NotBeNull();
+        capturedGame.Categories.Count.Should().Be(2);
+        capturedGame.Categories.Should().Contain(c => c.Name == "Strategy");
+        capturedGame.Categories.Should().Contain(c => c.Name == "Family");
+    }
+
+    [Fact]
+    public async Task Handle_WithDesignersAndPublishers_AssociatesWithGame()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var command = new CreateSharedGameCommand(
+            Title: "Pandemic",
+            YearPublished: 2008,
+            Description: "A cooperative game about fighting diseases",
+            MinPlayers: 2,
+            MaxPlayers: 4,
+            PlayingTimeMinutes: 60,
+            MinAge: 8,
+            ComplexityRating: null,
+            AverageRating: null,
+            ImageUrl: "https://example.com/pandemic.jpg",
+            ThumbnailUrl: "https://example.com/pandemic-thumb.jpg",
+            Rules: null,
+            CreatedBy: userId,
+            BggId: null,
+            Designers: ["Matt Leacock"],
+            Publishers: ["Z-Man Games", "Asmodee"]);
+
+        SharedGame? capturedGame = null;
+        _repositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
+            .Callback<SharedGame, CancellationToken>((g, _) => capturedGame = g)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        capturedGame.Should().NotBeNull();
+        capturedGame.Designers.Should().ContainSingle();
+        capturedGame.Designers.First().Name.Should().Be("Matt Leacock");
+        capturedGame.Publishers.Count.Should().Be(2);
+        capturedGame.Publishers.Should().Contain(p => p.Name == "Z-Man Games");
+        capturedGame.Publishers.Should().Contain(p => p.Name == "Asmodee");
+    }
+
+    [Fact]
+    public async Task Handle_WithNullMetadata_CreatesGameWithoutMetadata()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var command = new CreateSharedGameCommand(
+            Title: "Simple Game",
+            YearPublished: 2020,
+            Description: "A simple game with no metadata",
+            MinPlayers: 2,
+            MaxPlayers: 4,
+            PlayingTimeMinutes: 30,
+            MinAge: 6,
+            ComplexityRating: null,
+            AverageRating: null,
+            ImageUrl: "https://example.com/simple.jpg",
+            ThumbnailUrl: "https://example.com/simple-thumb.jpg",
+            Rules: null,
+            CreatedBy: userId,
+            BggId: null,
+            Categories: null,
+            Mechanics: null,
+            Designers: null,
+            Publishers: null);
+
+        SharedGame? capturedGame = null;
+        _repositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
+            .Callback<SharedGame, CancellationToken>((g, _) => capturedGame = g)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        capturedGame.Should().NotBeNull();
+        capturedGame.Categories.Should().BeEmpty();
+        capturedGame.Mechanics.Should().BeEmpty();
+        capturedGame.Designers.Should().BeEmpty();
+        capturedGame.Publishers.Should().BeEmpty();
     }
 }

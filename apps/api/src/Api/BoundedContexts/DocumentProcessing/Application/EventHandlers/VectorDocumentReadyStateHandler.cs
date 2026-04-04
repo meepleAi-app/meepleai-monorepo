@@ -44,7 +44,6 @@ internal sealed class VectorDocumentReadyStateHandler
         if (pdfEntity != null)
         {
             pdfEntity.ProcessingState = "Ready";
-            pdfEntity.ProcessingStatus = "completed";
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(

@@ -59,7 +59,7 @@ export function VerifyEmailContent() {
   const handleRedirect = useCallback(() => {
     // Clear stored email after successful verification
     sessionStorage.removeItem('pendingVerificationEmail');
-    router.push('/dashboard');
+    router.push('/library');
   }, [router]);
 
   /**
@@ -127,7 +127,7 @@ export function VerifyEmailContent() {
       <AuthLayout data-testid="verify-email-page">
         <VerificationSuccess
           email={email || undefined}
-          redirectUrl="/dashboard"
+          redirectUrl="/library"
           autoRedirectSeconds={3}
           onRedirect={handleRedirect}
           data-testid="verification-success"

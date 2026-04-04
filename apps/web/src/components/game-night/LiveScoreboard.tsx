@@ -132,7 +132,6 @@ export function LiveScoreboard({ players, isRealTime = false, className }: LiveS
 
             {/* Score + trend icon */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              {/* eslint-disable-next-line security/detect-object-injection -- trend is typed union */}
               {isRealTime && trendIcons[trend]}
               <span
                 className={cn(

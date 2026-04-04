@@ -17,5 +17,6 @@ internal record CreateChatSessionCommand(
     Guid? AgentId = null,
     string? AgentType = null,
     string? AgentName = null,
-    int TierLimit = 0   // 0 = unlimited; > 0 triggers auto-archive when at limit
+    int TierLimit = 0,  // 0 = unlimited; > 0 triggers auto-archive when at limit
+    string? UserRole = null
 ) : IRequest<Guid>;

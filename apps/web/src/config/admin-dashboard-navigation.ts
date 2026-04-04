@@ -21,16 +21,11 @@ import {
   BrainCircuitIcon,
   BarChartIcon,
   CpuIcon,
-  MessageSquareIcon,
-  WrenchIcon,
   FileTextIcon,
   UploadIcon,
   DatabaseIcon,
-  SettingsIcon,
-  GitBranchIcon,
   TerminalIcon,
   Settings2Icon,
-  MessageSquareCodeIcon,
   ListOrderedIcon,
   TrendingUpIcon,
   MonitorIcon,
@@ -45,6 +40,21 @@ import {
   ClipboardListIcon,
   KeyIcon,
   MailIcon,
+  ScrollTextIcon,
+  HeartPulseIcon,
+  BarChart3Icon,
+  BoxIcon,
+  FlaskConicalIcon,
+  SearchIcon,
+  PlusIcon,
+  HelpCircleIcon,
+  CheckCircleIcon,
+  RefreshCwIcon,
+  Trash2Icon,
+  DownloadIcon,
+  RotateCcwIcon,
+  SaveIcon,
+  Palette,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -62,6 +72,19 @@ export interface DashboardSidebarItem {
   activePattern?: RegExp;
 }
 
+export interface DashboardSectionAction {
+  /** Unique action id */
+  id: string;
+  /** Button label */
+  label: string;
+  /** Lucide icon name (used for rendering) */
+  icon: LucideIcon;
+  /** Route to navigate to (if action is navigational) */
+  route?: string;
+  /** Visual variant */
+  variant?: 'primary' | 'default';
+}
+
 export interface DashboardSection {
   /** Section unique ID */
   id: string;
@@ -77,13 +100,15 @@ export interface DashboardSection {
   description: string;
   /** Sidebar items for this section */
   sidebarItems: DashboardSidebarItem[];
+  /** Contextual actions for this section (replaces NavConfig action bars) */
+  actions?: DashboardSectionAction[];
   /** Visual group (kept for backwards compatibility, all sections render flat) */
   group: 'core' | 'ai';
 }
 
 // ─── Navigation Definition ───────────────────────────────────────────────────
 
-export const DASHBOARD_SECTIONS: DashboardSection[] = [
+const _ALL_DASHBOARD_SECTIONS: DashboardSection[] = [
   // ── 1. Overview ──────────────────────────────────────────────────────────
   {
     id: 'overview',
@@ -118,7 +143,33 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'Content',
     icon: FileTextIcon,
     baseRoute: '/admin/shared-games',
-    additionalRoutes: ['/admin/content', '/admin/knowledge-base', '/admin/games'],
+    actions: [
+      {
+        id: 'add-game',
+        label: 'Add Game',
+        icon: PlusIcon,
+        route: '/admin/shared-games/new',
+        variant: 'primary',
+      },
+      {
+        id: 'new-faq',
+        label: 'New FAQ',
+        icon: HelpCircleIcon,
+        route: '/admin/faqs',
+      },
+      {
+        id: 'approve',
+        label: 'Approve Submissions',
+        icon: CheckCircleIcon,
+        route: '/admin/shared-games',
+      },
+    ],
+    additionalRoutes: [
+      '/admin/content',
+      '/admin/knowledge-base',
+      '/admin/games',
+      '/admin/content/email-templates',
+    ],
     description: 'Games, documents, vectors, and RAG pipeline',
     group: 'core',
     sidebarItems: [
@@ -171,6 +222,12 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Upload & Process',
         icon: UploadIcon,
       },
+      // Email Templates (Issue #52)
+      {
+        href: '/admin/content/email-templates',
+        label: 'Email Templates',
+        icon: MailIcon,
+      },
     ],
   },
 
@@ -181,60 +238,56 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     icon: BrainCircuitIcon,
     baseRoute: '/admin/agents',
     additionalRoutes: ['/admin/ai'],
+    actions: [
+      {
+        id: 'new-agent',
+        label: 'New Agent',
+        icon: BotIcon,
+        route: '/admin/agents/new',
+        variant: 'primary',
+      },
+      {
+        id: 'new-definition',
+        label: 'New Definition',
+        icon: FileTextIcon,
+        route: '/admin/agents/definitions/create',
+      },
+      {
+        id: 'new-prompt',
+        label: 'New Prompt',
+        icon: PlusIcon,
+        route: '/admin/prompts/new',
+      },
+    ],
     description: 'AI agents, models, RAG, and analytics',
     group: 'ai',
     sidebarItems: [
       {
         href: '/admin/agents',
-        label: 'All Agents',
-        icon: BotIcon,
+        label: 'Mission Control',
+        icon: GaugeIcon,
         activePattern: /^\/admin\/agents$/,
       },
       {
+        href: '/admin/agents/inspector',
+        label: 'RAG Inspector',
+        icon: SearchIcon,
+      },
+      {
+        href: '/admin/agents/playground',
+        label: 'RAG Playground',
+        icon: FlaskConicalIcon,
+      },
+      {
         href: '/admin/agents/definitions',
-        label: 'Definitions',
+        label: 'Agent Definitions',
         icon: ListIcon,
         activePattern: /^\/admin\/agents\/definitions/,
       },
       {
-        href: '/admin/agents/builder',
-        label: 'Agent Builder',
-        icon: WrenchIcon,
-      },
-      {
-        href: '/admin/agents/models',
-        label: 'Models & Prompts',
-        icon: CpuIcon,
-      },
-      {
-        href: '/admin/agents/chat-history',
-        label: 'Chat History',
-        icon: MessageSquareIcon,
-      },
-      {
-        href: '/admin/agents/pipeline',
-        label: 'Pipeline Explorer',
-        icon: GitBranchIcon,
-      },
-      {
-        href: '/admin/agents/debug',
-        label: 'Debug Console',
-        icon: TerminalIcon,
-      },
-      {
-        href: '/admin/agents/debug-chat',
-        label: 'Debug Chat',
-        icon: MessageSquareCodeIcon,
-      },
-      {
-        href: '/admin/agents/strategy',
-        label: 'Strategy Config',
+        href: '/admin/agents/config',
+        label: 'Configuration',
         icon: Settings2Icon,
-      },
-      {
-        href: '/admin/agents/chat-limits',
-        label: 'Chat Limits',
-        icon: SettingsIcon,
       },
       {
         href: '/admin/agents/usage',
@@ -265,6 +318,18 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         activePattern: /^\/admin\/users$/,
       },
       {
+        href: '/admin/users/invitations',
+        label: 'Invitations',
+        icon: MailIcon,
+      },
+      {
+        href: '/admin/users/access-requests',
+        label: 'Access Requests',
+        icon: ClipboardListIcon,
+        badgeKey: 'accessRequestsPending',
+        activePattern: /^\/admin\/users\/access-requests/,
+      },
+      {
         href: '/admin/users/roles',
         label: 'Roles & Permissions',
         icon: ShieldIcon,
@@ -283,7 +348,40 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'System',
     icon: MonitorIcon,
     baseRoute: '/admin/monitor',
-    additionalRoutes: ['/admin/config'],
+    additionalRoutes: ['/admin/config', '/admin/notifications', '/admin/ui-library'],
+    actions: [
+      {
+        id: 'refresh',
+        label: 'Refresh',
+        icon: RefreshCwIcon,
+        route: '/admin/monitor?action=refresh',
+        variant: 'primary',
+      },
+      {
+        id: 'clear-cache',
+        label: 'Clear Cache',
+        icon: Trash2Icon,
+        route: '/admin/monitor?action=clear-cache',
+      },
+      {
+        id: 'run-tests',
+        label: 'Run Tests',
+        icon: FlaskConicalIcon,
+        route: '/admin/monitor?action=run-tests',
+      },
+      {
+        id: 'save-config',
+        label: 'Save Changes',
+        icon: SaveIcon,
+        route: '/admin/config?action=save',
+      },
+      {
+        id: 'reset-config',
+        label: 'Reset Defaults',
+        icon: RotateCcwIcon,
+        route: '/admin/config?action=reset',
+      },
+    ],
     description: 'Monitoring, alerts, cache, and system configuration',
     group: 'core',
     sidebarItems: [
@@ -324,6 +422,55 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Email',
         icon: MailIcon,
       },
+      // Operations Console (Issue #126)
+      {
+        href: '/admin/monitor/operations',
+        label: 'Operations',
+        icon: ScrollTextIcon,
+        activePattern: /^\/admin\/monitor\/operations/,
+      },
+      // Service Dashboard (Issue #132)
+      {
+        href: '/admin/monitor/services',
+        label: 'Services',
+        icon: HeartPulseIcon,
+        activePattern: /^\/admin\/monitor\/services/,
+      },
+      // Grafana Dashboards (Issue #134)
+      {
+        href: '/admin/monitor/grafana',
+        label: 'Grafana',
+        icon: BarChart3Icon,
+        activePattern: /^\/admin\/monitor\/grafana/,
+      },
+      // Log Viewer (Issue #140)
+      {
+        href: '/admin/monitor/logs',
+        label: 'Logs',
+        icon: ScrollTextIcon,
+        activePattern: /^\/admin\/monitor\/logs/,
+      },
+      // Container Dashboard (Issue #143)
+      {
+        href: '/admin/monitor/containers',
+        label: 'Containers',
+        icon: BoxIcon,
+        activePattern: /^\/admin\/monitor\/containers/,
+      },
+      // Service Call History
+      {
+        href: '/admin/monitor/service-calls',
+        label: 'Service Calls',
+        icon: ActivityIcon,
+        activePattern: /^\/admin\/monitor\/service-calls/,
+      },
+      // Admin Notifications
+      {
+        href: '/admin/notifications/compose',
+        label: 'Send Notification',
+        icon: BellIcon,
+        activePattern: /^\/admin\/notifications\/compose/,
+      },
       // Config items
       {
         href: '/admin/config?tab=general',
@@ -346,6 +493,16 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Rate Limits',
         icon: ZapIcon,
       },
+      {
+        href: '/admin/config/n8n',
+        label: 'n8n Workflows',
+        icon: ZapIcon,
+      },
+      {
+        href: '/admin/ui-library',
+        label: 'UI Library',
+        icon: Palette,
+      },
     ],
   },
 
@@ -355,6 +512,21 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'Analytics',
     icon: BarChartIcon,
     baseRoute: '/admin/analytics',
+    actions: [
+      {
+        id: 'export-report',
+        label: 'Export Report',
+        icon: DownloadIcon,
+        route: '/admin/analytics?action=export',
+        variant: 'primary',
+      },
+      {
+        id: 'new-api-key',
+        label: 'New API Key',
+        icon: KeyIcon,
+        route: '/admin/api-keys/new',
+      },
+    ],
     description: 'Usage statistics, audit logs, and reports',
     group: 'core',
     sidebarItems: [
@@ -387,6 +559,34 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     ],
   },
 ];
+
+// ─── Alpha Mode Filtering ────────────────────────────────────────────────────
+
+const isAlphaMode = process.env.NEXT_PUBLIC_ALPHA_MODE === 'true';
+
+const ALPHA_SECTION_IDS = new Set(['overview', 'content', 'users']);
+
+const ALPHA_CONTENT_SIDEBAR_LABELS = new Set([
+  'All Games',
+  'Add Game',
+  'KB Overview',
+  'Documents',
+  'Upload & Process',
+]);
+
+/** Dashboard sections — filtered by ALPHA_MODE when active */
+export const DASHBOARD_SECTIONS: DashboardSection[] = isAlphaMode
+  ? _ALL_DASHBOARD_SECTIONS
+      .filter(s => ALPHA_SECTION_IDS.has(s.id))
+      .map(s =>
+        s.id === 'content'
+          ? {
+              ...s,
+              sidebarItems: s.sidebarItems.filter(i => ALPHA_CONTENT_SIDEBAR_LABELS.has(i.label)),
+            }
+          : s
+      )
+  : _ALL_DASHBOARD_SECTIONS;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

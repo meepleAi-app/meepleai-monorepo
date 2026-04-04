@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 
@@ -111,16 +112,16 @@ public class BulkImportProgressIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(new GetBulkImportProgressQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(4, result.Total);
-        Assert.Equal(2, result.Queued);
-        Assert.Equal(1, result.Processing);
-        Assert.Equal(1, result.Completed);
-        Assert.Equal(0, result.Failed);
-        Assert.True(result.IsActive);
-        Assert.Equal(3, result.EstimatedSecondsRemaining);
-        Assert.NotNull(result.CurrentItem);
-        Assert.Equal(266192, result.CurrentItem.BggId);
-        Assert.Equal("Wingspan", result.CurrentItem.GameName);
+        result.Total.Should().Be(4);
+        result.Queued.Should().Be(2);
+        result.Processing.Should().Be(1);
+        result.Completed.Should().Be(1);
+        result.Failed.Should().Be(0);
+        result.IsActive.Should().BeTrue();
+        result.EstimatedSecondsRemaining.Should().Be(3);
+        result.CurrentItem.Should().NotBeNull();
+        result.CurrentItem.BggId.Should().Be(266192);
+        result.CurrentItem.GameName.Should().Be("Wingspan");
     }
 
     [Fact]
@@ -134,10 +135,10 @@ public class BulkImportProgressIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(new GetBulkImportProgressQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(0, result.Total);
-        Assert.False(result.IsActive);
-        Assert.Equal(0, result.EstimatedSecondsRemaining);
-        Assert.Null(result.CurrentItem);
+        result.Total.Should().Be(0);
+        result.IsActive.Should().BeFalse();
+        result.EstimatedSecondsRemaining.Should().Be(0);
+        result.CurrentItem.Should().BeNull();
     }
 
     [Fact]
@@ -165,10 +166,10 @@ public class BulkImportProgressIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(new GetBulkImportProgressQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(5, result.Total);
-        Assert.Equal(5, result.Completed);
-        Assert.False(result.IsActive);
-        Assert.Null(result.CurrentItem);
+        result.Total.Should().Be(5);
+        result.Completed.Should().Be(5);
+        result.IsActive.Should().BeFalse();
+        result.CurrentItem.Should().BeNull();
     }
 
     [Fact]
@@ -211,9 +212,9 @@ public class BulkImportProgressIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(new GetBulkImportProgressQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Total);
-        Assert.Equal(1, result.Completed);
-        Assert.Equal(1, result.Failed);
-        Assert.False(result.IsActive);
+        result.Total.Should().Be(2);
+        result.Completed.Should().Be(1);
+        result.Failed.Should().Be(1);
+        result.IsActive.Should().BeFalse();
     }
 }

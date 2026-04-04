@@ -80,7 +80,7 @@ export const libraryHandlers = [
 
     // Filter by status
     if (status) {
-      filtered = filtered.filter((item) => item.status === status);
+      filtered = filtered.filter(item => item.status === status);
     }
 
     // Sort
@@ -111,10 +111,28 @@ export const libraryHandlers = [
     );
   }),
 
+  // GET /api/v1/library/stats - Get library statistics
+  // NOTE: Must come before /:id to avoid being captured by the parametric route
+  http.get(`${API_BASE}/api/v1/library/stats`, () => {
+    const stats = {
+      totalGames: libraryItems.length,
+      owned: libraryItems.filter(i => i.status === 'owned').length,
+      wishlist: libraryItems.filter(i => i.status === 'wishlist').length,
+      played: libraryItems.filter(i => i.status === 'played').length,
+      wantToPlay: libraryItems.filter(i => i.status === 'want_to_play').length,
+      totalPlays: libraryItems.reduce((sum, i) => sum + i.playCount, 0),
+      averageRating:
+        libraryItems.filter(i => i.rating).reduce((sum, i) => sum + (i.rating || 0), 0) /
+          libraryItems.filter(i => i.rating).length || 0,
+    };
+
+    return HttpResponse.json(stats);
+  }),
+
   // GET /api/v1/library/:id - Get library item details
   http.get(`${API_BASE}/api/v1/library/:id`, ({ params }) => {
     const { id } = params;
-    const item = libraryItems.find((i) => i.id === id);
+    const item = libraryItems.find(i => i.id === id);
 
     if (!item) {
       return HttpResponse.json({ error: 'Library item not found' }, { status: 404 });
@@ -132,7 +150,7 @@ export const libraryHandlers = [
     };
 
     // Check if already in library
-    const existing = libraryItems.find((i) => i.gameId === body.gameId);
+    const existing = libraryItems.find(i => i.gameId === body.gameId);
     if (existing) {
       return HttpResponse.json({ error: 'Game already in library' }, { status: 409 });
     }
@@ -156,7 +174,7 @@ export const libraryHandlers = [
     const { id } = params;
     const body = (await request.json()) as Partial<LibraryItem>;
 
-    const index = libraryItems.findIndex((i) => i.id === id);
+    const index = libraryItems.findIndex(i => i.id === id);
     if (index === -1) {
       return HttpResponse.json({ error: 'Library item not found' }, { status: 404 });
     }
@@ -172,7 +190,7 @@ export const libraryHandlers = [
   // DELETE /api/v1/library/:id - Remove from library
   http.delete(`${API_BASE}/api/v1/library/:id`, ({ params }) => {
     const { id } = params;
-    const index = libraryItems.findIndex((i) => i.id === id);
+    const index = libraryItems.findIndex(i => i.id === id);
 
     if (index === -1) {
       return HttpResponse.json({ error: 'Library item not found' }, { status: 404 });
@@ -187,7 +205,7 @@ export const libraryHandlers = [
   http.post(`${API_BASE}/api/v1/library/:id/play`, async ({ params }) => {
     const { id } = params;
 
-    const index = libraryItems.findIndex((i) => i.id === id);
+    const index = libraryItems.findIndex(i => i.id === id);
     if (index === -1) {
       return HttpResponse.json({ error: 'Library item not found' }, { status: 404 });
     }
@@ -199,23 +217,6 @@ export const libraryHandlers = [
     };
 
     return HttpResponse.json(libraryItems[index]);
-  }),
-
-  // GET /api/v1/library/stats - Get library statistics
-  http.get(`${API_BASE}/api/v1/library/stats`, () => {
-    const stats = {
-      totalGames: libraryItems.length,
-      owned: libraryItems.filter((i) => i.status === 'owned').length,
-      wishlist: libraryItems.filter((i) => i.status === 'wishlist').length,
-      played: libraryItems.filter((i) => i.status === 'played').length,
-      wantToPlay: libraryItems.filter((i) => i.status === 'want_to_play').length,
-      totalPlays: libraryItems.reduce((sum, i) => sum + i.playCount, 0),
-      averageRating:
-        libraryItems.filter((i) => i.rating).reduce((sum, i) => sum + (i.rating || 0), 0) /
-          libraryItems.filter((i) => i.rating).length || 0,
-    };
-
-    return HttpResponse.json(stats);
   }),
 ];
 

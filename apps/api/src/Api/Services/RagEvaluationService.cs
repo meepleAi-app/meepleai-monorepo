@@ -47,8 +47,6 @@ public interface IRagEvaluationService
 
 internal class RagEvaluationService : IRagEvaluationService
 {
-    private readonly IQdrantService _qdrantService;
-    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<RagEvaluationService> _logger;
     private readonly string _allowedDatasetsDirectory;
     private readonly TimeProvider _timeProvider;
@@ -67,15 +65,11 @@ internal class RagEvaluationService : IRagEvaluationService
     };
 
     public RagEvaluationService(
-        IQdrantService qdrantService,
-        IEmbeddingService embeddingService,
         ILogger<RagEvaluationService> logger,
         IConfigurationService configService,
         string? allowedDatasetsDirectory = null,
         TimeProvider? timeProvider = null)
     {
-        _qdrantService = qdrantService;
-        _embeddingService = embeddingService;
         _logger = logger;
         _allowedDatasetsDirectory = allowedDatasetsDirectory
             ?? Path.Combine(Directory.GetCurrentDirectory(), "datasets", "rag");
@@ -355,48 +349,18 @@ internal class RagEvaluationService : IRagEvaluationService
     /// <summary>
     /// Evaluate a single query
     /// </summary>
-    private async Task<RagEvaluationQueryResult> EvaluateQueryAsync(
+    private Task<RagEvaluationQueryResult> EvaluateQueryAsync(
         RagEvaluationQuery query,
         int topK,
         CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
 
-        try
-        {
-            // Step 1: Generate embedding for query
-            var embedding = await GenerateQueryEmbeddingAsync(query, cancellationToken).ConfigureAwait(false);
-            if (embedding.Length == 0)
-            {
-                return CreateFailureResult(query, "Embedding generation failed", stopwatch);
-            }
+        // Vector store (Qdrant) has been removed — evaluate with empty search results.
+        stopwatch.Stop();
 
-            // Step 2: Search Qdrant
-            var searchResult = await _qdrantService.SearchAsync(
-                query.GameId,
-                embedding,
-                limit: topK,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            stopwatch.Stop();
-
-            if (!searchResult.Success)
-            {
-                _logger.LogWarning("Search failed for query {QueryId}: {Error}", query.Id, searchResult.ErrorMessage);
-                return CreateFailureResult(query, $"Search failed: {searchResult.ErrorMessage}", stopwatch);
-            }
-
-            // Step 3: Calculate metrics
-            return CalculateQueryMetrics(query, searchResult.Results, stopwatch.Elapsed.TotalMilliseconds);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-            _logger.LogError(ex, "Error evaluating query {QueryId}", query.Id);
-            return CreateFailureResult(query, $"Exception: {ex.Message}", stopwatch);
-        }
-#pragma warning restore CA1031
+        // Calculate metrics against empty results (all metrics will be zero)
+        return Task.FromResult(CalculateQueryMetrics(query, new List<SearchResultItem>(), stopwatch.Elapsed.TotalMilliseconds));
     }
 
     /// <summary>
@@ -467,32 +431,6 @@ internal class RagEvaluationService : IRagEvaluationService
         var fraction = rank - lowerIndex;
 
         return lowerValue + fraction * (upperValue - lowerValue);
-    }
-
-    private async Task<float[]> GenerateQueryEmbeddingAsync(RagEvaluationQuery query, CancellationToken cancellationToken)
-    {
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query.Query, cancellationToken).ConfigureAwait(false);
-
-        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
-        {
-            _logger.LogWarning("Failed to generate embedding for query {QueryId}: {Error}",
-                query.Id, embeddingResult.ErrorMessage);
-            return Array.Empty<float>();
-        }
-
-        return embeddingResult.Embeddings[0];
-    }
-
-    private static RagEvaluationQueryResult CreateFailureResult(RagEvaluationQuery query, string errorMessage, Stopwatch stopwatch)
-    {
-        return new RagEvaluationQueryResult
-        {
-            QueryId = query.Id,
-            Query = query.Query,
-            Success = false,
-            ErrorMessage = errorMessage,
-            LatencyMs = stopwatch.Elapsed.TotalMilliseconds
-        };
     }
 
     private static RagEvaluationQueryResult CalculateQueryMetrics(

@@ -29,6 +29,11 @@ public interface IAgentDefinitionRepository
     Task<List<AgentDefinition>> GetAllActiveAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets all published and active agent definitions (user-facing catalog).
+    /// </summary>
+    Task<List<AgentDefinition>> GetAllPublishedAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Searches agent definitions by name or description.
     /// </summary>
     Task<List<AgentDefinition>> SearchAsync(string searchTerm, CancellationToken cancellationToken = default);

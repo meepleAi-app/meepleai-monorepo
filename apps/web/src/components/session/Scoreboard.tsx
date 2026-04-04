@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import { TrendingUp, TrendingDown, Minus, Trophy } from 'lucide-react';
 
-import { ParticipantCard } from './ParticipantCard';
+import { MeepleParticipantCard } from './MeepleParticipantCard';
 import { ScoreboardData } from './types';
 
 interface ScoreboardProps {
@@ -22,12 +22,12 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
     if (!isRealTime) return;
 
     const newAnimating = new Set<string>();
-    data.participants.forEach((p) => {
+    data.participants.forEach(p => {
       const prevScore = prevScoresRef.current.get(p.id);
       if (prevScore !== undefined && prevScore !== p.totalScore) {
         newAnimating.add(p.id);
         setTimeout(() => {
-          setAnimatingScores((prev) => {
+          setAnimatingScores(prev => {
             const next = new Set(prev);
             next.delete(p.id);
             return next;
@@ -44,13 +44,17 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
 
   const getScoresByParticipant = (participantId: string, roundNum?: number) => {
     return data.scores
-      .filter((s) => s.participantId === participantId && (roundNum === undefined || s.roundNumber === roundNum))
+      .filter(
+        s =>
+          s.participantId === participantId &&
+          (roundNum === undefined || s.roundNumber === roundNum)
+      )
       .reduce((sum, s) => sum + s.scoreValue, 0);
   };
 
   const getScoreTrend = (participantId: string): 'up' | 'down' | 'neutral' => {
     const allScores = data.scores
-      .filter((s) => s.participantId === participantId)
+      .filter(s => s.participantId === participantId)
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     if (allScores.length < 2) return 'neutral';
@@ -64,7 +68,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
   const trendIcons = {
     up: <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />,
     down: <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />,
-    neutral: <Minus className="h-3 w-3 text-slate-400" />
+    neutral: <Minus className="h-3 w-3 text-slate-400" />,
   };
 
   if (variant === 'compact') {
@@ -72,8 +76,12 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
       <div className="space-y-2">
         {data.participants
           .sort((a, b) => (b.rank ?? 999) - (a.rank ?? 999))
-          .map((participant) => (
-            <ParticipantCard key={participant.id} participant={participant} variant="compact" />
+          .map(participant => (
+            <MeepleParticipantCard
+              key={participant.id}
+              participant={participant}
+              variant="compact"
+            />
           ))}
       </div>
     );
@@ -83,7 +91,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
   return (
     <div className="space-y-6">
       {/* Leader Podium - Top 3 */}
-      {data.participants.filter((p) => p.rank && p.rank <= 3).length > 0 && (
+      {data.participants.filter(p => p.rank && p.rank <= 3).length > 0 && (
         <div className="rounded-2xl border border-amber-200 dark:border-amber-900/30 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/10 p-6 shadow-xl shadow-amber-900/10">
           {/* Wood texture overlay */}
           <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] rounded-2xl bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOCIgbnVtT2N0YXZlcz0iNCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')] pointer-events-none" />
@@ -97,10 +105,14 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
 
           <div className="relative grid gap-3 sm:grid-cols-3">
             {data.participants
-              .filter((p) => p.rank && p.rank <= 3)
+              .filter(p => p.rank && p.rank <= 3)
               .sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999))
-              .map((participant) => (
-                <ParticipantCard key={participant.id} participant={participant} variant="full" />
+              .map(participant => (
+                <MeepleParticipantCard
+                  key={participant.id}
+                  participant={participant}
+                  variant="full"
+                />
               ))}
           </div>
         </div>
@@ -124,7 +136,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                   <th className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-800/50 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                     Player
                   </th>
-                  {data.rounds.map((round) => (
+                  {data.rounds.map(round => (
                     <th
                       key={round}
                       className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 whitespace-nowrap"
@@ -132,7 +144,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                       R{round}
                     </th>
                   ))}
-                  {data.categories.map((category) => (
+                  {data.categories.map(category => (
                     <th
                       key={category}
                       className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 whitespace-nowrap"
@@ -148,7 +160,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {data.participants
                   .sort((a, b) => b.totalScore - a.totalScore)
-                  .map((participant) => {
+                  .map(participant => {
                     const trend = getScoreTrend(participant.id);
                     const isAnimating = animatingScores.has(participant.id);
 
@@ -165,13 +177,13 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                             <div
                               className="h-8 w-8 flex items-center justify-center rounded-md text-xs font-bold text-white shadow-sm ring-1 ring-black/10"
                               style={{
-                                background: `linear-gradient(135deg, ${participant.avatarColor} 0%, ${participant.avatarColor}dd 100%)`
+                                background: `linear-gradient(135deg, ${participant.avatarColor} 0%, ${participant.avatarColor}dd 100%)`,
                               }}
                             >
                               {participant.displayName
                                 .replace(/\s*\(io\)\s*/i, '')
                                 .split(' ')
-                                .map((n) => n[0])
+                                .map(n => n[0])
                                 .join('')
                                 .toUpperCase()
                                 .slice(0, 2)}
@@ -181,7 +193,6 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                                 {participant.displayName}
                               </div>
                               <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                                {/* eslint-disable-next-line security/detect-object-injection -- trend is typed TrendType from computed value */}
                                 {trendIcons[trend]}
                                 <span>Rank #{participant.rank}</span>
                               </div>
@@ -190,7 +201,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                         </td>
 
                         {/* Round Scores */}
-                        {data.rounds.map((round) => {
+                        {data.rounds.map(round => {
                           const roundScore = getScoresByParticipant(participant.id, round);
                           return (
                             <td key={round} className="px-4 py-3 text-center">
@@ -202,9 +213,11 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                         })}
 
                         {/* Category Scores */}
-                        {data.categories.map((category) => {
+                        {data.categories.map(category => {
                           const categoryScores = data.scores
-                            .filter((s) => s.participantId === participant.id && s.category === category)
+                            .filter(
+                              s => s.participantId === participant.id && s.category === category
+                            )
                             .reduce((sum, s) => sum + s.scoreValue, 0);
                           return (
                             <td key={category} className="px-4 py-3 text-center">
@@ -233,16 +246,20 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
       )}
 
       {/* Other Participants (Rank > 3) */}
-      {data.participants.filter((p) => !p.rank || p.rank > 3).length > 0 && (
+      {data.participants.filter(p => !p.rank || p.rank > 3).length > 0 && (
         <div className="space-y-2">
           <h3 className="font-bold text-sm uppercase tracking-wider text-slate-600 dark:text-slate-400 px-1">
             Other Players
           </h3>
           {data.participants
-            .filter((p) => !p.rank || p.rank > 3)
+            .filter(p => !p.rank || p.rank > 3)
             .sort((a, b) => b.totalScore - a.totalScore)
-            .map((participant) => (
-              <ParticipantCard key={participant.id} participant={participant} variant="compact" />
+            .map(participant => (
+              <MeepleParticipantCard
+                key={participant.id}
+                participant={participant}
+                variant="compact"
+              />
             ))}
         </div>
       )}

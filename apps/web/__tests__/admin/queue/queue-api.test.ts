@@ -31,7 +31,7 @@ import {
   removeJob,
   reorderQueue,
   enqueuePdf,
-  bumpPriority,
+  setPriority,
   getQueueConfig,
   updateQueueConfig,
   bulkReindexFailed,
@@ -102,10 +102,10 @@ describe('Queue API Functions', () => {
   });
 
   // Issue #5458: New API functions for queue management
-  describe('bumpPriority', () => {
+  describe('setPriority', () => {
     it('should PATCH priority endpoint with new priority', async () => {
       mockPatch.mockResolvedValue(undefined);
-      await bumpPriority('job-123', 'Urgent');
+      await setPriority('job-123', 'Urgent');
       expect(mockPatch).toHaveBeenCalledWith('/api/v1/admin/queue/job-123/priority', {
         newPriority: 'Urgent',
       });

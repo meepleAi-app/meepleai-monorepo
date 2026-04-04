@@ -17,7 +17,12 @@ import Confetti from 'react-confetti';
 import { Dialog, DialogContent } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
-import { BadgeTier, getCelebratoryTitle, getTierIcon, type BadgeNotificationData } from '@/types/badges';
+import {
+  BadgeTier,
+  getCelebratoryTitle,
+  getTierIcon,
+  type BadgeNotificationData,
+} from '@/types/badges';
 
 export interface BadgeEarnedModalProps {
   /** Badge that was earned (null to hide modal) */
@@ -42,11 +47,7 @@ export interface BadgeEarnedModalProps {
  * />
  * ```
  */
-export function BadgeEarnedModal({
-  badge,
-  onClose,
-  onShare,
-}: BadgeEarnedModalProps){
+export function BadgeEarnedModal({ badge, onClose, onShare }: BadgeEarnedModalProps) {
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
@@ -88,7 +89,7 @@ export function BadgeEarnedModal({
       )}
 
       {/* Modal */}
-      <Dialog open={!!badge} onOpenChange={(open) => !open && onClose()}>
+      <Dialog open={!!badge} onOpenChange={open => !open && onClose()}>
         <DialogContent className="sm:max-w-md">
           <AnimatePresence>
             <motion.div
@@ -121,10 +122,7 @@ export function BadgeEarnedModal({
                 className="relative"
               >
                 <motion.div
-                  className={cn(
-                    'relative h-32 w-32 rounded-full p-2',
-                    getTierGradient(badge.tier)
-                  )}
+                  className={cn('relative h-32 w-32 rounded-full p-2', getTierGradient(badge.tier))}
                   animate={{
                     boxShadow: [
                       `0 0 0px ${getTierGlow(badge.tier)}`,
@@ -175,11 +173,7 @@ export function BadgeEarnedModal({
                   Continue
                 </Button>
                 {onShare && (
-                  <Button
-                    onClick={() => onShare(badge)}
-                    variant="default"
-                    className="flex-1"
-                  >
+                  <Button onClick={() => onShare(badge)} variant="default" className="flex-1">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 20 20"
@@ -226,7 +220,6 @@ function getConfettiConfig(tier: BadgeTier) {
       colors: ['#d97706', '#f59e0b', '#b45309'],
     },
   };
-  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return configs[tier];
 }
 
@@ -241,7 +234,6 @@ function getTierGradient(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'bg-gradient-to-br from-gray-300 to-gray-400',
     [BadgeTier.Bronze]: 'bg-gradient-to-br from-amber-600 to-amber-800',
   };
-  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return gradients[tier];
 }
 
@@ -256,7 +248,6 @@ function getTierGlow(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'rgba(209, 213, 219, 0.5)',
     [BadgeTier.Bronze]: 'rgba(217, 119, 6, 0.5)',
   };
-  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return glows[tier];
 }
 

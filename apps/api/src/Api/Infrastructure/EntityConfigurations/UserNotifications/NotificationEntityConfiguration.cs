@@ -27,6 +27,12 @@ internal class NotificationEntityConfiguration : IEntityTypeConfiguration<Notifi
         builder.Property(e => e.IsRead).HasColumnName("is_read").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(e => e.ReadAt).HasColumnName("read_at");
+        builder.Property(e => e.CorrelationId).HasColumnName("correlation_id");
+
+        // CorrelationId index for cross-channel tracking
+        builder.HasIndex(e => e.CorrelationId)
+            .HasDatabaseName("IX_notifications_correlation_id")
+            .HasFilter("correlation_id IS NOT NULL");
 
         // Critical indexes for notification queries (Issue #2053 code review)
         // Primary query: get user notifications ordered by creation date

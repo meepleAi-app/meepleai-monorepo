@@ -140,4 +140,15 @@ internal static class EndpointFilterExtensions
     {
         return builder.AddEndpointFilter(new RequireFeatureFilterFactory(featureName));
     }
+
+    /// <summary>
+    /// Requires public registration to be enabled for the endpoint.
+    /// Blocks with 403 if Registration:PublicEnabled is false or unreachable (fail-closed).
+    /// </summary>
+    /// <param name="builder">The route handler builder.</param>
+    /// <returns>The builder for method chaining.</returns>
+    public static RouteHandlerBuilder RequirePublicRegistration(this RouteHandlerBuilder builder)
+    {
+        return builder.AddEndpointFilter<RequirePublicRegistrationFilter>();
+    }
 }

@@ -1,5 +1,7 @@
+using Api.Infrastructure.Entities;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -7,6 +9,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.ChatSession;
 
@@ -30,6 +33,7 @@ public class CreateChatSessionCommandHandlerTests
         _handler = new CreateChatSessionCommandHandler(
             _mockRepository.Object,
             _mockUnitOfWork.Object,
+            CreatePermissiveRagAccessServiceMock(),
             _mockLogger.Object);
     }
 
@@ -48,7 +52,7 @@ public class CreateChatSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
+        result.Should().NotBe(Guid.Empty);
         _mockRepository.Verify(
             r => r.AddAsync(It.Is<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(
                 s => s.UserId == userId && s.GameId == gameId && s.Title == "Test Session"),
@@ -79,7 +83,7 @@ public class CreateChatSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
+        result.Should().NotBe(Guid.Empty);
         _mockRepository.Verify(
             r => r.AddAsync(It.Is<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(
                 s => s.UserLibraryEntryId == userLibraryEntryId &&
@@ -103,7 +107,7 @@ public class CreateChatSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
+        result.Should().NotBe(Guid.Empty);
         _mockRepository.Verify(
             r => r.AddAsync(It.Is<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(
                 s => s.Title == null),
@@ -153,49 +157,62 @@ public class CreateChatSessionCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, callOrder.Count);
-        Assert.Equal("Repository.AddAsync", callOrder[0]);
-        Assert.Equal("UnitOfWork.SaveChangesAsync", callOrder[1]);
+        callOrder.Count.Should().Be(2);
+        callOrder[0].Should().Be("Repository.AddAsync");
+        callOrder[1].Should().Be("UnitOfWork.SaveChangesAsync");
     }
 
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new CreateChatSessionCommandHandler(
                 null!,
                 _mockUnitOfWork.Object,
-                _mockLogger.Object));
+                CreatePermissiveRagAccessServiceMock(),
+                _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullUnitOfWork_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new CreateChatSessionCommandHandler(
                 _mockRepository.Object,
                 null!,
-                _mockLogger.Object));
+                CreatePermissiveRagAccessServiceMock(),
+                _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new CreateChatSessionCommandHandler(
                 _mockRepository.Object,
                 _mockUnitOfWork.Object,
-                null!));
+                CreatePermissiveRagAccessServiceMock(),
+                null!);
+        act.Should().Throw<ArgumentNullException>();
+    }
+    private static IRagAccessService CreatePermissiveRagAccessServiceMock()
+    {
+        var mock = new Mock<IRagAccessService>();
+        mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
     }
 }

@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Validators.PlaygroundTestScenario;
 
@@ -108,7 +109,7 @@ public class CreatePlaygroundTestScenarioCommandValidatorTests
             Messages = [new ScenarioMessage { Role = "invalid", Content = "text" }]
         };
         var result = _validator.TestValidate(command);
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -119,7 +120,7 @@ public class CreatePlaygroundTestScenarioCommandValidatorTests
             Messages = [new ScenarioMessage { Role = "user", Content = "" }]
         };
         var result = _validator.TestValidate(command);
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -152,7 +153,7 @@ public class CreatePlaygroundTestScenarioCommandValidatorTests
     {
         var command = CreateValidCommand() with { Tags = [new string('x', 51)] };
         var result = _validator.TestValidate(command);
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -183,7 +184,7 @@ public class CreatePlaygroundTestScenarioCommandValidatorTests
             Messages = [new ScenarioMessage { Role = "user", Content = "text", DelayMs = -1 }]
         };
         var result = _validator.TestValidate(command);
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -194,7 +195,7 @@ public class CreatePlaygroundTestScenarioCommandValidatorTests
             Messages = [new ScenarioMessage { Role = "user", Content = "text", DelayMs = 31000 }]
         };
         var result = _validator.TestValidate(command);
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
     }
 
     [Fact]

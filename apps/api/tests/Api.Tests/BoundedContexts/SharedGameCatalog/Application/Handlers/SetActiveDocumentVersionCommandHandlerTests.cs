@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Npgsql;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -92,8 +93,8 @@ public class SetActiveDocumentVersionCommandHandlerTests
             .ReturnsAsync((SharedGameDocument?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -112,9 +113,9 @@ public class SetActiveDocumentVersionCommandHandlerTests
             .ReturnsAsync(document);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("does not belong to game", ex.Message);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        ex.Message.Should().Contain("does not belong to game");
     }
 
     [Fact]
@@ -184,12 +185,12 @@ public class SetActiveDocumentVersionCommandHandlerTests
             .ThrowsAsync(dbUpdateException);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("activated concurrently", ex.Message);
-        Assert.Contains("Please refresh and try again", ex.Message);
-        Assert.Same(dbUpdateException, ex.InnerException);
+        ex.Message.Should().Contain("activated concurrently");
+        ex.Message.Should().Contain("Please refresh and try again");
+        ex.InnerException.Should().BeSameAs(dbUpdateException);
     }
 
     private static SharedGameDocument CreateTestDocument(Guid id, Guid gameId, bool isActive)

@@ -12,7 +12,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Copy, Check, Users, Gamepad2 } from 'lucide-react';
 
 import type { Participant } from '@/components/session/types';
-import type { ConnectionStatus } from '@/lib/hooks/useSessionStream';
+import type { ConnectionStatus } from '@/lib/domain-hooks/useSessionStream';
 
 import { ConnectionStatusBadge } from './ConnectionStatusBadge';
 

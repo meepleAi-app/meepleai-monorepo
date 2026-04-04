@@ -1,15 +1,15 @@
 /**
  * SharedGameSearch Component (Issue #2373: Phase 4)
  *
- * Search-first game search with SharedGameCatalog and BGG fallback.
+ * Search-first game search using the SharedGameCatalog.
  * Implements the user-facing search flow from the SharedGameCatalog spec.
  *
  * Flow:
  * 1. User types search term (debounced 300ms)
- * 2. Search SharedGameCatalog first (instant, local DB)
- * 3. If no results, show "Search on BGG" button
- * 4. User clicks BGG button -> BGG search results shown
- * 5. Results show source badge (Catalog vs BGG)
+ * 2. Search SharedGameCatalog (instant, local DB)
+ * 3. Results displayed with source badge
+ *
+ * Note: BGG search was removed (restricted to admin only due to licensing).
  *
  * @see claudedocs/shared-game-catalog-spec.md (Section: User-Facing, Flusso Utente)
  */
@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ExternalLink, Loader2, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
@@ -47,7 +47,7 @@ export interface SharedGameSearchResult {
   maxPlayers: number;
   playingTimeMinutes: number;
   averageRating: number | null;
-  source: 'catalog' | 'bgg';
+  source: 'catalog';
   bggId?: number | null;
 }
 
@@ -75,16 +75,12 @@ const PAGE_SIZE = 10;
 // Empty State Components
 // ============================================================================
 
-function NoResultsState({ searchTerm, catalogOnly }: { searchTerm: string; catalogOnly: boolean }) {
+function NoResultsState({ searchTerm }: { searchTerm: string }) {
   return (
     <div className="p-6 text-center">
       <div className="text-4xl mb-3">🎲</div>
       <p className="text-sm font-medium mb-1">Nessun risultato per &quot;{searchTerm}&quot;</p>
-      <p className="text-xs text-muted-foreground">
-        {catalogOnly
-          ? 'Prova a disattivare il filtro "Solo dal catalogo" per cercare su BGG'
-          : 'Prova con un termine di ricerca diverso'}
-      </p>
+      <p className="text-xs text-muted-foreground">Prova con un termine di ricerca diverso</p>
     </div>
   );
 }
@@ -107,8 +103,6 @@ export function SharedGameSearch({
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [results, setResults] = useState<SharedGameSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showBggButton, setShowBggButton] = useState(false);
-  const [bggLoading, setBggLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -132,7 +126,6 @@ export function SharedGameSearch({
   useEffect(() => {
     if (!debouncedTerm.trim()) {
       setResults([]);
-      setShowBggButton(false);
       setError(null);
       return;
     }
@@ -146,7 +139,6 @@ export function SharedGameSearch({
     const searchCatalog = async () => {
       setLoading(true);
       setError(null);
-      setShowBggButton(false);
 
       try {
         const response = await api.sharedGames.search({
@@ -177,16 +169,12 @@ export function SharedGameSearch({
             bggId: game.bggId,
           }));
           setResults(catalogResults);
-          setShowBggButton(false);
         } else {
-          // No local results - show BGG button (only if not catalog-only)
           setResults([]);
-          setShowBggButton(!filters.catalogOnly);
         }
       } catch (_err) {
         if ((_err as Error).name !== 'AbortError') {
           setError('Errore nella ricerca. Riprova.');
-          setShowBggButton(!filters.catalogOnly);
         }
       } finally {
         setLoading(false);
@@ -197,53 +185,12 @@ export function SharedGameSearch({
   }, [debouncedTerm, filters]);
 
   // ============================================================================
-  // Search BGG (Fallback)
-  // ============================================================================
-
-  const handleBggSearch = useCallback(async () => {
-    if (!debouncedTerm.trim()) return;
-
-    setBggLoading(true);
-    setError(null);
-
-    try {
-      const response = await api.bgg.search(debouncedTerm, false, 1, PAGE_SIZE);
-
-      if (response.results.length > 0) {
-        // Map BGG results - limited info from search endpoint
-        const bggResults: SharedGameSearchResult[] = response.results.map(item => ({
-          id: `bgg-${item.bggId}`,
-          title: item.name,
-          yearPublished: item.yearPublished ?? 0,
-          thumbnailUrl: item.thumbnailUrl ?? '',
-          minPlayers: 0, // Not available in search results
-          maxPlayers: 0, // Not available in search results
-          playingTimeMinutes: 0, // Not available in search results
-          averageRating: null, // Not available in search results
-          source: 'bgg' as const,
-          bggId: item.bggId,
-        }));
-        setResults(bggResults);
-        setShowBggButton(false);
-      } else {
-        setResults([]);
-        setError('Nessun gioco trovato su BoardGameGeek.');
-      }
-    } catch (_err) {
-      setError('BoardGameGeek non disponibile. Riprova più tardi.');
-    } finally {
-      setBggLoading(false);
-    }
-  }, [debouncedTerm]);
-
-  // ============================================================================
   // Handlers
   // ============================================================================
 
   const handleClear = useCallback(() => {
     setSearchTerm('');
     setResults([]);
-    setShowBggButton(false);
     setError(null);
     inputRef.current?.focus();
   }, []);
@@ -303,7 +250,7 @@ export function SharedGameSearch({
       )}
 
       {/* Results Dropdown */}
-      {(results.length > 0 || loading || showBggButton || error) && (
+      {(results.length > 0 || loading || error) && (
         <Card className="shadow-lg max-h-[400px] overflow-auto">
           <CardContent className="p-2">
             {/* Loading State */}
@@ -320,14 +267,10 @@ export function SharedGameSearch({
               <div className="p-4 text-center text-sm text-muted-foreground">{error}</div>
             )}
 
-            {/* No Results State (after BGG search failed) */}
-            {!loading &&
-              !error &&
-              results.length === 0 &&
-              !showBggButton &&
-              debouncedTerm.trim() && (
-                <NoResultsState searchTerm={debouncedTerm} catalogOnly={filters.catalogOnly} />
-              )}
+            {/* No Results State */}
+            {!loading && !error && results.length === 0 && debouncedTerm.trim() && (
+              <NoResultsState searchTerm={debouncedTerm} />
+            )}
 
             {/* Results List */}
             {!loading && results.length > 0 && (
@@ -339,23 +282,6 @@ export function SharedGameSearch({
                     onClick={() => handleSelect(game)}
                   />
                 ))}
-              </div>
-            )}
-
-            {/* BGG Fallback Button */}
-            {showBggButton && !loading && (
-              <div className="p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-3">
-                  Nessun gioco trovato nel catalogo.
-                </p>
-                <Button onClick={handleBggSearch} disabled={bggLoading} variant="outline" size="sm">
-                  {bggLoading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                  )}
-                  Cerca su BoardGameGeek
-                </Button>
               </div>
             )}
           </CardContent>
@@ -400,11 +326,8 @@ function SharedGameSearchResultItem({ game, onClick }: SharedGameSearchResultIte
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm truncate">{game.title}</span>
-          <Badge
-            variant={game.source === 'catalog' ? 'default' : 'secondary'}
-            className="text-xs flex-shrink-0"
-          >
-            {game.source === 'catalog' ? 'Catalogo' : 'BGG'}
+          <Badge variant="default" className="text-xs flex-shrink-0">
+            Catalogo
           </Badge>
         </div>
         <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">

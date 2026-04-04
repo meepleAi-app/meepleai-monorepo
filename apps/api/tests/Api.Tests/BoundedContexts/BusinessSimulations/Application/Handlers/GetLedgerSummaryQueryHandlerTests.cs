@@ -1,4 +1,4 @@
-using Api.BoundedContexts.BusinessSimulations.Application.Handlers;
+using Api.BoundedContexts.BusinessSimulations.Application.Commands;
 using Api.BoundedContexts.BusinessSimulations.Application.Queries;
 using Api.BoundedContexts.BusinessSimulations.Domain.Repositories;
 using Api.Tests.Constants;

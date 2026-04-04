@@ -10,7 +10,7 @@ import React from 'react';
 // Mock stores
 vi.mock('@/stores/agentStore', () => ({
   useAgentStore: vi.fn(() => ({
-    selectedTypologyId: null,
+    selectedagentDefinitionId: null,
     setSelectedTypology: vi.fn(),
   })),
 }));
@@ -26,7 +26,7 @@ describe('TemplateCarousel', () => {
     vi.clearAllMocks();
 
     vi.mocked(useAgentStore).mockReturnValue({
-      selectedTypologyId: null,
+      selectedagentDefinitionId: null,
       setSelectedTypology: mockSetSelectedTypology,
     } as unknown as ReturnType<typeof useAgentStore>);
   });
@@ -80,7 +80,7 @@ describe('TemplateCarousel', () => {
 
     it('applies selected styling to selected template', () => {
       vi.mocked(useAgentStore).mockReturnValue({
-        selectedTypologyId: '1',
+        selectedagentDefinitionId: '1',
         setSelectedTypology: mockSetSelectedTypology,
       } as unknown as ReturnType<typeof useAgentStore>);
 
@@ -93,7 +93,7 @@ describe('TemplateCarousel', () => {
 
     it('applies default styling to unselected templates', () => {
       vi.mocked(useAgentStore).mockReturnValue({
-        selectedTypologyId: '1',
+        selectedagentDefinitionId: '1',
         setSelectedTypology: mockSetSelectedTypology,
       } as unknown as ReturnType<typeof useAgentStore>);
 
@@ -121,8 +121,8 @@ describe('TemplateCarousel', () => {
       // Get all buttons with Info icon
       const allButtons = screen.getAllByRole('button');
       // The info buttons are smaller and inside the template cards
-      const infoButton = allButtons.find(btn =>
-        btn.className.includes('h-6') && btn.className.includes('w-6')
+      const infoButton = allButtons.find(
+        btn => btn.className.includes('h-6') && btn.className.includes('w-6')
       );
 
       if (infoButton) {

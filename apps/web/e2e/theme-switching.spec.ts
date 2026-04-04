@@ -67,7 +67,7 @@ test.describe('Theme Switching', () => {
     expect(persistedClasses).toContain('dark');
 
     // Navigate to another route
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     // Verify theme still persisted
@@ -205,12 +205,7 @@ test.describe('Theme Switching', () => {
 test.describe('Theme Consistency Across Components', () => {
   test('all major components render in both themes', async ({ page }) => {
     // Test pages with various components
-    const testPages = [
-      '/',
-      '/games',
-      '/chat',
-      '/about',
-    ];
+    const testPages = ['/', '/library', '/chat', '/about'];
 
     for (const pagePath of testPages) {
       // Test light mode

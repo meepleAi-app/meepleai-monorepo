@@ -31,8 +31,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { api } from '@/lib/api';
 import type { PdfMetrics } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
-import { usePdfStatus, type UsePdfStatusOptions, type PdfStatusData, type ConnectionState, type ConnectionMetrics } from './usePdfStatus';
+import {
+  usePdfStatus,
+  type UsePdfStatusOptions,
+  type PdfStatusData,
+  type ConnectionState,
+  type ConnectionMetrics,
+} from './usePdfStatus';
 
 // ============================================================================
 // Types
@@ -146,7 +153,7 @@ export function usePdfProgress(
       if (!isMountedRef.current) return;
       const error = err instanceof Error ? err : new Error('Failed to fetch metrics');
       setMetricsError(error);
-      console.error('[usePdfProgress] Metrics fetch failed:', error);
+      logger.error('[usePdfProgress] Metrics fetch failed:', error);
     } finally {
       if (isMountedRef.current) {
         setMetricsLoading(false);

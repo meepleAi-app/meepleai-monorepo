@@ -157,17 +157,19 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var dates = await DbContext.UserLibraryEntries
+        // Project Min/Max in the database instead of materializing all dates into memory
+        var result = await DbContext.UserLibraryEntries
             .AsNoTracking()
             .Where(e => e.UserId == userId && e.SharedGameId != null) // exclude private-game entries for consistency with count
-            .Select(e => e.AddedAt)
-            .ToListAsync(cancellationToken)
+            .GroupBy(_ => 1)
+            .Select(g => new { Oldest = g.Min(e => (DateTime?)e.AddedAt), Newest = g.Max(e => (DateTime?)e.AddedAt) })
+            .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (dates.Count == 0)
+        if (result is null)
             return (null, null);
 
-        return (dates.Min(), dates.Max());
+        return (result.Oldest, result.Newest);
     }
 
     public async Task<UserLibraryEntry?> GetUserGameWithStatsAsync(
@@ -218,6 +220,22 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .AsNoTracking()
             .CountAsync(e => e.UserId == userId && e.PrivatePdfId != null, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<Dictionary<GameStateType, int>> GetStateCountsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var stateCounts = await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Where(e => e.UserId == userId && e.SharedGameId != null)
+            .GroupBy(e => e.CurrentState)
+            .Select(g => new { State = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return stateCounts.ToDictionary(
+            x => (GameStateType)x.State,
+            x => x.Count);
     }
 
     /// <inheritdoc />
@@ -441,6 +459,13 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             privatePdfIdProp?.SetValue(entry, entity.PrivatePdfId.Value);
         }
 
+        // Hydrate OwnershipDeclaredAt from DB using reflection (private setter)
+        if (entity.OwnershipDeclaredAt.HasValue)
+        {
+            var ownershipDeclaredAtProp = typeof(UserLibraryEntry).GetProperty("OwnershipDeclaredAt");
+            ownershipDeclaredAtProp?.SetValue(entry, entity.OwnershipDeclaredAt.Value);
+        }
+
         // Clear domain events that were raised during construction
         // (we don't want to re-raise events for existing entities)
         entry.ClearDomainEvents();
@@ -572,6 +597,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             CustomPdfFileSizeBytes = domainEntity.CustomPdfMetadata?.FileSizeBytes,
             CustomPdfOriginalFileName = domainEntity.CustomPdfMetadata?.OriginalFileName,
             PrivatePdfId = domainEntity.PrivatePdfId,
+            OwnershipDeclaredAt = domainEntity.OwnershipDeclaredAt,
 
             // Game state
             CurrentState = (int)domainEntity.CurrentState.Value,

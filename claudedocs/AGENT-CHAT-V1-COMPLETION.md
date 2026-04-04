@@ -242,7 +242,7 @@ http://localhost:3000/admin/agent-definitions/playground
 ✅ PR ready for review
 ✅ Pushed to GitHub
 
-**PR**: https://github.com/DegrassiAaron/meepleai-monorepo/pull/4280
+**PR**: https://github.com/meepleAi-app/meepleai-monorepo/pull/4280
 
 ---
 

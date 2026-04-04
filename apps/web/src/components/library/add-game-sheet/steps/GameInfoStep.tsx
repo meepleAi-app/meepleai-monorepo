@@ -10,7 +10,7 @@ import { useState, useCallback, useMemo } from 'react';
 
 import { Save, Loader2, AlertCircle, Tag } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
@@ -40,7 +40,7 @@ export interface GameInfoStepProps {
 
 const SOURCE_LABELS: Record<string, string> = {
   catalog: 'Catalogo',
-  bgg: 'BGG',
+  bgg: 'Importato',
   custom: 'Custom',
 };
 

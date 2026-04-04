@@ -407,10 +407,11 @@ public class ErrorHandlingTests : IAsyncLifetime
         await cts.CancelAsync();
 
         // Assert
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        var act = async () =>
         {
             await _client.SendAsync(request, cts.Token);
-        });
+        };
+        await act.Should().ThrowAsync<OperationCanceledException>();
 
         // Frontend SDK should handle request cancellation
         // (e.g., when user navigates away during request)
@@ -434,7 +435,7 @@ public class ErrorHandlingTests : IAsyncLifetime
         {
             // Expected if timeout is too short
             // Frontend SDK should handle timeout errors
-            Assert.True(true, "Request timed out as expected");
+            true.Should().BeTrue("Request timed out as expected");
         }
     }
 }

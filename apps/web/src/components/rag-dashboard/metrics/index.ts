@@ -14,6 +14,10 @@ export { CacheHitGauge } from './CacheHitGauge';
 export { AccuracyScore } from './AccuracyScore';
 export { CostBreakdown } from './CostBreakdown';
 
+// Moved from root level
+export { PerformanceMetricsTable } from './PerformanceMetricsTable';
+export { TokenFlowVisualizer } from './TokenFlowVisualizer';
+
 // Data
 export { MOCK_RAG_METRICS, generateMockMetrics } from './mock-data';
 

@@ -43,8 +43,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
-
 
 import { BLOCKS_BY_TYPE, isValidConnection as checkBlockConnection } from './block-definitions';
 import { validatePipelineConstraints, PIPELINE_CONSTRAINTS } from './block-metadata';
@@ -80,13 +80,7 @@ import {
 } from './nodes';
 import { RagBlockNode } from './RagBlockNode';
 
-import type {
-  RagNode,
-  RagEdge,
-  RagNodeData,
-  RagBlockType,
-  PipelineDefinition,
-} from './types';
+import type { RagNode, RagEdge, RagNodeData, RagBlockType, PipelineDefinition } from './types';
 
 // =============================================================================
 // Types
@@ -149,16 +143,13 @@ const nodeTypes: NodeTypes = {
 // Edge Validation
 // =============================================================================
 
-function isConnectionValidForCanvas(
-  connection: Connection,
-  nodes: Node[]
-): boolean {
+function isConnectionValidForCanvas(connection: Connection, nodes: Node[]): boolean {
   const { source, target, sourceHandle, targetHandle } = connection;
 
   if (!source || !target || source === target) return false;
 
-  const sourceNode = nodes.find((n) => n.id === source);
-  const targetNode = nodes.find((n) => n.id === target);
+  const sourceNode = nodes.find(n => n.id === source);
+  const targetNode = nodes.find(n => n.id === target);
 
   if (!sourceNode || !targetNode) return false;
   if (!sourceNode.data || !targetNode.data) return false;
@@ -177,8 +168,8 @@ function isConnectionValidForCanvas(
   }
 
   // Check port data type compatibility
-  const sourcePort = sourceBlock.outputs.find((p) => p.id === sourceHandle);
-  const targetPort = targetBlock.inputs.find((p) => p.id === targetHandle);
+  const sourcePort = sourceBlock.outputs.find(p => p.id === sourceHandle);
+  const targetPort = targetBlock.inputs.find(p => p.id === targetHandle);
 
   if (!sourcePort || !targetPort) return false;
 
@@ -198,10 +189,7 @@ function createNodeId(): string {
   return `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-function createNodeFromBlock(
-  blockType: RagBlockType,
-  position: XYPosition
-): Node | null {
+function createNodeFromBlock(blockType: RagBlockType, position: XYPosition): Node | null {
   const block = BLOCKS_BY_TYPE[blockType];
   if (!block) return null;
 
@@ -251,8 +239,8 @@ export function PipelineCanvas({
   // Calculate validation
   const validation = useMemo(() => {
     const blockTypes = nodes
-      .filter((n) => n.data && typeof n.data === 'object' && 'block' in n.data)
-      .map((n) => {
+      .filter(n => n.data && typeof n.data === 'object' && 'block' in n.data)
+      .map(n => {
         const data = n.data as RagNodeData;
         return data.block.type;
       });
@@ -261,7 +249,7 @@ export function PipelineCanvas({
 
   // Handle connection
   const onConnect: OnConnect = useCallback(
-    (connection) => {
+    connection => {
       if (readOnly) return;
 
       if (!isConnectionValidForCanvas(connection, nodes)) {
@@ -280,14 +268,14 @@ export function PipelineCanvas({
         },
       };
 
-      setEdges((eds) => addEdge(newEdge, eds));
+      setEdges(eds => addEdge(newEdge, eds));
     },
     [nodes, readOnly, setEdges]
   );
 
   // Handle node changes
   const handleNodesChange: OnNodesChange = useCallback(
-    (changes) => {
+    changes => {
       if (readOnly) return;
       onNodesChange(changes);
     },
@@ -296,7 +284,7 @@ export function PipelineCanvas({
 
   // Handle edge changes
   const handleEdgesChange: OnEdgesChange = useCallback(
-    (changes) => {
+    changes => {
       if (readOnly) return;
       onEdgesChange(changes);
     },
@@ -328,10 +316,10 @@ export function PipelineCanvas({
 
         const newNode = createNodeFromBlock(type, position);
         if (newNode) {
-          setNodes((nds) => [...nds, newNode]);
+          setNodes(nds => [...nds, newNode]);
         }
       } catch (error) {
-        console.error('Failed to parse dropped block data:', error);
+        logger.error('Failed to parse dropped block data:', error);
       }
     },
     [readOnly, reactFlowInstance, setNodes]
@@ -445,7 +433,7 @@ export function PipelineCanvas({
         {/* Minimap */}
         {showMinimap && (
           <MiniMap
-            nodeColor={(node) => {
+            nodeColor={node => {
               const data = node.data as RagNodeData | undefined;
               return data?.block?.color || '#888';
             }}
@@ -462,12 +450,7 @@ export function PipelineCanvas({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={handleZoomIn}
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomIn}>
                     <ZoomIn className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -478,12 +461,7 @@ export function PipelineCanvas({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={handleZoomOut}
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomOut}>
                     <ZoomOut className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -494,12 +472,7 @@ export function PipelineCanvas({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={handleFitView}
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleFitView}>
                     <Maximize className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -562,22 +535,19 @@ export function PipelineCanvas({
                 variant={validation.tokensValid ? 'outline' : 'destructive'}
                 className="text-xs"
               >
-                {validation.details.estimatedTokens.toLocaleString()}/{PIPELINE_CONSTRAINTS.maxTokens.toLocaleString()}
+                {validation.details.estimatedTokens.toLocaleString()}/
+                {PIPELINE_CONSTRAINTS.maxTokens.toLocaleString()}
               </Badge>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <span className="text-muted-foreground">Est. Cost:</span>
-              <Badge
-                variant={validation.costValid ? 'outline' : 'destructive'}
-                className="text-xs"
-              >
-                ${validation.details.estimatedCost.toFixed(4)}/${PIPELINE_CONSTRAINTS.maxCostUsd.toFixed(2)}
+              <Badge variant={validation.costValid ? 'outline' : 'destructive'} className="text-xs">
+                ${validation.details.estimatedCost.toFixed(4)}/$
+                {PIPELINE_CONSTRAINTS.maxCostUsd.toFixed(2)}
               </Badge>
             </div>
             {!validation.isValid && (
-              <p className="text-xs text-destructive font-medium">
-                Pipeline exceeds constraints
-              </p>
+              <p className="text-xs text-destructive font-medium">Pipeline exceeds constraints</p>
             )}
           </div>
         </Panel>

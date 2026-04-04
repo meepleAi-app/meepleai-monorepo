@@ -13,8 +13,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/navigation/sheet';
-import { useMediaQuery } from '@/hooks/use-media-query';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/navigation/sheet';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
 export interface MobileTagsProps {
@@ -94,10 +100,7 @@ export function MobileTagDisplay({
   if (isCollapsed && isMobile) {
     return (
       <div
-        className={cn(
-          'flex items-center gap-1 transition-all duration-200',
-          className
-        )}
+        className={cn('flex items-center gap-1 transition-all duration-200', className)}
         onClick={() => setIsCollapsed(false)}
         role="button"
         tabIndex={0}
@@ -175,9 +178,7 @@ export function MobileTagDisplay({
                     'transition-colors hover:bg-accent'
                   )}
                 >
-                  {tag.icon && (
-                    <span className="w-4 h-4 flex-shrink-0">{tag.icon}</span>
-                  )}
+                  {tag.icon && <span className="w-4 h-4 flex-shrink-0">{tag.icon}</span>}
                   <span className="text-sm font-medium truncate">{tag.label}</span>
                 </div>
               ))}

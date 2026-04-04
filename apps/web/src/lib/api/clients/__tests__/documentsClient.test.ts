@@ -17,8 +17,12 @@ import type {
 } from '../../schemas/documents.schemas';
 import type { PdfDocumentDto } from '../../schemas/pdf.schemas';
 
+type MockedHttpClient = {
+  [K in keyof HttpClient]: ReturnType<typeof vi.fn>;
+};
+
 describe('createDocumentsClient', () => {
-  let mockHttpClient: Mocked<HttpClient>;
+  let mockHttpClient: MockedHttpClient;
   let documentsClient: ReturnType<typeof createDocumentsClient>;
 
   const mockGameId = '123e4567-e89b-12d3-a456-426614174000';
@@ -30,6 +34,7 @@ describe('createDocumentsClient', () => {
       get: vi.fn(),
       post: vi.fn(),
       put: vi.fn(),
+      patch: vi.fn(),
       delete: vi.fn(),
       postFile: vi.fn(),
     } as any;
@@ -59,6 +64,11 @@ describe('createDocumentsClient', () => {
           canRetry: false,
           errorCategory: null,
           processingError: null,
+          documentCategory: 'Rulebook',
+          baseDocumentId: null,
+          isActiveForRag: true,
+          hasAcceptedDisclaimer: false,
+          versionLabel: null,
         },
       ];
 

@@ -1,5 +1,6 @@
 using Api.SharedKernel.Domain.Validation;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.SharedKernel.Domain.Validation;
@@ -18,8 +19,8 @@ public class CommonValidatorsTests
         var result = email.IsValidEmail();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(email, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(email);
     }
 
     [Theory]
@@ -33,8 +34,8 @@ public class CommonValidatorsTests
         var result = email.IsValidEmail();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     [Theory]
     [InlineData("http://example.com")]
@@ -47,8 +48,8 @@ public class CommonValidatorsTests
         var result = url.IsValidUrl();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(url, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(url);
     }
 
     [Theory]
@@ -61,8 +62,8 @@ public class CommonValidatorsTests
         var result = url.IsValidUrl();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     [Theory]
     [InlineData("mpl_dev_YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=")]
@@ -74,8 +75,8 @@ public class CommonValidatorsTests
         var result = apiKey.IsValidApiKey();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(apiKey, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(apiKey);
     }
 
     [Theory]
@@ -89,8 +90,8 @@ public class CommonValidatorsTests
         var result = apiKey.IsValidApiKey();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     [Theory]
     [InlineData("Test123!")]
@@ -102,8 +103,8 @@ public class CommonValidatorsTests
         var result = password.IsValidPassword();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(password, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(password);
     }
 
     [Theory]
@@ -118,8 +119,8 @@ public class CommonValidatorsTests
         var result = password.IsValidPassword();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     [Theory]
     [InlineData("document.pdf")]
@@ -131,8 +132,8 @@ public class CommonValidatorsTests
         var result = fileName.IsValidFileName();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(fileName, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(fileName);
     }
 
     [Theory]
@@ -145,8 +146,8 @@ public class CommonValidatorsTests
         var result = fileName.IsValidFileName();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public class CommonValidatorsTests
         var result = fileName.HasAllowedExtension(allowedExtensions);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -174,8 +175,8 @@ public class CommonValidatorsTests
         var result = fileName.HasAllowedExtension(allowedExtensions);
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     [Theory]
     [InlineData("{\"key\": \"value\"}")]
@@ -187,8 +188,8 @@ public class CommonValidatorsTests
         var result = json.IsValidJson();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(json, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(json);
     }
 
     [Theory]
@@ -201,8 +202,8 @@ public class CommonValidatorsTests
         var result = json.IsValidJson();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     [Theory]
     [InlineData("1.0")]
@@ -214,8 +215,8 @@ public class CommonValidatorsTests
         var result = version.IsValidVersion();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(version, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(version);
     }
 
     [Theory]
@@ -229,8 +230,8 @@ public class CommonValidatorsTests
         var result = version.IsValidVersion();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     [Theory]
     [InlineData("RateLimit")]
@@ -242,8 +243,8 @@ public class CommonValidatorsTests
         var result = key.IsValidConfigKey();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(key, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(key);
     }
 
     [Theory]
@@ -257,8 +258,8 @@ public class CommonValidatorsTests
         var result = key.IsValidConfigKey();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     [Fact]
     public void NotInFuture_WithPastDate_ReturnsSuccess()
@@ -270,8 +271,8 @@ public class CommonValidatorsTests
         var result = date.NotInFuture();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(date, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(date);
     }
 
     [Fact]
@@ -284,8 +285,8 @@ public class CommonValidatorsTests
         var result = date.NotInFuture();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
 
     [Fact]
@@ -298,8 +299,8 @@ public class CommonValidatorsTests
         var result = date.NotInPast();
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(date, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(date);
     }
 
     [Fact]
@@ -312,8 +313,8 @@ public class CommonValidatorsTests
         var result = date.NotInPast();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
 
     [Fact]
@@ -328,7 +329,7 @@ public class CommonValidatorsTests
         var result = date.InDateRange(minDate, maxDate);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -343,8 +344,8 @@ public class CommonValidatorsTests
         var result = date.InDateRange(minDate, maxDate);
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     private enum TestValidationStatus
     {
@@ -363,7 +364,7 @@ public class CommonValidatorsTests
         var result = value.IsValidEnum<TestValidationStatus>();
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Theory]
@@ -376,8 +377,8 @@ public class CommonValidatorsTests
         var result = value.IsValidEnum<TestValidationStatus>();
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
 }
 

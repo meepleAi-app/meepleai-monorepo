@@ -287,3 +287,64 @@ export const FinalizeSessionCommandSchema = z.object({
 });
 
 export type FinalizeSessionCommand = z.infer<typeof FinalizeSessionCommandSchema>;
+
+// ========== Turn Summary AI (Issue #277) ==========
+
+export const TurnSummaryRequestSchema = z.object({
+  fromPhase: z.number().int().min(0).optional(),
+  toPhase: z.number().int().min(0).optional(),
+  lastNEvents: z.number().int().min(1).max(100).optional(),
+});
+
+export type TurnSummaryRequest = z.infer<typeof TurnSummaryRequestSchema>;
+
+export const TurnSummaryResultSchema = z.object({
+  summaryEventId: z.string().uuid(),
+  summary: z.string(),
+  eventsAnalyzed: z.number().int(),
+  generatedAt: z.string(),
+});
+
+export type TurnSummaryResult = z.infer<typeof TurnSummaryResultSchema>;
+
+// ========== Session Checkpoints (Issue #278) ==========
+
+export const CreateCheckpointRequestSchema = z.object({
+  name: z.string().min(1).max(200),
+});
+
+export type CreateCheckpointRequest = z.infer<typeof CreateCheckpointRequestSchema>;
+
+export const CreateCheckpointResultSchema = z.object({
+  checkpointId: z.string().uuid(),
+  name: z.string(),
+  createdAt: z.string(),
+  diaryEventCount: z.number().int(),
+});
+
+export type CreateCheckpointResult = z.infer<typeof CreateCheckpointResultSchema>;
+
+export const SessionCheckpointDtoSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  createdAt: z.string(),
+  createdBy: z.string().uuid(),
+  diaryEventCount: z.number().int(),
+});
+
+export type SessionCheckpointDto = z.infer<typeof SessionCheckpointDtoSchema>;
+
+export const ListCheckpointsResultSchema = z.object({
+  checkpoints: z.array(SessionCheckpointDtoSchema),
+});
+
+export type ListCheckpointsResult = z.infer<typeof ListCheckpointsResultSchema>;
+
+export const RestoreCheckpointResultSchema = z.object({
+  checkpointId: z.string().uuid(),
+  name: z.string(),
+  restoredAt: z.string(),
+  widgetsRestored: z.number().int(),
+});
+
+export type RestoreCheckpointResult = z.infer<typeof RestoreCheckpointResultSchema>;

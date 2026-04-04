@@ -75,8 +75,17 @@ internal class PdfTextProcessingDomainService
 
         text = string.Join('\n', lines);
 
-        // Step 6: Unicode normalization (Form C - canonical composition)
-        text = text.Normalize(NormalizationForm.FormC);
+        // Step 6: Strip invalid Unicode surrogates then normalize (Form C - canonical composition)
+        text = RemoveInvalidSurrogates(text);
+        try
+        {
+            text = text.Normalize(NormalizationForm.FormC);
+        }
+        catch (ArgumentException)
+        {
+            // Fallback: if normalization still fails after surrogate cleanup,
+            // skip normalization rather than crash the extraction pipeline
+        }
 
         // Step 7: Remove zero-width characters (after Unicode normalization to avoid it adding them back)
         text = RemoveZeroWidthCharacters(text);
@@ -102,6 +111,45 @@ internal class PdfTextProcessingDomainService
         if (avgCharsPerPage > 200) return ExtractionQuality.Medium;
         if (avgCharsPerPage > 50) return ExtractionQuality.Low;
         return ExtractionQuality.VeryLow; // Likely needs OCR
+    }
+
+    /// <summary>
+    /// Removes unpaired UTF-16 surrogates that cause string.Normalize() to throw.
+    /// Replaces lone high/low surrogates with U+FFFD (replacement character).
+    /// </summary>
+    private static string RemoveInvalidSurrogates(string text)
+    {
+        var sb = new StringBuilder(text.Length);
+        var index = 0;
+        while (index < text.Length)
+        {
+            var ch = text[index];
+            if (char.IsHighSurrogate(ch))
+            {
+                if (index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]))
+                {
+                    sb.Append(ch);
+                    sb.Append(text[index + 1]);
+                    index += 2; // skip past the surrogate pair
+                }
+                else
+                {
+                    sb.Append('\uFFFD'); // replacement character for lone high surrogate
+                    index++;
+                }
+            }
+            else if (char.IsLowSurrogate(ch))
+            {
+                sb.Append('\uFFFD'); // replacement character for lone low surrogate
+                index++;
+            }
+            else
+            {
+                sb.Append(ch);
+                index++;
+            }
+        }
+        return sb.ToString();
     }
 
     /// <summary>

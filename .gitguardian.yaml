@@ -1,0 +1,7 @@
+version: 2
+
+# Ignore test files with hardcoded mock credentials (not real secrets)
+# and example/template files with placeholder values
+ignore-paths:
+  - apps/api/tests/
+  - infra/secrets/*.secret.example

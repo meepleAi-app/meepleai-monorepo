@@ -11,11 +11,17 @@
 
 import { Users } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useGameContributors } from '@/hooks/queries';
 
-import { ContributorCard } from './ContributorCard';
+import { MeepleContributorCard } from './MeepleContributorCard';
 
 interface ContributorsSectionProps {
   gameId: string;
@@ -52,8 +58,8 @@ export function ContributorsSection({ gameId }: ContributorsSectionProps) {
   }
 
   // Separate primary from additional contributors
-  const primaryContributor = contributors.find((c) => c.isPrimaryContributor);
-  const additionalContributors = contributors.filter((c) => !c.isPrimaryContributor);
+  const primaryContributor = contributors.find(c => c.isPrimaryContributor);
+  const additionalContributors = contributors.filter(c => !c.isPrimaryContributor);
 
   return (
     <Card>
@@ -69,7 +75,7 @@ export function ContributorsSection({ gameId }: ContributorsSectionProps) {
         {primaryContributor && (
           <div>
             <p className="text-sm font-semibold text-muted-foreground mb-2">Original Contributor</p>
-            <ContributorCard contributor={primaryContributor} featured />
+            <MeepleContributorCard contributor={primaryContributor} featured />
           </div>
         )}
 
@@ -80,8 +86,8 @@ export function ContributorsSection({ gameId }: ContributorsSectionProps) {
               Additional Contributors ({additionalContributors.length})
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {additionalContributors.map((contributor) => (
-                <ContributorCard key={contributor.userId} contributor={contributor} />
+              {additionalContributors.map(contributor => (
+                <MeepleContributorCard key={contributor.userId} contributor={contributor} />
               ))}
             </div>
           </div>

@@ -136,6 +136,12 @@ export interface Citation {
   pageNumber: number;
   snippet: string;
   relevanceScore: number;
+  /** Copyright tier: 'full' shows verbatim snippet, 'protected' shows paraphrase. Defaults to 'full' for backward compat. */
+  copyrightTier: 'full' | 'protected';
+  /** AI-generated paraphrase for protected-tier citations */
+  paraphrasedSnippet?: string;
+  /** Whether the game is publicly available (affects upsell CTA copy) */
+  isPublic?: boolean;
 }
 
 /**

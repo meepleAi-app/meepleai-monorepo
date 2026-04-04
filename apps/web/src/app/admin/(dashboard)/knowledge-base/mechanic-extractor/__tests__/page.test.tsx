@@ -97,18 +97,11 @@ describe('MechanicExtractorPage', () => {
       expect(screen.queryByText('Your Notes')).not.toBeInTheDocument();
     });
 
-    it('sets nav config on mount', () => {
+    it('does not call setNavConfig (page manages its own nav via layout)', () => {
       renderWithQuery(<MechanicExtractorPage />);
-      expect(mockSetNavConfig).toHaveBeenCalledWith(
-        expect.objectContaining({
-          miniNav: expect.arrayContaining([
-            expect.objectContaining({
-              id: 'extractor',
-              label: 'Mechanic Extractor',
-            }),
-          ]),
-        })
-      );
+      // The MechanicExtractorPage does not call useSetNavConfig directly;
+      // navigation configuration is handled by the admin layout.
+      expect(mockSetNavConfig).not.toHaveBeenCalled();
     });
   });
 });

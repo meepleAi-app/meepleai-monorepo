@@ -1,6 +1,7 @@
 using Api.Services;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -20,12 +21,14 @@ public sealed class RequestSourceTests
         // All expected values must be present (regression guard)
         var values = Enum.GetValues<RequestSource>();
 
-        Assert.Contains(RequestSource.Manual, values);
-        Assert.Contains(RequestSource.RagPipeline, values);
-        Assert.Contains(RequestSource.EventDriven, values);
-        Assert.Contains(RequestSource.AutomatedTest, values);
-        Assert.Contains(RequestSource.AgentTask, values);
-        Assert.Contains(RequestSource.AdminOperation, values);
+        values.Should().Contain(RequestSource.Manual);
+        values.Should().Contain(RequestSource.RagPipeline);
+        values.Should().Contain(RequestSource.EventDriven);
+        values.Should().Contain(RequestSource.AutomatedTest);
+        values.Should().Contain(RequestSource.AgentTask);
+        values.Should().Contain(RequestSource.AdminOperation);
+        values.Should().Contain(RequestSource.ABTesting);
+        values.Should().Contain(RequestSource.RagClassification);
     }
 
     [Theory]
@@ -35,9 +38,11 @@ public sealed class RequestSourceTests
     [InlineData(RequestSource.AutomatedTest, "AutomatedTest")]
     [InlineData(RequestSource.AgentTask, "AgentTask")]
     [InlineData(RequestSource.AdminOperation, "AdminOperation")]
+    [InlineData(RequestSource.ABTesting, "ABTesting")]
+    [InlineData(RequestSource.RagClassification, "RagClassification")]
     public void RequestSource_ToStringMatchesExpected(RequestSource source, string expected)
     {
-        Assert.Equal(expected, source.ToString());
+        source.ToString().Should().Be(expected);
     }
 
     [Theory]
@@ -47,17 +52,19 @@ public sealed class RequestSourceTests
     [InlineData("AutomatedTest", RequestSource.AutomatedTest)]
     [InlineData("AgentTask", RequestSource.AgentTask)]
     [InlineData("AdminOperation", RequestSource.AdminOperation)]
+    [InlineData("ABTesting", RequestSource.ABTesting)]
+    [InlineData("RagClassification", RequestSource.RagClassification)]
     public void RequestSource_ParsesFromString(string name, RequestSource expected)
     {
         var parsed = Enum.Parse<RequestSource>(name);
-        Assert.Equal(expected, parsed);
+        parsed.Should().Be(expected);
     }
 
     [Fact]
-    public void RequestSource_HasExactly6Values()
+    public void RequestSource_HasExactly8Values()
     {
         // Regression guard: adding/removing values requires updating monitoring logic
         var count = Enum.GetValues<RequestSource>().Length;
-        Assert.Equal(6, count);
+        count.Should().Be(8);
     }
 }

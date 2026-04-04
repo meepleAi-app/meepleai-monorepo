@@ -37,6 +37,9 @@ internal class LlmRequestLogConfiguration : IEntityTypeConfiguration<LlmRequestL
         // Issue #5511: GDPR pseudonymization tracking
         builder.Property(x => x.IsAnonymized).HasColumnName("is_anonymized").HasDefaultValue(false).IsRequired();
 
+        // Issue #27: Geographic region hint for future multi-region analytics
+        builder.Property(x => x.UserRegion).HasColumnName("user_region").HasMaxLength(10);
+
         // Analytics indexes
         builder.HasIndex(x => new { x.RequestedAt, x.RequestSource })
             .HasDatabaseName("ix_llm_request_logs_requested_at_source");

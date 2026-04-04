@@ -32,10 +32,11 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
         ArgumentNullException.ThrowIfNull(query);
 
         _logger.LogInformation(
-            "Getting filtered shared games: Status={Status}, Search={Search}, SubmittedBy={SubmittedBy}, Page={Page}, PageSize={PageSize}, SortBy={SortBy}",
+            "Getting filtered shared games: Status={Status}, Search={Search}, SubmittedBy={SubmittedBy}, CategoryId={CategoryId}, Page={Page}, PageSize={PageSize}, SortBy={SortBy}",
             query.Status,
             query.Search,
             query.SubmittedBy,
+            query.CategoryId,
             query.PageNumber,
             query.PageSize,
             query.SortBy);
@@ -58,6 +59,12 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
         if (query.SubmittedBy.HasValue)
         {
             dbQuery = dbQuery.Where(g => g.CreatedBy == query.SubmittedBy.Value);
+        }
+
+        if (query.CategoryId.HasValue)
+        {
+            dbQuery = dbQuery.Where(g =>
+                g.Categories.Any(c => c.Id == query.CategoryId.Value));
         }
 
         // Parse sort parameters
@@ -89,7 +96,8 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
                 g.ThumbnailUrl,
                 (GameStatus)g.Status,
                 g.CreatedAt,
-                g.ModifiedAt))
+                g.ModifiedAt,
+                g.IsRagPublic))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

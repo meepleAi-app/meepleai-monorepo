@@ -3,6 +3,7 @@ using Api.Filters;
 using Api.Infrastructure.Entities;
 using Microsoft.AspNetCore.Http;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -33,7 +34,7 @@ public class RequireAdminSessionFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
     }
 
@@ -49,7 +50,7 @@ public class RequireAdminSessionFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
     }
 
@@ -68,7 +69,7 @@ public class RequireAdminSessionFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Once);
     }
 
@@ -88,14 +89,14 @@ public class RequireAdminSessionFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
 
         // Verify that the session in HttpContext.Items is the admin session
-        Assert.True(context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)));
+        context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)).Should().BeTrue();
         var sessionInContext = context.HttpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        Assert.NotNull(sessionInContext);
-        Assert.Equal("Admin", sessionInContext!.User!.Role);
-        Assert.Equal(adminSession.User!.Id, sessionInContext!.User!.Id);
+        sessionInContext.Should().NotBeNull();
+        sessionInContext!.User!.Role.Should().Be("Admin");
+        sessionInContext!.User!.Id.Should().Be(adminSession.User!.Id);
     }
 
     [Fact]
@@ -110,7 +111,7 @@ public class RequireAdminSessionFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
     }
 

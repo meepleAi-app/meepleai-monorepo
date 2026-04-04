@@ -12,10 +12,12 @@ Features:
 - Configurable batch size and timeouts
 """
 
+import asyncio
 import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from functools import partial
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -31,44 +33,6 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-# OpenTelemetry setup (Issue #5543: RAG pipeline distributed tracing)
-def _setup_otel():
-    """Initialize OpenTelemetry tracing if OTEL endpoint is configured."""
-    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-    if not endpoint:
-        logger.info("OTEL_EXPORTER_OTLP_ENDPOINT not set, tracing disabled")
-        return
-
-    try:
-        from opentelemetry import trace
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-        from opentelemetry.sdk.resources import Resource
-
-        resource = Resource.create({
-            "service.name": os.getenv("OTEL_SERVICE_NAME", "reranker-service"),
-            "service.version": "1.0.0",
-            "service.namespace": "meepleai",
-        })
-
-        provider = TracerProvider(resource=resource)
-        exporter = OTLPSpanExporter(endpoint=f"{endpoint}/v1/traces")
-        provider.add_span_processor(BatchSpanProcessor(exporter))
-        trace.set_tracer_provider(provider)
-
-        logger.info(f"OpenTelemetry tracing initialized → {endpoint}")
-    except Exception as e:
-        logger.warning(f"Failed to initialize OpenTelemetry: {e}")
-
-_setup_otel()
-_tracer = None
-try:
-    from opentelemetry import trace
-    _tracer = trace.get_tracer("reranker-service", "1.0.0")
-except Exception:
-    pass
 
 # Configuration from environment
 MODEL_NAME = os.getenv("MODEL_NAME", "BAAI/bge-reranker-v2-m3")
@@ -192,14 +156,6 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Instrument FastAPI for automatic trace context propagation (Issue #5543)
-try:
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-    FastAPIInstrumentor.instrument_app(app)
-    logger.info("FastAPI OpenTelemetry instrumentation enabled")
-except Exception:
-    pass
-
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
@@ -245,21 +201,19 @@ async def rerank(request: Request, rerank_request: RerankRequest):
 
     start = time.time()
 
-    # Tracing (Issue #5543)
-    span_ctx = _tracer.start_as_current_span("reranker.rerank") if _tracer else None
-    span = span_ctx.__enter__() if span_ctx else None
     try:
-        if span:
-            span.set_attribute("reranker.chunk_count", len(rerank_request.chunks))
-            span.set_attribute("reranker.query_length", len(rerank_request.query))
-            span.set_attribute("reranker.model", MODEL_NAME)
-            span.set_attribute("reranker.batch_size", BATCH_SIZE)
-
         # Prepare query-chunk pairs for cross-encoder
         pairs = [(rerank_request.query, chunk.content) for chunk in rerank_request.chunks]
 
-        # Compute reranking scores in batches
-        scores = model.predict(pairs, batch_size=BATCH_SIZE, show_progress_bar=False)
+        # Compute reranking scores in batches (offloaded to thread pool to avoid blocking the event loop)
+        loop = asyncio.get_running_loop()
+        predict_fn = partial(
+            model.predict,
+            pairs,
+            batch_size=BATCH_SIZE,
+            show_progress_bar=False
+        )
+        scores = await loop.run_in_executor(None, predict_fn)
 
         # Combine results with scores
         results = []
@@ -281,11 +235,6 @@ async def rerank(request: Request, rerank_request: RerankRequest):
 
         processing_time_ms = (time.time() - start) * 1000
 
-        if span:
-            span.set_attribute("reranker.processing_time_ms", processing_time_ms)
-            span.set_attribute("reranker.result_count", len(results))
-            span.set_attribute("reranker.success", True)
-
         logger.info(
             f"Reranked {len(rerank_request.chunks)} chunks in {processing_time_ms:.1f}ms"
         )
@@ -297,17 +246,11 @@ async def rerank(request: Request, rerank_request: RerankRequest):
         )
 
     except Exception as e:
-        if span:
-            span.set_attribute("reranker.success", False)
-            span.record_exception(e)
         logger.error(f"Reranking failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Reranking failed: {str(e)}"
         )
-    finally:
-        if span_ctx:
-            span_ctx.__exit__(None, None, None)
 
 
 @app.get("/")

@@ -50,7 +50,8 @@ internal record CreateChatThreadRequest(
     string? Title = null,
     string? InitialMessage = null,
     Guid? AgentId = null,
-    string? AgentType = null // Issue #4362
+    string? AgentType = null, // Issue #4362
+    List<Guid>? SelectedKnowledgeBaseIds = null  // VectorDocument IDs to use for RAG
 );
 
 /// <summary>

@@ -52,41 +52,54 @@ internal class EmailVerificationMiddleware
 
     public async Task InvokeAsync(HttpContext context, TimeProvider timeProvider)
     {
+        // Evaluate verification logic in isolation — _next is called exactly once, outside the try/catch.
+        // This prevents the catch from intercepting exceptions thrown by downstream middleware/endpoints,
+        // which would cause double-invocation of _next and a 500 response.
+        var blockResult = EvaluateVerification(context, timeProvider);
+
+        if (blockResult is not null)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                JsonSerializer.Serialize(blockResult),
+                context.RequestAborted).ConfigureAwait(false);
+            return;
+        }
+
+        await _next(context).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Evaluates whether the request should be blocked for email verification.
+    /// Returns the error payload to write if blocked, or null to allow the request through.
+    /// Fails open: any unexpected error returns null (allow).
+    /// </summary>
+    private object? EvaluateVerification(HttpContext context, TimeProvider timeProvider)
+    {
         try
         {
             // Skip exempt endpoints (login, register, verification endpoints, health)
             if (IsExemptPath(context.Request.Path))
-            {
-                await _next(context).ConfigureAwait(false);
-                return;
-            }
+                return null;
 
             // Extract user identity from active session
             var (authenticated, session, _) = context.TryGetActiveSession();
 
             if (!authenticated || session?.User is null)
-            {
-                // Unauthenticated request - let authentication middleware handle
-                await _next(context).ConfigureAwait(false);
-                return;
-            }
+                return null;
 
             var user = session.User;
 
-            // Admin and Editor roles are always exempt from email verification
-            if (user.Role.Equals("admin", StringComparison.OrdinalIgnoreCase) ||
+            // Admin, SuperAdmin, and Editor roles are always exempt from email verification
+            if (user.Role.Equals("superadmin", StringComparison.OrdinalIgnoreCase) ||
+                user.Role.Equals("admin", StringComparison.OrdinalIgnoreCase) ||
                 user.Role.Equals("editor", StringComparison.OrdinalIgnoreCase))
-            {
-                await _next(context).ConfigureAwait(false);
-                return;
-            }
+                return null;
 
             // Check if email is already verified
             if (user.EmailVerified)
-            {
-                await _next(context).ConfigureAwait(false);
-                return;
-            }
+                return null;
 
             // Check if user is in grace period using TimeProvider for testability
             var gracePeriodEndsAt = user.VerificationGracePeriodEndsAt;
@@ -96,9 +109,7 @@ internal class EmailVerificationMiddleware
                 // In grace period - allow request but add informational header
                 context.Response.Headers["X-Email-Verification-Grace-Period"] =
                     gracePeriodEndsAt.Value.ToString("O"); // ISO 8601 format
-
-                await _next(context).ConfigureAwait(false);
-                return;
+                return null;
             }
 
             // User requires verification and is past grace period - block request
@@ -108,10 +119,7 @@ internal class EmailVerificationMiddleware
                 user.Email,
                 gracePeriodEndsAt?.ToString("O") ?? "never set");
 
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            context.Response.ContentType = "application/json";
-
-            var payload = new
+            return new
             {
                 error = "Email verification required",
                 message = "Please verify your email address to access this feature. " +
@@ -124,10 +132,6 @@ internal class EmailVerificationMiddleware
                     resendEndpoint = "/api/v1/auth/email/resend"
                 }
             };
-
-            await context.Response.WriteAsync(
-                JsonSerializer.Serialize(payload),
-                context.RequestAborted).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -137,7 +141,7 @@ internal class EmailVerificationMiddleware
             // Trade-off: Temporary verification bypass vs complete system unavailability
             _logger.LogWarning(ex,
                 "Email verification middleware encountered an error; allowing request (fail-open)");
-            await _next(context).ConfigureAwait(false);
+            return null;
         }
 #pragma warning restore CA1031
     }

@@ -15,7 +15,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/overlays/alert-dialog-primitives';
 import { Button } from '@/components/ui/primitives/button';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 
 import { bulkReindexFailed } from '../lib/queue-api';
 

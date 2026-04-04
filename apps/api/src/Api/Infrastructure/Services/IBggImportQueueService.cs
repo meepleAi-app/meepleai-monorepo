@@ -13,12 +13,16 @@ public interface IBggImportQueueService
     /// </summary>
     /// <param name="bggId">BGG game ID to import</param>
     /// <param name="gameName">Optional game name for UI display</param>
+    /// <param name="requestedByUserId">Optional user ID who requested the import (for audit trail)</param>
+    /// <param name="autoPublish">When true, immediately quick-publishes the game after creation</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created queue entity</returns>
     /// <exception cref="InvalidOperationException">If BGG ID is already queued or imported</exception>
     Task<BggImportQueueEntity> EnqueueAsync(
         int bggId,
         string? gameName = null,
+        Guid? requestedByUserId = null,
+        bool autoPublish = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -141,5 +145,41 @@ public interface IBggImportQueueService
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     Task RecalculatePositionsAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Enqueue a single enrichment job for an existing skeleton SharedGame.
+    /// </summary>
+    Task<BggImportQueueEntity> EnqueueEnrichmentAsync(
+        Guid sharedGameId,
+        int? bggId,
+        string gameName,
+        Guid requestedByUserId,
+        Guid batchId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Enqueue multiple enrichment jobs in batch.
+    /// Returns the generated BatchId for notification tracking.
+    /// </summary>
+    Task<(Guid BatchId, int Enqueued)> EnqueueEnrichmentBatchAsync(
+        IEnumerable<(Guid SharedGameId, int? BggId, string GameName)> items,
+        Guid requestedByUserId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically claim a queue item for processing using raw SQL.
+    /// Returns true if this instance successfully claimed the item.
+    /// </summary>
+    Task<bool> TryClaimItemAsync(
+        Guid itemId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reset stale items stuck in Processing state for longer than the threshold.
+    /// Returns the number of recovered items.
+    /// </summary>
+    Task<int> RecoverStaleItemsAsync(
+        TimeSpan staleThreshold,
         CancellationToken cancellationToken = default);
 }

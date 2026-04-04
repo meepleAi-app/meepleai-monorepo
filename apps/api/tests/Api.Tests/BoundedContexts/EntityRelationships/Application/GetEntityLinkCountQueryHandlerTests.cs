@@ -4,6 +4,7 @@ using Api.BoundedContexts.EntityRelationships.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Application;
 
@@ -35,7 +36,7 @@ public class GetEntityLinkCountQueryHandlerTests
         var query = new GetEntityLinkCountQuery(MeepleEntityType.Game, _gameId);
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Equal(5, result);
+        result.Should().Be(5);
     }
 
     [Fact]
@@ -49,7 +50,7 @@ public class GetEntityLinkCountQueryHandlerTests
         var query = new GetEntityLinkCountQuery(MeepleEntityType.Game, _gameId);
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, result);
+        result.Should().Be(0);
     }
 
     [Fact]
@@ -72,7 +73,8 @@ public class GetEntityLinkCountQueryHandlerTests
     [Fact]
     public async Task Handle_NullQuery_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

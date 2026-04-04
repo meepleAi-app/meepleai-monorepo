@@ -20,31 +20,35 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
-import { useCostEstimate, calculateSessionCost, getCostWarningLevel } from '@/hooks/useCostEstimate';
+import {
+  useCostEstimate,
+  calculateSessionCost,
+  getCostWarningLevel,
+} from '@/hooks/useCostEstimate';
 import { cn } from '@/lib/utils';
 import { useAgentStore } from '@/stores/agentStore';
 
 interface CostPreviewProps {
   className?: string;
-  typologyId?: string | null;
+  agentDefinitionId?: string | null;
   estimatedQueriesPerSession?: number;
 }
 
 export function CostPreview({
   className,
-  typologyId,
+  agentDefinitionId,
   estimatedQueriesPerSession = 5,
 }: CostPreviewProps) {
-  const { selectedTypologyId } = useAgentStore();
+  const { selectedagentDefinitionId } = useAgentStore();
 
-  // Use provided typologyId or fall back to store selection
-  const activeTypologyId = typologyId || selectedTypologyId;
+  // Use provided agentDefinitionId or fall back to store selection
+  const activeagentDefinitionId = agentDefinitionId || selectedagentDefinitionId;
 
   // Fetch real-time cost estimate from API
-  const { data: estimate, isLoading } = useCostEstimate(activeTypologyId);
+  const { data: estimate, isLoading } = useCostEstimate(activeagentDefinitionId);
 
   // Early return if no typology selected
-  if (!activeTypologyId) {
+  if (!activeagentDefinitionId) {
     return null;
   }
 
@@ -103,7 +107,7 @@ export function CostPreview({
         ? 'bg-yellow-500/10'
         : 'bg-slate-800/50';
 
-  if (!activeTypologyId) {
+  if (!activeagentDefinitionId) {
     return null;
   }
 
@@ -153,9 +157,7 @@ export function CostPreview({
 
         {/* Per-Session Cost */}
         <div className="flex justify-between items-center text-sm">
-          <span className="text-slate-500">
-            Per session ({estimatedQueriesPerSession} queries)
-          </span>
+          <span className="text-slate-500">Per session ({estimatedQueriesPerSession} queries)</span>
           <span className="text-slate-300">${sessionCost.toFixed(3)}</span>
         </div>
 
@@ -195,9 +197,7 @@ export function CostPreview({
         )}
 
         {warningLevel === 'low' && (
-          <div className="mt-3 text-xs text-green-300">
-            ✓ Cost-effective configuration
-          </div>
+          <div className="mt-3 text-xs text-green-300">✓ Cost-effective configuration</div>
         )}
       </CardContent>
     </Card>

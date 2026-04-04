@@ -7,8 +7,8 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Creates admin, editor, and user accounts with predictable credentials.
 ///
 /// Users created:
-/// - admin@meepleai.dev / Demo123! (Admin role)
-/// - editor@meepleai.dev / Demo123! (Editor role)
-/// - user@meepleai.dev / Demo123! (User role)
+/// - Admin: email from INITIAL_ADMIN_EMAIL secret, password from ADMIN_PASSWORD secret (Admin role)
+/// - editor@meepleai.dev / password from SEED_TEST_PASSWORD secret (Editor role)
+/// - user@meepleai.dev / password from SEED_TEST_PASSWORD secret (User role)
 /// </summary>
 public sealed record SeedE2ETestUsersCommand : ICommand;

@@ -62,4 +62,10 @@ public class EmailQueueEntity
 
     [Column("failed_at")]
     public DateTime? FailedAt { get; set; }
+
+    /// <summary>
+    /// Optional correlation ID for cross-channel notification tracking.
+    /// </summary>
+    [Column("correlation_id")]
+    public Guid? CorrelationId { get; set; }
 }

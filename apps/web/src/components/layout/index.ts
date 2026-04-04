@@ -11,83 +11,18 @@ export {
   useLayoutMultiSelect,
   useLayoutContext,
 } from './LayoutProvider';
-export {
-  Layout,
-  PageHeader,
-  PageContent,
-  EmptyState,
-  LoadingState,
-} from './Layout';
+export { Layout, PageHeader, PageContent, EmptyState, LoadingState } from './Layout';
 
-// Phase 2: Navbar Components (#3288)
-export {
-  Navbar,
-  HamburgerButton,
-  HamburgerMenu,
-  Logo,
-  NavItems,
-  NavItemButton,
-  ProfileBar,
-} from './Navbar';
-export type {
-  NavbarProps,
-  HamburgerButtonProps,
-  HamburgerMenuProps,
-  LogoProps,
-  NavItem,
-  NavItemsProps,
-  NavItemButtonProps,
-  ProfileBarProps,
-} from './Navbar';
+// Logo — TopNavbar removed, use MeepleLogo directly from '@/components/ui/meeple/meeple-logo'
 
-// Phase 3: GlobalSearch Component (#3289)
-export {
-  GlobalSearch,
-  SearchTrigger,
-  SearchInput,
-  SearchResults,
-  RecentSearches,
-} from './GlobalSearch';
-export type {
-  GlobalSearchProps,
-  SearchTriggerProps,
-  SearchInputProps,
-  SearchResultsProps,
-  SearchResult,
-  SearchResultType,
-  RecentSearchesProps,
-} from './GlobalSearch';
-
-// Phase 4: ActionBar System (#3290)
-export {
-  ActionBar,
-  ActionBarSpacer,
-  ActionBarItem,
-  OverflowMenu,
-  MultiSelectBar,
-} from './ActionBar';
-export type {
-  ActionBarProps,
-  ActionBarItemProps,
-  OverflowMenuProps,
-  MultiSelectBarProps,
-} from './ActionBar';
-
-// Layout System v2 - UnifiedActionBar (#3479)
-export {
-  UnifiedActionBar,
-  UnifiedActionBarSpacer,
-} from './ActionBar';
-export type { UnifiedActionBarProps } from './ActionBar';
-
-// Phase 5: Smart FAB (#3291) - REMOVED: FAB functionality integrated into UnifiedActionBar
-
-// Phase 6: Breadcrumb & Polish (#3292)
-export { Breadcrumb, getContextConfig } from './Breadcrumb';
-export type { BreadcrumbProps } from './Breadcrumb';
+// Phase 4-6: ActionBar + Breadcrumb removed — replaced by UserShell ContextualBottomNav
 
 // Existing components
-export { ThemeSwitcher } from './ThemeSwitcher';
 export { toast } from './Toast';
 export { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 export { CommandPalette } from './CommandPalette';
+
+// v0app layout system (3-tier)
+export { ContextMiniNav } from './ContextMiniNav';
+export type { MiniNavTab } from './ContextMiniNav';
+export { FloatingActionPill } from './FloatingActionPill';

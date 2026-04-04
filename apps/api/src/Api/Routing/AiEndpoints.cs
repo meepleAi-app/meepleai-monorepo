@@ -4,12 +4,12 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries;
+using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Configuration;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
 using Api.Models;
-using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -21,7 +21,7 @@ namespace Api.Routing;
 
 /// <summary>
 /// AI and Agent endpoints.
-/// Handles RAG QA, explain, setup guide, chess agent, BGG API, and chess knowledge indexing.
+/// Handles RAG QA, explain, setup guide, and AI agent endpoints.
 /// </summary>
 internal static class AiEndpoints
 {
@@ -41,13 +41,7 @@ internal static class AiEndpoints
 
         MapAgentFeedbackEndpoint(group);
 
-        MapChessAgentEndpoint(group);
-
         MapPlayerModeSuggestionEndpoint(group);
-
-        // REMOVED: MapBggEndpoints(group); - Now handled by dedicated BggEndpoints.cs (Issue #3120)
-
-        // REMOVED: MapChessKnowledgeEndpoints(group); - Now handled by AdminMiscEndpoints.cs (duplicate route fix)
 
         // UI-01: Chat management endpoints
         return group;
@@ -72,10 +66,6 @@ internal static class AiEndpoints
         .RequireSession(); // Issue #1446: Automatic session validation
     }
 
-    // REMOVED: MapBggEndpoints - Now handled by dedicated BggEndpoints.cs (Issue #3120)
-
-    // REMOVED: MapChessKnowledgeEndpoints - Now handled by AdminMiscEndpoints.cs (duplicate route fix)
-
     private static void MapSetupGuideEndpoint(RouteGroupBuilder group)
     {
         // AI-03: RAG Setup Guide endpoint (Streaming)
@@ -87,14 +77,6 @@ internal static class AiEndpoints
     {
         // Migrated to CQRS: Uses ProvideAgentFeedbackCommand via MediatR (Issue #1188)
         group.MapPost("/agents/feedback", HandleAgentFeedback)
-        .RequireSession(); // Issue #1446: Automatic session validation
-    }
-
-    private static void MapChessAgentEndpoint(RouteGroupBuilder group)
-    {
-        // CHESS-04: Chess conversational agent endpoint
-        // Migrated to CQRS: Uses InvokeChessAgentCommand via MediatR (Issue #1188)
-        group.MapPost("/agents/chess", HandleChessAgent)
         .RequireSession(); // Issue #1446: Automatic session validation
     }
 
@@ -131,7 +113,6 @@ internal static class AiEndpoints
         HttpContext context,
         IMediator mediator,
         IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
-        IFeatureFlagService featureFlags, // CONFIG-05
         ILogger<Program> logger,
         bool generateFollowUps = true, // CHAT-02: opt-in parameter (Issue #1188)
         CancellationToken ct = default)
@@ -140,7 +121,7 @@ internal static class AiEndpoints
         if (!authenticated) return error!;
 
         // CONFIG-05: Check if streaming responses feature is enabled
-        if (!await featureFlags.IsEnabledAsync("Features.StreamingResponses").ConfigureAwait(false))
+        if (!await mediator.Send(new IsFeatureEnabledQuery("Features.StreamingResponses"), ct).ConfigureAwait(false))
         {
             return Results.Json(
                 new { error = "feature_disabled", message = "Streaming responses are currently disabled", featureName = "Features.StreamingResponses" },
@@ -310,8 +291,6 @@ internal static class AiEndpoints
         );
         await mediator.Send(logCommand, CancellationToken.None).ConfigureAwait(false);
     }
-
-
     private static async Task<IResult> HandleQaRequest(
         QaRequest req,
         HttpContext context,
@@ -496,17 +475,10 @@ internal static class AiEndpoints
         return Results.Json(resp);
     }
 
-    // REMOVED: HandleBggSearch, HandleGetBggGameDetails, HandleBatchThumbnails
-    // Now handled by dedicated BggEndpoints.cs (Issue #3120)
-
-    // REMOVED: HandleIndexChessKnowledge, HandleSearchChessKnowledge, HandleDeleteChessKnowledge
-    // Now handled by AdminMiscEndpoints.cs (duplicate route fix)
-
     private static async Task<IResult> HandleSetupGuide(
         SetupGuideRequest req,
         HttpContext context,
         IMediator mediator,
-        IFeatureFlagService featureFlags,
         ILogger<Program> logger,
         CancellationToken ct)
     {
@@ -514,7 +486,7 @@ internal static class AiEndpoints
         if (!authenticated) return error!;
 
         // CONFIG-05: Check if setup guide generation feature is enabled
-        if (!await featureFlags.IsEnabledAsync("Features.SetupGuideGeneration").ConfigureAwait(false))
+        if (!await mediator.Send(new IsFeatureEnabledQuery("Features.SetupGuideGeneration"), ct).ConfigureAwait(false))
         {
             return Results.Json(
                 new { error = "feature_disabled", message = "Setup guide generation is currently unavailable", featureName = "Features.SetupGuideGeneration" },
@@ -623,43 +595,6 @@ internal static class AiEndpoints
             session.User!.Id);
 
         return Results.Json(new { ok = true });
-    }
-
-    private static async Task<IResult> HandleChessAgent(ChessAgentRequest req, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
-    {
-        // Session validated by RequireSessionFilter
-        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-        // Issue #1445: Use centralized query validation
-        var queryError = QueryValidator.ValidateQuery(req.question);
-        if (queryError != null)
-        {
-            return Results.BadRequest(new { error = queryError });
-        }
-
-        var startTime = DateTime.UtcNow;
-        logger.LogInformation("Chess agent request from user {UserId}: {Question}, FEN: {FEN}",
-            session.User!.Id, req.question, req.fenPosition ?? "none");
-
-        // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
-        var resp = await mediator.Send(new InvokeChessAgentCommand
-        {
-            Question = req.question,
-            FenPosition = req.fenPosition,
-            ChatId = req.chatId
-        }, ct).ConfigureAwait(false);
-        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-
-        logger.LogInformation("Chess agent response delivered: {MoveCount} moves suggested",
-            resp.suggestedMoves.Count);
-
-        // ADM-01: Log AI request using CQRS
-        await LogChessAgentRequestAsync(session.User!.Id.ToString(), req.question, resp, latencyMs,
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            context.Request.Headers.UserAgent.ToString(),
-            mediator, ct).ConfigureAwait(false);
-
-        return Results.Json(resp);
     }
 
     private static async Task<IResult> HandlePlayerModeSuggestion(
@@ -1050,45 +985,6 @@ internal static class AiEndpoints
         );
         await mediator.Send(logCommand, CancellationToken.None).ConfigureAwait(false);
     }
-    private static async Task LogChessAgentRequestAsync(
-        string userId,
-        string query,
-        ChessAgentResponse resp,
-        int latencyMs,
-        string ipAddress,
-        string userAgent,
-        IMediator mediator,
-        CancellationToken ct)
-    {
-        string? model = null;
-        string? finishReason = null;
-        if (resp.metadata != null)
-        {
-            resp.metadata.TryGetValue("model", out model);
-            resp.metadata.TryGetValue("finish_reason", out finishReason);
-        }
-
-        var logCommand = new Api.BoundedContexts.Administration.Application.Commands.LogAiRequestCommand(
-            UserId: userId,
-            GameId: "chess",
-            Endpoint: "chess",
-            Query: query,
-            ResponseSnippet: resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
-            LatencyMs: latencyMs,
-            TokenCount: resp.totalTokens,
-            Confidence: resp.confidence,
-            Status: "Success",
-            ErrorMessage: null,
-            IpAddress: ipAddress,
-            UserAgent: userAgent,
-            PromptTokens: resp.promptTokens,
-            CompletionTokens: resp.completionTokens,
-            Model: model,
-            FinishReason: finishReason
-        );
-        await mediator.Send(logCommand, ct).ConfigureAwait(false);
-    }
-
     private static async Task ExecuteExplainStreamingAsync(
         StreamExplainQuery query,
         HttpContext context,

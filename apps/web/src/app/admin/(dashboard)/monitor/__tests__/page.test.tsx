@@ -1,6 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('../MauTab', () => ({ MauTab: () => <div data-testid="mau-tab" /> }));
+vi.mock('../GrafanaTab', () => ({ GrafanaTab: () => <div data-testid="grafana-tab" /> }));
+vi.mock('../ContainersTab', () => ({ ContainersTab: () => <div data-testid="containers-tab" /> }));
+vi.mock('../LogsTab', () => ({ LogsTab: () => <div data-testid="logs-tab" /> }));
+vi.mock('../OperationsLinkTab', () => ({
+  OperationsLinkTab: () => <div data-testid="operations-link-tab" />,
+}));
 vi.mock('../AlertsTab', () => ({ AlertsTab: () => <div data-testid="alerts-tab" /> }));
 vi.mock('../CacheTab', () => ({ CacheTab: () => <div data-testid="cache-tab" /> }));
 vi.mock('../InfrastructureTab', () => ({
@@ -10,7 +17,16 @@ vi.mock('../CommandCenterTab', () => ({
   CommandCenterTab: () => <div data-testid="command-tab" />,
 }));
 vi.mock('../TestingTab', () => ({ TestingTab: () => <div data-testid="testing-tab" /> }));
+vi.mock('../BulkExportTab', () => ({
+  BulkExportTab: () => <div data-testid="export-tab" />,
+}));
+vi.mock('../EmailManagementTab', () => ({
+  EmailManagementTab: () => <div data-testid="email-tab" />,
+}));
 vi.mock('../NavConfig', () => ({ AdminMonitorNavConfig: () => null }));
+vi.mock('@/components/admin/layout/AdminTabPersistence', () => ({
+  AdminTabPersistence: () => null,
+}));
 
 import AdminMonitorPage from '../page';
 
@@ -56,14 +72,14 @@ describe('AdminMonitorPage', () => {
   it('renders heading', async () => {
     const page = await AdminMonitorPage({ searchParams: Promise.resolve({}) });
     render(page);
-    expect(screen.getByText('Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Monitoraggio')).toBeInTheDocument();
   });
 
-  it('renders coming soon for export tab', async () => {
+  it('renders export tab content', async () => {
     const page = await AdminMonitorPage({
       searchParams: Promise.resolve({ tab: 'export' }),
     });
     render(page);
-    expect(screen.getByText('Export users, audit logs, and API keys in bulk.')).toBeInTheDocument();
+    expect(screen.getByTestId('export-tab')).toBeInTheDocument();
   });
 });

@@ -20,14 +20,15 @@ import { CheckCircle2, AlertCircle, Loader2, Save } from 'lucide-react';
 
 import { DuplicateWarningDialog } from '@/components/admin/games/import/DuplicateWarningDialog';
 import { toast } from '@/components/layout';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import { useCheckDuplicate } from '@/hooks/wizard/useCheckDuplicate';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useGameImportWizardStore, type EnrichedGameData } from '@/stores/useGameImportWizardStore';
 
@@ -95,12 +96,12 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
     // Year conflict
     if (
       bggGameData.yearPublished &&
-      extractedMetadata.yearPublished &&
-      bggGameData.yearPublished !== extractedMetadata.yearPublished
+      extractedMetadata.year &&
+      bggGameData.yearPublished !== extractedMetadata.year
     ) {
-      detected.yearPublished = {
+      detected.year = {
         bgg: bggGameData.yearPublished,
-        pdf: extractedMetadata.yearPublished,
+        pdf: extractedMetadata.year,
       };
     }
 
@@ -123,14 +124,12 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
     }
 
     // Play time conflict
-    // Note: BGG API uses 'playingTime', PDF extraction uses 'playTime'
-    // Conflict stored under 'playTime' key for consistency with EnrichedGameData
     if (
       bggGameData.playingTime &&
-      extractedMetadata.playTime &&
-      bggGameData.playingTime !== extractedMetadata.playTime
+      extractedMetadata.playingTime &&
+      bggGameData.playingTime !== extractedMetadata.playingTime
     ) {
-      detected.playTime = { bgg: bggGameData.playingTime, pdf: extractedMetadata.playTime };
+      detected.playingTime = { bgg: bggGameData.playingTime, pdf: extractedMetadata.playingTime };
     }
 
     // Min age conflict
@@ -199,19 +198,10 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
       ),
 
       // Year - ensure number or undefined
-      yearPublished:
-        typeof getResolvedValue(
-          'yearPublished',
-          bggGameData?.yearPublished,
-          extractedMetadata?.yearPublished
-        ) === 'number'
-          ? Number(
-              getResolvedValue(
-                'yearPublished',
-                bggGameData?.yearPublished,
-                extractedMetadata?.yearPublished
-              )
-            )
+      year:
+        typeof getResolvedValue('year', bggGameData?.yearPublished, extractedMetadata?.year) ===
+        'number'
+          ? Number(getResolvedValue('year', bggGameData?.yearPublished, extractedMetadata?.year))
           : undefined,
 
       // Players - ensure number or undefined
@@ -237,14 +227,18 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
           : undefined,
 
       // Play time - ensure number or undefined
-      playTime:
+      playingTime:
         typeof getResolvedValue(
-          'playTime',
+          'playingTime',
           bggGameData?.playingTime,
-          extractedMetadata?.playTime
+          extractedMetadata?.playingTime
         ) === 'number'
           ? Number(
-              getResolvedValue('playTime', bggGameData?.playingTime, extractedMetadata?.playTime)
+              getResolvedValue(
+                'playingTime',
+                bggGameData?.playingTime,
+                extractedMetadata?.playingTime
+              )
             )
           : undefined,
 
@@ -270,9 +264,6 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
               )
             )
           : undefined,
-
-      // Complexity (only in PDF)
-      complexity: extractedMetadata?.complexity,
 
       // BGG ID
       bggId: selectedBggId ?? undefined,
@@ -300,7 +291,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
     setCustomValues(prev => ({ ...prev, [field]: value }));
 
     // Numeric fields need type coercion
-    const numericFields = ['yearPublished', 'minPlayers', 'maxPlayers', 'playTime', 'minAge'];
+    const numericFields = ['year', 'minPlayers', 'maxPlayers', 'playingTime', 'minAge'];
     const coercedValue: string | number = numericFields.includes(field)
       ? Number(value) || 0
       : value;
@@ -344,7 +335,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
       }
     } catch (err) {
       // Error handled by store (toast + state)
-      console.error('Failed to submit wizard:', err);
+      logger.error('Failed to submit wizard:', err);
     }
   }, [
     enrichedData,
@@ -398,7 +389,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
               <RadioGroupItem value="bgg" id={`${field}-bgg`} />
               <Label htmlFor={`${field}-bgg`} className="flex-1 cursor-pointer font-normal">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Use BGG:</span>
+                  <span className="text-sm">Usa catalogo:</span>
                   <span className="font-medium">{String(conflict.bgg)}</span>
                 </div>
               </Label>
@@ -446,7 +437,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Missing Data</AlertTitle>
         <AlertDescription>
-          No extracted metadata or BGG data available. Please go back to previous steps.
+          Nessun metadato estratto o dati catalogo disponibili. Tornare ai passi precedenti.
         </AlertDescription>
       </Alert>
     );
@@ -458,8 +449,8 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
       <div>
         <h3 className="text-lg font-semibold">Review & Confirm</h3>
         <p className="text-sm text-muted-foreground">
-          Resolve any conflicts between PDF and BGG data, then review the final game details before
-          importing.
+          Risolvi eventuali conflitti tra dati PDF e catalogo, poi rivedi i dettagli finali prima di
+          importare.
         </p>
       </div>
 
@@ -469,17 +460,18 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
           <div>
             <h4 className="text-sm font-semibold">Resolve Conflicts</h4>
             <p className="text-xs text-muted-foreground">
-              {Object.keys(conflicts).length} conflict
-              {Object.keys(conflicts).length !== 1 ? 's' : ''} detected between BGG and PDF data.
+              {Object.keys(conflicts).length}{' '}
+              {Object.keys(conflicts).length !== 1 ? 'conflitti rilevati' : 'conflitto rilevato'}{' '}
+              tra dati catalogo e PDF.
             </p>
           </div>
 
           <div className="space-y-3">
             {renderConflictField('title', 'Game Title')}
-            {renderConflictField('yearPublished', 'Year Published')}
+            {renderConflictField('year', 'Year Published')}
             {renderConflictField('minPlayers', 'Min Players')}
             {renderConflictField('maxPlayers', 'Max Players')}
-            {renderConflictField('playTime', 'Play Time (minutes)')}
+            {renderConflictField('playingTime', 'Play Time (minutes)')}
             {renderConflictField('minAge', 'Minimum Age')}
             {renderConflictField('description', 'Description')}
           </div>
@@ -492,7 +484,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
           <CheckCircle2 className="h-4 w-4 text-green-500" />
           <AlertTitle>No Conflicts</AlertTitle>
           <AlertDescription className="text-sm">
-            BGG and PDF data have been automatically merged with no conflicts detected.
+            I dati catalogo e PDF sono stati uniti automaticamente senza conflitti.
           </AlertDescription>
         </Alert>
       )}
@@ -511,22 +503,18 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
             entity="game"
             variant="grid"
             title={enrichedData.title}
-            subtitle={enrichedData.yearPublished ? `(${enrichedData.yearPublished})` : undefined}
+            subtitle={enrichedData.year ? `(${enrichedData.year})` : undefined}
             imageUrl={enrichedData.imageUrl}
             metadata={[
               ...(enrichedData.minPlayers && enrichedData.maxPlayers
                 ? [{ label: `${enrichedData.minPlayers}-${enrichedData.maxPlayers} players` }]
                 : []),
-              ...(enrichedData.playTime ? [{ label: `${enrichedData.playTime} min` }] : []),
+              ...(enrichedData.playingTime ? [{ label: `${enrichedData.playingTime} min` }] : []),
               ...(enrichedData.minAge ? [{ label: `Age ${enrichedData.minAge}+` }] : []),
-              ...(enrichedData.complexity
-                ? [{ label: `Complexity ${enrichedData.complexity.toFixed(1)}` }]
-                : []),
             ]}
             showPreview={!!enrichedData.description}
             previewData={{
               description: enrichedData.description?.substring(0, 200),
-              complexity: enrichedData.complexity,
             }}
             data-testid="final-preview-card"
           />

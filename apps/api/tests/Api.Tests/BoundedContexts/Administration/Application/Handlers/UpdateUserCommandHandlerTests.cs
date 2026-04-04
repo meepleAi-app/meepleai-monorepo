@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -8,6 +8,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -63,8 +64,8 @@ public class UpdateUserCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("new@example.com", result.Email);
+        result.Should().NotBeNull();
+        result.Email.Should().Be("new@example.com");
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -96,15 +97,15 @@ public class UpdateUserCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("New Name", result.DisplayName);
+        result.Should().NotBeNull();
+        result.DisplayName.Should().Be("New Name");
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_WithValidRoleUpdate_UpdatesRole()
+    public async Task Handle_WithValidRoleUpdate_ThrowsDomainException_RequiresDedicatedEndpoint()
     {
-        // Arrange
+        // Arrange — Role changes via UpdateUser are no longer allowed; must use dedicated role change endpoint (SuperAdmin only)
         var userId = Guid.NewGuid();
         var user = new User(
             userId,
@@ -125,13 +126,11 @@ public class UpdateUserCommandHandlerTests
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        // Act
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal("admin", result.Role); // Role values are lowercase
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        // Act & Assert
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("Role changes must use the dedicated role change endpoint");
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -151,10 +150,10 @@ public class UpdateUserCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("not found", exception.Message);
-        Assert.Contains(userId.ToString(), exception.Message);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("not found");
+        exception.Message.Should().Contain(userId.ToString());
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -196,18 +195,18 @@ public class UpdateUserCommandHandlerTests
             .ReturnsAsync(otherUser);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("already in use", exception.Message);
-        Assert.Contains("other@example.com", exception.Message);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("already in use");
+        exception.Message.Should().Contain("other@example.com");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_WithAllFieldsUpdated_UpdatesAllFields()
+    public async Task Handle_WithAllFieldsUpdated_IncludingRole_ThrowsDomainException()
     {
-        // Arrange
+        // Arrange — When role is included, handler rejects the request before saving
         var userId = Guid.NewGuid();
         var user = new User(
             userId,
@@ -231,14 +230,47 @@ public class UpdateUserCommandHandlerTests
             .Setup(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
+        // Act & Assert — Role changes must use dedicated endpoint
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("Role changes must use the dedicated role change endpoint");
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithEmailAndDisplayNameUpdated_UpdatesBothFields()
+    {
+        // Arrange — Email + DisplayName without role should succeed
+        var userId = Guid.NewGuid();
+        var user = new User(
+            userId,
+            new Email("old@example.com"),
+            "Old Name",
+            PasswordHash.Create("Password123!"),
+            Role.User
+        );
+
+        var command = new UpdateUserCommand(
+            userId.ToString(),
+            "new@example.com",
+            "New Name",
+            null
+        );
+
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _mockUserRepository
+            .Setup(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("new@example.com", result.Email);
-        Assert.Equal("New Name", result.DisplayName);
-        Assert.Equal("editor", result.Role); // Role values are lowercase
+        result.Should().NotBeNull();
+        result.Email.Should().Be("new@example.com");
+        result.DisplayName.Should().Be("New Name");
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -270,8 +302,8 @@ public class UpdateUserCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("New Name", result.DisplayName); // No whitespace
+        result.Should().NotBeNull();
+        result.DisplayName.Should().Be("New Name"); // No whitespace
     }
 
     [Fact]
@@ -302,8 +334,8 @@ public class UpdateUserCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("same@example.com", result.Email);
+        result.Should().NotBeNull();
+        result.Email.Should().Be("same@example.com");
         // Should not check for email uniqueness if email is the same
         _mockUserRepository.Verify(
             r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()),

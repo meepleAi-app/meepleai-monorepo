@@ -7,6 +7,7 @@ using Api.SharedKernel.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.BusinessSimulations.Infrastructure.Persistence;
@@ -116,8 +117,8 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         var saved = await _context.LedgerEntries.FindAsync(entry.Id);
-        Assert.NotNull(saved);
-        Assert.Equal(entry.Amount.Amount, saved.Amount.Amount);
+        saved.Should().NotBeNull();
+        saved.Amount.Amount.Should().Be(entry.Amount.Amount);
     }
 
     [Fact]
@@ -131,8 +132,8 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByIdAsync(existingEntry.Id);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(existingEntry.Id, result.Id);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(existingEntry.Id);
     }
 
     [Fact]
@@ -146,7 +147,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByIdAsync(nonExistingId);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -164,9 +165,9 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         var updated = await _context.LedgerEntries.FindAsync(entry.Id);
-        Assert.NotNull(updated);
-        Assert.Equal("Updated description", updated.Description);
-        Assert.NotEqual(originalDescription, updated.Description);
+        updated.Should().NotBeNull();
+        updated.Description.Should().Be("Updated description");
+        updated.Description.Should().NotBe(originalDescription);
     }
 
     [Fact]
@@ -182,7 +183,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         var deleted = await _context.LedgerEntries.FindAsync(entry.Id);
-        Assert.Null(deleted);
+        deleted.Should().BeNull();
     }
 
     [Fact]
@@ -196,7 +197,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var exists = await _repository.ExistsAsync(entry.Id);
 
         // Assert
-        Assert.True(exists);
+        exists.Should().BeTrue();
     }
 
     [Fact]
@@ -210,7 +211,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var exists = await _repository.ExistsAsync(nonExistingId);
 
         // Assert
-        Assert.False(exists);
+        exists.Should().BeFalse();
     }
 
     #endregion
@@ -225,9 +226,9 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var entries = await _repository.GetAllAsync();
 
         // Assert
-        Assert.Equal(5, entries.Count);
-        Assert.True(entries[0].Date >= entries[1].Date);
-        Assert.True(entries[1].Date >= entries[2].Date);
+        entries.Count.Should().Be(5);
+        (entries[0].Date >= entries[1].Date).Should().BeTrue();
+        (entries[1].Date >= entries[2].Date).Should().BeTrue();
     }
 
     [Fact]
@@ -242,8 +243,8 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var (entries, total) = await _repository.GetByDateRangeAsync(from, to);
 
         // Assert
-        Assert.Equal(2, total); // Only entries in -25 to -15 range
-        Assert.All(entries, e => Assert.True(e.Date >= from && e.Date <= to));
+        total.Should().Be(2);
+        entries.Should().OnlyContain(e => e.Date >= from && e.Date <= to);
     }
 
     [Fact]
@@ -259,11 +260,11 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var (page2, total2) = await _repository.GetByDateRangeAsync(from, to, page: 2, pageSize: 2);
 
         // Assert
-        Assert.Equal(5, total1);
-        Assert.Equal(5, total2);
-        Assert.Equal(2, page1.Count);
-        Assert.Equal(2, page2.Count);
-        Assert.NotEqual(page1[0].Id, page2[0].Id);
+        total1.Should().Be(5);
+        total2.Should().Be(5);
+        page1.Count.Should().Be(2);
+        page2.Count.Should().Be(2);
+        page2[0].Id.Should().NotBe(page1[0].Id);
     }
 
     [Fact]
@@ -274,8 +275,8 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var (entries, total) = await _repository.GetByTypeAsync(LedgerEntryType.Income);
 
         // Assert
-        Assert.Equal(2, total);
-        Assert.All(entries, e => Assert.Equal(LedgerEntryType.Income, e.Type));
+        total.Should().Be(2);
+        entries.Should().OnlyContain(e => e.Type == LedgerEntryType.Income);
     }
 
     [Fact]
@@ -286,8 +287,8 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var (entries, total) = await _repository.GetByTypeAsync(LedgerEntryType.Expense);
 
         // Assert
-        Assert.Equal(3, total);
-        Assert.All(entries, e => Assert.Equal(LedgerEntryType.Expense, e.Type));
+        total.Should().Be(3);
+        entries.Should().OnlyContain(e => e.Type == LedgerEntryType.Expense);
     }
 
     [Fact]
@@ -298,8 +299,8 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var (entries, total) = await _repository.GetByCategoryAsync(LedgerCategory.Subscription);
 
         // Assert
-        Assert.Equal(1, total);
-        Assert.All(entries, e => Assert.Equal(LedgerCategory.Subscription, e.Category));
+        total.Should().Be(1);
+        entries.Should().OnlyContain(e => e.Category == LedgerCategory.Subscription);
     }
 
     [Fact]
@@ -319,13 +320,12 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
             dateTo: dateTo);
 
         // Assert
-        Assert.Equal(2, total); // 2 manual expenses: Infrastructure (-20d) + Marketing (-10d)
-        Assert.All(entries, e =>
-        {
-            Assert.Equal(LedgerEntryType.Expense, e.Type);
-            Assert.Equal(LedgerEntrySource.Manual, e.Source);
-            Assert.True(e.Date >= dateFrom && e.Date <= dateTo);
-        });
+        total.Should().Be(2);
+        entries.Should().OnlyContain(e =>
+            e.Type == LedgerEntryType.Expense &&
+            e.Source == LedgerEntrySource.Manual &&
+            e.Date >= dateFrom && e.Date <= dateTo
+        );
     }
 
     [Fact]
@@ -336,8 +336,8 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var (entries, total) = await _repository.GetFilteredAsync();
 
         // Assert
-        Assert.Equal(5, total);
-        Assert.Equal(5, entries.Count);
+        total.Should().Be(5);
+        entries.Count.Should().Be(5);
     }
 
     [Fact]
@@ -352,8 +352,8 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var (totalIncome, totalExpense) = await _repository.GetSummaryByDateRangeAsync(from, to);
 
         // Assert
-        Assert.Equal(1750m, totalIncome);  // 1250 + 500
-        Assert.Equal(1000m, totalExpense); // 450 + 250 + 300
+        totalIncome.Should().Be(1750m);
+        totalExpense.Should().Be(1000m);
     }
 
     [Fact]
@@ -368,8 +368,8 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var (totalIncome, totalExpense) = await _repository.GetSummaryByDateRangeAsync(from, to);
 
         // Assert
-        Assert.Equal(0m, totalIncome);
-        Assert.Equal(0m, totalExpense);
+        totalIncome.Should().Be(0m);
+        totalExpense.Should().Be(0m);
     }
 
     #endregion
@@ -388,7 +388,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var (entries, total) = await _repository.GetByDateRangeAsync(from, to, page: 0, pageSize: 2);
 
         // Assert
-        Assert.Equal(2, entries.Count); // Should clamp to page 1
+        entries.Count.Should().Be(2);
     }
 
     [Fact]
@@ -403,7 +403,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
         var (entries, total) = await _repository.GetByDateRangeAsync(from, to, page: 1, pageSize: 200);
 
         // Assert
-        Assert.True(entries.Count <= 100); // Should clamp to max 100
+        (entries.Count <= 100).Should().BeTrue();
     }
 
     #endregion
@@ -429,7 +429,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         var allEntries = await _context.LedgerEntries.ToListAsync();
-        Assert.Equal(15, allEntries.Count); // 5 seed + 10 added
+        allEntries.Count.Should().Be(15);
     }
 
     #endregion

@@ -14,7 +14,7 @@ echo -e "${CYAN}📖 MeepleAI Wiki Publisher${NC}"
 echo ""
 
 # Configuration
-WIKI_URL="https://github.com/DegrassiAaron/meepleai-monorepo.wiki.git"
+WIKI_URL="https://github.com/meepleAi-app/meepleai-monorepo.wiki.git"
 WIKI_DIR="$HOME/meepleai-wiki-temp"
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.wiki"
 
@@ -128,7 +128,7 @@ echo ""
 echo -e "${GREEN}✅ Wiki published successfully!${NC}"
 echo ""
 echo -e "${CYAN}View your wiki at:${NC}"
-echo "https://github.com/DegrassiAaron/meepleai-monorepo/wiki"
+echo "https://github.com/meepleAi-app/meepleai-monorepo/wiki"
 echo ""
 
 # Cleanup

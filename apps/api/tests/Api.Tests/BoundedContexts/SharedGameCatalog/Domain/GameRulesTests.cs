@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Domain;
 
@@ -14,9 +15,9 @@ public class GameRulesTests
         var rules = GameRules.Create("Game rules content", "en");
 
         // Assert
-        Assert.NotNull(rules);
-        Assert.Equal("Game rules content", rules.Content);
-        Assert.Equal("en", rules.Language);
+        rules.Should().NotBeNull();
+        rules.Content.Should().Be("Game rules content");
+        rules.Language.Should().Be("en");
     }
 
     [Theory]
@@ -27,7 +28,8 @@ public class GameRulesTests
     public void Create_WithEmptyFields_ThrowsArgumentException(string content, string language)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => GameRules.Create(content, language));
+        var act = () => GameRules.Create(content, language);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -37,7 +39,8 @@ public class GameRulesTests
     public void Create_WithInvalidLanguageCode_ThrowsArgumentException(string language)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => GameRules.Create("Content", language));
+        var act = () => GameRules.Create("Content", language);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -48,7 +51,7 @@ public class GameRulesTests
         var rules2 = GameRules.Create("Content", "en");
 
         // Act & Assert
-        Assert.Equal(rules1, rules2);
+        rules2.Should().Be(rules1);
     }
 
     [Fact]
@@ -59,7 +62,7 @@ public class GameRulesTests
         var rules2 = GameRules.Create("Content 2", "en");
 
         // Act & Assert
-        Assert.NotEqual(rules1, rules2);
+        rules2.Should().NotBe(rules1);
     }
 
     [Fact]
@@ -70,6 +73,6 @@ public class GameRulesTests
         var rules2 = GameRules.Create("Content", "it");
 
         // Act & Assert
-        Assert.NotEqual(rules1, rules2);
+        rules2.Should().NotBe(rules1);
     }
 }

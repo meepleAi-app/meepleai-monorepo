@@ -20,4 +20,9 @@ internal interface IEmailTemplateService
     /// Renders email template for retry notification.
     /// </summary>
     string RenderRetryAvailable(string userName, string fileName, int retryCount);
+
+    /// <summary>
+    /// Renders email template for admin manual notification.
+    /// </summary>
+    string RenderAdminNotification(string userName, string title, string message);
 }

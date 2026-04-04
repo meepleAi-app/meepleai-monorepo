@@ -48,13 +48,13 @@ function VerificationSuccessContent() {
   const handleRedirect = () => {
     // Clear any stored verification email
     sessionStorage.removeItem('pendingVerificationEmail');
-    router.push('/dashboard');
+    router.push('/library');
   };
 
   return (
     <AuthLayout data-testid="verification-success-page">
       <VerificationSuccess
-        redirectUrl="/dashboard"
+        redirectUrl="/library"
         autoRedirectSeconds={3}
         onRedirect={handleRedirect}
         data-testid="verification-success-component"

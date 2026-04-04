@@ -168,7 +168,7 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
   });
 
   test.describe('Public Routes (All Roles)', () => {
-    const publicRoutes = ['/', '/chat', '/games'];
+    const publicRoutes = ['/', '/chat', '/library'];
 
     publicRoutes.forEach(route => {
       test(`Admin can access ${route}`, async ({ page }) => {

@@ -8,8 +8,9 @@ RUN dotnet publish ./src/Api/Api.csproj -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 
-# Copy published files
+# Copy published files and remove debug/doc artifacts to reduce image size (~10MB savings)
 COPY --from=build /app/publish .
+RUN find . -name "*.pdb" -delete && find . -name "*.xml" -delete
 
 # Install curl for healthcheck and clean up in same layer
 RUN apt-get update \

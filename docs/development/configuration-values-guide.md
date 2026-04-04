@@ -202,7 +202,6 @@ Host=postgres;Database=meepleai;Username=postgres;Password=meeplepass;Pooling=tr
 | `SEQ_URL` | `.env.local` | Riga ~125 | `http://seq:5341` | ❌ | 🟢 Basso |
 | `GF_SECURITY_ADMIN_USER` | `.env.local` | Riga ~130 | `admin` | ❌ | 🟡 Medio |
 | `GF_SECURITY_ADMIN_PASSWORD` | `.env.local` | Riga ~131 | `admin` | ❌ | 🔴 Alto |
-| `HYPERDX_API_KEY` | `infra/env/api.env.dev` | Riga ~20 | `7da70858-4d51-442f-aa4e-7ca3170f1b2f` | ❌ | 🟡 Medio |
 | `LOG_LEVEL` | `.env.local` | Riga ~140 | `Debug` / `Information` / `Warning` | ❌ | 🟢 Basso |
 
 ---

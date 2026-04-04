@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { logger } from '@/lib/logger';
+
 export interface PdfDocument {
   id: string;
   fileName: string;
@@ -43,11 +45,11 @@ export function usePdfs(gameId: string | null) {
 
     try {
       const response = await fetch(`${API_BASE}/api/v1/games/${gameId}/pdfs`, {
-        credentials: 'include'
+        credentials: 'include',
       });
 
       if (!response.ok) {
-        console.error('Failed to load PDFs:', response.statusText);
+        logger.error(`Failed to load PDFs: ${response.statusText}`);
         setError('Unable to load uploaded PDFs. Please try again.');
         return;
       }
@@ -55,7 +57,7 @@ export function usePdfs(gameId: string | null) {
       const data: PdfListResponse = await response.json();
       setPdfs(data.pdfs ?? []);
     } catch (err) {
-      console.error('Failed to load PDFs:', err);
+      logger.error('Failed to load PDFs:', err);
       setError('Unable to load uploaded PDFs. Please try again.');
     } finally {
       setLoading(false);
@@ -70,6 +72,6 @@ export function usePdfs(gameId: string | null) {
     pdfs,
     loading,
     error,
-    refetch: fetchPdfs
+    refetch: fetchPdfs,
   };
 }

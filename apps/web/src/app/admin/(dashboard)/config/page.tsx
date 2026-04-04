@@ -17,7 +17,6 @@ import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersisten
 import { FeatureFlagsWrapper } from './FeatureFlagsWrapper';
 import { GeneralTab } from './GeneralTab';
 import { LimitsTab } from './LimitsTab';
-import { AdminConfigNavConfig } from './NavConfig';
 import { RateLimitsTab } from './RateLimitsTab';
 
 interface AdminConfigPageProps {
@@ -88,13 +87,12 @@ export default async function AdminConfigPage({ searchParams }: AdminConfigPageP
 
   return (
     <div className="space-y-5">
-      <AdminConfigNavConfig />
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Configuration
+          Configurazione
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          System settings, feature flags, and rate limits.
+          Impostazioni di sistema, feature flag e limiti di frequenza.
         </p>
       </div>
 

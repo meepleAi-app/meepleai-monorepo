@@ -12,7 +12,6 @@ import type { JSX } from 'react';
 
 import { AlertTriangle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import type { SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
 
 export interface DuplicateWarningDialogProps {
@@ -60,7 +60,7 @@ export function DuplicateWarningDialog({
             <div>
               <DialogTitle>Duplicate Game Detected</DialogTitle>
               <DialogDescription>
-                A game with BGG ID {bggId} already exists in the catalog.
+                Un gioco con ID {bggId} esiste già nel catalogo.
               </DialogDescription>
             </div>
           </div>
@@ -92,7 +92,7 @@ export function DuplicateWarningDialog({
             <h4 className="mb-2 text-sm font-semibold text-muted-foreground">New Import</h4>
             <div className="space-y-1">
               <p className="text-sm font-medium">{newGameTitle}</p>
-              <p className="text-xs text-muted-foreground">BGG ID: {bggId}</p>
+              <p className="text-xs text-muted-foreground">ID: {bggId}</p>
             </div>
           </div>
         </div>
@@ -103,9 +103,15 @@ export function DuplicateWarningDialog({
             <strong>What would you like to do?</strong>
           </p>
           <ul className="mt-2 space-y-1 text-xs text-amber-800 dark:text-amber-200">
-            <li>• <strong>Cancel</strong>: Go back and change your selection</li>
-            <li>• <strong>Replace</strong>: Update the existing game with new data</li>
-            <li>• <strong>Create Anyway</strong>: Create as a separate entry (not recommended)</li>
+            <li>
+              • <strong>Cancel</strong>: Go back and change your selection
+            </li>
+            <li>
+              • <strong>Replace</strong>: Update the existing game with new data
+            </li>
+            <li>
+              • <strong>Create Anyway</strong>: Create as a separate entry (not recommended)
+            </li>
           </ul>
         </div>
 

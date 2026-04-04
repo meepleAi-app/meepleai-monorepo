@@ -1,5 +1,10 @@
-# OPS-02: Prometheus Configuration for MeepleAI
+# OPS-02: Prometheus Configuration for MeepleAI — DEVELOPMENT
 # Scrapes metrics from the API service for observability
+#
+# ⚠️  ENVIRONMENT-SPECIFIC FILES:
+#   staging → prometheus.staging.yml (cluster: meepleai-staging)
+#   prod    → prometheus.prod.yml    (cluster: meepleai-prod)
+# This file is mounted only by compose.dev.yml (default fallback).
 
 global:
   scrape_interval: 15s       # Default scrape interval
@@ -50,9 +55,6 @@ scrape_configs:
         labels:
           service: 'meepleai-web'
           component: 'frontend'
-
-  # Jaeger scrape removed - replaced by HyperDX unified observability (Issue #1564)
-  # HyperDX exposes its own metrics if needed at hyperdx:8180/metrics
 
   # Scrape Grafana metrics (optional)
   - job_name: 'grafana'

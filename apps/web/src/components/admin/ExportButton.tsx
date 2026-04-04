@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { Button } from '@/components/ui/primitives/button';
+import { logger } from '@/lib/logger';
 
 export interface ExportButtonProps {
   /**
@@ -60,7 +61,7 @@ export function ExportButton({
       onExportCSV();
       toast.success('CSV exported successfully');
     } catch (error) {
-      console.error('CSV export failed:', error);
+      logger.error('CSV export failed:', error);
       toast.error('Failed to export CSV. Please try again.');
     }
   };
@@ -71,7 +72,7 @@ export function ExportButton({
       await onExportPDF();
       toast.success('PDF exported successfully');
     } catch (error) {
-      console.error('PDF export failed:', error);
+      logger.error('PDF export failed:', error);
       toast.error('Failed to export PDF. Please try again.');
     } finally {
       setIsPdfExporting(false);

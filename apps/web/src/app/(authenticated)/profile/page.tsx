@@ -1,43 +1,51 @@
 /**
  * Profile Landing Page - /profile
  *
- * Overview landing page with three tabs:
- *   - Overview: library stats + quick action links
- *   - Achievements: embedded achievements content (mirrors /profile/achievements)
- *   - Activity: coming soon placeholder
- *
- * @see Issue #4893
+ * Overview landing page con tre tab:
+ *   - Overview: library stats + ultime partite + quick action links
+ *   - Achievements: achievements inline
+ *   - Activity: activity feed
  */
 
 'use client';
 
 import { useEffect, useState } from 'react';
 
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
   BookOpen,
   ChevronRight,
+  FileText,
   Gamepad2,
   Heart,
   LayoutDashboard,
+  Package,
   Trophy,
-  User,
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { AchievementsGrid } from '@/components/profile/AchievementsGrid';
+import { ActivityFeed } from '@/components/profile/ActivityFeed';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
+import { EditProfileSheet } from '@/components/profile/EditProfileSheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
+import { userKeys } from '@/hooks/queries/useCurrentUser';
+import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { useAuth } from '@/hooks/useAuth';
+import { useRecentSessions } from '@/hooks/useRecentSessions';
 import { api } from '@/lib/api';
 import type { UserLibraryStats } from '@/lib/api/schemas/library.schemas';
+import { useCardHand } from '@/stores/use-card-hand';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Tab = 'overview' | 'achievements' | 'activity';
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── TabBar ───────────────────────────────────────────────────────────────────
 
 function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
@@ -72,6 +80,8 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
   );
 }
 
+// ─── QuickActionLink ──────────────────────────────────────────────────────────
+
 function QuickActionLink({
   href,
   icon: Icon,
@@ -100,20 +110,44 @@ function QuickActionLink({
   );
 }
 
-// ─── Overview Tab ─────────────────────────────────────────────────────────────
+// ─── StatTile ─────────────────────────────────────────────────────────────────
+
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number;
+  color: string;
+}): React.ReactElement {
+  return (
+    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30">
+      <Icon className={`h-4 w-4 shrink-0 ${color}`} />
+      <div>
+        <p className="text-xs text-muted-foreground font-nunito">{label}</p>
+        <p className="text-lg font-bold font-quicksand">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── OverviewTab ──────────────────────────────────────────────────────────────
 
 function OverviewTab() {
-  const [stats, setStats] = useState<UserLibraryStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { sessions, isLoading: sessionsLoading } = useRecentSessions(3);
 
-  useEffect(() => {
-    api.library
-      .getStats()
-      .then(data => setStats(data))
-      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load stats'))
-      .finally(() => setIsLoading(false));
-  }, []);
+  const {
+    data: stats,
+    isLoading,
+    error,
+  } = useQuery<UserLibraryStats>({
+    queryKey: libraryKeys.stats(),
+    queryFn: () => api.library.getStats(),
+    staleTime: 2 * 60 * 1000,
+  });
 
   return (
     <div className="space-y-6">
@@ -124,35 +158,103 @@ function OverviewTab() {
         </CardHeader>
         <CardContent>
           {isLoading && (
-            <div className="grid grid-cols-2 gap-4">
-              {[...Array(2)].map((_, i) => (
+            <div className="grid grid-cols-3 gap-3">
+              {[...Array(6)].map((_, i) => (
                 <Skeleton key={i} className="h-14 w-full rounded-lg" />
               ))}
             </div>
           )}
           {error && (
             <Alert>
-              <AlertDescription className="font-nunito text-sm">{error}</AlertDescription>
+              <AlertDescription className="font-nunito text-sm">
+                {error instanceof Error ? error.message : 'Errore nel caricamento stats.'}
+              </AlertDescription>
             </Alert>
           )}
           {!isLoading && !error && stats && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-                <Gamepad2 className="h-5 w-5 text-primary shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground font-nunito">Total Games</p>
-                  <p className="text-xl font-bold font-quicksand">{stats.totalGames}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-                <Heart className="h-5 w-5 text-red-400 shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground font-nunito">Favorites</p>
-                  <p className="text-xl font-bold font-quicksand">{stats.favoriteGames}</p>
-                </div>
-              </div>
+            <div className="grid grid-cols-3 gap-3">
+              <StatTile
+                icon={Gamepad2}
+                label="Giochi"
+                value={stats.totalGames}
+                color="text-primary"
+              />
+              <StatTile
+                icon={Heart}
+                label="Preferiti"
+                value={stats.favoriteGames}
+                color="text-red-400"
+              />
+              <StatTile
+                icon={BookOpen}
+                label="Posseduti"
+                value={stats.ownedCount ?? 0}
+                color="text-green-500"
+              />
+              <StatTile
+                icon={Trophy}
+                label="Wishlist"
+                value={stats.wishlistCount ?? 0}
+                color="text-amber-500"
+              />
+              <StatTile
+                icon={FileText}
+                label="PDF caricati"
+                value={stats.privatePdfs ?? 0}
+                color="text-blue-500"
+              />
+              <StatTile
+                icon={Package}
+                label="In prestito"
+                value={stats.inPrestitoCount ?? 0}
+                color="text-orange-400"
+              />
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Ultime partite */}
+      <Card className="border-l-4 border-l-green-400 shadow-sm">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="font-quicksand text-lg">Ultime partite</CardTitle>
+          <Button asChild variant="ghost" size="sm" className="font-nunito gap-1">
+            <Link href="/play-records">
+              Tutte <ChevronRight className="h-3 w-3" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {sessionsLoading && (
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full rounded-lg" />
+              ))}
+            </div>
+          )}
+          {!sessionsLoading && sessions.length === 0 && (
+            <p className="text-sm text-muted-foreground font-nunito">
+              Nessuna partita ancora.{' '}
+              <Link href="/sessions" className="underline">
+                Inizia una sessione
+              </Link>
+            </p>
+          )}
+          {!sessionsLoading &&
+            sessions.map(s => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between py-2 border-b border-border/30 last:border-0"
+              >
+                <span className="font-nunito text-sm font-medium">{s.gameName}</span>
+                <span className="text-xs text-muted-foreground font-nunito">
+                  {new Date(s.sessionDate).toLocaleDateString('it-IT', {
+                    day: '2-digit',
+                    month: 'short',
+                  })}
+                </span>
+              </div>
+            ))}
         </CardContent>
       </Card>
 
@@ -167,19 +269,19 @@ function OverviewTab() {
               href="/profile/achievements"
               icon={Trophy}
               label="Achievements"
-              description="View your earned badges and milestones"
+              description="Vedi badge e traguardi"
             />
             <QuickActionLink
               href="/library"
               icon={BookOpen}
               label="My Library"
-              description="Browse and manage your game collection"
+              description="Sfoglia la tua collezione"
             />
             <QuickActionLink
-              href="/sessions"
+              href="/play-records"
               icon={Gamepad2}
-              label="Game Sessions"
-              description="View your play history"
+              label="Storia di gioco"
+              description="Tutte le partite giocate"
             />
           </div>
         </CardContent>
@@ -188,58 +290,34 @@ function OverviewTab() {
   );
 }
 
-// ─── Achievements Tab ──────────────────────────────────────────────────────────
+// ─── AchievementsTab ──────────────────────────────────────────────────────────
 
 function AchievementsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground font-nunito">
-          Your earned badges and progress milestones
-        </p>
+        <p className="text-sm text-muted-foreground font-nunito">Badge guadagnati e progressi</p>
         <Button asChild variant="ghost" size="sm" className="font-nunito gap-1">
           <Link href="/profile/achievements">
-            View All <ChevronRight className="h-3 w-3" />
+            Tutti <ChevronRight className="h-3 w-3" />
           </Link>
         </Button>
       </div>
-      {/* Iframe-like embed via redirect to achievements page content */}
-      <Card className="border-l-4 border-l-amber-400">
-        <CardContent className="py-8 text-center">
-          <Trophy className="h-10 w-10 text-amber-500 mx-auto mb-3" />
-          <p className="font-medium font-quicksand mb-1">Your Achievements</p>
-          <p className="text-sm text-muted-foreground font-nunito mb-4">
-            View your full achievements gallery
-          </p>
-          <Button asChild variant="outline" className="font-nunito">
-            <Link href="/profile/achievements">Open Achievements</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <AchievementsGrid />
     </div>
   );
 }
 
-// ─── Activity Tab ─────────────────────────────────────────────────────────────
+// ─── ActivityTab ──────────────────────────────────────────────────────────────
 
-function ActivityTab() {
+function ActivityTab(): React.ReactElement {
   return (
-    <Card className="border-l-4 border-l-blue-400 shadow-sm">
-      <CardContent className="py-14 flex flex-col items-center text-center gap-4">
-        <div className="rounded-full bg-blue-100 p-5">
-          <Activity className="h-8 w-8 text-blue-600" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold font-quicksand mb-2">Activity Feed Coming Soon</h2>
-          <p className="text-muted-foreground font-nunito text-sm max-w-sm">
-            Your recent game sessions, achievements earned, and library updates will appear here.
-          </p>
-        </div>
-        <Button asChild variant="outline" className="font-nunito">
-          <Link href="/sessions">Browse Sessions</Link>
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground font-nunito">
+        Le tue ultime partite, achievement e aggiornamenti
+      </p>
+      <ActivityFeed />
+    </div>
   );
 }
 
@@ -247,30 +325,53 @@ function ActivityTab() {
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { drawCard } = useCardHand();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
-  const displayName = user?.displayName ?? user?.email ?? 'Player';
-  const initials = displayName
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+  const { data: profile } = useQuery({
+    queryKey: [...userKeys.current(), 'profile'],
+    queryFn: () => api.auth.getProfile(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    drawCard({
+      id: 'section-profile',
+      entity: 'custom',
+      title: 'Profile',
+      href: '/profile',
+    });
+  }, [drawCard]);
+
+  const displayName = profile?.displayName ?? user?.displayName ?? user?.email ?? 'Player';
+  const avatarUrl = profile?.avatarUrl ?? null;
+
+  async function handleAvatarUpload(file: File, previewUrl: string): Promise<void> {
+    // Optimistic update immediato con blob URL
+    queryClient.setQueryData([...userKeys.current(), 'profile'], (prev: typeof profile) =>
+      prev ? { ...prev, avatarUrl: previewUrl } : prev
+    );
+    const result = await api.auth.uploadAvatar(file);
+    if (result?.avatarUrl) {
+      queryClient.setQueryData([...userKeys.current(), 'profile'], (prev: typeof profile) =>
+        prev ? { ...prev, avatarUrl: result.avatarUrl } : prev
+      );
+    }
+    await queryClient.invalidateQueries({ queryKey: userKeys.all });
+  }
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="container mx-auto max-w-3xl">
         {/* Profile Header */}
         <div className="flex items-center gap-4 mb-8 p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-border/50 shadow-sm">
-          {/* Avatar */}
-          <div className="h-16 w-16 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center shrink-0">
-            {user ? (
-              <span className="text-xl font-bold font-quicksand text-primary">{initials}</span>
-            ) : (
-              <User className="h-7 w-7 text-muted-foreground" />
-            )}
-          </div>
-          {/* Info */}
+          <AvatarUpload
+            currentAvatarUrl={avatarUrl}
+            displayName={displayName}
+            onUpload={handleAvatarUpload}
+            size={64}
+          />
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold font-quicksand truncate">{displayName}</h1>
             {user?.email && (
@@ -282,6 +383,7 @@ export default function ProfilePage() {
               </span>
             )}
           </div>
+          <EditProfileSheet currentDisplayName={displayName} />
         </div>
 
         {/* Tabs */}

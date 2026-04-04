@@ -15,5 +15,7 @@ internal record AskQuestionQuery(
     Guid? ThreadId = null, // Optional: Chat thread ID for conversational context
     string? SearchMode = null, // AI-14: "Vector", "Keyword", "Hybrid" (default)
     string Language = "en",
-    bool BypassCache = false
+    bool BypassCache = false,
+    Guid? UserId = null,
+    string? UserRole = null
 ) : IQuery<QaResponseDto>;

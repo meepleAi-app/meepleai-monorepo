@@ -10,7 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Import after mocking
-import { RagConfigurationForm } from '../RagConfigurationForm';
+import { RagConfigurationForm } from '../config/RagConfigurationForm';
 import { DEFAULT_CONFIGURATION } from '../types-configurable';
 
 describe('RagConfigurationForm', () => {
@@ -638,9 +638,7 @@ describe('RagConfigurationForm', () => {
       // Find query input by placeholder or nearby text
       const inputs = screen.getAllByRole('spinbutton');
       // The query input should be in the cost preview section
-      const queryInput = inputs.find(input =>
-        input.getAttribute('value') === '10000'
-      );
+      const queryInput = inputs.find(input => input.getAttribute('value') === '10000');
 
       if (queryInput) {
         await user.clear(queryInput);

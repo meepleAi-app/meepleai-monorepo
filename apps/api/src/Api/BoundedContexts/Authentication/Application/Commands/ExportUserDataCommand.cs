@@ -72,5 +72,4 @@ internal record ExportedDataSummary(
     int TotalLibraryGames,
     int TotalChatThreads,
     int TotalNotifications,
-    int TotalConversationMemories,
-    int TotalApiKeys);
+    int TotalConversationMemories);

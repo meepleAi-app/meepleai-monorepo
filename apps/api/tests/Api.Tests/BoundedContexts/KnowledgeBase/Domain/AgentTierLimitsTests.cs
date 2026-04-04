@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain;
 
@@ -23,7 +24,7 @@ public class AgentTierLimitsTests
     public void GetMaxAgents_RegularUser_ReturnsCorrectLimit(string tier, int expected)
     {
         var result = AgentTierLimits.GetMaxAgents(tier, "user");
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Theory]
@@ -34,7 +35,7 @@ public class AgentTierLimitsTests
     public void GetMaxAgents_AdminRole_ReturnsMaxValue(string role)
     {
         var result = AgentTierLimits.GetMaxAgents("free", role);
-        Assert.Equal(int.MaxValue, result);
+        result.Should().Be(int.MaxValue);
     }
 
     [Theory]
@@ -45,7 +46,7 @@ public class AgentTierLimitsTests
     public void GetMaxAgents_UnknownTier_ReturnsDefault(string? tier)
     {
         var result = AgentTierLimits.GetMaxAgents(tier, "user");
-        Assert.Equal(AgentTierLimits.DefaultMaxAgents, result);
+        result.Should().Be(AgentTierLimits.DefaultMaxAgents);
     }
 
     [Theory]
@@ -60,24 +61,22 @@ public class AgentTierLimitsTests
     public void IsAdminOrEditor_ReturnsCorrectly(string? role, bool expected)
     {
         var result = AgentTierLimits.IsAdminOrEditor(role);
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void MaxAgentsPerTier_ContainsAllExpectedTiers()
     {
-        Assert.True(AgentTierLimits.MaxAgentsPerTier.ContainsKey("free"));
-        Assert.True(AgentTierLimits.MaxAgentsPerTier.ContainsKey("normal"));
-        Assert.True(AgentTierLimits.MaxAgentsPerTier.ContainsKey("premium"));
-        Assert.True(AgentTierLimits.MaxAgentsPerTier.ContainsKey("pro"));
-        Assert.True(AgentTierLimits.MaxAgentsPerTier.ContainsKey("enterprise"));
+        AgentTierLimits.MaxAgentsPerTier.ContainsKey("free").Should().BeTrue();
+        AgentTierLimits.MaxAgentsPerTier.ContainsKey("normal").Should().BeTrue();
+        AgentTierLimits.MaxAgentsPerTier.ContainsKey("premium").Should().BeTrue();
+        AgentTierLimits.MaxAgentsPerTier.ContainsKey("pro").Should().BeTrue();
+        AgentTierLimits.MaxAgentsPerTier.ContainsKey("enterprise").Should().BeTrue();
     }
 
     [Fact]
     public void MaxAgentsPerTier_IsCaseInsensitive()
     {
-        Assert.Equal(
-            AgentTierLimits.MaxAgentsPerTier["free"],
-            AgentTierLimits.MaxAgentsPerTier["Free"]);
+        AgentTierLimits.MaxAgentsPerTier["Free"].Should().Be(AgentTierLimits.MaxAgentsPerTier["free"]);
     }
 }

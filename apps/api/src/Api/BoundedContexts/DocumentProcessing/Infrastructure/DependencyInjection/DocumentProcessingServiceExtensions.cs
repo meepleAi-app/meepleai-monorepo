@@ -5,10 +5,13 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.Extensions;
 using Api.Infrastructure.BackgroundServices;
+using Api.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
@@ -53,6 +56,7 @@ internal static class DocumentProcessingServiceExtensions
         services.AddScoped<PdfTextProcessingDomainService>(); // DDD-PHASE4: Text processing business rules
         services.AddScoped<PdfQualityValidationDomainService>(); // BGAI-012: Quality threshold enforcement
         services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>(); // User tier-based upload quotas
+        services.AddScoped<IUserQuotaInfoService, UserQuotaInfoService>(); // Local read service for user quota info (avoids cross-BC IUserRepository dependency)
         services.AddScoped<IQueueBackpressureService, QueueBackpressureService>(); // Issue #5457: Backpressure
         services.AddScoped<CitationPriorityService>(); // ISSUE-2051: Citation priority and deduplication
 
@@ -74,6 +78,9 @@ internal static class DocumentProcessingServiceExtensions
 
         // Issue #5445: Language detection for PDF pipeline routing
         services.AddSingleton<ILanguageDetector, LanguageDetector>();
+
+        // RAG translation: LLM-based chunk translation for cross-language retrieval
+        services.AddScoped<IChunkTranslationService, ChunkTranslationService>();
 
         // Infrastructure Adapters (scoped - may use file I/O)
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();
@@ -230,7 +237,8 @@ internal static class DocumentProcessingServiceExtensions
                 client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
             })
             .AddPolicyHandler(GetRetryPolicy(
-                configuration.GetValue<int?>("PdfProcessing:Extractor:Unstructured:MaxRetries") ?? 3));
+                configuration.GetValue<int?>("PdfProcessing:Extractor:Unstructured:MaxRetries") ?? 3))
+            .AddServiceCallLogging("UnstructuredService");
 
         services.AddScoped<UnstructuredPdfTextExtractor>();
     }
@@ -252,7 +260,8 @@ internal static class DocumentProcessingServiceExtensions
                 client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
             })
             .AddPolicyHandler(GetRetryPolicy(
-                configuration.GetValue<int?>("PdfProcessing:Extractor:SmolDocling:MaxRetries") ?? 3));
+                configuration.GetValue<int?>("PdfProcessing:Extractor:SmolDocling:MaxRetries") ?? 3))
+            .AddServiceCallLogging("SmolDoclingService");
 
         services.AddScoped<SmolDoclingPdfTextExtractor>();
     }

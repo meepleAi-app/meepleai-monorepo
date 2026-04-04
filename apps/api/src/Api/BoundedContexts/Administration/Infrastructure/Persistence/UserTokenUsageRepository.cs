@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
@@ -8,24 +10,23 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 /// <summary>
 /// EF Core repository implementation for UserTokenUsage (Issue #3692)
 /// </summary>
-public sealed class UserTokenUsageRepository : IUserTokenUsageRepository
+public sealed class UserTokenUsageRepository : RepositoryBase, IUserTokenUsageRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public UserTokenUsageRepository(MeepleAiDbContext context)
+    public UserTokenUsageRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task<UserTokenUsage?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<UserTokenUsage>()
+        return await DbContext.Set<UserTokenUsage>()
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<UserTokenUsage>> GetTopConsumersAsync(int limit, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<UserTokenUsage>()
+        return await DbContext.Set<UserTokenUsage>()
             .OrderByDescending(u => u.TokensUsed)
             .Take(limit)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -36,7 +37,7 @@ public sealed class UserTokenUsageRepository : IUserTokenUsageRepository
         DateTime until,
         CancellationToken cancellationToken = default)
     {
-        var usages = await _context.Set<UserTokenUsage>()
+        var usages = await DbContext.Set<UserTokenUsage>()
             .Where(u => u.UpdatedAt >= from && u.UpdatedAt <= until)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -66,7 +67,7 @@ public sealed class UserTokenUsageRepository : IUserTokenUsageRepository
 
     public async Task<Dictionary<Guid, int>> GetUsageByTierAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Set<UserTokenUsage>()
+        return await DbContext.Set<UserTokenUsage>()
             .GroupBy(u => u.TierId)
             .Select(g => new { TierId = g.Key, TotalUsage = g.Sum(u => u.TokensUsed) })
             .ToDictionaryAsync(x => x.TierId, x => x.TotalUsage, cancellationToken).ConfigureAwait(false);
@@ -74,25 +75,25 @@ public sealed class UserTokenUsageRepository : IUserTokenUsageRepository
 
     public async Task<int> CountUsersByTierAsync(Guid tierId, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<UserTokenUsage>()
+        return await DbContext.Set<UserTokenUsage>()
             .CountAsync(u => u.TierId == tierId, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task AddAsync(UserTokenUsage usage, CancellationToken cancellationToken = default)
     {
-        await _context.Set<UserTokenUsage>().AddAsync(usage, cancellationToken).ConfigureAwait(false);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.Set<UserTokenUsage>().AddAsync(usage, cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(UserTokenUsage usage, CancellationToken cancellationToken = default)
     {
-        _context.Set<UserTokenUsage>().Update(usage);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        DbContext.Set<UserTokenUsage>().Update(usage);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> ExistsForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<UserTokenUsage>()
+        return await DbContext.Set<UserTokenUsage>()
             .AnyAsync(u => u.UserId == userId, cancellationToken).ConfigureAwait(false);
     }
 }

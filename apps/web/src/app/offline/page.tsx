@@ -12,7 +12,7 @@ import { WifiOff, RefreshCw, Home, Gamepad2 } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/primitives/button';
-import { usePWA } from '@/lib/hooks/usePWA';
+import { usePWA } from '@/lib/domain-hooks/usePWA';
 
 export default function OfflinePage() {
   const { isOnline, storageStats, actions: _actions } = usePWA();
@@ -29,7 +29,7 @@ export default function OfflinePage() {
   const handleRetry = async () => {
     setRetrying(true);
     // Wait a moment then reload
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     window.location.reload();
   };
 
@@ -50,8 +50,7 @@ export default function OfflinePage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">You're Offline</h1>
           <p className="text-muted-foreground">
-            It looks like you've lost your internet connection.
-            Some features may be limited.
+            It looks like you've lost your internet connection. Some features may be limited.
           </p>
         </div>
 
@@ -74,7 +73,8 @@ export default function OfflinePage() {
             </div>
             {storageStats.pendingActions > 0 && (
               <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                {storageStats.pendingActions} action{storageStats.pendingActions > 1 ? 's' : ''} waiting to sync
+                {storageStats.pendingActions} action{storageStats.pendingActions > 1 ? 's' : ''}{' '}
+                waiting to sync
               </p>
             )}
           </div>
@@ -82,12 +82,7 @@ export default function OfflinePage() {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button
-            onClick={handleRetry}
-            disabled={retrying}
-            variant="default"
-            className="gap-2"
-          >
+          <Button onClick={handleRetry} disabled={retrying} variant="default" className="gap-2">
             <RefreshCw className={retrying ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
             {retrying ? 'Retrying...' : 'Try Again'}
           </Button>

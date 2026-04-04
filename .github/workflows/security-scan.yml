@@ -26,7 +26,7 @@ jobs:
         language: ['csharp', 'javascript']
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -58,10 +58,10 @@ jobs:
   # Dependency scanning
   dependencies:
     name: Dependency Vulnerabilities
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # .NET dependencies
       - name: Setup .NET
@@ -84,12 +84,12 @@ jobs:
 
       # Frontend dependencies
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 10
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: pnpm
@@ -118,10 +118,10 @@ jobs:
   # Secrets scanning with Semgrep
   secrets:
     name: Secrets Detection
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Semgrep
         run: |
@@ -145,3 +145,21 @@ jobs:
           category: semgrep
         if: always()
         continue-on-error: true  # Code scanning might not be enabled in repo settings
+
+  notify-end:
+    if: always() && contains(join(needs.*.result, ','), 'failure')
+    needs: [codeql, dependencies, secrets]
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: failed
+      workflow_name: "Security Scan"
+      environment: security
+      is_critical: true
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+      SLACK_CRITICAL_WEBHOOK_URL: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}

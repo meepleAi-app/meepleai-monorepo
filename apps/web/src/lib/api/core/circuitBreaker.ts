@@ -204,7 +204,6 @@ class CircuitBreaker {
     const metrics: Record<string, CircuitMetrics> = {};
     this.circuits.forEach((circuit, endpoint) => {
       // Safe: endpoint comes from Map keys, not user input
-      // eslint-disable-next-line security/detect-object-injection
       metrics[endpoint] = { ...circuit };
     });
     return metrics;

@@ -31,7 +31,6 @@ graph TB
     end
 
     subgraph "Observability Layer"
-        HyperDX[HyperDX<br/>:8180<br/>Logs + Traces + Session Replay]
         Prometheus[Prometheus<br/>:9090<br/>Metrics]
         Grafana[Grafana<br/>:3001<br/>Dashboards]
     end

@@ -98,7 +98,6 @@ export const SessionStatusBadge = React.memo(function SessionStatusBadge({
   size = 'sm',
   className,
 }: SessionStatusBadgeProps) {
-  // eslint-disable-next-line security/detect-object-injection
   const config = statusConfig[status];
   const isPulsating = status === 'inProgress';
 

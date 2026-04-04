@@ -22,18 +22,23 @@ async function setupGameVariantsMocks(page: Page) {
     { id: 'blitz', name: 'Blitz Chess', description: 'Fast-paced with time controls' },
   ];
 
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        user: { id: 'test-user', email: 'test@example.com', displayName: 'Test User', role: 'User' },
+        user: {
+          id: 'test-user',
+          email: 'test@example.com',
+          displayName: 'Test User',
+          role: 'User',
+        },
         expiresAt: new Date(Date.now() + 3600000).toISOString(),
       }),
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/games/chess/variants`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games/chess/variants`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -41,7 +46,7 @@ async function setupGameVariantsMocks(page: Page) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/games/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games/*`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -49,7 +54,7 @@ async function setupGameVariantsMocks(page: Page) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/games`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -63,21 +68,21 @@ async function setupGameVariantsMocks(page: Page) {
 test.describe('GAME-08: Game Variants', () => {
   test('should display game variants', async ({ page }) => {
     await setupGameVariantsMocks(page);
-    await page.goto('/games/chess');
+    await page.goto('/library/games/chess');
     await page.waitForLoadState('networkidle');
     await expect(page.getByText(/variant|chess960|blitz/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should show variant descriptions', async ({ page }) => {
     await setupGameVariantsMocks(page);
-    await page.goto('/games/chess');
+    await page.goto('/library/games/chess');
     await page.waitForLoadState('networkidle');
     await expect(page.getByText(/random|position|time.*control/i).first()).toBeVisible();
   });
 
   test('should select variant', async ({ page }) => {
     await setupGameVariantsMocks(page);
-    await page.goto('/games/chess');
+    await page.goto('/library/games/chess');
     await page.waitForLoadState('networkidle');
 
     const variantOption = page.getByText(/chess960/i);

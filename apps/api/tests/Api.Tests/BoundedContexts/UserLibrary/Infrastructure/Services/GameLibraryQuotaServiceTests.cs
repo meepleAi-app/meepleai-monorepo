@@ -405,8 +405,9 @@ public class GameLibraryQuotaServiceTests
         var userRole = AuthRole.User;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.CheckQuotaAsync(userId, userTier, userRole));
+        var act = () =>
+            _service.CheckQuotaAsync(userId, userTier, userRole);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -418,8 +419,9 @@ public class GameLibraryQuotaServiceTests
         AuthRole userRole = null!;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.CheckQuotaAsync(userId, userTier, userRole));
+        var act2 = () =>
+            _service.CheckQuotaAsync(userId, userTier, userRole);
+        await act2.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -431,8 +433,9 @@ public class GameLibraryQuotaServiceTests
         var userRole = AuthRole.User;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.GetQuotaInfoAsync(userId, userTier, userRole));
+        var act3 = () =>
+            _service.GetQuotaInfoAsync(userId, userTier, userRole);
+        await act3.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -444,8 +447,9 @@ public class GameLibraryQuotaServiceTests
         AuthRole userRole = null!;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.GetQuotaInfoAsync(userId, userTier, userRole));
+        var act4 = () =>
+            _service.GetQuotaInfoAsync(userId, userTier, userRole);
+        await act4.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.ProcessPendingPdfs;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -82,14 +83,34 @@ internal sealed class LaunchAdminPdfProcessingCommandHandler
             "Admin wizard: Set Priority=Admin for PDF {PdfId}",
             command.PdfDocumentId);
 
-        // Trigger processing pipeline in background
+        // Enqueue processing job for tracking, then trigger pipeline
         try
         {
-            // Step 1: Extract text
+            // Step 1: Create processing_jobs record for queue tracking
+            const int adminPriority = 100;
+            var enqueueCommand = new EnqueuePdfCommand(
+                command.PdfDocumentId, command.LaunchedByUserId, adminPriority);
+
+            try
+            {
+                var jobId = await _mediator.Send(enqueueCommand, cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation(
+                    "Admin wizard: Enqueued PDF {PdfId} as job {JobId} with priority {Priority}",
+                    command.PdfDocumentId, jobId, adminPriority);
+            }
+            catch (ConflictException ex)
+            {
+                // PDF already has an active job — skip enqueue, proceed with pipeline
+                _logger.LogDebug(ex,
+                    "Admin wizard: PDF {PdfId} already has an active job, skipping enqueue",
+                    command.PdfDocumentId);
+            }
+
+            // Step 2: Extract text
             var extractCommand = new ExtractPdfTextCommand(command.PdfDocumentId);
             await _mediator.Send(extractCommand, cancellationToken).ConfigureAwait(false);
 
-            // Step 2: Index PDF (chunking + embedding + indexing)
+            // Step 3: Index PDF (chunking + embedding + indexing)
             var indexCommand = new IndexPdfCommand(command.PdfDocumentId.ToString());
             await _mediator.Send(indexCommand, cancellationToken).ConfigureAwait(false);
 
@@ -97,7 +118,7 @@ internal sealed class LaunchAdminPdfProcessingCommandHandler
                 "Admin wizard: Processing pipeline launched for PDF {PdfId}",
                 command.PdfDocumentId);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ConflictException)
         {
             _logger.LogError(ex,
                 "Admin wizard: Failed to launch processing for PDF {PdfId}",

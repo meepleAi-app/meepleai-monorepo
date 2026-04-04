@@ -4,7 +4,7 @@
 
 set -e
 
-REPO="DegrassiAaron/meepleai-monorepo"
+REPO="meepleAi-app/meepleai-monorepo"
 
 echo "🔧 Setting up branch protection rules for $REPO..."
 echo ""

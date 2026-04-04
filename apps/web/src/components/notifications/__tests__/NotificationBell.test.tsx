@@ -15,10 +15,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NotificationBell } from '../NotificationBell';
-import { useNotificationStore } from '@/store/notification/store';
+import { useNotificationStore } from '@/stores/notification/store';
 
 // Mock NotificationCenter to avoid IntlProvider requirement in bell unit tests
-vi.mock('@/components/layout/Navbar/NotificationCenter', () => ({
+vi.mock('@/components/notifications/NotificationCenter', () => ({
   NotificationCenter: () => null,
 }));
 
@@ -29,13 +29,15 @@ vi.mock('@/hooks/useNotificationSSE', () => ({
 }));
 
 // Mock NotificationCenter Sheet to isolate bell tests
-vi.mock('@/components/layout/Navbar/NotificationCenter', () => ({
+vi.mock('@/components/notifications/NotificationCenter', () => ({
   NotificationCenter: ({ open }: { open: boolean; onOpenChange: (v: boolean) => void }) =>
-    open ? <div data-testid="notification-center-mock" role="dialog" aria-label="Notifications" /> : null,
+    open ? (
+      <div data-testid="notification-center-mock" role="dialog" aria-label="Notifications" />
+    ) : null,
 }));
 
 // Mock store with all selectors
-vi.mock('@/store/notification/store', () => ({
+vi.mock('@/stores/notification/store', () => ({
   useNotificationStore: vi.fn(),
   selectUnreadCount: vi.fn(state => state.unreadCount),
   selectNotifications: vi.fn(state => state.notifications),

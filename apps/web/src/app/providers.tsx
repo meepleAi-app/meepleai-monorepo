@@ -22,6 +22,7 @@ import { SessionWarningModal } from '@/components/modals';
 import { IntlProvider } from '@/components/providers/IntlProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PWAProvider } from '@/components/pwa';
+import { CardBrowserProvider } from '@/components/ui/data-display/meeple-card-browser';
 import { Toaster } from '@/components/ui/feedback/sonner';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
@@ -143,7 +144,16 @@ function AppContent({ children }: { children: ReactNode }) {
  * - Accessibility features
  */
 export function AppProviders({ children }: AppProvidersProps) {
-  return (
+  // Lazy require inside function body: ensures tree-shaking eliminates MockProvider
+  // from non-mock production builds regardless of @types/node availability.
+  const MockProvider =
+    process.env.NEXT_PUBLIC_MOCK_MODE === 'true'
+      ? (require('./mock-provider').MockProvider as React.ComponentType<{
+          children: React.ReactNode;
+        }>)
+      : null;
+
+  const providers = (
     <IntlProvider>
       <ThemeProvider>
         <QueryProvider>
@@ -154,9 +164,11 @@ export function AppProviders({ children }: AppProvidersProps) {
                 showDetails={process.env.NODE_ENV === 'development'}
               >
                 <RouteErrorBoundary routeName="AppContent">
-                  <AddGameWizardProvider>
-                    <AppContent>{children}</AppContent>
-                  </AddGameWizardProvider>
+                  <CardBrowserProvider>
+                    <AddGameWizardProvider>
+                      <AppContent>{children}</AppContent>
+                    </AddGameWizardProvider>
+                  </CardBrowserProvider>
                 </RouteErrorBoundary>
               </ErrorBoundary>
             </LayoutProvider>
@@ -165,4 +177,10 @@ export function AppProviders({ children }: AppProvidersProps) {
       </ThemeProvider>
     </IntlProvider>
   );
+
+  if (MockProvider) {
+    return <MockProvider>{providers}</MockProvider>;
+  }
+
+  return providers;
 }

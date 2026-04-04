@@ -327,7 +327,7 @@ describe('CommentForm', () => {
   });
 
   describe('error handling', () => {
-    let alertSpy: jest.SpyInstance;
+    let alertSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
       alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});

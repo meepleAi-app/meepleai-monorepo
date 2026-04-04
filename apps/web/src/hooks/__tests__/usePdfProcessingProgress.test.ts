@@ -90,7 +90,7 @@ describe('usePdfProcessingProgress', () => {
   });
 
   describe('Polling Behavior', () => {
-    it('should poll at default 500ms interval', async () => {
+    it('should poll at default 2000ms interval', async () => {
       renderHook(() => usePdfProcessingProgress('test-pdf-id'));
 
       // Wait for initial fetch
@@ -100,25 +100,23 @@ describe('usePdfProcessingProgress', () => {
 
       const initialCallCount = mockGetProcessingProgress.mock.calls.length;
 
-      // Advance 500ms (default interval)
+      // Advance 2000ms (default interval)
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
+        await vi.advanceTimersByTimeAsync(2000);
       });
 
       expect(mockGetProcessingProgress).toHaveBeenCalledTimes(initialCallCount + 1);
 
-      // Advance another 500ms
+      // Advance another 2000ms
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
+        await vi.advanceTimersByTimeAsync(2000);
       });
 
       expect(mockGetProcessingProgress).toHaveBeenCalledTimes(initialCallCount + 2);
     });
 
     it('should use custom polling interval', async () => {
-      renderHook(() =>
-        usePdfProcessingProgress('test-pdf-id', { pollingInterval: 1000 })
-      );
+      renderHook(() => usePdfProcessingProgress('test-pdf-id', { pollingInterval: 1000 }));
 
       // Wait for initial fetch
       await act(async () => {
@@ -163,7 +161,9 @@ describe('usePdfProcessingProgress', () => {
       mockGetProcessingProgress.mockImplementation(() => {
         callCount++;
         if (callCount <= 2) {
-          return Promise.resolve(createMockProgress({ currentStep: 'Embedding', percentComplete: 75 }));
+          return Promise.resolve(
+            createMockProgress({ currentStep: 'Embedding', percentComplete: 75 })
+          );
         }
         return Promise.resolve(
           createMockProgress({
@@ -183,14 +183,14 @@ describe('usePdfProcessingProgress', () => {
 
       expect(result.current.progress?.currentStep).toBe('Embedding');
 
-      // Advance to trigger more polls until completed
+      // Advance to trigger more polls until completed (default interval is 2000ms)
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
+        await vi.advanceTimersByTimeAsync(2000);
       });
 
       // May still be Embedding if multiple fetches needed
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
+        await vi.advanceTimersByTimeAsync(2000);
       });
 
       expect(result.current.progress?.currentStep).toBe('Completed');
@@ -210,7 +210,9 @@ describe('usePdfProcessingProgress', () => {
       mockGetProcessingProgress.mockImplementation(() => {
         callCount++;
         if (callCount <= 2) {
-          return Promise.resolve(createMockProgress({ currentStep: 'Chunking', percentComplete: 50 }));
+          return Promise.resolve(
+            createMockProgress({ currentStep: 'Chunking', percentComplete: 50 })
+          );
         }
         return Promise.resolve(
           createMockProgress({
@@ -230,13 +232,13 @@ describe('usePdfProcessingProgress', () => {
 
       expect(result.current.progress?.currentStep).toBe('Chunking');
 
-      // Advance to trigger more polls until failed
+      // Advance to trigger more polls until failed (default interval is 2000ms)
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
+        await vi.advanceTimersByTimeAsync(2000);
       });
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(500);
+        await vi.advanceTimersByTimeAsync(2000);
       });
 
       expect(result.current.progress?.currentStep).toBe('Failed');
@@ -283,9 +285,7 @@ describe('usePdfProcessingProgress', () => {
         })
       );
 
-      renderHook(() =>
-        usePdfProcessingProgress('test-pdf-id', { onComplete })
-      );
+      renderHook(() => usePdfProcessingProgress('test-pdf-id', { onComplete }));
 
       // Initial fetch
       await act(async () => {
@@ -415,8 +415,8 @@ describe('usePdfProcessingProgress', () => {
         return Promise.resolve(createMockProgress());
       });
 
-      const { result } = renderHook(() =>
-        usePdfProcessingProgress('test-pdf-id', { pollingInterval: 60000 }) // Very long polling to avoid interference
+      const { result } = renderHook(
+        () => usePdfProcessingProgress('test-pdf-id', { pollingInterval: 60000 }) // Very long polling to avoid interference
       );
 
       // Let initial fetch fail
@@ -476,7 +476,7 @@ describe('usePdfProcessingProgress', () => {
     it('should not update state after unmount', async () => {
       // Slow response that completes after unmount
       let resolvePromise: (value: ProcessingProgress) => void;
-      const slowPromise = new Promise<ProcessingProgress>((resolve) => {
+      const slowPromise = new Promise<ProcessingProgress>(resolve => {
         resolvePromise = resolve;
       });
       mockGetProcessingProgress.mockReturnValue(slowPromise);
@@ -503,10 +503,9 @@ describe('usePdfProcessingProgress', () => {
 
   describe('PdfId Changes', () => {
     it('should reset state when pdfId changes', async () => {
-      const { result, rerender } = renderHook(
-        ({ pdfId }) => usePdfProcessingProgress(pdfId),
-        { initialProps: { pdfId: 'pdf-1' } }
-      );
+      const { result, rerender } = renderHook(({ pdfId }) => usePdfProcessingProgress(pdfId), {
+        initialProps: { pdfId: 'pdf-1' },
+      });
 
       // Wait for initial fetch for pdf-1
       await act(async () => {
@@ -579,7 +578,9 @@ describe('usePdfProcessingProgress', () => {
       });
 
       // Refetch should trigger one more call
-      expect(mockGetProcessingProgress.mock.calls.length).toBeGreaterThanOrEqual(callCountAfterInitial);
+      expect(mockGetProcessingProgress.mock.calls.length).toBeGreaterThanOrEqual(
+        callCountAfterInitial
+      );
     });
 
     it('should reset notification flags on refetch', async () => {
@@ -604,9 +605,7 @@ describe('usePdfProcessingProgress', () => {
         );
       });
 
-      const { result } = renderHook(() =>
-        usePdfProcessingProgress('test-pdf-id', { onComplete })
-      );
+      const { result } = renderHook(() => usePdfProcessingProgress('test-pdf-id', { onComplete }));
 
       // Initial fetch - not completed
       await act(async () => {

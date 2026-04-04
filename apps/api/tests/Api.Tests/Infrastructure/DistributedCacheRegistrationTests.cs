@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure;
@@ -47,8 +48,8 @@ public class DistributedCacheRegistrationTests
 
         // Assert - IDistributedCache should be resolved without throwing
         var cache = serviceProvider.GetService<IDistributedCache>();
-        Assert.NotNull(cache);
-        Assert.IsType<Microsoft.Extensions.Caching.Distributed.MemoryDistributedCache>(cache);
+        cache.Should().NotBeNull();
+        cache.Should().BeOfType<Microsoft.Extensions.Caching.Distributed.MemoryDistributedCache>();
     }
 
     [Fact]
@@ -76,9 +77,9 @@ public class DistributedCacheRegistrationTests
 
         // Assert - IDistributedCache should be resolved without throwing
         var cache = serviceProvider.GetService<IDistributedCache>();
-        Assert.NotNull(cache);
+        cache.Should().NotBeNull();
         // When Redis is configured, it uses RedisCache implementation
-        Assert.Contains("Redis", cache.GetType().Name);
+        cache.GetType().Name.Should().Contain("Redis");
     }
 
     [Fact]
@@ -104,8 +105,8 @@ public class DistributedCacheRegistrationTests
         // Assert - IDistributedCache should be resolved without throwing
         // Default EnableL2Cache is false, so we should get MemoryDistributedCache
         var cache = serviceProvider.GetService<IDistributedCache>();
-        Assert.NotNull(cache);
-        Assert.IsType<Microsoft.Extensions.Caching.Distributed.MemoryDistributedCache>(cache);
+        cache.Should().NotBeNull();
+        cache.Should().BeOfType<Microsoft.Extensions.Caching.Distributed.MemoryDistributedCache>();
     }
 
     /// <summary>

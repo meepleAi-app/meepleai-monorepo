@@ -199,7 +199,7 @@ describe('SharedGameDetailModal', () => {
     it('shows loading spinner while fetching', async () => {
       // Create a delayed promise
       let resolvePromise: (value: unknown) => void;
-      const delayedPromise = new Promise((resolve) => {
+      const delayedPromise = new Promise(resolve => {
         resolvePromise = resolve;
       });
       mockGetById.mockReturnValue(delayedPromise);
@@ -534,9 +534,10 @@ describe('SharedGameDetailModal', () => {
         // Share button might have icon only or text
         const buttons = screen.getAllByRole('button');
         const shareButton = buttons.find(
-          (btn) => btn.textContent?.toLowerCase().includes('condividi') ||
-                   btn.querySelector('[data-lucide="share-2"]') ||
-                   btn.querySelector('svg')
+          btn =>
+            btn.textContent?.toLowerCase().includes('condividi') ||
+            btn.querySelector('[data-lucide="share-2"]') ||
+            btn.querySelector('svg')
         );
         expect(shareButton).toBeTruthy();
       });
@@ -546,7 +547,7 @@ describe('SharedGameDetailModal', () => {
       render(<SharedGameDetailModal {...defaultProps} />);
 
       await waitFor(() => {
-        const bggLink = screen.getByRole('link', { name: /bgg/i });
+        const bggLink = screen.getByRole('link', { name: /vedi scheda esterna/i });
         expect(bggLink).toBeInTheDocument();
         expect(bggLink).toHaveAttribute(
           'href',

@@ -22,19 +22,19 @@ test.describe('Agent Chat - User Flow', () => {
 
   test('navigates from game detail to chat', async ({ page }) => {
     // Go to game detail
-    await page.goto('/games/test-game-id');
+    await page.goto('/library/games/test-game-id');
     await expect(page.locator('h1')).toContainText('Catan'); // Game title
 
     // Click "Chat con AI" button
     await page.click('text=💬 Chat con AI');
 
     // Should navigate to chat page
-    await page.waitForURL(/\/games\/.*\/chat/);
+    await page.waitForURL(/\/library\/games\/.*\/chat/);
     await expect(page.locator('h2')).toContainText('MeepleAI Assistant');
   });
 
   test('sends message and receives streaming response', async ({ page }) => {
-    await page.goto('/games/test-game-id/chat');
+    await page.goto('/library/games/test-game-id/chat');
 
     // Type message
     const input = page.locator('textarea[placeholder*="Chiedi"]');
@@ -54,7 +54,7 @@ test.describe('Agent Chat - User Flow', () => {
   });
 
   test('shows typing indicator during streaming', async ({ page }) => {
-    await page.goto('/games/test-game-id/chat');
+    await page.goto('/library/games/test-game-id/chat');
 
     const input = page.locator('textarea[placeholder*="Chiedi"]');
     await input.fill('Test question');
@@ -70,7 +70,7 @@ test.describe('Agent Chat - User Flow', () => {
   });
 
   test('auto-scrolls to newest message', async ({ page }) => {
-    await page.goto('/games/test-game-id/chat');
+    await page.goto('/library/games/test-game-id/chat');
 
     // Send multiple messages
     for (let i = 1; i <= 5; i++) {
@@ -121,10 +121,7 @@ test.describe('Agent Chat - Admin Flow', () => {
     await expect(popoutBtn).toBeVisible();
 
     // Click popout (will open new window)
-    const [popupPage] = await Promise.all([
-      context.waitForEvent('page'),
-      popoutBtn.click(),
-    ]);
+    const [popupPage] = await Promise.all([context.waitForEvent('page'), popoutBtn.click()]);
 
     // Verify new window opened
     await popupPage.waitForLoadState();
@@ -135,7 +132,7 @@ test.describe('Agent Chat - Admin Flow', () => {
 
 test.describe('Agent Chat - Multi-Agent Switching', () => {
   test('switches between agents mid-conversation', async ({ page }) => {
-    await page.goto('/games/test-game-id/chat');
+    await page.goto('/library/games/test-game-id/chat');
 
     // Send first message (default agent)
     const input = page.locator('textarea[placeholder*="Chiedi"]');
@@ -161,11 +158,11 @@ test.describe('Agent Chat - Multi-Agent Switching', () => {
 test.describe('Agent Chat - Error Handling', () => {
   test('shows error message on connection failure', async ({ page }) => {
     // Mock network failure
-    await page.route('**/api/v1/agents/**/chat', (route) => {
+    await page.route('**/api/v1/agents/**/chat', route => {
       route.abort('failed');
     });
 
-    await page.goto('/games/test-game-id/chat');
+    await page.goto('/library/games/test-game-id/chat');
 
     const input = page.locator('textarea[placeholder*="Chiedi"]');
     await input.fill('Test question');
@@ -177,7 +174,7 @@ test.describe('Agent Chat - Error Handling', () => {
 
   test('allows retry after error', async ({ page }) => {
     let attempts = 0;
-    await page.route('**/api/v1/agents/**/chat', (route) => {
+    await page.route('**/api/v1/agents/**/chat', route => {
       attempts++;
       if (attempts === 1) {
         route.abort('failed');
@@ -186,7 +183,7 @@ test.describe('Agent Chat - Error Handling', () => {
       }
     });
 
-    await page.goto('/games/test-game-id/chat');
+    await page.goto('/library/games/test-game-id/chat');
 
     const input = page.locator('textarea[placeholder*="Chiedi"]');
     await input.fill('Test question');

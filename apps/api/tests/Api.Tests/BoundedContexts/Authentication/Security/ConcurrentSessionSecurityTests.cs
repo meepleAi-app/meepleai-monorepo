@@ -9,6 +9,7 @@ using Api.Tests.TestHelpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Security;
 
@@ -78,10 +79,10 @@ public class ConcurrentSessionSecurityTests : IDisposable
             .Where(s => s.UserId == user.Id && s.RevokedAt == null)
             .ToListAsync();
 
-        Assert.Equal(3, userSessions.Count);
-        Assert.Contains(userSessions, s => s.IpAddress == "192.168.1.1");
-        Assert.Contains(userSessions, s => s.IpAddress == "10.0.0.1");
-        Assert.Contains(userSessions, s => s.IpAddress == "172.16.0.1");
+        userSessions.Count.Should().Be(3);
+        userSessions.Should().Contain(s => s.IpAddress == "192.168.1.1");
+        userSessions.Should().Contain(s => s.IpAddress == "10.0.0.1");
+        userSessions.Should().Contain(s => s.IpAddress == "172.16.0.1");
     }
 
     /// <summary>
@@ -135,7 +136,7 @@ public class ConcurrentSessionSecurityTests : IDisposable
             .Where(s => s.UserId == user.Id && s.RevokedAt == null)
             .ToListAsync();
 
-        Assert.Equal(maxSessions, finalActiveSessions.Count);
+        finalActiveSessions.Count.Should().Be(maxSessions);
     }
 
     /// <summary>
@@ -175,7 +176,7 @@ public class ConcurrentSessionSecurityTests : IDisposable
 
         // Assert - Each session should have unique token hash
         var uniqueHashes = tokenHashes.Distinct().Count();
-        Assert.Equal(5, uniqueHashes); // All token hashes should be unique
+        uniqueHashes.Should().Be(5); // All token hashes should be unique
     }
 
     #endregion
@@ -214,9 +215,9 @@ public class ConcurrentSessionSecurityTests : IDisposable
         var isNewIp = !existingSessions.Any(s => s.IpAddress == newIp);
 
         // Assert
-        Assert.True(isNewIp, "System should detect login from new IP");
-        Assert.Single(existingSessions); // One existing session
-        Assert.Equal("192.168.1.100", existingSessions[0].IpAddress);
+        isNewIp.Should().BeTrue("System should detect login from new IP");
+        existingSessions.Should().ContainSingle(); // One existing session
+        existingSessions[0].IpAddress.Should().Be("192.168.1.100");
     }
 
     /// <summary>
@@ -273,8 +274,8 @@ public class ConcurrentSessionSecurityTests : IDisposable
             .Where(s => s.UserId == user.Id && s.RevokedAt == null)
             .ToListAsync();
 
-        Assert.Single(activeSessions);
-        Assert.Equal(newSession.Id, activeSessions[0].Id);
+        activeSessions.Should().ContainSingle();
+        activeSessions[0].Id.Should().Be(newSession.Id);
     }
 
     /// <summary>
@@ -294,10 +295,10 @@ public class ConcurrentSessionSecurityTests : IDisposable
 
         // Assert - All tokens should be unique
         var uniqueTokens = tokens.Distinct().Count();
-        Assert.Equal(1000, uniqueTokens);
+        uniqueTokens.Should().Be(1000);
 
         // Verify token format (should be base64-like, long enough for security)
-        Assert.All(tokens, t => Assert.True(t.Length >= 32, "Token should be at least 32 characters"));
+        tokens.Should().OnlyContain(t => t.Length >= 32, "Token should be at least 32 characters");
     }
 
     #endregion
@@ -345,8 +346,8 @@ public class ConcurrentSessionSecurityTests : IDisposable
         await Task.WhenAll(tasks);
 
         // Assert - All validations should succeed consistently
-        Assert.Equal(10, validationResults.Count);
-        Assert.All(validationResults, r => Assert.True(r));
+        validationResults.Count.Should().Be(10);
+        validationResults.Should().AllSatisfy(r => r.Should().BeTrue());
     }
 
     /// <summary>
@@ -379,8 +380,8 @@ public class ConcurrentSessionSecurityTests : IDisposable
         var validationAfterRevoke = session.IsValid(_timeProvider);
 
         // Assert
-        Assert.True(validationBeforeRevoke, "Validation before revoke should succeed");
-        Assert.False(validationAfterRevoke, "Validation after revoke should fail");
+        validationBeforeRevoke.Should().BeTrue("Validation before revoke should succeed");
+        validationAfterRevoke.Should().BeFalse("Validation after revoke should fail");
     }
 
     /// <summary>
@@ -410,12 +411,12 @@ public class ConcurrentSessionSecurityTests : IDisposable
         await _unitOfWork.SaveChangesAsync(CancellationToken.None);
 
         // Assert - Second revoke should throw (domain guards against replay)
-        var exception = Assert.Throws<Api.SharedKernel.Domain.Exceptions.DomainException>(
-            () => session.Revoke(_timeProvider));
-        Assert.Contains("already revoked", exception.Message);
-        Assert.False(session.IsValid(_timeProvider));
-        Assert.NotNull(session.RevokedAt);
-        Assert.Equal(firstRevokedAt, session.RevokedAt); // RevokedAt unchanged
+        var act = () => session.Revoke(_timeProvider);
+        var exception = act.Should().Throw<Api.SharedKernel.Domain.Exceptions.DomainException>().Which;
+        exception.Message.Should().Contain("already revoked");
+        session.IsValid(_timeProvider).Should().BeFalse();
+        session.RevokedAt.Should().NotBeNull();
+        session.RevokedAt.Should().Be(firstRevokedAt); // RevokedAt unchanged
     }
 
     /// <summary>
@@ -445,7 +446,7 @@ public class ConcurrentSessionSecurityTests : IDisposable
         var isValidAfterExpiry = session.IsValid(_timeProvider);
 
         // Assert - Session should be invalid after expiry
-        Assert.False(isValidAfterExpiry, "Expired session should not be valid");
+        isValidAfterExpiry.Should().BeFalse("Expired session should not be valid");
     }
 
     #endregion

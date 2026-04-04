@@ -1,9 +1,16 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Services;
+using Api.Services.Pdf;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using KbValueObjects = Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 
@@ -13,8 +20,8 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 /// </summary>
 internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineService
 {
-    private const int ChunkSize = 512;
-    private const int ChunkOverlap = 50;
+    private const int ChunkSize = 1024;
+    private const int ChunkOverlap = 150;
     private const int EmbeddingBatchSize = 20;
 
     private readonly MeepleAiDbContext _db;
@@ -22,9 +29,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly IPdfTableExtractor _tableExtractor;
     private readonly ITextChunkingService _chunkingService;
     private readonly IEmbeddingService _embeddingService;
-    private readonly IQdrantService _qdrantService;
+    private readonly IBlobStorageService _blobStorageService;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<PdfProcessingPipelineService> _logger;
+    private readonly IRaptorIndexer? _raptorIndexer;
+    private readonly IEntityExtractor? _entityExtractor;
+    private readonly IVectorStoreAdapter? _vectorStore;
+    private readonly IFeatureFlagService? _featureFlagService;
+    private readonly ILanguageDetector _languageDetector;
+    private readonly IChunkTranslationService _chunkTranslationService;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -32,18 +45,30 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IPdfTableExtractor tableExtractor,
         ITextChunkingService chunkingService,
         IEmbeddingService embeddingService,
-        IQdrantService qdrantService,
+        IBlobStorageService blobStorageService,
         TimeProvider timeProvider,
-        ILogger<PdfProcessingPipelineService> logger)
+        ILogger<PdfProcessingPipelineService> logger,
+        ILanguageDetector languageDetector,
+        IChunkTranslationService chunkTranslationService,
+        IRaptorIndexer? raptorIndexer = null,
+        IEntityExtractor? entityExtractor = null,
+        IVectorStoreAdapter? vectorStore = null,
+        IFeatureFlagService? featureFlagService = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
         _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
+        _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _languageDetector = languageDetector ?? throw new ArgumentNullException(nameof(languageDetector));
+        _chunkTranslationService = chunkTranslationService ?? throw new ArgumentNullException(nameof(chunkTranslationService));
+        _raptorIndexer = raptorIndexer;
+        _entityExtractor = entityExtractor;
+        _vectorStore = vectorStore;
+        _featureFlagService = featureFlagService;
     }
 
     public async Task ProcessAsync(
@@ -70,18 +95,19 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             // Idempotency: skip if already completed or failed
-            if (string.Equals(pdfDoc.ProcessingStatus, "completed", StringComparison.Ordinal)
-                || string.Equals(pdfDoc.ProcessingStatus, "failed", StringComparison.Ordinal))
+            var readyState = nameof(PdfProcessingState.Ready);
+            var failedState = nameof(PdfProcessingState.Failed);
+            if (string.Equals(pdfDoc.ProcessingState, readyState, StringComparison.Ordinal)
+                || string.Equals(pdfDoc.ProcessingState, failedState, StringComparison.Ordinal))
             {
                 _logger.LogInformation(
                     "[PdfPipeline] PDF {PdfId} already in terminal state ({Status}), skipping",
-                    pdfId, pdfDoc.ProcessingStatus);
+                    pdfId, pdfDoc.ProcessingState);
                 return;
             }
 
             // Issue #4215: Transition to Extracting state
             pdfDoc.ProcessingState = "Extracting";
-            pdfDoc.ProcessingStatus = "processing";
             pdfDoc.ProcessingError = null;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -92,6 +118,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             // Step 2: Extract structured content (tables)
             _logger.LogInformation("[PdfPipeline] Step 2/4: Extracting structured content from {PdfId}", pdfId);
             await ExtractStructuredContentAsync(pdfDoc, filePath, cancellationToken).ConfigureAwait(false);
+
+            // Detect document language (Issue: RAG retrieval quality)
+            var langResult = _languageDetector.Detect(fullText);
+            pdfDoc.Language = langResult.DetectedLanguage;
+            pdfDoc.LanguageConfidence = langResult.Confidence;
+            _logger.LogInformation(
+                "[PdfPipeline] Detected language: {Language} (confidence: {Confidence:F2}) for PDF {PdfId}",
+                langResult.DetectedLanguage, langResult.Confidence, pdfDoc.Id);
 
             // Issue #4215: Transition to Chunking state
             pdfDoc.ProcessingState = "Chunking";
@@ -108,31 +142,169 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 return;
             }
 
+            // Dual-language indexing: translate non-English chunks to English
+            var detectedLang = pdfDoc.Language ?? "en";
+            var translatedChunks = new List<(DocumentChunkInput chunk, string lang, bool isTranslation)>();
+
+            // Add all original chunks with their detected language
+            foreach (var chunk in chunks)
+                translatedChunks.Add((chunk, detectedLang, false));
+
+            if (!string.Equals(detectedLang, "en", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation(
+                    "[PdfPipeline] Translating {ChunkCount} chunks from {Lang} to EN for PDF {PdfId}",
+                    chunks.Count, detectedLang, pdfDoc.Id);
+
+                try
+                {
+                    var translations = await _chunkTranslationService.TranslateChunksAsync(
+                        chunks.Select(c => c.Text).ToList(),
+                        detectedLang, "en", cancellationToken).ConfigureAwait(false);
+
+                    foreach (var t in translations)
+                    {
+                        if (!string.IsNullOrWhiteSpace(t.TranslatedText))
+                        {
+                            var origChunk = chunks[t.OriginalIndex];
+                            translatedChunks.Add((
+                                new DocumentChunkInput
+                                {
+                                    Text = t.TranslatedText,
+                                    Page = origChunk.Page,
+                                    CharStart = origChunk.CharStart,
+                                    CharEnd = origChunk.CharEnd
+                                },
+                                "en",
+                                true));
+                        }
+                    }
+
+                    _logger.LogInformation(
+                        "[PdfPipeline] Added {TranslatedCount} EN translations for PDF {PdfId}",
+                        translations.Count, pdfDoc.Id);
+                }
+#pragma warning disable CA1031 // Translation is optional, must not block pipeline
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "[PdfPipeline] Translation failed for PDF {PdfId}, proceeding with original chunks only",
+                        pdfDoc.Id);
+                }
+#pragma warning restore CA1031
+            }
+
+            // === RAPTOR: Build hierarchical summary tree (optional, non-blocking) ===
+            // Check if raptor-retrieval enhancement is globally enabled before spending LLM tokens
+            var raptorEnabled = _featureFlagService != null
+                && await _featureFlagService.IsEnabledAsync("rag.enhancement.raptor-retrieval").ConfigureAwait(false);
+
+            if (_raptorIndexer != null && raptorEnabled && chunks.Count > 3)
+            {
+                try
+                {
+                    var chunkTexts = chunks.Select(c => c.Text).ToList();
+                    var gameId = pdfDoc.GameId ?? Guid.Empty;
+                    var raptorResult = await _raptorIndexer.BuildTreeAsync(
+                        pdfDoc.Id, gameId,
+                        chunkTexts, maxLevels: 3, cancellationToken).ConfigureAwait(false);
+
+                    if (raptorResult.TotalNodes > 0)
+                    {
+                        await SaveRaptorSummariesAsync(
+                            pdfDoc.Id, gameId,
+                            raptorResult.Summaries, cancellationToken).ConfigureAwait(false);
+
+                        _logger.LogInformation(
+                            "[PdfPipeline] RAPTOR: built {Levels}-level tree with {Nodes} summary nodes for PDF {PdfId}",
+                            raptorResult.Levels, raptorResult.TotalNodes, pdfDoc.Id);
+                    }
+                }
+#pragma warning disable CA1031 // RAPTOR is optional enhancement, must not block pipeline
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "[PdfPipeline] RAPTOR indexing failed for PDF {PdfId}, continuing without hierarchical summaries",
+                        pdfDoc.Id);
+                    // Non-blocking: document processing continues even if RAPTOR fails
+                }
+#pragma warning restore CA1031
+            }
+
+            // === Graph RAG: Extract entity relations (optional, non-blocking) ===
+            // Check if graph-traversal enhancement is globally enabled before spending LLM tokens
+            var graphRagEnabled = _featureFlagService != null
+                && await _featureFlagService.IsEnabledAsync("rag.enhancement.graph-traversal").ConfigureAwait(false);
+
+            if (_entityExtractor is not null && graphRagEnabled && fullText.Length >= 200)
+            {
+                try
+                {
+                    var gameId = pdfDoc.GameId ?? Guid.Empty;
+                    var gameTitle = pdfDoc.FileName ?? "Unknown";
+                    var extraction = await _entityExtractor.ExtractEntitiesAsync(
+                        gameId, gameTitle,
+                        fullText[..Math.Min(fullText.Length, 8000)],
+                        cancellationToken).ConfigureAwait(false);
+
+                    if (extraction.Relations.Count > 0)
+                    {
+                        var entities = extraction.Relations.Select(r => new GameEntityRelationEntity
+                        {
+                            Id = Guid.NewGuid(),
+                            GameId = gameId,
+                            SourceEntity = r.SourceEntity,
+                            SourceType = r.SourceType,
+                            Relation = r.Relation,
+                            TargetEntity = r.TargetEntity,
+                            TargetType = r.TargetType,
+                            Confidence = r.Confidence,
+                            ExtractedAt = DateTime.UtcNow
+                        }).ToList();
+
+                        _db.GameEntityRelations.AddRange(entities);
+                        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                        _logger.LogInformation(
+                            "[PdfPipeline] Graph RAG: extracted {RelCount} relations for PDF {PdfId}",
+                            entities.Count, pdfDoc.Id);
+                    }
+                }
+#pragma warning disable CA1031 // Graph RAG is optional enhancement
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "[PdfPipeline] Graph RAG extraction failed for PDF {PdfId}, continuing",
+                        pdfDoc.Id);
+                }
+#pragma warning restore CA1031
+            }
+
             // Issue #4215: Transition to Embedding state
             pdfDoc.ProcessingState = "Embedding";
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            // Step 4a: Generate embeddings
-            _logger.LogInformation("[PdfPipeline] Step 4a/5: Generating embeddings for {ChunkCount} chunks for {PdfId}", chunks.Count, pdfId);
-            var embeddings = await GenerateEmbeddingsAsync(pdfDoc, chunks, cancellationToken).ConfigureAwait(false);
+            // Step 4a: Generate embeddings (for all chunks: original + translated)
+            var allChunkInputs = translatedChunks.Select(t => t.chunk).ToList();
+            _logger.LogInformation("[PdfPipeline] Step 4a/5: Generating embeddings for {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
+            var embeddings = await GenerateEmbeddingsAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Transition to Indexing state
             pdfDoc.ProcessingState = "Indexing";
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // Step 4b: Index in Qdrant
-            _logger.LogInformation("[PdfPipeline] Step 4b/5: Indexing {ChunkCount} chunks for {PdfId}", chunks.Count, pdfId);
-            await IndexInQdrantAsync(pdfDoc, chunks, embeddings, cancellationToken).ConfigureAwait(false);
-            await SaveTextChunksAsync(pdfDoc, chunks, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("[PdfPipeline] Step 4b/5: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
+            await IndexInQdrantAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
+            await SaveTextChunksAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Mark as Ready (final state)
             pdfDoc.ProcessingState = "Ready";
-            pdfDoc.ProcessingStatus = "completed";
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            _logger.LogInformation("[PdfPipeline] Successfully processed PDF {PdfId}: {Pages} pages, {Chunks} chunks",
-                pdfId, pdfDoc.PageCount ?? 0, chunks.Count);
+            _logger.LogInformation("[PdfPipeline] Successfully processed PDF {PdfId}: {Pages} pages, {Chunks} chunks (incl. translations)",
+                pdfId, pdfDoc.PageCount ?? 0, translatedChunks.Count);
         }
 #pragma warning disable CA1031 // Background pipeline must catch all to mark status
         catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
@@ -153,7 +325,23 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         string filePath,
         CancellationToken cancellationToken)
     {
-        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        // Issue #501: Use blob storage with correct GUID format (no hyphens) to match StoreAsync key format
+        var fileId = pdfDoc.Id.ToString("N"); // "N" = no hyphens, matches S3BlobStorageService.StoreAsync
+        var gameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
+        var fileStream = await _blobStorageService.RetrieveAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
+
+        if (fileStream == null)
+        {
+            // Fallback to local filesystem for backward compatibility (dev without S3)
+            _logger.LogWarning("[PdfPipeline] Blob storage returned null for {PdfId}, falling back to filesystem path: {FilePath}", fileId, filePath);
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException(
+                    $"PDF file not found in blob storage or filesystem: {filePath}", filePath);
+            }
+            fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
+
         await using (fileStream.ConfigureAwait(false))
         {
             var extractResult = await _pdfTextExtractor
@@ -307,40 +495,13 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
     private async Task IndexInQdrantAsync(
         PdfDocumentEntity pdfDoc,
-        List<DocumentChunkInput> chunks,
+        List<(DocumentChunkInput chunk, string lang, bool isTranslation)> translatedChunks,
         List<float[]> embeddings,
         CancellationToken cancellationToken)
     {
-        var pdfId = pdfDoc.Id.ToString();
+        var chunkCount = translatedChunks.Count;
 
-        // Issue #5254: Delete old vectors before re-indexing to prevent duplicates
-        var deleted = await _qdrantService.DeleteDocumentAsync(pdfId, cancellationToken).ConfigureAwait(false);
-        if (deleted)
-        {
-            _logger.LogInformation("Deleted old vectors for PDF {PdfId} before re-indexing", pdfId);
-        }
-
-        var documentChunks = chunks
-            .Select((chunk, index) => new DocumentChunk
-            {
-                Text = chunk.Text,
-                Embedding = embeddings[index],
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList();
-
-        var indexResult = await _qdrantService
-            .IndexDocumentChunksAsync((pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty, pdfId, documentChunks, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!indexResult.Success)
-        {
-            throw new InvalidOperationException($"Qdrant indexing failed: {indexResult.ErrorMessage}");
-        }
-
-        // Update or create VectorDocument record
+        // Update or create VectorDocument record (tracking)
         var vectorDoc = await _db.VectorDocuments
             .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDoc.Id, cancellationToken)
             .ConfigureAwait(false);
@@ -351,10 +512,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 Id = Guid.NewGuid(),
                 GameId = pdfDoc.GameId,
-                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
+                SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfDoc.Id,
                 IndexingStatus = "completed",
-                ChunkCount = indexResult.IndexedCount,
+                ChunkCount = chunkCount,
                 TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0,
                 IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
             };
@@ -363,12 +524,56 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         else
         {
             vectorDoc.IndexingStatus = "completed";
-            vectorDoc.ChunkCount = indexResult.IndexedCount;
+            vectorDoc.ChunkCount = chunkCount;
             vectorDoc.TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
             vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Index embeddings in pgvector for semantic search
+        if (_vectorStore != null && embeddings.Count == translatedChunks.Count)
+        {
+            var gameId = pdfDoc.GameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
+            if (gameId == Guid.Empty)
+            {
+                _logger.LogWarning(
+                    "[PdfPipeline] No GameId for PDF {PdfId}, skipping pgvector indexing",
+                    pdfDoc.Id);
+                return;
+            }
+
+            // Ensure pgvector table + HNSW index exist (idempotent)
+            var dimension = embeddings[0].Length;
+            await _vectorStore.EnsureCollectionExistsAsync(gameId, dimension, cancellationToken)
+                .ConfigureAwait(false);
+
+            // Delete old embeddings for this document (re-processing support)
+            await _vectorStore.DeleteByVectorDocumentIdAsync(vectorDoc.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+            // Build Embedding domain objects and bulk-insert via pgvector COPY
+            var modelName = _embeddingService.GetModelName();
+            var embeddingEntities = translatedChunks.Select((item, i) =>
+                new KbEntities.Embedding(
+                    id: Guid.NewGuid(),
+                    vectorDocumentId: vectorDoc.Id,
+                    textContent: item.chunk.Text,
+                    vector: new KbValueObjects.Vector(embeddings[i]),
+                    model: modelName,
+                    chunkIndex: i,
+                    pageNumber: Math.Max(1, item.chunk.Page),
+                    language: item.lang,
+                    isTranslation: item.isTranslation))
+                .ToList();
+
+            await _vectorStore.IndexBatchAsync(embeddingEntities, cancellationToken)
+                .ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "[PdfPipeline] Indexed {Count} embeddings in pgvector for PDF {PdfId} (gameId={GameId})",
+                embeddingEntities.Count, pdfDoc.Id, gameId);
+        }
     }
 
     private async Task SaveTextChunksAsync(
@@ -410,13 +615,33 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             textChunkEntities.Count, pdfDoc.Id);
     }
 
+    private async Task SaveRaptorSummariesAsync(
+        Guid pdfDocumentId, Guid gameId,
+        List<RaptorSummaryNode> summaries,
+        CancellationToken ct)
+    {
+        foreach (var summary in summaries)
+        {
+            var entity = new RaptorSummaryEntity
+            {
+                Id = Guid.NewGuid(),
+                PdfDocumentId = pdfDocumentId,
+                GameId = gameId,
+                TreeLevel = summary.TreeLevel,
+                ClusterIndex = summary.ClusterIndex,
+                SummaryText = summary.SummaryText,
+                SourceChunkCount = summary.SourceChunkCount,
+                CreatedAt = DateTime.UtcNow
+            };
+            _db.RaptorSummaries.Add(entity);
+        }
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
+
     private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage)
     {
         // Issue #4215: Use Failed state
         pdfDoc.ProcessingState = "Failed";
-#pragma warning disable CS0618
-        pdfDoc.ProcessingStatus = "failed";
-#pragma warning restore CS0618
         pdfDoc.ProcessingError = errorMessage;
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
@@ -439,7 +664,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 // Issue #4215: Use Failed state
                 pdfDoc.ProcessingState = "Failed";
-                pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = errorMessage.Length > 500
                     ? errorMessage[..500]
                     : errorMessage;

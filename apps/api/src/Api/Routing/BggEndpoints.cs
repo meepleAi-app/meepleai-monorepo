@@ -1,4 +1,7 @@
-using Api.Infrastructure.ExternalServices.BoardGameGeek;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.Extensions;
+using Api.Models;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -6,7 +9,9 @@ namespace Api.Routing;
 
 /// <summary>
 /// BoardGameGeek API integration endpoints.
-/// Issue #3120: Provides public search and game details lookup from BGG.
+/// Issue #3120: Provides admin-only search and game details lookup from BGG.
+/// Restricted to admin due to BGG commercial use licensing.
+/// Unified: Uses IBggApiService (rich DTOs with categories, mechanics, etc.)
 /// </summary>
 internal static class BggEndpoints
 {
@@ -18,7 +23,7 @@ internal static class BggEndpoints
             [FromQuery(Name = "query")] string? query,
             [FromQuery(Name = "page")] int page,
             [FromQuery(Name = "pageSize")] int pageSize,
-            IBggApiClient bggClient,
+            IMediator mediator,
             CancellationToken cancellationToken) =>
         {
             var searchTerm = q ?? query;
@@ -28,10 +33,9 @@ internal static class BggEndpoints
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 20;
 
-            var results = await bggClient.SearchGamesAsync(searchTerm, cancellationToken).ConfigureAwait(false);
-            var resultsList = results.ToList();
-            var total = resultsList.Count;
-            var paged = resultsList.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var results = await mediator.Send(new SearchBggGamesQuery(searchTerm), cancellationToken).ConfigureAwait(false);
+            var total = results.Count;
+            var paged = results.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             return Results.Ok(new
             {
@@ -42,33 +46,39 @@ internal static class BggEndpoints
                 totalPages = (int)Math.Ceiling((double)total / pageSize)
             });
         })
+        .RequireAdminSession()
         .RequireRateLimiting("BggSearch")
-        .WithName("BggPublicSearch")
+        .WithName("BggAdminSearch")
         .WithOpenApi(operation =>
         {
-            operation.Summary = "Search BoardGameGeek catalog";
-            operation.Description = "Public search for board games on BoardGameGeek. Rate limited to 20 searches per hour per user.";
+            operation.Summary = "Search BoardGameGeek catalog (Admin only)";
+            operation.Description = "Admin-only search for board games on BoardGameGeek. Restricted due to BGG commercial use licensing. Rate limited to 60 searches per hour per user.";
             return operation;
         });
 
         // GET /api/v1/bgg/games/{bggId}
         group.MapGet("/bgg/games/{bggId:int}", async (
             int bggId,
-            IBggApiClient bggClient,
+            IMediator mediator,
             CancellationToken cancellationToken) =>
         {
             if (bggId <= 0)
                 return Results.BadRequest(new { error = "Invalid BGG ID" });
 
-            var details = await bggClient.GetGameDetailsAsync(bggId, cancellationToken).ConfigureAwait(false);
+            var details = await mediator.Send(new GetBggGameDetailsQuery(bggId), cancellationToken).ConfigureAwait(false);
+
+            if (details == null)
+                return Results.NotFound(new { error = $"BGG game {bggId} not found" });
+
             return Results.Ok(details);
         })
+        .RequireAdminSession()
         .RequireRateLimiting("BggSearch")
         .WithName("GetBggGameDetails")
         .WithOpenApi(operation =>
         {
-            operation.Summary = "Get BoardGameGeek game details";
-            operation.Description = "Retrieve detailed information about a specific board game from BoardGameGeek by its BGG ID. Rate limited to 20 requests per hour per user.";
+            operation.Summary = "Get BoardGameGeek game details (Admin only)";
+            operation.Description = "Admin-only retrieval of detailed information about a specific board game from BoardGameGeek by its BGG ID. Restricted due to BGG commercial use licensing. Rate limited to 60 requests per hour per user.";
             return operation;
         });
 

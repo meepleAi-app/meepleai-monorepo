@@ -47,26 +47,11 @@ export function EntityIndicator({
   customColor?: string;
   className?: string;
 }) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
-  const name = entityColors[entity].name;
 
-  // Hero/featured uses ribbon, others use left border
+  // Hero/featured uses left border accent only — ribbon removed
   if (variant === 'hero') {
-    return (
-      <span
-        className={cn(
-          'absolute top-4 right-[-2rem] z-20',
-          'py-1 px-10 text-xs font-bold uppercase tracking-wider',
-          'text-white shadow-md rotate-45',
-          className
-        )}
-        style={{ backgroundColor: `hsl(${color})` }}
-      >
-        {name}
-      </span>
-    );
+    return null;
   }
 
   if (variant === 'featured' || variant === 'grid') {
@@ -102,9 +87,9 @@ export function EntityIndicator({
  * Issue #4062: Stacks entity badge, status, and custom badge vertically
  * with compact sizing (80px max), truncation, and hover tooltips.
  */
-export function VerticalTagStack({
-  entity,
-  customColor,
+export const VerticalTagStack = React.memo(function VerticalTagStack({
+  entity: _entity,
+  customColor: _customColor,
   status,
   showStatusIcon,
   badge,
@@ -115,32 +100,12 @@ export function VerticalTagStack({
   showStatusIcon?: boolean;
   badge?: string;
 }) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
-  const color = customColor || entityColors[entity].hsl;
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
-  const name = entityColors[entity].name;
-
   return (
     <TooltipProvider delayDuration={300}>
       <div
         className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
         data-testid="meeple-card-tag-stack"
       >
-        {/* Entity type badge (highest priority) */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              className="max-w-[60px] sm:max-w-[80px] truncate px-1.5 sm:px-2 py-px sm:py-0.5 text-[8px] sm:text-[9px] font-extrabold uppercase tracking-[0.04em] text-white rounded-[5px] sm:rounded-[6px] shadow-sm cursor-default"
-              style={{ backgroundColor: `hsl(${color})` }}
-            >
-              {name}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
-            {name}
-          </TooltipContent>
-        </Tooltip>
-
         {/* Status badge */}
         {status && (
           <StatusBadge status={status} showIcon={showStatusIcon} className="max-w-[80px]" />
@@ -150,7 +115,7 @@ export function VerticalTagStack({
         {badge && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="max-w-[80px] truncate bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-muted-foreground border border-border/50 cursor-default">
+              <span className="max-w-[80px] truncate bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-white/80 border border-white/15 cursor-default">
                 {badge}
               </span>
             </TooltipTrigger>
@@ -162,7 +127,7 @@ export function VerticalTagStack({
       </div>
     </TooltipProvider>
   );
-}
+});
 
 // ============================================================================
 // CoverImage
@@ -171,7 +136,7 @@ export function VerticalTagStack({
 /**
  * Cover image with optional gradient overlay and entity-specific placeholders
  */
-export function CoverImage({
+export const CoverImage = React.memo(function CoverImage({
   src,
   alt,
   variant,
@@ -184,7 +149,6 @@ export function CoverImage({
   entity: MeepleEntityType;
   customColor?: string;
 }) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
 
   // Treat placehold.co URLs as "no image" - they return SVGs that Next.js Image can't optimize
@@ -216,9 +180,15 @@ export function CoverImage({
     session: 'linear-gradient(135deg, hsl(240,30%,85%), hsl(240,40%,70%))',
     event: 'linear-gradient(135deg, hsl(350,40%,85%), hsl(350,60%,70%))',
     toolkit: 'linear-gradient(135deg, hsl(142,30%,85%), hsl(142,50%,75%))',
-    document: 'linear-gradient(135deg, hsl(210,30%,85%), hsl(210,40%,70%))',
-    custom: 'linear-gradient(135deg, hsl(220,30%,85%), hsl(220,40%,70%))',
-    kb_card: 'linear-gradient(135deg, hsl(174,30%,85%), hsl(174,50%,70%))',
+    tool: 'linear-gradient(135deg, hsl(195,30%,85%), hsl(195,50%,70%))',
+    kb: 'linear-gradient(135deg, hsl(174,30%,85%), hsl(174,50%,70%))',
+    collection: 'linear-gradient(135deg, hsl(20,40%,85%), hsl(20,60%,72%))',
+    group: 'linear-gradient(135deg, hsl(280,30%,85%), hsl(280,45%,72%))',
+    location: 'linear-gradient(135deg, hsl(200,30%,85%), hsl(200,50%,72%))',
+    expansion: 'linear-gradient(135deg, hsl(290,30%,85%), hsl(290,50%,72%))',
+    achievement: 'linear-gradient(135deg, hsl(45,50%,85%), hsl(45,80%,70%))',
+    note: 'linear-gradient(135deg, hsl(40,20%,85%), hsl(40,30%,72%))',
+    custom: 'linear-gradient(135deg, hsl(220,15%,85%), hsl(220,15%,70%))',
   };
 
   // Entity emoji fallbacks (when no image)
@@ -230,9 +200,15 @@ export function CoverImage({
     session: '\uD83C\uDFB2',
     event: '\uD83C\uDFC6',
     toolkit: '\uD83D\uDEE0\uFE0F',
-    document: '\uD83D\uDCC4',
+    tool: '\uD83D\uDD27',
+    kb: '\uD83D\uDCC4',
+    collection: '\uD83D\uDCDA',
+    group: '\uD83D\uDC65',
+    location: '\uD83D\uDCCD',
+    expansion: '\uD83D\uDCE6',
+    achievement: '\uD83C\uDFC6',
+    note: '\uD83D\uDCDD',
     custom: '\uD83C\uDFB2',
-    kb_card: '\uD83D\uDCCB',
   };
 
   return (
@@ -263,7 +239,6 @@ export function CoverImage({
         <div
           className="absolute inset-0 flex items-center justify-center"
           style={{
-            // eslint-disable-next-line security/detect-object-injection
             background: entityGradients[entity],
           }}
         >
@@ -310,7 +285,7 @@ export function CoverImage({
       )}
     </div>
   );
-}
+});
 
 // ============================================================================
 // MetadataChips
@@ -390,7 +365,6 @@ export function ActionButtons({
   customColor?: string;
   className?: string;
 }) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
 
   return (

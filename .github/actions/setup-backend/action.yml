@@ -17,6 +17,13 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Fix dotnet directory permissions
+      shell: bash
+      run: |
+        if [ -d "/usr/share/dotnet" ]; then
+          sudo chown -R $(whoami) /usr/share/dotnet || true
+        fi
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
       with:
@@ -24,7 +31,7 @@ runs:
 
     - name: Cache NuGet packages
       if: ${{ inputs.cache-nuget == 'true' }}
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}
@@ -33,7 +40,7 @@ runs:
 
     - name: Cache .NET build outputs
       if: ${{ inputs.cache-nuget == 'true' }}
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ${{ inputs.working-directory }}/src/**/bin

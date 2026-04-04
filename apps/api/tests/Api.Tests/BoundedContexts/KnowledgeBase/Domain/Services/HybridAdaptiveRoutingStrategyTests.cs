@@ -1,18 +1,17 @@
-using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.SharedKernel.Domain.ValueObjects;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
-using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Configuration;
+using Api.SharedKernel.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
-using AuthUser = Api.BoundedContexts.Authentication.Domain.Entities.User;
+using RagStrategy = Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagStrategy;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -114,47 +113,47 @@ public class HybridAdaptiveRoutingStrategyTests
     {
         // Arrange
         var sut = CreateStrategy();
-        var user = CreateUser(Role.User);
+        var userContext = CreateContext(LlmUserTier.User);
 
         // Act
-        var decision = sut.SelectProvider(user, strategy);
+        var decision = sut.SelectProvider(userContext, strategy);
 
         // Assert
-        Assert.Equal(expectedProvider, decision.ProviderName);
-        Assert.Equal(expectedModel, decision.ModelId);
-        Assert.Contains("Strategy:", decision.Reason);
+        decision.ProviderName.Should().Be(expectedProvider);
+        decision.ModelId.Should().Be(expectedModel);
+        decision.Reason.Should().Contain("Strategy:");
     }
 
     [Fact]
     public void SelectProvider_NullUser_DefaultsToUserTier()
     {
-        // Arrange — null user (internal pipeline calls) should default to User tier
+        // Arrange — internal pipeline calls default to User tier
         var sut = CreateStrategy();
 
         // Act
-        var decision = sut.SelectProvider(user: null, RagStrategy.Balanced);
+        var decision = sut.SelectProvider(LlmUserContext.Internal, RagStrategy.Balanced);
 
         // Assert
-        Assert.Equal("DeepSeek", decision.ProviderName);
-        Assert.Equal("deepseek-chat", decision.ModelId);
-        Assert.Contains("Tier: User", decision.Reason);
+        decision.ProviderName.Should().Be("DeepSeek");
+        decision.ModelId.Should().Be("deepseek-chat");
+        decision.Reason.Should().Contain("Tier: User");
     }
 
     [Theory]
-    [InlineData("admin", LlmUserTier.Admin)]
-    [InlineData("editor", LlmUserTier.Editor)]
-    [InlineData("user", LlmUserTier.User)]
-    public void SelectProvider_DifferentRoles_MapsToCorrectTier(string roleValue, LlmUserTier expectedTier)
+    [InlineData(LlmUserTier.Admin)]
+    [InlineData(LlmUserTier.Editor)]
+    [InlineData(LlmUserTier.User)]
+    public void SelectProvider_DifferentTiers_UsesCorrectTier(LlmUserTier tier)
     {
         // Arrange
         var sut = CreateStrategy();
-        var user = CreateUser(Role.Parse(roleValue));
+        var userContext = CreateContext(tier);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Balanced);
+        var decision = sut.SelectProvider(userContext, RagStrategy.Balanced);
 
         // Assert
-        Assert.Contains($"Tier: {expectedTier}", decision.Reason);
+        decision.Reason.Should().Contain($"Tier: {tier}");
     }
 
     #endregion
@@ -174,15 +173,15 @@ public class HybridAdaptiveRoutingStrategyTests
             .ReturnsAsync(new[] { RagStrategy.Fast, RagStrategy.Balanced });
 
         var sut = CreateStrategy();
-        var user = CreateUser(Role.User);
+        var userContext = CreateContext(LlmUserTier.User);
 
         // Act & Assert
-        var exception = Assert.Throws<UnauthorizedAccessException>(
-            () => sut.SelectProvider(user, RagStrategy.Expert));
+        Action act = () => sut.SelectProvider(userContext, RagStrategy.Expert);
+        var exception = act.Should().Throw<UnauthorizedAccessException>().Which;
 
-        Assert.Contains("User", exception.Message);
-        Assert.Contains("EXPERT", exception.Message);
-        Assert.Contains("Available strategies:", exception.Message);
+        exception.Message.Should().Contain("User");
+        exception.Message.Should().Contain("EXPERT");
+        exception.Message.Should().Contain("Available strategies:");
     }
 
     [Fact]
@@ -190,15 +189,15 @@ public class HybridAdaptiveRoutingStrategyTests
     {
         // Arrange
         var sut = CreateStrategy();
-        var admin = CreateUser(Role.Admin);
+        var adminContext = CreateContext(LlmUserTier.Admin);
 
         // Act - Try all strategies
         var strategies = Enum.GetValues<RagStrategy>();
-        var decisions = strategies.Select(s => sut.SelectProvider(admin, s)).ToList();
+        var decisions = strategies.Select(s => sut.SelectProvider(adminContext, s)).ToList();
 
         // Assert - All should succeed
-        Assert.Equal(strategies.Length, decisions.Count);
-        Assert.All(decisions, d => Assert.Contains("Tier: Admin", d.Reason));
+        decisions.Count.Should().Be(strategies.Length);
+        decisions.Should().AllSatisfy(d => d.Reason.Should().Contain("Tier: Admin"));
     }
 
     [Fact]
@@ -210,11 +209,11 @@ public class HybridAdaptiveRoutingStrategyTests
             .ThrowsAsync(new InvalidOperationException("Database error"));
 
         var sut = CreateStrategy();
-        var user = CreateUser(Role.User);
+        var userContext = CreateContext(LlmUserTier.User);
 
         // Act & Assert - Should deny access on error (fail closed)
-        var exception = Assert.Throws<UnauthorizedAccessException>(
-            () => sut.SelectProvider(user, RagStrategy.Balanced));
+        Action act = () => sut.SelectProvider(userContext, RagStrategy.Balanced);
+        var exception = act.Should().Throw<UnauthorizedAccessException>().Which;
     }
 
     #endregion
@@ -241,15 +240,15 @@ public class HybridAdaptiveRoutingStrategyTests
             preferredSettings,
             _logger);
 
-        var user = CreateUser(Role.Admin);
+        var adminContext = CreateContext(LlmUserTier.Admin);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Expert);
+        var decision = sut.SelectProvider(adminContext, RagStrategy.Expert);
 
         // Assert - Should use PreferredProvider instead of strategy routing
-        Assert.Equal("Ollama", decision.ProviderName);
-        Assert.Equal("mistral", decision.ModelId);
-        Assert.Contains("PreferredProvider override", decision.Reason);
+        decision.ProviderName.Should().Be("Ollama");
+        decision.ModelId.Should().Be("mistral");
+        decision.Reason.Should().Contain("PreferredProvider override");
     }
 
     [Fact]
@@ -257,14 +256,14 @@ public class HybridAdaptiveRoutingStrategyTests
     {
         // Arrange
         var sut = CreateStrategy();
-        var user = CreateUser(Role.Admin);
+        var adminContext = CreateContext(LlmUserTier.Admin);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Expert);
+        var decision = sut.SelectProvider(adminContext, RagStrategy.Expert);
 
         // Assert - Should use strategy routing
-        Assert.DoesNotContain("PreferredProvider", decision.Reason);
-        Assert.Contains("Strategy:", decision.Reason);
+        decision.Reason.Should().NotContain("PreferredProvider");
+        decision.Reason.Should().Contain("Strategy:");
     }
 
     [Fact]
@@ -287,13 +286,13 @@ public class HybridAdaptiveRoutingStrategyTests
             disabledPreferredSettings,
             _logger);
 
-        var user = CreateUser(Role.Admin);
+        var adminContext = CreateContext(LlmUserTier.Admin);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Expert);
+        var decision = sut.SelectProvider(adminContext, RagStrategy.Expert);
 
         // Assert - Should use strategy routing (preferred is disabled)
-        Assert.DoesNotContain("PreferredProvider", decision.Reason);
+        decision.Reason.Should().NotContain("PreferredProvider");
     }
 
     #endregion
@@ -324,14 +323,14 @@ public class HybridAdaptiveRoutingStrategyTests
             disabledDeepSeekSettings,
             _logger);
 
-        var user = CreateUser(Role.User);
+        var userContext = CreateContext(LlmUserTier.User);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Balanced);
+        var decision = sut.SelectProvider(userContext, RagStrategy.Balanced);
 
         // Assert - Should fallback to Ollama (hardcoded fallback behavior)
-        Assert.Equal("Ollama", decision.ProviderName);
-        Assert.Contains("Fallback from DeepSeek", decision.Reason);
+        decision.ProviderName.Should().Be("Ollama");
+        decision.Reason.Should().Contain("Fallback from DeepSeek");
     }
 
     [Fact]
@@ -355,13 +354,13 @@ public class HybridAdaptiveRoutingStrategyTests
             allDisabledSettings,
             _logger);
 
-        var user = CreateUser(Role.User);
+        var userContext = CreateContext(LlmUserTier.User);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => sut.SelectProvider(user, RagStrategy.Balanced));
+        Action act = () => sut.SelectProvider(userContext, RagStrategy.Balanced);
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("AI providers are disabled", exception.Message);
+        exception.Message.Should().Contain("AI providers are disabled");
     }
 
     #endregion
@@ -378,14 +377,14 @@ public class HybridAdaptiveRoutingStrategyTests
             .Returns("meta-llama/llama-3.3-70b-instruct:free");
 
         var sut = CreateStrategy(mockOverride.Object);
-        var user = CreateUser(Role.Admin);
+        var adminContext = CreateContext(LlmUserTier.Admin);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Expert);
+        var decision = sut.SelectProvider(adminContext, RagStrategy.Expert);
 
         // Assert
-        Assert.Equal("meta-llama/llama-3.3-70b-instruct:free", decision.ModelId);
-        Assert.Contains("Budget mode", decision.Reason);
+        decision.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
+        decision.Reason.Should().Contain("Budget mode");
         mockOverride.Verify(s => s.IsInBudgetMode(), Times.Once);
         mockOverride.Verify(s => s.GetOverrideModel("anthropic/claude-sonnet-4.5"), Times.Once);
     }
@@ -398,14 +397,14 @@ public class HybridAdaptiveRoutingStrategyTests
         mockOverride.Setup(s => s.IsInBudgetMode()).Returns(false);
 
         var sut = CreateStrategy(mockOverride.Object);
-        var user = CreateUser(Role.Admin);
+        var adminContext = CreateContext(LlmUserTier.Admin);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Expert);
+        var decision = sut.SelectProvider(adminContext, RagStrategy.Expert);
 
         // Assert
-        Assert.Equal("anthropic/claude-sonnet-4.5", decision.ModelId);
-        Assert.DoesNotContain("Budget mode", decision.Reason);
+        decision.ModelId.Should().Be("anthropic/claude-sonnet-4.5");
+        decision.Reason.Should().NotContain("Budget mode");
         mockOverride.Verify(s => s.GetOverrideModel(It.IsAny<string>()), Times.Never);
     }
 
@@ -419,14 +418,14 @@ public class HybridAdaptiveRoutingStrategyTests
             .Returns((string model) => model); // No mapping = return same model
 
         var sut = CreateStrategy(mockOverride.Object);
-        var user = CreateUser(Role.User);
+        var userContext = CreateContext(LlmUserTier.User);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Fast);
+        var decision = sut.SelectProvider(userContext, RagStrategy.Fast);
 
         // Assert - Original model kept when no mapping exists
-        Assert.Equal("meta-llama/llama-3.3-70b-instruct:free", decision.ModelId);
-        Assert.DoesNotContain("Budget mode:", decision.Reason); // No downgrade occurred
+        decision.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
+        decision.Reason.Should().NotContain("Budget mode:"); // No downgrade occurred
     }
 
     #endregion
@@ -442,14 +441,14 @@ public class HybridAdaptiveRoutingStrategyTests
             .ReturnsAsync(("Ollama", "custom-local-model:latest"));
 
         var sut = CreateStrategy();
-        var user = CreateUser(Role.User);
+        var userContext = CreateContext(LlmUserTier.User);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Balanced);
+        var decision = sut.SelectProvider(userContext, RagStrategy.Balanced);
 
         // Assert
-        Assert.Equal("Ollama", decision.ProviderName);
-        Assert.Equal("custom-local-model:latest", decision.ModelId);
+        decision.ProviderName.Should().Be("Ollama");
+        decision.ModelId.Should().Be("custom-local-model:latest");
     }
 
     [Fact]
@@ -461,14 +460,14 @@ public class HybridAdaptiveRoutingStrategyTests
             .ThrowsAsync(new InvalidOperationException("Database error"));
 
         var sut = CreateStrategy();
-        var user = CreateUser(Role.User);
+        var userContext = CreateContext(LlmUserTier.User);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Balanced);
+        var decision = sut.SelectProvider(userContext, RagStrategy.Balanced);
 
         // Assert - Should fall back to default
-        Assert.Equal("DeepSeek", decision.ProviderName);
-        Assert.Equal("deepseek-chat", decision.ModelId);
+        decision.ProviderName.Should().Be("DeepSeek");
+        decision.ModelId.Should().Be("deepseek-chat");
     }
 
     #endregion
@@ -480,42 +479,66 @@ public class HybridAdaptiveRoutingStrategyTests
     {
         // Arrange
         var sut = CreateStrategy();
-        var user = CreateUser(Role.Editor);
+        var editorContext = CreateContext(LlmUserTier.Editor);
 
         // Act
-        var decision = sut.SelectProvider(user, RagStrategy.Precise);
+        var decision = sut.SelectProvider(editorContext, RagStrategy.Precise);
 
         // Assert
-        Assert.NotNull(decision.Reason);
-        Assert.Contains("Strategy: PRECISE", decision.Reason);
-        Assert.Contains("Tier: Editor", decision.Reason);
+        decision.Reason.Should().NotBeNull();
+        decision.Reason.Should().Contain("Strategy: PRECISE");
+        decision.Reason.Should().Contain("Tier: Editor");
     }
 
     [Fact]
     public void SelectProvider_NullUser_IncludesUserTierInReason()
     {
-        // Arrange — null user defaults to User tier (not Anonymous)
+        // Arrange — internal pipeline calls default to User tier (not Anonymous)
         var sut = CreateStrategy();
 
         // Act
-        var decision = sut.SelectProvider(user: null, RagStrategy.Fast);
+        var decision = sut.SelectProvider(LlmUserContext.Internal, RagStrategy.Fast);
 
         // Assert — internal pipeline calls default to User tier
-        Assert.Contains("Tier: User", decision.Reason);
+        decision.Reason.Should().Contain("Tier: User");
     }
 
     #endregion
 
-    private static AuthUser CreateUser(Role role)
-    {
-        var email = Email.Parse($"test.{role.Value}@meepleai.dev");
-        var password = PasswordHash.Create("TestPass123!");
+    #region Region-aware routing (Issue #28)
 
-        return new AuthUser(
-            Guid.NewGuid(),
-            email,
-            $"Test {role.Value}",
-            password,
-            role);
+    [Fact]
+    public void SelectProvider_WithRegion_PropagatesUserRegionOnDecision()
+    {
+        // Arrange
+        var adminContext = CreateContext(LlmUserTier.Admin);
+        var sut = CreateStrategy();
+
+        // Act
+        var decision = sut.SelectProvider(adminContext, RagStrategy.Balanced, region: "eu-west-1");
+
+        // Assert
+        decision.UserRegion.Should().Be("eu-west-1");
+    }
+
+    [Fact]
+    public void SelectProvider_WithoutRegion_UserRegionIsNull()
+    {
+        // Arrange
+        var adminContext = CreateContext(LlmUserTier.Admin);
+        var sut = CreateStrategy();
+
+        // Act
+        var decision = sut.SelectProvider(adminContext, RagStrategy.Balanced);
+
+        // Assert
+        decision.UserRegion.Should().BeNull();
+    }
+
+    #endregion
+
+    private static LlmUserContext CreateContext(LlmUserTier tier)
+    {
+        return new LlmUserContext(Guid.NewGuid(), tier.ToString().ToLowerInvariant(), tier);
     }
 }

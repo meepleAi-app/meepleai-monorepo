@@ -88,13 +88,7 @@ export default defineConfig({
       'src/hooks/__tests__/useAgentConfigModal.test.ts',
       'src/app/editor/dashboard/__tests__/client.test.tsx',
       'src/lib/hooks/__tests__/useStreamingChatWithReconnect.test.ts',
-      // Issue #3026: A11y tests with remaining issues (keyboard, complex components)
-      'src/components/ui/overlays/__tests__/dialog.a11y.test.tsx',
-      'src/components/ui/overlays/__tests__/select.a11y.test.tsx',
-      'src/components/ui/overlays/__tests__/confirmation-dialog.a11y.test.tsx',
-      'src/components/ui/navigation/__tests__/dropdown-menu.a11y.test.tsx',
-      'src/components/ui/navigation/__tests__/tabs.a11y.test.tsx',
-      'src/components/ui/feedback/__tests__/alert-dialog.a11y.test.tsx',
+      // Issue #3026: A11y tests fixed - assertions updated to match Radix UI primitives
       // Exclude specific utility files by name (not their test counterparts)
       // These are helper utilities, not test files
       '**/__tests__/utils/async-test-helpers.{ts,tsx}',

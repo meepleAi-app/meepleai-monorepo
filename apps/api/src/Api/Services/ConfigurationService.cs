@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
+using Api.Middleware;
 using Api.Models;
 using MediatR;
 
@@ -44,7 +45,7 @@ internal class ConfigurationService : IConfigurationService
 
         if (config == null)
         {
-            _logger.LogDebug("Configuration {Key} not found, returning default value", key);
+            _logger.LogDebug("Configuration {Key} not found, returning default value", LogValueSanitizer.Sanitize(key));
             return defaultValue;
         }
 
@@ -60,7 +61,7 @@ internal class ConfigurationService : IConfigurationService
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            _logger.LogError(ex, "Failed to deserialize configuration {Key} of type {ValueType}", key, config.ValueType);
+            _logger.LogError(ex, "Failed to deserialize configuration {Key} of type {ValueType}", LogValueSanitizer.Sanitize(key), LogValueSanitizer.Sanitize(config.ValueType));
             return defaultValue;
         }
     }

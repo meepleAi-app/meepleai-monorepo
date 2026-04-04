@@ -1,4 +1,4 @@
-using Api.BoundedContexts.UserLibrary.Application.Handlers;
+using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;

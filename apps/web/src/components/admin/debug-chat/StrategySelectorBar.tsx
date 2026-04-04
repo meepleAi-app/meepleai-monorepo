@@ -11,18 +11,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { PanelRightIcon, PanelRightCloseIcon, RefreshCwIcon } from 'lucide-react';
 
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/overlays/tooltip';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
 // Known RAG strategies (matching backend AgentStrategy value object)

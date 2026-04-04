@@ -175,7 +175,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         // Step 4: Generate answer with LLM and record metrics
         _logger.LogDebug("[AskQuestionHandler] Step 4: Generating LLM answer...");
         var sw4 = System.Diagnostics.Stopwatch.StartNew();
-        var (llmResponse, _) = await GenerateLlmAnswerAndRecordMetricsAsync(
+        var (llmResponse, llmResult) = await GenerateLlmAnswerAndRecordMetricsAsync(
             systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
         sw4.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 4 DONE: LLM generation completed in {ElapsedMs}ms - Response: {ResponseLength} chars",
@@ -200,10 +200,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             GameId: query.GameId,
             QueryLength: query.Question.Length,
             ChunksRetrieved: searchResults.Count,
-            ChunksUsed: searchResults.Count,
+            ChunksUsed: searchResults.Count, // currently equal to ChunksRetrieved — all retrieved chunks are passed to LLM context
             CitationsCount: response.Citations?.Count ?? 0,
             Strategy: query.SearchMode ?? "hybrid",
-            ModelUsed: "unknown",
+            ModelUsed: llmResult.Cost.ModelId ?? "unknown",
             LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
             CacheHit: false,
             NoRelevantContext: false);

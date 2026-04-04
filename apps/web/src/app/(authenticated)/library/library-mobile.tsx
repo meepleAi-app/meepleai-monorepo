@@ -105,9 +105,10 @@ export function LibraryMobile() {
     // Nessun stateFilter: il filtering per segmento è client-side
   });
 
-  const allGames = data?.items ?? [];
-
-  const games = useMemo(() => filterBySegment(allGames, activeSegment), [allGames, activeSegment]);
+  const games = useMemo(() => {
+    const allGames = data?.items ?? [];
+    return filterBySegment(allGames, activeSegment);
+  }, [data?.items, activeSegment]);
 
   // ── Subtitle text ────────────────────────────────────────────────────────
   const subtitle = stats

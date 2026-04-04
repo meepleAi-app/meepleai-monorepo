@@ -415,7 +415,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             // documentIds are VectorDocument.Ids (from GameDocumentDto returned by GetGameDocumentsQuery).
             // Resolve to PdfDocument.Ids via the VectorDocument aggregate before querying the PDF repo.
             var vectorDocs = await _vectorDocumentRepository.GetByGameIdAsync(gameId, ct).ConfigureAwait(false);
-            var pdfIds = vectorDocs
+            var pdfIds = (vectorDocs ?? [])
                 .Where(vd => documentIds.Contains(vd.Id))
                 .Select(vd => vd.PdfDocumentId)
                 .ToList();

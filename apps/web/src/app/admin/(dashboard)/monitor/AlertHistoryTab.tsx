@@ -7,19 +7,10 @@ import { format } from 'date-fns';
 import { History } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-interface AlertHistoryItem {
-  id: string;
-  alertType: string;
-  severity: 'Critical' | 'Warning' | 'Info';
-  message: string;
-  metadata: Record<string, unknown> | null;
-  triggeredAt: string;
-  resolvedAt: string | null;
-  isActive: boolean;
-  channelSent: Record<string, boolean> | null;
-}
+type AlertHistoryItem = Awaited<ReturnType<typeof api.admin.getAlertHistory>>[number];
 
 type SeverityFilter = 'All' | 'Critical' | 'Warning' | 'Info';
 type StatusFilter = 'All' | 'Active' | 'Resolved';
@@ -48,13 +39,9 @@ export function AlertHistoryTab() {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('All');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
 
-  const { data: alerts = [], isLoading } = useQuery<AlertHistoryItem[]>({
+  const { data: alerts = [], isLoading } = useQuery({
     queryKey: ['admin', 'alerts', 'history'],
-    queryFn: async () => {
-      const res = await fetch('/api/v1/admin/alerts');
-      if (!res.ok) return [];
-      return res.json();
-    },
+    queryFn: () => api.admin.getAlertHistory(),
     refetchInterval: 30_000,
     retry: false,
   });

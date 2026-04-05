@@ -17,12 +17,9 @@ import {
 
 import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { toast } from '@/components/layout';
-import { createAdminClient, type EmailQueueItem } from '@/lib/api/clients/adminClient';
+import { api } from '@/lib/api';
+import type { EmailQueueItem } from '@/lib/api/clients/adminClient';
 import { isNotFoundError } from '@/lib/api/core/errors';
-import { HttpClient } from '@/lib/api/core/httpClient';
-
-const httpClient = new HttpClient();
-const adminClient = createAdminClient({ httpClient });
 
 function StatCard({
   label,
@@ -86,7 +83,7 @@ export function EmailManagementTab() {
   // Queries
   const statsQuery = useQuery({
     queryKey: ['admin', 'email-stats'],
-    queryFn: () => adminClient.getEmailQueueStats(),
+    queryFn: () => api.admin.getEmailQueueStats(),
     refetchInterval: 30000, // Auto-refresh every 30s
     retry: (failureCount, err) => {
       if (isNotFoundError(err)) return false;
@@ -96,17 +93,17 @@ export function EmailManagementTab() {
 
   const deadLetterQuery = useQuery({
     queryKey: ['admin', 'dead-letter-emails'],
-    queryFn: () => adminClient.getDeadLetterEmails({ take: 50 }),
+    queryFn: () => api.admin.getDeadLetterEmails({ take: 50 }),
   });
 
   const historyQuery = useQuery({
     queryKey: ['admin', 'email-history', searchTerm],
-    queryFn: () => adminClient.getEmailHistory({ take: 20, search: searchTerm || undefined }),
+    queryFn: () => api.admin.getEmailHistory({ take: 20, search: searchTerm || undefined }),
   });
 
   // Mutations
   const retryMutation = useMutation({
-    mutationFn: (id: string) => adminClient.retryEmail(id),
+    mutationFn: (id: string) => api.admin.retryEmail(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'email-stats'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'dead-letter-emails'] });
@@ -116,7 +113,7 @@ export function EmailManagementTab() {
   });
 
   const retryAllMutation = useMutation({
-    mutationFn: () => adminClient.retryAllDeadLetters(),
+    mutationFn: () => api.admin.retryAllDeadLetters(),
     onSuccess: count => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'email-stats'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'dead-letter-emails'] });
@@ -126,7 +123,7 @@ export function EmailManagementTab() {
   });
 
   const sendTestMutation = useMutation({
-    mutationFn: (to: string) => adminClient.sendTestEmail(to),
+    mutationFn: (to: string) => api.admin.sendTestEmail(to),
     onSuccess: () => {
       toast.success('Test email sent');
       setTestEmailTo('');

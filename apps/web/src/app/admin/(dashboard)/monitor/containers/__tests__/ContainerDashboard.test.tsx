@@ -133,7 +133,10 @@ describe('ContainerDashboard', () => {
       expect(screen.getByTestId('view-logs-abc123')).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('view-logs-abc123')).toHaveAttribute('href', '/admin/monitor/logs');
+    expect(screen.getByTestId('view-logs-abc123')).toHaveAttribute(
+      'href',
+      '/admin/monitor?tab=logs'
+    );
   });
 
   it('auto-refresh controls are visible', async () => {

@@ -63,26 +63,38 @@ jobs:
 
             echo "🗑️ Deleting admin user from DB so seeder recreates with new password..."
 
-            # Step 1: Get admin user ID (role stored lowercase as 'superadmin')
+            # Step 1: Get admin user ID
             ADMIN_ID=$(docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -t -A -c \
               "SELECT \"Id\" FROM users WHERE \"Email\" = '${ADMIN_EMAIL}' AND lower(\"Role\") IN ('admin','superadmin') LIMIT 1;")
 
             echo "Admin ID: ${ADMIN_ID:-not found}"
 
             if [ -n "$ADMIN_ID" ]; then
-              # Step 2: Null FK references in system_configurations
-              docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
-                "UPDATE system_configurations SET \"CreatedByUserId\" = NULL WHERE \"CreatedByUserId\" = '${ADMIN_ID}'::uuid;" \
-                && echo "✅ Nulled CreatedByUserId FK" || echo "⚠️ FK null (CreatedByUserId) skipped"
+              # Step 2: Find a substitute user for NOT NULL FK references
+              # CreatedByUserId is NOT NULL in system_configurations, so we can't null it.
+              # Replace the admin FK reference with another existing user.
+              SUBSTITUTE_ID=$(docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -t -A -c \
+                "SELECT \"Id\" FROM users WHERE \"Id\" != '${ADMIN_ID}'::uuid LIMIT 1;")
 
+              echo "Substitute user ID: ${SUBSTITUTE_ID:-none}"
+
+              if [ -n "$SUBSTITUTE_ID" ]; then
+                docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+                  "UPDATE system_configurations SET \"CreatedByUserId\" = '${SUBSTITUTE_ID}'::uuid WHERE \"CreatedByUserId\" = '${ADMIN_ID}'::uuid;" \
+                  && echo "✅ Reassigned CreatedByUserId FK" || echo "⚠️ CreatedByUserId reassign skipped"
+              else
+                echo "⚠️ No substitute user found — attempting delete anyway"
+              fi
+
+              # Step 3: Null UpdatedByUserId (nullable column)
               docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
                 "UPDATE system_configurations SET \"UpdatedByUserId\" = NULL WHERE \"UpdatedByUserId\" = '${ADMIN_ID}'::uuid;" \
-                && echo "✅ Nulled UpdatedByUserId FK" || echo "⚠️ FK null (UpdatedByUserId) skipped"
+                && echo "✅ Nulled UpdatedByUserId FK" || echo "⚠️ UpdatedByUserId null skipped"
 
-              # Step 3: Delete admin user
+              # Step 4: Delete admin user
               docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
                 "DELETE FROM users WHERE \"Id\" = '${ADMIN_ID}'::uuid;" \
-                && echo "✅ Admin user deleted" || { echo "❌ Delete failed"; exit 1; }
+                && echo "✅ Admin user deleted" || { echo "❌ Delete failed — check remaining FK constraints"; exit 1; }
             else
               echo "⚠️ Admin user not found in DB — skipping delete"
             fi

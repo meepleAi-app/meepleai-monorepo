@@ -53,15 +53,24 @@ jobs:
               exit 1
             fi
 
+            # Load DB credentials from database.secret
+            DB_SECRET="/opt/meepleai/repo/infra/secrets/database.secret"
+            if [ -f "$DB_SECRET" ]; then
+              set -a; source "$DB_SECRET"; set +a
+            fi
+            PG_USER="${POSTGRES_USER:-meepleai}"
+            PG_DB="${POSTGRES_DB:-meepleai_db}"
+            echo "📦 Using DB: $PG_DB as user: $PG_USER"
+
             echo "🗑️ Deleting admin user from DB so seeder recreates with new password..."
-            docker exec meepleai-postgres psql -U postgres meepleai -c "
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c "
               DELETE FROM users WHERE email = '${ADMIN_EMAIL}' AND role = 'SuperAdmin';
             " && echo "✅ Admin user deleted from DB" || echo "⚠️ Delete failed or user not found"
 
             # Show result
-            docker exec meepleai-postgres psql -U postgres meepleai -c "
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c "
               SELECT count(*) as admin_count FROM users WHERE role = 'SuperAdmin';
-            "
+            " || echo "⚠️ Could not query admin count"
 
             echo "🔄 Restarting API container to pick up new secrets and re-seed..."
             cd /opt/meepleai/repo/infra

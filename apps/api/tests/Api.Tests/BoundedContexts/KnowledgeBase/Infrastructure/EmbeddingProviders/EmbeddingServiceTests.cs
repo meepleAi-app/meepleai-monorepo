@@ -48,6 +48,15 @@ public class EmbeddingServiceTests
 
         _providerFactoryMock.Setup(x => x.GetPrimaryProvider()).Returns(_primaryProviderMock.Object);
         _providerFactoryMock.Setup(x => x.GetFallbackProvider()).Returns(_fallbackProviderMock.Object);
+
+        // Moq does not call default interface implementations — set up 3-param language overload explicitly
+        _primaryProviderMock
+            .Setup(x => x.GenerateBatchEmbeddingsAsync(
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingProviderResult.CreateSuccess(
+                new List<float[]> { new float[] { 0.1f, 0.2f } }, "test-model"));
     }
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()

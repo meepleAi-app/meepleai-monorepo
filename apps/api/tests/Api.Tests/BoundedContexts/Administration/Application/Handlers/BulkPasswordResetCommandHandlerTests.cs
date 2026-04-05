@@ -47,6 +47,8 @@ public class BulkPasswordResetCommandHandlerTests
         var user1 = CreateTestUser(userId1, "user1@test.com");
         var user2 = CreateTestUser(userId2, "user2@test.com");
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user1);
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId2, It.IsAny<CancellationToken>()))
@@ -83,6 +85,8 @@ public class BulkPasswordResetCommandHandlerTests
 
         var user1 = CreateTestUser(userId1, "user1@test.com");
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user1);
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId2, It.IsAny<CancellationToken>()))
@@ -164,6 +168,8 @@ public class BulkPasswordResetCommandHandlerTests
         var requesterId = Guid.NewGuid();
         var user = CreateTestUser(userId, "user@test.com");
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
@@ -185,16 +191,25 @@ public class BulkPasswordResetCommandHandlerTests
     [Fact]
     public async Task Handle_WhenInfrastructureExceptionOccurs_ShouldNotLeakExceptionMessage()
     {
-        // Arrange — repository throws with sensitive infrastructure details
+        // Arrange — requester loads fine; per-user GetByIdAsync throws infrastructure exception
         const string sensitiveMessage = "Connection timeout: server=prod-db.internal;port=5432;password=s3cr3t";
+        var requesterId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        // Requester lookup succeeds
         _mockUserRepository
-            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
+
+        // Per-user lookup throws with sensitive infrastructure details
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException(sensitiveMessage));
 
         var command = new BulkPasswordResetCommand(
-            new List<Guid> { Guid.NewGuid() },
+            new List<Guid> { userId },
             "NewPassword123!",
-            Guid.NewGuid()
+            requesterId
         );
 
         // Act — the per-item catch handles the exception; no DomainException is thrown
@@ -214,8 +229,12 @@ public class BulkPasswordResetCommandHandlerTests
         // Arrange — UpdateAsync throws infrastructure exception for one user
         const string sensitiveDbMessage = "Deadlock detected on table Users: xact_abort";
         var userId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
         var user = CreateTestUser(userId, "user@test.com");
 
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
@@ -226,7 +245,7 @@ public class BulkPasswordResetCommandHandlerTests
         var command = new BulkPasswordResetCommand(
             new List<Guid> { userId },
             "NewPassword123!",
-            Guid.NewGuid()
+            requesterId
         );
 
         // Act
@@ -246,6 +265,17 @@ public class BulkPasswordResetCommandHandlerTests
             displayName: "Test User",
             passwordHash: PasswordHash.Create("OldPassword123!"),
             role: Role.User
+        );
+    }
+
+    private static User CreateSuperAdminUser(Guid id)
+    {
+        return new User(
+            id: id,
+            email: new Email("superadmin@test.com"),
+            displayName: "Super Admin",
+            passwordHash: PasswordHash.Create("SuperAdminPassword123!"),
+            role: Role.SuperAdmin
         );
     }
 }

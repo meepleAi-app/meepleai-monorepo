@@ -619,29 +619,39 @@ internal static class AdminUserActivityEndpoints
 
     private static async Task<IResult> HandleImpersonateUser(
         Guid userId,
+        Api.Routing.Admin.ImpersonateUserRequest request,
         HttpContext context,
         IMediator mediator,
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        var (authorized, session, error) = context.RequireAdminSession();
+        var (authorized, session, error) = context.RequireSuperAdminSession();
         if (!authorized) return error!;
 
-        logger.LogWarning("⚠️ Admin {AdminId} attempting to impersonate user {UserId}",
-            session!.User!.Id, userId);
+        if (string.IsNullOrWhiteSpace(request?.Reason) || request.Reason.Trim().Length < 10)
+            return Results.BadRequest(new { error = "Impersonation reason is required (minimum 10 characters)" });
+
+        logger.LogWarning("⚠️ SuperAdmin {AdminId} attempting to impersonate user {UserId}, reason: {Reason}",
+            session!.User!.Id, userId, request.Reason);
 
         try
         {
             var command = new ImpersonateUserCommand(
                 userId,
-                session.User.Id);
+                session.User.Id,
+                request.Reason.Trim());
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogWarning("⚠️ Impersonation successful: Admin {AdminId} → User {UserId}",
+            logger.LogWarning("⚠️ Impersonation successful: SuperAdmin {AdminId} → User {UserId}",
                 session.User.Id, userId);
 
             return Results.Ok(result);
+        }
+        catch (ForbiddenException ex)
+        {
+            logger.LogWarning(ex, "Forbidden impersonation attempt by {AdminId} on user {UserId}", session.User.Id, userId);
+            return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
         }
         catch (NotFoundException ex)
         {

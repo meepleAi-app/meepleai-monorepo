@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
@@ -12,6 +13,12 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 internal class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleCommand, UserDto>
 {
     private static readonly string[] AllowedRoles = { "Admin", "Editor", "Creator", "User" };
+
+    // ADM-002: Role hierarchy — higher level = more privileged
+    private static readonly Dictionary<string, int> RoleLevels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "user", 0 }, { "creator", 1 }, { "editor", 2 }, { "admin", 3 }, { "superadmin", 4 }
+    };
 
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -35,9 +42,28 @@ internal class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleComm
         Guard.AgainstNullOrWhiteSpace(command.NewRole, nameof(command.NewRole));
         Guard.AgainstInvalidValue(command.NewRole, AllowedRoles, nameof(command.NewRole));
 
+        // ADM-002: Privilege escalation check — cannot assign role >= caller's own level
+        var adminLevel = RoleLevels.GetValueOrDefault(command.AdminRole, 0);
+        var targetLevel = RoleLevels.GetValueOrDefault(command.NewRole, 0);
+
+        if (targetLevel >= adminLevel)
+            throw new ForbiddenException(
+                $"Cannot assign role '{command.NewRole}': you can only assign roles below your own privilege level");
+
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
             throw new DomainException($"User {command.UserId} not found");
+
+        // ADM-002: Minimum SuperAdmin guard — prevent demoting the last SuperAdmin
+        if (user.Role.Value.Equals("superadmin", StringComparison.OrdinalIgnoreCase) &&
+            !command.NewRole.Equals("superadmin", StringComparison.OrdinalIgnoreCase))
+        {
+            var superAdminCount = await _userRepository.CountByRoleAsync(
+                "superadmin", cancellationToken).ConfigureAwait(false);
+            if (superAdminCount <= 1)
+                throw new ForbiddenException(
+                    "Cannot demote the last SuperAdmin. The system requires at least one SuperAdmin.");
+        }
 
         var newRole = Role.Parse(command.NewRole);
         user.UpdateRole(newRole);

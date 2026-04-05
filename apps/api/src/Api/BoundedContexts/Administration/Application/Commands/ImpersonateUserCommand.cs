@@ -7,8 +7,10 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Command to impersonate user for debugging (Issue #2890).
 /// HIGH SECURITY RISK: Creates full user session for admin debugging.
 /// Note: Audit logging is handled manually in the handler (richer context with separate admin/target entries).
+/// ADM-001: Reason is mandatory for audit trail compliance.
 /// </summary>
 internal record ImpersonateUserCommand(
     Guid TargetUserId,
-    Guid AdminUserId
+    Guid AdminUserId,
+    string Reason
 ) : ICommand<ImpersonateUserResponseDto>;

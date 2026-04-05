@@ -34,6 +34,13 @@ public interface IUserRepository : IRepository<User, Guid>
     Task<int> CountAdminsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Counts users with a specific role name (case-insensitive).
+    /// Used for privilege escalation guards (e.g., ensure at least one SuperAdmin remains).
+    /// ADM-002: Privilege escalation prevention.
+    /// </summary>
+    Task<int> CountByRoleAsync(string roleName, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all backup codes for a user (used for 2FA).
     /// </summary>
     Task<IReadOnlyList<Api.Infrastructure.Entities.UserBackupCodeEntity>> GetBackupCodesAsync(Guid userId, CancellationToken cancellationToken = default);

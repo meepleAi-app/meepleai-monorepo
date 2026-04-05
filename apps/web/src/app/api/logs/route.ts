@@ -21,7 +21,8 @@ function detectLevel(line: string): LokiLogEntry['level'] {
 }
 
 function nsToIso(ns: string): string {
-  const ms = Math.floor(Number(ns) / 1_000_000);
+  // Loki timestamps are nanoseconds since epoch — use BigInt to avoid precision loss
+  const ms = Number(BigInt(ns) / BigInt(1_000_000));
   return new Date(ms).toISOString();
 }
 

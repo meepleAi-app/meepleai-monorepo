@@ -236,8 +236,8 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { Email = "", Password = "" });
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // Assert — FluentValidation returns 422 UnprocessableEntity for validation errors
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     // ========================================

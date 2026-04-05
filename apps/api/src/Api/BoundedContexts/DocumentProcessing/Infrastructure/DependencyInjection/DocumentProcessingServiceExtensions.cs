@@ -7,6 +7,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Extensions;
 using Api.Infrastructure.BackgroundServices;
+using Api.Services;
 using Api.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
@@ -103,6 +104,9 @@ internal static class DocumentProcessingServiceExtensions
             services.AddKeyedScoped<IPdfTextExtractor, UnstructuredPdfTextExtractor>(PdfExtractorKeys.Unstructured);
             services.AddKeyedScoped<IPdfTextExtractor, SmolDoclingPdfTextExtractor>(PdfExtractorKeys.SmolDocling);
             services.AddKeyedScoped<IPdfTextExtractor, DocnetPdfTextExtractor>(PdfExtractorKeys.Docnet);
+
+            // Register ITextChunkingService required by EnhancedPdfProcessingOrchestrator
+            services.AddScoped<ITextChunkingService, TextChunkingService>();
 
             // Register orchestrator application service
             services.AddScoped<EnhancedPdfProcessingOrchestrator>();

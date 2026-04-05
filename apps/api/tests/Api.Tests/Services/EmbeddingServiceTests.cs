@@ -56,6 +56,18 @@ public sealed class EmbeddingServiceTests
         _fallbackProviderMock.Setup(x => x.ModelName).Returns("text-embedding-ada-002");
         _fallbackProviderMock.Setup(x => x.Dimensions).Returns(1536);
 
+        // Moq does not call default interface implementations — set up 3-param language overload explicitly
+        _primaryProviderMock
+            .Setup(x => x.GenerateBatchEmbeddingsAsync(
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingProviderResult
+            {
+                Success = true,
+                Embeddings = new List<float[]> { new float[1024] }
+            });
+
         _service = new EmbeddingService(
             _providerFactoryMock.Object,
             Options.Create(_config),

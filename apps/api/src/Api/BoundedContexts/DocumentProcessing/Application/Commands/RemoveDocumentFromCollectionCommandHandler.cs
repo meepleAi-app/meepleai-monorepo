@@ -24,9 +24,9 @@ internal class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<Remo
         IUnitOfWork unitOfWork,
         ILogger<RemoveDocumentFromCollectionCommandHandler> logger)
     {
-        _collectionRepository = collectionRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _collectionRepository = collectionRepository ?? throw new ArgumentNullException(nameof(collectionRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<bool> Handle(RemoveDocumentFromCollectionCommand command, CancellationToken cancellationToken)
@@ -40,7 +40,7 @@ internal class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<Remo
         var collection = await _collectionRepository.GetByIdAsync(command.CollectionId, cancellationToken).ConfigureAwait(false);
         if (collection == null)
         {
-            throw new DomainException($"Collection {command.CollectionId} not found");
+            throw new DomainException("Collection not found.");
         }
 
         // SECURITY: Verify user owns this collection (same pattern as AddDocumentToCollectionCommandHandler)

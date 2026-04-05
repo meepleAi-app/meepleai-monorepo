@@ -44,7 +44,7 @@ internal class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocume
         var collection = await _collectionRepository.GetByIdAsync(command.CollectionId, cancellationToken).ConfigureAwait(false);
         if (collection == null)
         {
-            throw new DomainException($"Collection {command.CollectionId} not found");
+            throw new DomainException("Collection not found.");
         }
 
         // SECURITY: Verify user owns this collection (quality review issue #5)
@@ -57,14 +57,13 @@ internal class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocume
         var pdfDoc = await _pdfRepository.GetByIdAsync(command.PdfDocumentId, cancellationToken).ConfigureAwait(false);
         if (pdfDoc == null)
         {
-            throw new DomainException($"PDF document {command.PdfDocumentId} not found");
+            throw new DomainException("PDF document not found.");
         }
 
         // Validate PDF belongs to same game as collection
         if (pdfDoc.GameId != collection.GameId)
         {
-            throw new DomainException(
-                $"PDF document {command.PdfDocumentId} (game {pdfDoc.GameId}) does not belong to collection's game {collection.GameId}");
+            throw new DomainException("PDF document does not belong to the collection's game.");
         }
 
         // Parse and validate document type

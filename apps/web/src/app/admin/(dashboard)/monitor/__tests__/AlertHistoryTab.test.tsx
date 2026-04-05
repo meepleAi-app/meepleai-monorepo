@@ -1,6 +1,16 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const mockGetAlertHistory = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/api', () => ({
+  api: {
+    admin: {
+      getAlertHistory: mockGetAlertHistory,
+    },
+  },
+}));
 
 import { AlertHistoryTab } from '../AlertHistoryTab';
 
@@ -33,7 +43,7 @@ const mockAlerts = [
   {
     id: 'alert-1',
     alertType: 'CpuUsage',
-    severity: 'Critical',
+    severity: 'Critical' as const,
     message: 'CPU usage exceeded 90% threshold',
     metadata: null,
     triggeredAt: '2026-03-15T10:00:00Z',
@@ -44,7 +54,7 @@ const mockAlerts = [
   {
     id: 'alert-2',
     alertType: 'MemoryUsage',
-    severity: 'Warning',
+    severity: 'Warning' as const,
     message: 'Memory usage at 80%',
     metadata: null,
     triggeredAt: '2026-03-15T12:00:00Z',
@@ -60,17 +70,7 @@ const mockAlerts = [
 
 beforeEach(() => {
   vi.clearAllMocks();
-
-  global.fetch = vi.fn(() =>
-    Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve(mockAlerts),
-    } as Response)
-  );
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
+  mockGetAlertHistory.mockResolvedValue(mockAlerts);
 });
 
 // ============================================================================
@@ -87,12 +87,7 @@ describe('AlertHistoryTab', () => {
   });
 
   it('shows "No alerts" empty state when API returns empty array', async () => {
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([]),
-      } as Response)
-    );
+    mockGetAlertHistory.mockResolvedValue([]);
 
     renderWithProviders(<AlertHistoryTab />);
 
@@ -116,7 +111,6 @@ describe('AlertHistoryTab', () => {
     renderWithProviders(<AlertHistoryTab />);
 
     await waitFor(() => {
-      // Critical appears in the dropdown option AND as badge — at least one match is enough
       expect(screen.getAllByText('Critical').length).toBeGreaterThanOrEqual(1);
     });
 
@@ -148,12 +142,7 @@ describe('AlertHistoryTab', () => {
   });
 
   it('handles API error gracefully by showing no alerts', async () => {
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: false,
-        status: 500,
-      } as Response)
-    );
+    mockGetAlertHistory.mockRejectedValue(new Error('Network error'));
 
     renderWithProviders(<AlertHistoryTab />);
 

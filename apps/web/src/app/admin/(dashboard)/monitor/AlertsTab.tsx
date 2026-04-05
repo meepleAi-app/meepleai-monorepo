@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { AlertTriangleIcon, Plus, RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
@@ -42,8 +42,14 @@ export function AlertsTab() {
       .finally(() => setLoading(false));
   };
 
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     loadData();
+    intervalRef.current = setInterval(loadData, 30_000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
   const handleToggle = (id: string) => {
@@ -66,13 +72,6 @@ export function AlertsTab() {
         toast.error("Errore nell'eliminazione della regola");
       }
     );
-  };
-
-  const handleEdit = (rule: AlertRule) => {
-    // Toggle enabled state as a lightweight edit action for now.
-    // Full editing UI can be added when alert rule form component is built.
-    handleToggle(rule.id);
-    toast.info('Modifica regola: toggle stato abilitazione');
   };
 
   if (loading) {
@@ -117,12 +116,7 @@ export function AlertsTab() {
           Nuova Regola
         </Button>
       </div>
-      <AlertRuleList
-        rules={rules}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onToggle={handleToggle}
-      />
+      <AlertRuleList rules={rules} onDelete={handleDelete} onToggle={handleToggle} />
       <CreateAlertRuleDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}

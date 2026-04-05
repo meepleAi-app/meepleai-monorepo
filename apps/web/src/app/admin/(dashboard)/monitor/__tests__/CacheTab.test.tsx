@@ -2,6 +2,8 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 const mockGetInfrastructureDetails = vi.hoisted(() => vi.fn());
 const mockClearKBCache = vi.hoisted(() => vi.fn());
+const mockToastSuccess = vi.hoisted(() => vi.fn());
+const mockToastError = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -9,6 +11,13 @@ vi.mock('@/lib/api', () => ({
       getInfrastructureDetails: mockGetInfrastructureDetails,
       clearKBCache: mockClearKBCache,
     },
+  },
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: mockToastSuccess,
+    error: mockToastError,
   },
 }));
 
@@ -77,6 +86,37 @@ describe('CacheTab', () => {
     await user.click(screen.getByRole('button', { name: /clear cache/i }));
 
     expect(mockClearKBCache).toHaveBeenCalledOnce();
+  });
+
+  it('shows success toast after clearing cache', async () => {
+    const user = userEvent.setup();
+    render(<CacheTab />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /clear cache/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /clear cache/i }));
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith('Cache KB svuotata');
+    });
+  });
+
+  it('shows error toast when clear cache fails', async () => {
+    mockClearKBCache.mockRejectedValue(new Error('Network error'));
+    const user = userEvent.setup();
+    render(<CacheTab />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /clear cache/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /clear cache/i }));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Errore nel svuotamento della cache');
+    });
   });
 
   it('handles API errors gracefully', async () => {

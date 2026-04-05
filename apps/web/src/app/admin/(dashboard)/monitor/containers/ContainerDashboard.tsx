@@ -96,7 +96,7 @@ function ContainerCard({ container }: ContainerCardProps) {
       {/* Actions */}
       <div className="flex items-center gap-2">
         <Link
-          href={`/admin/monitor/logs`}
+          href={`/admin/monitor?tab=logs`}
           className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
           data-testid={`view-logs-${container.id}`}
         >

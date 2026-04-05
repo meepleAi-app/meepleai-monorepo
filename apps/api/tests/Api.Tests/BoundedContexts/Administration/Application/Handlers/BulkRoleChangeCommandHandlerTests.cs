@@ -198,16 +198,25 @@ public class BulkRoleChangeCommandHandlerTests
     [Fact]
     public async Task Handle_WhenInfrastructureExceptionOccurs_ShouldNotLeakExceptionMessage()
     {
-        // Arrange — GetByIdAsync throws with sensitive infrastructure details
+        // Arrange — requester loads fine; per-user GetByIdAsync throws sensitive infrastructure exception
         const string sensitiveMessage = "EF Core transaction failed: server=prod-db;uid=sa;pwd=secret123";
+        var requesterId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        // Requester lookup succeeds
         _mockUserRepository
-            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
+
+        // Per-user lookup throws with sensitive infrastructure details
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException(sensitiveMessage));
 
         var command = new BulkRoleChangeCommand(
-            new List<Guid> { Guid.NewGuid() },
+            new List<Guid> { userId },
             "admin",
-            Guid.NewGuid()
+            requesterId
         );
 
         // Act — the per-item catch handles the exception; no DomainException is thrown

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.TestHelpers;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -30,6 +32,13 @@ public sealed class GetKnowledgeBaseStatusPrivateGameTests : IDisposable
     [Fact]
     public async Task Handle_PrivateGame_ReadyPdf_ReturnsCompletedStatus()
     {
+        _dbContext.PrivateGames.Add(new PrivateGameEntity
+        {
+            Id = PrivateGameId,
+            Title = "Test Rulebook Game",
+            OwnerId = Guid.NewGuid(),
+            Source = PrivateGameSource.Manual,
+        });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
@@ -50,6 +59,7 @@ public sealed class GetKnowledgeBaseStatusPrivateGameTests : IDisposable
         result.Should().NotBeNull();
         result!.Status.Should().Be("Completed");
         result.Progress.Should().Be(100);
+        result.GameName.Should().Be("Test Rulebook Game");
     }
 
     [Fact]

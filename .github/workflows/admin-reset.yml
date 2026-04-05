@@ -91,18 +91,29 @@ jobs:
               sleep 5
             done
 
-            echo "🧪 Verifying login works..."
-            sleep 2
-            RESULT=$(curl -sf -X POST https://meepleai.app/api/v1/auth/login \
-              -H "Content-Type: application/json" \
-              -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${NEW_PASSWORD}\"}" 2>/dev/null || echo "CURL_FAILED")
+            echo "🧪 Verifying login works (up to 60s for seeder to run)..."
+            LOGIN_OK=false
+            for attempt in $(seq 1 12); do
+              sleep 5
+              RESULT=$(curl -sf -X POST https://meepleai.app/api/v1/auth/login \
+                -H "Content-Type: application/json" \
+                -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${NEW_PASSWORD}\"}" 2>/dev/null || echo "CURL_FAILED")
 
-            if echo "$RESULT" | grep -q '"sessionToken"'; then
-              echo "✅ Admin login verified successfully!"
-            elif echo "$RESULT" | grep -q '"requiresTwoFactor"'; then
-              echo "✅ Admin login successful (2FA required)"
-            else
-              echo "❌ Login verification failed: $RESULT"
+              if echo "$RESULT" | grep -q '"sessionToken"'; then
+                echo "✅ Admin login verified successfully! (attempt $attempt)"
+                LOGIN_OK=true
+                break
+              elif echo "$RESULT" | grep -q '"requiresTwoFactor"'; then
+                echo "✅ Admin login successful (2FA required, attempt $attempt)"
+                LOGIN_OK=true
+                break
+              else
+                echo "⏳ Attempt $attempt/12: $RESULT"
+              fi
+            done
+
+            if [ "$LOGIN_OK" != "true" ]; then
+              echo "❌ Login verification failed after 60s"
               exit 1
             fi
         env:

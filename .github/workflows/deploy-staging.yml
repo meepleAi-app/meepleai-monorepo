@@ -440,6 +440,11 @@ jobs:
 
             echo "🚀 Deploying services:$SERVICES"
 
+            # Remove existing containers before recreating to avoid "name already in use" conflicts
+            # from orphaned containers left by interrupted deploys (e.g., cancelled workflows)
+            docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
+              --profile minimal rm -sf $SERVICES 2>/dev/null || true
+
             # Deploy only changed services (--force-recreate ensures container restarts even if image digest unchanged)
             docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
               --profile minimal up -d --no-deps --force-recreate $SERVICES

@@ -5,10 +5,12 @@
  * backoff and jitter to prevent thundering herd problems.
  *
  * Retryable errors:
- * - 500 Internal Server Error
- * - 502 Bad Gateway
- * - 503 Service Unavailable
+ * - 502 Bad Gateway (upstream/load-balancer transient)
+ * - 503 Service Unavailable (upstream/load-balancer transient)
  * - Network errors (fetch failures)
+ *
+ * Non-retryable server errors:
+ * - 500 Internal Server Error (application bug — retrying won't help)
  *
  * Non-retryable errors:
  * - 4xx client errors (except timeouts)
@@ -75,10 +77,12 @@ export function isRetryableError(error: unknown): boolean {
     return true;
   }
 
-  // Server errors (5xx) are retryable
+  // Gateway/infrastructure errors are retryable; application errors (500) are not.
+  // 500 = application bug — retrying won't help and causes console noise (e.g. /auth/me on page load).
+  // 502/503 = upstream/load-balancer transient issues — safe to retry.
   if (error instanceof ServerError) {
     const statusCode = error.statusCode;
-    return statusCode === 500 || statusCode === 502 || statusCode === 503;
+    return statusCode === 502 || statusCode === 503;
   }
 
   // Generic fetch errors are retryable

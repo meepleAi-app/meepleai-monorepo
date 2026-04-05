@@ -1,22 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import type { LokiLogEntry, LokiQueryRangeResponse, LogsApiResponse } from '@/lib/loki/types';
+import { isAdminRole } from '@/lib/utils/roles';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const ADMIN_ROLES = new Set(['admin', 'superadmin']);
 // container_name=~"meepleai-.*" scopea ai soli container MeepleAI (Fluent-bit label standard)
 const LOKI_QUERY = '{container_name=~"meepleai-.*"} |~ "(?i)(error|warn|fatal)"';
 const LIMIT = 100;
 const LOOK_BACK_HOURS = 24;
-
-function isAdminCookie(cookieHeader: string | null): boolean {
-  if (!cookieHeader) return false;
-  const match = cookieHeader.match(/meepleai_user_role=([^;]+)/);
-  if (!match) return false;
-  return ADMIN_ROLES.has(match[1].toLowerCase());
-}
 
 function detectLevel(line: string): LokiLogEntry['level'] {
   const lower = line.toLowerCase();
@@ -33,8 +26,8 @@ function nsToIso(ns: string): string {
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse<LogsApiResponse>> {
-  const cookieHeader = request.headers.get('cookie');
-  if (!isAdminCookie(cookieHeader)) {
+  const userRole = request.cookies.get('meepleai_user_role')?.value ?? null;
+  if (!isAdminRole(userRole)) {
     return NextResponse.json({ entries: [] }, { status: 401 });
   }
 

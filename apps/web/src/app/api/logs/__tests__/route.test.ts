@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -11,6 +11,11 @@ vi.stubEnv('LOKI_URL', 'http://loki:3100');
 describe('GET /api/logs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.stubEnv('LOKI_URL', 'http://loki:3100');
   });
 
   it('returns 401 when meepleai_user_role cookie is missing', async () => {
@@ -37,11 +42,10 @@ describe('GET /api/logs', () => {
       headers: { cookie: 'meepleai_user_role=admin' },
     });
     const res = await GET(req);
-    const body = await res.json() as { lokiUnavailable: boolean; entries: unknown[] };
+    const body = (await res.json()) as { lokiUnavailable: boolean; entries: unknown[] };
     expect(res.status).toBe(200);
     expect(body.lokiUnavailable).toBe(true);
     expect(body.entries).toHaveLength(0);
-    vi.stubEnv('LOKI_URL', 'http://loki:3100');
   });
 
   it('returns lokiUnavailable when Loki fetch fails', async () => {
@@ -52,7 +56,7 @@ describe('GET /api/logs', () => {
       headers: { cookie: 'meepleai_user_role=admin' },
     });
     const res = await GET(req);
-    const body = await res.json() as { lokiUnavailable: boolean };
+    const body = (await res.json()) as { lokiUnavailable: boolean };
     expect(res.status).toBe(200);
     expect(body.lokiUnavailable).toBe(true);
   });
@@ -86,7 +90,7 @@ describe('GET /api/logs', () => {
     });
     const res = await GET(req);
     expect(res.status).toBe(200);
-    const body = await res.json() as { entries: Array<{ container: string; level: string }> };
+    const body = (await res.json()) as { entries: Array<{ container: string; level: string }> };
     expect(body.entries).toHaveLength(2);
     expect(body.entries[0].container).toBe('meepleai-api');
     // Sort descending: WARNING (più recente) è entries[0], ERROR (più vecchio) è entries[1]

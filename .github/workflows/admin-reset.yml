@@ -62,18 +62,8 @@ jobs:
             echo "📦 Using DB: $PG_DB as user: $PG_USER"
 
             echo "🔐 Computing PBKDF2-SHA256 hash of new password..."
-            # API uses: v1.210000.<base64_salt>.<base64_hash> (PBKDF2-SHA256, 210k iterations)
-            NEW_HASH=$(python3 - <<'PYEOF'
-import hashlib, os, base64, sys
-password = os.environ.get("NEW_PASSWORD", "")
-if not password:
-    print("ERROR: NEW_PASSWORD not set", file=sys.stderr)
-    sys.exit(1)
-salt = os.urandom(16)
-h = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 210000, dklen=32)
-print(f"v1.210000.{base64.b64encode(salt).decode()}.{base64.b64encode(h).decode()}")
-PYEOF
-)
+            # API uses: v1.210000.<base64_salt>.<base64_hash> (PBKDF2-SHA256, 210k iterations, PasswordHash.Create())
+            NEW_HASH=$(python3 -c 'import hashlib,os,base64; p=os.environ["NEW_PASSWORD"]; s=os.urandom(16); h=hashlib.pbkdf2_hmac("sha256",p.encode("utf-8"),s,210000,dklen=32); print("v1.210000."+base64.b64encode(s).decode()+"."+base64.b64encode(h).decode())')
 
             if [ -z "$NEW_HASH" ]; then
               echo "❌ Failed to compute password hash"

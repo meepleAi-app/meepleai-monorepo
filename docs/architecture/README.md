@@ -1,371 +1,64 @@
-# Infrastructure Documentation
+# Architecture Documentation
 
-**Docker Compose + Traefik + Monitoring**
-
----
-
-## Quick Start
-
-**Prerequisites**:
-- Docker 24+
-- Docker Compose 2.20+
-
-**Setup**:
-```bash
-# 1. Generate secrets
-cd infra/secrets
-pwsh setup-secrets.ps1 -SaveGenerated
-
-# 2. Start infrastructure
-cd ../
-docker compose up -d postgres qdrant redis
-
-# 3. Verify services
-docker compose ps
-```
+**MeepleAI System Architecture** — ADRs, DDD, diagrammi, overview di sistema
 
 ---
 
-## Architecture
+## Quick Navigation
 
-### Service Stack
-
-**Core Services**:
-- PostgreSQL 16 (database)
-- Redis 7 (cache + sessions)
-- Qdrant (vector search)
-
-**Application**:
-- API (.NET 9)
-- Web (Next.js 14)
-
-**AI/ML Services**:
-- embedding-service (Python)
-- reranker-service (Python)
-- unstructured-service (PDF processing)
-- smoldocling-service (OCR)
-
-**Infrastructure**:
-- Traefik (reverse proxy)
-- Prometheus (metrics)
-- Grafana (dashboards)
+| Risorsa | Percorso | Descrizione |
+|---------|----------|-------------|
+| **System Architecture** | [overview/system-architecture.md](./overview/system-architecture.md) | Overview completo dello stack |
+| **ADR Index** | [adr/README.md](./adr/README.md) | Architecture Decision Records |
+| **DDD Quick Reference** | [ddd/quick-reference.md](./ddd/quick-reference.md) | Pattern DDD e Bounded Contexts |
+| **Diagrams** | [diagrams/README.md](./diagrams/README.md) | Mermaid diagrams (CQRS, RAG, PDF pipeline) |
+| **Bounded Contexts** | [../bounded-contexts/README.md](../bounded-contexts/README.md) | 18 BC con responsabilità e pattern |
 
 ---
 
-## Configuration
+## Stack Tecnologico
 
-### Docker Compose Profiles
+**Backend** (.NET 9): ASP.NET Minimal APIs + MediatR | PostgreSQL 16 + EF Core (pgvector) + Redis | FluentValidation
 
-**Minimal** (core only):
-```bash
-docker compose --profile minimal up -d
-# Services: postgres, redis, qdrant, api, web
-```
+**Frontend** (Next.js 16): App Router + React 19 | Tailwind 4 + shadcn/ui | Zustand + React Query
 
-**Dev** (with monitoring):
-```bash
-docker compose --profile dev up -d
-# Services: minimal + prometheus, grafana
-```
-
-**Full** (all services):
-```bash
-docker compose --profile full up -d
-# Services: everything including AI/ML, n8n, mailpit
-```
-
-### Environment Variables
-
-**Location**: `infra/secrets/*.secret`
-
-**Critical Secrets** (required):
-- `database.secret` - PostgreSQL credentials
-- `redis.secret` - Redis password
-- `qdrant.secret` - Qdrant API key
-- `jwt.secret` - JWT signing key
-- `admin.secret` - Admin credentials
-- `embedding-service.secret` - Embedding model
-
-**Important Secrets** (warnings):
-- `openrouter.secret` - LLM API key
-- `unstructured-service.secret` - PDF processing
-- `bgg.secret` - BoardGameGeek API
-
-**Optional Secrets**:
-- `oauth.secret` - OAuth providers
-- `email.secret` - Email service
-- `monitoring.secret` - Grafana admin
+**AI** (Python): sentence-transformers | cross-encoder | Unstructured | SmolDocling
 
 ---
 
-## Service Management
+## Pattern Architetturali
 
-### Common Commands
-
-```bash
-# Start services
-docker compose up -d
-
-# View logs
-docker compose logs -f
-docker compose logs -f api
-
-# Restart service
-docker compose restart api
-
-# Stop all services
-docker compose down
-
-# Stop and remove volumes (⚠️ DATA LOSS)
-docker compose down -v
-
-# Check service health
-docker compose ps
-```
-
-### Health Checks
-
-**Endpoints**:
-- API: http://localhost:8080/health
-- Grafana: http://localhost:3001
-- Traefik: http://localhost:8090
-
-**Check Script**:
-```bash
-pwsh -c "Invoke-WebRequest -Uri http://localhost:8080/health | Select-Object StatusCode,Content"
-```
+| Pattern | Implementazione |
+|---------|----------------|
+| **DDD** | 18 Bounded Contexts con Domain/Application/Infrastructure |
+| **CQRS** | Commands + Queries via MediatR — zero direct service injection negli endpoint |
+| **Clean Architecture** | Dipendenze verso l'interno: Infrastructure → Application → Domain |
+| **Event-Driven** | Domain Events per comunicazione inter-context |
+| **RAG** | Hybrid retrieval (vector pgvector + keyword FTS) con multi-layer validation |
 
 ---
 
-## Networking
+## ADR Essenziali
 
-### Traefik Reverse Proxy
+| ADR | Decisione | Importanza |
+|-----|-----------|-----------|
+| [ADR-006](./adr/adr-006-multi-layer-validation.md) | Multi-Layer Validation (5 layer) | 🔴 Critico |
+| [ADR-007](./adr/adr-007-hybrid-llm.md) | Hybrid LLM (Ollama + OpenRouter) | 🟡 Alto |
+| [ADR-009](./adr/adr-009-centralized-error-handling.md) | Centralized Error Handling | 🟡 Alto |
+| [ADR-012](./adr/adr-012-fluentvalidation-cqrs.md) | FluentValidation con CQRS | 🟡 Alto |
+| [ADR-050](./adr/adr-050-pgvector-migration.md) | Migrazione Qdrant → pgvector | 🟡 Alto |
 
-**Configuration**: `infra/traefik/traefik.yml`
-
-**Routes**:
-```yaml
-# API
-api.localhost → localhost:8080
-
-# Frontend
-localhost → localhost:3000
-
-# Grafana
-grafana.localhost → localhost:3001
-```
-
-**Dashboard**: http://localhost:8090
-
-### Service Discovery
-
-Traefik auto-discovers services via Docker labels:
-
-```yaml
-labels:
-  - "traefik.enable=true"
-  - "traefik.http.routers.api.rule=Host(`api.localhost`)"
-  - "traefik.http.services.api.loadbalancer.server.port=8080"
-```
+→ [Indice completo ADR](./adr/README.md)
 
 ---
 
-## Monitoring
+## Infrastruttura Docker
 
-### Prometheus
-
-**URL**: http://localhost:9090
-**Config**: `infra/monitoring/prometheus/prometheus.yml`
-
-**Metrics**:
-- Application metrics (custom)
-- Container metrics (cAdvisor)
-- PostgreSQL metrics (postgres_exporter)
-
-### Grafana
-
-**URL**: http://localhost:3001
-**Credentials**: `infra/secrets/monitoring.secret`
-
-**Dashboards**:
-- Application Overview
-- Database Performance
-- Infrastructure Health
-
-**Import Dashboards**:
-```bash
-# From infra/monitoring/grafana/dashboards/
-docker cp dashboard.json meepleai-grafana:/etc/grafana/provisioning/dashboards/
-```
+Per setup Docker Compose, Traefik e monitoring, vedi:
+- **[Deployment Guide](../deployment/README.md)** — guida completa all'infrastruttura
+- **[Development Docker](../development/docker/README.md)** — ambiente locale
 
 ---
 
-## Database Management
-
-### PostgreSQL
-
-**Connection**:
-```bash
-# Via Docker
-docker exec -it meepleai-postgres psql -U admin -d meepleai
-
-# Via connection string
-psql "postgresql://admin:password@localhost:5432/meepleai"
-```
-
-**Backup**:
-```bash
-# Backup database
-docker exec meepleai-postgres pg_dump -U admin meepleai > backup.sql
-
-# Restore database
-cat backup.sql | docker exec -i meepleai-postgres psql -U admin meepleai
-```
-
-### Redis
-
-**Connection**:
-```bash
-# Via Docker
-docker exec -it meepleai-redis redis-cli -a password
-
-# Commands
-PING          # Check connection
-KEYS *        # List keys (⚠️ use in dev only)
-DBSIZE        # Count keys
-FLUSHDB       # Clear database (⚠️ DATA LOSS)
-```
-
-### Qdrant
-
-**Connection**:
-- Dashboard: http://localhost:6333/dashboard
-- API: http://localhost:6333
-
-**Operations**:
-```bash
-# Via curl
-curl http://localhost:6333/collections
-
-# Check health
-curl http://localhost:6333/healthz
-```
-
----
-
-## Volume Management
-
-### Persistent Volumes
-
-**Data Volumes**:
-```yaml
-volumes:
-  postgres_data:       # PostgreSQL data
-  redis_data:          # Redis persistence
-  qdrant_data:         # Qdrant vectors
-  grafana_data:        # Grafana dashboards
-```
-
-**Backup Volumes**:
-```bash
-# Backup volume
-docker run --rm \
-  -v meepleai_postgres_data:/data \
-  -v $(pwd):/backup \
-  busybox tar czf /backup/postgres-backup.tar.gz /data
-
-# Restore volume
-docker run --rm \
-  -v meepleai_postgres_data:/data \
-  -v $(pwd):/backup \
-  busybox tar xzf /backup/postgres-backup.tar.gz -C /
-```
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**Service won't start**:
-```bash
-# Check logs
-docker compose logs service-name
-
-# Check secrets
-ls infra/secrets/*.secret
-
-# Regenerate secrets if needed
-cd infra/secrets && pwsh setup-secrets.ps1 -SaveGenerated
-```
-
-**Port conflicts**:
-```bash
-# Find process using port
-netstat -ano | findstr :8080
-
-# Kill process
-taskkill /PID <PID> /F
-```
-
-**Volume issues**:
-```bash
-# Remove volumes and restart (⚠️ DATA LOSS)
-docker compose down -v
-docker compose up -d
-```
-
----
-
-## Production Deployment
-
-### Security Hardening
-
-**Steps**:
-1. Rotate all secrets
-2. Enable HTTPS (Let's Encrypt)
-3. Configure firewall rules
-4. Enable fail2ban
-5. Set up log aggregation
-6. Configure backup automation
-
-**Guide**: [Infrastructure Deployment Checklist](../deployment/infrastructure-deployment-checklist.md)
-
-### Scaling
-
-**Horizontal Scaling**:
-```yaml
-# docker-compose.yml
-services:
-  api:
-    deploy:
-      replicas: 3
-```
-
-**Vertical Scaling**:
-```yaml
-# Resource limits
-services:
-  api:
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 4G
-```
-
-**Guide**: [Scaling Guide](../deployment/scaling-guide.md)
-
----
-
-## Related Documentation
-
-- [Deployment Guide](../deployment/README.md)
-- [Secrets Management](../deployment/secrets-management.md)
-- [Monitoring Setup](../deployment/monitoring-setup-guide.md)
-- [Runbooks](../deployment/runbooks/README.md)
-
----
-
-**Last Updated**: 2026-01-31
-**Maintainer**: DevOps Team
+**Last Updated**: 2026-04-05
+**Maintainer**: Architecture Team

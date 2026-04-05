@@ -162,8 +162,8 @@ export default function UsagePage() {
             >
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>
-                Failed to load usage data:{' '}
-                {error instanceof Error ? error.message : 'Unknown error'}
+                Impossibile caricare i dati di utilizzo:{' '}
+                {error instanceof Error ? error.message : 'Errore sconosciuto'}
               </span>
             </div>
           )}

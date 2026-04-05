@@ -100,7 +100,7 @@ function computeDelta(current: number, prev: number): number | null {
 function DeltaBadge({ delta, invert = false }: { delta: number | null; invert?: boolean }) {
   if (delta === null) return null;
   const abs = Math.abs(delta);
-  if (abs < 0.5) return <span className="text-xs text-muted-foreground">→ stable</span>;
+  if (abs < 0.5) return <span className="text-xs text-muted-foreground">→ stabile</span>;
   const isPositive = delta > 0;
   const isGood = invert ? !isPositive : isPositive;
   const color = isGood
@@ -133,7 +133,7 @@ export default function MissionControlPage() {
     queryKey: ['admin', 'mission-control', 'metrics-prev'],
     queryFn: () =>
       api.admin.getAgentMetrics(dayBeforeYesterday, yesterday) as Promise<AgentMetrics>,
-    staleTime: 60_000,
+    staleTime: 300_000, // historical data: changes at most once per day
   });
 
   const { data: ragData, isLoading: ragLoading } = useQuery({
@@ -142,10 +142,11 @@ export default function MissionControlPage() {
     staleTime: 30_000,
   });
 
-  const { data: embeddingInfo } = useQuery({
+  const { data: embeddingInfo, isError: embeddingError } = useQuery({
     queryKey: ['admin', 'mission-control', 'embedding'],
     queryFn: () => api.admin.getEmbeddingInfo(),
     staleTime: 120_000,
+    retry: 1,
   });
 
   const { data: openRouterStatus } = useQuery({
@@ -166,6 +167,7 @@ export default function MissionControlPage() {
 
   function getServiceHealth(name: string): HealthStatus {
     if (name === 'Embedding Service') {
+      if (embeddingError) return 'unreachable';
       if (!embeddingInfo) return 'unknown';
       return (embeddingInfo as EmbeddingInfo).status === 'healthy' ? 'healthy' : 'degraded';
     }

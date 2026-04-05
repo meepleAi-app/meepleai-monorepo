@@ -75,13 +75,17 @@ internal class SessionAuthenticationMiddleware
                     }
                 }
             }
-            catch (Exception ex) when (ex is InvalidOperationException or System.Security.SecurityException or FormatException)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // MIDDLEWARE BOUNDARY PATTERN: Authentication middleware must not block requests on validation errors
                 // Rationale: This middleware validates session cookies but must not crash the request pipeline if
-                // validation fails (DB errors, crypto errors, malformed tokens). Failed authentication simply means
-                // the request proceeds as unauthenticated. We log the error for monitoring but allow the request.
-                // Context: Session validation involves DB queries and crypto operations that can fail
+                // validation fails (DB errors, crypto errors, malformed tokens, network timeouts). Failed
+                // authentication simply means the request proceeds as unauthenticated. We log the error for
+                // monitoring but allow the request through (fail-open pattern).
+                // Context: Session validation involves DB queries and crypto operations that can fail.
+                // Previous narrow catch (InvalidOperationException | SecurityException | FormatException) caused
+                // NpgsqlException / TimeoutException to propagate as HTTP 500 instead of returning 401.
+                // OperationCanceledException is excluded: client disconnects are expected and must not be logged.
                 _logger.LogWarning(ex, "Session cookie validation failed");
             }
         }

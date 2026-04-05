@@ -440,10 +440,14 @@ jobs:
 
             echo "🚀 Deploying services:$SERVICES"
 
-            # Remove existing containers before recreating to avoid "name already in use" conflicts
-            # from orphaned containers left by interrupted deploys (e.g., cancelled workflows)
-            docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
-              --profile minimal rm -sf $SERVICES 2>/dev/null || true
+            # Force-remove orphaned containers by name before deploy.
+            # 'docker compose rm' only removes containers it owns; containers from
+            # interrupted/cancelled deploys may belong to a different compose invocation
+            # and cause "name already in use" conflicts. 'docker rm -f' removes by name
+            # regardless of project ownership.
+            for svc in $SERVICES; do
+              docker rm -f "meepleai-${svc}" 2>/dev/null && echo "🗑️ Removed orphaned meepleai-${svc}" || true
+            done
 
             # Deploy only changed services (--force-recreate ensures container restarts even if image digest unchanged)
             docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \

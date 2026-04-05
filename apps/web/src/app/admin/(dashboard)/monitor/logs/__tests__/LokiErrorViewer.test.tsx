@@ -6,7 +6,11 @@ import { LokiErrorViewer } from '../LokiErrorViewer';
 import type { LogsApiResponse } from '@/lib/loki/types';
 
 function wrapper({ children }: { children: React.ReactNode }) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, refetchInterval: false, gcTime: 0 },
+    },
+  });
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 

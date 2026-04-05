@@ -110,6 +110,17 @@ export function LokiErrorViewer() {
         </Button>
       </div>
 
+      {/* Stale data warning */}
+      {isError && data && (
+        <div
+          className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+          data-testid="loki-refresh-error"
+        >
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          Could not refresh logs. Showing last known data.
+        </div>
+      )}
+
       {entries.length === 0 ? (
         <div className="py-12 text-center text-sm text-muted-foreground" data-testid="loki-empty">
           No errors or warnings in the last 24 hours.
@@ -126,9 +137,9 @@ export function LokiErrorViewer() {
               </tr>
             </thead>
             <tbody>
-              {entries.map(entry => (
+              {entries.map((entry, index) => (
                 <tr
-                  key={entry.id}
+                  key={`${entry.id}-${index}`}
                   className="border-b transition-colors hover:bg-muted/40"
                   data-testid={`loki-row-${entry.id}`}
                 >

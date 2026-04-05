@@ -44,8 +44,6 @@ jobs:
 
             echo "🔑 Updating admin.secret on server..."
             SECRET_FILE="/opt/meepleai/repo/infra/secrets/admin.secret"
-
-            # Update ADMIN_PASSWORD in the secret file
             if [ -f "$SECRET_FILE" ]; then
               sed -i "s|^ADMIN_PASSWORD=.*|ADMIN_PASSWORD=${NEW_PASSWORD}|" "$SECRET_FILE"
               echo "✅ admin.secret updated"
@@ -54,7 +52,7 @@ jobs:
               exit 1
             fi
 
-            # Load DB credentials from database.secret
+            # Load DB credentials
             DB_SECRET="/opt/meepleai/repo/infra/secrets/database.secret"
             if [ -f "$DB_SECRET" ]; then
               set -a; source "$DB_SECRET"; set +a
@@ -64,34 +62,30 @@ jobs:
             echo "📦 Using DB: $PG_DB as user: $PG_USER"
 
             echo "🗑️ Deleting admin user from DB so seeder recreates with new password..."
-            # Role is stored lowercase ("superadmin"). Must null FK references before deleting.
-            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" << EOF
-            DO \$\$
-            DECLARE
-              admin_id UUID;
-            BEGIN
-              SELECT "Id" INTO admin_id
-              FROM users
-              WHERE "Email" = '${ADMIN_EMAIL}' AND lower("Role") IN ('admin','superadmin')
-              LIMIT 1;
 
-              IF admin_id IS NOT NULL THEN
-                -- Null FK references that prevent deletion
-                UPDATE system_configurations
-                  SET "CreatedByUserId" = NULL
-                  WHERE "CreatedByUserId" = admin_id;
-                UPDATE system_configurations
-                  SET "UpdatedByUserId" = NULL
-                  WHERE "UpdatedByUserId" = admin_id;
-                -- Delete the admin user
-                DELETE FROM users WHERE "Id" = admin_id;
-                RAISE NOTICE 'Admin user deleted: %', admin_id;
-              ELSE
-                RAISE NOTICE 'Admin user not found for email: ${ADMIN_EMAIL}';
-              END IF;
-            END \$\$;
-            EOF
-            echo "✅ Admin delete step complete"
+            # Step 1: Get admin user ID (role stored lowercase as 'superadmin')
+            ADMIN_ID=$(docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -t -A -c \
+              "SELECT \"Id\" FROM users WHERE \"Email\" = '${ADMIN_EMAIL}' AND lower(\"Role\") IN ('admin','superadmin') LIMIT 1;")
+
+            echo "Admin ID: ${ADMIN_ID:-not found}"
+
+            if [ -n "$ADMIN_ID" ]; then
+              # Step 2: Null FK references in system_configurations
+              docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+                "UPDATE system_configurations SET \"CreatedByUserId\" = NULL WHERE \"CreatedByUserId\" = '${ADMIN_ID}'::uuid;" \
+                && echo "✅ Nulled CreatedByUserId FK" || echo "⚠️ FK null (CreatedByUserId) skipped"
+
+              docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+                "UPDATE system_configurations SET \"UpdatedByUserId\" = NULL WHERE \"UpdatedByUserId\" = '${ADMIN_ID}'::uuid;" \
+                && echo "✅ Nulled UpdatedByUserId FK" || echo "⚠️ FK null (UpdatedByUserId) skipped"
+
+              # Step 3: Delete admin user
+              docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+                "DELETE FROM users WHERE \"Id\" = '${ADMIN_ID}'::uuid;" \
+                && echo "✅ Admin user deleted" || { echo "❌ Delete failed"; exit 1; }
+            else
+              echo "⚠️ Admin user not found in DB — skipping delete"
+            fi
 
             # Show result
             docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \

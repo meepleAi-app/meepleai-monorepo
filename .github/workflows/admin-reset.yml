@@ -1,0 +1,99 @@
+name: Reset Admin Password
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_password:
+        description: 'New admin password (min 8 chars, uppercase + digit required)'
+        required: true
+        type: string
+      admin_email:
+        description: 'Admin email'
+        required: false
+        default: 'admin@meepleai.app'
+        type: string
+      confirm:
+        description: 'Type "yes" to confirm password reset'
+        required: true
+        type: string
+
+jobs:
+  reset-admin:
+    name: Reset Admin Password on Staging
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    if: vars.DEPLOY_METHOD == 'ssh'
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "yes" ]; then
+            echo "❌ Confirmation required: type 'yes' to proceed"
+            exit 1
+          fi
+          echo "✅ Confirmed"
+
+      - name: Update secret and reset admin via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          envs: NEW_PASSWORD,ADMIN_EMAIL
+          script: |
+            set -e
+
+            echo "🔑 Updating admin.secret on server..."
+            SECRET_FILE="/opt/meepleai/repo/infra/secrets/admin.secret"
+
+            # Update ADMIN_PASSWORD in the secret file
+            if [ -f "$SECRET_FILE" ]; then
+              sed -i "s|^ADMIN_PASSWORD=.*|ADMIN_PASSWORD=${NEW_PASSWORD}|" "$SECRET_FILE"
+              echo "✅ admin.secret updated"
+            else
+              echo "❌ $SECRET_FILE not found"
+              exit 1
+            fi
+
+            echo "🗑️ Deleting admin user from DB so seeder recreates with new password..."
+            docker exec meepleai-postgres psql -U postgres meepleai -c "
+              DELETE FROM users WHERE email = '${ADMIN_EMAIL}' AND role = 'SuperAdmin';
+            " && echo "✅ Admin user deleted from DB" || echo "⚠️ Delete failed or user not found"
+
+            # Show result
+            docker exec meepleai-postgres psql -U postgres meepleai -c "
+              SELECT count(*) as admin_count FROM users WHERE role = 'SuperAdmin';
+            "
+
+            echo "🔄 Restarting API container to pick up new secrets and re-seed..."
+            cd /opt/meepleai/repo/infra
+            set -a
+            for f in secrets/*.secret; do source "$f" 2>/dev/null; done
+            set +a
+            docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
+              --profile minimal restart api
+
+            echo "⏳ Waiting for API to be healthy..."
+            for attempt in $(seq 1 20); do
+              if docker exec meepleai-api curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+                echo "✅ API healthy after ~$((attempt*3))s"
+                break
+              fi
+              sleep 3
+            done
+
+            echo "🧪 Verifying login works..."
+            sleep 2
+            RESULT=$(docker exec meepleai-api curl -sf -X POST http://localhost:8080/api/v1/auth/login \
+              -H "Content-Type: application/json" \
+              -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${NEW_PASSWORD}\"}" 2>/dev/null || echo "CURL_FAILED")
+
+            if echo "$RESULT" | grep -q '"sessionToken"'; then
+              echo "✅ Admin login verified successfully!"
+            elif echo "$RESULT" | grep -q '"requiresTwoFactor"'; then
+              echo "✅ Admin login successful (2FA required)"
+            else
+              echo "❌ Login verification failed: $RESULT"
+              exit 1
+            fi
+        env:
+          NEW_PASSWORD: ${{ inputs.new_password }}
+          ADMIN_EMAIL: ${{ inputs.admin_email }}

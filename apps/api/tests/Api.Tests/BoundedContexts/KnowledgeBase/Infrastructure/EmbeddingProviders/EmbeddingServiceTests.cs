@@ -390,6 +390,7 @@ public class EmbeddingServiceTests
         _primaryProviderMock
             .Setup(x => x.GenerateBatchEmbeddingsAsync(
                 It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingProviderResult.CreateSuccess(expectedEmbeddings, "test-model"));
 
@@ -416,6 +417,7 @@ public class EmbeddingServiceTests
         _primaryProviderMock
             .Setup(x => x.GenerateBatchEmbeddingsAsync(
                 It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingProviderResult.CreateSuccess(expectedEmbeddings, "test-model"));
 
@@ -444,6 +446,7 @@ public class EmbeddingServiceTests
         _primaryProviderMock
             .Setup(x => x.GenerateBatchEmbeddingsAsync(
                 It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingProviderResult.CreateSuccess(expectedEmbeddings, "test-model"));
 

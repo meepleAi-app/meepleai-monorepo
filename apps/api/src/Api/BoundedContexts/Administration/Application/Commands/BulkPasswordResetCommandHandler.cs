@@ -96,7 +96,7 @@ internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordRes
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error resetting password for user {UserId}", userId);
-                    errors.Add($"User {userId}: {ex.Message}");
+                    errors.Add($"User {userId}: password reset failed due to an internal error.");
                 }
 #pragma warning restore CA1031
             }
@@ -129,7 +129,7 @@ internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordRes
         catch (Exception ex)
         {
             _logger.LogError(ex, "Critical error during bulk password reset");
-            throw new DomainException($"Bulk password reset failed: {ex.Message}", ex);
+            throw new DomainException("Bulk password reset failed due to an internal error.", ex);
         }
 #pragma warning restore CA1031
     }

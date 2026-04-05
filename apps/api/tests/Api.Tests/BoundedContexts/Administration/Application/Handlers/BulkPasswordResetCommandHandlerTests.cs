@@ -182,6 +182,62 @@ public class BulkPasswordResetCommandHandlerTests
         _mockUserRepository.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task Handle_WhenInfrastructureExceptionOccurs_ShouldNotLeakExceptionMessage()
+    {
+        // Arrange — repository throws with sensitive infrastructure details
+        const string sensitiveMessage = "Connection timeout: server=prod-db.internal;port=5432;password=s3cr3t";
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(sensitiveMessage));
+
+        var command = new BulkPasswordResetCommand(
+            new List<Guid> { Guid.NewGuid() },
+            "NewPassword123!",
+            Guid.NewGuid()
+        );
+
+        // Act — the per-item catch handles the exception; no DomainException is thrown
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert — the error message must not leak infrastructure details
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Should().NotContain(sensitiveMessage,
+            because: "infrastructure exception details must never be forwarded to the client");
+        result.Errors[0].Should().NotContain("password=s3cr3t",
+            because: "credentials must never leak through error messages");
+    }
+
+    [Fact]
+    public async Task Handle_WhenPerUserResetFails_ShouldNotLeakRawExceptionMessage()
+    {
+        // Arrange — UpdateAsync throws infrastructure exception for one user
+        const string sensitiveDbMessage = "Deadlock detected on table Users: xact_abort";
+        var userId = Guid.NewGuid();
+        var user = CreateTestUser(userId, "user@test.com");
+
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _mockUserRepository
+            .Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(sensitiveDbMessage));
+
+        var command = new BulkPasswordResetCommand(
+            new List<Guid> { userId },
+            "NewPassword123!",
+            Guid.NewGuid()
+        );
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Should().NotContain(sensitiveDbMessage,
+            because: "raw infrastructure exception messages must not be forwarded to clients");
+    }
+
     private static User CreateTestUser(Guid id, string email)
     {
         return new User(

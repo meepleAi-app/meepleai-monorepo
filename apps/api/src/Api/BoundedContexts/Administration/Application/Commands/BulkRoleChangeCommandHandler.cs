@@ -138,7 +138,7 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
         catch (Exception ex)
         {
             _logger.LogError(ex, "Critical error during bulk role change");
-            throw new DomainException($"Bulk role change failed: {ex.Message}", ex);
+            throw new DomainException("Bulk role change failed due to an internal error.", ex);
         }
 #pragma warning restore CA1031
     }

@@ -233,10 +233,10 @@ internal class ApiExceptionHandlerMiddleware
                 "validation_error",
                 validationEx.Message
             ),
-            DomainException => (
+            DomainException domainEx => (
                 StatusCodes.Status400BadRequest,
                 "domain_error",
-                "The request could not be processed"
+                domainEx.Message
             ),
 
             // ASP.NET request binding exceptions (e.g., invalid JSON body)

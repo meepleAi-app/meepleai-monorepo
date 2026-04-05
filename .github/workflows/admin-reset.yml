@@ -61,69 +61,37 @@ jobs:
             PG_DB="${POSTGRES_DB:-meepleai_db}"
             echo "📦 Using DB: $PG_DB as user: $PG_USER"
 
-            echo "🗑️ Deleting admin user from DB so seeder recreates with new password..."
+            echo "🔐 Computing PBKDF2-SHA256 hash of new password..."
+            # API uses: v1.210000.<base64_salt>.<base64_hash> (PBKDF2-SHA256, 210k iterations)
+            NEW_HASH=$(python3 - <<'PYEOF'
+import hashlib, os, base64, sys
+password = os.environ.get("NEW_PASSWORD", "")
+if not password:
+    print("ERROR: NEW_PASSWORD not set", file=sys.stderr)
+    sys.exit(1)
+salt = os.urandom(16)
+h = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 210000, dklen=32)
+print(f"v1.210000.{base64.b64encode(salt).decode()}.{base64.b64encode(h).decode()}")
+PYEOF
+)
 
-            # Step 1: Get admin user ID
-            ADMIN_ID=$(docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -t -A -c \
-              "SELECT \"Id\" FROM users WHERE \"Email\" = '${ADMIN_EMAIL}' AND lower(\"Role\") IN ('admin','superadmin') LIMIT 1;")
-
-            echo "Admin ID: ${ADMIN_ID:-not found}"
-
-            if [ -n "$ADMIN_ID" ]; then
-              # Step 2: Find a substitute user for NOT NULL FK references
-              # CreatedByUserId is NOT NULL in system_configurations, so we can't null it.
-              # Replace the admin FK reference with another existing user.
-              SUBSTITUTE_ID=$(docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -t -A -c \
-                "SELECT \"Id\" FROM users WHERE \"Id\" != '${ADMIN_ID}'::uuid LIMIT 1;")
-
-              echo "Substitute user ID: ${SUBSTITUTE_ID:-none}"
-
-              if [ -n "$SUBSTITUTE_ID" ]; then
-                docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
-                  "UPDATE system_configurations SET \"CreatedByUserId\" = '${SUBSTITUTE_ID}'::uuid WHERE \"CreatedByUserId\" = '${ADMIN_ID}'::uuid;" \
-                  && echo "✅ Reassigned CreatedByUserId FK" || echo "⚠️ CreatedByUserId reassign skipped"
-              else
-                echo "⚠️ No substitute user found — attempting delete anyway"
-              fi
-
-              # Step 3: Null UpdatedByUserId (nullable column)
-              docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
-                "UPDATE system_configurations SET \"UpdatedByUserId\" = NULL WHERE \"UpdatedByUserId\" = '${ADMIN_ID}'::uuid;" \
-                && echo "✅ Nulled UpdatedByUserId FK" || echo "⚠️ UpdatedByUserId null skipped"
-
-              # Step 4: Delete admin user
-              docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
-                "DELETE FROM users WHERE \"Id\" = '${ADMIN_ID}'::uuid;" \
-                && echo "✅ Admin user deleted" || { echo "❌ Delete failed — check remaining FK constraints"; exit 1; }
-            else
-              echo "⚠️ Admin user not found in DB — skipping delete"
+            if [ -z "$NEW_HASH" ]; then
+              echo "❌ Failed to compute password hash"
+              exit 1
             fi
+            echo "✅ Hash computed (format: v1.210000.*.*)"
 
-            # Show result
+            echo "🔄 Updating admin password hash directly in DB..."
             docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
-              "SELECT count(*) as admin_count FROM users WHERE lower(\"Role\") IN ('admin','superadmin');" \
-              || echo "⚠️ Could not query admin count"
+              "UPDATE users SET \"PasswordHash\" = '${NEW_HASH}', \"UpdatedAt\" = NOW() WHERE \"Email\" = '${ADMIN_EMAIL}' AND lower(\"Role\") IN ('admin','superadmin');"
 
-            echo "🔄 Recreating API container to pick up new secrets and re-seed..."
-            cd /opt/meepleai/repo/infra
-            set -a
-            for f in secrets/*.secret; do source "$f" 2>/dev/null || true; done
-            set +a
-            docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
-              --profile minimal up -d --no-deps --force-recreate api
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+              "SELECT \"Email\", \"Role\", \"IsActive\", \"UpdatedAt\" FROM users WHERE \"Email\" = '${ADMIN_EMAIL}';" \
+              || echo "⚠️ Could not query admin user"
 
-            echo "⏳ Waiting for API to be healthy (checking https://meepleai.app/health)..."
-            for attempt in $(seq 1 20); do
-              if curl -sf https://meepleai.app/health > /dev/null 2>&1; then
-                echo "✅ API healthy after ~$((attempt*5))s"
-                break
-              fi
-              sleep 5
-            done
-
-            echo "🧪 Verifying login works (up to 90s for seeder to run)..."
+            echo "🧪 Verifying login works (up to 30s)..."
             LOGIN_OK=false
-            for attempt in $(seq 1 18); do
+            for attempt in $(seq 1 6); do
               sleep 5
               RESULT=$(curl -s -X POST https://meepleai.app/api/v1/auth/login \
                 -H "Content-Type: application/json" \
@@ -138,12 +106,12 @@ jobs:
                 LOGIN_OK=true
                 break
               else
-                echo "⏳ Attempt $attempt/18: $RESULT"
+                echo "⏳ Attempt $attempt/6: $RESULT"
               fi
             done
 
             if [ "$LOGIN_OK" != "true" ]; then
-              echo "❌ Login verification failed after 90s"
+              echo "❌ Login verification failed — check API logs"
               exit 1
             fi
         env:

@@ -109,9 +109,10 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
             var superAdminCount = await _userRepository.CountByRoleAsync(
                 "superadmin", cancellationToken).ConfigureAwait(false);
 
-            // Fast path: if batch size < total SuperAdmins, even demoting every SuperAdmin in the
+            // Fast path: if there are no SuperAdmins, nothing to protect.
+            // If batch size < total SuperAdmins, even demoting every SuperAdmin in the
             // batch still leaves at least one outside it. No further checks needed.
-            if (superAdminCount <= distinctUserIds.Count)
+            if (superAdminCount > 0 && superAdminCount <= distinctUserIds.Count)
             {
                 // Conservative path: batch is large enough to potentially demote all SuperAdmins.
                 // Count SuperAdmins in the batch to determine actual impact.

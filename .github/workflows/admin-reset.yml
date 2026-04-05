@@ -73,10 +73,10 @@ jobs:
 
             echo "🔄 Updating admin password hash directly in DB..."
             docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
-              "UPDATE users SET \"PasswordHash\" = '${NEW_HASH}', \"UpdatedAt\" = NOW() WHERE \"Email\" = '${ADMIN_EMAIL}' AND lower(\"Role\") IN ('admin','superadmin');"
+              "UPDATE users SET \"PasswordHash\" = '${NEW_HASH}' WHERE \"Email\" = '${ADMIN_EMAIL}' AND lower(\"Role\") IN ('admin','superadmin');"
 
             docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
-              "SELECT \"Email\", \"Role\", \"IsActive\", \"UpdatedAt\" FROM users WHERE \"Email\" = '${ADMIN_EMAIL}';" \
+              "SELECT \"Email\", \"Role\", \"Status\", \"IsSuspended\" FROM users WHERE \"Email\" = '${ADMIN_EMAIL}';" \
               || echo "⚠️ Could not query admin user"
 
             echo "🧪 Verifying login works (up to 30s)..."

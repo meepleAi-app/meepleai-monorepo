@@ -88,11 +88,14 @@ services:
       args:
         NEXT_PUBLIC_API_BASE: "https://meepleai.app"
         NEXT_PUBLIC_APP_URL: "https://meepleai.app"
+        NEXT_PUBLIC_GRAFANA_URL: /grafana
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE: "https://meepleai.app"
       NEXT_PUBLIC_APP_URL: "https://meepleai.app"
       API_BASE_URL: http://api:8080
+      LOKI_URL: http://loki:3100
+      NEXT_PUBLIC_GRAFANA_URL: /grafana
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web.rule=Host(`meepleai.app`)"

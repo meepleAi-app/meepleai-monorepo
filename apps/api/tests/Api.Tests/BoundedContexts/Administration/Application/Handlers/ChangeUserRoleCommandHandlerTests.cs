@@ -84,7 +84,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.Editor.Value);
+            NewRole: Role.Editor.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -114,7 +115,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.User.Value);
+            NewRole: Role.User.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -143,7 +145,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.User.Value);
+            NewRole: Role.User.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -235,7 +238,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.Editor.Value);
+            NewRole: Role.Editor.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);

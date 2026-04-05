@@ -113,6 +113,16 @@ alpha-down: ## Stop Alpha Zero environment
 logs: ## Tail logs for a service (usage: make logs s=api)
 	$(COMPOSE) logs -f $(s)
 
+logging: ## Start log aggregation stack on staging (loki + fluent-bit)
+	$(COMPOSE) -f compose.staging.yml -f compose.logging.yml --profile logging up -d
+
+logging-down: ## Stop log aggregation stack
+	$(COMPOSE) -f compose.logging.yml --profile logging down
+
+logs-ui: ## Open Grafana log explorer in browser (staging)
+	@echo "Grafana Logs: https://meepleai.app/grafana"
+	@echo "  Explore → Loki → {container_name=~\"meepleai-.*\"}"
+
 ps: ## Show running containers
 	$(COMPOSE) ps
 

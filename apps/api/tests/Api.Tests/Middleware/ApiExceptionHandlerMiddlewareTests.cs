@@ -257,6 +257,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         using var errorResponse = ParseErrorResponse(responseBody);
 
+        _httpContext.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
         errorResponse.RootElement.GetProperty("message").GetString().Should().Be(loginErrorMessage);
     }
 

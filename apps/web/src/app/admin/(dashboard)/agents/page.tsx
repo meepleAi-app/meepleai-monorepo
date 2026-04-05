@@ -11,6 +11,7 @@ import {
   Clock,
   FileSearch,
   Gauge,
+  Info,
   PlusCircle,
   Search,
   Zap,
@@ -21,6 +22,12 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 
@@ -80,6 +87,33 @@ function formatErrorRate(rate: number): string {
   return `${(rate * 100).toFixed(1)}%`;
 }
 
+/** Returns percentage change (positive = went up). null when prev is 0. */
+function computeDelta(current: number, prev: number): number | null {
+  if (!prev) return null;
+  return ((current - prev) / prev) * 100;
+}
+
+/**
+ * Shows a coloured ±% badge.
+ * `invert=true` means a positive delta is bad (latency, error rate, cost).
+ */
+function DeltaBadge({ delta, invert = false }: { delta: number | null; invert?: boolean }) {
+  if (delta === null) return null;
+  const abs = Math.abs(delta);
+  if (abs < 0.5) return <span className="text-xs text-muted-foreground">→ stabile</span>;
+  const isPositive = delta > 0;
+  const isGood = invert ? !isPositive : isPositive;
+  const color = isGood
+    ? 'text-emerald-600 dark:text-emerald-400'
+    : 'text-red-600 dark:text-red-400';
+  const arrow = isPositive ? '↑' : '↓';
+  return (
+    <span className={`text-xs font-medium ${color}`}>
+      {arrow} {abs.toFixed(1)}%
+    </span>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function MissionControlPage() {
@@ -87,11 +121,19 @@ export default function MissionControlPage() {
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+  const dayBeforeYesterday = format(subDays(new Date(), 2), 'yyyy-MM-dd');
 
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['admin', 'mission-control', 'metrics'],
     queryFn: () => api.admin.getAgentMetrics(yesterday, today) as Promise<AgentMetrics>,
     staleTime: 60_000,
+  });
+
+  const { data: prevMetrics } = useQuery({
+    queryKey: ['admin', 'mission-control', 'metrics-prev'],
+    queryFn: () =>
+      api.admin.getAgentMetrics(dayBeforeYesterday, yesterday) as Promise<AgentMetrics>,
+    staleTime: 300_000, // historical data: changes at most once per day
   });
 
   const { data: ragData, isLoading: ragLoading } = useQuery({
@@ -100,10 +142,11 @@ export default function MissionControlPage() {
     staleTime: 30_000,
   });
 
-  const { data: embeddingInfo } = useQuery({
+  const { data: embeddingInfo, isError: embeddingError } = useQuery({
     queryKey: ['admin', 'mission-control', 'embedding'],
     queryFn: () => api.admin.getEmbeddingInfo(),
     staleTime: 120_000,
+    retry: 1,
   });
 
   const { data: openRouterStatus } = useQuery({
@@ -114,15 +157,17 @@ export default function MissionControlPage() {
 
   // Derive error rate from satisfaction (placeholder — real metric would come from backend)
   const errorRate = metrics ? 1 - metrics.userSatisfactionRate : 0;
+  const prevErrorRate = prevMetrics ? 1 - prevMetrics.userSatisfactionRate : 0;
 
   const executions = (ragData?.items ?? []) as RagExecution[];
 
   // ─── Service Health ──────────────────────────────────────────────────────
 
-  type HealthStatus = 'healthy' | 'degraded' | 'down' | 'unknown';
+  type HealthStatus = 'healthy' | 'degraded' | 'down' | 'unknown' | 'unreachable';
 
   function getServiceHealth(name: string): HealthStatus {
     if (name === 'Embedding Service') {
+      if (embeddingError) return 'unreachable';
       if (!embeddingInfo) return 'unknown';
       return (embeddingInfo as EmbeddingInfo).status === 'healthy' ? 'healthy' : 'degraded';
     }
@@ -132,7 +177,7 @@ export default function MissionControlPage() {
       if (or.isThrottled) return 'degraded';
       return 'healthy';
     }
-    // Reranker and Vector DB don't have dedicated endpoints yet
+    // Reranker and Vector DB don't have dedicated health endpoints yet
     return 'unknown';
   }
 
@@ -150,8 +195,12 @@ export default function MissionControlPage() {
         label: 'Non disponibile',
         className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
       },
+      unreachable: {
+        label: 'Irraggiungibile',
+        className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+      },
       unknown: {
-        label: 'Sconosciuto',
+        label: 'Non Configurato',
         className: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
       },
     };
@@ -166,20 +215,33 @@ export default function MissionControlPage() {
   }
 
   const services = [
-    { name: 'Embedding Service', icon: Bot },
-    { name: 'Reranker Service', icon: Gauge },
-    { name: 'OpenRouter API', icon: Zap },
-    { name: 'Vector DB', icon: Search },
+    { name: 'Embedding Service', icon: Bot, tooltip: null },
+    {
+      name: 'Reranker Service',
+      icon: Gauge,
+      tooltip: 'Endpoint di health non ancora disponibile — monitoraggio in arrivo',
+    },
+    { name: 'OpenRouter API', icon: Zap, tooltip: null },
+    {
+      name: 'Vector DB',
+      icon: Search,
+      tooltip: 'Endpoint di health non ancora disponibile — monitoraggio in arrivo',
+    },
   ];
 
-  // ─── Quick Actions ───────────────────────────────────────────────────────
+  // ─── Quick Actions (adaptive: prioritise inspector when error rate is high) ──
 
-  const quickActions = [
+  const baseActions = [
     { label: 'Testa Query RAG', icon: Search, href: '/admin/agents/playground' },
     { label: 'Ispeziona Esecuzioni', icon: FileSearch, href: '/admin/agents/inspector' },
     { label: 'Report Costi', icon: CircleDollarSign, href: '/admin/agents/usage' },
     { label: 'Nuovo Agente', icon: PlusCircle, href: '/admin/agents/definitions/create' },
   ];
+
+  const quickActions =
+    errorRate >= 0.1
+      ? [baseActions[1], baseActions[0], baseActions[2], baseActions[3]]
+      : baseActions;
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
@@ -207,7 +269,17 @@ export default function MissionControlPage() {
             {metricsLoading ? (
               <Skeleton className="h-7 w-20" />
             ) : (
-              <p className="text-2xl font-bold tracking-tight">{metrics?.totalInvocations ?? 0}</p>
+              <>
+                <p className="text-2xl font-bold tracking-tight">
+                  {metrics?.totalInvocations ?? 0}
+                </p>
+                <DeltaBadge
+                  delta={computeDelta(
+                    metrics?.totalInvocations ?? 0,
+                    prevMetrics?.totalInvocations ?? 0
+                  )}
+                />
+              </>
             )}
           </CardContent>
         </Card>
@@ -222,9 +294,15 @@ export default function MissionControlPage() {
             {metricsLoading ? (
               <Skeleton className="h-7 w-20" />
             ) : (
-              <p className="text-2xl font-bold tracking-tight">
-                {metrics ? formatLatency(metrics.avgLatencyMs) : '—'}
-              </p>
+              <>
+                <p className="text-2xl font-bold tracking-tight">
+                  {metrics ? formatLatency(metrics.avgLatencyMs) : '—'}
+                </p>
+                <DeltaBadge
+                  invert
+                  delta={computeDelta(metrics?.avgLatencyMs ?? 0, prevMetrics?.avgLatencyMs ?? 0)}
+                />
+              </>
             )}
           </CardContent>
         </Card>
@@ -241,7 +319,10 @@ export default function MissionControlPage() {
             {metricsLoading ? (
               <Skeleton className="h-7 w-20" />
             ) : (
-              <p className="text-2xl font-bold tracking-tight">{formatErrorRate(errorRate)}</p>
+              <>
+                <p className="text-2xl font-bold tracking-tight">{formatErrorRate(errorRate)}</p>
+                <DeltaBadge invert delta={computeDelta(errorRate, prevErrorRate)} />
+              </>
             )}
           </CardContent>
         </Card>
@@ -256,9 +337,17 @@ export default function MissionControlPage() {
             {metricsLoading ? (
               <Skeleton className="h-7 w-20" />
             ) : (
-              <p className="text-2xl font-bold tracking-tight">
-                {metrics ? formatTokens(metrics.totalTokensUsed) : '0'}
-              </p>
+              <>
+                <p className="text-2xl font-bold tracking-tight">
+                  {metrics ? formatTokens(metrics.totalTokensUsed) : '0'}
+                </p>
+                <DeltaBadge
+                  delta={computeDelta(
+                    metrics?.totalTokensUsed ?? 0,
+                    prevMetrics?.totalTokensUsed ?? 0
+                  )}
+                />
+              </>
             )}
           </CardContent>
         </Card>
@@ -273,9 +362,15 @@ export default function MissionControlPage() {
             {metricsLoading ? (
               <Skeleton className="h-7 w-20" />
             ) : (
-              <p className="text-2xl font-bold tracking-tight">
-                {metrics ? formatCost(metrics.totalCost) : '$0.00'}
-              </p>
+              <>
+                <p className="text-2xl font-bold tracking-tight">
+                  {metrics ? formatCost(metrics.totalCost) : '$0.00'}
+                </p>
+                <DeltaBadge
+                  invert
+                  delta={computeDelta(metrics?.totalCost ?? 0, prevMetrics?.totalCost ?? 0)}
+                />
+              </>
             )}
           </CardContent>
         </Card>
@@ -289,22 +384,32 @@ export default function MissionControlPage() {
             <CardTitle className="text-sm font-semibold">Stato Servizi</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {services.map(svc => {
-              const Icon = svc.icon;
-              const status = getServiceHealth(svc.name);
-              return (
-                <div
-                  key={svc.name}
-                  className="flex items-center justify-between rounded-lg border border-slate-200/60 dark:border-zinc-700/40 px-3 py-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{svc.name}</span>
+            <TooltipProvider>
+              {services.map(svc => {
+                const Icon = svc.icon;
+                const status = getServiceHealth(svc.name);
+                return (
+                  <div
+                    key={svc.name}
+                    className="flex items-center justify-between rounded-lg border border-slate-200/60 dark:border-zinc-700/40 px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{svc.name}</span>
+                      {svc.tooltip && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>{svc.tooltip}</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    {healthBadge(status)}
                   </div>
-                  {healthBadge(status)}
-                </div>
-              );
-            })}
+                );
+              })}
+            </TooltipProvider>
           </CardContent>
         </Card>
 

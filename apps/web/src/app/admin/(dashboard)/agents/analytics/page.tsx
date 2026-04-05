@@ -192,8 +192,12 @@ export default function AgentAnalyticsPage() {
       {/* Error State */}
       {!is404(metricsError) && (metricsError || topAgentsError) && (
         <Card className="border-destructive">
-          <CardContent className="py-4">
-            <p className="text-destructive">Failed to load metrics. Please try again.</p>
+          <CardContent className="py-4 flex items-center justify-between gap-4">
+            <p className="text-destructive text-sm">Impossibile caricare le metriche. Riprova.</p>
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Riprova
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -201,9 +205,9 @@ export default function AgentAnalyticsPage() {
       {/* Tabbed Content */}
       <Tabs defaultValue={defaultTab}>
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="top-agents">Top Agents</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
+          <TabsTrigger value="overview">Panoramica</TabsTrigger>
+          <TabsTrigger value="top-agents">Top Agenti</TabsTrigger>
+          <TabsTrigger value="trends">Tendenze</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab: KPI cards + usage/cost charts */}
@@ -218,7 +222,7 @@ export default function AgentAnalyticsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                   <TrendingUp className="h-4 w-4 text-blue-500" />
-                  Usage Over Time
+                  Utilizzo nel Tempo
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -228,7 +232,7 @@ export default function AgentAnalyticsPage() {
                   <UsageChart data={metrics.usageOverTime} />
                 ) : (
                   <div className="flex h-64 items-center justify-center text-muted-foreground">
-                    No data available
+                    Nessun dato disponibile
                   </div>
                 )}
               </CardContent>
@@ -239,7 +243,7 @@ export default function AgentAnalyticsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                   <BarChart3 className="h-4 w-4 text-emerald-500" />
-                  Cost Breakdown by Model
+                  Costi per Modello
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -249,7 +253,7 @@ export default function AgentAnalyticsPage() {
                   <CostBreakdownChart data={metrics.costBreakdown} />
                 ) : (
                   <div className="flex h-64 items-center justify-center text-muted-foreground">
-                    No data available
+                    Nessun dato disponibile
                   </div>
                 )}
               </CardContent>
@@ -264,16 +268,16 @@ export default function AgentAnalyticsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                 <Activity className="h-4 w-4 text-purple-500" />
-                Top Agents
+                Top Agenti
               </CardTitle>
               <Select value={sortBy} onValueChange={(v: string) => setSortBy(v as typeof sortBy)}>
                 <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="invocations">By Usage</SelectItem>
-                  <SelectItem value="cost">By Cost</SelectItem>
-                  <SelectItem value="confidence">By Confidence</SelectItem>
+                  <SelectItem value="invocations">Per Utilizzo</SelectItem>
+                  <SelectItem value="cost">Per Costo</SelectItem>
+                  <SelectItem value="confidence">Per Confidence</SelectItem>
                 </SelectContent>
               </Select>
             </CardHeader>
@@ -288,7 +292,7 @@ export default function AgentAnalyticsPage() {
                 <TopAgentsTable agents={topAgents} />
               ) : (
                 <div className="flex h-32 items-center justify-center text-muted-foreground">
-                  No agents found
+                  Nessun agente trovato
                 </div>
               )}
             </CardContent>

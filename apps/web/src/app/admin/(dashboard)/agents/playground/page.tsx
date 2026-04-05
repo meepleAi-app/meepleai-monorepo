@@ -14,14 +14,29 @@
 
 import { useState, useCallback, useRef } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import { PlayIcon, SendIcon } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
 import { DebugTimeline, StrategySelectorBar } from '@/components/admin/debug-chat';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/overlays/select';
 import { useDebugChatStream } from '@/hooks/useDebugChatStream';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { createAdminClient } from '@/lib/api/clients/adminClient';
+import { HttpClient } from '@/lib/api/core/httpClient';
 import { cn } from '@/lib/utils';
+
+// ─── Module-level client (stable reference) ───────────────────────────────────
+
+const _httpClient = new HttpClient();
+const _adminClient = createAdminClient({ httpClient: _httpClient });
 
 import { CompareTab } from './compare-tab';
 
@@ -63,6 +78,12 @@ function QueryTesterTab() {
   const [strategy, setStrategy] = useState<RagStrategy>('HybridRAG');
   const [model, setModel] = useState('');
   const [temperature, setTemperature] = useState(0.7);
+
+  const { data: aiModels, isLoading: modelsLoading } = useQuery({
+    queryKey: ['admin', 'ai-models', 'active'],
+    queryFn: () => _adminClient.getAiModels({ status: 'active' }),
+    staleTime: 300_000,
+  });
   const [topK, setTopK] = useState(5);
   const [gameScope, setGameScope] = useState('');
   const [agent, setAgent] = useState('');
@@ -154,17 +175,19 @@ function QueryTesterTab() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="model-input">
-              Model
-            </label>
-            <input
-              id="model-input"
-              type="text"
-              value={model}
-              onChange={e => setModel(e.target.value)}
-              placeholder="gpt-4o-mini"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            />
+            <label className="text-xs font-medium text-muted-foreground">Modello</label>
+            <Select value={model} onValueChange={setModel} disabled={modelsLoading}>
+              <SelectTrigger className="w-full text-sm">
+                <SelectValue placeholder={modelsLoading ? 'Caricamento…' : 'Seleziona modello'} />
+              </SelectTrigger>
+              <SelectContent>
+                {(aiModels?.items ?? []).map(m => (
+                  <SelectItem key={m.id} value={m.modelIdentifier}>
+                    {m.displayName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1">

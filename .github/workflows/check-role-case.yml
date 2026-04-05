@@ -1,0 +1,56 @@
+name: Check Admin Role Case
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-role:
+    name: Check admin role in DB
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    if: vars.DEPLOY_METHOD == 'ssh'
+    steps:
+      - name: Check role case and test login
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+
+            DB_SECRET="/opt/meepleai/repo/infra/secrets/database.secret"
+            set -a; source "$DB_SECRET"; set +a
+            PG_USER="${POSTGRES_USER:-meepleai}"
+            PG_DB="${POSTGRES_DB:-meepleai_db}"
+
+            echo "=== ALL USERS (role + email) ==="
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+              "SELECT \"Id\", \"Email\", \"Role\", \"IsActive\", \"IsEmailVerified\" FROM users ORDER BY \"CreatedAt\" DESC LIMIT 10;" 2>&1
+
+            echo "=== COUNT BY EXACT ROLE VALUE ==="
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+              "SELECT \"Role\", count(*) FROM users GROUP BY \"Role\";" 2>&1
+
+            echo "=== ADMIN SECRET VALUES ==="
+            ADMIN_SECRET="/opt/meepleai/repo/infra/secrets/admin.secret"
+            echo "ADMIN_EMAIL: [$(grep "^ADMIN_EMAIL=" "$ADMIN_SECRET" | cut -d= -f2)]"
+            echo "ADMIN_PASSWORD length: $(grep "^ADMIN_PASSWORD=" "$ADMIN_SECRET" | cut -d= -f2 | wc -c)"
+            echo "INITIAL_ADMIN_EMAIL: [$(grep "^INITIAL_ADMIN_EMAIL=" "$ADMIN_SECRET" | cut -d= -f2)]"
+
+            echo "=== TEST LOGIN WITH CURRENT CREDENTIALS ==="
+            ADMIN_EMAIL=$(grep "^ADMIN_EMAIL=" "$ADMIN_SECRET" | cut -d= -f2)
+            ADMIN_PASS=$(grep "^ADMIN_PASSWORD=" "$ADMIN_SECRET" | cut -d= -f2)
+            curl -s -X POST https://meepleai.app/api/v1/auth/login \
+              -H "Content-Type: application/json" \
+              -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASS}\"}"
+
+            echo ""
+            echo "=== TEST WITH LOWERCASE EMAIL ==="
+            curl -s -X POST https://meepleai.app/api/v1/auth/login \
+              -H "Content-Type: application/json" \
+              -d '{"email":"admin@meepleai.app","password":"zDsRBuX2ZT1M@vgJF4qw"}'
+
+            echo ""
+            echo "=== CHECK PASSWORD HASH IN DB ==="
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+              "SELECT \"Email\", left(\"PasswordHash\", 20) as hash_prefix, \"UpdatedAt\" FROM users WHERE lower(\"Role\") IN ('admin','superadmin');" 2>&1

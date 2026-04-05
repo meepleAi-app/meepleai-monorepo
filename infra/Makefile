@@ -232,6 +232,6 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
         alpha alpha-core alpha-down \
         secrets-setup secrets-sync \
         snapshot restore-staging restore-local seed-games \
-        logs ps build clean help \
+        logs logging logging-down logs-ui ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
         sec-scan sec-pentest test-e2e test-visual test-perf validate-workflows

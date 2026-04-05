@@ -52,11 +52,6 @@ limits_config:
   max_streams_per_user: 10000
   max_global_streams_per_user: 50000
 
-# Table manager for retention enforcement
-table_manager:
-  retention_deletes_enabled: true
-  retention_period: 720h
-
 # Compactor for storage optimization
 compactor:
   working_directory: /loki/compactor

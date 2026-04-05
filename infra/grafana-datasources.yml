@@ -20,6 +20,7 @@ datasources:
 
   # Loki datasource for log aggregation (Issue #3367)
   - name: Loki
+    uid: loki
     type: loki
     access: proxy
     url: http://loki:3100

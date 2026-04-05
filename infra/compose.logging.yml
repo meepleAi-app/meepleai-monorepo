@@ -58,3 +58,7 @@ services:
 
 volumes:
   loki_data:
+
+networks:
+  meepleai:
+    external: true

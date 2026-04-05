@@ -39,6 +39,7 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           envs: NEW_PASSWORD,ADMIN_EMAIL
           script: |
+            export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
             set -e
 
             echo "🔑 Updating admin.secret on server..."
@@ -63,22 +64,23 @@ jobs:
             echo "📦 Using DB: $PG_DB as user: $PG_USER"
 
             echo "🗑️ Deleting admin user from DB so seeder recreates with new password..."
-            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c "
-              DELETE FROM users WHERE email = '${ADMIN_EMAIL}' AND role = 'SuperAdmin';
-            " && echo "✅ Admin user deleted from DB" || echo "⚠️ Delete failed or user not found"
+            # EF Core uses PascalCase column names
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+              "DELETE FROM users WHERE \"Email\" = '${ADMIN_EMAIL}' AND \"Role\" = 'SuperAdmin';" \
+              && echo "✅ Admin user deleted from DB" || echo "⚠️ Delete failed or user not found"
 
             # Show result
-            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c "
-              SELECT count(*) as admin_count FROM users WHERE role = 'SuperAdmin';
-            " || echo "⚠️ Could not query admin count"
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+              "SELECT count(*) as admin_count FROM users WHERE \"Role\" = 'SuperAdmin';" \
+              || echo "⚠️ Could not query admin count"
 
-            echo "🔄 Restarting API container to pick up new secrets and re-seed..."
+            echo "🔄 Recreating API container to pick up new secrets and re-seed..."
             cd /opt/meepleai/repo/infra
             set -a
-            for f in secrets/*.secret; do source "$f" 2>/dev/null; done
+            for f in secrets/*.secret; do source "$f" 2>/dev/null || true; done
             set +a
             docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
-              --profile minimal restart api
+              --profile minimal up -d --no-deps --force-recreate api
 
             echo "⏳ Waiting for API to be healthy..."
             for attempt in $(seq 1 20); do

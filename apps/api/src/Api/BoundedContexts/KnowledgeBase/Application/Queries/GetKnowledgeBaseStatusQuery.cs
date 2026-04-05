@@ -5,9 +5,10 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Query to get the knowledge base (RAG) status for a game.
-/// Returns the embedding pipeline status derived from the most recent PDF document for the game.
-/// Issue #4065: RAG readiness polling for GET /api/v1/knowledge-base/{gameId}/status
+/// For private games: set IsPrivateGame = true so the handler filters by p.PrivateGameId.
+/// For shared games: IsPrivateGame = false (default) — filters by p.GameId (existing behavior).
 /// </summary>
 internal sealed record GetKnowledgeBaseStatusQuery(
-    Guid GameId
+    Guid GameId,
+    bool IsPrivateGame = false
 ) : IQuery<KnowledgeBaseStatusDto?>;

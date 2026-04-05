@@ -13,6 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Queries the most recent PDF for a game and maps its processing state
 /// to the EmbeddingStatus enum expected by the frontend RAG readiness indicator.
 /// Issue #4065: RAG readiness polling
+/// Issue #3664: Private game PDF support — when IsPrivateGame=true, filters by PrivateGameId.
 /// </summary>
 internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBaseStatusQuery, KnowledgeBaseStatusDto?>
 {
@@ -37,16 +38,31 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
 
         try
         {
-            // Get game name for the response
-            var gameName = await _dbContext.Games
-                .Where(g => g.Id == query.GameId)
-                .Select(g => g.Name)
-                .FirstOrDefaultAsync(cancellationToken)
-                .ConfigureAwait(false);
+            string? gameName;
+            if (query.IsPrivateGame)
+            {
+                // Private games are in PrivateGames table and use .Title
+                gameName = await _dbContext.PrivateGames
+                    .Where(g => g.Id == query.GameId)
+                    .Select(g => g.Title)
+                    .FirstOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                // Shared catalog games use .Name
+                gameName = await _dbContext.Games
+                    .Where(g => g.Id == query.GameId)
+                    .Select(g => g.Name)
+                    .FirstOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
 
             // Get the most recent PDF for the game (any processing state)
             var pdf = await _dbContext.PdfDocuments
-                .Where(p => p.GameId == query.GameId)
+                .Where(p => query.IsPrivateGame
+                    ? p.PrivateGameId == query.GameId
+                    : p.GameId == query.GameId)
                 .OrderByDescending(p => p.UploadedAt)
                 .AsNoTracking()
                 .Select(p => new

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
@@ -27,6 +28,7 @@ internal static class PrivateGameEndpoints
         MapProposePrivateGameEndpoint(group);
         MapLinkAgentEndpoint(group); // Issue #4228
         MapUnlinkAgentEndpoint(group); // Issue #4228
+        MapKnowledgeBaseStatusEndpoint(group); // Issue #3664
 
         return group;
     }
@@ -438,6 +440,34 @@ internal static class PrivateGameEndpoints
         .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
         .Produces<ProblemDetails>(StatusCodes.Status403Forbidden)
         .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
+    }
+
+    /// <summary>
+    /// GET /api/v1/private-games/{id}/kb-status - Get RAG knowledge base status for a private game
+    /// Issue #3664: Private game PDF support — KB readiness polling.
+    /// </summary>
+    private static void MapKnowledgeBaseStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/private-games/{id:guid}/kb-status", async (
+            Guid id,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out _))
+                return Results.Unauthorized();
+
+            var query = new GetKnowledgeBaseStatusQuery(id, IsPrivateGame: true);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return result is null ? Results.NotFound() : Results.Ok(result);
+        })
+        .RequireAuthorization()
+        .WithName("GetPrivateGameKbStatus")
+        .WithTags("PrivateGames")
+        .WithSummary("Get RAG knowledge base status for a private game");
     }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)

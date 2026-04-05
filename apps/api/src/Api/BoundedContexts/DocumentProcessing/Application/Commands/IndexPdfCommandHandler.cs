@@ -99,6 +99,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // Mark processing complete
             pdf.ProcessingState = "Ready";
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            pdf.IsActiveForRag = true; // Auto-enable after successful indexing so vectors are searchable
 
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

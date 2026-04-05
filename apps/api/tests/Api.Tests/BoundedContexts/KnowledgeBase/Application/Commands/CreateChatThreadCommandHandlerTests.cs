@@ -94,4 +94,20 @@ public sealed class CreateChatThreadCommandHandlerTests
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => _handler.Handle(null!, CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Handle_WithSelectedKnowledgeBaseIds_SetsThemOnThread()
+    {
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var kbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+        var command = new CreateChatThreadCommand(UserId: userId, GameId: gameId, SelectedKnowledgeBaseIds: kbIds);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        _mockRepo.Verify(r => r.AddAsync(
+            It.Is<ChatThread>(t => t.GetSelectedKnowledgeBaseIds() != null && t.GetSelectedKnowledgeBaseIds()!.Count == 2),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

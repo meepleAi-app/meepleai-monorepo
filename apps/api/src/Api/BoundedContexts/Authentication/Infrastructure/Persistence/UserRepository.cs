@@ -375,6 +375,15 @@ public class UserRepository : RepositoryBase, IUserRepository
             .CountAsync(u => u.Role == adminRole || u.Role == superAdminRole, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<int> CountByRoleAsync(string roleName, CancellationToken cancellationToken = default)
+    {
+        var role = Role.Parse(roleName); // validates role name and normalizes to lowercase
+        return await DbContext.Users
+            .AsNoTracking()
+            .CountAsync(u => u.Role == role.Value, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<User>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))

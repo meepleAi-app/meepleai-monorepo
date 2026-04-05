@@ -20,7 +20,6 @@ internal static class AdminUserActivityDetailEndpoints
         MapUserDetailEndpoint(group);
         MapUserRoleHistoryEndpoint(group);
         MapUserQuickActionsEndpoints(group);
-        MapUserRoleChangeEndpoint(group);
         MapUserImpersonateEndpoint(group);
         MapEndImpersonationEndpoint(group);
     }
@@ -147,39 +146,17 @@ internal static class AdminUserActivityDetailEndpoints
             .Produces(StatusCodes.Status404NotFound);
     }
 
-    private static void MapUserRoleChangeEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPut("/admin/users/{userId:guid}/role", HandleChangeUserRole)
-            .RequireAdminSession()
-            .WithName("ChangeUserRole")
-            .WithTags("Admin", "Users")
-            .WithSummary("Change a single user's role")
-            .WithDescription(@"Change a user's role. Automatically audited via [AuditableAction].
-
-**Authorization**: Admin session required
-
-**Valid Roles**: Admin, Editor, User
-
-**Optional**: Reason field (max 500 chars) for audit trail
-
-**Issue**: #124 - Admin Infrastructure Panel")
-            .Produces<Api.Models.UserDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status403Forbidden)
-            .Produces(StatusCodes.Status404NotFound);
-    }
-
     private static void MapUserImpersonateEndpoint(RouteGroupBuilder group)
     {
         // Impersonate user (admin only) - Issue #2890
         group.MapPost("/admin/users/{userId:guid}/impersonate", HandleImpersonateUser)
-            .RequireAdminSession()
+            .RequireAuthorization("RequireSuperAdmin")
             .WithName("ImpersonateUser")
             .WithTags("Admin", "Users", "Debug")
-            .WithSummary("Impersonate user for debugging (admin only)")
+            .WithSummary("Impersonate user for debugging (SuperAdmin only, ADM-003)")
             .WithDescription(@"Create session as another user for debugging purposes.
 
-**Authorization**: Admin session required
+**Authorization**: SuperAdmin session required
 
 **Security**:
 - ⚠️ HIGH RISK: Creates full user session
@@ -307,37 +284,6 @@ internal static class AdminUserActivityDetailEndpoints
         return Results.Ok(history);
     }
 
-    private static async Task<IResult> HandleChangeUserRole(
-        Guid userId,
-        ChangeUserRoleRequest request,
-        HttpContext context,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        var (authorized, session, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
-        logger.LogInformation("Admin {AdminId} changing role for user {UserId} to {NewRole}, reason: {Reason}",
-            session!.User!.Id, userId, request.NewRole, request.Reason ?? "(none)");
-
-        try
-        {
-            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole, request.Reason);
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-            logger.LogInformation("Role changed for user {UserId} to {NewRole} by admin {AdminId}",
-                userId, request.NewRole, session.User.Id);
-
-            return Results.Ok(result);
-        }
-        catch (DomainException ex)
-        {
-            logger.LogWarning(ex, "Failed to change role for user {UserId}", userId);
-            return Results.BadRequest(new { error = ex.Message });
-        }
-    }
-
     private static async Task<IResult> HandleResetUserPassword(
         Guid userId,
         ResetUserPasswordRequest request,
@@ -417,29 +363,39 @@ internal static class AdminUserActivityDetailEndpoints
 
     private static async Task<IResult> HandleImpersonateUser(
         Guid userId,
+        ImpersonateUserRequest request,
         HttpContext context,
         IMediator mediator,
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        var (authorized, session, error) = context.RequireAdminSession();
+        var (authorized, session, error) = context.RequireSuperAdminSession();
         if (!authorized) return error!;
 
-        logger.LogWarning("⚠️ Admin {AdminId} attempting to impersonate user {UserId}",
-            session!.User!.Id, userId);
+        if (string.IsNullOrWhiteSpace(request?.Reason) || request.Reason.Trim().Length < 10)
+            return Results.BadRequest(new { error = "Impersonation reason is required (minimum 10 characters)" });
+
+        logger.LogWarning("⚠️ SuperAdmin {AdminId} attempting to impersonate user {UserId}, reason: {Reason}",
+            session!.User!.Id, userId, request.Reason);
 
         try
         {
             var command = new ImpersonateUserCommand(
                 userId,
-                session.User.Id);
+                session.User.Id,
+                request.Reason.Trim());
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogWarning("⚠️ Impersonation successful: Admin {AdminId} → User {UserId}",
+            logger.LogWarning("⚠️ Impersonation successful: SuperAdmin {AdminId} → User {UserId}",
                 session.User.Id, userId);
 
             return Results.Ok(result);
+        }
+        catch (ForbiddenException ex)
+        {
+            logger.LogWarning(ex, "Forbidden impersonation attempt by {AdminId} on user {UserId}", session.User.Id, userId);
+            return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
         }
         catch (NotFoundException ex)
         {
@@ -482,3 +438,8 @@ internal static class AdminUserActivityDetailEndpoints
         return Results.BadRequest(new EndImpersonationResponse(false, "Failed to end impersonation"));
     }
 }
+
+/// <summary>
+/// Request payload for impersonating a user (ADM-001: mandatory reason).
+/// </summary>
+internal record ImpersonateUserRequest(string Reason);

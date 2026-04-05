@@ -1,6 +1,6 @@
 # Bounded Context Diagrams - Complete Index
 
-**Visual architecture documentation for all 11 bounded contexts**
+**Visual architecture documentation for 11 of 18 bounded contexts** (diagrammi disponibili)
 
 ## 📊 Quick Navigation
 

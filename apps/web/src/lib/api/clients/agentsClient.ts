@@ -586,18 +586,28 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Chat with agent using SSE streaming
      * Returns async generator for streaming responses
      * Issue #4126: API Integration
+     *
+     * @param agentId - Agent UUID
+     * @param message - User message (max 2000 chars)
+     * @param options.chatThreadId - Optional thread ID for multi-turn conversations.
+     *   Pass the threadId from createWithSetup or a previous Complete event to maintain context.
+     * @param options.signal - Optional AbortSignal for cancellation
      */
     async *chat(
       agentId: string,
       message: string,
-      signal?: AbortSignal
+      options?: { chatThreadId?: string; signal?: AbortSignal }
     ): AsyncGenerator<SSEEvent, void, unknown> {
+      const { chatThreadId, signal } = options ?? {};
       const response = await fetch(`/api/v1/agents/${encodeURIComponent(agentId)}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({
+          message,
+          ...(chatThreadId && { chatThreadId }),
+        }),
         signal,
       });
 
@@ -727,7 +737,14 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return response;
     },
 
-    /** Create agent with auto-link to SharedGame and document attachment */
+    /**
+     * Create agent with auto-link to SharedGame and document attachment
+     *
+     * @deprecated Prefer createWithSetup (POST /api/v1/agents/create-with-setup) for new code.
+     * This method conflicts with generateSetupGuide on the same URL path `/api/v1/agents/setup`.
+     * The correct backend URL for agent creation with setup should be confirmed and updated.
+     * @see createWithSetup
+     */
     async createAgentWithSetup(request: {
       userId: string;
       userTier: string;
@@ -746,6 +763,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       slotUsed: number;
       gameAddedToCollection: boolean;
     } | null> {
+      // TODO: resolve URL conflict with generateSetupGuide — both use POST /api/v1/agents/setup
       return httpClient.post('/api/v1/agents/setup', request);
     },
   };

@@ -16,20 +16,24 @@ namespace Api.Tests.Unit.Administration;
 /// ISSUE-919: Scheduling logic testing (90%+ coverage)
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
+public sealed class QuartzReportSchedulerServiceTests : IAsyncLifetime
 {
     private readonly Mock<ILogger<QuartzReportSchedulerService>> _loggerMock;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly QuartzReportSchedulerService _sut;
-    private readonly IScheduler _scheduler;
+    private IScheduler _scheduler = null!;
 
     public QuartzReportSchedulerServiceTests()
     {
         _loggerMock = new Mock<ILogger<QuartzReportSchedulerService>>();
         _schedulerFactory = new StdSchedulerFactory();
         _sut = new QuartzReportSchedulerService(_schedulerFactory, _loggerMock.Object);
-        _scheduler = _schedulerFactory.GetScheduler().Result;
-        _scheduler.Start().Wait();
+    }
+
+    public async ValueTask InitializeAsync()
+    {
+        _scheduler = await _schedulerFactory.GetScheduler();
+        await _scheduler.Start();
     }
 
     #region Constructor Tests

@@ -181,11 +181,11 @@ public class PluginRegistryTests
     }
 
     [Fact]
-    public void LoadPlugin_WhenDisabled_ThrowsPluginDisabledException()
+    public async Task LoadPlugin_WhenDisabled_ThrowsPluginDisabledException()
     {
         // Arrange
         var registry = CreateRegistry();
-        registry.DisablePluginAsync("test-plugin-v1").GetAwaiter().GetResult();
+        await registry.DisablePluginAsync("test-plugin-v1");
 
         // Act
         var act = () => registry.LoadPlugin("test-plugin-v1");

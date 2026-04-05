@@ -617,6 +617,7 @@ volumes:
   alertmanager_data:
   seq_data:
   mailpit_data:
+  loki_data:
 
 # =============================================================================
 # Networks

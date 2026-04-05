@@ -252,19 +252,48 @@ export type UpdateAgentDocumentsResponse = z.infer<typeof UpdateAgentDocumentsRe
 // ========== Issue #4126: Chat API Schemas ==========
 
 /**
+ * Agent Strategy Names
+ * Typed enum for the built-in RAG strategies configurable on AgentDefinition.
+ * Use this instead of raw strings to get compile-time validation.
+ */
+export const AgentStrategySchema = z.enum([
+  'HybridSearch',
+  'VectorOnly',
+  'MultiModelConsensus',
+  'CitationValidation',
+  'ConfidenceScoring',
+  'Custom',
+]);
+
+export type AgentStrategy = z.infer<typeof AgentStrategySchema>;
+
+/**
  * Chat with Agent Request Schema
  */
 export const ChatWithAgentRequestSchema = z.object({
   message: z.string().min(1, 'Message is required').max(2000, 'Message too long'),
+  /** Optional thread ID for multi-turn conversations. Pass the threadId returned by createWithSetup or a previous chat Complete event. */
+  chatThreadId: z.string().uuid().optional(),
 });
 
 export type ChatWithAgentRequest = z.infer<typeof ChatWithAgentRequestSchema>;
 
 /**
  * SSE Streaming Event Schema
+ *
+ * Event types use camelCase to match the backend RagStreamingEvent contract.
+ * @see apps/web/src/lib/api/schemas/streaming.schemas.ts (StreamingEventType)
  */
 export const SSEEventSchema = z.object({
-  type: z.enum(['StateUpdate', 'Token', 'Complete', 'Error', 'Citations']),
+  type: z.enum([
+    'stateUpdate',
+    'token',
+    'complete',
+    'error',
+    'citations',
+    'followUpQuestions',
+    'setupStep',
+  ]),
   data: z.unknown(),
   timestamp: z.string().datetime(),
 });

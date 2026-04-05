@@ -47,6 +47,8 @@ public class BulkPasswordResetCommandHandlerTests
         var user1 = CreateTestUser(userId1, "user1@test.com");
         var user2 = CreateTestUser(userId2, "user2@test.com");
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user1);
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId2, It.IsAny<CancellationToken>()))
@@ -83,6 +85,8 @@ public class BulkPasswordResetCommandHandlerTests
 
         var user1 = CreateTestUser(userId1, "user1@test.com");
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user1);
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId2, It.IsAny<CancellationToken>()))
@@ -164,6 +168,8 @@ public class BulkPasswordResetCommandHandlerTests
         var requesterId = Guid.NewGuid();
         var user = CreateTestUser(userId, "user@test.com");
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
@@ -182,6 +188,75 @@ public class BulkPasswordResetCommandHandlerTests
         _mockUserRepository.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task Handle_WhenInfrastructureExceptionOccurs_ShouldNotLeakExceptionMessage()
+    {
+        // Arrange — requester loads fine; per-user GetByIdAsync throws infrastructure exception
+        const string sensitiveMessage = "Connection timeout: server=prod-db.internal;port=5432;password=s3cr3t";
+        var requesterId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        // Requester lookup succeeds
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
+
+        // Per-user lookup throws with sensitive infrastructure details
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(sensitiveMessage));
+
+        var command = new BulkPasswordResetCommand(
+            new List<Guid> { userId },
+            "NewPassword123!",
+            requesterId
+        );
+
+        // Act — the per-item catch handles the exception; no DomainException is thrown
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert — the error message must not leak infrastructure details
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Should().NotContain(sensitiveMessage,
+            because: "infrastructure exception details must never be forwarded to the client");
+        result.Errors[0].Should().NotContain("password=s3cr3t",
+            because: "credentials must never leak through error messages");
+    }
+
+    [Fact]
+    public async Task Handle_WhenPerUserResetFails_ShouldNotLeakRawExceptionMessage()
+    {
+        // Arrange — UpdateAsync throws infrastructure exception for one user
+        const string sensitiveDbMessage = "Deadlock detected on table Users: xact_abort";
+        var userId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        var user = CreateTestUser(userId, "user@test.com");
+
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _mockUserRepository
+            .Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(sensitiveDbMessage));
+
+        var command = new BulkPasswordResetCommand(
+            new List<Guid> { userId },
+            "NewPassword123!",
+            requesterId
+        );
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Should().NotContain(sensitiveDbMessage,
+            because: "raw infrastructure exception messages must not be forwarded to clients");
+    }
+
     private static User CreateTestUser(Guid id, string email)
     {
         return new User(
@@ -190,6 +265,17 @@ public class BulkPasswordResetCommandHandlerTests
             displayName: "Test User",
             passwordHash: PasswordHash.Create("OldPassword123!"),
             role: Role.User
+        );
+    }
+
+    private static User CreateSuperAdminUser(Guid id)
+    {
+        return new User(
+            id: id,
+            email: new Email("superadmin@test.com"),
+            displayName: "Super Admin",
+            passwordHash: PasswordHash.Create("SuperAdminPassword123!"),
+            role: Role.SuperAdmin
         );
     }
 }

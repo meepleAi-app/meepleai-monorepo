@@ -26,6 +26,39 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
   },
 }));
+// Mock useAvailableModels so GPT-4o is immediately available on mount
+// (React Query is async; the effect that pre-selects the model runs synchronously)
+vi.mock('@/hooks/queries/useModels', () => ({
+  useAvailableModels: vi.fn(() => ({
+    data: [
+      {
+        id: 'gpt-4o',
+        name: 'GPT-4o',
+        provider: 'OpenAI',
+        tier: 'Premium',
+        // cost formula: costPer1kInputTokens * 2 + costPer1kOutputTokens * 1 = 0.005
+        costPer1kInputTokens: 0.001,
+        costPer1kOutputTokens: 0.003,
+        maxTokens: 128000,
+        supportsStreaming: true,
+      },
+      {
+        id: 'gpt-4o-mini',
+        name: 'GPT-4o Mini',
+        provider: 'OpenAI',
+        tier: 'Standard',
+        costPer1kInputTokens: 0.0002,
+        costPer1kOutputTokens: 0.0006,
+        maxTokens: 128000,
+        supportsStreaming: true,
+      },
+    ],
+    isLoading: false,
+    error: null,
+  })),
+  useAgentConfiguration: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateAgentConfiguration: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+}));
 
 // Test data
 const mockTypologies = [

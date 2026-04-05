@@ -207,6 +207,61 @@ public class ApiExceptionHandlerMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_DomainException_PropagatesMessage()
+    {
+        // Arrange
+        var exception = new DomainException("Invalid email or password");
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        // Act
+        await middleware.InvokeAsync(_httpContext);
+
+        // Assert
+        _httpContext.Response.StatusCode.Should().Be(400);
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        errorResponse.RootElement.GetProperty("error").GetString().Should().Be("domain_error");
+        errorResponse.RootElement.GetProperty("message").GetString().Should().Be("Invalid email or password");
+    }
+
+    [Theory]
+    [InlineData("Invalid email or password")]
+    [InlineData("Account is locked. Please try again in 3 minute(s).")]
+    [InlineData("Account has been locked due to too many failed login attempts. Please try again in 15 minutes.")]
+    [InlineData("Account is suspended")]
+    public async Task InvokeAsync_DomainException_PropagatesAllLoginMessages(string loginErrorMessage)
+    {
+        // Arrange
+        var exception = new DomainException(loginErrorMessage);
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        // Act
+        await middleware.InvokeAsync(_httpContext);
+
+        // Assert
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        _httpContext.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        errorResponse.RootElement.GetProperty("message").GetString().Should().Be(loginErrorMessage);
+    }
+
+    [Fact]
     public async Task InvokeAsync_ValidationException_Returns400WithValidationError()
     {
         // Arrange

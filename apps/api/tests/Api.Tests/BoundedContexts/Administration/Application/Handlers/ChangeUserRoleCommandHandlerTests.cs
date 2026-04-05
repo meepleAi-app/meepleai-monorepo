@@ -48,7 +48,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.Admin.Value);
+            NewRole: Role.Admin.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -83,7 +84,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.Editor.Value);
+            NewRole: Role.Editor.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -113,7 +115,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.User.Value);
+            NewRole: Role.User.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -142,7 +145,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.User.Value);
+            NewRole: Role.User.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -166,7 +170,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.Admin.Value);
+            NewRole: Role.Admin.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -199,7 +204,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.Admin.Value); // Same role
+            NewRole: Role.Admin.Value,
+            AdminRole: Role.SuperAdmin.Value); // Same role
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -232,7 +238,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.Editor.Value);
+            NewRole: Role.Editor.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -259,7 +266,8 @@ public class ChangeUserRoleCommandHandlerTests
 
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.Admin.Value);
+            NewRole: Role.Admin.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
@@ -339,7 +347,8 @@ public class ChangeUserRoleCommandHandlerTests
         var userId = Guid.NewGuid();
         var command = new ChangeUserRoleCommand(
             UserId: userId.ToString(),
-            NewRole: Role.Admin.Value);
+            NewRole: Role.Admin.Value,
+            AdminRole: Role.SuperAdmin.Value);
 
         _userRepositoryMock
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))

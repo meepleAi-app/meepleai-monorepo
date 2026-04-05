@@ -5,6 +5,7 @@ using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Middleware.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
@@ -16,6 +17,19 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeCommand, BulkOperationResult>
 {
     private const int MaxBulkSize = 1000;
+
+    // ADM-002 + ADM-004: Role hierarchy levels and role-based batch size limits
+    private static readonly Dictionary<string, int> RoleLevels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "user", 0 }, { "creator", 1 }, { "editor", 2 }, { "admin", 3 }, { "superadmin", 4 }
+    };
+
+    private static readonly Dictionary<string, int> MaxBulkSizeByRole = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "superadmin", 1000 },
+        { "admin", 100 },
+    };
+
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BulkRoleChangeCommandHandler> _logger;
@@ -52,6 +66,18 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
                 command.UserIds.Count - distinctUserIds.Count);
         }
 
+        // ADM-002: Load requester to enforce privilege checks
+        var requester = await _userRepository.GetByIdAsync(command.RequesterId, cancellationToken)
+            .ConfigureAwait(false);
+        if (requester is null)
+            throw new DomainException($"Requester {command.RequesterId} not found");
+
+        // ADM-004: Role-based batch size limit (Admin: max 100, SuperAdmin: max 1000)
+        var allowedBulkSize = MaxBulkSizeByRole.GetValueOrDefault(requester.Role.Value, 100);
+        if (distinctUserIds.Count > allowedBulkSize)
+            throw new ForbiddenException(
+                $"Bulk role change of {distinctUserIds.Count} users exceeds your role limit of {allowedBulkSize}. Contact a SuperAdmin for larger operations.");
+
         // Validation: Role must be valid
         Role newRole;
         try
@@ -69,6 +95,39 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
             throw new DomainException($"Invalid role: {command.NewRole}", ex);
         }
 #pragma warning restore CA1031
+
+        // ADM-002: Role hierarchy check — cannot assign role >= requester's own level
+        var requesterLevel = RoleLevels.GetValueOrDefault(requester.Role.Value, 0);
+        var targetLevel = RoleLevels.GetValueOrDefault(command.NewRole, 0);
+        if (targetLevel >= requesterLevel)
+            throw new ForbiddenException(
+                $"Cannot bulk assign role '{command.NewRole}': you can only assign roles below your own privilege level");
+
+        // ADM-002: Minimum SuperAdmin guard for bulk demotion (skip if assigning superadmin)
+        if (!command.NewRole.Equals("superadmin", StringComparison.OrdinalIgnoreCase))
+        {
+            var superAdminCount = await _userRepository.CountByRoleAsync(
+                "superadmin", cancellationToken).ConfigureAwait(false);
+
+            // Fast path: if there are no SuperAdmins, nothing to protect.
+            // If batch size < total SuperAdmins, even demoting every SuperAdmin in the
+            // batch still leaves at least one outside it. No further checks needed.
+            if (superAdminCount > 0 && superAdminCount <= distinctUserIds.Count)
+            {
+                // Conservative path: batch is large enough to potentially demote all SuperAdmins.
+                // Count SuperAdmins in the batch to determine actual impact.
+                var superAdminsInBatch = 0;
+                foreach (var uid in distinctUserIds)
+                {
+                    var u = await _userRepository.GetByIdAsync(uid, cancellationToken).ConfigureAwait(false);
+                    if (u?.Role.Value.Equals("superadmin", StringComparison.OrdinalIgnoreCase) == true)
+                        superAdminsInBatch++;
+                }
+                if (superAdminCount - superAdminsInBatch < 1)
+                    throw new ForbiddenException(
+                        "Bulk operation would demote all SuperAdmins. The system requires at least one SuperAdmin.");
+            }
+        }
 
         _logger.LogInformation("Admin {RequesterId} initiating bulk role change for {Count} users to role {Role}",
             command.RequesterId, distinctUserIds.Count, command.NewRole);
@@ -129,6 +188,10 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
                 Errors: errors
             );
         }
+        catch (ForbiddenException)
+        {
+            throw; // preserve HTTP 403 semantics — do not wrap in DomainException
+        }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
         // HANDLER BOUNDARY: COMMAND HANDLER PATTERN - Wraps unexpected infrastructure failures
@@ -138,7 +201,7 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
         catch (Exception ex)
         {
             _logger.LogError(ex, "Critical error during bulk role change");
-            throw new DomainException($"Bulk role change failed: {ex.Message}", ex);
+            throw new DomainException("Bulk role change failed due to an internal error.", ex);
         }
 #pragma warning restore CA1031
     }

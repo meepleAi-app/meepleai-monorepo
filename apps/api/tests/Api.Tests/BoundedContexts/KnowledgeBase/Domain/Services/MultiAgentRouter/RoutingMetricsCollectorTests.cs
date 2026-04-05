@@ -133,7 +133,7 @@ public class RoutingMetricsCollectorTests
     }
 
     [Fact]
-    public void RecordRoutingDecision_ThreadSafety_ConcurrentAccess()
+    public async Task RecordRoutingDecision_ThreadSafety_ConcurrentAccess()
     {
         const int threadCount = 10;
         const int decisionsPerThread = 100;
@@ -148,7 +148,7 @@ public class RoutingMetricsCollectorTests
                 }
             }));
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks);
         var snapshot = _collector.GetSnapshot();
 
         snapshot.TotalDecisions.Should().Be(threadCount * decisionsPerThread);

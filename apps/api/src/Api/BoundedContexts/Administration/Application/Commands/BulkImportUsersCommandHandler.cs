@@ -87,7 +87,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
         catch (Exception ex)
         {
             _logger.LogError(ex, "Critical error during bulk user import");
-            throw new DomainException($"Bulk user import failed: {ex.Message}", ex);
+            throw new DomainException("Bulk user import failed due to an internal error.", ex);
         }
 #pragma warning restore CA1031
     }
@@ -200,7 +200,7 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error importing user at line {LineNumber}", lineNumber);
-                errors.Add($"Line {lineNumber} ({record.Email}): {ex.Message}");
+                errors.Add($"Line {lineNumber}: import failed due to an internal error.");
             }
 #pragma warning restore CA1031
         }

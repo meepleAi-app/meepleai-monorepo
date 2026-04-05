@@ -46,10 +46,14 @@ public class BulkRoleChangeCommandHandlerTests
         var user1 = CreateTestUser(userId1, "user1@test.com", Role.User);
         var user2 = CreateTestUser(userId2, "user2@test.com", Role.User);
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user1);
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user2);
+        _mockUserRepository.Setup(r => r.CountByRoleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(10);
 
         var command = new BulkRoleChangeCommand(
             new List<Guid> { userId1, userId2 },
@@ -81,10 +85,14 @@ public class BulkRoleChangeCommandHandlerTests
 
         var user1 = CreateTestUser(userId1, "user1@test.com", Role.User);
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user1);
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId2, It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
+        _mockUserRepository.Setup(r => r.CountByRoleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(10);
 
         var command = new BulkRoleChangeCommand(
             new List<Guid> { userId1, userId2 },
@@ -107,10 +115,15 @@ public class BulkRoleChangeCommandHandlerTests
     public async Task Handle_WithInvalidRole_ShouldThrowDomainException()
     {
         // Arrange
+        var requesterId = Guid.NewGuid();
+
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
+
         var command = new BulkRoleChangeCommand(
             new List<Guid> { Guid.NewGuid() },
             "invalid_role",
-            Guid.NewGuid()
+            requesterId
         );
 
         // Act & Assert
@@ -159,15 +172,20 @@ public class BulkRoleChangeCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
         var user = CreateTestUser(userId, "user@test.com", Role.User);
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
+        _mockUserRepository.Setup(r => r.CountByRoleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(10);
 
         var command = new BulkRoleChangeCommand(
             new List<Guid> { userId },
             roleName,
-            Guid.NewGuid()
+            requesterId
         );
 
         // Act
@@ -175,6 +193,41 @@ public class BulkRoleChangeCommandHandlerTests
 
         // Assert
         result.SuccessCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Handle_WhenInfrastructureExceptionOccurs_ShouldNotLeakExceptionMessage()
+    {
+        // Arrange — requester loads fine; per-user GetByIdAsync throws sensitive infrastructure exception
+        const string sensitiveMessage = "EF Core transaction failed: server=prod-db;uid=sa;pwd=secret123";
+        var requesterId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        // Requester lookup succeeds
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
+
+        // Per-user lookup throws with sensitive infrastructure details
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(sensitiveMessage));
+
+        var command = new BulkRoleChangeCommand(
+            new List<Guid> { userId },
+            "admin",
+            requesterId
+        );
+
+        // Act — the per-item catch handles the exception; no DomainException is thrown
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert — the per-item error message must not leak infrastructure details
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Should().NotContain(sensitiveMessage,
+            because: "infrastructure exception details must never be forwarded to the client");
+        result.Errors[0].Should().NotContain("pwd=secret123",
+            because: "credentials must never leak through error messages");
     }
 
     private static User CreateTestUser(Guid id, string email, Role role)
@@ -185,6 +238,17 @@ public class BulkRoleChangeCommandHandlerTests
             displayName: "Test User",
             passwordHash: PasswordHash.Create("Password123!"),
             role: role
+        );
+    }
+
+    private static User CreateSuperAdminUser(Guid id)
+    {
+        return new User(
+            id: id,
+            email: new Email("superadmin@test.com"),
+            displayName: "Super Admin",
+            passwordHash: PasswordHash.Create("SuperAdminPassword123!"),
+            role: Role.SuperAdmin
         );
     }
 }

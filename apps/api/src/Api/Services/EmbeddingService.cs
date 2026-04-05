@@ -160,8 +160,44 @@ internal class EmbeddingService : IEmbeddingService
                     language);
             }
 
-            // Use standard embedding generation (providers handle language internally if supported)
-            return await GenerateEmbeddingsAsync(texts, ct).ConfigureAwait(false);
+            // Try primary provider with language hint
+            var result = await _primaryProvider.GenerateBatchEmbeddingsAsync(texts, language, ct).ConfigureAwait(false);
+
+            if (result.Success)
+            {
+                return EmbeddingResult.CreateSuccess(result.Embeddings.ToList());
+            }
+
+            // Try fallback if configured and primary failed
+            if (_fallbackProvider != null && _config.EnableFallback)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                _logger.LogWarning(
+                    "Primary provider {Primary} failed: {Error}. Trying fallback {Fallback}",
+                    _primaryProvider.ProviderName,
+                    result.ErrorMessage,
+                    _fallbackProvider.ProviderName);
+
+                var fallbackResult = await _fallbackProvider.GenerateBatchEmbeddingsAsync(texts, language, ct).ConfigureAwait(false);
+
+                if (fallbackResult.Success)
+                {
+                    _logger.LogInformation("Fallback provider {Provider} succeeded", _fallbackProvider.ProviderName);
+                    return EmbeddingResult.CreateSuccess(fallbackResult.Embeddings.ToList());
+                }
+
+                _logger.LogError(
+                    "Fallback provider {Provider} also failed: {Error}",
+                    _fallbackProvider.ProviderName,
+                    fallbackResult.ErrorMessage);
+
+                return EmbeddingResult.CreateFailure(
+                    $"Primary ({_primaryProvider.ProviderName}): {result.ErrorMessage}; " +
+                    $"Fallback ({_fallbackProvider.ProviderName}): {fallbackResult.ErrorMessage}");
+            }
+
+            return EmbeddingResult.CreateFailure(result.ErrorMessage ?? "Embedding generation failed");
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out

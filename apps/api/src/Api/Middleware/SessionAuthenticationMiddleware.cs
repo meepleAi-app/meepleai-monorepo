@@ -75,7 +75,7 @@ internal class SessionAuthenticationMiddleware
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // MIDDLEWARE BOUNDARY PATTERN: Authentication middleware must not block requests on validation errors
                 // Rationale: This middleware validates session cookies but must not crash the request pipeline if
@@ -85,6 +85,7 @@ internal class SessionAuthenticationMiddleware
                 // Context: Session validation involves DB queries and crypto operations that can fail.
                 // Previous narrow catch (InvalidOperationException | SecurityException | FormatException) caused
                 // NpgsqlException / TimeoutException to propagate as HTTP 500 instead of returning 401.
+                // OperationCanceledException is excluded: client disconnects are expected and must not be logged.
                 _logger.LogWarning(ex, "Session cookie validation failed");
             }
         }

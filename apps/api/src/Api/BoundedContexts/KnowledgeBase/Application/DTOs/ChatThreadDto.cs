@@ -47,6 +47,7 @@ internal record ChatMessageDto(
 /// </summary>
 internal record CreateChatThreadRequest(
     Guid? GameId = null,
+    Guid? PrivateGameId = null,
     string? Title = null,
     string? InitialMessage = null,
     Guid? AgentId = null,

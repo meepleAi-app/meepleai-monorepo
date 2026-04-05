@@ -474,6 +474,7 @@ internal static class KnowledgeBaseEndpoints
         var command = new CreateChatThreadCommand(
             UserId: userId,
             GameId: req.GameId,
+            PrivateGameId: req.PrivateGameId,
             Title: req.Title,
             InitialMessage: req.InitialMessage,
             AgentId: req.AgentId,

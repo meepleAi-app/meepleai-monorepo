@@ -64,14 +64,14 @@ jobs:
             echo "📦 Using DB: $PG_DB as user: $PG_USER"
 
             echo "🗑️ Deleting admin user from DB so seeder recreates with new password..."
-            # EF Core uses PascalCase column names
+            # Role is stored lowercase ("superadmin"), use lower() for case-insensitive match
             docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
-              "DELETE FROM users WHERE \"Email\" = '${ADMIN_EMAIL}' AND \"Role\" = 'SuperAdmin';" \
+              "DELETE FROM users WHERE \"Email\" = '${ADMIN_EMAIL}' AND lower(\"Role\") IN ('admin','superadmin');" \
               && echo "✅ Admin user deleted from DB" || echo "⚠️ Delete failed or user not found"
 
             # Show result
             docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
-              "SELECT count(*) as admin_count FROM users WHERE \"Role\" = 'SuperAdmin';" \
+              "SELECT count(*) as admin_count FROM users WHERE lower(\"Role\") IN ('admin','superadmin');" \
               || echo "⚠️ Could not query admin count"
 
             echo "🔄 Recreating API container to pick up new secrets and re-seed..."

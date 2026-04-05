@@ -22,8 +22,6 @@ internal class GetServiceDashboardQueryHandler : IRequestHandler<GetServiceDashb
     {
         ["postgres"] = "Core Infrastructure",
         ["redis"] = "Core Infrastructure",
-        ["qdrant"] = "Core Infrastructure",
-        ["qdrant-collection"] = "Core Infrastructure",
         ["embedding"] = "AI Services",
         ["n8n"] = "External APIs",
     };
@@ -35,8 +33,6 @@ internal class GetServiceDashboardQueryHandler : IRequestHandler<GetServiceDashb
     {
         ["postgres"] = "PostgreSQL",
         ["redis"] = "Redis",
-        ["qdrant"] = "Qdrant",
-        ["qdrant-collection"] = "Qdrant Collection",
         ["embedding"] = "Embedding Service",
         ["n8n"] = "n8n Workflows",
     };

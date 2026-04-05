@@ -6456,6 +6456,82 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("pgvector_embeddings", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.RagQualityLogEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("CacheHit")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cache_hit");
+
+                    b.Property<int>("ChunksRetrieved")
+                        .HasColumnType("integer")
+                        .HasColumnName("chunks_retrieved");
+
+                    b.Property<int>("ChunksUsed")
+                        .HasColumnType("integer")
+                        .HasColumnName("chunks_used");
+
+                    b.Property<int>("CitationsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("citations_count");
+
+                    b.Property<decimal?>("ContextPrecision")
+                        .HasColumnType("numeric")
+                        .HasColumnName("context_precision");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<int?>("InputTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("input_tokens");
+
+                    b.Property<int>("LatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("latency_ms");
+
+                    b.Property<string>("ModelUsed")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model_used");
+
+                    b.Property<bool>("NoRelevantContext")
+                        .HasColumnType("boolean")
+                        .HasColumnName("no_relevant_context");
+
+                    b.Property<int?>("OutputTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("output_tokens");
+
+                    b.Property<int>("QueryLength")
+                        .HasColumnType("integer")
+                        .HasColumnName("query_length");
+
+                    b.Property<string>("Strategy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("strategy");
+
+                    b.Property<Guid?>("ThreadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("thread_id");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("rag_quality_logs");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.RagUserConfigEntity", b =>
                 {
                     b.Property<Guid>("Id")

@@ -113,6 +113,16 @@ alpha-down: ## Stop Alpha Zero environment
 logs: ## Tail logs for a service (usage: make logs s=api)
 	$(COMPOSE) logs -f $(s)
 
+logging: ## Start log aggregation stack on staging (loki + fluent-bit)
+	$(COMPOSE) -f compose.staging.yml -f compose.logging.yml --profile logging up -d
+
+logging-down: ## Stop log aggregation stack
+	$(COMPOSE) -f compose.logging.yml --profile logging down
+
+logs-ui: ## Open Grafana log explorer in browser (staging)
+	@echo "Grafana Logs: https://meepleai.app/grafana"
+	@echo "  Explore → Loki → {container_name=~\"meepleai-.*\"}"
+
 ps: ## Show running containers
 	$(COMPOSE) ps
 
@@ -153,10 +163,28 @@ ci-be-unit: ## Backend unit tests — mirrors ci.yml backend-unit job
 	cd $(API) && dotnet test $(API_TESTS) --filter "Category=Unit" --nologo -v q
 	@echo "✅ Backend unit tests passed"
 
-ci-be-integration: ## Backend integration tests (requires make dev) — mirrors ci.yml backend-integration job
-	@echo "🔵 Backend integration tests (ensure 'make dev' is running)..."
+ci-be-unit-coverage: ## Backend unit tests with coverage report (lcov in tests/Api.Tests/coverage/)
+	@echo "🔵 Backend unit tests + coverage..."
+	cd $(API_SRC) && dotnet build --nologo -v q
+	cd $(API) && dotnet test $(API_TESTS) --filter "Category=Unit" --nologo -v q \
+		-p:CollectCoverage=true \
+		-p:CoverletOutputFormat=lcov \
+		-p:CoverletOutput=./tests/Api.Tests/coverage/unit-coverage.lcov
+	@echo "✅ Coverage report: $(API)/tests/Api.Tests/coverage/unit-coverage.lcov"
+
+ci-be-integration: ## Backend integration tests (self-contained via Testcontainers, no make dev needed)
+	@echo "🔵 Backend integration tests (Testcontainers auto-spawn)..."
 	cd $(API) && dotnet test $(API_TESTS) --filter "Category=Integration" --nologo -v q
 	@echo "✅ Backend integration tests passed"
+
+ci-be-integration-fast: ## Backend integration tests using running dev-core containers (faster, requires make dev-core)
+	@echo "🔵 Backend integration tests (fast mode, using dev-core containers)..."
+	@echo "   Ensure 'make dev-core' is running before this target."
+	cd $(API) && \
+		TEST_POSTGRES_CONNSTRING="Host=localhost;Port=5432;Database=meepleai_dev;Username=meepleai;Password=$$(grep POSTGRES_PASSWORD $(ROOT)/infra/secrets/database.secret | cut -d= -f2);MaxPoolSize=2;Timeout=30;Command Timeout=60" \
+		TEST_REDIS_CONNSTRING="localhost:6379,allowAdmin=true,password=$$(grep REDIS_PASSWORD $(ROOT)/infra/secrets/redis.secret | cut -d= -f2)" \
+		dotnet test $(API_TESTS) --filter "Category=Integration" --nologo -v q
+	@echo "✅ Backend integration tests passed (fast mode)"
 
 ci-be-e2e: ## Backend E2E tests (Testcontainers) — mirrors backend-e2e-tests.yml
 	@echo "🔵 Backend E2E tests..."
@@ -204,6 +232,6 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
         alpha alpha-core alpha-down \
         secrets-setup secrets-sync \
         snapshot restore-staging restore-local seed-games \
-        logs ps build clean help \
+        logs logging logging-down logs-ui ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
         sec-scan sec-pentest test-e2e test-visual test-perf validate-workflows

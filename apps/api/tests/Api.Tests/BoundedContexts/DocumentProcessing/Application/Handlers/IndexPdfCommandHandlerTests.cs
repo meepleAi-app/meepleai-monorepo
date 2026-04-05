@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -18,7 +19,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// <summary>
 /// Tests for IndexPdfCommandHandler.
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
-/// Tests PDF text indexing workflow (chunking, embedding, Qdrant indexing).
+/// Tests PDF text indexing workflow (chunking, embedding, pgvector indexing).
 /// NOTE: Complex orchestrator with many dependencies - focused on construction and validation.
 /// RESOLVED: Issue #1690 - Integration tests added in IndexPdfIntegrationTests.cs.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
@@ -64,7 +65,8 @@ public class IndexPdfCommandHandlerTests
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
-            indexingSettingsMock.Object);
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         // Assert
         handler.Should().NotBeNull();
@@ -85,6 +87,7 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
             timeProvider);
 
         // Assert
@@ -105,6 +108,7 @@ public class IndexPdfCommandHandlerTests
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
             null);
 
         // Assert
@@ -196,23 +200,23 @@ public class IndexPdfCommandHandlerTests
     }
 
     [Fact]
-    public void IndexingResultDto_CreateFailure_WithQdrantIndexingFailure()
+    public void IndexingResultDto_CreateFailure_WithVectorIndexingFailure()
     {
         // Act
         var result = IndexingResultDto.CreateFailure(
-            "Qdrant indexing failed",
-            PdfIndexingErrorCode.QdrantIndexingFailed);
+            "Vector indexing failed",
+            PdfIndexingErrorCode.VectorIndexingFailed);
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorCode.Should().Be(PdfIndexingErrorCode.QdrantIndexingFailed);
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.VectorIndexingFailed);
     }
     [Theory]
     [InlineData(PdfIndexingErrorCode.PdfNotFound)]
     [InlineData(PdfIndexingErrorCode.TextExtractionRequired)]
     [InlineData(PdfIndexingErrorCode.ChunkingFailed)]
     [InlineData(PdfIndexingErrorCode.EmbeddingFailed)]
-    [InlineData(PdfIndexingErrorCode.QdrantIndexingFailed)]
+    [InlineData(PdfIndexingErrorCode.VectorIndexingFailed)]
     [InlineData(PdfIndexingErrorCode.UnexpectedError)]
     public void PdfIndexingErrorCode_AllValuesAreValid(PdfIndexingErrorCode errorCode)
     {
@@ -257,7 +261,8 @@ public class IndexPdfCommandHandlerTests
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
-            indexingSettingsMock.Object);
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -319,7 +324,8 @@ public class IndexPdfCommandHandlerTests
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
-            indexingSettingsMock.Object);
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -378,7 +384,8 @@ public class IndexPdfCommandHandlerTests
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
-            indexingSettingsMock.Object);
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -419,7 +426,8 @@ public class IndexPdfCommandHandlerTests
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
-            indexingSettingsMock.Object);
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         var command = new IndexPdfCommand(pdfId.ToString());
 
@@ -475,7 +483,8 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            loggerMock.Object, indexingSettingsMock.Object);
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -510,7 +519,8 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            loggerMock.Object, indexingSettingsMock.Object);
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -545,7 +555,8 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            loggerMock.Object, indexingSettingsMock.Object);
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -613,7 +624,52 @@ public class IndexPdfCommandHandlerTests
 #pragma warning restore CA5394
     }
 
-    // NOTE: Full workflow tests (text chunking, embedding generation, Qdrant indexing)
+    [Fact]
+    public async Task Handle_OnSuccessfulIndexing_SetsIsActiveForRagToTrue()
+    {
+        // Arrange: PDF with IsActiveForRag explicitly set to false (e.g. manually disabled)
+        using var context = CreateFreshDbContext();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", GenerateExtractedText(10));
+        pdf.IsActiveForRag = false; // Explicitly disabled before indexing
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        var textChunks = GenerateTextChunks(10);
+        chunkingServiceMock
+            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(textChunks);
+
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+            {
+                var embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList();
+                return new EmbeddingResult { Success = true, Embeddings = embeddings };
+            });
+
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var handler = new IndexPdfCommandHandler(
+            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>());
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert: indexing succeeds and IsActiveForRag is enabled
+        result.Success.Should().BeTrue();
+        var updatedPdf = await context.PdfDocuments.FindAsync(pdfId);
+        updatedPdf!.ProcessingState.Should().Be("Ready");
+        updatedPdf.IsActiveForRag.Should().BeTrue("vectors are indexed and must be searchable via RAG");
+    }
+
+    // NOTE: Full workflow tests (text chunking, embedding generation, pgvector indexing)
     // should be in integration test suite due to DbContext and multi-service complexity.
     // See integration-tests.yml workflow.
 }

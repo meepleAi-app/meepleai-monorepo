@@ -86,7 +86,12 @@ vi.mock('react-pdf', () => {
   };
 });
 
-// Mock framer-motion to avoid animation issues in tests
+// Mock framer-motion because:
+// 1. jsdom has no requestAnimationFrame loop — framer-motion hangs waiting for the next frame
+// 2. AnimatePresence defers child rendering until exit animations complete, hiding elements
+//    from getByLabelText/getByRole and causing false "not found" failures
+// 3. Framer-motion-specific props (animate, whileHover, etc.) passed to real DOM elements
+//    produce React "unrecognized prop" warnings that pollute test output
 vi.mock('framer-motion', () => {
   const React = require('react');
 
@@ -249,8 +254,10 @@ if (typeof global.TextEncoder === 'undefined') {
   global.TextDecoder = TextDecoder;
 }
 
-// Mock Worker API for Vitest (Issue #1301 - UploadQueueStore lazy init tests)
-// jsdom does not provide Worker constructor, so we mock it globally
+// Mock Worker API because jsdom does not ship a Web Worker implementation.
+// UploadQueueStore (Issue #1301) lazily creates a Worker on first upload; any test
+// that renders upload-related UI would throw "Worker is not defined" at import time
+// without this mock. Tests that need to verify Worker messages use vi.spyOn(postMessage).
 if (typeof global.Worker === 'undefined') {
   global.Worker = class Worker {
     scriptURL: string | URL;
@@ -431,8 +438,10 @@ if (typeof global.fetch === 'undefined') {
   });
 }
 
-// Mock FileReader for PDF validation tests
-// jsdom's FileReader doesn't properly support readAsArrayBuffer, so we mock it
+// Mock FileReader because jsdom's implementation doesn't fire onload for readAsArrayBuffer.
+// PDF validation code reads the first 4 bytes to check magic bytes (%PDF), which requires
+// a working FileReader.readAsArrayBuffer. Without this mock, all PDF validation tests
+// would silently skip the check and accept any file as valid.
 if (typeof global.FileReader === 'undefined' || !global.FileReader.prototype.readAsArrayBuffer) {
   global.FileReader = class FileReader {
     result: any = null;
@@ -588,10 +597,7 @@ beforeAll(() => {
       return;
     }
     // Suppress nested button warnings from Radix UI Accordion (AccordionTrigger renders as button)
-    if (
-      typeof args[0] === 'string' &&
-      args[0].includes('cannot be a descendant of')
-    ) {
+    if (typeof args[0] === 'string' && args[0].includes('cannot be a descendant of')) {
       return;
     }
     // Suppress React key warnings that occur during form reset/hydration
@@ -602,10 +608,7 @@ beforeAll(() => {
       return;
     }
     // Suppress NaN value warnings from number inputs during clearing (AgentConfigPanel)
-    if (
-      typeof args[0] === 'string' &&
-      args[0].includes('Received NaN for the')
-    ) {
+    if (typeof args[0] === 'string' && args[0].includes('Received NaN for the')) {
       return;
     }
     // Suppress controlled/uncontrolled component switching warnings during form reset

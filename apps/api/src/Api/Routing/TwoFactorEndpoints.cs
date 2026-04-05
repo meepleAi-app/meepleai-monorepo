@@ -132,7 +132,9 @@ internal static class TwoFactorEndpoints
             if (!verifyResult.Success || verifyResult.UserId == null)
             {
                 logger.LogWarning("2FA verification failed: {ErrorMessage}", verifyResult.ErrorMessage);
-                return Results.Unauthorized();
+                return Results.Json(
+                    new { error = "two_factor_failed", message = verifyResult.ErrorMessage ?? "Two-factor verification failed" },
+                    statusCode: StatusCodes.Status401Unauthorized);
             }
 
             // Create actual session after 2FA verification - DDD CQRS

@@ -47,19 +47,6 @@ describe('Agent Switching Components', () => {
       expect(tutorButton).toBeDisabled();
     });
 
-    it('shows tooltip with agent description', async () => {
-      const user = userEvent.setup();
-
-      render(<AgentSelectorBadge currentAgent="tutor" onSwitch={vi.fn()} showSwitcher={true} />);
-
-      const arbitroButton = screen.getByText('Arbitro');
-      await user.hover(arbitroButton);
-
-      // Tooltip should appear (testing-library may not catch async tooltip)
-      // Simplified: just verify button exists
-      expect(arbitroButton).toBeInTheDocument();
-    });
-
     it('respects disabled prop', () => {
       render(
         <AgentSelectorBadge

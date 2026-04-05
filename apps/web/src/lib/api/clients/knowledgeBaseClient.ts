@@ -66,6 +66,20 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
     },
 
     /**
+     * Get KB (RAG) status for a private game
+     * Polls /api/v1/private-games/{id}/kb-status
+     * Issue #3664: Private game PDF support — KB readiness polling.
+     * @param privateGameId Private game UUID
+     * @returns Current KB status with chunk progress, or null if not found
+     */
+    async getPrivateGameKbStatus(privateGameId: string): Promise<KnowledgeBaseStatus | null> {
+      return httpClient.get(
+        `/api/v1/private-games/${encodeURIComponent(privateGameId)}/kb-status`,
+        KnowledgeBaseStatusSchema
+      );
+    },
+
+    /**
      * Get user's RAG configuration (Issue #5311)
      * @param strategy Optional strategy filter
      * @returns Current RAG config or defaults

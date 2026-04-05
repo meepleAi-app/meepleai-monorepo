@@ -99,7 +99,7 @@ internal static class AdministrationServiceExtensions
         services.AddHttpClient<ISeqQueryClient, SeqQueryClient>((sp, client) =>
         {
             var options = sp.GetRequiredService<IOptions<SeqOptions>>().Value;
-            client.BaseAddress = new Uri(options.ServerUrl);
+            client.BaseAddress = new Uri(options.QueryUrl);
             if (!string.IsNullOrEmpty(options.ApiKey))
                 client.DefaultRequestHeaders.Add("X-Seq-ApiKey", options.ApiKey);
             client.Timeout = TimeSpan.FromSeconds(15);

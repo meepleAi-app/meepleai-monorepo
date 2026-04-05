@@ -136,12 +136,6 @@ internal static class AuthenticationEndpoints
                 return Results.BadRequest(new { error = "Invalid request payload" });
             }
 
-            if (string.IsNullOrWhiteSpace(payload.Email) || string.IsNullOrWhiteSpace(payload.Password))
-            {
-                logger.LogWarning("Login failed: email or password is empty");
-                return Results.BadRequest(new { error = "Email and password are required" });
-            }
-
             var command = new DddLoginCommand(
                 Email: payload.Email,
                 Password: payload.Password,

@@ -185,4 +185,52 @@ user4@test.com,User Four,user,ValidPassword!";
         result.SuccessCount.Should().Be(1);
         _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Handle_WhenInfrastructureExceptionOccurs_ShouldNotLeakExceptionMessage()
+    {
+        // Arrange — infrastructure throws a message containing connection string details
+        const string sensitiveMessage = "A network-related or instance-specific error occurred: server=db;password=secret";
+        _mockUserRepository
+            .Setup(r => r.ExistsByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(sensitiveMessage));
+
+        var csvContent = "email,displayName,role,password\nuser@test.com,Test User,user,Password123!";
+        var command = new BulkImportUsersCommand(csvContent, Guid.NewGuid());
+
+        // Act & Assert
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().NotContain(sensitiveMessage,
+            because: "infrastructure exception details must never be forwarded to the client");
+        exception.Message.Should().NotContain("password=secret",
+            because: "credentials must never leak through error messages");
+    }
+
+    [Fact]
+    public async Task Handle_WhenPerLineImportFails_ShouldNotIncludeEmailInError()
+    {
+        // Arrange — AddAsync throws an infrastructure exception for the user
+        const string sensitiveDbMessage = "Unique constraint violation on column email";
+        _mockUserRepository
+            .Setup(r => r.ExistsByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _mockUserRepository
+            .Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(sensitiveDbMessage));
+
+        var email = "sensitive@user.com";
+        var csvContent = $"email,displayName,role,password\n{email},Test User,user,Password123!";
+        var command = new BulkImportUsersCommand(csvContent, Guid.NewGuid());
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Should().NotContain(email,
+            because: "email is PII and must not appear in error messages returned to callers");
+        result.Errors[0].Should().NotContain(sensitiveDbMessage,
+            because: "raw infrastructure exception messages must not be forwarded to clients");
+    }
 }

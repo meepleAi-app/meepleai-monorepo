@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
@@ -23,9 +24,9 @@ internal class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<Remo
         IUnitOfWork unitOfWork,
         ILogger<RemoveDocumentFromCollectionCommandHandler> logger)
     {
-        _collectionRepository = collectionRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
+        _collectionRepository = collectionRepository ?? throw new ArgumentNullException(nameof(collectionRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<bool> Handle(RemoveDocumentFromCollectionCommand command, CancellationToken cancellationToken)
@@ -39,13 +40,13 @@ internal class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<Remo
         var collection = await _collectionRepository.GetByIdAsync(command.CollectionId, cancellationToken).ConfigureAwait(false);
         if (collection == null)
         {
-            throw new DomainException($"Collection {command.CollectionId} not found");
+            throw new DomainException("Collection not found.");
         }
 
         // SECURITY: Verify user owns this collection (same pattern as AddDocumentToCollectionCommandHandler)
         if (collection.CreatedByUserId != command.UserId)
         {
-            throw new DomainException($"User {command.UserId} is not authorized to modify collection {command.CollectionId}");
+            throw new ForbiddenException("You do not have permission to modify this collection.");
         }
 
         // Remove document from collection (domain validates document exists)

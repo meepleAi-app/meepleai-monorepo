@@ -207,7 +207,7 @@ public sealed class MultiTierCacheTests : IDisposable
         metrics.Should().NotBeNull();
         metrics.L1Memory.Should().NotBeNull();
         metrics.L2Redis.Should().NotBeNull();
-        metrics.L3Qdrant.Should().NotBeNull();
+        metrics.L3Vector.Should().NotBeNull();
     }
 
     [Fact]

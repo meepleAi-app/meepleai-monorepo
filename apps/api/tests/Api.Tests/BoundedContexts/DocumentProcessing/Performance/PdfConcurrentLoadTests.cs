@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
@@ -25,6 +26,7 @@ public class PdfConcurrentLoadTests
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IConfiguration _configuration;
     private readonly IOptions<PdfProcessingOptions> _options;
+    private readonly ITextChunkingService _chunkingService;
 
     public PdfConcurrentLoadTests()
     {
@@ -35,6 +37,7 @@ public class PdfConcurrentLoadTests
             LargePdfThresholdBytes = 52_428_800,
             UseTempFileForLargePdfs = true
         });
+        _chunkingService = Mock.Of<ITextChunkingService>();
     }
 
     #region Concurrent Extraction Tests
@@ -58,7 +61,7 @@ public class PdfConcurrentLoadTests
                 var stage3 = new ConcurrentFakeExtractor(success: true, quality: ExtractionQuality.Low);
 
                 var orchestrator = new EnhancedPdfProcessingOrchestrator(
-                    stage1, stage2, stage3, _logger, _configuration, _options);
+                    stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
 
                 await using var pdfStream = CreateDummyPdfStream();
                 return await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
@@ -120,7 +123,7 @@ public class PdfConcurrentLoadTests
                 }
 
                 var orchestrator = new EnhancedPdfProcessingOrchestrator(
-                    stage1, stage2, stage3, _logger, _configuration, _options);
+                    stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
 
                 await using var pdfStream = CreateDummyPdfStream();
                 return await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
@@ -162,7 +165,7 @@ public class PdfConcurrentLoadTests
                 var stage3 = new ConcurrentFakeExtractor(success: true, pageCount: pageCount, charsPerPage: 300);
 
                 var orchestrator = new EnhancedPdfProcessingOrchestrator(
-                    stage1, stage2, stage3, _logger, _configuration, _options);
+                    stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
 
                 await using var pdfStream = CreateDummyPdfStream();
                 return await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
@@ -207,7 +210,7 @@ public class PdfConcurrentLoadTests
                 var stage3 = new ConcurrentFakeExtractor(success: true, quality: ExtractionQuality.Low);
 
                 var orchestrator = new EnhancedPdfProcessingOrchestrator(
-                    stage1, stage2, stage3, _logger, _configuration, _options);
+                    stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
 
                 await using var pdfStream = CreateDummyPdfStream();
                 return await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
@@ -244,7 +247,7 @@ public class PdfConcurrentLoadTests
                     var stage3 = new ConcurrentFakeExtractor(success: true, quality: ExtractionQuality.Low);
 
                     var orch = new EnhancedPdfProcessingOrchestrator(
-                        stage1, stage2, stage3, _logger, _configuration, _options);
+                        stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
                     await using var stream = CreateDummyPdfStream();
                     return await orch.ExtractTextWithFallbackAsync(stream);
                 }));
@@ -259,7 +262,7 @@ public class PdfConcurrentLoadTests
                     var stage3 = new ConcurrentFakeExtractor(success: true, pageCount: 10, charsPerPage: 300);
 
                     var orch = new EnhancedPdfProcessingOrchestrator(
-                        stage1, stage2, stage3, _logger, _configuration, _options);
+                        stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
                     await using var stream = CreateDummyPdfStream();
                     return await orch.ExtractPagedTextWithFallbackAsync(stream);
                 }));

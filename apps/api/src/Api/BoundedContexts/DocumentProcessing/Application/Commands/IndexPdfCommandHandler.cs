@@ -1,8 +1,10 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +20,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// 2. Validate extraction status
 /// 3. Chunk extracted text
 /// 4. Generate embeddings
-/// 5. Index to Qdrant
+/// 5. Index embeddings to pgvector
 /// 6. Update PDF document status
 /// </summary>
 internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, IndexingResultDto>
@@ -29,6 +31,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     private readonly IndexingSettings _indexingSettings;
     private readonly ILogger<IndexPdfCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly ISemanticResponseCache _semanticCache;
 
     public IndexPdfCommandHandler(
         MeepleAiDbContext db,
@@ -36,6 +39,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         IEmbeddingService embeddingService,
         ILogger<IndexPdfCommandHandler> logger,
         IOptions<IndexingSettings> indexingSettings,
+        ISemanticResponseCache semanticCache,
         TimeProvider? timeProvider = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -43,6 +47,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _indexingSettings = indexingSettings?.Value ?? throw new ArgumentNullException(nameof(indexingSettings));
+        _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -76,16 +81,16 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 return await MarkIndexingFailedAsync(vectorDoc!, chunkingError!, chunkErrorCode!.Value, cancellationToken).ConfigureAwait(false);
             }
 
-            // Step 3: Index in Qdrant and update VectorDocument
+            // Step 3: Update VectorDocument status
             // For private PDFs GameId is null — fall back to PrivateGameId so vectors are scoped
             // to the correct private game rather than collapsed under Guid.Empty.
-            var effectiveGameId = pdf.GameId ?? pdf.PrivateGameId ?? Guid.Empty;
+            var effectiveGameId = pdf.PrivateGameId ?? pdf.GameId ?? Guid.Empty;
             var indexingSuccess = await IndexChunksInVectorStoreAsync(
                 pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)
             {
                 pdf.ProcessingState = "Failed";
-                return await MarkIndexingFailedAsync(vectorDoc!, "Qdrant indexing failed", PdfIndexingErrorCode.QdrantIndexingFailed, cancellationToken).ConfigureAwait(false);
+                return await MarkIndexingFailedAsync(vectorDoc!, "Vector indexing failed", PdfIndexingErrorCode.VectorIndexingFailed, cancellationToken).ConfigureAwait(false);
             }
 
             // Step 4: Save text chunks to PostgreSQL for hybrid search
@@ -94,8 +99,12 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // Mark processing complete
             pdf.ProcessingState = "Ready";
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            pdf.IsActiveForRag = true; // Auto-enable after successful indexing so vectors are searchable
 
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Invalidate semantic response cache so stale answers are not served after re-index
+            await _semanticCache.InvalidateGameAsync(effectiveGameId, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Successfully indexed PDF {PdfId}: {ChunkCount} chunks, {TotalChars} characters",
                 pdfId, documentChunks!.Count, pdf.ExtractedText!.Length);
@@ -108,12 +117,12 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
         // SERVICE BOUNDARY PATTERN: Error state management for complex multi-system operation
-        // PDF indexing involves multiple external systems (Qdrant, DB, file system) that must maintain consistency
+        // PDF indexing involves multiple external systems (pgvector, DB, file system) that must maintain consistency
 #pragma warning restore S125
         catch (Exception ex)
         {
             // ERROR STATE MANAGEMENT: Top-level catch ensures graceful failure handling
-            // Rationale: PDF indexing involves multiple external systems (Qdrant, DB, file system).
+            // Rationale: PDF indexing involves multiple external systems (pgvector, DB, file system).
             // Any unhandled error should be captured, logged, and persisted as a failed indexing
             // attempt rather than throwing to the caller. This maintains data consistency and
             // provides operators with debugging context via the indexing_error field.
@@ -284,9 +293,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     }
 
     /// <summary>
-    /// Indexes document chunks in Qdrant and updates VectorDocument.
+    /// Indexes document chunks in pgvector and updates VectorDocument.
     /// </summary>
-    private Task<bool> IndexChunksInVectorStoreAsync(
+    private async Task<bool> IndexChunksInVectorStoreAsync(
         string pdfId,
         string gameId,
         string extractedText,
@@ -294,18 +303,61 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         VectorDocumentEntity vectorDoc,
         CancellationToken cancellationToken)
     {
-        // Vector store (Qdrant) has been removed — skip vector indexing.
-        // Update VectorDocumentEntity to "completed" for tracking.
-        _logger.LogInformation("Skipping Qdrant indexing (removed) for PDF {PdfId}, {ChunkCount} chunks",
-            pdfId, documentChunks.Count);
+        var pdfGuid = Guid.Parse(pdfId);
+        var gameGuid = Guid.TryParse(gameId, out var g) ? g : Guid.Empty;
 
+        // Remove old embeddings
+        var existing = await _db.PgVectorEmbeddings
+            .Where(e => e.VectorDocumentId == vectorDoc.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (existing.Count > 0)
+        {
+            _db.PgVectorEmbeddings.RemoveRange(existing);
+            _logger.LogInformation("🗑️ [REINDEX] Removed {Count} old embeddings for PDF {PdfId}", existing.Count, pdfId);
+        }
+
+        // Get language from the PDF document
+        var pdfDoc = await _db.PdfDocuments
+            .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken)
+            .ConfigureAwait(false);
+        var language = pdfDoc?.Language ?? "en";
+        var modelName = _embeddingService.GetModelName();
+
+        // Save in batches of 500
+        const int saveBatchSize = 500;
+        var batchCount = (int)Math.Ceiling((double)documentChunks.Count / saveBatchSize);
+
+        for (var batchIdx = 0; batchIdx < batchCount; batchIdx++)
+        {
+            var batchChunks = documentChunks.Skip(batchIdx * saveBatchSize).Take(saveBatchSize).ToList();
+            var entities = batchChunks.Select((chunk, i) => new PgVectorEmbeddingEntity
+            {
+                Id = Guid.NewGuid(),
+                VectorDocumentId = vectorDoc.Id,
+                GameId = gameGuid,
+                TextContent = chunk.Text,
+                Vector = new Pgvector.Vector(chunk.Embedding),
+                Model = modelName,
+                ChunkIndex = batchIdx * saveBatchSize + i,
+                PageNumber = Math.Max(1, chunk.Page),
+                Lang = language,
+                CreatedAt = DateTimeOffset.UtcNow
+            }).ToList();
+
+            await _db.PgVectorEmbeddings.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Update VectorDocument
         vectorDoc.IndexingStatus = "completed";
         vectorDoc.ChunkCount = documentChunks.Count;
         vectorDoc.TotalCharacters = extractedText.Length;
         vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
         vectorDoc.IndexingError = null;
 
-        return Task.FromResult(true);
+        _logger.LogInformation("✅ [REINDEX] PDF {PdfId}: {Count} chunks indexed in pgvector", pdfId, documentChunks.Count);
+        return true;
     }
 
     /// <summary>

@@ -119,7 +119,8 @@ internal static class AdminOperationsEndpoints
 
             var command = new ImpersonateUserCommand(
                 TargetUserId: request.TargetUserId,
-                AdminUserId: session!.User!.Id
+                AdminUserId: session!.User!.Id,
+                Reason: "Operations panel impersonation"
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);

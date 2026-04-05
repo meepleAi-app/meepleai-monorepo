@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
@@ -25,6 +26,7 @@ public class PdfExtractionPerformanceTests
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IConfiguration _configuration;
     private readonly IOptions<PdfProcessingOptions> _options;
+    private readonly ITextChunkingService _chunkingService;
 
     public PdfExtractionPerformanceTests()
     {
@@ -35,6 +37,7 @@ public class PdfExtractionPerformanceTests
             LargePdfThresholdBytes = 52_428_800,
             UseTempFileForLargePdfs = true
         });
+        _chunkingService = Mock.Of<ITextChunkingService>();
     }
 
     #region Stage Timing Tests
@@ -206,7 +209,7 @@ public class PdfExtractionPerformanceTests
         var stage3 = new TimedFakeExtractor(delayMs: 0, success: true, quality: ExtractionQuality.Low);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, config, _options);
+            stage1, stage2, stage3, _logger, config, _options, _chunkingService);
 
         await using var pdfStream = CreateDummyPdfStream();
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
@@ -355,7 +358,7 @@ public class PdfExtractionPerformanceTests
         IPdfTextExtractor stage1, IPdfTextExtractor stage2, IPdfTextExtractor stage3)
     {
         return new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, _options);
+            stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
     }
 
     private static string GenerateText(int pageCount, int charsPerPage)

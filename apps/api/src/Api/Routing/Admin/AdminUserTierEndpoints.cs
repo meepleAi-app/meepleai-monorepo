@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 
@@ -294,13 +295,18 @@ internal static class AdminUserTierEndpoints
 
         try
         {
-            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole, request.Reason);
+            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole, request.Reason, session!.User!.Role);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Role changed for user {UserId} to {NewRole} by admin {AdminId}",
                 userId, request.NewRole, session.User.Id);
 
             return Results.Ok(result);
+        }
+        catch (ForbiddenException ex)
+        {
+            logger.LogWarning(ex, "Forbidden role change attempt for user {UserId}", userId);
+            return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
         }
         catch (DomainException ex)
         {

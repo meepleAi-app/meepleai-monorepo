@@ -83,7 +83,8 @@ internal sealed class EndImpersonationCommandHandler
             {
                 sessionId = command.SessionId,
                 impersonatedUserId,
-                endedByAdminId = command.AdminUserId
+                endedByAdminId = command.AdminUserId,
+                endedAt = DateTime.UtcNow.ToString("O")
             }),
             ipAddress: "admin-action"
         );

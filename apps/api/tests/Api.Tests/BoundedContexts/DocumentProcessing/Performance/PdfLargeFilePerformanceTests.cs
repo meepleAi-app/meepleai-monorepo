@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
@@ -24,11 +25,13 @@ public class PdfLargeFilePerformanceTests
 {
     private readonly ILogger<EnhancedPdfProcessingOrchestrator> _logger;
     private readonly IConfiguration _configuration;
+    private readonly ITextChunkingService _chunkingService;
 
     public PdfLargeFilePerformanceTests()
     {
         _logger = Mock.Of<ILogger<EnhancedPdfProcessingOrchestrator>>();
         _configuration = new ConfigurationBuilder().Build();
+        _chunkingService = Mock.Of<ITextChunkingService>();
     }
 
     #region Size-Based Strategy Tests
@@ -51,7 +54,7 @@ public class PdfLargeFilePerformanceTests
         var stage3 = new LargeFileFakeExtractor(success: true, quality: ExtractionQuality.Low);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreatePdfStream(sizeBytes);
 
@@ -76,7 +79,7 @@ public class PdfLargeFilePerformanceTests
         var stage3 = new LargeFileFakeExtractor(success: true, quality: ExtractionQuality.Low);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         // Exactly at threshold (50 MB)
         await using var pdfStream = CreatePdfStream(52_428_800);
@@ -111,7 +114,7 @@ public class PdfLargeFilePerformanceTests
         var stage3 = new LargeFileFakeExtractor(success: true, quality: ExtractionQuality.Low);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, config, options);
+            stage1, stage2, stage3, _logger, config, options, _chunkingService);
 
         // 110 MB - exceeds 100 MB limit
         await using var pdfStream = CreatePdfStream(115_343_360);
@@ -149,7 +152,7 @@ public class PdfLargeFilePerformanceTests
         var stage3 = new LargeFileFakeExtractor(success: true, quality: ExtractionQuality.Low);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, config, options);
+            stage1, stage2, stage3, _logger, config, options, _chunkingService);
 
         // Exactly 100 MB - at the limit
         await using var pdfStream = CreatePdfStream(104_857_600);
@@ -179,7 +182,7 @@ public class PdfLargeFilePerformanceTests
         var stage3 = new LargeFileFakeExtractor(success: true, quality: ExtractionQuality.Low);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -209,7 +212,7 @@ public class PdfLargeFilePerformanceTests
         var stage3 = new LargeFileFakeExtractor(success: true, pageCount: 500, charsPerPage: 300);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreateDummyPdfStream();
 
@@ -255,7 +258,7 @@ public class PdfLargeFilePerformanceTests
                 var stage3 = new LargeFileFakeExtractor(success: true, quality: ExtractionQuality.Low);
 
                 var orchestrator = new EnhancedPdfProcessingOrchestrator(
-                    stage1, stage2, stage3, _logger, _configuration, options);
+                    stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
                 await using var pdfStream = CreateDummyPdfStream();
                 return await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
@@ -295,7 +298,7 @@ public class PdfLargeFilePerformanceTests
         var stage3 = new LargeFileFakeExtractor(success: true, quality: ExtractionQuality.Low);
 
         var orchestrator = new EnhancedPdfProcessingOrchestrator(
-            stage1, stage2, stage3, _logger, _configuration, options);
+            stage1, stage2, stage3, _logger, _configuration, options, _chunkingService);
 
         await using var pdfStream = CreateDummyPdfStream();
 

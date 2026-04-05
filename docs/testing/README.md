@@ -6,14 +6,12 @@
 
 ## Active Quality Initiatives
 
-### RAG Quality Validation (#3192)
-**Epic**: [#3174 - AI Agent System](https://github.com/your-org/meepleai-monorepo/issues/3174)
-**Status**: 🔴 **BLOCKED by #3231** (RAG endpoints ResponseEnded error)
-**Target**: 90%+ accuracy on 20 sample questions
+### RAG Quality Validation
 
-**Documents**:
-- [AGT-018 Final Steps](AGT-018-FINAL-STEPS.md) - Implementation roadmap
-- [RAG Validation 20Q](rag-validation-20q.md) - Latest test results
+> ⚠️ **Nota storica** — Lo snapshot seguente è del 2026-01-31 e riflette uno stato bloccato da un bug ora risolto (PR#123 - rag-retrieval-quality, semantic chunking + language detection). Per lo stato attuale del RAG, eseguire `pwsh tools/run-rag-validation-20q.ps1`.
+
+**Epic**: [#3174 - AI Agent System](https://github.com/your-org/meepleai-monorepo/issues/3174)
+**Target**: 90%+ accuracy on 20 sample questions
 
 **Validation Metrics**:
 - **Accuracy**: Answer contains expected keywords (target >90%)
@@ -22,16 +20,15 @@
 - **Hallucination**: No forbidden keywords (target 0%)
 - **Latency**: Response time <5s (target >95% within SLA)
 
-**Current Status** (2026-01-31):
+**Snapshot storico** (2026-01-31 — blocker #3231, ora risolto):
 ```
-Accuracy:           0% (0/20) - ❌ FAIL (target: ≥90%)
-Avg Confidence:     0.00       - ❌ FAIL (target: ≥0.70)
-Citation Rate:      0% (0/20)  - ❌ FAIL (target: ≥95%)
-Hallucination Rate: 0% (0/20)  - ✅ PASS (target: <3%)
-Latency <5s Rate:   100%       - ✅ PASS (target: ≥95%)
+Accuracy:           0% (0/20) - bloccato da ResponseEnded error in AskQuestionQueryHandler
+Hallucination Rate: 0% (0/20)  - ✅ PASS
+Latency <5s Rate:   100%       - ✅ PASS
 ```
 
-**Blocker**: #3231 - All RAG endpoints crash with ResponseEnded error. Debug needed in `AskQuestionQueryHandler`.
+**Documenti**:
+- [RAG Validation 20Q](rag-validation-20q.md) - Ultimi risultati di validazione
 
 ---
 

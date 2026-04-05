@@ -106,10 +106,13 @@ public class RedisBackgroundTaskOrchestratorTests
         var taskName = "Delayed Task";
         var delay = TestConstants.Timing.SmallDelay;
         var taskExecuted = false;
+        // Use TaskCompletionSource for reliable synchronization instead of fixed delay (prevents flakiness in CI)
+        var taskCompletedTcs = new TaskCompletionSource<bool>();
         Func<CancellationToken, Task> taskFactory = async ct =>
         {
             await Task.Delay(TestConstants.Timing.TinyDelay, ct);
             taskExecuted = true;
+            taskCompletedTcs.TrySetResult(true);
         };
 
         _mockDatabase.Setup(db => db.StringSetAsync(
@@ -126,11 +129,13 @@ public class RedisBackgroundTaskOrchestratorTests
         // Assert - task should not be executed immediately
         taskExecuted.Should().BeFalse();
 
-        // Wait for delay + execution time + generous overhead buffer to prevent race condition
-        // Buffer increased from 50ms to 200ms to account for scheduler overhead and test host variability
-        await Task.Delay(delay + TestConstants.Timing.TinyDelay + TimeSpan.FromMilliseconds(200), TestCancellationToken);
+        // Wait for task completion with generous timeout instead of fixed delay (CI-safe)
+        var completedInTime = await Task.WhenAny(
+            taskCompletedTcs.Task,
+            Task.Delay(TestConstants.Timing.ShortTimeout, TestCancellationToken)) == taskCompletedTcs.Task;
 
         // Assert - task should be executed after delay
+        completedInTime.Should().BeTrue("Task should complete within timeout after delay");
         taskExecuted.Should().BeTrue();
     }
 
@@ -344,6 +349,8 @@ public class RedisBackgroundTaskOrchestratorTests
         var executionCount = 0;
         using var cts = new CancellationTokenSource();
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
+        // Use TCS for reliable synchronization instead of fixed delay (prevents flakiness in CI)
+        var twoExecutionsTcs = new TaskCompletionSource<bool>();
 
         Func<CancellationToken, Task> taskFactory = async ct =>
         {
@@ -351,6 +358,7 @@ public class RedisBackgroundTaskOrchestratorTests
             executionCount++;
             if (executionCount >= 2)
             {
+                twoExecutionsTcs.TrySetResult(true);
                 await cts.CancelAsync(); // Stop after 2 executions
             }
         };
@@ -366,10 +374,13 @@ public class RedisBackgroundTaskOrchestratorTests
         // Act
         await _orchestrator.ScheduleRecurringAsync(taskId, taskName, interval, taskFactory, linkedCts.Token);
 
-        // Wait for at least 2 executions
-        await Task.Delay(TestConstants.Timing.LargeDelay, TestCancellationToken);
+        // Wait for 2 executions with generous timeout instead of fixed delay (CI-safe)
+        var completedInTime = await Task.WhenAny(
+            twoExecutionsTcs.Task,
+            Task.Delay(TestConstants.Timing.ShortTimeout, TestCancellationToken)) == twoExecutionsTcs.Task;
 
         // Assert
+        completedInTime.Should().BeTrue("Recurring task should execute at least 2 times within timeout");
         (executionCount >= 2).Should().BeTrue();
     }
 

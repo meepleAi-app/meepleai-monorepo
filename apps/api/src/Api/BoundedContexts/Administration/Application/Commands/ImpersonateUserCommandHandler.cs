@@ -47,6 +47,26 @@ internal sealed class ImpersonateUserCommandHandler
         _logger.LogWarning("⚠️ SECURITY: Admin {AdminId} attempting to impersonate user {TargetUserId}",
             command.AdminUserId, command.TargetUserId);
 
+        // Verify admin exists and has admin role (check first to prevent enumeration)
+        var adminUser = await _userRepository.GetByIdAsync(command.AdminUserId, cancellationToken)
+            .ConfigureAwait(false);
+        if (adminUser is null)
+        {
+            throw new NotFoundException($"Admin user with ID '{command.AdminUserId}' not found");
+        }
+
+        // Accept Admin (level 3) or SuperAdmin (level 4) as valid callers
+        var adminLevel = adminUser.Role.Value.ToLowerInvariant() switch
+        {
+            "admin" => 3,
+            "superadmin" => 4,
+            _ => 0
+        };
+        if (adminLevel < 3)
+        {
+            throw new ConflictException("Only admins or SuperAdmins can impersonate users");
+        }
+
         // Verify target user exists
         var targetUser = await _userRepository.GetByIdAsync(command.TargetUserId, cancellationToken)
             .ConfigureAwait(false);
@@ -61,25 +81,15 @@ internal sealed class ImpersonateUserCommandHandler
             throw new ConflictException($"Cannot impersonate suspended user '{command.TargetUserId}'");
         }
 
-        // Prevent impersonation of other admins (Issue #3349)
-        if (string.Equals(targetUser.Role.Value, "admin", StringComparison.OrdinalIgnoreCase))
+        // Prevent impersonation of admin or superadmin users (ADM-001 + ADM-003)
+        // Extended from Issue #3349 to also cover SuperAdmin
+        if (string.Equals(targetUser.Role.Value, "admin", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(targetUser.Role.Value, "superadmin", StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogWarning("⚠️ SECURITY: Admin {AdminId} attempted to impersonate another admin {TargetUserId}",
-                command.AdminUserId, command.TargetUserId);
-            throw new ConflictException("Cannot impersonate other administrators");
-        }
-
-        // Verify admin exists and has admin role
-        var adminUser = await _userRepository.GetByIdAsync(command.AdminUserId, cancellationToken)
-            .ConfigureAwait(false);
-        if (adminUser is null)
-        {
-            throw new NotFoundException($"Admin user with ID '{command.AdminUserId}' not found");
-        }
-
-        if (!string.Equals(adminUser.Role.Value, "admin", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ConflictException("Only admins can impersonate users");
+            _logger.LogWarning(
+                "⚠️ SECURITY: Admin {AdminId} attempted to impersonate privileged user {TargetUserId} (role: {Role})",
+                command.AdminUserId, command.TargetUserId, targetUser.Role.Value);
+            throw new ForbiddenException("Cannot impersonate admin or SuperAdmin users");
         }
 
         // Create session via MediatR (reuse existing command)
@@ -104,6 +114,7 @@ internal sealed class ImpersonateUserCommandHandler
             {
                 targetUserId = command.TargetUserId,
                 targetEmail = targetUser.Email.Value,
+                reason = command.Reason,
                 sessionToken = sessionResponse.SessionToken[..Math.Min(16, sessionResponse.SessionToken.Length)] + "...",
                 expiresAt = sessionResponse.ExpiresAt
             }),

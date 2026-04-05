@@ -194,11 +194,11 @@ public class InMemoryChunkRepositoryTests
     }
 
     [Fact]
-    public void Clear_RemovesAllChunks()
+    public async Task Clear_RemovesAllChunks()
     {
         // Arrange
         var chunk = CreateTestChunk();
-        _repository.SaveAsync(chunk).Wait();
+        await _repository.SaveAsync(chunk);
 
         // Act
         _repository.Clear();

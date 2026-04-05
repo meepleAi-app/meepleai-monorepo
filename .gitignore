@@ -64,6 +64,8 @@ infra/secrets/prod/*.pfx
 logs/
 # Exception: Allow admin monitor logs page
 !apps/web/src/app/admin/*/monitor/logs/
+# Exception: Allow Next.js API route for logs
+!apps/web/src/app/api/logs/
 *.log
 npm-debug.log*
 yarn-debug.log*

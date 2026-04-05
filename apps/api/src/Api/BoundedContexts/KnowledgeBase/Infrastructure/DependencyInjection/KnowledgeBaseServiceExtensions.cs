@@ -344,6 +344,12 @@ internal static class KnowledgeBaseServiceExtensions
 
         // E4-3: Session query budget — Redis-backed per-session AI query tracking
         services.AddScoped<ISessionQueryBudgetService, SessionQueryBudgetService>();
+
+        // RAG Pipeline Hardening P1-2: per-query metrics logging to rag_quality_logs table
+        services.AddScoped<IRagQualityTracker, RagQualityTracker>();
+
+        // RAG Pipeline Hardening P1-4: heuristic query complexity analyzer for LLM model routing
+        services.AddSingleton<QueryComplexityAnalyzer>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)
@@ -406,6 +412,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-3494: Multi-Tier Cache Service (Singleton for L1 in-memory cache consistency)
         services.AddSingleton<IMultiTierCache, MultiTierCache>();
+
+        // P1-5: Semantic response cache — Redis-backed cosine-similarity cache (24h TTL, 0.95 threshold)
+        services.AddSingleton<ISemanticResponseCache, SemanticResponseCache>();
     }
 
     private static void AddBackgroundJobServices(IServiceCollection services, IConfiguration? configuration)

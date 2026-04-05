@@ -48,6 +48,8 @@ public sealed class SeqQueryClient : ISeqQueryClient
         if (!string.IsNullOrWhiteSpace(afterId))
             queryParams.Add($"afterId={afterId}");
 
+        // render=true asks Seq to include RenderedMessage in the response
+        queryParams.Add("render=true");
         var url = $"/api/events?{string.Join("&", queryParams)}";
 
         try
@@ -83,11 +85,13 @@ public sealed class SeqQueryClient : ISeqQueryClient
     private static ApplicationLogDto ParseEvent(JsonElement evt)
     {
         var properties = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (evt.TryGetProperty("Properties", out var props))
+        // Seq REST API returns Properties as an array of {Name, Value} objects
+        if (evt.TryGetProperty("Properties", out var props) && props.ValueKind == JsonValueKind.Array)
         {
-            foreach (var prop in props.EnumerateObject())
+            foreach (var prop in props.EnumerateArray())
             {
-                properties[prop.Name] = prop.Value.ToString();
+                if (prop.TryGetProperty("Name", out var name) && prop.TryGetProperty("Value", out var value))
+                    properties[name.GetString() ?? ""] = value.ToString();
             }
         }
 

@@ -166,7 +166,7 @@ Infrastructure Layer (Repositories + External Services + EF Core)
 ```
 
 ### Patterns Implementati
-- **Domain-Driven Design (DDD)**: 11 bounded contexts, aggregates, value objects
+- **Domain-Driven Design (DDD)**: 18 bounded contexts, aggregates, value objects
 - **CQRS (Command Query Responsibility Segregation)**: Separazione write/read
 - **MediatR**: Mediator pattern per loose coupling
 - **Repository Pattern**: Infrastructure isolation

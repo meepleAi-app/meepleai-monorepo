@@ -37,17 +37,18 @@ cp .env.example .env.local
 # Required variables
 OPENROUTER_API_KEY=<your-key>
 ConnectionStrings__Postgres=Host=localhost;Port=5432;Database=meepleai;Username=postgres;Password=postgres
-QDRANT_URL=http://localhost:6333
 REDIS_URL=localhost:6379
 INITIAL_ADMIN_EMAIL=admin@meepleai.com
 INITIAL_ADMIN_PASSWORD=<secure-password>
 NEXT_PUBLIC_API_BASE=http://localhost:8080
 ```
 
+> **Nota**: il vector store è pgvector (estensione PostgreSQL), non è necessario un servizio Qdrant separato.
+
 **3. Start Infrastructure**
 ```bash
 cd infra
-docker compose up -d postgres qdrant redis
+docker compose up -d postgres redis
 ```
 
 **4. Run Backend (Terminal 1)**
@@ -71,17 +72,28 @@ pnpm dev
 
 ### DDD Bounded Contexts
 
-Il progetto segue DDD con 7 bounded contexts, ciascuno con pattern CQRS/MediatR:
+Il progetto segue DDD con 18 bounded contexts, ciascuno con pattern CQRS/MediatR:
 
 ```
 apps/api/src/Api/BoundedContexts/
+├── Administration/         # Users, roles, audit, analytics
+├── AgentMemory/            # House rules, memory notes, guest player claims
 ├── Authentication/         # Auth, sessions, API keys, OAuth, 2FA
-├── GameManagement/         # Games catalog, play sessions
-├── KnowledgeBase/          # RAG, vectors, chat (Hybrid RRF)
-├── DocumentProcessing/     # PDF upload, extraction, validation
-├── WorkflowIntegration/    # n8n workflows, error logging
+├── BusinessSimulations/    # Ledger entries, cost scenarios, resource forecasts
+├── DatabaseSync/           # DB migrations, tunnel management, sync ops
+├── DocumentProcessing/     # PDF upload, extraction, chunking
+├── EntityRelationships/    # Cross-entity links (EntityLink aggregates)
+├── Gamification/           # Achievements, badges, leaderboards
+├── GameManagement/         # Catalog, sessions, FAQs, specs
+├── GameToolbox/            # Card decks, phases, session tool templates
+├── GameToolkit/            # AI toolkit generation, KB-based suggestions
+├── KnowledgeBase/          # RAG, AI agents, chat, vector search (pgvector)
+├── SessionTracking/        # Session notes, scoring, activity tracking
+├── SharedGameCatalog/      # Community DB with soft-delete
 ├── SystemConfiguration/    # Runtime config, feature flags
-└── Administration/         # Users, alerts, audit, analytics
+├── UserLibrary/            # Collections, wishlist, history
+├── UserNotifications/      # Alerts, email, push
+└── WorkflowIntegration/    # n8n, webhooks, logging
 ```
 
 **Pattern per Context**:

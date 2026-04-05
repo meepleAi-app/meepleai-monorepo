@@ -24,8 +24,8 @@ export function AlertsTab() {
   const [loadError, setLoadError] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  const loadData = () => {
-    setLoading(true);
+  const loadData = (silent = false) => {
+    if (!silent) setLoading(true);
     setLoadError(false);
     Promise.all([
       alertRulesApi.getAll().catch(() => []),
@@ -39,14 +39,16 @@ export function AlertsTab() {
         setTotalServices(infraDetails?.overall?.totalServices ?? 0);
       })
       .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   };
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     loadData();
-    intervalRef.current = setInterval(loadData, 30_000);
+    intervalRef.current = setInterval(() => loadData(true), 30_000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -91,7 +93,7 @@ export function AlertsTab() {
           <p className="text-sm text-amber-800 dark:text-amber-200 flex-1">
             Errore nel caricamento degli alert. Alcuni dati potrebbero non essere disponibili.
           </p>
-          <Button variant="outline" size="sm" onClick={loadData}>
+          <Button variant="outline" size="sm" onClick={() => loadData()}>
             <RefreshCwIcon className="h-3.5 w-3.5 mr-1.5" />
             Riprova
           </Button>

@@ -40,6 +40,8 @@ services:
       loki:
         condition: service_healthy
     user: root
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-staging}
     volumes:
       - ./monitoring/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
       - ./monitoring/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro

@@ -64,10 +64,34 @@ jobs:
             echo "📦 Using DB: $PG_DB as user: $PG_USER"
 
             echo "🗑️ Deleting admin user from DB so seeder recreates with new password..."
-            # Role is stored lowercase ("superadmin"), use lower() for case-insensitive match
-            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
-              "DELETE FROM users WHERE \"Email\" = '${ADMIN_EMAIL}' AND lower(\"Role\") IN ('admin','superadmin');" \
-              && echo "✅ Admin user deleted from DB" || echo "⚠️ Delete failed or user not found"
+            # Role is stored lowercase ("superadmin"). Must null FK references before deleting.
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" << EOF
+            DO \$\$
+            DECLARE
+              admin_id UUID;
+            BEGIN
+              SELECT "Id" INTO admin_id
+              FROM users
+              WHERE "Email" = '${ADMIN_EMAIL}' AND lower("Role") IN ('admin','superadmin')
+              LIMIT 1;
+
+              IF admin_id IS NOT NULL THEN
+                -- Null FK references that prevent deletion
+                UPDATE system_configurations
+                  SET "CreatedByUserId" = NULL
+                  WHERE "CreatedByUserId" = admin_id;
+                UPDATE system_configurations
+                  SET "UpdatedByUserId" = NULL
+                  WHERE "UpdatedByUserId" = admin_id;
+                -- Delete the admin user
+                DELETE FROM users WHERE "Id" = admin_id;
+                RAISE NOTICE 'Admin user deleted: %', admin_id;
+              ELSE
+                RAISE NOTICE 'Admin user not found for email: ${ADMIN_EMAIL}';
+              END IF;
+            END \$\$;
+            EOF
+            echo "✅ Admin delete step complete"
 
             # Show result
             docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
@@ -91,11 +115,11 @@ jobs:
               sleep 5
             done
 
-            echo "🧪 Verifying login works (up to 60s for seeder to run)..."
+            echo "🧪 Verifying login works (up to 90s for seeder to run)..."
             LOGIN_OK=false
-            for attempt in $(seq 1 12); do
+            for attempt in $(seq 1 18); do
               sleep 5
-              RESULT=$(curl -sf -X POST https://meepleai.app/api/v1/auth/login \
+              RESULT=$(curl -s -X POST https://meepleai.app/api/v1/auth/login \
                 -H "Content-Type: application/json" \
                 -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${NEW_PASSWORD}\"}" 2>/dev/null || echo "CURL_FAILED")
 
@@ -108,12 +132,12 @@ jobs:
                 LOGIN_OK=true
                 break
               else
-                echo "⏳ Attempt $attempt/12: $RESULT"
+                echo "⏳ Attempt $attempt/18: $RESULT"
               fi
             done
 
             if [ "$LOGIN_OK" != "true" ]; then
-              echo "❌ Login verification failed after 60s"
+              echo "❌ Login verification failed after 90s"
               exit 1
             fi
         env:

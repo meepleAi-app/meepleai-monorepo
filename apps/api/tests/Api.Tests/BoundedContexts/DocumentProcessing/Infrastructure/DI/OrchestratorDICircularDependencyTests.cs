@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -40,6 +41,9 @@ public class OrchestratorDICircularDependencyTests
         // Register IConfiguration for domain services
         services.AddSingleton<IConfiguration>(configuration);
 
+        // Register shared services required by EnhancedPdfProcessingOrchestrator
+        services.AddScoped<ITextChunkingService, TextChunkingService>();
+
         // Act - Should not throw InvalidOperationException (circular dependency)
         services.AddDocumentProcessingContext(configuration);
         var serviceProvider = services.BuildServiceProvider();
@@ -70,6 +74,9 @@ public class OrchestratorDICircularDependencyTests
             .Build();
 
         services.AddSingleton<IConfiguration>(configuration);
+
+        // Register shared services required by EnhancedPdfProcessingOrchestrator
+        services.AddScoped<ITextChunkingService, TextChunkingService>();
 
         // Act
         services.AddDocumentProcessingContext(configuration);

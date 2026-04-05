@@ -87,7 +87,7 @@ jobs:
                 -H "Content-Type: application/json" \
                 -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${NEW_PASSWORD}\"}" 2>/dev/null || echo "CURL_FAILED")
 
-              if echo "$RESULT" | grep -q '"sessionToken"'; then
+              if echo "$RESULT" | grep -q '"user"'; then
                 echo "✅ Admin login verified successfully! (attempt $attempt)"
                 LOGIN_OK=true
                 break

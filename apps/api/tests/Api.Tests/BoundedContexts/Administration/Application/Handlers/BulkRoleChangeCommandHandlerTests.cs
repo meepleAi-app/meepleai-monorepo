@@ -46,10 +46,14 @@ public class BulkRoleChangeCommandHandlerTests
         var user1 = CreateTestUser(userId1, "user1@test.com", Role.User);
         var user2 = CreateTestUser(userId2, "user2@test.com", Role.User);
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user1);
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user2);
+        _mockUserRepository.Setup(r => r.CountByRoleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(10);
 
         var command = new BulkRoleChangeCommand(
             new List<Guid> { userId1, userId2 },
@@ -81,10 +85,14 @@ public class BulkRoleChangeCommandHandlerTests
 
         var user1 = CreateTestUser(userId1, "user1@test.com", Role.User);
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user1);
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId2, It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
+        _mockUserRepository.Setup(r => r.CountByRoleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(10);
 
         var command = new BulkRoleChangeCommand(
             new List<Guid> { userId1, userId2 },
@@ -107,10 +115,15 @@ public class BulkRoleChangeCommandHandlerTests
     public async Task Handle_WithInvalidRole_ShouldThrowDomainException()
     {
         // Arrange
+        var requesterId = Guid.NewGuid();
+
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
+
         var command = new BulkRoleChangeCommand(
             new List<Guid> { Guid.NewGuid() },
             "invalid_role",
-            Guid.NewGuid()
+            requesterId
         );
 
         // Act & Assert
@@ -159,15 +172,20 @@ public class BulkRoleChangeCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
         var user = CreateTestUser(userId, "user@test.com", Role.User);
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
+        _mockUserRepository.Setup(r => r.CountByRoleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(10);
 
         var command = new BulkRoleChangeCommand(
             new List<Guid> { userId },
             roleName,
-            Guid.NewGuid()
+            requesterId
         );
 
         // Act
@@ -211,6 +229,17 @@ public class BulkRoleChangeCommandHandlerTests
             displayName: "Test User",
             passwordHash: PasswordHash.Create("Password123!"),
             role: role
+        );
+    }
+
+    private static User CreateSuperAdminUser(Guid id)
+    {
+        return new User(
+            id: id,
+            email: new Email("superadmin@test.com"),
+            displayName: "Super Admin",
+            passwordHash: PasswordHash.Create("SuperAdminPassword123!"),
+            role: Role.SuperAdmin
         );
     }
 }

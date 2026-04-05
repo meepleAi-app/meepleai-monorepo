@@ -47,6 +47,8 @@ public class BulkPasswordResetCommandHandlerTests
         var user1 = CreateTestUser(userId1, "user1@test.com");
         var user2 = CreateTestUser(userId2, "user2@test.com");
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user1);
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId2, It.IsAny<CancellationToken>()))
@@ -83,6 +85,8 @@ public class BulkPasswordResetCommandHandlerTests
 
         var user1 = CreateTestUser(userId1, "user1@test.com");
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user1);
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId2, It.IsAny<CancellationToken>()))
@@ -164,6 +168,8 @@ public class BulkPasswordResetCommandHandlerTests
         var requesterId = Guid.NewGuid();
         var user = CreateTestUser(userId, "user@test.com");
 
+        _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuperAdminUser(requesterId));
         _mockUserRepository.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
@@ -246,6 +252,17 @@ public class BulkPasswordResetCommandHandlerTests
             displayName: "Test User",
             passwordHash: PasswordHash.Create("OldPassword123!"),
             role: Role.User
+        );
+    }
+
+    private static User CreateSuperAdminUser(Guid id)
+    {
+        return new User(
+            id: id,
+            email: new Email("superadmin@test.com"),
+            displayName: "Super Admin",
+            passwordHash: PasswordHash.Create("SuperAdminPassword123!"),
+            role: Role.SuperAdmin
         );
     }
 }

@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
@@ -49,7 +50,7 @@ internal class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocume
         // SECURITY: Verify user owns this collection (quality review issue #5)
         if (collection.CreatedByUserId != command.UserId)
         {
-            throw new DomainException($"User {command.UserId} is not authorized to modify collection {command.CollectionId}");
+            throw new ForbiddenException("You do not have permission to modify this collection.");
         }
 
         // Validate PDF document exists

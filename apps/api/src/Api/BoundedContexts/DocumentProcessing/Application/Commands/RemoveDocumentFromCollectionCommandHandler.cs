@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
@@ -45,7 +46,7 @@ internal class RemoveDocumentFromCollectionCommandHandler : ICommandHandler<Remo
         // SECURITY: Verify user owns this collection (same pattern as AddDocumentToCollectionCommandHandler)
         if (collection.CreatedByUserId != command.UserId)
         {
-            throw new DomainException($"User {command.UserId} is not authorized to modify collection {command.CollectionId}");
+            throw new ForbiddenException("You do not have permission to modify this collection.");
         }
 
         // Remove document from collection (domain validates document exists)

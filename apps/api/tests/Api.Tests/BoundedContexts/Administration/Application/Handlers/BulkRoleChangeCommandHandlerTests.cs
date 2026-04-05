@@ -177,6 +177,32 @@ public class BulkRoleChangeCommandHandlerTests
         result.SuccessCount.Should().Be(1);
     }
 
+    [Fact]
+    public async Task Handle_WhenInfrastructureExceptionOccurs_ShouldNotLeakExceptionMessage()
+    {
+        // Arrange — GetByIdAsync throws with sensitive infrastructure details
+        const string sensitiveMessage = "EF Core transaction failed: server=prod-db;uid=sa;pwd=secret123";
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(sensitiveMessage));
+
+        var command = new BulkRoleChangeCommand(
+            new List<Guid> { Guid.NewGuid() },
+            "admin",
+            Guid.NewGuid()
+        );
+
+        // Act — the per-item catch handles the exception; no DomainException is thrown
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert — the per-item error message must not leak infrastructure details
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Should().NotContain(sensitiveMessage,
+            because: "infrastructure exception details must never be forwarded to the client");
+        result.Errors[0].Should().NotContain("pwd=secret123",
+            because: "credentials must never leak through error messages");
+    }
+
     private static User CreateTestUser(Guid id, string email, Role role)
     {
         return new User(

@@ -221,4 +221,41 @@ public class SlackNotificationProcessorJobTests : IDisposable
             r => r.UpdateAsync(It.IsAny<NotificationQueueItem>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task Execute_SendViaWebhook_IncludesCorrelationIdHeader()
+    {
+        // Arrange
+        var teamItem = CreateSlackTeamItem();
+        HttpRequestMessage? capturedRequest = null;
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("ok") });
+
+        var client = new HttpClient(handlerMock.Object);
+        _httpClientFactoryMock.Setup(f => f.CreateClient("SlackApi")).Returns(client);
+
+        _queueRepoMock.Setup(r => r.GetPendingByChannelAsync(NotificationChannelType.SlackUser, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NotificationQueueItem>());
+        _queueRepoMock.Setup(r => r.GetPendingByChannelAsync(NotificationChannelType.SlackTeam, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NotificationQueueItem> { teamItem });
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.Execute(_jobContextMock.Object);
+
+        // Assert
+        Assert.NotNull(capturedRequest);
+        Assert.True(
+            capturedRequest!.Headers.TryGetValues("X-MeepleAI-CorrelationId", out var values),
+            "CorrelationId header must be present for distributed tracing");
+        Assert.True(Guid.TryParse(values!.First(), out _), "header value must be a valid GUID");
+    }
 }

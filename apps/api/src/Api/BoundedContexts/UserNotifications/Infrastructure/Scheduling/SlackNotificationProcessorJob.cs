@@ -214,6 +214,8 @@ internal sealed class SlackNotificationProcessorJob : IJob
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
+        // Propagate CorrelationId for distributed tracing / Slack request correlation
+        request.Headers.TryAddWithoutValidation("X-MeepleAI-CorrelationId", item.CorrelationId.ToString());
 
         using var response = await client.SendAsync(request, ct).ConfigureAwait(false);
 
@@ -267,6 +269,8 @@ internal sealed class SlackNotificationProcessorJob : IJob
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", botToken);
+        // Propagate CorrelationId for distributed tracing / Slack request correlation
+        request.Headers.TryAddWithoutValidation("X-MeepleAI-CorrelationId", item.CorrelationId.ToString());
 
         using var response = await client.SendAsync(request, ct).ConfigureAwait(false);
 

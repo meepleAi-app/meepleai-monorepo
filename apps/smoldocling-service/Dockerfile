@@ -1,13 +1,40 @@
 # SmolDocling FastAPI Service Dockerfile
+# Multi-stage build: builder compiles deps, runtime keeps only what's needed
 # Supports both GPU and CPU inference
 
-# Use CUDA base image for GPU support (can run CPU-only too)
-# Pick a newer CUDA/LTS image to replace the soon-to-be-deprecated tag
+# ============================================================
+# Stage 1: Builder — compile Python packages in a slim image
+# ============================================================
+FROM python:3.11-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a virtual environment for clean COPY later
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Download model weights at build time (speeds up first startup)
+ENV HF_HOME=/opt/model-cache
+RUN python -c "from transformers import AutoProcessor, AutoModelForImageTextToText; \
+    print('Downloading SmolDocling model...'); \
+    AutoProcessor.from_pretrained('docling-project/SmolDocling-256M-preview'); \
+    AutoModelForImageTextToText.from_pretrained('docling-project/SmolDocling-256M-preview'); \
+    print('Model download complete')"
+
+# ============================================================
+# Stage 2: Runtime — CUDA base for GPU, no build-essential
+# ============================================================
 FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
 
 WORKDIR /app
 
-# Install system dependencies
+# Install only runtime system dependencies (NO build-essential)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Python
     python3.11 \
@@ -19,8 +46,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Image processing
     libgl1 \
     libglib2.0-0 \
-    # Build tools (for some pip packages)
-    build-essential \
     # Cleanup
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -28,24 +53,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set Python version
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
 
-# Create non-root user for security (before model download so cache is user-owned)
+# Create non-root user for security (before copying model so cache is user-owned)
 RUN groupadd -r smoldocling && useradd -r -g smoldocling -m -d /home/smoldocling smoldocling \
     && mkdir -p /home/smoldocling/.cache/huggingface \
     && chown -R smoldocling:smoldocling /home/smoldocling
 
-# Copy requirements first for better caching
-COPY requirements.txt .
-RUN python -m pip install --no-cache-dir -r requirements.txt
+# Copy the pre-built virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Download model weights at build time (optional - speeds up first startup)
-# Cache to user-owned directory so non-root user can access at runtime
+# Copy pre-downloaded model weights from builder and set ownership
 ENV HF_HOME=/home/smoldocling/.cache/huggingface
-RUN python -c "from transformers import AutoProcessor, AutoModelForImageTextToText; \
-    print('Downloading SmolDocling model...'); \
-    AutoProcessor.from_pretrained('docling-project/SmolDocling-256M-preview'); \
-    AutoModelForImageTextToText.from_pretrained('docling-project/SmolDocling-256M-preview'); \
-    print('Model download complete')" \
-    && chown -R smoldocling:smoldocling /home/smoldocling/.cache
+COPY --from=builder /opt/model-cache /home/smoldocling/.cache/huggingface
+RUN chown -R smoldocling:smoldocling /home/smoldocling/.cache
 
 # Copy application code
 COPY src/ ./src/

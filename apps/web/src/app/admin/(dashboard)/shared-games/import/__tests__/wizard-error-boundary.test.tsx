@@ -23,10 +23,8 @@ vi.mock('@/stores/useGameImportWizardStore', () => ({
   useGameImportWizardStore: () => ({
     currentStep: 1,
     uploadedPdf: null,
-    extractedMetadata: null,
-    selectedBggId: null,
-    bggGameData: null,
-    enrichedData: null,
+    reviewedMetadata: null,
+    importResult: null,
     isProcessing: false,
     error: null,
     goNext: vi.fn(),
@@ -34,10 +32,8 @@ vi.mock('@/stores/useGameImportWizardStore', () => ({
     canGoNext: () => false,
     canGoBack: () => false,
     reset: vi.fn(),
-    submitWizard: vi.fn(),
     setUploadedPdf: vi.fn(),
     setStep: vi.fn(),
-    setSelectedBggId: vi.fn(),
   }),
 }));
 
@@ -52,25 +48,24 @@ vi.mock('../steps/Step1UploadPdf', () => ({
   },
 }));
 
-vi.mock('../steps/Step3BggMatch', () => ({
-  Step3BggMatch: () => <div>Step 3</div>,
+vi.mock('../steps/Step3PreviewConfirm', () => ({
+  Step3PreviewConfirm: () => <div>Step 3</div>,
 }));
 
 describe('AdminGameImportWizard - Error Boundary', () => {
   it('should catch errors and show fallback UI', async () => {
-    // Suppress console.error for this test
     const originalError = console.error;
     console.error = vi.fn();
 
     renderWithQuery(<AdminGameImportWizardClient />);
 
-    // Should show error fallback
-    await screen.findByText('Wizard Error');
-    expect(screen.getByText(/error occurred in the game import wizard/i)).toBeInTheDocument();
+    // Should show error fallback (Italian UI text)
+    await screen.findByText('Errore nel wizard');
+    expect(screen.getByText(/Si è verificato un errore/i)).toBeInTheDocument();
 
     // Should show recovery buttons
-    expect(screen.getByRole('button', { name: /start over/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /back to games/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ricomincia/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /torna ai giochi/i })).toBeInTheDocument();
 
     console.error = originalError;
   });
@@ -81,16 +76,15 @@ describe('AdminGameImportWizard - Error Boundary', () => {
 
     renderWithQuery(<AdminGameImportWizardClient />);
 
-    await screen.findByText('Wizard Error');
+    await screen.findByText('Errore nel wizard');
 
-    const startOverBtn = screen.getByRole('button', { name: /start over/i });
+    const startOverBtn = screen.getByRole('button', { name: /ricomincia/i });
     const user = userEvent.setup();
 
     await user.click(startOverBtn);
 
     // Error boundary resets, Step1 throws again, so error fallback re-appears
-    // Re-query for the button since DOM was re-rendered
-    const newStartOverBtn = await screen.findByRole('button', { name: /start over/i });
+    const newStartOverBtn = await screen.findByRole('button', { name: /ricomincia/i });
     expect(newStartOverBtn).toBeInTheDocument();
 
     console.error = originalError;

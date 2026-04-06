@@ -14,6 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
 
+# Pre-download ML model in builder to avoid cold-start delay
+ENV HF_HOME=/model-cache
+RUN pip install --no-cache /app/wheels/* \
+    && python -c "from sentence_transformers import CrossEncoder; CrossEncoder('BAAI/bge-reranker-v2-m3')"
+
 # Production stage
 FROM python:3.11-slim
 
@@ -34,6 +39,9 @@ COPY --from=builder /app/requirements.txt .
 # Install dependencies from wheels (faster, no compilation)
 RUN pip install --no-cache /wheels/*
 
+# Copy pre-downloaded model from builder
+COPY --from=builder --chown=reranker:reranker /model-cache /home/reranker/.cache/huggingface
+
 # Copy application code
 COPY main.py .
 
@@ -44,7 +52,8 @@ RUN chown -R reranker:reranker /app
 USER reranker
 
 # Environment variables with sensible defaults
-ENV MODEL_NAME=BAAI/bge-reranker-v2-m3 \
+ENV HF_HOME=/home/reranker/.cache/huggingface \
+    MODEL_NAME=BAAI/bge-reranker-v2-m3 \
     BATCH_SIZE=32 \
     MAX_LENGTH=512 \
     DEVICE=cpu \

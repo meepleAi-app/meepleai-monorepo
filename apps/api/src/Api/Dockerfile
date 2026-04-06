@@ -8,19 +8,16 @@ RUN dotnet publish ./src/Api/Api.csproj -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 
-# Copy published files and remove debug/doc artifacts to reduce image size (~10MB savings)
-COPY --from=build /app/publish .
-RUN find . -name "*.pdb" -delete && find . -name "*.xml" -delete
-
-# Install curl for healthcheck and clean up in same layer
+# Install curl for healthcheck, create non-root user, prepare directories — single layer
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && adduser --disabled-password --gecos '' --uid 1001 apiuser \
+    && mkdir -p /app/pdf_uploads
 
-# Create non-root user for security
-RUN adduser --disabled-password --gecos '' --uid 1001 apiuser \
-    && chown -R apiuser:apiuser /app \
-    && mkdir -p /app/pdf_uploads \
+# Copy published files and remove debug/doc artifacts to reduce image size (~10MB savings)
+COPY --from=build --chown=apiuser:apiuser /app/publish .
+RUN find . -name "*.pdb" -delete && find . -name "*.xml" -delete \
     && chown -R apiuser:apiuser /app/pdf_uploads
 
 # Switch to non-root user

@@ -27,7 +27,7 @@ vi.mock('@/stores/useGameImportWizardStore', () => ({
     enrichedData: null,
     setStep: vi.fn(),
     setUploadedPdf: vi.fn(),
-    setExtractedMetadata: vi.fn(),
+    setReviewedMetadata: vi.fn(),
     setSelectedBggId: vi.fn(),
   })),
 }));

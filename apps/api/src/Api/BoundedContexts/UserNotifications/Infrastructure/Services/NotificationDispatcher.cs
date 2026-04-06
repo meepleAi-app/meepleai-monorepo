@@ -51,8 +51,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             id: Guid.NewGuid(),
             userId: message.RecipientUserId,
             type: message.Type,
-            severity: NotificationSeverity.Info,
-            title: message.Payload.GetType().Name,
+            severity: ResolveSeverity(message.Type),
+            title: ResolveTitle(message.Type),
             message: message.Payload.ToString() ?? string.Empty,
             link: message.DeepLinkPath,
             metadata: metadataJson,
@@ -182,6 +182,76 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
     }
 
     /// <summary>
+    /// Maps notification type to display severity.
+    /// </summary>
+    private static NotificationSeverity ResolveSeverity(NotificationType type)
+    {
+        if (type == NotificationType.DocumentProcessingFailed
+            || type == NotificationType.AdminSystemHealthAlert
+            || type == NotificationType.AdminOpenRouterThresholdAlert)
+            return NotificationSeverity.Error;
+
+        if (type == NotificationType.SessionTerminated
+            || type == NotificationType.AdminReviewLockExpiring
+            || type == NotificationType.AdminStaleShareRequests
+            || type == NotificationType.RateLimitReached
+            || type == NotificationType.SlackConnectionRevoked)
+            return NotificationSeverity.Warning;
+
+        if (type == NotificationType.DocumentReady
+            || type == NotificationType.RuleSpecGenerated
+            || type == NotificationType.BadgeEarned
+            || type == NotificationType.AgentReady
+            || type == NotificationType.GdprDataExportReady)
+            return NotificationSeverity.Success;
+
+        return NotificationSeverity.Info;
+    }
+
+    /// <summary>
+    /// Returns a human-readable title for the notification type.
+    /// </summary>
+    private static string ResolveTitle(NotificationType type)
+    {
+        if (type == NotificationType.DocumentReady) return "Documento pronto";
+        if (type == NotificationType.RuleSpecGenerated) return "Specifiche generate";
+        if (type == NotificationType.DocumentProcessingFailed) return "Elaborazione fallita";
+        if (type == NotificationType.ShareRequestCreated) return "Nuova Share Request";
+        if (type == NotificationType.ShareRequestApproved) return "Share Request approvata";
+        if (type == NotificationType.ShareRequestRejected) return "Share Request rifiutata";
+        if (type == NotificationType.ShareRequestChangesRequested) return "Modifiche richieste";
+        if (type == NotificationType.BadgeEarned) return "Badge ottenuto";
+        if (type == NotificationType.GameNightInvitation) return "Invito Serata";
+        if (type == NotificationType.GameNightRsvpReceived) return "RSVP ricevuto";
+        if (type == NotificationType.GameNightReminder) return "Promemoria Serata";
+        if (type == NotificationType.GameNightCancelled) return "Serata annullata";
+        if (type == NotificationType.AgentReady) return "Agente pronto";
+        if (type == NotificationType.LoanReminder) return "Promemoria prestito";
+        if (type == NotificationType.RateLimitApproaching) return "Quota in avvicinamento";
+        if (type == NotificationType.RateLimitReached) return "Quota raggiunta";
+        if (type == NotificationType.SessionTerminated) return "Sessione terminata";
+        if (type == NotificationType.GdprDataExportReady) return "Export dati pronto";
+        if (type == NotificationType.GdprAccountDeleted) return "Account eliminato";
+        if (type == NotificationType.GdprAiConsentUpdated) return "Consenso AI aggiornato";
+        if (type == NotificationType.SlackConnectionRevoked) return "Slack disconnesso";
+
+        // Admin types
+        if (type == NotificationType.AdminNewShareRequest) return "[Admin] Nuova Share Request";
+        if (type == NotificationType.AdminStaleShareRequests) return "[Admin] Share Request in attesa";
+        if (type == NotificationType.AdminReviewLockExpiring) return "[Admin] Lock revisione in scadenza";
+        if (type == NotificationType.AdminSharedGameSubmitted) return "[Admin] Gioco condiviso inviato";
+        if (type == NotificationType.AdminOpenRouterThresholdAlert) return "[Admin] Soglia OpenRouter";
+        if (type == NotificationType.AdminOpenRouterDailySummary) return "[Admin] Digest giornaliero";
+        if (type == NotificationType.AdminSystemHealthAlert) return "[Admin] Alerta sistema";
+        if (type == NotificationType.AdminModelStatusChanged) return "[Admin] Stato modello cambiato";
+        if (type == NotificationType.AdminAccessRequestCreated) return "[Admin] Nuova richiesta accesso";
+        if (type == NotificationType.AdminManualNotification) return "[Admin] Notifica manuale";
+        if (type == NotificationType.AdminPdfProcessingStarted) return "[Admin] Elaborazione PDF avviata";
+
+        return "Notifica MeepleAI";
+    }
+
+    /// <summary>
     /// Checks if email delivery is enabled for a given notification type based on user preferences.
     /// </summary>
     private static bool IsEmailEnabledForType(NotificationPreferences prefs, NotificationType type)
@@ -201,9 +271,24 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
 
     /// <summary>
     /// Checks if Slack DM delivery is enabled for a given notification type based on user preferences.
+    /// Admin types are never delivered to individual users via Slack DM.
     /// </summary>
     private static bool IsSlackEnabledForType(NotificationPreferences prefs, NotificationType type)
     {
+        // Admin types are never sent to individual users via DM
+        if (type == NotificationType.AdminNewShareRequest
+            || type == NotificationType.AdminStaleShareRequests
+            || type == NotificationType.AdminReviewLockExpiring
+            || type == NotificationType.AdminSharedGameSubmitted
+            || type == NotificationType.AdminOpenRouterThresholdAlert
+            || type == NotificationType.AdminOpenRouterDailySummary
+            || type == NotificationType.AdminSystemHealthAlert
+            || type == NotificationType.AdminModelStatusChanged
+            || type == NotificationType.AdminAccessRequestCreated
+            || type == NotificationType.AdminManualNotification
+            || type == NotificationType.AdminPdfProcessingStarted)
+            return false;
+
         if (type == NotificationType.DocumentReady || type == NotificationType.RuleSpecGenerated)
             return prefs.SlackOnDocumentReady;
         if (type == NotificationType.DocumentProcessingFailed)

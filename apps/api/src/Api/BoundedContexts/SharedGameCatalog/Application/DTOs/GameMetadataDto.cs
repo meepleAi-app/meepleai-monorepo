@@ -43,6 +43,26 @@ public record GameMetadataDto
     public string? Description { get; init; }
 
     /// <summary>
+    /// List of publishers
+    /// </summary>
+    public IReadOnlyList<string>? Publishers { get; init; }
+
+    /// <summary>
+    /// List of designers/authors
+    /// </summary>
+    public IReadOnlyList<string>? Designers { get; init; }
+
+    /// <summary>
+    /// Game categories (e.g., Strategy, Family, Party)
+    /// </summary>
+    public IReadOnlyList<string>? Categories { get; init; }
+
+    /// <summary>
+    /// Game mechanics (e.g., Deck Building, Worker Placement)
+    /// </summary>
+    public IReadOnlyList<string>? Mechanics { get; init; }
+
+    /// <summary>
     /// Confidence score (0.0 - 1.0) indicating extraction quality.
     /// ≥0.80: High quality, all key fields extracted
     /// 0.50-0.79: Medium quality, some fields missing

@@ -43,7 +43,7 @@ describe('Usage & Costs Tabs', () => {
     const { default: UsagePage } = await import('@/app/admin/(dashboard)/agents/usage/page');
     render(<UsagePage />, { wrapper: Wrapper });
     expect(screen.getByRole('tab', { name: /openrouter/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /token balance/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /chat log/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /saldo token/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /log chat/i })).toBeInTheDocument();
   });
 });

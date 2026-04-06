@@ -6,8 +6,8 @@ import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import FastAPI, File, UploadFile, HTTPException, status
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi import FastAPI, File, Form, Query, UploadFile, HTTPException, status
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from starlette.concurrency import run_in_threadpool
 from PIL import Image
 
@@ -303,6 +303,101 @@ async def extract_pdf(
                     request_id=request_id,
                 )
             ).model_dump(),
+        )
+
+
+@app.post(
+    "/api/v1/page-image",
+    summary="Extract single PDF page as image",
+    description="Converts a specific PDF page to a JPEG image for cover image selection",
+)
+async def extract_page_image(
+    file: UploadFile = File(..., description="PDF file"),
+    page_number: int = Query(default=1, ge=1, description="1-based page number to extract"),
+):
+    """
+    Extract a single page from a PDF as a JPEG image.
+
+    Args:
+        file: PDF file (multipart/form-data)
+        page_number: 1-based page number (default: 1)
+
+    Returns:
+        JPEG image bytes (Content-Type: image/jpeg)
+    """
+    import io
+    import tempfile
+    import os
+
+    request_id = str(uuid.uuid4())
+    logger.info(f"Page image request [{request_id}]: file={file.filename}, page={page_number}")
+
+    try:
+        # Validate content type
+        if not file.content_type or "pdf" not in file.content_type.lower():
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail=f"Unsupported file type: {file.content_type}. Expected application/pdf",
+            )
+
+        file_content = await file.read()
+        if len(file_content) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Empty file",
+            )
+
+        # Write to temp file (pdf2image requires a file path)
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(file_content)
+            tmp_path = tmp.name
+
+        try:
+            from pdf2image import convert_from_path
+            from pdf2image.exceptions import PDFPageCountError
+
+            def _convert():
+                return convert_from_path(
+                    pdf_path=tmp_path,
+                    dpi=150,  # Lower DPI for preview images
+                    fmt="jpeg",
+                    first_page=page_number,
+                    last_page=page_number,
+                    thread_count=1,
+                )
+
+            images = await run_in_threadpool(_convert)
+
+            if not images:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Page {page_number} not found in PDF",
+                )
+
+            # Convert PIL image to JPEG bytes
+            img_bytes = io.BytesIO()
+            images[0].save(img_bytes, format="JPEG", quality=85)
+            img_bytes.seek(0)
+
+            logger.info(f"Page image extracted [{request_id}]: page={page_number}")
+            return Response(
+                content=img_bytes.read(),
+                media_type="image/jpeg",
+            )
+
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Page image extraction failed [{request_id}]: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to extract page image: {str(e)}",
         )
 
 

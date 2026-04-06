@@ -145,6 +145,57 @@ export interface WizardCreateGameResult {
   enrichedWithBggId?: number | null;
 }
 
+// ─── PDF Import Wizard v2 types ───────────────────────────────────────────────
+
+export interface WizardExtractedMetadata {
+  title: string;
+  yearPublished?: number | null;
+  description?: string | null;
+  minPlayers?: number | null;
+  maxPlayers?: number | null;
+  playingTimeMinutes?: number | null;
+  minAge?: number | null;
+  publishers?: string[] | null;
+  designers?: string[] | null;
+  categories?: string[] | null;
+  mechanics?: string[] | null;
+  confidenceScore?: number | null;
+}
+
+export interface ImportGameFromPdfRequest {
+  title: string;
+  pdfDocumentId: string;
+  yearPublished?: number | null;
+  description?: string | null;
+  minPlayers?: number | null;
+  maxPlayers?: number | null;
+  playingTimeMinutes?: number | null;
+  minAge?: number | null;
+  coverImageUrl?: string | null;
+  publishers?: string[] | null;
+  designers?: string[] | null;
+  categories?: string[] | null;
+  mechanics?: string[] | null;
+}
+
+export interface ImportGameFromPdfResult {
+  gameId: string;
+  pdfDocumentId: string;
+  indexingStatus: string;
+  warning?: string | null;
+}
+
+export interface KnowledgeBaseSearchResult {
+  answer?: string | null;
+  chunks: Array<{
+    text: string;
+    pageNumber?: number | null;
+    score?: number | null;
+    documentTitle?: string | null;
+  }>;
+  queryId?: string | null;
+}
+
 export interface CreateSharedGamesClientParams {
   httpClient: HttpClient;
 }
@@ -1213,6 +1264,164 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      * Uses raw fetch because httpClient.get() parses JSON; blob download requires
      * the raw response body.
      */
+    // ========== PDF Import Wizard v2 (5-step flow) ==========
+
+    /**
+     * Extract game metadata from an already-uploaded PDF (by PdfDocumentId).
+     * GET /api/v1/admin/shared-games/extract-metadata/{pdfId}
+     */
+    async extractMetadataByPdfId(pdfId: string): Promise<WizardExtractedMetadata | null> {
+      const MetadataSchema = z.object({
+        title: z.string(),
+        yearPublished: z.number().nullable().optional(),
+        description: z.string().nullable().optional(),
+        minPlayers: z.number().nullable().optional(),
+        maxPlayers: z.number().nullable().optional(),
+        playingTimeMinutes: z.number().nullable().optional(),
+        minAge: z.number().nullable().optional(),
+        publishers: z.array(z.string()).nullable().optional(),
+        designers: z.array(z.string()).nullable().optional(),
+        categories: z.array(z.string()).nullable().optional(),
+        mechanics: z.array(z.string()).nullable().optional(),
+        confidenceScore: z.number().nullable().optional(),
+      });
+      return httpClient.get(
+        `/api/v1/admin/shared-games/extract-metadata/${encodeURIComponent(pdfId)}`,
+        MetadataSchema
+      );
+    },
+
+    /**
+     * Chunked upload for wizard (orphaned PDF, no gameId).
+     * Calls init → chunks → complete with gameId=null.
+     * Returns { pdfDocumentId, fileName }.
+     */
+    async wizardChunkedUpload(
+      file: File,
+      onProgress?: (percent: number) => void
+    ): Promise<{ pdfDocumentId: string; fileName: string }> {
+      const baseUrl = getApiBase();
+      const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
+
+      // Init session (no gameId → orphaned)
+      const initRes = await fetch(`${baseUrl}/api/v1/ingest/pdf/chunked/init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ fileName: file.name, totalFileSize: file.size }),
+      });
+      if (!initRes.ok) {
+        const err = await initRes.json().catch(() => ({}));
+        throw new Error(err.detail ?? err.title ?? 'Failed to initialize upload');
+      }
+      const initData = (await initRes.json()) as {
+        sessionId: string;
+        totalChunks: number;
+        chunkSizeBytes: number;
+      };
+      const { sessionId, totalChunks } = initData;
+
+      // Upload chunks
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const chunk = file.slice(start, end);
+
+        const formData = new FormData();
+        formData.append('sessionId', sessionId);
+        formData.append('chunkIndex', i.toString());
+        formData.append('chunk', chunk, `chunk-${i}`);
+
+        const chunkRes = await fetch(`${baseUrl}/api/v1/ingest/pdf/chunked/chunk`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        if (!chunkRes.ok) {
+          const err = await chunkRes.json().catch(() => ({}));
+          throw new Error(err.detail ?? `Chunk ${i + 1}/${totalChunks} upload failed`);
+        }
+        const chunkData = (await chunkRes.json()) as { progressPercentage: number };
+        onProgress?.(chunkData.progressPercentage ?? Math.round(((i + 1) / totalChunks) * 100));
+      }
+
+      // Complete
+      const completeRes = await fetch(`${baseUrl}/api/v1/ingest/pdf/chunked/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ sessionId }),
+      });
+      if (!completeRes.ok) {
+        const err = await completeRes.json().catch(() => ({}));
+        throw new Error(err.detail ?? 'Failed to complete upload');
+      }
+      const completeData = (await completeRes.json()) as {
+        success: boolean;
+        documentId: string;
+        fileName: string;
+      };
+      if (!completeData.success || !completeData.documentId) {
+        throw new Error('Upload incomplete: no documentId returned');
+      }
+      return {
+        pdfDocumentId: completeData.documentId,
+        fileName: completeData.fileName ?? file.name,
+      };
+    },
+
+    /**
+     * Import game from uploaded PDF (saga: create + link + index).
+     * POST /api/v1/admin/shared-games/import-from-pdf
+     */
+    async importGameFromPdf(request: ImportGameFromPdfRequest): Promise<ImportGameFromPdfResult> {
+      const ResultSchema = z.object({
+        gameId: z.string(),
+        pdfDocumentId: z.string(),
+        indexingStatus: z.string(),
+        warning: z.string().nullable().optional(),
+      });
+      const result = await httpClient.post<z.infer<typeof ResultSchema>>(
+        '/api/v1/admin/shared-games/import-from-pdf',
+        request,
+        ResultSchema
+      );
+      return result!;
+    },
+
+    /**
+     * Get a single PDF page as JPEG image.
+     * GET /api/v1/ingest/pdf/{pdfId}/page-image?page=N
+     * Returns a blob URL string.
+     */
+    getPdfPageImageUrl(pdfId: string, page: number): string {
+      return `${getApiBase()}/api/v1/ingest/pdf/${encodeURIComponent(pdfId)}/page-image?page=${page}`;
+    },
+
+    /**
+     * Search knowledge base for a game (RAG test in Step 5).
+     * POST /api/v1/knowledge-base/search
+     */
+    async searchKnowledgeBase(gameId: string, query: string): Promise<KnowledgeBaseSearchResult> {
+      const ChunkSchema = z.object({
+        text: z.string(),
+        pageNumber: z.number().nullable().optional(),
+        score: z.number().nullable().optional(),
+        documentTitle: z.string().nullable().optional(),
+      });
+      const ResultSchema = z.object({
+        answer: z.string().nullable().optional(),
+        chunks: z.array(ChunkSchema),
+        queryId: z.string().nullable().optional(),
+      });
+      const result = await httpClient.post<z.infer<typeof ResultSchema>>(
+        '/api/v1/knowledge-base/search',
+        { gameId, query, topK: 5 },
+        ResultSchema
+      );
+      return result!;
+    },
+
     async downloadTrackingExport(): Promise<void> {
       const path = '/api/v1/admin/shared-games/tracking-export';
       const response = await fetch(`${getApiBase()}${path}`, {

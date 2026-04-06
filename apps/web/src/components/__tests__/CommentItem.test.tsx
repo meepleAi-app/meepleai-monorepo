@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommentItem } from '../comments/CommentItem';
 import type { RuleSpecComment } from '@/lib/api';
@@ -749,7 +749,13 @@ describe('CommentItem', () => {
 
     it('shows loading state while saving', async () => {
       const user = userEvent.setup();
-      mockOnEdit.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+      let resolveEdit!: () => void;
+      mockOnEdit.mockImplementation(
+        () =>
+          new Promise<void>(resolve => {
+            resolveEdit = resolve;
+          })
+      );
 
       render(
         <CommentItem
@@ -771,11 +777,17 @@ describe('CommentItem', () => {
       await user.clear(textarea);
       await user.type(textarea, 'Updated');
 
-      const saveButton = screen.getByRole('button', { name: 'Salva' });
-      await user.click(saveButton);
+      // Fire the click - handleSaveEdit calls setIsSubmitting(true) then awaits onEdit.
+      // userEvent.click returns after React commits the state update, while onEdit is still pending.
+      await user.click(screen.getByRole('button', { name: 'Salva' }));
 
       expect(screen.getByRole('button', { name: 'Salvataggio...' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Salvataggio...' })).toBeDisabled();
+
+      // Clean up the pending promise
+      await act(async () => {
+        resolveEdit();
+      });
     });
 
     it('disables textarea while saving', async () => {
@@ -1026,7 +1038,13 @@ describe('CommentItem', () => {
 
     it('disables edit button while deleting', async () => {
       const user = userEvent.setup();
-      mockOnDelete.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+      let resolveDelete!: () => void;
+      mockOnDelete.mockImplementation(
+        () =>
+          new Promise<void>(resolve => {
+            resolveDelete = resolve;
+          })
+      );
 
       render(
         <CommentItem
@@ -1041,12 +1059,17 @@ describe('CommentItem', () => {
         />
       );
 
-      const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
-      await user.click(deleteButton);
+      // Fire delete - confirm resolves (microtask), setIsSubmitting(true), then onDelete is pending.
+      // userEvent.click returns after React commits isSubmitting=true to the DOM.
+      await user.click(screen.getByRole('button', { name: 'Delete comment' }));
 
       await waitFor(() => {
-        const editButton = screen.getByRole('button', { name: 'Edit comment' });
-        expect(editButton).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Edit comment' })).toBeDisabled();
+      });
+
+      // Clean up the pending promise
+      await act(async () => {
+        resolveDelete();
       });
     });
 

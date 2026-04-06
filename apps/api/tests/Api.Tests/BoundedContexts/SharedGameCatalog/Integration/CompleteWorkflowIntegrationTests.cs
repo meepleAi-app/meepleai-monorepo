@@ -40,7 +40,6 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
     private readonly string _testDbName;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
-    private IMediator _mediator = null!;
 
     // Stable test user ID used as CreatedBy/UserId audit field across all tests
     private static readonly Guid TestUserId = new("AAAAAAAA-0000-0000-0000-000000000001");
@@ -111,7 +110,6 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             await dbContext.Database.MigrateAsync();
-            _mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         }
 
         _client = _factory.CreateClient();

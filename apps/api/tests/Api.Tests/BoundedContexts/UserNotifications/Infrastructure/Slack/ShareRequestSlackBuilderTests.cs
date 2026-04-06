@@ -207,6 +207,10 @@ public sealed class ShareRequestSlackBuilderTests
 
         // 2 blocks only: header + section (no actions)
         blocks.GetArrayLength().Should().Be(2);
+
+        var section = blocks[1];
+        section.GetProperty("text").GetProperty("text").GetString()
+            .Should().Contain("approvata");
     }
 
     [Fact]
@@ -223,5 +227,9 @@ public sealed class ShareRequestSlackBuilderTests
         blocks[0].GetProperty("text").GetProperty("text").GetString()
             .Should().Contain("Rifiutata");
         blocks.GetArrayLength().Should().Be(2);
+
+        var section = blocks[1];
+        section.GetProperty("text").GetProperty("text").GetString()
+            .Should().Contain("rifiutata");
     }
 }

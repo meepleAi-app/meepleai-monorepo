@@ -34,14 +34,13 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
             throw new ArgumentException($"Expected {nameof(ShareRequestPayload)} but received {payload.GetType().Name}", nameof(payload));
         }
 
-        var isCreated = string.Equals(sr.Status, "created", StringComparison.OrdinalIgnoreCase);
-        var isApproved = string.Equals(sr.Status, "approved", StringComparison.OrdinalIgnoreCase);
-
-        var (headerEmoji, headerText) = (isCreated, isApproved) switch
+        var (headerEmoji, headerText) = sr.Status.ToLowerInvariant() switch
         {
-            (true, _)  => ("\ud83d\udce5", "Nuova Share Request"),
-            (_, true)  => ("\u2705", "Approvata"),
-            _          => ("\u274c", "Rifiutata")
+            "created"  => ("\ud83d\udce5", "Nuova Share Request"),
+            "approved" => ("\u2705", "Approvata"),
+            "rejected" => ("\u274c", "Rifiutata"),
+            var unknown => throw new ArgumentException(
+                $"Unrecognised ShareRequest status: '{unknown}'", nameof(payload))
         };
 
         var blocks = new List<object>
@@ -54,7 +53,7 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
             BuildSectionBlock(sr)
         };
 
-        if (isCreated)
+        if (sr.Status.Equals("created", StringComparison.OrdinalIgnoreCase))
         {
             var timestamp = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
             var blockId = $"sr:{sr.ShareRequestId}:{timestamp}";
@@ -100,7 +99,12 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
 
     private static object BuildSectionBlock(ShareRequestPayload sr)
     {
-        var text = $"*{sr.RequesterName}* vuole condividere il regolamento di *{sr.GameTitle}* con te.";
+        var text = sr.Status.ToLowerInvariant() switch
+        {
+            "approved" => $"\u2705 La tua richiesta di condivisione per *{sr.GameTitle}* è stata approvata da {sr.RequesterName}.",
+            "rejected" => $"\u274c La tua richiesta di condivisione per *{sr.GameTitle}* è stata rifiutata da {sr.RequesterName}.",
+            _ => $"\ud83c\udfb2 *Gioco*: {sr.GameTitle}\n\ud83d\udc64 *Richiedente*: {sr.RequesterName}"
+        };
 
         if (!string.IsNullOrEmpty(sr.GameImageUrl))
         {

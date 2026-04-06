@@ -1,11 +1,16 @@
 'use client';
 
 /**
- * Dashboard Bento — Layout B (Bento Command)
+ * Dashboard Bento — Layout con 6 widget
  *
- * Desktop dashboard with:
- * - 12-column bento grid with variable-span widgets
- * - Live session, KPI stats, library, chat preview, leaderboard, trending
+ * Desktop: 12-col bento grid con widget variabili
+ * - LiveSession (8×2), KPI Stats (4×2)
+ * - Library (6×4), Chat (6×4)
+ * - Leaderboard (6×3), Trending (6×3)
+ *
+ * First-run (totalGames=0 && no recent sessions):
+ * - WelcomeHero (12×3) al posto di LiveSession+KPI
+ * - Library empty CTA, Trending reale, Chat empty CTA, Sessions empty CTA
  */
 
 import { useEffect } from 'react';
@@ -13,21 +18,24 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { useAuth } from '@/components/auth/AuthProvider';
+import { StatsRow } from '@/components/dashboard/StatsRow';
+import { WelcomeHero } from '@/components/dashboard/WelcomeHero';
+import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import type { SessionSummaryDto, TrendingGameDto, UserGameDto } from '@/lib/api/dashboard-client';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 import { cn } from '@/lib/utils';
 
-// ─── Entity colors (matches meeple-card-styles.ts) ───────────────────────────
+// ─── Entity color tokens (CSS custom properties) ──────────────────────────────
 
 const C = {
-  game: 'hsl(25,95%,45%)',
-  player: 'hsl(262,83%,58%)',
-  session: 'hsl(240,60%,55%)',
-  chat: 'hsl(220,80%,55%)',
-  kb: 'hsl(174,60%,40%)',
-  event: 'hsl(350,89%,60%)',
-  agent: 'hsl(38,92%,50%)',
-  success: 'hsl(142,70%,45%)',
+  game: 'hsl(var(--e-game))',
+  player: 'hsl(var(--e-player))',
+  session: 'hsl(var(--e-session))',
+  chat: 'hsl(var(--e-chat))',
+  kb: 'hsl(var(--e-kb))',
+  event: 'hsl(var(--e-event))',
+  success: 'hsl(var(--e-success))',
 } as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -114,7 +122,10 @@ function BentoWidget({
             role: 'button' as const,
             tabIndex: 0,
             onKeyDown: (e: React.KeyboardEvent) => {
-              if (e.key === 'Enter' || e.key === ' ') onClick();
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
             },
           }
         : {})}
@@ -126,9 +137,40 @@ function BentoWidget({
 
 function WidgetLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-1.5">
+    <p className="font-nunito text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-1.5">
       {children}
     </p>
+  );
+}
+
+// ─── Empty state helper ───────────────────────────────────────────────────────
+
+function WidgetEmptyState({
+  icon,
+  text,
+  ctaLabel,
+  ctaColor,
+  href,
+}: {
+  icon: string;
+  text: string;
+  ctaLabel: string;
+  ctaColor: string;
+  href: string;
+}) {
+  const router = useRouter();
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center p-4">
+      <span className="text-2xl opacity-40">{icon}</span>
+      <p className="font-nunito text-[11px] text-muted-foreground leading-snug">{text}</p>
+      <button
+        onClick={() => router.push(href)}
+        className="font-nunito text-[11px] font-bold px-3 py-1 rounded-full border transition-colors hover:opacity-80"
+        style={{ borderColor: `${ctaColor}66`, color: ctaColor }}
+      >
+        {ctaLabel}
+      </button>
+    </div>
   );
 }
 
@@ -179,26 +221,12 @@ function LiveSessionWidget({
       colSpan={8}
       rowSpan={2}
       accentColor={C.success}
-      accentBg="rgba(16,185,129,0.04)"
+      accentBg="hsl(var(--e-success) / 0.04)"
       className="flex flex-col justify-between"
       onClick={() => router.push(`/sessions/${session.id}`)}
     >
       <div className="flex items-center justify-between mb-2">
-        <WidgetLabel>Sessione Live</WidgetLabel>
-        <span
-          className="inline-flex items-center gap-1.5 text-[10px] font-bold rounded-full px-2.5 py-0.5"
-          style={{
-            background: 'rgba(16,185,129,0.12)',
-            color: C.success,
-            border: '1px solid rgba(16,185,129,0.2)',
-          }}
-        >
-          <span
-            className="w-1.5 h-1.5 rounded-full animate-pulse"
-            style={{ background: C.success }}
-          />
-          IN CORSO
-        </span>
+        <WidgetLabel>Sessione Recente</WidgetLabel>
       </div>
       <div className="flex items-center gap-3">
         <div
@@ -220,79 +248,74 @@ function LiveSessionWidget({
           <p className="font-quicksand font-extrabold text-base leading-tight truncate">
             {session.gameName}
           </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="font-nunito text-[11px] text-muted-foreground mt-0.5">
             {session.playerCount} giocatori
             {session.winnerName ? ` · Vincitore: ${session.winnerName}` : ''}
           </p>
         </div>
         <span
-          className="shrink-0 px-3.5 py-1.5 rounded-lg text-[11px] font-bold text-white"
+          className="shrink-0 px-3.5 py-1.5 rounded-lg text-[11px] font-bold font-nunito text-white"
           style={{ background: C.game }}
           aria-hidden="true"
         >
-          Entra →
+          Vai →
         </span>
       </div>
     </BentoWidget>
   );
 }
 
-// ─── KPI Widget (variable span) ───────────────────────────────────────────────
+// ─── KPI Stats Widget (4×2) ───────────────────────────────────────────────────
 
-interface KpiWidgetProps {
-  label: string;
-  value: string | number;
-  badge?: string;
-  badgePositive?: boolean;
-  sub?: string;
-  accentColor: string;
-  colSpan: number;
-  tabletColSpan?: number;
-  rowSpan: number;
-  href?: string;
-}
-
-function KpiWidget({
-  label,
-  value,
-  badge,
-  badgePositive,
-  sub,
-  accentColor,
-  colSpan,
-  tabletColSpan,
-  rowSpan,
-  href,
-}: KpiWidgetProps) {
-  const router = useRouter();
+function KpiStatsWidget({
+  stats,
+  isLoading,
+}: {
+  stats: {
+    totalGames: number;
+    monthlyPlays: number;
+    weeklyPlayTime: string;
+    monthlyFavorites: number;
+  } | null;
+  isLoading: boolean;
+}) {
   return (
-    <BentoWidget
-      colSpan={colSpan}
-      tabletColSpan={tabletColSpan}
-      rowSpan={rowSpan}
-      accentColor={accentColor}
-      onClick={href ? () => router.push(href) : undefined}
-    >
-      <WidgetLabel>{label}</WidgetLabel>
-      <p
-        className="font-quicksand text-[26px] font-extrabold leading-none tracking-tight"
-        style={{ color: accentColor }}
-      >
-        {value}
-      </p>
-      {badge && (
-        <span
-          className={cn(
-            'inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full',
-            badgePositive
-              ? 'bg-emerald-500/15 text-emerald-400'
-              : 'bg-muted/60 text-muted-foreground'
-          )}
-        >
-          {badge}
-        </span>
+    <BentoWidget colSpan={4} tabletColSpan={6} rowSpan={2}>
+      <WidgetLabel>Le tue statistiche</WidgetLabel>
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-2 mt-1">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-8 rounded bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-1">
+          <div>
+            <p className="font-quicksand font-extrabold text-2xl" style={{ color: C.game }}>
+              {stats?.totalGames ?? '—'}
+            </p>
+            <p className="font-nunito text-[10px] text-muted-foreground">giochi</p>
+          </div>
+          <div>
+            <p className="font-quicksand font-extrabold text-2xl" style={{ color: C.session }}>
+              {stats?.monthlyPlays ?? '—'}
+            </p>
+            <p className="font-nunito text-[10px] text-muted-foreground">partite/mese</p>
+          </div>
+          <div>
+            <p className="font-quicksand font-extrabold text-2xl" style={{ color: C.chat }}>
+              {stats ? parsePlayTimeHours(stats.weeklyPlayTime) : '—'}
+            </p>
+            <p className="font-nunito text-[10px] text-muted-foreground">ore/sett.</p>
+          </div>
+          <div>
+            <p className="font-quicksand font-extrabold text-2xl" style={{ color: C.success }}>
+              {stats?.monthlyFavorites ?? '—'}
+            </p>
+            <p className="font-nunito text-[10px] text-muted-foreground">preferiti</p>
+          </div>
+        </div>
       )}
-      {sub && !badge && <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>}
     </BentoWidget>
   );
 }
@@ -331,7 +354,13 @@ function LibraryWidget({
             </div>
           ))
         ) : games.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground mt-2">Nessun gioco in libreria ancora</p>
+          <WidgetEmptyState
+            icon="🎲"
+            text="La tua libreria è vuota. Aggiungi i giochi che possiedi."
+            ctaLabel="+ Aggiungi gioco"
+            ctaColor={C.game}
+            href="/library?action=add"
+          />
         ) : (
           games.slice(0, 6).map(game => (
             <div
@@ -352,7 +381,7 @@ function LibraryWidget({
               ) : (
                 <div
                   className="w-7 h-7 rounded-md shrink-0 flex items-center justify-center text-sm"
-                  style={{ background: `${C.game}22` }}
+                  style={{ background: 'hsl(var(--e-game) / 0.13)' }}
                 >
                   🎲
                 </div>
@@ -372,9 +401,11 @@ function LibraryWidget({
           ))
         )}
       </div>
-      <p className="text-[10px] font-bold mt-2 pt-1" style={{ color: C.game }}>
-        Vedi tutti {totalCount} →
-      </p>
+      {games.length > 0 && (
+        <p className="font-nunito text-[10px] font-bold mt-2 pt-1" style={{ color: C.game }}>
+          Vedi tutti {totalCount} →
+        </p>
+      )}
     </BentoWidget>
   );
 }
@@ -394,21 +425,24 @@ function ChatPreviewWidget() {
       <div className="flex items-center justify-between mb-2">
         <WidgetLabel>Chat AI</WidgetLabel>
         <span
-          className="text-[9px] font-bold rounded-full px-2 py-0.5"
-          style={{ background: `${C.chat}20`, color: C.chat }}
+          className="text-[9px] font-bold font-nunito rounded-full px-2 py-0.5"
+          style={{ background: 'hsl(var(--e-chat) / 0.13)', color: C.chat }}
         >
           Regole & Domande
         </span>
       </div>
       <div className="flex-1 flex flex-col gap-1.5 overflow-hidden justify-end">
         <div
-          className="self-end max-w-[80%] rounded-lg px-2.5 py-1.5 text-[11px]"
-          style={{ background: `${C.game}18`, border: `1px solid ${C.game}22` }}
+          className="self-end max-w-[80%] rounded-lg px-2.5 py-1.5 text-[11px] font-nunito"
+          style={{
+            background: 'hsl(var(--e-game) / 0.09)',
+            border: '1px solid hsl(var(--e-game) / 0.13)',
+          }}
         >
           Quante strade posso costruire?
         </div>
         <div
-          className="self-start max-w-[90%] rounded-lg px-2.5 py-1.5 text-[11px] text-muted-foreground"
+          className="self-start max-w-[90%] rounded-lg px-2.5 py-1.5 text-[11px] font-nunito text-muted-foreground"
           style={{
             background: 'rgba(255,255,255,0.04)',
             border: '1px solid rgba(255,255,255,0.07)',
@@ -417,7 +451,7 @@ function ChatPreviewWidget() {
           Puoi costruire tutte le strade che vuoi, purché tu abbia le risorse.{' '}
           <span
             className="font-mono text-[8px] rounded px-1 py-0.5 cursor-pointer"
-            style={{ background: `${C.chat}18`, color: C.chat }}
+            style={{ background: 'hsl(var(--e-chat) / 0.09)', color: C.chat }}
           >
             p.8
           </span>
@@ -474,9 +508,13 @@ function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
       <WidgetLabel>Classifica Gruppo</WidgetLabel>
       <div className="flex-1 flex flex-col overflow-hidden">
         {sorted.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground mt-2">
-            Gioca partite con amici per vedere la classifica
-          </p>
+          <WidgetEmptyState
+            icon="🏆"
+            text="Gioca partite con amici per vedere la classifica."
+            ctaLabel="▶ Nuova sessione"
+            ctaColor={C.session}
+            href="/sessions/new"
+          />
         ) : (
           sorted.map(([name, wins], i) => (
             <div
@@ -504,20 +542,20 @@ function LeaderboardWidget({ sessions }: { sessions: SessionSummaryDto[] }) {
   );
 }
 
-// ─── Trending Widget (6×2) ───────────────────────────────────────────────────
+// ─── Trending Widget (6×3) ───────────────────────────────────────────────────
 
 function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoading: boolean }) {
   const router = useRouter();
   return (
     <BentoWidget
       colSpan={6}
-      rowSpan={2}
+      rowSpan={3}
       accentColor={C.kb}
       className="flex flex-col"
-      onClick={() => router.push('/games')}
+      onClick={() => router.push('/library?tab=catalogo')}
     >
       <WidgetLabel>Popolari questa settimana</WidgetLabel>
-      <div className="flex gap-3 mt-1 overflow-hidden">
+      <div className="flex gap-3 mt-1 overflow-hidden flex-1">
         {isLoading
           ? Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex flex-col items-center gap-1 shrink-0">
@@ -562,93 +600,88 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
 // ─── Dashboard Client ─────────────────────────────────────────────────────────
 
 export function DashboardClient() {
+  const { user } = useAuth();
   const {
-    stats,
-    isLoadingStats,
     fetchStats,
-    recentSessions,
-    isLoadingSessions,
+    fetchGames,
     fetchRecentSessions,
-    updateFilters,
-    games,
-    isLoadingGames,
-    totalGamesCount,
-    trendingGames,
-    isLoadingTrending,
     fetchTrendingGames,
+    updateFilters,
+    stats,
+    games,
+    totalGamesCount,
+    recentSessions,
+    trendingGames,
+    isLoadingStats,
+    isLoadingGames,
+    isLoadingTrending,
+    isLoadingSessions,
   } = useDashboardStore();
 
   useEffect(() => {
     fetchStats();
-    fetchRecentSessions(8);
+    fetchRecentSessions(10);
     fetchTrendingGames(6);
-    updateFilters({ sort: 'alphabetical', pageSize: 8, page: 1 });
+    updateFilters({ sort: 'alphabetical', pageSize: 6, page: 1 });
+    fetchGames();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- store actions are stable Zustand references
   }, []);
 
-  const latestSession = recentSessions[0];
+  const firstName = user?.displayName?.split(' ')[0] ?? user?.displayName ?? 'Giocatore';
 
-  const monthlyPlays = stats?.monthlyPlays ?? 0;
-  const playsChange = stats?.monthlyPlaysChange;
-  const weeklyHours = stats ? parsePlayTimeHours(stats.weeklyPlayTime) : '—';
-  const totalGames = stats?.totalGames ?? 0;
+  // New user: stats loaded, no games, no sessions
+  const isNewUser =
+    !isLoadingStats && stats !== null && stats.totalGames === 0 && recentSessions.length === 0;
 
   return (
-    <div className="flex-1 overflow-y-auto p-3.5">
-      <div
-        className="grid grid-cols-6 lg:grid-cols-12"
-        style={{ gridAutoRows: '60px', gap: '8px' }}
-      >
-        {/* Row 1-2: Live Session (8×2) + Partite (4×2) */}
-        <LiveSessionWidget session={latestSession} isLoading={isLoadingSessions} />
-        <KpiWidget
-          label="Partite (mese)"
-          value={isLoadingStats ? '…' : monthlyPlays}
-          badge={
-            playsChange !== null && playsChange !== undefined && playsChange !== 0
-              ? `${playsChange > 0 ? '+' : ''}${playsChange}%`
-              : undefined
-          }
-          badgePositive={(playsChange ?? 0) > 0}
-          accentColor={C.game}
-          colSpan={4}
-          tabletColSpan={6}
-          rowSpan={2}
-          href="/sessions"
-        />
+    <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-4 pb-24">
+      {/* Stats row — sempre visibile */}
+      <StatsRow />
 
-        {/* Row 3-6: Library (6×4) + Ore (3×2) + Giochi (3×2) */}
-        <LibraryWidget
-          games={games}
-          totalCount={totalGamesCount || totalGames}
-          isLoading={isLoadingGames}
-        />
-        <KpiWidget
-          label="Ore sett."
-          value={isLoadingStats ? '…' : weeklyHours}
-          sub="questa settimana"
-          accentColor={C.session}
-          colSpan={3}
-          rowSpan={2}
-        />
-        <KpiWidget
-          label="Giochi in lib."
-          value={isLoadingStats ? '…' : totalGames}
-          accentColor={C.event}
-          colSpan={3}
-          rowSpan={2}
-          href="/library"
-        />
+      {/* Bento grid */}
+      <div className="grid grid-cols-6 lg:grid-cols-12 auto-rows-[48px] gap-3">
+        {isNewUser ? (
+          <>
+            {/* Welcome Hero — full width */}
+            <WelcomeHero firstName={firstName} />
 
-        {/* Row 5-8: Chat AI (6×4) */}
-        <ChatPreviewWidget />
+            {/* Library — empty CTA */}
+            <LibraryWidget games={[]} totalCount={0} isLoading={false} />
 
-        {/* Row 7-9: Leaderboard (6×3) */}
-        <LeaderboardWidget sessions={recentSessions} />
+            {/* Trending — always has real data */}
+            <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
 
-        {/* Row 9-10: Trending (6×2) */}
-        <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
+            {/* Chat — empty CTA */}
+            <ChatPreviewWidget />
+
+            {/* Leaderboard — empty CTA */}
+            <LeaderboardWidget sessions={[]} />
+          </>
+        ) : (
+          <>
+            {/* LiveSession / Sessione recente */}
+            <LiveSessionWidget session={recentSessions[0]} isLoading={isLoadingSessions} />
+
+            {/* KPI Stats */}
+            <KpiStatsWidget stats={stats} isLoading={isLoadingStats} />
+
+            {/* Library */}
+            <LibraryWidget games={games} totalCount={totalGamesCount} isLoading={isLoadingGames} />
+
+            {/* Chat */}
+            <ChatPreviewWidget />
+
+            {/* Leaderboard */}
+            <LeaderboardWidget sessions={recentSessions} />
+
+            {/* Trending */}
+            <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
+          </>
+        )}
       </div>
+
+      {/* FAB contestuale */}
+      <FloatingActionPill page="dashboard" />
     </div>
   );
 }

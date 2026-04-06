@@ -21,6 +21,7 @@ import {
   GameTableZoneSessions,
   GameTableSkeleton,
 } from '@/components/library/game-table';
+import { GameHeader } from '@/components/library/GameHeader';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
@@ -159,7 +160,19 @@ export default function LibraryGameDetailPage() {
   };
 
   return (
-    <>
+    <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {/* Game header: cover + title + metadata */}
+      <GameHeader
+        title={gameDetail.gameTitle}
+        publisher={gameDetail.gamePublisher}
+        year={gameDetail.gameYearPublished}
+        rating={gameDetail.averageRating}
+        coverUrl={gameDetail.gameImageUrl}
+        minPlayers={gameDetail.minPlayers}
+        maxPlayers={gameDetail.maxPlayers}
+        playingTimeMinutes={gameDetail.playingTimeMinutes}
+      />
+
       {/* Mobile layout */}
       <div className="lg:hidden">
         <GameDetailMobile gameId={gameId} />
@@ -198,6 +211,6 @@ export default function LibraryGameDetailPage() {
           onDrawerClose={drawer.close}
         />
       </div>
-    </>
+    </div>
   );
 }

@@ -141,7 +141,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
 
         Status = NotificationQueueStatus.Failed;
         var delayIndex = Math.Min(RetryCount - 1, RetryDelays.Length - 1);
-        NextRetryAt = utcNow.Add(RetryDelays[delayIndex]);
+        var jitter = TimeSpan.FromSeconds(Random.Shared.Next(0, 31)); // 0-30s jitter, evita thundering herd
+        NextRetryAt = utcNow.Add(RetryDelays[delayIndex] + jitter);
     }
 
     /// <summary>

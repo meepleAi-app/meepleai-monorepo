@@ -185,8 +185,9 @@ public class NotificationQueueItemTests
         item.RetryCount.Should().Be(1);
         item.Status.Should().Be(NotificationQueueStatus.Failed);
         item.LastError.Should().Be("connection refused");
-        // First failure: +1 minute
-        item.NextRetryAt.Should().Be(now.AddMinutes(1));
+        // First failure: +1 minute (plus 0-30s jitter)
+        item.NextRetryAt.Should().BeOnOrAfter(now.AddMinutes(1));
+        item.NextRetryAt.Should().BeOnOrBefore(now.AddMinutes(1).AddSeconds(30));
     }
 
     [Fact]
@@ -208,8 +209,9 @@ public class NotificationQueueItemTests
         // Assert
         item.RetryCount.Should().Be(2);
         item.Status.Should().Be(NotificationQueueStatus.Failed);
-        // Second failure: +5 minutes
-        item.NextRetryAt.Should().Be(now2.AddMinutes(5));
+        // Second failure: +5 minutes (plus 0-30s jitter)
+        item.NextRetryAt.Should().BeOnOrAfter(now2.AddMinutes(5));
+        item.NextRetryAt.Should().BeOnOrBefore(now2.AddMinutes(5).AddSeconds(30));
     }
 
     [Fact]
@@ -235,8 +237,9 @@ public class NotificationQueueItemTests
         // Assert — still retrying (4 total attempts: initial + 3 retries matching [1m, 5m, 30m] delays)
         item.RetryCount.Should().Be(3);
         item.Status.Should().Be(NotificationQueueStatus.Failed);
-        // Third failure uses last delay (30 minutes)
-        item.NextRetryAt.Should().Be(now3.AddMinutes(30));
+        // Third failure uses last delay (30 minutes, plus 0-30s jitter)
+        item.NextRetryAt.Should().BeOnOrAfter(now3.AddMinutes(30));
+        item.NextRetryAt.Should().BeOnOrBefore(now3.AddMinutes(30).AddSeconds(30));
         item.LastError.Should().Be("error 3");
     }
 

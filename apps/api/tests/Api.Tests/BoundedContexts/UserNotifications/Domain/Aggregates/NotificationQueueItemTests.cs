@@ -311,6 +311,53 @@ public class NotificationQueueItemTests
     }
 
     [Fact]
+    public void MarkAsRateLimited_FromProcessing_DoesNotIncrementRetryCount()
+    {
+        // Arrange
+        var item = CreateDefaultItem();
+        item.MarkAsProcessing();
+        var expectedRetryCount = item.RetryCount; // 0
+
+        // Act
+        var retryAt = new DateTime(2026, 3, 15, 12, 5, 0, DateTimeKind.Utc);
+        item.MarkAsRateLimited(retryAt);
+
+        // Assert
+        item.RetryCount.Should().Be(expectedRetryCount); // still 0
+        item.Status.Should().Be(NotificationQueueStatus.Failed);
+        item.NextRetryAt.Should().Be(retryAt);
+        item.LastError.Should().Contain("rate limit");
+    }
+
+    [Fact]
+    public void MarkAsRateLimited_FromPending_Throws()
+    {
+        // Arrange
+        var item = CreateDefaultItem();
+        var fixedRetryAt = new DateTime(2026, 3, 15, 12, 0, 30, DateTimeKind.Utc);
+
+        // Act & Assert
+        var act = () => item.MarkAsRateLimited(fixedRetryAt);
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void MarkAsRateLimited_MultipleTimes_NeverExceedsMaxRetries()
+    {
+        var item = CreateDefaultItem();
+        var fixedRetryAt = new DateTime(2026, 3, 15, 12, 0, 30, DateTimeKind.Utc);
+
+        for (int i = 0; i < 10; i++)
+        {
+            item.MarkAsProcessing();
+            item.MarkAsRateLimited(fixedRetryAt);
+        }
+
+        item.RetryCount.Should().Be(0);
+        item.Status.Should().Be(NotificationQueueStatus.Failed);
+    }
+
+    [Fact]
     public void Create_SetsChannelTypeAndPayload()
     {
         // Arrange

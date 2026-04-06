@@ -148,6 +148,21 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Marks the notification as temporarily unavailable due to API rate limiting.
+    /// Does NOT increment RetryCount — rate limit backpressure is not a delivery failure.
+    /// The item will be retried after the specified time.
+    /// </summary>
+    public void MarkAsRateLimited(DateTime retryAt)
+    {
+        if (!Status.IsProcessing)
+            throw new InvalidOperationException($"Cannot mark as rate-limited from status '{Status.Value}'");
+
+        Status = NotificationQueueStatus.Failed;
+        NextRetryAt = retryAt;
+        LastError = "rate limit — retry after backoff";
+    }
+
+    /// <summary>
     /// Moves the notification to dead letter queue.
     /// No further retry attempts will be made.
     /// </summary>

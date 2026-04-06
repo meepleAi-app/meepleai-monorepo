@@ -84,7 +84,11 @@ export function AppNavbar() {
           {/* Avatar with dropdown */}
           <div className="relative">
             <button
+              type="button"
               onClick={() => setDropdownOpen(v => !v)}
+              onKeyDown={e => {
+                if (e.key === 'Escape') setDropdownOpen(false);
+              }}
               aria-label="Menu utente"
               aria-expanded={dropdownOpen}
               className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -116,6 +120,7 @@ export function AppNavbar() {
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => {
                       setDropdownOpen(false);
                       router.push('/profile');
@@ -126,6 +131,7 @@ export function AppNavbar() {
                     Profilo
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       setDropdownOpen(false);
                       router.push('/settings');
@@ -137,6 +143,7 @@ export function AppNavbar() {
                   </button>
                   <div className="border-t border-border/50 my-1" />
                   <button
+                    type="button"
                     onClick={handleLogout}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-muted/50 transition-colors font-nunito"
                     style={{ color: 'hsl(var(--e-event))' }}

@@ -309,7 +309,10 @@ export default function ChatListPage() {
           )}
         </main>
       </div>
-      <FloatingActionPill page="chat" />
+      {/* FAB — desktop only: mobile uses ChatListMobile's own navigation */}
+      <div className="hidden lg:block">
+        <FloatingActionPill page="chat" />
+      </div>
     </>
   );
 }

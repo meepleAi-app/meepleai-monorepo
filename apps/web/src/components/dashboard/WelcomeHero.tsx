@@ -44,6 +44,7 @@ export function WelcomeHero({ firstName }: WelcomeHeroProps) {
         </p>
         <div className="flex flex-wrap gap-2">
           <button
+            type="button"
             onClick={() => router.push('/library?action=add')}
             className="font-nunito font-bold text-xs text-white px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
             style={{ background: 'hsl(var(--e-game))' }}
@@ -51,12 +52,14 @@ export function WelcomeHero({ firstName }: WelcomeHeroProps) {
             ➕ Aggiungi un gioco
           </button>
           <button
+            type="button"
             onClick={() => router.push('/library?tab=catalogo')}
             className="font-nunito font-bold text-xs text-muted-foreground px-4 py-2 rounded-full border border-border hover:bg-muted/30 transition-colors"
           >
             🔍 Sfoglia catalogo
           </button>
           <button
+            type="button"
             onClick={() => router.push('/chat/new')}
             className="font-nunito font-bold text-xs text-muted-foreground px-4 py-2 rounded-full border border-border hover:bg-muted/30 transition-colors"
           >

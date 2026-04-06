@@ -42,6 +42,7 @@ export function FloatingActionPill({
         <span className="text-xs font-quicksand font-bold text-muted-foreground pr-1">{label}</span>
         <div className="w-px h-5 bg-white/10" />
         <button
+          type="button"
           onClick={() => router.push(href)}
           className="text-xs font-nunito font-bold text-white px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity"
           style={{ background: 'hsl(var(--e-game))' }}
@@ -50,6 +51,7 @@ export function FloatingActionPill({
         </button>
         {onSearch && (
           <button
+            type="button"
             onClick={onSearch}
             className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-muted-foreground hover:bg-white/10 transition-colors"
             aria-label="Cerca"
@@ -59,6 +61,7 @@ export function FloatingActionPill({
         )}
         {onSort && (
           <button
+            type="button"
             onClick={onSort}
             className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-muted-foreground hover:bg-white/10 transition-colors"
             aria-label="Ordina"
@@ -68,6 +71,7 @@ export function FloatingActionPill({
         )}
         {onToggleView && (
           <button
+            type="button"
             onClick={onToggleView}
             className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-muted-foreground hover:bg-white/10 transition-colors"
             aria-label="Cambia vista"
@@ -83,6 +87,7 @@ export function FloatingActionPill({
           <div className="fixed bottom-0 left-0 right-0 h-16 z-50 bg-[rgba(15,23,42,0.95)] backdrop-blur-md border-t border-white/[0.08] flex items-center justify-around px-6">
             {onSearch && (
               <button
+                type="button"
                 onClick={onSearch}
                 className="flex flex-col items-center gap-0.5 text-muted-foreground"
                 aria-label="Cerca"
@@ -93,6 +98,7 @@ export function FloatingActionPill({
             )}
             {onSort && (
               <button
+                type="button"
                 onClick={onSort}
                 className="flex flex-col items-center gap-0.5 text-muted-foreground"
                 aria-label="Ordina"
@@ -103,6 +109,7 @@ export function FloatingActionPill({
             )}
             {onToggleView && (
               <button
+                type="button"
                 onClick={onToggleView}
                 className="flex flex-col items-center gap-0.5 text-muted-foreground"
                 aria-label="Vista"
@@ -114,8 +121,9 @@ export function FloatingActionPill({
           </div>
         )}
         <button
+          type="button"
           onClick={() => router.push(href)}
-          className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+          className={`fixed ${hasSecondary ? 'bottom-20' : 'bottom-6'} right-4 z-50 w-14 h-14 rounded-full text-white flex items-center justify-center hover:opacity-90 transition-opacity`}
           style={{
             background: 'hsl(var(--e-game))',
             boxShadow: '0 4px 16px hsl(var(--e-game) / 0.4)',

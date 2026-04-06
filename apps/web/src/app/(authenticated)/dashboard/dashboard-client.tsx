@@ -122,7 +122,10 @@ function BentoWidget({
             role: 'button' as const,
             tabIndex: 0,
             onKeyDown: (e: React.KeyboardEvent) => {
-              if (e.key === 'Enter' || e.key === ' ') onClick();
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
             },
           }
         : {})}

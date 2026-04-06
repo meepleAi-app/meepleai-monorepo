@@ -51,9 +51,10 @@ internal sealed class PdfProcessingSlackBuilder : ISlackMessageBuilder
             }
         };
 
-        if (!string.IsNullOrEmpty(deepLinkPath))
+        var safeDeepLinkPath = SlackDeepLinkValidator.Validate(deepLinkPath);
+        if (safeDeepLinkPath is not null)
         {
-            var url = $"{_frontendBaseUrl.TrimEnd('/')}{deepLinkPath}";
+            var url = $"{_frontendBaseUrl.TrimEnd('/')}{safeDeepLinkPath}";
             blocks.Add(new
             {
                 type = "actions",

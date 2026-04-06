@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { formatDistanceToNow, format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Clock, Crown, History, Loader2, Play, Search, Users } from 'lucide-react';
+import { Clock, Crown, History, Loader2, Search, Users } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
@@ -36,25 +36,6 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   Paused: { label: 'In pausa', color: 'bg-amber-100 text-amber-700' },
   Completed: { label: 'Completata', color: 'bg-indigo-100 text-indigo-700' },
 };
-
-// ========== New Session CTA ==========
-
-function NewSessionCta() {
-  const router = useRouter();
-
-  return (
-    <button
-      onClick={() => router.push('/sessions/new')}
-      className="w-full rounded-xl border-2 border-dashed border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-6 text-center transition-all hover:border-indigo-300 hover:shadow-md dark:from-indigo-950/20 dark:to-violet-950/20 dark:border-indigo-800"
-    >
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 mb-3">
-        <Play className="h-6 w-6 text-indigo-600" />
-      </div>
-      <h3 className="font-semibold font-quicksand text-foreground">Nuova Sessione</h3>
-      <p className="mt-1 text-xs text-muted-foreground">Inizia una partita con amici</p>
-    </button>
-  );
-}
 
 // ========== History Metadata Helper ==========
 

@@ -41,7 +41,7 @@ public sealed class GameNightSlackBuilderTests
     {
         // Arrange
         var gnId = Guid.Parse("11111111-2222-3333-4444-555555555555");
-        var payload = new GameNightPayload(gnId, "Friday Night Games", DateTime.UtcNow, "Alice");
+        var payload = new GameNightPayload(gnId, "Friday Night Games", new DateTime(2026, 5, 10, 20, 0, 0, DateTimeKind.Utc), "Alice");
 
         // Act
         var result = _sut.BuildMessage(payload, null);
@@ -65,7 +65,7 @@ public sealed class GameNightSlackBuilderTests
     {
         // Arrange
         var gnId = Guid.NewGuid();
-        var payload = new GameNightPayload(gnId, "Board Game Night", DateTime.UtcNow, "Bob");
+        var payload = new GameNightPayload(gnId, "Board Game Night", new DateTime(2026, 5, 10, 20, 0, 0, DateTimeKind.Utc), "Bob");
 
         // Act
         var result = _sut.BuildMessage(payload, null);
@@ -111,7 +111,7 @@ public sealed class GameNightSlackBuilderTests
     public void BuildMessage_HeaderContainsGameNightTitle()
     {
         // Arrange
-        var payload = new GameNightPayload(Guid.NewGuid(), "Epic Board Game Night", DateTime.UtcNow, "Host");
+        var payload = new GameNightPayload(Guid.NewGuid(), "Epic Board Game Night", new DateTime(2026, 5, 10, 20, 0, 0, DateTimeKind.Utc), "Host");
 
         // Act
         var result = _sut.BuildMessage(payload, null);

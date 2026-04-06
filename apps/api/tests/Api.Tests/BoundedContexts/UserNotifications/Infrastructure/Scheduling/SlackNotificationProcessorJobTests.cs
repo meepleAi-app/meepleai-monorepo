@@ -170,7 +170,12 @@ public class SlackNotificationProcessorJobTests : IDisposable
         var slackConnection = SlackConnection.Create(
             userId, "U01ABC", "T01ABCDEF", "TestWorkspace", "xoxb-old-token", "D01ABCDEF");
 
-        // Return connection for both the bot API call and the revocation handler
+        // Batch lookup used during Execute for bot token resolution
+        _slackConnRepoMock.Setup(r => r.GetActiveByUserIdsAsync(
+                It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, SlackConnection> { { userId, slackConnection } });
+
+        // Single-item lookup used in HandleTokenRevocationAsync to deactivate the connection
         _slackConnRepoMock.Setup(r => r.GetActiveByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(slackConnection);
 

@@ -71,6 +71,17 @@ internal sealed class SlackNotificationProcessorJob : IJob
 
             var allItems = slackUserItems.Concat(slackTeamItems).ToList();
 
+            // Batch-load bot tokens per tutti gli SlackUser items in una sola query
+            var userIds = allItems
+                .Where(i => i.ChannelType == NotificationChannelType.SlackUser && i.RecipientUserId.HasValue)
+                .Select(i => i.RecipientUserId!.Value)
+                .Distinct()
+                .ToList();
+
+            var connectionsByUserId = await _slackConnectionRepository
+                .GetActiveByUserIdsAsync(userIds, context.CancellationToken)
+                .ConfigureAwait(false);
+
             if (allItems.Count == 0)
             {
                 _logger.LogDebug("No pending Slack notifications to process");
@@ -109,7 +120,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                         await _queueRepository.UpdateAsync(item, context.CancellationToken).ConfigureAwait(false);
                         await _dbContext.SaveChangesAsync(context.CancellationToken).ConfigureAwait(false);
 
-                        await SendSlackMessageAsync(item, context.CancellationToken).ConfigureAwait(false);
+                        await SendSlackMessageAsync(item, connectionsByUserId, context.CancellationToken).ConfigureAwait(false);
 
                         item.MarkAsSent(DateTime.UtcNow);
                         await _queueRepository.UpdateAsync(item, context.CancellationToken).ConfigureAwait(false);
@@ -177,20 +188,17 @@ internal sealed class SlackNotificationProcessorJob : IJob
 #pragma warning restore CA1031
     }
 
-    private async Task SendSlackMessageAsync(NotificationQueueItem item, CancellationToken ct)
+    private async Task SendSlackMessageAsync(
+        NotificationQueueItem item,
+        IReadOnlyDictionary<Guid, SlackConnection> connectionCache,
+        CancellationToken ct)
     {
         using var client = _httpClientFactory.CreateClient("SlackApi");
 
         if (item.ChannelType == NotificationChannelType.SlackTeam)
-        {
-            // Webhook-based delivery for team channels
             await SendViaWebhookAsync(client, item, ct).ConfigureAwait(false);
-        }
         else
-        {
-            // Bot token-based delivery for DMs
-            await SendViaBotApiAsync(client, item, ct).ConfigureAwait(false);
-        }
+            await SendViaBotApiAsync(client, item, connectionCache, ct).ConfigureAwait(false);
     }
 
     private async Task SendViaWebhookAsync(HttpClient client, NotificationQueueItem item, CancellationToken ct)
@@ -226,20 +234,20 @@ internal sealed class SlackNotificationProcessorJob : IJob
         }
     }
 
-    private async Task SendViaBotApiAsync(HttpClient client, NotificationQueueItem item, CancellationToken ct)
+    private async Task SendViaBotApiAsync(
+        HttpClient client,
+        NotificationQueueItem item,
+        IReadOnlyDictionary<Guid, SlackConnection> connectionCache,
+        CancellationToken ct)
     {
         var channelId = item.SlackChannelTarget
             ?? throw new InvalidOperationException($"Missing channel ID for SlackUser item {item.Id}");
 
-        // Look up the bot token from the Slack connection
-        string? botToken = null;
-        if (item.RecipientUserId.HasValue)
-        {
-            var connection = await _slackConnectionRepository
-                .GetActiveByUserIdAsync(item.RecipientUserId.Value, ct)
-                .ConfigureAwait(false);
-            botToken = connection?.BotAccessToken;
-        }
+        // Use cache — avoids N+1 query per item
+        string? botToken = item.RecipientUserId.HasValue
+            && connectionCache.TryGetValue(item.RecipientUserId.Value, out var conn)
+            ? conn.BotAccessToken
+            : null;
 
         if (string.IsNullOrEmpty(botToken))
             throw new InvalidOperationException($"No active bot token for item {item.Id}, user {item.RecipientUserId}");
@@ -299,9 +307,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
 
         try
         {
-            // Reset current item back to pending with retry time
-            currentItem.MarkAsFailed($"Rate limited, retry after {retryAfterSeconds}s");
-            currentItem.SetNextRetryAt(retryAt);
+            currentItem.MarkAsRateLimited(retryAt);   // FIX: era MarkAsFailed
             await _queueRepository.UpdateAsync(currentItem, ct).ConfigureAwait(false);
             await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
         }

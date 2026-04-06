@@ -57,8 +57,9 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
         {
             var timestamp = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
             var blockId = $"sr:{sr.ShareRequestId}:{timestamp}";
-            var deepLink = !string.IsNullOrEmpty(deepLinkPath)
-                ? $"{_frontendBaseUrl.TrimEnd('/')}{deepLinkPath}"
+            var safeDeepLinkPath = SlackDeepLinkValidator.Validate(deepLinkPath);
+            var deepLink = safeDeepLinkPath is not null
+                ? $"{_frontendBaseUrl.TrimEnd('/')}{safeDeepLinkPath}"
                 : $"{_frontendBaseUrl.TrimEnd('/')}/share-requests/{sr.ShareRequestId}";
 
             blocks.Add(new
@@ -106,7 +107,12 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
             _ => $"\ud83c\udfb2 *Gioco*: {sr.GameTitle}\n\ud83d\udc64 *Richiedente*: {sr.RequesterName}"
         };
 
-        if (!string.IsNullOrEmpty(sr.GameImageUrl))
+        var safeImageUrl = sr.GameImageUrl is not null
+            && sr.GameImageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            ? sr.GameImageUrl
+            : null;
+
+        if (safeImageUrl is not null)
         {
             return new
             {
@@ -115,7 +121,7 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
                 accessory = new
                 {
                     type = "image",
-                    image_url = sr.GameImageUrl,
+                    image_url = safeImageUrl,
                     alt_text = sr.GameTitle
                 }
             };

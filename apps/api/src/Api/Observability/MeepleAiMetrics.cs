@@ -17,6 +17,7 @@ namespace Api.Observability;
 ///   - MeepleAiMetrics.Insights.cs     — AI insight generation metrics
 ///   - MeepleAiMetrics.LlmOperational.cs — Circuit breaker, OpenRouter gauges
 ///   - MeepleAiMetrics.Evaluation.cs   — RAG evaluation and grid search
+///   - MeepleAiMetrics.Slack.cs        — Slack delivery counters, rate limit, token revocations
 /// </summary>
 internal static partial class MeepleAiMetrics
 {

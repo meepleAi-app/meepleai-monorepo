@@ -7,6 +7,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.Infrastructure;
+using Api.Observability;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -126,6 +127,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                         await _queueRepository.UpdateAsync(item, context.CancellationToken).ConfigureAwait(false);
                         await _dbContext.SaveChangesAsync(context.CancellationToken).ConfigureAwait(false);
 
+                        MeepleAiMetrics.RecordSlackMessageSent(item.ChannelType.Value, item.NotificationType.Value);
                         sentCount++;
 
                         _logger.LogInformation(
@@ -142,6 +144,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                             "Slack rate limited for team {TeamId}, retryAfter={RetryAfter}s. Deferring remaining items.",
                             teamId, ex.RetryAfterSeconds);
 
+                        MeepleAiMetrics.RecordSlackRateLimited(teamId);
                         await HandleRateLimitAsync(item, ex.RetryAfterSeconds, context.CancellationToken)
                             .ConfigureAwait(false);
                         break; // Move to next team
@@ -155,6 +158,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                             "Slack token revoked for team {TeamId}, deactivating connection. Item {ItemId} dead-lettered.",
                             teamId, item.Id);
 
+                        MeepleAiMetrics.RecordSlackTokenRevocation();
                         await HandleTokenRevocationAsync(item, context.CancellationToken).ConfigureAwait(false);
                     }
 #pragma warning disable CA1031
@@ -167,6 +171,10 @@ internal sealed class SlackNotificationProcessorJob : IJob
                             "Failed to send Slack notification {ItemId} to {Channel}, team={TeamId}",
                             item.Id, item.SlackChannelTarget, item.SlackTeamId);
 
+                        MeepleAiMetrics.RecordSlackMessageFailed(
+                            item.ChannelType.Value,
+                            item.NotificationType.Value,
+                            ex is HttpRequestException ? "http_error" : "unknown");
                         await HandleFailureAsync(item, ex.Message, context.CancellationToken).ConfigureAwait(false);
                     }
 #pragma warning restore CA1031
@@ -214,6 +222,8 @@ internal sealed class SlackNotificationProcessorJob : IJob
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
+        // Propagate CorrelationId for distributed tracing / Slack request correlation
+        request.Headers.TryAddWithoutValidation("X-MeepleAI-CorrelationId", item.CorrelationId.ToString());
 
         using var response = await client.SendAsync(request, ct).ConfigureAwait(false);
 
@@ -267,6 +277,8 @@ internal sealed class SlackNotificationProcessorJob : IJob
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", botToken);
+        // Propagate CorrelationId for distributed tracing / Slack request correlation
+        request.Headers.TryAddWithoutValidation("X-MeepleAI-CorrelationId", item.CorrelationId.ToString());
 
         using var response = await client.SendAsync(request, ct).ConfigureAwait(false);
 
@@ -277,6 +289,11 @@ internal sealed class SlackNotificationProcessorJob : IJob
         }
 
         var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Slack API HTTP error: {response.StatusCode} - {responseBody}");
+        }
 
         // Slack API returns 200 with ok=false for errors
         using var jsonDoc = JsonDocument.Parse(responseBody);
@@ -290,11 +307,6 @@ internal sealed class SlackNotificationProcessorJob : IJob
                 throw new SlackTokenRevokedException($"Token revoked: {error}");
 
             throw new HttpRequestException($"Slack API error: {error}");
-        }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new HttpRequestException($"Slack API HTTP error: {response.StatusCode} - {responseBody}");
         }
     }
 
@@ -408,10 +420,11 @@ internal sealed class SlackNotificationProcessorJob : IJob
     }
 }
 
+#pragma warning disable S3871 // Exception types are internal by design — never cross bounded context boundary
 /// <summary>
 /// Exception thrown when Slack returns HTTP 429 (Too Many Requests).
 /// </summary>
-public sealed class SlackRateLimitException : Exception
+internal sealed class SlackRateLimitException : Exception
 {
     public int RetryAfterSeconds { get; }
 
@@ -425,7 +438,8 @@ public sealed class SlackRateLimitException : Exception
 /// <summary>
 /// Exception thrown when Slack token has been revoked or is invalid.
 /// </summary>
-public sealed class SlackTokenRevokedException : Exception
+internal sealed class SlackTokenRevokedException : Exception
 {
     public SlackTokenRevokedException(string message) : base(message) { }
 }
+#pragma warning restore S3871

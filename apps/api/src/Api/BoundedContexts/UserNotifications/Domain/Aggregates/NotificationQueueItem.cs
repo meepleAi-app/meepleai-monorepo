@@ -203,13 +203,13 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         var item = new NotificationQueueItem(
             id, channelType, recipientUserId, notificationType,
             payload, slackChannelTarget, slackTeamId, correlationId,
+            createdAt: createdAt,
             deepLinkPath: deepLinkPath);
         item.Status = status;
         item.RetryCount = retryCount;
         item.MaxRetries = maxRetries;
         item.NextRetryAt = nextRetryAt;
         item.LastError = lastError;
-        item.CreatedAt = createdAt;
         item.ProcessedAt = processedAt;
         return item;
     }

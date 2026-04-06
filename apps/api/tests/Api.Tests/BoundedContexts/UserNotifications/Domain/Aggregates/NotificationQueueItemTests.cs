@@ -374,6 +374,37 @@ public class NotificationQueueItemTests
     }
 
     [Fact]
+    public void Reconstitute_WithDeepLinkPath_PreservesProperty()
+    {
+        // Arrange — simulate DB round-trip via Reconstitute
+        var id = Guid.NewGuid();
+        var expectedPath = "/library/documents/xyz789";
+
+        // Act
+        var item = NotificationQueueItem.Reconstitute(
+            id: id,
+            channelType: NotificationChannelType.SlackUser,
+            recipientUserId: DefaultRecipientUserId,
+            notificationType: NotificationType.DocumentReady,
+            payload: new GenericPayload("Test", "Body"),
+            slackChannelTarget: null,
+            slackTeamId: null,
+            status: NotificationQueueStatus.Pending,
+            retryCount: 0,
+            maxRetries: 3,
+            nextRetryAt: null,
+            lastError: null,
+            createdAt: new DateTime(2026, 3, 15, 12, 0, 0, DateTimeKind.Utc),
+            processedAt: null,
+            correlationId: Guid.NewGuid(),
+            deepLinkPath: expectedPath);
+
+        // Assert
+        item.DeepLinkPath.Should().Be(expectedPath);
+        item.Id.Should().Be(id);
+    }
+
+    [Fact]
     public void Create_SetsChannelTypeAndPayload()
     {
         // Arrange

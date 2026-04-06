@@ -13,11 +13,13 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 internal class SlackSignatureValidator
 {
     private readonly string _signingSecret;
+    private readonly TimeProvider _timeProvider;
 
-    public SlackSignatureValidator(IOptions<SlackNotificationConfiguration> config)
+    public SlackSignatureValidator(IOptions<SlackNotificationConfiguration> config, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(config);
         _signingSecret = config.Value.SigningSecret;
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     /// <summary>
@@ -33,12 +35,11 @@ internal class SlackSignatureValidator
         if (string.IsNullOrEmpty(timestamp) || string.IsNullOrEmpty(signature))
             return false;
 
-        // Replay protection: reject requests older than 5 minutes
         if (!long.TryParse(timestamp, System.Globalization.CultureInfo.InvariantCulture, out var ts))
             return false;
 
         var requestTime = DateTimeOffset.FromUnixTimeSeconds(ts);
-        var now = DateTimeOffset.UtcNow;
+        var now = _timeProvider.GetUtcNow();
         if (Math.Abs((now - requestTime).TotalSeconds) > 300)
             return false;
 

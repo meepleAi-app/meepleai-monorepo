@@ -83,4 +83,53 @@ public sealed class AdminAlertSlackBuilderTests
         var act = () => CreateSut().BuildMessage(new BadgePayload(Guid.NewGuid(), "X", "Y"), null);
         act.Should().Throw<ArgumentException>().WithMessage("*GenericPayload*BadgePayload*");
     }
+
+    [Fact]
+    public void BuildMessage_InfoTitle_ProducesInfoAttachment()
+    {
+        var payload = new GenericPayload("Daily Summary", "No issues today.");
+
+        var result = CreateSut().BuildMessage(payload, null);
+        var json = JsonSerializer.Serialize(result);
+        var doc = JsonDocument.Parse(json);
+
+        // Default/info path uses "#1967d2" (informational blue)
+        var color = doc.RootElement.GetProperty("attachments")[0].GetProperty("color").GetString();
+        color.Should().Be("#1967d2");
+    }
+
+    [Theory]
+    [InlineData("CRITICAL issue detected")]
+    [InlineData("CIRCUIT BREAKER opened")]
+    [InlineData("Service DEGRADED")]
+    public void BuildMessage_CriticalKeywords_ProduceDangerAttachment(string title)
+    {
+        var payload = new GenericPayload(title, "Details here.");
+
+        var result = CreateSut().BuildMessage(payload, null);
+        var json = JsonSerializer.Serialize(result);
+        var doc = JsonDocument.Parse(json);
+
+        doc.RootElement.GetProperty("attachments")[0].GetProperty("color").GetString()
+            .Should().Be("danger");
+    }
+
+    [Theory]
+    [InlineData("WARNING: budget approaching")]
+    [InlineData("STALE share requests detected")]
+    [InlineData("Review lock EXPIRING soon")]
+    [InlineData("Model is DEPRECATED")]
+    [InlineData("BUDGET threshold reached")]
+    [InlineData("RPM quota near limit")]
+    public void BuildMessage_WarningKeywords_ProduceWarningAttachment(string title)
+    {
+        var payload = new GenericPayload(title, "Details here.");
+
+        var result = CreateSut().BuildMessage(payload, null);
+        var json = JsonSerializer.Serialize(result);
+        var doc = JsonDocument.Parse(json);
+
+        doc.RootElement.GetProperty("attachments")[0].GetProperty("color").GetString()
+            .Should().Be("warning");
+    }
 }

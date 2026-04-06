@@ -342,7 +342,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                 var notification = new Notification(
                     id: Guid.NewGuid(),
                     userId: item.RecipientUserId.Value,
-                    type: NotificationType.DocumentProcessingFailed,
+                    type: NotificationType.SlackConnectionRevoked,
                     severity: NotificationSeverity.Warning,
                     title: "Slack Disconnected",
                     message: "Your Slack workspace connection has been revoked. Please reconnect to continue receiving Slack notifications.",

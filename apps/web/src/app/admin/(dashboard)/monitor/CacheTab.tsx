@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
@@ -69,8 +70,9 @@ export function CacheTab() {
     setClearing(true);
     try {
       await api.admin.clearKBCache();
+      toast.success('Cache KB svuotata');
     } catch {
-      // Silently handle — toast could be added later
+      toast.error('Errore nel svuotamento della cache');
     } finally {
       setClearing(false);
     }

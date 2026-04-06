@@ -3,6 +3,7 @@ using Api.Tests.TestHelpers;
 using Api.Services;
 using Api.Tests.Infrastructure;
 using Api.SharedKernel.Application.Services;
+using Api.Models;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using MediatR;
@@ -189,6 +190,28 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
             // Mock cache service
             services.RemoveAll(typeof(IHybridCacheService));
             services.AddScoped<IHybridCacheService>(_ => Mock.Of<IHybridCacheService>());
+
+            // Mock configuration service: enable public registration and return defaults for other keys.
+            // Moq matches in reverse setup order (last wins), so general fallbacks are set first.
+            services.RemoveAll(typeof(IConfigurationService));
+            var mockConfigService = new Mock<IConfigurationService>();
+            mockConfigService
+                .Setup(c => c.GetConfigurationByKeyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((SystemConfigurationDto?)null);
+            mockConfigService
+                .Setup(c => c.GetValueAsync<bool?>(It.IsAny<string>(), It.IsAny<bool?>(), It.IsAny<string?>()))
+                .ReturnsAsync((string key, bool? def, string? env) => def);
+            mockConfigService
+                .Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
+                .ReturnsAsync((string key, int? def, string? env) => def);
+            mockConfigService
+                .Setup(c => c.GetValueAsync<string?>(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()))
+                .ReturnsAsync((string key, string? def, string? env) => def);
+            // Specific override (last = highest priority): enable public registration
+            mockConfigService
+                .Setup(c => c.GetValueAsync<bool?>("Registration:PublicEnabled", It.IsAny<bool?>(), It.IsAny<string?>()))
+                .ReturnsAsync(true);
+            services.AddScoped<IConfigurationService>(_ => mockConfigService.Object);
 
             // Ensure domain event collector is registered
             services.AddScoped<IDomainEventCollector, DomainEventCollector>();

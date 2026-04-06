@@ -1,11 +1,18 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { GrafanaTab } from '../GrafanaTab';
 
 describe('GrafanaTab', () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_GRAFANA_URL = 'http://grafana.test';
+  });
+
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_GRAFANA_URL;
+  });
+
   it('renders Grafana dashboard section', () => {
     render(<GrafanaTab />);
-    // GrafanaDashboard renders a root div with data-testid="grafana-dashboard"
     expect(screen.getByTestId('grafana-dashboard')).toBeTruthy();
   });
 
@@ -18,5 +25,12 @@ describe('GrafanaTab', () => {
   it('renders application category section', () => {
     render(<GrafanaTab />);
     expect(screen.getByTestId('category-section-application')).toBeTruthy();
+  });
+
+  it('shows not-configured state when NEXT_PUBLIC_GRAFANA_URL is not set', () => {
+    delete process.env.NEXT_PUBLIC_GRAFANA_URL;
+    render(<GrafanaTab />);
+    expect(screen.getByTestId('grafana-not-configured')).toBeTruthy();
+    expect(screen.queryByTestId('grafana-dashboard')).not.toBeInTheDocument();
   });
 });

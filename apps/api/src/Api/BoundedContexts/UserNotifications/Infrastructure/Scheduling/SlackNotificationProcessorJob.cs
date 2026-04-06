@@ -7,6 +7,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.Infrastructure;
+using Api.Observability;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -71,6 +72,17 @@ internal sealed class SlackNotificationProcessorJob : IJob
 
             var allItems = slackUserItems.Concat(slackTeamItems).ToList();
 
+            // Batch-load bot tokens per tutti gli SlackUser items in una sola query
+            var userIds = allItems
+                .Where(i => i.ChannelType == NotificationChannelType.SlackUser && i.RecipientUserId.HasValue)
+                .Select(i => i.RecipientUserId!.Value)
+                .Distinct()
+                .ToList();
+
+            var connectionsByUserId = await _slackConnectionRepository
+                .GetActiveByUserIdsAsync(userIds, context.CancellationToken)
+                .ConfigureAwait(false);
+
             if (allItems.Count == 0)
             {
                 _logger.LogDebug("No pending Slack notifications to process");
@@ -109,12 +121,13 @@ internal sealed class SlackNotificationProcessorJob : IJob
                         await _queueRepository.UpdateAsync(item, context.CancellationToken).ConfigureAwait(false);
                         await _dbContext.SaveChangesAsync(context.CancellationToken).ConfigureAwait(false);
 
-                        await SendSlackMessageAsync(item, context.CancellationToken).ConfigureAwait(false);
+                        await SendSlackMessageAsync(item, connectionsByUserId, context.CancellationToken).ConfigureAwait(false);
 
                         item.MarkAsSent(DateTime.UtcNow);
                         await _queueRepository.UpdateAsync(item, context.CancellationToken).ConfigureAwait(false);
                         await _dbContext.SaveChangesAsync(context.CancellationToken).ConfigureAwait(false);
 
+                        MeepleAiMetrics.RecordSlackMessageSent(item.ChannelType.Value, item.NotificationType.Value);
                         sentCount++;
 
                         _logger.LogInformation(
@@ -131,6 +144,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                             "Slack rate limited for team {TeamId}, retryAfter={RetryAfter}s. Deferring remaining items.",
                             teamId, ex.RetryAfterSeconds);
 
+                        MeepleAiMetrics.RecordSlackRateLimited(teamId);
                         await HandleRateLimitAsync(item, ex.RetryAfterSeconds, context.CancellationToken)
                             .ConfigureAwait(false);
                         break; // Move to next team
@@ -144,6 +158,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                             "Slack token revoked for team {TeamId}, deactivating connection. Item {ItemId} dead-lettered.",
                             teamId, item.Id);
 
+                        MeepleAiMetrics.RecordSlackTokenRevocation();
                         await HandleTokenRevocationAsync(item, context.CancellationToken).ConfigureAwait(false);
                     }
 #pragma warning disable CA1031
@@ -156,6 +171,10 @@ internal sealed class SlackNotificationProcessorJob : IJob
                             "Failed to send Slack notification {ItemId} to {Channel}, team={TeamId}",
                             item.Id, item.SlackChannelTarget, item.SlackTeamId);
 
+                        MeepleAiMetrics.RecordSlackMessageFailed(
+                            item.ChannelType.Value,
+                            item.NotificationType.Value,
+                            ex is HttpRequestException ? "http_error" : "unknown");
                         await HandleFailureAsync(item, ex.Message, context.CancellationToken).ConfigureAwait(false);
                     }
 #pragma warning restore CA1031
@@ -177,20 +196,17 @@ internal sealed class SlackNotificationProcessorJob : IJob
 #pragma warning restore CA1031
     }
 
-    private async Task SendSlackMessageAsync(NotificationQueueItem item, CancellationToken ct)
+    private async Task SendSlackMessageAsync(
+        NotificationQueueItem item,
+        IReadOnlyDictionary<Guid, SlackConnection> connectionCache,
+        CancellationToken ct)
     {
         using var client = _httpClientFactory.CreateClient("SlackApi");
 
         if (item.ChannelType == NotificationChannelType.SlackTeam)
-        {
-            // Webhook-based delivery for team channels
             await SendViaWebhookAsync(client, item, ct).ConfigureAwait(false);
-        }
         else
-        {
-            // Bot token-based delivery for DMs
-            await SendViaBotApiAsync(client, item, ct).ConfigureAwait(false);
-        }
+            await SendViaBotApiAsync(client, item, connectionCache, ct).ConfigureAwait(false);
     }
 
     private async Task SendViaWebhookAsync(HttpClient client, NotificationQueueItem item, CancellationToken ct)
@@ -199,13 +215,15 @@ internal sealed class SlackNotificationProcessorJob : IJob
             ?? throw new InvalidOperationException($"Missing webhook URL for SlackTeam item {item.Id}");
 
         var builder = _builderFactory.GetBuilder(item.NotificationType);
-        var message = builder.BuildMessage(item.Payload, null);
+        var message = builder.BuildMessage(item.Payload, item.DeepLinkPath);
         var payload = JsonSerializer.Serialize(message);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, webhookUrl)
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
+        // Propagate CorrelationId for distributed tracing / Slack request correlation
+        request.Headers.TryAddWithoutValidation("X-MeepleAI-CorrelationId", item.CorrelationId.ToString());
 
         using var response = await client.SendAsync(request, ct).ConfigureAwait(false);
 
@@ -226,26 +244,26 @@ internal sealed class SlackNotificationProcessorJob : IJob
         }
     }
 
-    private async Task SendViaBotApiAsync(HttpClient client, NotificationQueueItem item, CancellationToken ct)
+    private async Task SendViaBotApiAsync(
+        HttpClient client,
+        NotificationQueueItem item,
+        IReadOnlyDictionary<Guid, SlackConnection> connectionCache,
+        CancellationToken ct)
     {
         var channelId = item.SlackChannelTarget
             ?? throw new InvalidOperationException($"Missing channel ID for SlackUser item {item.Id}");
 
-        // Look up the bot token from the Slack connection
-        string? botToken = null;
-        if (item.RecipientUserId.HasValue)
-        {
-            var connection = await _slackConnectionRepository
-                .GetActiveByUserIdAsync(item.RecipientUserId.Value, ct)
-                .ConfigureAwait(false);
-            botToken = connection?.BotAccessToken;
-        }
+        // Use cache — avoids N+1 query per item
+        string? botToken = item.RecipientUserId.HasValue
+            && connectionCache.TryGetValue(item.RecipientUserId.Value, out var conn)
+            ? conn.BotAccessToken
+            : null;
 
         if (string.IsNullOrEmpty(botToken))
             throw new InvalidOperationException($"No active bot token for item {item.Id}, user {item.RecipientUserId}");
 
         var builder = _builderFactory.GetBuilder(item.NotificationType);
-        var blockKitMessage = builder.BuildMessage(item.Payload, null);
+        var blockKitMessage = builder.BuildMessage(item.Payload, item.DeepLinkPath);
         // Merge channel into the Block Kit message by serializing and re-parsing
         var messageJson = JsonSerializer.Serialize(blockKitMessage);
         using var mergedDoc = JsonDocument.Parse(messageJson);
@@ -259,6 +277,8 @@ internal sealed class SlackNotificationProcessorJob : IJob
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", botToken);
+        // Propagate CorrelationId for distributed tracing / Slack request correlation
+        request.Headers.TryAddWithoutValidation("X-MeepleAI-CorrelationId", item.CorrelationId.ToString());
 
         using var response = await client.SendAsync(request, ct).ConfigureAwait(false);
 
@@ -269,6 +289,11 @@ internal sealed class SlackNotificationProcessorJob : IJob
         }
 
         var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Slack API HTTP error: {response.StatusCode} - {responseBody}");
+        }
 
         // Slack API returns 200 with ok=false for errors
         using var jsonDoc = JsonDocument.Parse(responseBody);
@@ -283,11 +308,6 @@ internal sealed class SlackNotificationProcessorJob : IJob
 
             throw new HttpRequestException($"Slack API error: {error}");
         }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new HttpRequestException($"Slack API HTTP error: {response.StatusCode} - {responseBody}");
-        }
     }
 
     private async Task HandleRateLimitAsync(
@@ -299,9 +319,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
 
         try
         {
-            // Reset current item back to pending with retry time
-            currentItem.MarkAsFailed($"Rate limited, retry after {retryAfterSeconds}s");
-            currentItem.SetNextRetryAt(retryAt);
+            currentItem.MarkAsRateLimited(retryAt);   // FIX: era MarkAsFailed
             await _queueRepository.UpdateAsync(currentItem, ct).ConfigureAwait(false);
             await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
         }
@@ -342,7 +360,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                 var notification = new Notification(
                     id: Guid.NewGuid(),
                     userId: item.RecipientUserId.Value,
-                    type: NotificationType.DocumentProcessingFailed,
+                    type: NotificationType.SlackConnectionRevoked,
                     severity: NotificationSeverity.Warning,
                     title: "Slack Disconnected",
                     message: "Your Slack workspace connection has been revoked. Please reconnect to continue receiving Slack notifications.",
@@ -402,10 +420,11 @@ internal sealed class SlackNotificationProcessorJob : IJob
     }
 }
 
+#pragma warning disable S3871 // Exception types are internal by design — never cross bounded context boundary
 /// <summary>
 /// Exception thrown when Slack returns HTTP 429 (Too Many Requests).
 /// </summary>
-public sealed class SlackRateLimitException : Exception
+internal sealed class SlackRateLimitException : Exception
 {
     public int RetryAfterSeconds { get; }
 
@@ -419,7 +438,8 @@ public sealed class SlackRateLimitException : Exception
 /// <summary>
 /// Exception thrown when Slack token has been revoked or is invalid.
 /// </summary>
-public sealed class SlackTokenRevokedException : Exception
+internal sealed class SlackTokenRevokedException : Exception
 {
     public SlackTokenRevokedException(string message) : base(message) { }
 }
+#pragma warning restore S3871

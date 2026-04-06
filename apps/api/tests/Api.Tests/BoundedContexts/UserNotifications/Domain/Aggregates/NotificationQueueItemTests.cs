@@ -18,7 +18,8 @@ public class NotificationQueueItemTests
         NotificationType? notificationType = null,
         INotificationPayload? payload = null,
         string? slackChannelTarget = null,
-        string? slackTeamId = null)
+        string? slackTeamId = null,
+        string? deepLinkPath = null)
     {
         return NotificationQueueItem.Create(
             channelType ?? NotificationChannelType.SlackUser,
@@ -26,7 +27,8 @@ public class NotificationQueueItemTests
             notificationType ?? NotificationType.DocumentReady,
             payload ?? new GenericPayload("Test", "Body"),
             slackChannelTarget,
-            slackTeamId);
+            slackTeamId,
+            deepLinkPath: deepLinkPath);
     }
 
     [Fact]
@@ -183,8 +185,9 @@ public class NotificationQueueItemTests
         item.RetryCount.Should().Be(1);
         item.Status.Should().Be(NotificationQueueStatus.Failed);
         item.LastError.Should().Be("connection refused");
-        // First failure: +1 minute
-        item.NextRetryAt.Should().Be(now.AddMinutes(1));
+        // First failure: +1 minute (plus 0-30s jitter)
+        item.NextRetryAt.Should().BeOnOrAfter(now.AddMinutes(1));
+        item.NextRetryAt.Should().BeOnOrBefore(now.AddMinutes(1).AddSeconds(30));
     }
 
     [Fact]
@@ -206,8 +209,9 @@ public class NotificationQueueItemTests
         // Assert
         item.RetryCount.Should().Be(2);
         item.Status.Should().Be(NotificationQueueStatus.Failed);
-        // Second failure: +5 minutes
-        item.NextRetryAt.Should().Be(now2.AddMinutes(5));
+        // Second failure: +5 minutes (plus 0-30s jitter)
+        item.NextRetryAt.Should().BeOnOrAfter(now2.AddMinutes(5));
+        item.NextRetryAt.Should().BeOnOrBefore(now2.AddMinutes(5).AddSeconds(30));
     }
 
     [Fact]
@@ -233,8 +237,9 @@ public class NotificationQueueItemTests
         // Assert — still retrying (4 total attempts: initial + 3 retries matching [1m, 5m, 30m] delays)
         item.RetryCount.Should().Be(3);
         item.Status.Should().Be(NotificationQueueStatus.Failed);
-        // Third failure uses last delay (30 minutes)
-        item.NextRetryAt.Should().Be(now3.AddMinutes(30));
+        // Third failure uses last delay (30 minutes, plus 0-30s jitter)
+        item.NextRetryAt.Should().BeOnOrAfter(now3.AddMinutes(30));
+        item.NextRetryAt.Should().BeOnOrBefore(now3.AddMinutes(30).AddSeconds(30));
         item.LastError.Should().Be("error 3");
     }
 
@@ -308,6 +313,98 @@ public class NotificationQueueItemTests
 
         // Assert
         item.NextRetryAt.Should().Be(retryAt);
+    }
+
+    [Fact]
+    public void MarkAsRateLimited_FromProcessing_DoesNotIncrementRetryCount()
+    {
+        // Arrange
+        var item = CreateDefaultItem();
+        item.MarkAsProcessing();
+        var expectedRetryCount = item.RetryCount; // 0
+
+        // Act
+        var retryAt = new DateTime(2026, 3, 15, 12, 5, 0, DateTimeKind.Utc);
+        item.MarkAsRateLimited(retryAt);
+
+        // Assert
+        item.RetryCount.Should().Be(expectedRetryCount); // still 0
+        item.Status.Should().Be(NotificationQueueStatus.Failed);
+        item.NextRetryAt.Should().Be(retryAt);
+        item.LastError.Should().Contain("rate limit");
+    }
+
+    [Fact]
+    public void MarkAsRateLimited_FromPending_Throws()
+    {
+        // Arrange
+        var item = CreateDefaultItem();
+        var fixedRetryAt = new DateTime(2026, 3, 15, 12, 0, 30, DateTimeKind.Utc);
+
+        // Act & Assert
+        var act = () => item.MarkAsRateLimited(fixedRetryAt);
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void MarkAsRateLimited_MultipleTimes_NeverExceedsMaxRetries()
+    {
+        var item = CreateDefaultItem();
+        var fixedRetryAt = new DateTime(2026, 3, 15, 12, 0, 30, DateTimeKind.Utc);
+
+        for (int i = 0; i < 10; i++)
+        {
+            item.MarkAsProcessing();
+            item.MarkAsRateLimited(fixedRetryAt);
+        }
+
+        item.RetryCount.Should().Be(0);
+        item.Status.Should().Be(NotificationQueueStatus.Failed);
+    }
+
+    [Fact]
+    public void Create_WithDeepLinkPath_SetsProperty()
+    {
+        var item = CreateDefaultItem(deepLinkPath: "/library/documents/abc123");
+        item.DeepLinkPath.Should().Be("/library/documents/abc123");
+    }
+
+    [Fact]
+    public void Create_WithoutDeepLinkPath_PropertyIsNull()
+    {
+        var item = CreateDefaultItem();
+        item.DeepLinkPath.Should().BeNull();
+    }
+
+    [Fact]
+    public void Reconstitute_WithDeepLinkPath_PreservesProperty()
+    {
+        // Arrange — simulate DB round-trip via Reconstitute
+        var id = Guid.NewGuid();
+        var expectedPath = "/library/documents/xyz789";
+
+        // Act
+        var item = NotificationQueueItem.Reconstitute(
+            id: id,
+            channelType: NotificationChannelType.SlackUser,
+            recipientUserId: DefaultRecipientUserId,
+            notificationType: NotificationType.DocumentReady,
+            payload: new GenericPayload("Test", "Body"),
+            slackChannelTarget: null,
+            slackTeamId: null,
+            status: NotificationQueueStatus.Pending,
+            retryCount: 0,
+            maxRetries: 3,
+            nextRetryAt: null,
+            lastError: null,
+            createdAt: new DateTime(2026, 3, 15, 12, 0, 0, DateTimeKind.Utc),
+            processedAt: null,
+            correlationId: Guid.NewGuid(),
+            deepLinkPath: expectedPath);
+
+        // Assert
+        item.DeepLinkPath.Should().Be(expectedPath);
+        item.Id.Should().Be(id);
     }
 
     [Fact]

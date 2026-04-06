@@ -24,9 +24,7 @@ describe('HttpClient - Error Handling', () => {
     it('should skip error logging when requested', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
 
-      setup.mockFetch.mockResolvedValueOnce(
-        createErrorResponse(500, { error: 'Server error' })
-      );
+      setup.mockFetch.mockResolvedValueOnce(createErrorResponse(500, { error: 'Server error' }));
 
       await expect(
         setup.client.get('/api/v1/test', undefined, {
@@ -89,10 +87,25 @@ describe('HttpClient - Error Handling', () => {
       setup = setupTestEnvironment();
     });
 
-    it('should retry on 500 error and succeed', async () => {
-      // First call fails with 500, second call succeeds
+    it('should NOT retry on 500 error (application error)', async () => {
+      // 500 is not retryable — application bugs won't resolve with retries
+      setup.mockFetch.mockResolvedValueOnce(createErrorResponse(500, { error: 'Server error' }));
+
+      await expect(
+        setup.client.get('/api/v1/test', undefined, {
+          retry: {
+            retryConfig: { maxAttempts: 3, baseDelay: 10, maxDelay: 100, enabled: true, jitter: 0 },
+          },
+        })
+      ).rejects.toThrow(ServerError);
+
+      expect(setup.mockFetch).toHaveBeenCalledTimes(1); // No retries
+    });
+
+    it('should retry on 502 error and succeed', async () => {
+      // First call fails with 502 (gateway error), second call succeeds
       setup.mockFetch
-        .mockResolvedValueOnce(createErrorResponse(500, { error: 'Server error' }))
+        .mockResolvedValueOnce(createErrorResponse(502, { error: 'Bad Gateway' }))
         .mockResolvedValueOnce(createSuccessResponse({ data: 'success' }));
 
       const result = await setup.client.get('/api/v1/test', undefined, {
@@ -135,9 +148,7 @@ describe('HttpClient - Error Handling', () => {
     });
 
     it('should not retry on 401 error', async () => {
-      setup.mockFetch.mockResolvedValueOnce(
-        createErrorResponse(401, { error: 'Unauthorized' })
-      );
+      setup.mockFetch.mockResolvedValueOnce(createErrorResponse(401, { error: 'Unauthorized' }));
 
       const result = await setup.client.get('/api/v1/test', undefined, {
         retry: {
@@ -151,7 +162,7 @@ describe('HttpClient - Error Handling', () => {
     });
 
     it('should skip retry when skipRetry is true', async () => {
-      setup.mockFetch.mockResolvedValueOnce(createErrorResponse(500, { error: 'Server error' }));
+      setup.mockFetch.mockResolvedValueOnce(createErrorResponse(502, { error: 'Bad Gateway' }));
 
       await expect(
         setup.client.get('/api/v1/test', undefined, {
@@ -164,7 +175,7 @@ describe('HttpClient - Error Handling', () => {
 
     it('should record retry metrics', async () => {
       setup.mockFetch
-        .mockResolvedValueOnce(createErrorResponse(500, { error: 'Server error' }))
+        .mockResolvedValueOnce(createErrorResponse(502, { error: 'Bad Gateway' }))
         .mockResolvedValueOnce(createSuccessResponse({ data: 'success' }));
 
       await setup.client.get('/api/v1/test', undefined, {
@@ -180,7 +191,7 @@ describe('HttpClient - Error Handling', () => {
 
     it('should call onRetry callback', async () => {
       setup.mockFetch
-        .mockResolvedValueOnce(createErrorResponse(500, { error: 'Server error' }))
+        .mockResolvedValueOnce(createErrorResponse(502, { error: 'Bad Gateway' }))
         .mockResolvedValueOnce(createSuccessResponse({ data: 'success' }));
 
       const onRetry = vi.fn();
@@ -213,7 +224,7 @@ describe('HttpClient - Error Handling', () => {
 
     it('should work with DELETE requests', async () => {
       setup.mockFetch
-        .mockResolvedValueOnce(createErrorResponse(500, { error: 'Server error' }))
+        .mockResolvedValueOnce(createErrorResponse(503, { error: 'Service Unavailable' }))
         .mockResolvedValueOnce({
           ok: true,
           status: 204,
@@ -230,7 +241,7 @@ describe('HttpClient - Error Handling', () => {
     });
 
     it('should exhaust retries and throw last error', async () => {
-      setup.mockFetch.mockResolvedValue(createErrorResponse(500, { error: 'Server error' }));
+      setup.mockFetch.mockResolvedValue(createErrorResponse(502, { error: 'Bad Gateway' }));
 
       await expect(
         setup.client.get('/api/v1/test', undefined, {

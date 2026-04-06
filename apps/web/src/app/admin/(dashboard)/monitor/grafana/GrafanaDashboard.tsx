@@ -290,6 +290,8 @@ export function GrafanaDashboard() {
     window.open(iframeUrl, '_blank', 'noopener,noreferrer');
   }, [iframeUrl]);
 
+  if (!isConfigured) return <GrafanaNotConfigured />;
+
   return (
     <div className="space-y-5" data-testid="grafana-dashboard">
       {/* Dashboard Selector */}
@@ -368,24 +370,20 @@ export function GrafanaDashboard() {
 
       {/* Iframe / Placeholder */}
       {selectedId ? (
-        isConfigured ? (
-          <div
-            className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md overflow-hidden"
-            data-testid="grafana-iframe-container"
-          >
-            <iframe
-              key={iframeUrl}
-              src={iframeUrl ?? ''}
-              title={selectedDashboard?.name ?? 'Grafana Dashboard'}
-              className="w-full border-0"
-              style={{ height: 'calc(100vh - 320px)', minHeight: '500px' }}
-              loading="lazy"
-              data-testid="grafana-iframe"
-            />
-          </div>
-        ) : (
-          <GrafanaNotConfigured />
-        )
+        <div
+          className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md overflow-hidden"
+          data-testid="grafana-iframe-container"
+        >
+          <iframe
+            key={iframeUrl}
+            src={iframeUrl ?? ''}
+            title={selectedDashboard?.name ?? 'Grafana Dashboard'}
+            className="w-full border-0"
+            style={{ height: 'calc(100vh - 320px)', minHeight: '500px' }}
+            loading="lazy"
+            data-testid="grafana-iframe"
+          />
+        </div>
       ) : (
         <div
           className="rounded-xl border border-dashed border-muted-foreground/20 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-10 text-center"

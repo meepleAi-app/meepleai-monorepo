@@ -22,7 +22,6 @@ import {
   Box,
   ScrollText,
   BarChart3,
-  Settings,
 } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
@@ -39,7 +38,6 @@ import { GrafanaTab } from './GrafanaTab';
 import { InfrastructureTab } from './InfrastructureTab';
 import { LogsTab } from './LogsTab';
 import { MauTab } from './MauTab';
-import { OperationsLinkTab } from './OperationsLinkTab';
 import { TestingTab } from './TestingTab';
 
 interface AdminMonitorPageProps {
@@ -48,7 +46,7 @@ interface AdminMonitorPageProps {
 
 const TABS: readonly HubTab[] = [
   { id: 'alerts', label: 'Alerts', href: '/admin/monitor?tab=alerts', icon: <Bell /> },
-  { id: 'cache', label: 'Cache', href: '/admin/monitor?tab=cache', icon: <Database /> },
+  { id: 'cache', label: 'Metrics', href: '/admin/monitor?tab=cache', icon: <Database /> },
   { id: 'infra', label: 'Infrastructure', href: '/admin/monitor?tab=infra', icon: <HardDrive /> },
   {
     id: 'command',
@@ -61,12 +59,6 @@ const TABS: readonly HubTab[] = [
   { id: 'containers', label: 'Containers', href: '/admin/monitor?tab=containers', icon: <Box /> },
   { id: 'logs', label: 'Logs', href: '/admin/monitor?tab=logs', icon: <ScrollText /> },
   { id: 'grafana', label: 'Grafana', href: '/admin/monitor?tab=grafana', icon: <BarChart3 /> },
-  {
-    id: 'operations',
-    label: 'Operations',
-    href: '/admin/monitor?tab=operations',
-    icon: <Settings />,
-  },
   { id: 'export', label: 'Bulk Export', href: '/admin/monitor?tab=export', icon: <Download /> },
   { id: 'email', label: 'Email', href: '/admin/monitor?tab=email', icon: <Mail /> },
   { id: 'history', label: 'History', href: '/admin/monitor?tab=history', icon: <History /> },
@@ -159,12 +151,6 @@ function renderTabContent(tab: TabId) {
       return (
         <Suspense fallback={<TabSkeleton />}>
           <GrafanaTab />
-        </Suspense>
-      );
-    case 'operations':
-      return (
-        <Suspense fallback={<TabSkeleton />}>
-          <OperationsLinkTab />
         </Suspense>
       );
     default:

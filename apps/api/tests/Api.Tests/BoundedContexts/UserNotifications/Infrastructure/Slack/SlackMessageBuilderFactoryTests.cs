@@ -96,7 +96,7 @@ public sealed class SlackMessageBuilderFactoryTests
     public void GetBuilder_AdminType_ReturnsAdminAlertBuilder()
     {
         // Arrange
-        var adminBuilder = new AdminAlertSlackBuilder();
+        var adminBuilder = new AdminAlertSlackBuilder(_timeProvider);
         var fallback = new GenericSlackBuilder(_config);
         var factory = new SlackMessageBuilderFactory(
             new ISlackMessageBuilder[] { adminBuilder },

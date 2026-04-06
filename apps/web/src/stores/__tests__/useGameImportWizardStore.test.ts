@@ -1,12 +1,13 @@
 /**
- * Game Import Wizard Store Tests - Issue #4161
+ * Game Import Wizard Store Tests
  *
  * Test coverage:
  * - Initial state
- * - Navigation (goNext, goBack, canGoNext, canGoBack)
- * - Data actions (setters)
- * - Step validation
- * - Wizard submission
+ * - Navigation (goNext, goBack, canGoNext, canGoBack, setStep)
+ * - Step validation (canGoNext per step)
+ * - Data actions (setUploadedPdf, setReviewedMetadata, setCoverImage)
+ * - Import execution (executeImport / submitWizard)
+ * - Step 5 actions (setIndexingReady, addRagMessage, updateRagMessage)
  * - Reset functionality
  *
  * Target: ≥85% coverage
@@ -17,88 +18,81 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import {
   useGameImportWizardStore,
-  type ExtractedMetadata,
-  type BggGameData,
-  type EnrichedGameData,
+  type GameMetadata,
   type UploadedPdf,
+  type CoverImageSelection,
 } from '../useGameImportWizardStore';
 
-// Mock toast
+// Mock toast (store uses toast.error / toast.warning)
 vi.mock('@/components/layout', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
   },
 }));
 
-// Mock API client for submitWizard
-const mockWizardCreateGame = vi.fn();
+// Mock API client for executeImport
+const mockImportGameFromPdf = vi.fn();
 vi.mock('@/lib/api', () => ({
   api: {
     sharedGames: {
-      wizardCreateGame: (...args: unknown[]) => mockWizardCreateGame(...args),
+      importGameFromPdf: (...args: unknown[]) => mockImportGameFromPdf(...args),
     },
   },
 }));
 
 const mockUploadedPdf: UploadedPdf = {
+  pdfDocumentId: 'pdf-123',
   id: 'pdf-123',
   fileName: 'rulebook.pdf',
 };
 
-const mockExtractedMetadata: ExtractedMetadata = {
+const mockMetadata: GameMetadata = {
   title: 'Test Game',
   minPlayers: 2,
   maxPlayers: 4,
-  playingTime: 60,
+  playingTimeMinutes: 60,
   description: 'A test game',
-};
-
-const mockBggGameData: BggGameData = {
-  bggId: 12345,
-  name: 'Test Game from BGG',
   yearPublished: 2020,
-  minPlayers: 2,
-  maxPlayers: 5,
-  playingTime: 90,
   minAge: 10,
-  description: 'BGG description',
-  imageUrl: 'https://example.com/image.jpg',
-  thumbnailUrl: 'https://example.com/thumb.jpg',
+  publishers: ['Publisher A'],
+  designers: ['Designer A'],
+  categories: ['Strategy'],
+  mechanics: ['Deck Building'],
 };
 
-const mockEnrichedData: EnrichedGameData = {
-  title: 'Test Game (Final)',
-  minPlayers: 2,
-  maxPlayers: 4,
-  playingTime: 60,
-  description: 'Final description',
-  bggId: 12345,
-  imageUrl: 'https://example.com/image.jpg',
-  year: 2020,
-  minAge: 10,
+const mockCoverImage: CoverImageSelection = {
+  mode: 'pdf-page',
+  imageUrl: 'https://example.com/cover.jpg',
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
 
-  // Reset Zustand store state to initial
+  // Reset store to initial state
   useGameImportWizardStore.setState({
     currentStep: 1,
     uploadedPdf: null,
-    extractedMetadata: null,
-    selectedBggId: null,
-    bggGameData: null,
-    enrichedData: null,
+    reviewedMetadata: null,
+    coverImage: { mode: 'placeholder', imageUrl: null },
+    importResult: null,
+    ragTestHistory: [],
+    isIndexingReady: false,
     isProcessing: false,
     error: null,
+    extractedMetadata: null,
+    selectedBggId: null,
+    enrichedData: null,
+    bggGameData: null,
   });
 
-  // Reset API mock
-  mockWizardCreateGame.mockResolvedValue({
+  // Default success response
+  mockImportGameFromPdf.mockResolvedValue({
     gameId: 'game-new-123',
-    approvalStatus: 'Published',
-    bggEnrichmentApplied: false,
+    pdfDocumentId: 'pdf-123',
+    indexingStatus: 'pending',
+    warning: null,
   });
 });
 
@@ -109,12 +103,12 @@ describe('useGameImportWizardStore', () => {
 
       expect(result.current.currentStep).toBe(1);
       expect(result.current.uploadedPdf).toBeNull();
-      expect(result.current.extractedMetadata).toBeNull();
-      expect(result.current.selectedBggId).toBeNull();
-      expect(result.current.bggGameData).toBeNull();
-      expect(result.current.enrichedData).toBeNull();
+      expect(result.current.reviewedMetadata).toBeNull();
+      expect(result.current.importResult).toBeNull();
       expect(result.current.isProcessing).toBe(false);
       expect(result.current.error).toBeNull();
+      expect(result.current.ragTestHistory).toHaveLength(0);
+      expect(result.current.isIndexingReady).toBe(false);
     });
   });
 
@@ -122,7 +116,6 @@ describe('useGameImportWizardStore', () => {
     it('goNext increments step when allowed', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
-      // Set PDF to allow step 1 → 2
       act(() => {
         result.current.setUploadedPdf(mockUploadedPdf);
       });
@@ -136,18 +129,18 @@ describe('useGameImportWizardStore', () => {
       expect(result.current.currentStep).toBe(2);
     });
 
-    it('goNext does not increment past step 4', () => {
+    it('goNext does not increment past step 5', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
       act(() => {
-        result.current.setStep(4);
+        result.current.setStep(5);
       });
 
       act(() => {
         result.current.goNext();
       });
 
-      expect(result.current.currentStep).toBe(4);
+      expect(result.current.currentStep).toBe(5);
     });
 
     it('goBack decrements step', () => {
@@ -176,16 +169,25 @@ describe('useGameImportWizardStore', () => {
       expect(result.current.currentStep).toBe(1);
     });
 
-    it('canGoBack returns true except on step 1', () => {
+    it('canGoBack returns true only for steps 2 and 3', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
+      // Step 1 — cannot go back
       expect(result.current.canGoBack()).toBe(false);
 
-      act(() => {
-        result.current.setStep(2);
-      });
-
+      act(() => result.current.setStep(2));
       expect(result.current.canGoBack()).toBe(true);
+
+      act(() => result.current.setStep(3));
+      expect(result.current.canGoBack()).toBe(true);
+
+      // Step 4 (saga in progress) — locked
+      act(() => result.current.setStep(4));
+      expect(result.current.canGoBack()).toBe(false);
+
+      // Step 5 — locked
+      act(() => result.current.setStep(5));
+      expect(result.current.canGoBack()).toBe(false);
     });
 
     it('setStep updates current step and clears error', () => {
@@ -205,7 +207,7 @@ describe('useGameImportWizardStore', () => {
   });
 
   describe('Step Validation', () => {
-    it('step 1 requires uploaded PDF', () => {
+    it('step 1: canGoNext false without PDF, true with PDF', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
       expect(result.current.canGoNext()).toBe(false);
@@ -217,45 +219,56 @@ describe('useGameImportWizardStore', () => {
       expect(result.current.canGoNext()).toBe(true);
     });
 
-    it('step 2 requires extracted metadata', () => {
+    it('step 2: canGoNext requires reviewed metadata with non-empty title', () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => result.current.setStep(2));
+      expect(result.current.canGoNext()).toBe(false);
+
+      act(() => result.current.setReviewedMetadata(mockMetadata));
+      expect(result.current.canGoNext()).toBe(true);
+    });
+
+    it('step 2: canGoNext false when title is blank', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
       act(() => {
         result.current.setStep(2);
+        result.current.setReviewedMetadata({ ...mockMetadata, title: '   ' });
       });
 
       expect(result.current.canGoNext()).toBe(false);
+    });
+
+    it('step 3: canGoNext requires reviewed metadata', () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => result.current.setStep(3));
+      expect(result.current.canGoNext()).toBe(false);
+
+      act(() => result.current.setReviewedMetadata(mockMetadata));
+      expect(result.current.canGoNext()).toBe(true);
+    });
+
+    it('step 4: canGoNext requires importResult', () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => result.current.setStep(4));
+      expect(result.current.canGoNext()).toBe(false);
 
       act(() => {
-        result.current.setExtractedMetadata(mockExtractedMetadata);
+        useGameImportWizardStore.setState({
+          importResult: { gameId: 'g1', pdfDocumentId: 'p1', indexingStatus: 'pending' },
+        });
       });
 
       expect(result.current.canGoNext()).toBe(true);
     });
 
-    it('step 3 requires selected BGG ID', () => {
+    it('step 5: canGoNext always false', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
-      act(() => {
-        result.current.setStep(3);
-      });
-
-      expect(result.current.canGoNext()).toBe(false);
-
-      act(() => {
-        result.current.setSelectedBggId(12345, mockBggGameData);
-      });
-
-      expect(result.current.canGoNext()).toBe(true);
-    });
-
-    it('step 4 cannot go next (final step)', () => {
-      const { result } = renderHook(() => useGameImportWizardStore());
-
-      act(() => {
-        result.current.setStep(4);
-      });
-
+      act(() => result.current.setStep(5));
       expect(result.current.canGoNext()).toBe(false);
     });
   });
@@ -276,195 +289,168 @@ describe('useGameImportWizardStore', () => {
       expect(result.current.error).toBeNull();
     });
 
-    it('setExtractedMetadata updates state and clears error', () => {
+    it('setReviewedMetadata updates reviewedMetadata and extractedMetadata (legacy)', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
       act(() => {
-        result.current.setExtractedMetadata(mockExtractedMetadata);
+        result.current.setReviewedMetadata(mockMetadata);
       });
 
-      expect(result.current.extractedMetadata).toEqual(mockExtractedMetadata);
+      expect(result.current.reviewedMetadata).toEqual(mockMetadata);
+      // Legacy alias
+      expect(result.current.extractedMetadata).toEqual(mockMetadata);
       expect(result.current.error).toBeNull();
     });
 
-    it('setSelectedBggId updates both ID and data', () => {
+    it('setCoverImage updates cover selection', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
       act(() => {
-        result.current.setSelectedBggId(12345, mockBggGameData);
+        result.current.setCoverImage(mockCoverImage);
       });
 
-      expect(result.current.selectedBggId).toBe(12345);
-      expect(result.current.bggGameData).toEqual(mockBggGameData);
-      expect(result.current.error).toBeNull();
-    });
-
-    it('setSelectedBggId works with ID only (no data)', () => {
-      const { result } = renderHook(() => useGameImportWizardStore());
-
-      act(() => {
-        result.current.setSelectedBggId(12345);
-      });
-
-      expect(result.current.selectedBggId).toBe(12345);
-      expect(result.current.bggGameData).toBeNull();
-    });
-
-    it('resolveConflicts updates enriched data', () => {
-      const { result } = renderHook(() => useGameImportWizardStore());
-
-      act(() => {
-        result.current.resolveConflicts(mockEnrichedData);
-      });
-
-      expect(result.current.enrichedData).toEqual(mockEnrichedData);
-      expect(result.current.error).toBeNull();
+      expect(result.current.coverImage).toEqual(mockCoverImage);
     });
   });
 
-  describe('Wizard Submission', () => {
-    it('submitWizard succeeds with valid data', async () => {
+  describe('Import Execution', () => {
+    it('executeImport calls API and sets importResult on success', async () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
-      // Setup complete wizard state
       act(() => {
         result.current.setUploadedPdf(mockUploadedPdf);
-        result.current.setSelectedBggId(12345, mockBggGameData);
-        result.current.resolveConflicts(mockEnrichedData);
+        result.current.setReviewedMetadata(mockMetadata);
+        result.current.setCoverImage(mockCoverImage);
+      });
+
+      await act(async () => {
+        await result.current.executeImport();
+      });
+
+      expect(mockImportGameFromPdf).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: mockMetadata.title,
+          pdfDocumentId: mockUploadedPdf.pdfDocumentId,
+        })
+      );
+
+      expect(result.current.importResult).not.toBeNull();
+      expect(result.current.importResult?.gameId).toBe('game-new-123');
+      expect(result.current.isProcessing).toBe(false);
+      expect(result.current.error).toBeNull();
+    });
+
+    it('executeImport sets error and returns early when no PDF', async () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => {
+        result.current.setReviewedMetadata(mockMetadata);
+      });
+
+      await act(async () => {
+        await result.current.executeImport();
+      });
+
+      expect(mockImportGameFromPdf).not.toHaveBeenCalled();
+      expect(result.current.error).toBeTruthy();
+      expect(result.current.isProcessing).toBe(false);
+    });
+
+    it('executeImport sets error and returns early when title is empty', async () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => {
+        result.current.setUploadedPdf(mockUploadedPdf);
+        result.current.setReviewedMetadata({ ...mockMetadata, title: '' });
+      });
+
+      await act(async () => {
+        await result.current.executeImport();
+      });
+
+      expect(mockImportGameFromPdf).not.toHaveBeenCalled();
+      expect(result.current.error).toBeTruthy();
+    });
+
+    it('executeImport sets error on API failure', async () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      mockImportGameFromPdf.mockRejectedValue(new Error('Internal Server Error'));
+
+      act(() => {
+        result.current.setUploadedPdf(mockUploadedPdf);
+        result.current.setReviewedMetadata(mockMetadata);
+      });
+
+      // Store rethrows — catch inside act() so state updates are flushed before assertions
+      await act(async () => {
+        try {
+          await result.current.executeImport();
+        } catch {
+          // expected — store rethrows API errors
+        }
+      });
+
+      expect(result.current.error).toBe('Internal Server Error');
+      expect(result.current.isProcessing).toBe(false);
+    });
+
+    it('submitWizard delegates to executeImport', async () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => {
+        result.current.setUploadedPdf(mockUploadedPdf);
+        result.current.setReviewedMetadata(mockMetadata);
       });
 
       await act(async () => {
         await result.current.submitWizard();
       });
 
-      expect(mockWizardCreateGame).toHaveBeenCalledWith({
-        pdfDocumentId: mockUploadedPdf.id,
-        extractedTitle: mockEnrichedData.title,
-        minPlayers: mockEnrichedData.minPlayers,
-        maxPlayers: mockEnrichedData.maxPlayers,
-        playingTimeMinutes: mockEnrichedData.playingTime,
-        minAge: mockEnrichedData.minAge,
-        selectedBggId: 12345,
-      });
-
-      // State should reset after successful submission
-      expect(result.current.currentStep).toBe(1);
-      expect(result.current.uploadedPdf).toBeNull();
-      expect(result.current.enrichedData).toBeNull();
+      expect(mockImportGameFromPdf).toHaveBeenCalled();
     });
+  });
 
-    it('submitWizard fails without PDF', async () => {
-      const { result } = renderHook(() => useGameImportWizardStore());
-
-      // Only set enriched data, no PDF
-      act(() => {
-        result.current.resolveConflicts(mockEnrichedData);
-      });
-
-      await expect(
-        act(async () => {
-          await result.current.submitWizard();
-        })
-      ).rejects.toThrow('No PDF uploaded');
-
-      expect(result.current.error).toBe('No PDF uploaded');
-      expect(result.current.isProcessing).toBe(false);
-    });
-
-    it('submitWizard fails without enriched data', async () => {
-      const { result } = renderHook(() => useGameImportWizardStore());
-
-      // Only set PDF, no enriched data
-      act(() => {
-        result.current.setUploadedPdf(mockUploadedPdf);
-      });
-
-      await expect(
-        act(async () => {
-          await result.current.submitWizard();
-        })
-      ).rejects.toThrow('Game title is required');
-
-      expect(result.current.error).toBe('Game title is required');
-    });
-
-    it('submitWizard fails with empty title', async () => {
-      const { result } = renderHook(() => useGameImportWizardStore());
-
-      const invalidData = { ...mockEnrichedData, title: '   ' };
-
-      act(() => {
-        result.current.setUploadedPdf(mockUploadedPdf);
-        result.current.resolveConflicts(invalidData);
-      });
-
-      await expect(
-        act(async () => {
-          await result.current.submitWizard();
-        })
-      ).rejects.toThrow('Game title is required');
-    });
-
-    it('submitWizard handles API errors', async () => {
-      const { result } = renderHook(() => useGameImportWizardStore());
-
-      // Mock API failure
-      mockWizardCreateGame.mockRejectedValue(new Error('Internal Server Error'));
-
-      act(() => {
-        result.current.setUploadedPdf(mockUploadedPdf);
-        result.current.resolveConflicts(mockEnrichedData);
-      });
-
-      let errorThrown = false;
-      try {
-        await act(async () => {
-          await result.current.submitWizard();
-        });
-      } catch (err) {
-        errorThrown = true;
-        expect(err).toBeInstanceOf(Error);
-        expect((err as Error).message).toBe('Internal Server Error');
-      }
-
-      expect(errorThrown).toBe(true);
-      expect(result.current.error).toBe('Internal Server Error');
-      expect(result.current.isProcessing).toBe(false);
-    });
-
-    it('submitWizard sets processing state during submission', async () => {
+  describe('Step 5 Actions', () => {
+    it('setIndexingReady updates isIndexingReady', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
       act(() => {
-        result.current.setUploadedPdf(mockUploadedPdf);
-        result.current.resolveConflicts(mockEnrichedData);
+        result.current.setIndexingReady(true);
       });
 
-      // Create a promise that we can control
-      let resolveSubmit: (value: unknown) => void;
-      const submitPromise = new Promise(resolve => {
-        resolveSubmit = resolve;
+      expect(result.current.isIndexingReady).toBe(true);
+    });
+
+    it('addRagMessage appends a pending message and returns its id', () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      let msgId = '';
+      act(() => {
+        msgId = result.current.addRagMessage('Quante carte ci sono?');
       });
 
-      mockWizardCreateGame.mockImplementation(async () => {
-        await submitPromise;
-        return {
-          gameId: 'game-new-123',
-          approvalStatus: 'Published',
-          bggEnrichmentApplied: false,
-        };
+      expect(msgId).toBeTruthy();
+      expect(result.current.ragTestHistory).toHaveLength(1);
+      expect(result.current.ragTestHistory[0].question).toBe('Quante carte ci sono?');
+      expect(result.current.ragTestHistory[0].isLoading).toBe(true);
+    });
+
+    it('updateRagMessage updates the correct message', () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      let msgId = '';
+      act(() => {
+        msgId = result.current.addRagMessage('Test question');
       });
 
-      // Start submission
-      const submissionPromise = act(async () => {
-        await result.current.submitWizard();
+      act(() => {
+        result.current.updateRagMessage(msgId, { answer: 'Test answer', isLoading: false });
       });
 
-      // Resolve the submission
-      resolveSubmit!(undefined);
-      await submissionPromise;
-
-      expect(result.current.isProcessing).toBe(false);
+      const msg = result.current.ragTestHistory.find(m => m.id === msgId);
+      expect(msg?.answer).toBe('Test answer');
+      expect(msg?.isLoading).toBe(false);
     });
   });
 
@@ -472,30 +458,38 @@ describe('useGameImportWizardStore', () => {
     it('reset clears all wizard data and returns to step 1', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
-      // Set some state
       act(() => {
         result.current.setUploadedPdf(mockUploadedPdf);
-        result.current.setExtractedMetadata(mockExtractedMetadata);
-        result.current.setSelectedBggId(12345, mockBggGameData);
-        result.current.resolveConflicts(mockEnrichedData);
-        result.current.setStep(4);
+        result.current.setReviewedMetadata(mockMetadata);
+        result.current.setCoverImage(mockCoverImage);
+        result.current.setStep(3);
         useGameImportWizardStore.setState({ error: 'Test error' });
       });
 
-      // Reset
       act(() => {
         result.current.reset();
       });
 
-      // All should be back to initial state
       expect(result.current.currentStep).toBe(1);
       expect(result.current.uploadedPdf).toBeNull();
-      expect(result.current.extractedMetadata).toBeNull();
-      expect(result.current.selectedBggId).toBeNull();
-      expect(result.current.bggGameData).toBeNull();
-      expect(result.current.enrichedData).toBeNull();
+      expect(result.current.reviewedMetadata).toBeNull();
+      expect(result.current.importResult).toBeNull();
       expect(result.current.isProcessing).toBe(false);
       expect(result.current.error).toBeNull();
+      expect(result.current.ragTestHistory).toHaveLength(0);
+      expect(result.current.isIndexingReady).toBe(false);
+    });
+  });
+
+  describe('Legacy compat', () => {
+    it('setSelectedBggId is a no-op (BGG flow removed)', () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => {
+        result.current.setSelectedBggId(12345);
+      });
+
+      expect(result.current.selectedBggId).toBeNull();
     });
   });
 });

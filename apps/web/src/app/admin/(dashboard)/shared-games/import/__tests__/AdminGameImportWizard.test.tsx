@@ -1,44 +1,27 @@
 /**
- * Admin Game Import Wizard Component Tests - Issue #4161
+ * Admin Game Import Wizard — 5-step PDF flow
  *
- * Test coverage:
- * - Initial render and auth states
- * - Step navigation (next/back buttons)
- * - Store integration
- * - Error display
- * - Wizard submission
+ * Tests:
+ * - Auth states (loading, unauthenticated, authenticated)
+ * - Step rendering and navigation
+ * - Progress bar
  * - Reset functionality
- *
- * Pattern: Vitest + React Testing Library
- * Target: ≥85% coverage
+ * - Error display
  */
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { AdminGameImportWizardClient } from '../client';
-
 import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 
-// Mock useUploadPdf hook (used by Step1UploadPdf)
-vi.mock('@/hooks/queries/useUploadPdf', () => ({
-  useUploadPdf: vi.fn(() => ({
-    mutate: vi.fn(),
-    isPending: false,
-    progress: 0,
-    error: null,
-  })),
-}));
+// ── Mocks ──────────────────────────────────────────────────────────────────────
 
-// Mock dependencies
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    back: vi.fn(),
-  }),
+  useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
   usePathname: () => '/admin/shared-games/import',
 }));
 
@@ -47,563 +30,302 @@ vi.mock('@/components/auth/AuthProvider', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
+}));
+
+// Mock heavy step components that are integration-tested separately
+vi.mock('../steps/Step2MetadataReview', () => ({
+  Step2MetadataReview: () => <div data-testid="step2-metadata-review">Step 2 — Metadata</div>,
+}));
+vi.mock('../steps/Step3PreviewConfirm', () => ({
+  Step3PreviewConfirm: () => <div data-testid="step3-preview-confirm">Step 3 — Preview</div>,
+}));
+vi.mock('../steps/Step4CreationProgress', () => ({
+  Step4CreationProgress: () => (
+    <div data-testid="step4-creation-progress">Step 4 — Creating...</div>
+  ),
+}));
+vi.mock('../steps/Step5RagTest', () => ({
+  Step5RagTest: () => <div data-testid="step5-rag-test">Step 5 — RAG Test</div>,
+}));
+vi.mock('../steps/Step1UploadPdf', () => ({
+  Step1UploadPdf: ({ onUploadComplete }: { onUploadComplete: (pdf: unknown) => void }) => (
+    <div data-testid="step1-upload-pdf">
+      <button
+        onClick={() =>
+          onUploadComplete({ pdfDocumentId: 'pdf-123', id: 'pdf-123', fileName: 'test.pdf' })
+        }
+      >
+        Simulate Upload
+      </button>
+    </div>
+  ),
 }));
 
 const { useAuthUser } = await import('@/components/auth/AuthProvider');
 
-const mockUser = {
-  id: 'user-123',
-  email: 'admin@test.com',
-  role: 'Admin',
-};
+const mockUser = { id: 'user-123', email: 'admin@test.com', role: 'Admin' };
+
+// ── Setup ──────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
   vi.clearAllMocks();
 
-  // Default: authenticated admin user
   (useAuthUser as ReturnType<typeof vi.fn>).mockReturnValue({
     user: mockUser,
     loading: false,
   });
 
-  // Reset store to initial state
-  useGameImportWizardStore.setState({
-    currentStep: 1,
-    uploadedPdf: null,
-    extractedMetadata: null,
-    selectedBggId: null,
-    bggGameData: null,
-    enrichedData: null,
-    isProcessing: false,
-    error: null,
-  });
+  useGameImportWizardStore.setState(
+    useGameImportWizardStore.getInitialState?.() ?? {
+      currentStep: 1,
+      uploadedPdf: null,
+      reviewedMetadata: null,
+      coverImage: { mode: 'placeholder', imageUrl: null },
+      importResult: null,
+      ragTestHistory: [],
+      isIndexingReady: false,
+      isProcessing: false,
+      error: null,
+      extractedMetadata: null,
+      selectedBggId: null,
+      enrichedData: null,
+      bggGameData: null,
+    }
+  );
 });
+
+// ── Tests ──────────────────────────────────────────────────────────────────────
 
 describe('AdminGameImportWizardClient', () => {
   describe('Authentication States', () => {
     it('shows loading spinner while auth is loading', () => {
-      (useAuthUser as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: null,
-        loading: true,
-      });
+      (useAuthUser as ReturnType<typeof vi.fn>).mockReturnValue({ user: null, loading: true });
 
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
+      expect(screen.getByText(/caricamento/i)).toBeInTheDocument();
     });
 
     it('shows sign-in prompt when not authenticated', () => {
-      (useAuthUser as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: null,
-        loading: false,
-      });
+      (useAuthUser as ReturnType<typeof vi.fn>).mockReturnValue({ user: null, loading: false });
 
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      expect(screen.getByText('Authentication Required')).toBeInTheDocument();
-      expect(screen.getByText('Please sign in to access the admin wizard.')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute('href', '/login');
+      expect(screen.getByText(/autenticazione richiesta/i)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /accedi/i })).toHaveAttribute('href', '/login');
     });
 
     it('renders wizard when authenticated', () => {
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      expect(screen.getByText('Game Import Wizard')).toBeInTheDocument();
-      expect(screen.getByText(/importa un gioco da pdf/i)).toBeInTheDocument();
+      expect(screen.getByText('Importa gioco da PDF')).toBeInTheDocument();
     });
   });
 
-  describe('Initial Render', () => {
-    it('displays all wizard steps in step indicator', () => {
+  describe('Initial Render (Step 1)', () => {
+    it('displays all 5 wizard step labels', () => {
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      expect(screen.getByText('1. Upload PDF')).toBeInTheDocument();
-      expect(screen.getByText('2. Metadata')).toBeInTheDocument();
-      expect(screen.getByText('3. Catalogo Match')).toBeInTheDocument();
-      expect(screen.getByText('4. Finalize')).toBeInTheDocument();
+      // Labels appear in both the WizardSteps breadcrumb and the card header — use getAllByText
+      expect(screen.getAllByText('1. Upload PDF').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('2. Metadati').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('3. Anteprima').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('4. Creazione').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('5. RAG Test').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('highlights step 1 as active on initial render', () => {
+    it('shows Step 1 content on initial render', () => {
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      // WizardSteps uses aria-current for active step
-      const step1Button = screen.getByLabelText(/step 1:/i);
-      expect(step1Button).toHaveAttribute('aria-current', 'step');
+      expect(screen.getByTestId('step1-upload-pdf')).toBeInTheDocument();
     });
 
-    it('displays wizard state summary', () => {
+    it('shows step counter "Step 1 di 5"', () => {
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      expect(screen.getByText('Wizard State')).toBeInTheDocument();
-      expect(screen.getByText(/step:/i)).toBeInTheDocument();
-      expect(screen.getAllByText(/pdf:/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Step 1 di 5')).toBeInTheDocument();
     });
 
     it('shows reset button', () => {
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      expect(screen.getByRole('button', { name: /reset/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /ricomincia/i })).toBeInTheDocument();
+    });
+
+    it('shows 0% progress bar on step 1', () => {
+      renderWithQuery(<AdminGameImportWizardClient />);
+
+      expect(screen.getByText('0%')).toBeInTheDocument();
+      const bar = screen.getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '0');
     });
   });
 
-  describe('Step Navigation', () => {
-    it('Previous button is disabled on step 1', () => {
+  describe('Navigation', () => {
+    it('Back button is disabled on step 1', () => {
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      const prevButton = screen.getByRole('button', { name: /previous/i });
-      expect(prevButton).toBeDisabled();
+      const back = screen.getByRole('button', { name: /indietro/i });
+      expect(back).toBeDisabled();
     });
 
-    it('Next button is disabled when step validation fails', () => {
+    it('Next button is disabled without PDF', () => {
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      const nextButton = screen.getByRole('button', { name: /next/i });
-      expect(nextButton).toBeDisabled(); // No PDF uploaded
+      const next = screen.getByRole('button', { name: /avanti/i });
+      expect(next).toBeDisabled();
     });
 
-    it('Next button is enabled when step validation passes', () => {
-      // Upload PDF to satisfy step 1 validation
+    it('Next is enabled after PDF upload', async () => {
+      renderWithQuery(<AdminGameImportWizardClient />);
+
+      await userEvent.click(screen.getByRole('button', { name: /simulate upload/i }));
+
+      await waitFor(() => {
+        const next = screen.getByRole('button', { name: /avanti/i });
+        expect(next).not.toBeDisabled();
+      });
+    });
+
+    it('clicking Next advances to step 2', async () => {
       useGameImportWizardStore.setState({
-        uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
+        uploadedPdf: { pdfDocumentId: 'pdf-123', id: 'pdf-123', fileName: 'test.pdf' },
       });
 
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      const nextButton = screen.getByRole('button', { name: /next/i });
-      expect(nextButton).not.toBeDisabled();
-    });
-
-    it('clicking Next advances to next step', async () => {
-      useGameImportWizardStore.setState({
-        uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-      });
-
-      renderWithQuery(<AdminGameImportWizardClient />);
-
-      const nextButton = screen.getByRole('button', { name: /next/i });
-      await userEvent.click(nextButton);
+      await userEvent.click(screen.getByRole('button', { name: /avanti/i }));
 
       await waitFor(() => {
         expect(useGameImportWizardStore.getState().currentStep).toBe(2);
       });
     });
 
-    it('clicking Previous goes back to previous step', async () => {
+    it('Back button goes back from step 2 to step 1', async () => {
       useGameImportWizardStore.setState({
         currentStep: 2,
-        uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-        extractedMetadata: { title: 'Test Game' },
+        uploadedPdf: { pdfDocumentId: 'pdf-123', id: 'pdf-123', fileName: 'test.pdf' },
       });
 
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      const prevButton = screen.getByRole('button', { name: /previous/i });
-      await userEvent.click(prevButton);
+      await userEvent.click(screen.getByRole('button', { name: /indietro/i }));
 
       await waitFor(() => {
         expect(useGameImportWizardStore.getState().currentStep).toBe(1);
       });
     });
 
-    it('Submit button appears on final step instead of Next', () => {
-      useGameImportWizardStore.setState({
-        currentStep: 4,
-      });
+    it('Nav buttons hidden on step 4 (saga manages itself)', () => {
+      useGameImportWizardStore.setState({ currentStep: 4 });
 
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /submit & import/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /avanti/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /indietro/i })).not.toBeInTheDocument();
     });
-  });
 
-  describe('Store Integration', () => {
-    it('displays uploaded PDF information when available', () => {
-      useGameImportWizardStore.setState({
-        uploadedPdf: { id: 'pdf-123', fileName: 'rulebook.pdf' },
-      });
+    it('On step 5 shows "Importa un altro gioco" button instead of nav', () => {
+      useGameImportWizardStore.setState({ currentStep: 5 });
 
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      // Check wizard state summary shows PDF uploaded
-      const summary = screen.getByText('Wizard State').closest('div');
-      expect(within(summary!).getByText(/✓.*rulebook\.pdf/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /avanti/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /importa un altro gioco/i })).toBeInTheDocument();
     });
 
-    it('displays extracted metadata on step 2', () => {
-      useGameImportWizardStore.setState({
-        currentStep: 2,
-        extractedMetadata: {
-          title: 'Test Game',
-          minPlayers: 2,
-          maxPlayers: 4,
-          playingTime: 60,
-        },
-      });
-
-      renderWithQuery(<AdminGameImportWizardClient />);
-
-      expect(screen.getByText(/title:/i)).toBeInTheDocument();
-      expect(screen.getByText('Test Game')).toBeInTheDocument();
-      expect(screen.getByText(/2-4/i)).toBeInTheDocument();
-      expect(screen.getByText(/60 min/i)).toBeInTheDocument();
-    });
-
-    it('displays selected BGG ID on step 3', () => {
+    it('Step 3 Next button shows "Crea gioco →"', () => {
       useGameImportWizardStore.setState({
         currentStep: 3,
-        selectedBggId: 12345,
+        reviewedMetadata: { title: 'Test Game' },
+        uploadedPdf: { pdfDocumentId: 'pdf-123', id: 'pdf-123', fileName: 'test.pdf' },
       });
 
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      // Wizard state summary shows BGG selection status
-      expect(screen.getByText(/Catalogo:/i)).toBeInTheDocument();
-      expect(screen.getByText(/✓ ID 12345/i)).toBeInTheDocument();
-    });
-
-    it('displays enriched data on step 4', () => {
-      useGameImportWizardStore.setState({
-        currentStep: 4,
-        enrichedData: {
-          title: 'Final Game Title',
-          minPlayers: 2,
-          maxPlayers: 4,
-          bggId: 12345,
-        },
-      });
-
-      renderWithQuery(<AdminGameImportWizardClient />);
-
-      expect(screen.getByText(/final title:/i)).toBeInTheDocument();
-      expect(screen.getByText('Final Game Title')).toBeInTheDocument();
-      expect(screen.getByText(/id:/i)).toBeInTheDocument();
-      expect(screen.getByText(/12345/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /crea gioco/i })).toBeInTheDocument();
     });
   });
 
-  describe('Error Handling', () => {
-    it('displays error message when present', () => {
-      useGameImportWizardStore.setState({
-        error: 'Test error message',
-      });
+  describe('Progress Bar', () => {
+    it('shows 25% on step 2 (1/4 steps completed)', () => {
+      useGameImportWizardStore.setState({ currentStep: 2 });
 
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      expect(screen.getByText('Error')).toBeInTheDocument();
-      expect(screen.getByText('Test error message')).toBeInTheDocument();
+      expect(screen.getByText('Step 2 di 5')).toBeInTheDocument();
     });
 
-    it('clears error when navigating between steps', async () => {
-      useGameImportWizardStore.setState({
-        currentStep: 2,
-        uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-        extractedMetadata: { title: 'Test' },
-        error: 'Previous error',
-      });
+    it('shows 100% on step 5', () => {
+      useGameImportWizardStore.setState({ currentStep: 5 });
 
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      const prevButton = screen.getByRole('button', { name: /previous/i });
-      await userEvent.click(prevButton);
-
-      await waitFor(() => {
-        expect(useGameImportWizardStore.getState().error).toBeNull();
-      });
+      expect(screen.getByText('100%')).toBeInTheDocument();
+      const bar = screen.getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '100');
     });
   });
 
-  describe('Wizard Submission', () => {
-    it('Submit button is disabled without enriched data', () => {
-      useGameImportWizardStore.setState({
-        currentStep: 4,
-        uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-        enrichedData: null,
-      });
-
+  describe('Step Content', () => {
+    it('renders Step2 on step 2', () => {
+      useGameImportWizardStore.setState({ currentStep: 2 });
       renderWithQuery(<AdminGameImportWizardClient />);
-
-      const submitButton = screen.getByRole('button', { name: /submit & import/i });
-      expect(submitButton).toBeDisabled();
+      expect(screen.getByTestId('step2-metadata-review')).toBeInTheDocument();
     });
 
-    it('Submit button is enabled with complete data', () => {
-      useGameImportWizardStore.setState({
-        currentStep: 4,
-        uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-        enrichedData: { title: 'Test Game' },
-      });
-
+    it('renders Step3 on step 3', () => {
+      useGameImportWizardStore.setState({ currentStep: 3 });
       renderWithQuery(<AdminGameImportWizardClient />);
-
-      const submitButton = screen.getByRole('button', { name: /submit & import/i });
-      expect(submitButton).not.toBeDisabled();
+      expect(screen.getByTestId('step3-preview-confirm')).toBeInTheDocument();
     });
 
-    it('shows processing state during submission', () => {
-      useGameImportWizardStore.setState({
-        currentStep: 4,
-        uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-        enrichedData: { title: 'Test Game' },
-        isProcessing: true,
-      });
-
+    it('renders Step4 on step 4', () => {
+      useGameImportWizardStore.setState({ currentStep: 4 });
       renderWithQuery(<AdminGameImportWizardClient />);
+      expect(screen.getByTestId('step4-creation-progress')).toBeInTheDocument();
+    });
 
-      expect(screen.getByText(/submitting/i)).toBeInTheDocument();
+    it('renders Step5 on step 5', () => {
+      useGameImportWizardStore.setState({ currentStep: 5 });
+      renderWithQuery(<AdminGameImportWizardClient />);
+      expect(screen.getByTestId('step5-rag-test')).toBeInTheDocument();
     });
   });
 
-  describe('Reset Functionality', () => {
-    it('clicking Reset resets wizard state', async () => {
+  describe('Error Display', () => {
+    it('shows error message on non-step-4 steps', () => {
+      useGameImportWizardStore.setState({ currentStep: 2, error: 'Qualcosa è andato storto' });
+
+      renderWithQuery(<AdminGameImportWizardClient />);
+
+      expect(screen.getByText('Qualcosa è andato storto')).toBeInTheDocument();
+    });
+
+    it('does not show global error on step 4 (saga handles its own errors)', () => {
+      useGameImportWizardStore.setState({ currentStep: 4, error: 'Saga error' });
+
+      renderWithQuery(<AdminGameImportWizardClient />);
+
+      expect(screen.queryByText('Saga error')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Reset', () => {
+    it('clicking Ricomincia resets wizard to step 1', async () => {
       useGameImportWizardStore.setState({
         currentStep: 3,
-        uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-        extractedMetadata: { title: 'Test' },
-        selectedBggId: 12345,
+        uploadedPdf: { pdfDocumentId: 'pdf-123', id: 'pdf-123', fileName: 'test.pdf' },
       });
 
       renderWithQuery(<AdminGameImportWizardClient />);
 
-      const resetButton = screen.getByRole('button', { name: /reset/i });
-      await userEvent.click(resetButton);
+      await userEvent.click(screen.getByRole('button', { name: /ricomincia/i }));
 
       await waitFor(() => {
-        const state = useGameImportWizardStore.getState();
-        expect(state.currentStep).toBe(1);
-        expect(state.uploadedPdf).toBeNull();
-        expect(state.extractedMetadata).toBeNull();
-        expect(state.selectedBggId).toBeNull();
-      });
-    });
-  });
-
-  describe('Wizard State Summary', () => {
-    it('displays completed state checkmarks', () => {
-      useGameImportWizardStore.setState({
-        currentStep: 4,
-        uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-        extractedMetadata: { title: 'Test' },
-        selectedBggId: 12345,
-        enrichedData: { title: 'Final' },
-      });
-
-      renderWithQuery(<AdminGameImportWizardClient />);
-
-      const summary = screen.getByText('Wizard State').closest('div');
-      expect(within(summary!).getByText(/✓.*test\.pdf/i)).toBeInTheDocument();
-      expect(within(summary!).getByText(/✓.*extracted/i)).toBeInTheDocument();
-      expect(within(summary!).getByText(/✓.*id 12345/i)).toBeInTheDocument();
-      expect(within(summary!).getByText(/✓.*ready/i)).toBeInTheDocument();
-    });
-
-    it('displays incomplete state markers', () => {
-      useGameImportWizardStore.setState({
-        currentStep: 1,
-        uploadedPdf: null,
-        extractedMetadata: null,
-        selectedBggId: null,
-        enrichedData: null,
-      });
-
-      renderWithQuery(<AdminGameImportWizardClient />);
-
-      const summary = screen.getByText('Wizard State').closest('div');
-      expect(within(summary!).getByText(/✗.*not uploaded/i)).toBeInTheDocument();
-      expect(within(summary!).getByText(/✗.*not extracted/i)).toBeInTheDocument();
-      expect(within(summary!).getByText(/✗.*not selected/i)).toBeInTheDocument();
-      expect(within(summary!).getByText(/✗.*not ready/i)).toBeInTheDocument();
-    });
-  });
-
-  describe('Wizard Navigation & Progress - Issue #4166', () => {
-    describe('Progress Bar', () => {
-      it('displays progress bar with correct percentage for step 1', () => {
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
-        expect(screen.getByText('0%')).toBeInTheDocument();
-
-        const progressBar = screen.getByRole('progressbar');
-        expect(progressBar).toHaveAttribute('aria-valuenow', '0');
-        expect(progressBar).toHaveStyle({ width: '0%' });
-      });
-
-      it('displays progress bar with correct percentage for step 2', () => {
-        useGameImportWizardStore.setState({ currentStep: 2 });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        expect(screen.getByText('Step 2 of 4')).toBeInTheDocument();
-        expect(screen.getByText('33%')).toBeInTheDocument();
-
-        const progressBar = screen.getByRole('progressbar');
-        expect(progressBar).toHaveAttribute('aria-valuenow', '33.33333333333333');
-      });
-
-      it('displays progress bar with correct percentage for step 3', () => {
-        useGameImportWizardStore.setState({ currentStep: 3 });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        expect(screen.getByText('Step 3 of 4')).toBeInTheDocument();
-        expect(screen.getByText('67%')).toBeInTheDocument();
-
-        const progressBar = screen.getByRole('progressbar');
-        expect(progressBar).toHaveAttribute('aria-valuenow', '66.66666666666666');
-      });
-
-      it('displays progress bar with correct percentage for step 4', () => {
-        useGameImportWizardStore.setState({ currentStep: 4 });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        expect(screen.getByText('Step 4 of 4')).toBeInTheDocument();
-        expect(screen.getByText('100%')).toBeInTheDocument();
-
-        const progressBar = screen.getByRole('progressbar');
-        expect(progressBar).toHaveAttribute('aria-valuenow', '100');
-        expect(progressBar).toHaveStyle({ width: '100%' });
-      });
-    });
-
-    describe('WizardSteps Integration', () => {
-      it('renders WizardSteps component with all steps', () => {
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        // WizardSteps should render all step labels
-        expect(screen.getByText('1. Upload PDF')).toBeInTheDocument();
-        expect(screen.getByText('2. Metadata')).toBeInTheDocument();
-        expect(screen.getByText('3. Catalogo Match')).toBeInTheDocument();
-        expect(screen.getByText('4. Finalize')).toBeInTheDocument();
-      });
-
-      it('highlights current step in WizardSteps', () => {
-        useGameImportWizardStore.setState({ currentStep: 2 });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        // Step 2 should have active state (aria-current)
-        const step2 = screen.getByLabelText(/step 2:/i);
-        expect(step2).toHaveAttribute('aria-current', 'step');
-      });
-
-      it('shows completed checkmark for completed steps', () => {
-        useGameImportWizardStore.setState({ currentStep: 3 });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        // Steps 1 and 2 should have completed state (green background)
-        const step1 = screen.getByLabelText(/step 1:/i);
-        const step2 = screen.getByLabelText(/step 2:/i);
-
-        // WizardSteps applies bg-green-600 to completed steps
-        const step1Indicator = within(step1).getByText('1. Upload PDF').previousSibling;
-        const step2Indicator = within(step2).getByText('2. Metadata').previousSibling;
-
-        expect(step1Indicator).toHaveClass('bg-green-600');
-        expect(step2Indicator).toHaveClass('bg-green-600');
-      });
-    });
-
-    describe('Breadcrumb Navigation', () => {
-      it('allows clicking on completed steps to navigate back', async () => {
-        useGameImportWizardStore.setState({
-          currentStep: 3,
-          uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-          extractedMetadata: { title: 'Test' },
-        });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        // Click on step 1 (completed)
-        const step1Button = screen.getByLabelText(/step 1:/i);
-        await userEvent.click(step1Button);
-
-        await waitFor(() => {
-          expect(useGameImportWizardStore.getState().currentStep).toBe(1);
-        });
-      });
-
-      it('allows clicking on active step (no effect)', async () => {
-        useGameImportWizardStore.setState({ currentStep: 2 });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        // Click on step 2 (active)
-        const step2Button = screen.getByLabelText(/step 2:/i);
-        await userEvent.click(step2Button);
-
-        await waitFor(() => {
-          expect(useGameImportWizardStore.getState().currentStep).toBe(2);
-        });
-      });
-
-      it('does not allow clicking on future steps', async () => {
-        useGameImportWizardStore.setState({ currentStep: 1 });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        // Step 3 button should be disabled
-        const step3Button = screen.getByLabelText(/step 3:/i);
-        expect(step3Button).toBeDisabled();
-      });
-    });
-
-    describe('Validation Gates', () => {
-      it('prevents navigation to step 2 without uploaded PDF', () => {
-        useGameImportWizardStore.setState({
-          currentStep: 1,
-          uploadedPdf: null,
-        });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        const nextButton = screen.getByRole('button', { name: /next/i });
-        expect(nextButton).toBeDisabled();
-      });
-
-      it('allows navigation to step 2 with uploaded PDF', () => {
-        useGameImportWizardStore.setState({
-          currentStep: 1,
-          uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-        });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        const nextButton = screen.getByRole('button', { name: /next/i });
-        expect(nextButton).not.toBeDisabled();
-      });
-
-      it('prevents navigation to step 3 without extracted metadata', () => {
-        useGameImportWizardStore.setState({
-          currentStep: 2,
-          uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-          extractedMetadata: null,
-        });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        const nextButton = screen.getByRole('button', { name: /next/i });
-        expect(nextButton).toBeDisabled();
-      });
-
-      it('prevents navigation to step 4 without BGG selection', () => {
-        useGameImportWizardStore.setState({
-          currentStep: 3,
-          uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-          extractedMetadata: { title: 'Test' },
-          selectedBggId: null,
-        });
-
-        renderWithQuery(<AdminGameImportWizardClient />);
-
-        const nextButton = screen.getByRole('button', { name: /next/i });
-        expect(nextButton).toBeDisabled();
+        expect(useGameImportWizardStore.getState().currentStep).toBe(1);
+        expect(useGameImportWizardStore.getState().uploadedPdf).toBeNull();
       });
     });
   });

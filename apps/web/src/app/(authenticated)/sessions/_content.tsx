@@ -14,10 +14,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { formatDistanceToNow, format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Clock, Crown, History, Loader2, Play, Plus, Search, Users } from 'lucide-react';
-import Link from 'next/link';
+import { Clock, Crown, History, Loader2, Search, Users } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import { MeepleResumeSessionCard } from '@/components/session/MeepleResumeSessionCard';
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { Input } from '@/components/ui/primitives/input';
@@ -36,25 +36,6 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   Paused: { label: 'In pausa', color: 'bg-amber-100 text-amber-700' },
   Completed: { label: 'Completata', color: 'bg-indigo-100 text-indigo-700' },
 };
-
-// ========== New Session CTA ==========
-
-function NewSessionCta() {
-  const router = useRouter();
-
-  return (
-    <button
-      onClick={() => router.push('/sessions/new')}
-      className="w-full rounded-xl border-2 border-dashed border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-6 text-center transition-all hover:border-indigo-300 hover:shadow-md dark:from-indigo-950/20 dark:to-violet-950/20 dark:border-indigo-800"
-    >
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 mb-3">
-        <Play className="h-6 w-6 text-indigo-600" />
-      </div>
-      <h3 className="font-semibold font-quicksand text-foreground">Nuova Sessione</h3>
-      <p className="mt-1 text-xs text-muted-foreground">Inizia una partita con amici</p>
-    </button>
-  );
-}
 
 // ========== History Metadata Helper ==========
 
@@ -138,7 +119,7 @@ export function SessionsContent() {
   }
 
   return (
-    <div className="space-y-6 container mx-auto px-4 py-6">
+    <div className="space-y-6 container mx-auto px-4 py-6 pb-24">
       {/* Header */}
       <div className="flex items-center gap-3">
         {tab === 'history' ? (
@@ -207,11 +188,6 @@ export function SessionsContent() {
               </div>
             </div>
           )}
-
-          {/* New Session CTA — desktop only (mobile uses FAB) */}
-          <div className="hidden lg:block">
-            <NewSessionCta />
-          </div>
 
           {/* Other active sessions (Setup, Created, etc.) */}
           {activeSessions.filter(s => s.status !== 'InProgress' && s.status !== 'Paused').length >
@@ -334,14 +310,7 @@ export function SessionsContent() {
         </div>
       )}
 
-      {/* Mobile FAB — new session */}
-      <Link
-        href="/sessions/new"
-        className="fixed bottom-20 right-4 lg:hidden z-30 w-14 h-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
-        aria-label="Nuova sessione"
-      >
-        <Plus className="w-6 h-6" />
-      </Link>
+      <FloatingActionPill page="sessions" />
     </div>
   );
 }

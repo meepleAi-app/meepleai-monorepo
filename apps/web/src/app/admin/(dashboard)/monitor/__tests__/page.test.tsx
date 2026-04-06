@@ -5,9 +5,6 @@ vi.mock('../MauTab', () => ({ MauTab: () => <div data-testid="mau-tab" /> }));
 vi.mock('../GrafanaTab', () => ({ GrafanaTab: () => <div data-testid="grafana-tab" /> }));
 vi.mock('../ContainersTab', () => ({ ContainersTab: () => <div data-testid="containers-tab" /> }));
 vi.mock('../LogsTab', () => ({ LogsTab: () => <div data-testid="logs-tab" /> }));
-vi.mock('../OperationsLinkTab', () => ({
-  OperationsLinkTab: () => <div data-testid="operations-link-tab" />,
-}));
 vi.mock('../AlertsTab', () => ({ AlertsTab: () => <div data-testid="alerts-tab" /> }));
 vi.mock('../CacheTab', () => ({ CacheTab: () => <div data-testid="cache-tab" /> }));
 vi.mock('../InfrastructureTab', () => ({

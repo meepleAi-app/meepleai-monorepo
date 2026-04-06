@@ -10,6 +10,8 @@
 import { Suspense, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
+import { formatDistanceToNow } from 'date-fns';
+import { it } from 'date-fns/locale';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
@@ -117,7 +119,8 @@ export default function UsagePage() {
         <div className="flex items-center gap-3">
           {dataUpdatedAt > 0 && (
             <span className="text-xs text-muted-foreground">
-              Updated {new Date(dataUpdatedAt).toLocaleTimeString()}
+              Aggiornato{' '}
+              {formatDistanceToNow(new Date(dataUpdatedAt), { addSuffix: true, locale: it })}
             </span>
           )}
           <Button
@@ -137,8 +140,8 @@ export default function UsagePage() {
       <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="openrouter">OpenRouter</TabsTrigger>
-          <TabsTrigger value="token-balance">Token Balance</TabsTrigger>
-          <TabsTrigger value="chat-log">Chat Log</TabsTrigger>
+          <TabsTrigger value="token-balance">Saldo Token</TabsTrigger>
+          <TabsTrigger value="chat-log">Log Chat</TabsTrigger>
         </TabsList>
 
         {/* ── OpenRouter tab (existing content) ── */}
@@ -159,21 +162,21 @@ export default function UsagePage() {
             >
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>
-                Failed to load usage data:{' '}
-                {error instanceof Error ? error.message : 'Unknown error'}
+                Impossibile caricare i dati di utilizzo:{' '}
+                {error instanceof Error ? error.message : 'Errore sconosciuto'}
               </span>
             </div>
           )}
 
           {/* ── Overview KPIs ── */}
           <section id="overview" aria-label="Overview KPIs">
-            <h2 className="text-lg font-medium font-quicksand mb-4">Overview</h2>
+            <h2 className="text-lg font-medium font-quicksand mb-4">Panoramica</h2>
             <KpiCards status={status} isLoading={statusLoading} />
           </section>
 
           {/* ── Charts ── */}
-          <section id="costs" aria-label="Charts">
-            <h2 className="text-lg font-medium font-quicksand mb-4">Charts</h2>
+          <section id="costs" aria-label="Grafici">
+            <h2 className="text-lg font-medium font-quicksand mb-4">Grafici</h2>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <RequestTimelineChart
                 data={timeline}
@@ -191,8 +194,8 @@ export default function UsagePage() {
           </section>
 
           {/* ── Rate Limits ── */}
-          <section id="rate-limits" aria-label="Rate Limits">
-            <h2 className="text-lg font-medium font-quicksand mb-4">Rate Limits</h2>
+          <section id="rate-limits" aria-label="Limiti di Velocità">
+            <h2 className="text-lg font-medium font-quicksand mb-4">Limiti di Velocità</h2>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <RateLimitGauge status={status} isLoading={statusLoading} />
               <FreeQuotaIndicator data={freeQuota} isLoading={freeQuotaLoading} />
@@ -200,8 +203,8 @@ export default function UsagePage() {
           </section>
 
           {/* ── Recent Requests ── */}
-          <section id="free-quota" aria-label="Recent Requests">
-            <h2 className="text-lg font-medium font-quicksand mb-4">Recent Requests</h2>
+          <section id="free-quota" aria-label="Richieste Recenti">
+            <h2 className="text-lg font-medium font-quicksand mb-4">Richieste Recenti</h2>
             <RecentRequestsTable
               data={recentRequests}
               filters={requestFilters}

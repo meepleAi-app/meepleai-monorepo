@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { AlertTriangleIcon, Plus, RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,8 +24,8 @@ export function AlertsTab() {
   const [loadError, setLoadError] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  const loadData = () => {
-    setLoading(true);
+  const loadData = (silent = false) => {
+    if (!silent) setLoading(true);
     setLoadError(false);
     Promise.all([
       alertRulesApi.getAll().catch(() => []),
@@ -39,11 +39,19 @@ export function AlertsTab() {
         setTotalServices(infraDetails?.overall?.totalServices ?? 0);
       })
       .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   };
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     loadData();
+    intervalRef.current = setInterval(() => loadData(true), 30_000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
   const handleToggle = (id: string) => {
@@ -68,13 +76,6 @@ export function AlertsTab() {
     );
   };
 
-  const handleEdit = (rule: AlertRule) => {
-    // Toggle enabled state as a lightweight edit action for now.
-    // Full editing UI can be added when alert rule form component is built.
-    handleToggle(rule.id);
-    toast.info('Modifica regola: toggle stato abilitazione');
-  };
-
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -92,7 +93,7 @@ export function AlertsTab() {
           <p className="text-sm text-amber-800 dark:text-amber-200 flex-1">
             Errore nel caricamento degli alert. Alcuni dati potrebbero non essere disponibili.
           </p>
-          <Button variant="outline" size="sm" onClick={loadData}>
+          <Button variant="outline" size="sm" onClick={() => loadData()}>
             <RefreshCwIcon className="h-3.5 w-3.5 mr-1.5" />
             Riprova
           </Button>
@@ -117,12 +118,7 @@ export function AlertsTab() {
           Nuova Regola
         </Button>
       </div>
-      <AlertRuleList
-        rules={rules}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onToggle={handleToggle}
-      />
+      <AlertRuleList rules={rules} onDelete={handleDelete} onToggle={handleToggle} />
       <CreateAlertRuleDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}

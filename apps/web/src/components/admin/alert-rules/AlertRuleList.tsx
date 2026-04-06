@@ -1,4 +1,4 @@
-import { Edit, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import {
@@ -15,12 +15,12 @@ import type { AlertRule } from '@/lib/api/schemas/alert-rules.schemas';
 
 interface AlertRuleListProps {
   rules: AlertRule[];
-  onEdit: (rule: AlertRule) => void;
+  onEdit?: (rule: AlertRule) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
 }
 
-export function AlertRuleList({ rules, onEdit, onDelete, onToggle }: AlertRuleListProps) {
+export function AlertRuleList({ rules, onEdit: _onEdit, onDelete, onToggle }: AlertRuleListProps) {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'Critical':
@@ -74,9 +74,6 @@ export function AlertRuleList({ rules, onEdit, onDelete, onToggle }: AlertRuleLi
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => onEdit(rule)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => onDelete(rule.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>

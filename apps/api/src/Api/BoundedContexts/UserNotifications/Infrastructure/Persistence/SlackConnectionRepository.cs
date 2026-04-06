@@ -74,6 +74,34 @@ internal class SlackConnectionRepository : RepositoryBase, ISlackConnectionRepos
         return entity != null ? MapToDomain(entity) : null;
     }
 
+    private const int BatchChunkSize = 500; // Conservative PostgreSQL IN clause limit
+
+    public async Task<Dictionary<Guid, SlackConnection>> GetActiveByUserIdsAsync(
+        IEnumerable<Guid> userIds,
+        CancellationToken ct = default)
+    {
+        var ids = userIds.ToList();
+        if (ids.Count == 0)
+            return [];
+
+        var result = new Dictionary<Guid, SlackConnection>(ids.Count);
+
+        foreach (var chunk in ids.Chunk(BatchChunkSize))
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var entities = await DbContext.Set<SlackConnectionEntity>()
+                .AsNoTracking()
+                .Where(e => chunk.Contains(e.UserId) && e.IsActive)
+                .ToListAsync(ct).ConfigureAwait(false);
+
+            foreach (var entity in entities)
+                result[entity.UserId] = MapToDomain(entity);
+        }
+
+        return result;
+    }
+
     public async Task<int> GetActiveConnectionCountAsync(CancellationToken ct = default)
     {
         return await DbContext.Set<SlackConnectionEntity>()

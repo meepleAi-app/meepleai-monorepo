@@ -44,9 +44,9 @@ describe('retryPolicy', () => {
       expect(isRetryableError(error)).toBe(true);
     });
 
-    it('should identify 500 ServerError as retryable', () => {
+    it('should NOT retry 500 ServerError (application error)', () => {
       const error = new ServerError({ message: 'Internal error', statusCode: 500 });
-      expect(isRetryableError(error)).toBe(true);
+      expect(isRetryableError(error)).toBe(false);
     });
 
     it('should identify 502 ServerError as retryable', () => {
@@ -229,7 +229,7 @@ describe('retryPolicy', () => {
     });
 
     it('should throw after max attempts', async () => {
-      const error = new ServerError({ message: 'Server error', statusCode: 500 });
+      const error = new ServerError({ message: 'Server error', statusCode: 502 });
       const fn = vi.fn().mockRejectedValue(error);
 
       await expect(
@@ -269,7 +269,7 @@ describe('retryPolicy', () => {
     });
 
     it('should call onRetry callback', async () => {
-      const error = new ServerError({ message: 'Server error', statusCode: 500 });
+      const error = new ServerError({ message: 'Server error', statusCode: 502 });
       const fn = vi.fn().mockRejectedValueOnce(error).mockResolvedValueOnce('success');
 
       const onRetry = vi.fn();

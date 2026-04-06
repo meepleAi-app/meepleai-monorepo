@@ -31,9 +31,34 @@ internal sealed class GameNightSlackBuilder : ISlackMessageBuilder
             throw new ArgumentException($"Expected {nameof(GameNightPayload)} but received {payload.GetType().Name}", nameof(payload));
         }
 
+        var scheduledDate = gn.ScheduledAt.ToString("dddd d MMMM yyyy, HH:mm", CultureInfo.InvariantCulture);
+
+        if (gn.IsCancelled)
+        {
+            return new
+            {
+                blocks = new object[]
+                {
+                    new
+                    {
+                        type = "header",
+                        text = new { type = "plain_text", text = $"\u274c Annullata: {gn.Title}", emoji = true }
+                    },
+                    new
+                    {
+                        type = "section",
+                        text = new
+                        {
+                            type = "mrkdwn",
+                            text = $"\ud83d\udcc5 *Era prevista per*: {scheduledDate}\n\ud83d\udc64 *Organizzatore*: {gn.OrganizerName}\n\n_La serata è stata annullata._"
+                        }
+                    }
+                }
+            };
+        }
+
         var timestamp = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
         var blockId = $"gn:{gn.GameNightId}:{timestamp}";
-        var scheduledDate = gn.ScheduledAt.ToString("dddd d MMMM yyyy, HH:mm", CultureInfo.InvariantCulture);
 
         var blocks = new List<object>
         {

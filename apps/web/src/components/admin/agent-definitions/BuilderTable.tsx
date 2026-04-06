@@ -24,10 +24,10 @@ interface BuilderTableProps {
   onUnpublish?: (id: string) => void;
 }
 
-const STATUS_LABELS = ['Draft', 'Testing', 'Published'] as const;
+const STATUS_LABELS = ['Bozza', 'In Test', 'Pubblicato'] as const;
 
 function getStatusBadge(status: number) {
-  const label = STATUS_LABELS[status] ?? 'Draft';
+  const label = STATUS_LABELS[status] ?? 'Bozza';
   switch (status) {
     case 1:
       return (
@@ -56,41 +56,45 @@ export function BuilderTable({
   const columns: ColumnDef<AgentDefinitionDto>[] = [
     {
       accessorKey: 'name',
-      header: 'Name',
+      header: 'Nome',
     },
     {
       accessorKey: 'description',
-      header: 'Description',
+      header: 'Descrizione',
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground line-clamp-1">
-          {row.original.description || 'No description'}
+          {row.original.description || 'Nessuna descrizione'}
         </span>
       ),
     },
     {
       accessorKey: 'config.model',
-      header: 'Model',
+      header: 'Modello',
       cell: ({ row }) => <Badge variant="secondary">{row.original.config.model}</Badge>,
     },
     {
       id: 'status',
-      header: 'Status',
+      header: 'Stato',
       cell: ({ row }) => {
         const agent = row.original;
+        const status = agent.status ?? 0;
         return (
           <div className="flex items-center gap-2">
-            {getStatusBadge(agent.status ?? 0)}
-            <Badge variant={agent.isActive ? 'default' : 'outline'}>
-              {agent.isActive ? 'Active' : 'Inactive'}
-            </Badge>
+            {getStatusBadge(status)}
+            {/* Show active/inactive badge only for published agents */}
+            {status === 2 && (
+              <Badge variant={agent.isActive ? 'default' : 'outline'}>
+                {agent.isActive ? 'Attivo' : 'Inattivo'}
+              </Badge>
+            )}
           </div>
         );
       },
     },
     {
       accessorKey: 'createdAt',
-      header: 'Created',
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
+      header: 'Creato il',
+      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('it-IT'),
     },
     {
       id: 'actions',
@@ -109,7 +113,7 @@ export function BuilderTable({
               <DropdownMenuItem asChild>
                 <Link href={`/admin/agents/definitions/${agent.id}/edit`}>
                   <Pencil className="h-4 w-4 mr-2" />
-                  Edit
+                  Modifica
                 </Link>
               </DropdownMenuItem>
 
@@ -117,26 +121,26 @@ export function BuilderTable({
               {status === 0 && onStartTesting && (
                 <DropdownMenuItem onClick={() => onStartTesting(agent.id)}>
                   <FlaskConical className="h-4 w-4 mr-2" />
-                  Start Testing
+                  Avvia Test
                 </DropdownMenuItem>
               )}
               {status === 1 && onPublish && (
                 <DropdownMenuItem onClick={() => onPublish(agent.id)}>
                   <Rocket className="h-4 w-4 mr-2" />
-                  Publish
+                  Pubblica
                 </DropdownMenuItem>
               )}
               {status === 2 && onUnpublish && (
                 <DropdownMenuItem onClick={() => onUnpublish(agent.id)}>
                   <ArchiveRestore className="h-4 w-4 mr-2" />
-                  Unpublish
+                  Ritira
                 </DropdownMenuItem>
               )}
 
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onDelete(agent.id)} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                Elimina
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

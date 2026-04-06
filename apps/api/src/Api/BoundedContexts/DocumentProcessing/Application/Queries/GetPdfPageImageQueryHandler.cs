@@ -1,7 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
-using Api.SharedKernel.Domain.Exceptions;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
@@ -34,14 +34,14 @@ internal sealed class GetPdfPageImageQueryHandler : IQueryHandler<GetPdfPageImag
         ArgumentNullException.ThrowIfNull(query);
 
         if (query.PageNumber < 1)
-            throw new ArgumentOutOfRangeException(nameof(query.PageNumber), "Page number must be >= 1");
+            throw new ArgumentOutOfRangeException(nameof(query), "Page number must be >= 1");
 
         var pdfDoc = await _pdfRepo.GetByIdAsync(query.PdfDocumentId, cancellationToken).ConfigureAwait(false);
         if (pdfDoc == null)
             throw new NotFoundException($"PdfDocument {query.PdfDocumentId} not found");
 
         // Resolve storage bucket
-        var bucket = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? "wizard-temp";
+        var bucket = pdfDoc.PrivateGameId?.ToString() ?? pdfDoc.GameId.ToString();
 
         // Extract file ID from stored path
         var fileId = ExtractFileIdFromPath(pdfDoc.FilePath);

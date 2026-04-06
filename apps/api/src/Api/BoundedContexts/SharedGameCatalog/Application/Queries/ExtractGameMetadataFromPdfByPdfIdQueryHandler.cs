@@ -3,6 +3,7 @@ using System.Text.Json;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
@@ -80,7 +81,7 @@ internal sealed class ExtractGameMetadataFromPdfByPdfIdQueryHandler
             }
 
             // Resolve storage bucket: orphaned PDFs use "wizard-temp"
-            var bucket = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? "wizard-temp";
+            var bucket = pdfDoc.PrivateGameId?.ToString() ?? pdfDoc.GameId.ToString();
 
             // Extract fileId from stored FilePath (format: {fileId}_{timestamp}.pdf)
             var fileId = ExtractFileIdFromPath(pdfDoc.FilePath);

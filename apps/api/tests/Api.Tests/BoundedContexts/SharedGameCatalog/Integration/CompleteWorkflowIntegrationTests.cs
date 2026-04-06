@@ -18,7 +18,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using Xunit;
 
-#pragma warning disable S3261 // Namespace content is commented out — intentional pending refactoring (Issue #3490)
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 
 /// <summary>
@@ -27,17 +26,11 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 ///
 /// Tests:
 /// 1. Manual Creation Workflow
-/// 2. PDF Wizard Workflow
+/// 2. PDF Wizard Workflow (BGG import, document association dropped from ImportGameFromBggCommand)
 /// 3. Agent Linking Workflow
 /// 4. KB Documents Visibility
 /// 5. Complete Flow End-to-End (Backend)
-///
-/// NOTE: DISABLED due to compilation errors from command signature changes.
-/// CreateSharedGameCommand and ImportGameFromBggCommand signatures changed.
-/// Entire class commented out until commands are refactored.
-/// See Issue #3490 - needs complete refactoring.
 /// </summary>
-/*
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
@@ -48,6 +41,13 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
     private IMediator _mediator = null!;
+
+    // Stable test user ID used as CreatedBy/UserId audit field across all tests
+    private static readonly Guid TestUserId = new("AAAAAAAA-0000-0000-0000-000000000001");
+
+    // BGG IDs used by import tests — must be distinct to avoid ix_shared_games_bgg_id duplicate key
+    private const int BggIdGloomhaven = 174430;
+    private const int BggIdForCompleteFlow = 999001; // Fictional ID for Test 5
 
     public CompleteWorkflowIntegrationTests(SharedTestcontainersFixture fixture)
     {
@@ -66,14 +66,14 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
             {
                 builder.ConfigureTestServices(services =>
                 {
-                    // Mock BGG API service (test-specific)
+                    // Mock BGG API service — accepts any BggId so different tests can use distinct IDs
                     services.RemoveAll(typeof(Api.Services.IBggApiService));
                     var mockBggApi = new Mock<Api.Services.IBggApiService>();
 
                     mockBggApi
-                        .Setup(x => x.GetGameDetailsAsync(174430, It.IsAny<CancellationToken>()))
+                        .Setup(x => x.GetGameDetailsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                         .ReturnsAsync(new BggGameDetailsDto(
-                            174430,
+                            BggIdGloomhaven,
                             "Gloomhaven",
                             "Epic dungeon crawler",
                             2017,
@@ -128,28 +128,33 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
     /// Test 1: Manual Creation Workflow
     /// Validates CQRS pipeline for manual SharedGame creation
     /// </summary>
-    [Fact(Skip = "Command signature changed - needs refactoring")]
+    [Fact]
     public async Task ManualCreation_CreatesSharedGameSuccessfully()
     {
-        // Arrange: CreateSharedGameCommand
-        var command = new CreateSharedGameCommand
-        {
-            Title = "Test Game Manual",
-            YearPublished = 2024,
-            MinPlayers = 2,
-            MaxPlayers = 4,
-            PlayingTimeMinutes = 60,
-            MinAge = 12,
-            Description = "A manually created test game",
-            BggId = null // Manual creation without BGG
-        };
+        // Arrange
+        var command = new CreateSharedGameCommand(
+            Title: "Test Game Manual",
+            YearPublished: 2024,
+            Description: "A manually created test game",
+            MinPlayers: 2,
+            MaxPlayers: 4,
+            PlayingTimeMinutes: 60,
+            MinAge: 12,
+            ComplexityRating: null,
+            AverageRating: null,
+            ImageUrl: "https://example.com/test.jpg",
+            ThumbnailUrl: "https://example.com/test-thumb.jpg",
+            Rules: null,
+            CreatedBy: TestUserId,
+            BggId: null
+        );
 
-        // Act: Send command via Mediator
+        // Act
         using var scope = _factory.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var gameId = await mediator.Send(command);
 
-        // Assert: Game in DB with correct status
+        // Assert
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var game = await dbContext.Set<SharedGame>()
             .FirstOrDefaultAsync(g => g.Id == gameId);
@@ -159,67 +164,44 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
         game.YearPublished.Should().Be(2024);
         game.MinPlayers.Should().Be(2);
         game.MaxPlayers.Should().Be(4);
-        game.Status.Should().Be("Draft"); // Default status for manual creation
+        game.Status.Should().Be((int)GameStatus.Draft);
         game.BggId.Should().BeNull();
     }
 
     /// <summary>
-    /// Test 2: PDF Wizard Workflow
-    /// Validates complete wizard flow: Upload → Extract → Enrich → Import
+    /// Test 2: BGG Import Workflow
+    /// Validates complete import flow: BGG API fetch → SharedGame creation in Draft
+    /// (PDF document association was removed from ImportGameFromBggCommand in a later refactor)
     /// </summary>
-    [Fact(Skip = "Command signature changed - needs refactoring")]
-    public async Task PdfWizard_CreatesSharedGameWithDocuments()
+    [Fact]
+    public async Task BggImport_CreatesSharedGameFromBggApi()
     {
-        // Arrange: Simulate PDF upload (mock document ID)
-        var pdfDocumentId = Guid.NewGuid();
-
-        // Act 1: Extract metadata (simulated - in real scenario, this would call extraction service)
-        var extractedMetadata = new ExtractedMetadataDto
-        {
-            Title = "Test Game from PDF",
-            MinPlayers = 2,
-            MaxPlayers = 4,
-            PlayingTimeMinutes = 90
-        };
-
-        // Act 2: Enrich from BGG
+        // Arrange
         using var scope = _factory.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        // Simulate BGG enrichment (GetBggGameDetailsQuery already mocked)
-        var bggId = 174430;
+        var importCommand = new ImportGameFromBggCommand(BggId: BggIdGloomhaven, UserId: TestUserId);
 
-        // Act 3: Import game from BGG with PDF document
-        var importCommand = new ImportGameFromBggCommand
-        {
-            BggId = bggId,
-            PdfDocumentId = pdfDocumentId,
-            DocumentType = 0, // Rulebook
-            DocumentVersion = "1.0"
-        };
-
+        // Act
         var gameId = await mediator.Send(importCommand);
 
-        // Assert: Game created with BggId and status
+        // Assert
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var game = await dbContext.Set<SharedGame>()
             .Include(g => g.Documents)
             .FirstOrDefaultAsync(g => g.Id == gameId);
 
         game.Should().NotBeNull();
-        game!.BggId.Should().Be(bggId);
+        game!.BggId.Should().Be(BggIdGloomhaven);
         game.Title.Should().Be("Gloomhaven"); // From mocked BGG API
-        game.Status.Should().Be("Draft");
-
-        // Note: Document association depends on DocumentProcessing BC implementation
-        // Full validation requires proper PDF document seeding
+        game.Status.Should().Be((int)GameStatus.Draft);
     }
 
     /// <summary>
     /// Test 3: Agent Linking Workflow
     /// Validates agent creation and linking to SharedGame
     /// </summary>
-    [Fact(Skip = "Command signature changed - needs refactoring")]
+    [Fact]
     public async Task AgentLinking_LinksAgentToSharedGame()
     {
         // Arrange: Create SharedGame
@@ -227,22 +209,28 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        var createGameCommand = new CreateSharedGameCommand
-        {
-            Title = "Test Game for Agent",
-            YearPublished = 2024,
-            MinPlayers = 2,
-            MaxPlayers = 4,
-            PlayingTimeMinutes = 60
-        };
+        var createGameCommand = new CreateSharedGameCommand(
+            Title: "Test Game for Agent",
+            YearPublished: 2024,
+            Description: "Test game for agent linking",
+            MinPlayers: 2,
+            MaxPlayers: 4,
+            PlayingTimeMinutes: 60,
+            MinAge: 12,
+            ComplexityRating: null,
+            AverageRating: null,
+            ImageUrl: "https://example.com/agent.jpg",
+            ThumbnailUrl: "https://example.com/agent-thumb.jpg",
+            Rules: null,
+            CreatedBy: TestUserId
+        );
 
         var gameId = await mediator.Send(createGameCommand);
 
         // Arrange: Create Agent (mock agent ID - real scenario would use AgentDefinitions BC)
         var agentId = Guid.NewGuid();
 
-        // Act: Link agent to SharedGame (command implementation depends on Issue #4228)
-        // For now, we manually update the game entity to simulate linking
+        // Act: Verify game was created correctly
         var game = await dbContext.Set<SharedGame>().FindAsync(gameId);
         game.Should().NotBeNull();
 
@@ -250,12 +238,12 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
         // game!.AgentDefinitionId = agentId;
         // await dbContext.SaveChangesAsync();
 
-        // Assert: game.AgentDefinitionId == agentId
-        // Note: Full assertion requires LinkAgentToSharedGameCommand implementation (Issue #4228)
+        // Assert: game exists and is ready for agent linking (Issue #4228)
         game.Should().NotBeNull();
         game!.Id.Should().Be(gameId);
+        game.Title.Should().Be("Test Game for Agent");
 
-        // Note: Uncomment when LinkAgentToSharedGameCommand is implemented
+        // Note: Uncomment when LinkAgentToSharedGameCommand is implemented (Issue #4228)
         // game.AgentDefinitionId.Should().Be(agentId);
     }
 
@@ -263,86 +251,80 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
     /// Test 4: KB Documents Visibility
     /// Validates that SharedGame documents are visible for agent knowledge base
     /// </summary>
-    [Fact(Skip = "Command signature changed - needs refactoring")]
+    [Fact]
     public async Task KbDocuments_AreVisibleForSharedGame()
     {
-        // Arrange: Create SharedGame with indexed PDF
+        // Arrange: Create SharedGame
         using var scope = _factory.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        var gameId = await mediator.Send(new CreateSharedGameCommand
-        {
-            Title = "Test Game with KB",
-            YearPublished = 2024,
-            MinPlayers = 2,
-            MaxPlayers = 4
-        });
+        var gameId = await mediator.Send(new CreateSharedGameCommand(
+            Title: "Test Game with KB",
+            YearPublished: 2024,
+            Description: "Test game for KB documents visibility",
+            MinPlayers: 2,
+            MaxPlayers: 4,
+            PlayingTimeMinutes: 60,
+            MinAge: 10,
+            ComplexityRating: null,
+            AverageRating: null,
+            ImageUrl: "https://example.com/kb.jpg",
+            ThumbnailUrl: "https://example.com/kb-thumb.jpg",
+            Rules: null,
+            CreatedBy: TestUserId
+        ));
 
-        // Simulate PDF document association (requires DocumentProcessing BC setup)
-        var pdfDocumentId = Guid.NewGuid();
-
-        // Act: Query agent documents (GetAgentDocumentsQuery - implementation depends on KnowledgeBase BC)
-        // For now, verify game and document relationship
+        // Act: Query game with documents (GetAgentDocumentsQuery - implementation depends on KnowledgeBase BC)
         var game = await dbContext.Set<SharedGame>()
             .Include(g => g.Documents)
             .FirstOrDefaultAsync(g => g.Id == gameId);
 
-        // Assert: Documents list contains PDF
+        // Assert: Game exists and documents collection is accessible
         game.Should().NotBeNull();
+        game!.Id.Should().Be(gameId);
+        game.Documents.Should().NotBeNull(); // Collection initialized, may be empty without PDF upload
 
         // Note: Full assertion requires:
         // 1. SharedGameDocument entity properly seeded
         // 2. GetAgentDocumentsQuery implementation
         // 3. Vector DB indexing workflow
-
-        // Placeholder assertion
-        game!.Id.Should().Be(gameId);
     }
 
     /// <summary>
     /// Test 5: Complete Flow End-to-End (Backend)
-    /// Validates entire backend pipeline from PDF upload to agent creation
+    /// Validates entire backend pipeline from BGG import to agent creation readiness
+    /// Uses a distinct BggId (999001) to avoid duplicate key conflict with Test 2 (174430)
     /// </summary>
-    [Fact(Skip = "Command signature changed - needs refactoring")]
+    [Fact]
     public async Task CompleteFlow_PdfToAgentCreation()
     {
         using var scope = _factory.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        // Step 1: Upload PDF (simulated)
-        var pdfDocumentId = Guid.NewGuid();
-
-        // Step 2: Extract metadata (simulated)
-        var extractedTitle = "Complete Workflow Test Game";
-
-        // Step 3: Create SharedGame from BGG
-        var gameId = await mediator.Send(new ImportGameFromBggCommand
-        {
-            BggId = 174430,
-            PdfDocumentId = pdfDocumentId,
-            DocumentType = 0,
-            DocumentVersion = "1.0"
-        });
+        // Step 1: Import game from BGG (uses BggIdForCompleteFlow=999001 to avoid duplicate with Test 2)
+        var gameId = await mediator.Send(new ImportGameFromBggCommand(
+            BggId: BggIdForCompleteFlow,
+            UserId: TestUserId));
 
         gameId.Should().NotBeEmpty();
 
-        // Step 4: Wait for embedding (in real scenario, this is async)
+        // Step 2: Wait for embedding (in real scenario, this is async)
         // For testing, we assume immediate completion
 
-        // Step 5: Create and link agent (simulated - requires Issue #4228)
+        // Step 3: Create and link agent (simulated - requires Issue #4228)
         var agentId = Guid.NewGuid();
 
-        // Step 6: Query KB documents
+        // Step 4: Query KB documents
         var game = await dbContext.Set<SharedGame>()
             .Include(g => g.Documents)
             .FirstOrDefaultAsync(g => g.Id == gameId);
 
         // Assert: All steps successful
         game.Should().NotBeNull();
-        game!.BggId.Should().Be(174430);
-        game.Title.Should().Be("Gloomhaven"); // From mocked BGG API
+        game!.BggId.Should().Be(BggIdForCompleteFlow);
+        game.Title.Should().Be("Gloomhaven"); // From mocked BGG API (same mock for all BggIds)
 
         // Note: Complete flow assertion requires:
         // 1. Full DocumentProcessing BC integration
@@ -351,7 +333,6 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
 
         // Current assertions validate core CQRS pipeline
         game.Id.Should().Be(gameId);
-        game.Status.Should().NotBeNullOrEmpty();
+        game.Status.Should().Be((int)GameStatus.Draft);
     }
 }
-*/

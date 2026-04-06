@@ -182,35 +182,37 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
 
     #region GetByBggIdAsync Tests
 
-    [Fact(Skip = "CI flaky: duplicate key on ix_shared_games_bgg_id due to test isolation issue — concurrent test classes seed same bgg_id")]
+    [Fact]
     public async Task GetByBggIdAsync_WithExistingBggId_ReturnsGame()
     {
-        // Arrange
+        // Arrange — use a unique BGG ID per test run to prevent duplicate key violations across concurrent collections
+        var uniqueBggId = Math.Abs(Guid.NewGuid().GetHashCode() % 1_000_000) + 2_000_000;
         var game = SharedGame.Create("7 Wonders", 2010, "Draft cards to build civilizations", 2, 7, 30, 10,
-            null, null, "https://example.com/7wonders.jpg", "https://example.com/7wonders-thumb.jpg", null, TestUserId, bggId: 68448);
+            null, null, "https://example.com/7wonders.jpg", "https://example.com/7wonders-thumb.jpg", null, TestUserId, bggId: uniqueBggId);
         await _repository.AddAsync(game);
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var result = await _repository.GetByBggIdAsync(68448);
+        var result = await _repository.GetByBggIdAsync(uniqueBggId);
 
         // Assert
         result.Should().NotBeNull();
         result.Id.Should().Be(game.Id);
-        result.BggId.Should().Be(68448);
+        result.BggId.Should().Be(uniqueBggId);
     }
 
-    [Fact(Skip = "CI flaky: duplicate key on ix_shared_games_bgg_id due to test isolation issue — concurrent test classes seed same bgg_id")]
+    [Fact]
     public async Task ExistsByBggIdAsync_WithExistingBggId_ReturnsTrue()
     {
-        // Arrange
+        // Arrange — use a unique BGG ID per test run to prevent duplicate key violations across concurrent collections
+        var uniqueBggId = Math.Abs(Guid.NewGuid().GetHashCode() % 1_000_000) + 3_000_000;
         var game = SharedGame.Create("Wingspan", 2019, "Bird collection game", 1, 5, 60, 10,
-            null, null, "https://example.com/wingspan.jpg", "https://example.com/wingspan-thumb.jpg", null, TestUserId, bggId: 266192);
+            null, null, "https://example.com/wingspan.jpg", "https://example.com/wingspan-thumb.jpg", null, TestUserId, bggId: uniqueBggId);
         await _repository.AddAsync(game);
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var exists = await _repository.ExistsByBggIdAsync(266192);
+        var exists = await _repository.ExistsByBggIdAsync(uniqueBggId);
 
         // Assert
         exists.Should().BeTrue();

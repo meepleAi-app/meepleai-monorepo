@@ -246,10 +246,11 @@ public class HttpBehaviorTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        // API should return 400 or 401, not 500 (proper validation)
+        // FluentValidation returns 422 UnprocessableEntity for missing fields; 400 and 401 also accepted
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.BadRequest,
-            HttpStatusCode.Unauthorized);
+            HttpStatusCode.Unauthorized,
+            HttpStatusCode.UnprocessableEntity);
     }
     [Fact(DisplayName = "GET response should include Content-Type header")]
     public async Task Get_Response_IncludesContentTypeHeader()

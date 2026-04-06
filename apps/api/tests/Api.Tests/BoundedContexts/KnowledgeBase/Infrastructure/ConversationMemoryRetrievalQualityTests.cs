@@ -302,18 +302,11 @@ public sealed class ConversationMemoryRetrievalQualityTests : IAsyncLifetime
         var now = DateTime.UtcNow;
         var decayWindow = TimeSpan.FromHours(24);
 
-        var scores = memories.Select(m => m.CalculateTemporalScore(now, decayWindow)).ToList();
+        // Sort ascending by timestamp to ensure oldest-first ordering regardless of repository sort order
+        var sortedMemories = memories.OrderBy(m => m.Timestamp).ToList();
+        var scores = sortedMemories.Select(m => m.CalculateTemporalScore(now, decayWindow)).ToList();
 
-        // Assert - Temporal scores should decrease as memories get older
-        // This validates the nDCG-like quality: more recent = more relevant
-        for (int i = 0; i < scores.Count - 1; i++)
-        {
-            // Memories are ordered by timestamp ascending (oldest first, newest last)
-            // So temporal scores should generally increase (newer memories score higher)
-            // We verify the overall ordering is correct
-        }
-
-        // Verify that the most recent memories have the highest temporal scores
+        // Verify that the most recent memories (second half, ascending order) have the highest temporal scores
         var topHalf = scores.Skip(scores.Count / 2).ToList();
         var bottomHalf = scores.Take(scores.Count / 2).ToList();
 

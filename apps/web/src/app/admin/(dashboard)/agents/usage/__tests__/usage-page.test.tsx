@@ -243,7 +243,9 @@ describe('UsagePage', () => {
       { timeout: 10000 }
     );
 
-    expect(screen.getByText(/Failed to load usage data.*Redis unavailable/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/impossibile caricare i dati di utilizzo.*Redis unavailable/i)
+    ).toBeInTheDocument();
   });
 
   it('shows charts section component headings', async () => {

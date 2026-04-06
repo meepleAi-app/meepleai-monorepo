@@ -31,6 +31,7 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
     public DateTime CreatedAt { get; private set; }
     public DateTime? ProcessedAt { get; private set; }
     public Guid CorrelationId { get; private set; }
+    public string? DeepLinkPath { get; private set; }
 
 #pragma warning disable CS8618
     private NotificationQueueItem() : base() { }
@@ -45,7 +46,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         string? slackChannelTarget,
         string? slackTeamId,
         Guid correlationId,
-        DateTime? createdAt = null)
+        DateTime? createdAt = null,
+        string? deepLinkPath = null)
         : base(id)
     {
         ChannelType = channelType ?? throw new ArgumentNullException(nameof(channelType));
@@ -62,6 +64,7 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         CreatedAt = createdAt ?? DateTime.UtcNow;
         ProcessedAt = null;
         CorrelationId = correlationId;
+        DeepLinkPath = deepLinkPath;
     }
 
     /// <summary>
@@ -75,7 +78,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         string? slackChannelTarget = null,
         string? slackTeamId = null,
         Guid? correlationId = null,
-        DateTime? createdAt = null)
+        DateTime? createdAt = null,
+        string? deepLinkPath = null)
     {
         return new NotificationQueueItem(
             Guid.NewGuid(),
@@ -86,7 +90,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
             slackChannelTarget,
             slackTeamId,
             correlationId ?? Guid.NewGuid(),
-            createdAt);
+            createdAt,
+            deepLinkPath);
     }
 
     /// <summary>
@@ -192,11 +197,13 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         string? lastError,
         DateTime createdAt,
         DateTime? processedAt,
-        Guid correlationId)
+        Guid correlationId,
+        string? deepLinkPath = null)
     {
         var item = new NotificationQueueItem(
             id, channelType, recipientUserId, notificationType,
-            payload, slackChannelTarget, slackTeamId, correlationId);
+            payload, slackChannelTarget, slackTeamId, correlationId,
+            deepLinkPath: deepLinkPath);
         item.Status = status;
         item.RetryCount = retryCount;
         item.MaxRetries = maxRetries;

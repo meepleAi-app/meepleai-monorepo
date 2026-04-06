@@ -130,7 +130,8 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
             LastError = item.LastError,
             CreatedAt = item.CreatedAt,
             ProcessedAt = item.ProcessedAt,
-            CorrelationId = item.CorrelationId
+            CorrelationId = item.CorrelationId,
+            DeepLinkPath = item.DeepLinkPath
         };
     }
 
@@ -151,6 +152,7 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
             lastError: entity.LastError,
             createdAt: entity.CreatedAt,
             processedAt: entity.ProcessedAt,
-            correlationId: entity.CorrelationId);
+            correlationId: entity.CorrelationId,
+            deepLinkPath: entity.DeepLinkPath);
     }
 }

@@ -199,7 +199,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
             ?? throw new InvalidOperationException($"Missing webhook URL for SlackTeam item {item.Id}");
 
         var builder = _builderFactory.GetBuilder(item.NotificationType);
-        var message = builder.BuildMessage(item.Payload, null);
+        var message = builder.BuildMessage(item.Payload, item.DeepLinkPath);
         var payload = JsonSerializer.Serialize(message);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, webhookUrl)
@@ -245,7 +245,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
             throw new InvalidOperationException($"No active bot token for item {item.Id}, user {item.RecipientUserId}");
 
         var builder = _builderFactory.GetBuilder(item.NotificationType);
-        var blockKitMessage = builder.BuildMessage(item.Payload, null);
+        var blockKitMessage = builder.BuildMessage(item.Payload, item.DeepLinkPath);
         // Merge channel into the Block Kit message by serializing and re-parsing
         var messageJson = JsonSerializer.Serialize(blockKitMessage);
         using var mergedDoc = JsonDocument.Parse(messageJson);

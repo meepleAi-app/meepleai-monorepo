@@ -18,7 +18,8 @@ public class NotificationQueueItemTests
         NotificationType? notificationType = null,
         INotificationPayload? payload = null,
         string? slackChannelTarget = null,
-        string? slackTeamId = null)
+        string? slackTeamId = null,
+        string? deepLinkPath = null)
     {
         return NotificationQueueItem.Create(
             channelType ?? NotificationChannelType.SlackUser,
@@ -26,7 +27,8 @@ public class NotificationQueueItemTests
             notificationType ?? NotificationType.DocumentReady,
             payload ?? new GenericPayload("Test", "Body"),
             slackChannelTarget,
-            slackTeamId);
+            slackTeamId,
+            deepLinkPath: deepLinkPath);
     }
 
     [Fact]
@@ -355,6 +357,20 @@ public class NotificationQueueItemTests
 
         item.RetryCount.Should().Be(0);
         item.Status.Should().Be(NotificationQueueStatus.Failed);
+    }
+
+    [Fact]
+    public void Create_WithDeepLinkPath_SetsProperty()
+    {
+        var item = CreateDefaultItem(deepLinkPath: "/library/documents/abc123");
+        item.DeepLinkPath.Should().Be("/library/documents/abc123");
+    }
+
+    [Fact]
+    public void Create_WithoutDeepLinkPath_PropertyIsNull()
+    {
+        var item = CreateDefaultItem();
+        item.DeepLinkPath.Should().BeNull();
     }
 
     [Fact]

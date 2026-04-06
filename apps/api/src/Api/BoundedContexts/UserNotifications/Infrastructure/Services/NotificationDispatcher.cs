@@ -89,7 +89,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
                     recipientUserId: message.RecipientUserId,
                     notificationType: message.Type,
                     payload: message.Payload,
-                    correlationId: correlationId);
+                    correlationId: correlationId,
+                    deepLinkPath: message.DeepLinkPath);
 
                 queueItems.Add(emailItem);
 
@@ -118,7 +119,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
                         payload: message.Payload,
                         slackChannelTarget: slackConnection.DmChannelId,
                         slackTeamId: slackConnection.SlackTeamId,
-                        correlationId: correlationId);
+                        correlationId: correlationId,
+                        deepLinkPath: message.DeepLinkPath);
 
                     queueItems.Add(slackItem);
 
@@ -150,7 +152,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
                         payload: message.Payload,
                         slackChannelTarget: settings.WebhookUrl,
                         slackTeamId: teamId,
-                        correlationId: correlationId);
+                        correlationId: correlationId,
+                        deepLinkPath: message.DeepLinkPath);
 
                     queueItems.Add(teamItem);
 

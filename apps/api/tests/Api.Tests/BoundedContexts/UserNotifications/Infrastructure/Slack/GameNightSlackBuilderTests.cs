@@ -132,4 +132,59 @@ public sealed class GameNightSlackBuilderTests
         act.Should().Throw<ArgumentException>()
             .WithMessage("*GameNightPayload*GenericPayload*");
     }
+
+    [Fact]
+    public void BuildMessage_WhenIsCancelledTrue_ShowsCancellationLayoutWithoutRsvpButtons()
+    {
+        // Arrange
+        var payload = new GameNightPayload(
+            Guid.NewGuid(),
+            "Serata Catan",
+            new DateTime(2026, 5, 10, 20, 0, 0, DateTimeKind.Utc),
+            "Mario",
+            IsCancelled: true);
+
+        // Act
+        var result = _sut.BuildMessage(payload, null);
+        var json = JsonSerializer.Serialize(result);
+        var doc = JsonDocument.Parse(json);
+        var blocks = doc.RootElement.GetProperty("blocks");
+
+        // Assert — 2 blocks: header + section (no RSVP actions)
+        blocks.GetArrayLength().Should().Be(2);
+
+        var header = blocks[0];
+        header.GetProperty("text").GetProperty("text").GetString()
+            .Should().Contain("Annullata");
+
+        // No actions block
+        for (int i = 0; i < blocks.GetArrayLength(); i++)
+        {
+            blocks[i].GetProperty("type").GetString().Should().NotBe("actions");
+        }
+    }
+
+    [Fact]
+    public void BuildMessage_WhenIsCancelledFalse_ShowsRsvpButtons()
+    {
+        // Arrange
+        var payload = new GameNightPayload(
+            Guid.NewGuid(),
+            "Serata Catan",
+            new DateTime(2026, 5, 10, 20, 0, 0, DateTimeKind.Utc),
+            "Mario",
+            IsCancelled: false);
+
+        // Act
+        var result = _sut.BuildMessage(payload, null);
+        var json = JsonSerializer.Serialize(result);
+        var doc = JsonDocument.Parse(json);
+        var blocks = doc.RootElement.GetProperty("blocks");
+
+        // Assert — 3 blocks: header + section + actions
+        blocks.GetArrayLength().Should().Be(3);
+        blocks[2].GetProperty("type").GetString().Should().Be("actions");
+        var elements = blocks[2].GetProperty("elements");
+        elements[0].GetProperty("action_id").GetString().Should().Be("game_night_rsvp_yes");
+    }
 }

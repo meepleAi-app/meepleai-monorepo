@@ -22,7 +22,8 @@ public record GameNightPayload(
     Guid GameNightId,
     string Title,
     DateTime ScheduledAt,
-    string OrganizerName) : INotificationPayload;
+    string OrganizerName,
+    bool IsCancelled = false) : INotificationPayload;
 
 public record PdfProcessingPayload(
     Guid PdfId,

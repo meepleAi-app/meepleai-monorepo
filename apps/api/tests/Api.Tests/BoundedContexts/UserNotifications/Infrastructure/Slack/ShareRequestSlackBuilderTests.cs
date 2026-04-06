@@ -166,4 +166,62 @@ public sealed class ShareRequestSlackBuilderTests
         act.Should().Throw<ArgumentException>()
             .WithMessage("*ShareRequestPayload*GenericPayload*");
     }
+
+    [Fact]
+    public void BuildMessage_WhenStatusIsCreated_ShowsApproveRejectButtons()
+    {
+        var payload = new ShareRequestPayload(
+            Guid.NewGuid(), "Mario", "Catan", null, Status: "created");
+
+        var result = _sut.BuildMessage(payload, null);
+        var json = JsonSerializer.Serialize(result);
+        var doc = JsonDocument.Parse(json);
+        var blocks = doc.RootElement.GetProperty("blocks");
+
+        // Header: "Nuova Share Request"
+        blocks[0].GetProperty("text").GetProperty("text").GetString()
+            .Should().Contain("Nuova Share Request");
+
+        // Actions block with 3 elements (Approve, Reject, Open)
+        blocks.GetArrayLength().Should().Be(3);
+        var elements = blocks[2].GetProperty("elements");
+        elements.GetArrayLength().Should().Be(3);
+        elements[0].GetProperty("action_id").GetString().Should().Be("share_request_approve");
+        elements[1].GetProperty("action_id").GetString().Should().Be("share_request_reject");
+    }
+
+    [Fact]
+    public void BuildMessage_WhenStatusIsApproved_ShowsConfirmationWithoutActionButtons()
+    {
+        var payload = new ShareRequestPayload(
+            Guid.NewGuid(), "Mario", "Catan", null, Status: "approved");
+
+        var result = _sut.BuildMessage(payload, null);
+        var json = JsonSerializer.Serialize(result);
+        var doc = JsonDocument.Parse(json);
+        var blocks = doc.RootElement.GetProperty("blocks");
+
+        // Header: "Approvata"
+        blocks[0].GetProperty("text").GetProperty("text").GetString()
+            .Should().Contain("Approvata");
+
+        // 2 blocks only: header + section (no actions)
+        blocks.GetArrayLength().Should().Be(2);
+    }
+
+    [Fact]
+    public void BuildMessage_WhenStatusIsRejected_ShowsRejectionWithoutActionButtons()
+    {
+        var payload = new ShareRequestPayload(
+            Guid.NewGuid(), "Mario", "Catan", null, Status: "rejected");
+
+        var result = _sut.BuildMessage(payload, null);
+        var json = JsonSerializer.Serialize(result);
+        var doc = JsonDocument.Parse(json);
+        var blocks = doc.RootElement.GetProperty("blocks");
+
+        blocks[0].GetProperty("text").GetProperty("text").GetString()
+            .Should().Contain("Rifiutata");
+        blocks.GetArrayLength().Should().Be(2);
+    }
 }

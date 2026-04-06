@@ -15,7 +15,8 @@ public record ShareRequestPayload(
     Guid ShareRequestId,
     string RequesterName,
     string GameTitle,
-    string? GameImageUrl) : INotificationPayload;
+    string? GameImageUrl,
+    string Status = "created") : INotificationPayload;
 
 public record GameNightPayload(
     Guid GameNightId,

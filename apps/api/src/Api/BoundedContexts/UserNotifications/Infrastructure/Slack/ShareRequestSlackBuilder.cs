@@ -34,19 +34,35 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
             throw new ArgumentException($"Expected {nameof(ShareRequestPayload)} but received {payload.GetType().Name}", nameof(payload));
         }
 
-        var timestamp = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
-        var blockId = $"sr:{sr.ShareRequestId}:{timestamp}";
-        var deepLink = $"{_frontendBaseUrl.TrimEnd('/')}/share-requests/{sr.ShareRequestId}";
+        var isCreated = string.Equals(sr.Status, "created", StringComparison.OrdinalIgnoreCase);
+        var isApproved = string.Equals(sr.Status, "approved", StringComparison.OrdinalIgnoreCase);
+
+        var (headerEmoji, headerText) = (isCreated, isApproved) switch
+        {
+            (true, _)  => ("\ud83d\udce5", "Nuova Share Request"),
+            (_, true)  => ("\u2705", "Approvata"),
+            _          => ("\u274c", "Rifiutata")
+        };
 
         var blocks = new List<object>
         {
             new
             {
                 type = "header",
-                text = new { type = "plain_text", text = "\ud83d\udce5 Nuova Share Request", emoji = true }
+                text = new { type = "plain_text", text = $"{headerEmoji} {headerText}", emoji = true }
             },
-            BuildSectionBlock(sr),
-            new
+            BuildSectionBlock(sr)
+        };
+
+        if (isCreated)
+        {
+            var timestamp = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
+            var blockId = $"sr:{sr.ShareRequestId}:{timestamp}";
+            var deepLink = !string.IsNullOrEmpty(deepLinkPath)
+                ? $"{_frontendBaseUrl.TrimEnd('/')}{deepLinkPath}"
+                : $"{_frontendBaseUrl.TrimEnd('/')}/share-requests/{sr.ShareRequestId}";
+
+            blocks.Add(new
             {
                 type = "actions",
                 block_id = blockId,
@@ -76,8 +92,8 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
                         url = deepLink
                     }
                 }
-            }
-        };
+            });
+        }
 
         return new { blocks };
     }

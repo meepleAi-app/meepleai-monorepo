@@ -12,10 +12,10 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { AlertTriangle, ChevronDown, ChevronRight, MessageCircle, Plus, Bot } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { ChatListMobile } from '@/components/chat-unified/ChatListMobile';
+import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -237,9 +237,45 @@ export default function ChatListPage() {
       <div className="lg:hidden h-dvh">
         <ChatListMobile />
       </div>
-      {/* Desktop */}
-      <div className="hidden lg:block min-h-screen bg-background py-8 px-4">
-        <div className="container mx-auto max-w-7xl">
+
+      {/* Desktop — sidebar split layout */}
+      <div className="hidden lg:flex min-h-[calc(100vh-52px)]">
+        {/* Sidebar */}
+        <aside className="flex flex-col w-[280px] bg-card border-r border-border shrink-0">
+          <div className="p-4">
+            <Button
+              onClick={() => router.push('/chat/new')}
+              className="w-full bg-[hsl(var(--e-game))] hover:bg-[hsl(var(--e-game))]/90 text-white font-semibold"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nuova chat
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
+            {isLoading && (
+              <div className="space-y-2 px-1 pt-1">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-8 rounded bg-muted/40 animate-pulse"
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+            )}
+            {!isLoading &&
+              groups.map(group => (
+                <AgentGroupSection
+                  key={group.key}
+                  group={group}
+                  onSessionClick={session => router.push(`/chat/${session.id}`)}
+                />
+              ))}
+          </div>
+        </aside>
+
+        {/* Main area */}
+        <main className="flex-1 min-w-0 py-8 px-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -248,12 +284,6 @@ export default function ChatListPage() {
                 Tutte le conversazioni con gli agenti AI
               </p>
             </div>
-            <Button asChild className="font-nunito">
-              <Link href="/chat/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Nuova Chat
-              </Link>
-            </Button>
           </div>
 
           {/* Tier usage banner */}
@@ -270,36 +300,18 @@ export default function ChatListPage() {
             </Alert>
           )}
 
-          {/* Loading */}
-          {isLoading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-32 rounded-lg bg-muted/40 animate-pulse"
-                  aria-hidden="true"
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Grouped list */}
+          {/* Empty state */}
           {!isLoading && groups.length === 0 && (
             <div className="text-center py-16 text-muted-foreground font-nunito">
               <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
               <p>Nessuna chat trovata. Inizia una nuova conversazione!</p>
             </div>
           )}
-
-          {!isLoading &&
-            groups.map(group => (
-              <AgentGroupSection
-                key={group.key}
-                group={group}
-                onSessionClick={session => router.push(`/chat/${session.id}`)}
-              />
-            ))}
-        </div>
+        </main>
+      </div>
+      {/* FAB — desktop only: mobile uses ChatListMobile's own navigation */}
+      <div className="hidden lg:block">
+        <FloatingActionPill page="chat" />
       </div>
     </>
   );

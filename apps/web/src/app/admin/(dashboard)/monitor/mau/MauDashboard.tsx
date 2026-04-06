@@ -144,7 +144,7 @@ export function MauDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.dailyBreakdown.slice(-14).map(day => (
+                  {data.dailyBreakdown.slice(-period).map(day => (
                     <tr key={day.date} className="border-b last:border-0">
                       <td className="p-2 text-zinc-600 dark:text-zinc-400">
                         {new Date(day.date).toLocaleDateString(undefined, {

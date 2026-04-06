@@ -1,0 +1,48 @@
+name: Check API Startup Logs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-logs:
+    name: Check API Logs on Staging
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    if: vars.DEPLOY_METHOD == 'ssh'
+    steps:
+      - name: Fetch API logs
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+
+            echo "=== API CONTAINER IMAGE ==="
+            docker inspect meepleai-api --format '{{.Config.Image}}' 2>/dev/null || echo "N/A"
+
+            echo "=== API CONTAINER STARTED AT ==="
+            docker inspect meepleai-api --format '{{.State.StartedAt}}' 2>/dev/null || echo "N/A"
+
+            echo "=== LAST 100 LOG LINES ==="
+            docker logs meepleai-api --tail=100 2>&1
+
+            echo "=== SEEDER LINES (grep) ==="
+            docker logs meepleai-api 2>&1 | grep -i "seed\|Seed\|SEED\|admin\|Admin\|startup\|Startup" | tail -30 || echo "(none found)"
+
+            echo "=== EXCEPTION LINES ==="
+            docker logs meepleai-api 2>&1 | grep -i "error\|exception\|fail\|Error\|Exception\|Fail" | tail -30 || echo "(none found)"
+
+            echo "=== /health CHECK ==="
+            curl -s https://meepleai.app/health
+
+            echo ""
+            echo "=== LOGIN TEST (full response) ==="
+            SECRET_FILE="/opt/meepleai/repo/infra/secrets/admin.secret"
+            ADMIN_EMAIL=$(grep "^ADMIN_EMAIL=" "$SECRET_FILE" | cut -d= -f2)
+            ADMIN_PASS=$(grep "^ADMIN_PASSWORD=" "$SECRET_FILE" | cut -d= -f2)
+            echo "Email being used: [$ADMIN_EMAIL]"
+            echo "Pass length: ${#ADMIN_PASS}"
+            curl -sv -X POST https://meepleai.app/api/v1/auth/login \
+              -H "Content-Type: application/json" \
+              -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASS}\"}" 2>&1 | tail -30

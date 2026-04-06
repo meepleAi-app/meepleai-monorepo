@@ -24,6 +24,7 @@ import { useEffect } from 'react';
 import dynamicImport from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 
+import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useCardHand } from '@/stores/use-card-hand';
 
@@ -103,6 +104,7 @@ export function LibraryContent() {
 
       {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}
       <AddGameDrawerController />
+      <FloatingActionPill page="library" />
     </>
   );
 }

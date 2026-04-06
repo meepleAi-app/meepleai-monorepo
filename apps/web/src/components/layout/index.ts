@@ -26,3 +26,4 @@ export { CommandPalette } from './CommandPalette';
 export { ContextMiniNav } from './ContextMiniNav';
 export type { MiniNavTab } from './ContextMiniNav';
 export { FloatingActionPill } from './FloatingActionPill';
+export type { FabPage, FloatingActionPillProps } from './FloatingActionPill';

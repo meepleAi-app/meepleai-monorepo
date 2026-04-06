@@ -154,6 +154,7 @@ public sealed class ChatThreadRepositoryIntegrationTests : IAsyncLifetime
         if (_dbContext == null) return;
 
         _dbContext.ChatThreads.RemoveRange(_dbContext.ChatThreads);
+        _dbContext.Games.RemoveRange(_dbContext.Games);
         _dbContext.Users.RemoveRange(_dbContext.Users);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
@@ -231,10 +232,35 @@ public sealed class ChatThreadRepositoryIntegrationTests : IAsyncLifetime
 
     #region FindByGameIdAsync Tests
 
-    [Fact(Skip = "Requires Game entity seeding (FK constraint) — covered by application-layer tests")]
+    [Fact]
     public async Task FindByGameIdAsync_MultipleThreadsForGame_ShouldReturnAll()
     {
-        await Task.CompletedTask;
+        // Arrange
+        await CleanDatabaseAsync();
+        await EnsureUserExistsAsync(TestUserId1);
+
+        // Seed a GameEntity to satisfy the FK constraint on ChatThread.GameId
+        var gameId = Guid.NewGuid();
+        _dbContext!.Games.Add(new Api.Infrastructure.Entities.GameEntity
+        {
+            Id = gameId,
+            Name = "Test Game for ChatThread FK",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var thread1 = CreateTestChatThread(TestThreadId1, TestUserId1, gameId);
+        var thread2 = CreateTestChatThread(TestThreadId2, TestUserId1, gameId);
+        await _repository!.AddAsync(thread1, TestCancellationToken);
+        await _repository.AddAsync(thread2, TestCancellationToken);
+        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
+
+        // Act
+        var result = await _repository.FindByGameIdAsync(gameId, TestCancellationToken);
+
+        // Assert
+        result.Should().HaveCount(2);
+        result.Should().AllSatisfy(t => t.GameId.Should().Be(gameId));
     }
 
     [Fact]

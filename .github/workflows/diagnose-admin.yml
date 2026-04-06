@@ -1,0 +1,41 @@
+name: Diagnose Admin Login
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    name: Check API and Admin on Staging
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    if: vars.DEPLOY_METHOD == 'ssh'
+    steps:
+      - name: SSH Diagnostics
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+            
+            echo "=== API CONTAINER STATUS ==="
+            docker ps --filter name=meepleai-api --format "{{.Status}}"
+            
+            echo "=== API LAST 50 LOG LINES ==="
+            docker logs meepleai-api --tail=50 2>&1
+
+            echo "=== DB SECRET ==="
+            DB_SECRET="/opt/meepleai/repo/infra/secrets/database.secret"
+            if [ -f "$DB_SECRET" ]; then
+              set -a; source "$DB_SECRET"; set +a
+            fi
+            PG_USER="${POSTGRES_USER:-meepleai}"
+            PG_DB="${POSTGRES_DB:-meepleai_db}"
+            
+            echo "=== ADMIN USER IN DB ==="
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+              "SELECT \"Id\", \"Email\", \"Role\", \"IsActive\" FROM users WHERE \"Role\" = 'SuperAdmin';" \
+              2>&1 || echo "Query failed"
+
+            echo "=== ADMIN_PASSWORD IN SECRET ==="
+            grep "^ADMIN_PASSWORD=" /opt/meepleai/repo/infra/secrets/admin.secret | cut -c1-40

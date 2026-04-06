@@ -4,6 +4,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Configuration;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -265,5 +266,126 @@ public class NotificationDispatcherTests
                     items.All(i => i.ChannelType != NotificationChannelType.SlackUser)),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Theory]
+    [InlineData("document_processing_failed", "error")]
+    [InlineData("admin_system_health_alert", "error")]
+    [InlineData("admin_openrouter_threshold_alert", "error")]
+    [InlineData("session_terminated", "warning")]
+    [InlineData("rate_limit_reached", "warning")]
+    [InlineData("slack_connection_revoked", "warning")]
+    [InlineData("document_ready", "success")]
+    [InlineData("badge_earned", "success")]
+    [InlineData("share_request_created", "info")]
+    public async Task DispatchAsync_MapsCorrectSeverityForType(string typeValue, string expectedSeverity)
+    {
+        // Arrange
+        var message = new NotificationMessage
+        {
+            Type = NotificationType.FromString(typeValue),
+            RecipientUserId = Guid.NewGuid(),
+            Payload = new GenericPayload("Title", "Body")
+        };
+
+        Notification? captured = null;
+        _notificationRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .Callback<Notification, CancellationToken>((n, _) => captured = n)
+            .Returns(Task.CompletedTask);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert
+        captured.Should().NotBeNull();
+        captured!.Severity.Value.Should().Be(expectedSeverity);
+    }
+
+    [Theory]
+    [InlineData("document_ready", "Documento pronto")]
+    [InlineData("document_processing_failed", "Elaborazione fallita")]
+    [InlineData("badge_earned", "Badge ottenuto")]
+    [InlineData("share_request_created", "Nuova Share Request")]
+    [InlineData("game_night_invitation", "Invito Serata")]
+    public async Task DispatchAsync_UsesFriendlyTitleNotTypeName(string typeValue, string expectedTitleFragment)
+    {
+        // Arrange
+        var message = new NotificationMessage
+        {
+            Type = NotificationType.FromString(typeValue),
+            RecipientUserId = Guid.NewGuid(),
+            Payload = new GenericPayload("Title", "Body")
+        };
+
+        Notification? captured = null;
+        _notificationRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .Callback<Notification, CancellationToken>((n, _) => captured = n)
+            .Returns(Task.CompletedTask);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert
+        captured.Should().NotBeNull();
+        captured!.Title.Should().Contain(expectedTitleFragment);
+        captured.Title.Should().NotContain("Payload"); // no C# type names
+    }
+
+    [Theory]
+    [InlineData("admin_new_share_request")]
+    [InlineData("admin_system_health_alert")]
+    [InlineData("admin_openrouter_threshold_alert")]
+    [InlineData("admin_model_status_changed")]
+    public async Task DispatchAsync_AdminTypes_NotSentViaSlackDm(string typeValue)
+    {
+        // Arrange: user has Slack enabled with active connection
+        var userId = Guid.NewGuid();
+        var prefs = new NotificationPreferences(userId);
+        prefs.UpdateSlackPreferences(
+            enabled: true,
+            onDocumentReady: true,
+            onDocumentFailed: true,
+            onRetryAvailable: false,
+            onGameNightInvitation: true,
+            onGameNightReminder: true,
+            onShareRequestCreated: true,
+            onShareRequestApproved: true,
+            onBadgeEarned: true);
+        _prefsRepoMock
+            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(prefs);
+
+        var connection = SlackConnection.Create(userId, "U123", "T456", "TestTeam", "xoxb-token", "D789");
+        _slackConnRepoMock
+            .Setup(r => r.GetActiveByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(connection);
+
+        var message = new NotificationMessage
+        {
+            Type = NotificationType.FromString(typeValue),
+            RecipientUserId = userId,
+            Payload = new GenericPayload("Admin Alert", "Details")
+        };
+
+        IEnumerable<NotificationQueueItem>? capturedItems = null;
+        _queueRepoMock
+            .Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<NotificationQueueItem>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<NotificationQueueItem>, CancellationToken>((items, _) => capturedItems = items)
+            .Returns(Task.CompletedTask);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.DispatchAsync(message);
+
+        // Assert — no SlackUser channel items for admin types
+        capturedItems?.Any(i => i.ChannelType == NotificationChannelType.SlackUser)
+            .Should().BeFalse($"admin type '{typeValue}' should not be delivered via Slack DM");
     }
 }

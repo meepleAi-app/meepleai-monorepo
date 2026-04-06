@@ -8,6 +8,8 @@ using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Polly;
+using Polly.Extensions.Http;
 using Quartz;
 
 
@@ -48,6 +50,18 @@ internal static class UserNotificationsServiceExtensions
         services.AddSingleton<ISlackMessageBuilder, BadgeSlackBuilder>();
         services.AddSingleton<ISlackMessageBuilder, AdminAlertSlackBuilder>();
         services.AddSingleton<SlackMessageBuilderFactory>();
+
+        // Named HttpClient for Slack API with 10s timeout and circuit breaker.
+        // Circuit breaker opens after 5 consecutive 5xx/timeout errors, stays open 2 minutes.
+        services.AddHttpClient("SlackApi", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        })
+        .AddPolicyHandler(HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: 5,
+                durationOfBreak: TimeSpan.FromMinutes(2)));
 
         // Register services
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>(); // Multi-channel dispatch

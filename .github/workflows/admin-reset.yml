@@ -1,0 +1,109 @@
+name: Reset Admin Password
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_password:
+        description: 'New admin password (min 8 chars, uppercase + digit required)'
+        required: true
+        type: string
+      admin_email:
+        description: 'Admin email'
+        required: false
+        default: 'admin@meepleai.app'
+        type: string
+      confirm:
+        description: 'Type "yes" to confirm password reset'
+        required: true
+        type: string
+
+jobs:
+  reset-admin:
+    name: Reset Admin Password on Staging
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    if: vars.DEPLOY_METHOD == 'ssh'
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "yes" ]; then
+            echo "❌ Confirmation required: type 'yes' to proceed"
+            exit 1
+          fi
+          echo "✅ Confirmed"
+
+      - name: Update secret and reset admin via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          envs: NEW_PASSWORD,ADMIN_EMAIL
+          script: |
+            export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+            set -e
+
+            echo "🔑 Updating admin.secret on server..."
+            SECRET_FILE="/opt/meepleai/repo/infra/secrets/admin.secret"
+            if [ -f "$SECRET_FILE" ]; then
+              sed -i "s|^ADMIN_PASSWORD=.*|ADMIN_PASSWORD=${NEW_PASSWORD}|" "$SECRET_FILE"
+              echo "✅ admin.secret updated"
+            else
+              echo "❌ $SECRET_FILE not found"
+              exit 1
+            fi
+
+            # Load DB credentials
+            DB_SECRET="/opt/meepleai/repo/infra/secrets/database.secret"
+            if [ -f "$DB_SECRET" ]; then
+              set -a; source "$DB_SECRET"; set +a
+            fi
+            PG_USER="${POSTGRES_USER:-meepleai}"
+            PG_DB="${POSTGRES_DB:-meepleai_db}"
+            echo "📦 Using DB: $PG_DB as user: $PG_USER"
+
+            echo "🔐 Computing PBKDF2-SHA256 hash of new password..."
+            # API uses: v1.210000.<base64_salt>.<base64_hash> (PBKDF2-SHA256, 210k iterations, PasswordHash.Create())
+            NEW_HASH=$(python3 -c 'import hashlib,os,base64; p=os.environ["NEW_PASSWORD"]; s=os.urandom(16); h=hashlib.pbkdf2_hmac("sha256",p.encode("utf-8"),s,210000,dklen=32); print("v1.210000."+base64.b64encode(s).decode()+"."+base64.b64encode(h).decode())')
+
+            if [ -z "$NEW_HASH" ]; then
+              echo "❌ Failed to compute password hash"
+              exit 1
+            fi
+            echo "✅ Hash computed (format: v1.210000.*.*)"
+
+            echo "🔄 Updating admin password hash directly in DB..."
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+              "UPDATE users SET \"PasswordHash\" = '${NEW_HASH}' WHERE \"Email\" = '${ADMIN_EMAIL}' AND lower(\"Role\") IN ('admin','superadmin');"
+
+            docker exec meepleai-postgres psql -U "$PG_USER" "$PG_DB" -c \
+              "SELECT \"Email\", \"Role\", \"Status\", \"IsSuspended\" FROM users WHERE \"Email\" = '${ADMIN_EMAIL}';" \
+              || echo "⚠️ Could not query admin user"
+
+            echo "🧪 Verifying login works (up to 30s)..."
+            LOGIN_OK=false
+            for attempt in $(seq 1 6); do
+              sleep 5
+              RESULT=$(curl -s -X POST https://meepleai.app/api/v1/auth/login \
+                -H "Content-Type: application/json" \
+                -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${NEW_PASSWORD}\"}" 2>/dev/null || echo "CURL_FAILED")
+
+              if echo "$RESULT" | grep -q '"user"'; then
+                echo "✅ Admin login verified successfully! (attempt $attempt)"
+                LOGIN_OK=true
+                break
+              elif echo "$RESULT" | grep -q '"requiresTwoFactor"'; then
+                echo "✅ Admin login successful (2FA required, attempt $attempt)"
+                LOGIN_OK=true
+                break
+              else
+                echo "⏳ Attempt $attempt/6: $RESULT"
+              fi
+            done
+
+            if [ "$LOGIN_OK" != "true" ]; then
+              echo "❌ Login verification failed — check API logs"
+              exit 1
+            fi
+        env:
+          NEW_PASSWORD: ${{ inputs.new_password }}
+          ADMIN_EMAIL: ${{ inputs.admin_email }}

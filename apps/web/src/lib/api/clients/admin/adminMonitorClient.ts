@@ -252,6 +252,24 @@ export function createAdminMonitorClient(http: HttpClient) {
       const res = await http.get('/api/v1/admin/circuit-breakers');
       return z.array(CircuitBreakerStateSchema).parse(res);
     },
+
+    // ========== Alert History ==========
+
+    async getAlertHistory() {
+      const AlertHistoryItemSchema = z.object({
+        id: z.string(),
+        alertType: z.string(),
+        severity: z.enum(['Critical', 'Warning', 'Info']),
+        message: z.string(),
+        metadata: z.record(z.string(), z.unknown()).nullable(),
+        triggeredAt: z.string(),
+        resolvedAt: z.string().nullable(),
+        isActive: z.boolean(),
+        channelSent: z.record(z.string(), z.boolean()).nullable(),
+      });
+      const res = await http.get('/api/v1/admin/alerts');
+      return z.array(AlertHistoryItemSchema).parse(res ?? []);
+    },
   };
 }
 

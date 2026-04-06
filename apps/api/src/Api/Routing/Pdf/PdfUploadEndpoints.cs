@@ -21,6 +21,7 @@ internal static class PdfUploadEndpoints
         MapPrivatePdfUploadEndpoint(group); // Issue #3479: Private PDF Upload
         MapChunkedUploadEndpoints(group);
         MapBggExtractionEndpoint(group); // ISSUE-2513: BGG games extraction from PDF
+        MapPdfPageImageEndpoint(group); // Import wizard: cover image picker
     }
 
     private static void MapStandardUploadEndpoint(RouteGroupBuilder group)
@@ -110,6 +111,35 @@ internal static class PdfUploadEndpoints
         .WithSummary("Extract BGG games list from PDF")
         .WithDescription("Parses PDF document to extract structured game data (Name, BGG ID) for SharedGames seeding")
         .Produces<object>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404);
+    }
+
+    /// <summary>
+    /// Import wizard: extract a single PDF page as JPEG for cover image selection.
+    /// GET /ingest/pdf/{pdfId}/page-image?page=N
+    /// </summary>
+    private static void MapPdfPageImageEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/ingest/pdf/{pdfId:guid}/page-image", async (
+            Guid pdfId,
+            [FromQuery] int page,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            if (page < 1)
+                return Results.BadRequest(new { error = "page must be >= 1" });
+
+            var imageBytes = await mediator.Send(new GetPdfPageImageQuery(pdfId, page), ct).ConfigureAwait(false);
+            return Results.File(imageBytes, "image/jpeg");
+        })
+        .RequireSession()
+        .WithName("GetPdfPageImage")
+        .WithTags("DocumentProcessing")
+        .WithSummary("Extract single PDF page as JPEG image")
+        .WithDescription("Returns a JPEG preview of the specified page for use in the import wizard cover image picker.")
+        .Produces<byte[]>(200, "image/jpeg")
         .Produces(400)
         .Produces(401)
         .Produces(404);

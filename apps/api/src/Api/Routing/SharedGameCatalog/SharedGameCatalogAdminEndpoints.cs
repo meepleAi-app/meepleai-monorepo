@@ -401,12 +401,78 @@ internal static class SharedGameCatalogAdminEndpoints
             .Produces(StatusCodes.Status200OK, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
+
+        // Import game from PDF (wizard 5-step saga)
+        group.MapPost("/admin/shared-games/import-from-pdf", HandleImportGameFromPdf)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("ImportGameFromPdf")
+            .WithSummary("Import shared game from PDF (Admin/Editor)")
+            .WithDescription("Orchestrates a saga: creates SharedGame, links the orphaned PDF, and enqueues RAG indexing.")
+            .Produces<ImportGameFromPdfResult>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Extract metadata from PDF by PdfDocumentId (wizard step 2)
+        group.MapGet("/admin/shared-games/extract-metadata/{pdfId:guid}", HandleExtractMetadataByPdfId)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("ExtractGameMetadataFromPdfById")
+            .WithSummary("Extract game metadata from uploaded PDF (Admin/Editor)")
+            .WithDescription("Runs SmolDocling + LLM pipeline on an orphaned PDF to extract game metadata for wizard step 2.")
+            .Produces<GameMetadataDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
     }
 #pragma warning restore MA0051
 
     // ========================================
     // ADMIN HANDLERS
     // ========================================
+
+    private static async Task<IResult> HandleImportGameFromPdf(
+        [FromBody] ImportGameFromPdfRequest request,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var command = new ImportGameFromPdfCommand(
+            Metadata: new ImportGameMetadataDto(
+                request.Title,
+                request.YearPublished,
+                request.Description,
+                request.MinPlayers,
+                request.MaxPlayers,
+                request.PlayingTimeMinutes,
+                request.MinAge,
+                request.Publishers,
+                request.Designers,
+                request.Categories,
+                request.Mechanics
+            ),
+            PdfDocumentId: request.PdfDocumentId,
+            CoverImageUrl: request.CoverImageUrl,
+            RequestedBy: session!.User!.Id
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/admin/shared-games/{result.GameId}", result);
+    }
+
+    private static async Task<IResult> HandleExtractMetadataByPdfId(
+        Guid pdfId,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var query = new ExtractGameMetadataFromPdfByPdfIdQuery(pdfId, session!.User!.Id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 
     private static async Task<IResult> HandleListAllGames(
         IMediator mediator,
@@ -1373,3 +1439,22 @@ internal static class SharedGameCatalogAdminEndpoints
             filename);
     }
 }
+
+/// <summary>
+/// Request body for POST /admin/shared-games/import-from-pdf
+/// </summary>
+internal sealed record ImportGameFromPdfRequest(
+    string Title,
+    Guid PdfDocumentId,
+    int? YearPublished = null,
+    string? Description = null,
+    int? MinPlayers = null,
+    int? MaxPlayers = null,
+    int? PlayingTimeMinutes = null,
+    int? MinAge = null,
+    string? CoverImageUrl = null,
+    List<string>? Publishers = null,
+    List<string>? Designers = null,
+    List<string>? Categories = null,
+    List<string>? Mechanics = null
+);

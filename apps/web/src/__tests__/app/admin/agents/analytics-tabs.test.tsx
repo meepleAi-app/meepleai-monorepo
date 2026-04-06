@@ -62,8 +62,8 @@ describe('Analytics Tabs', () => {
     const { default: AnalyticsPage } =
       await import('@/app/admin/(dashboard)/agents/analytics/page');
     render(<AnalyticsPage />, { wrapper: Wrapper });
-    expect(screen.getByRole('tab', { name: /overview/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /top agents/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /trends/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /panoramica/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /top agenti/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /tendenze/i })).toBeInTheDocument();
   });
 });

@@ -10242,7 +10242,7 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
-                        .HasDefaultValue("[]");
+                        .HasDefaultValueSql("'[]'::jsonb");
 
                     b.Property<decimal>("MonthlyBudgetUsd")
                         .ValueGeneratedOnAdd()
@@ -11846,6 +11846,11 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("DeepLinkPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("deep_link_path");
 
                     b.Property<string>("LastError")
                         .HasMaxLength(2000)

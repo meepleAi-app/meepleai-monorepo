@@ -11,6 +11,7 @@ using Api.Tests.Constants;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 using FluentAssertions;
@@ -32,18 +33,19 @@ public class HandleSlackInteractionCommandHandlerTests
 
     public HandleSlackInteractionCommandHandlerTests()
     {
+        _timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+
         var configMock = new Mock<IOptions<SlackNotificationConfiguration>>();
         configMock.Setup(c => c.Value).Returns(new SlackNotificationConfiguration
         {
             SigningSecret = SigningSecret
         });
-        _signatureValidator = new SlackSignatureValidator(configMock.Object);
+        _signatureValidator = new SlackSignatureValidator(configMock.Object, _timeProvider);
 
         _slackConnectionRepoMock = new Mock<ISlackConnectionRepository>();
         _mediatorMock = new Mock<IMediator>();
         _httpClientFactoryMock = new Mock<IHttpClientFactory>();
         _loggerMock = new Mock<ILogger<HandleSlackInteractionCommandHandler>>();
-        _timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
 
         _handler = new HandleSlackInteractionCommandHandler(
             _signatureValidator,

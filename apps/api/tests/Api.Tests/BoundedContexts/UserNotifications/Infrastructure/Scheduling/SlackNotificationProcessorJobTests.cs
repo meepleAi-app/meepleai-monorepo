@@ -170,7 +170,12 @@ public class SlackNotificationProcessorJobTests : IDisposable
         var slackConnection = SlackConnection.Create(
             userId, "U01ABC", "T01ABCDEF", "TestWorkspace", "xoxb-old-token", "D01ABCDEF");
 
-        // Return connection for both the bot API call and the revocation handler
+        // Batch lookup used during Execute for bot token resolution
+        _slackConnRepoMock.Setup(r => r.GetActiveByUserIdsAsync(
+                It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, SlackConnection> { { userId, slackConnection } });
+
+        // Single-item lookup used in HandleTokenRevocationAsync to deactivate the connection
         _slackConnRepoMock.Setup(r => r.GetActiveByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(slackConnection);
 
@@ -215,5 +220,63 @@ public class SlackNotificationProcessorJobTests : IDisposable
         _queueRepoMock.Verify(
             r => r.UpdateAsync(It.IsAny<NotificationQueueItem>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task Execute_SendViaWebhook_IncludesCorrelationIdHeader()
+    {
+        // Arrange
+        var teamItem = CreateSlackTeamItem();
+        HttpRequestMessage? capturedRequest = null;
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("ok") });
+
+        var client = new HttpClient(handlerMock.Object);
+        _httpClientFactoryMock.Setup(f => f.CreateClient("SlackApi")).Returns(client);
+
+        _queueRepoMock.Setup(r => r.GetPendingByChannelAsync(NotificationChannelType.SlackUser, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NotificationQueueItem>());
+        _queueRepoMock.Setup(r => r.GetPendingByChannelAsync(NotificationChannelType.SlackTeam, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NotificationQueueItem> { teamItem });
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.Execute(_jobContextMock.Object);
+
+        // Assert
+        Assert.NotNull(capturedRequest);
+        Assert.True(
+            capturedRequest!.Headers.TryGetValues("X-MeepleAI-CorrelationId", out var values),
+            "CorrelationId header must be present for distributed tracing");
+        Assert.True(Guid.TryParse(values!.First(), out _), "header value must be a valid GUID");
+    }
+
+    [Fact]
+    public async Task Execute_OnSuccess_MetricsInstrumentationDoesNotThrow()
+    {
+        // Arrange
+        var teamItem = CreateSlackTeamItem();
+        _queueRepoMock.Setup(r => r.GetPendingByChannelAsync(NotificationChannelType.SlackUser, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NotificationQueueItem>());
+        _queueRepoMock.Setup(r => r.GetPendingByChannelAsync(NotificationChannelType.SlackTeam, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NotificationQueueItem> { teamItem });
+
+        SetupHttpClient(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("ok") });
+
+        var sut = CreateSut();
+
+        // Act — metrics (RecordSlackMessageSent) are static fire-and-forget side effects;
+        // verify the instrumented path completes without exceptions.
+        var ex = await Record.ExceptionAsync(() => sut.Execute(_jobContextMock.Object));
+
+        Assert.Null(ex);
     }
 }

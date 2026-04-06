@@ -1,66 +1,44 @@
 /**
- * useExtractMetadata - React Query hook for AI metadata extraction
- * Issue #4163: Step 2 - Metadata Extraction
- *
- * Handles AI-powered metadata extraction from uploaded PDF with confidence scoring.
+ * useExtractMetadata — React Query hook for AI metadata extraction from PDF.
+ * Calls GET /admin/shared-games/extract-metadata/{pdfId}.
  */
 
-import { useMutation, type UseMutationOptions } from '@tanstack/react-query';
+import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
-import type { ExtractedMetadata } from '@/stores/useGameImportWizardStore';
+import type { WizardExtractedMetadata } from '@/lib/api/clients/sharedGamesClient';
+import type { GameMetadata } from '@/stores/useGameImportWizardStore';
 
-export interface ExtractMetadataInput {
-  /** Document ID from Step 1 upload */
-  documentId: string;
+function mapToGameMetadata(dto: WizardExtractedMetadata): GameMetadata {
+  return {
+    title: dto.title,
+    yearPublished: dto.yearPublished ?? undefined,
+    description: dto.description ?? undefined,
+    minPlayers: dto.minPlayers ?? undefined,
+    maxPlayers: dto.maxPlayers ?? undefined,
+    playingTimeMinutes: dto.playingTimeMinutes ?? undefined,
+    minAge: dto.minAge ?? undefined,
+    publishers: dto.publishers ?? undefined,
+    designers: dto.designers ?? undefined,
+    categories: dto.categories ?? undefined,
+    mechanics: dto.mechanics ?? undefined,
+    confidenceScore: dto.confidenceScore ?? undefined,
+  };
 }
 
-export type UseExtractMetadataOptions = Omit<
-  UseMutationOptions<ExtractedMetadata, Error, ExtractMetadataInput>,
-  'mutationFn'
->;
-
-/**
- * Hook for extracting game metadata from uploaded PDF using AI
- *
- * @param options - Mutation options
- * @returns Mutation result with extracted metadata
- *
- * @example
- * ```tsx
- * const { mutate, isPending } = useExtractMetadata();
- *
- * const handleExtract = () => {
- *   mutate({ documentId: uploadedPdf.id }, {
- *     onSuccess: (metadata) => {
- *       console.log('Extracted:', metadata.title);
- *       console.log('Confidence:', metadata.confidenceScore);
- *     },
- *     onError: (error) => console.error('Failed:', error),
- *   });
- * };
- * ```
- */
-export function useExtractMetadata(options: UseExtractMetadataOptions = {}) {
-  return useMutation<ExtractedMetadata, Error, ExtractMetadataInput>({
-    mutationFn: async ({ documentId }) => {
-      // Call backend API to extract metadata
-      const result = await api.admin.extractGameMetadata(documentId);
-
-      // Map backend DTO to store interface (field names now match)
-      const metadata: ExtractedMetadata = {
-        title: result.title,
-        year: result.year,
-        minPlayers: result.minPlayers,
-        maxPlayers: result.maxPlayers,
-        playingTime: result.playingTime,
-        minAge: result.minAge,
-        description: result.description,
-        confidenceScore: result.confidenceScore,
-      };
-
-      return metadata;
+export function useExtractMetadata(
+  pdfDocumentId: string | null | undefined,
+  options?: Omit<UseQueryOptions<GameMetadata | null, Error>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery<GameMetadata | null, Error>({
+    queryKey: ['extractMetadata', pdfDocumentId],
+    queryFn: async () => {
+      if (!pdfDocumentId) return null;
+      const dto = await api.sharedGames.extractMetadataByPdfId(pdfDocumentId);
+      return dto ? mapToGameMetadata(dto) : null;
     },
+    enabled: !!pdfDocumentId,
+    staleTime: 5 * 60 * 1000,
     ...options,
   });
 }

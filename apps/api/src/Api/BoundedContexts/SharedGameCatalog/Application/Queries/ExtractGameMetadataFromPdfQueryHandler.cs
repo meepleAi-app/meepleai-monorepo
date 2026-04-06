@@ -27,8 +27,12 @@ internal sealed class ExtractGameMetadataFromPdfQueryHandler : IQueryHandler<Ext
         - PlayingTime: Average playing time in minutes (integer)
         - MinAge: Minimum recommended age (integer)
         - Description: Brief game description or overview (string, 1-3 sentences)
+        - Publishers: List of publisher names (array of strings, e.g., ["CMON", "Stonemaier Games"])
+        - Designers: List of game designer/author names (array of strings, e.g., ["Uwe Rosenberg"])
+        - Categories: List of game categories (array of strings, e.g., ["Strategy", "Fantasy", "Family"])
+        - Mechanics: List of game mechanics (array of strings, e.g., ["Deck Building", "Worker Placement", "Area Control"])
 
-        If a field cannot be determined from the text, return null for that field.
+        If a field cannot be determined from the text, return null for that field (or empty array for list fields).
         Be conservative - only extract information you are confident about.
         """;
 
@@ -277,8 +281,8 @@ internal sealed class ExtractGameMetadataFromPdfQueryHandler : IQueryHandler<Ext
 
             {truncatedText}
 
-            Return JSON with: Title, Year, MinPlayers, MaxPlayers, PlayingTime, MinAge, Description.
-            Use null for fields that cannot be determined.
+            Return JSON with: Title, Year, MinPlayers, MaxPlayers, PlayingTime, MinAge, Description, Publishers, Designers, Categories, Mechanics.
+            Use null for fields that cannot be determined. Use empty array [] for list fields with no data.
             """;
     }
 
@@ -307,7 +311,7 @@ internal sealed class ExtractGameMetadataFromPdfQueryHandler : IQueryHandler<Ext
         var baseConfidence = MapQualityToConfidence(extractionResult.Quality) * 0.5;
 
         // Field completeness score (0.0-0.5 scale)
-        const int totalFields = 7; // Title, Year, MinPlayers, MaxPlayers, PlayingTime, MinAge, Description
+        const int totalFields = 11; // Title, Year, MinPlayers, MaxPlayers, PlayingTime, MinAge, Description, Publishers, Designers, Categories, Mechanics
         var fieldCompleteness = (fieldsPopulated / (double)totalFields) * 0.5;
 
         var totalConfidence = baseConfidence + fieldCompleteness;
@@ -345,6 +349,10 @@ internal sealed class ExtractGameMetadataFromPdfQueryHandler : IQueryHandler<Ext
         if (metadata.PlayingTime.HasValue) count++;
         if (metadata.MinAge.HasValue) count++;
         if (!string.IsNullOrWhiteSpace(metadata.Description)) count++;
+        if (metadata.Publishers?.Count > 0) count++;
+        if (metadata.Designers?.Count > 0) count++;
+        if (metadata.Categories?.Count > 0) count++;
+        if (metadata.Mechanics?.Count > 0) count++;
 
         return count;
     }

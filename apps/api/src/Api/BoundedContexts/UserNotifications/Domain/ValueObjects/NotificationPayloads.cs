@@ -15,13 +15,15 @@ public record ShareRequestPayload(
     Guid ShareRequestId,
     string RequesterName,
     string GameTitle,
-    string? GameImageUrl) : INotificationPayload;
+    string? GameImageUrl,
+    string Status = "created") : INotificationPayload;
 
 public record GameNightPayload(
     Guid GameNightId,
     string Title,
     DateTime ScheduledAt,
-    string OrganizerName) : INotificationPayload;
+    string OrganizerName,
+    bool IsCancelled = false) : INotificationPayload;
 
 public record PdfProcessingPayload(
     Guid PdfId,

@@ -40,7 +40,7 @@ public sealed class LlmSystemConfigEntityConfiguration : IEntityTypeConfiguratio
         builder.Property(e => e.FallbackChainJson)
             .IsRequired()
             .HasColumnType("jsonb")
-            .HasDefaultValue("[]");
+            .HasDefaultValueSql("'[]'::jsonb");
 
         builder.Property(e => e.CreatedAt)
             .IsRequired()

@@ -32,16 +32,13 @@ function createTestQueryClient() {
 
 function renderWithProviders(component: React.ReactElement) {
   const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
 }
 
 function createMockFile(name: string, type: string, size: number): File {
-  const content = new Array(size).fill('a').join('');
-  return new File([content], name, { type });
+  const file = new File(['a'], name, { type });
+  Object.defineProperty(file, 'size', { value: size });
+  return file;
 }
 
 // ============================================================================
@@ -96,7 +93,9 @@ describe('PdfUploadSection', () => {
     it('should render the info box', () => {
       renderWithProviders(<PdfUploadSection {...defaultProps} />);
 
-      expect(screen.getByText(/Il PDF caricato sarà indicizzato automaticamente/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Il PDF caricato sarà indicizzato automaticamente/i)
+      ).toBeInTheDocument();
     });
 
     it('should render existing PDF when provided', () => {

@@ -24,7 +24,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useLayoutResponsive } from '@/components/layout/LayoutProvider';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
-import { FilterChipsRow } from '@/components/ui/FilterChipsRow';
 import { SectionBlock } from '@/components/ui/SectionBlock';
 import { ViewToggle } from '@/components/ui/ViewToggle';
 import { useLibrary } from '@/hooks/queries/useLibrary';
@@ -32,45 +31,46 @@ import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 
 import { LibraryEmptyState } from './LibraryEmptyState';
+import {
+  LibraryFilterBar,
+  type LibraryCollectionFilter,
+  type LibrarySortValue,
+} from './LibraryFilterBar';
 import { LibraryHeroBanner } from './LibraryHeroBanner';
 import { LibraryPageHeader } from './LibraryPageHeader';
 import { LibraryToolbar } from './LibraryToolbar';
 import { UsageWidget } from './UsageWidget';
 
-// ── Filter chip definitions ─────────────────────────────────────────────────
+// ── Filter helpers ───────────────────────────────────────────────────────────
 
-const LIBRARY_FILTER_CHIPS = [
-  { id: 'all', label: 'Tutti' },
-  { id: 'recent', label: 'Recenti' },
-  { id: 'oldest', label: 'Prima aggiunti' },
-  { id: 'rating', label: 'Rating \u2193' },
-  { id: 'players-2-4', label: '2-4 giocatori' },
-  { id: 'under-60', label: '< 60 min' },
-];
+function applyCollectionFilter(
+  items: UserLibraryEntry[],
+  filter: LibraryCollectionFilter
+): UserLibraryEntry[] {
+  if (filter === 'Posseduti') return items.filter(g => g.currentState === 'Owned');
+  if (filter === 'Wishlist') return items.filter(g => g.currentState === 'Wishlist');
+  return items;
+}
 
-// ── Filter logic ────────────────────────────────────────────────────────────
+function applyPlayerFilter(
+  items: UserLibraryEntry[],
+  playerFilter: string | null
+): UserLibraryEntry[] {
+  if (!playerFilter) return items;
+  if (playerFilter === '5+') return items.filter(g => g.maxPlayers != null && g.maxPlayers >= 5);
+  const n = parseInt(playerFilter, 10);
+  return items.filter(
+    g => g.minPlayers != null && g.maxPlayers != null && g.minPlayers <= n && g.maxPlayers >= n
+  );
+}
 
-function applyFilter(items: UserLibraryEntry[], filterId: string): UserLibraryEntry[] {
-  switch (filterId) {
-    case 'recent':
-      return [...items].sort(
-        (a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
-      );
-    case 'oldest':
-      return [...items].sort(
-        (a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
-      );
-    case 'rating':
-      return [...items].sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0));
-    case 'players-2-4':
-      return items.filter(
-        g => g.minPlayers != null && g.maxPlayers != null && g.minPlayers <= 4 && g.maxPlayers >= 2
-      );
-    case 'under-60':
-      return items.filter(g => g.playingTimeMinutes != null && g.playingTimeMinutes <= 60);
-    default:
-      return items;
-  }
+function applySort(items: UserLibraryEntry[], sortBy: LibrarySortValue): UserLibraryEntry[] {
+  if (sortBy === 'az') return [...items].sort((a, b) => a.gameTitle.localeCompare(b.gameTitle));
+  if (sortBy === 'rating')
+    return [...items].sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0));
+  if (sortBy === 'lastPlayed')
+    return [...items].sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
+  return items;
 }
 
 // ── CTA card — "Crea gioco" at the end of the custom games section ──────────
@@ -188,7 +188,9 @@ export interface PersonalLibraryPageProps {
 export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [collectionFilter, setCollectionFilter] = useState<LibraryCollectionFilter>('Tutti');
+  const [playerFilter, setPlayerFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<LibrarySortValue>('az');
   const { data, isLoading, error } = useLibrary();
   const { isMobile } = useLayoutResponsive();
 
@@ -212,9 +214,15 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
     ? customGames.filter(g => g.gameTitle.toLowerCase().includes(query))
     : customGames;
 
-  // Apply chip filter
-  const filteredCatalog = applyFilter(searchedCatalog, activeFilter);
-  const filteredCustom = applyFilter(searchedCustom, activeFilter);
+  // Apply collection + player + sort filters
+  const filteredCatalog = applySort(
+    applyPlayerFilter(applyCollectionFilter(searchedCatalog, collectionFilter), playerFilter),
+    sortBy
+  );
+  const filteredCustom = applySort(
+    applyPlayerFilter(applyCollectionFilter(searchedCustom, collectionFilter), playerFilter),
+    sortBy
+  );
 
   const totalCount = data?.totalCount ?? 0;
 
@@ -304,16 +312,18 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
             onSearchChange={setSearchQuery}
           />
 
-          {/* Filter chips row + view toggle */}
+          {/* Filter bar + view toggle */}
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
-              <FilterChipsRow
-                chips={LIBRARY_FILTER_CHIPS}
-                activeId={activeFilter}
-                onSelect={setActiveFilter}
+              <LibraryFilterBar
+                activeFilter={collectionFilter}
+                onFilterChange={setCollectionFilter}
+                activePlayerFilter={playerFilter}
+                onPlayerFilterChange={setPlayerFilter}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
               />
             </div>
-            {/* ViewToggle — desktop only */}
             {!isMobile && <ViewToggle view={viewMode} onViewChange={setViewMode} />}
           </div>
 

@@ -133,4 +133,19 @@ public sealed class PhaseCommandHandlerTests
         _repo.Verify(r => r.UpdateAsync(toolbox, It.IsAny<CancellationToken>()), Times.Once);
         _repo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task AdvancePhaseHandler_Handle_FreeformToolbox_ThrowsInvalidOperationException()
+    {
+        var toolbox = Toolbox.Create("Freeform Toolbox", null, ToolboxMode.Freeform);
+        _repo.Setup(r => r.GetByIdAsync(toolbox.Id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(toolbox);
+        var handler = new AdvancePhaseCommandHandler(_repo.Object);
+
+        var act = async () => await handler.Handle(
+            new AdvancePhaseCommand(toolbox.Id), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        _repo.Verify(r => r.UpdateAsync(It.IsAny<Toolbox>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

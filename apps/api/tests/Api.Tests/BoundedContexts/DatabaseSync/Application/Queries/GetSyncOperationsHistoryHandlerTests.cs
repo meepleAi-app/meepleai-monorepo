@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.DatabaseSync.Application.Queries;
 
-[Trait("Category", TestCategories.Unit)]
+[Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DatabaseSync")]
 public sealed class GetSyncOperationsHistoryHandlerTests : IDisposable
 {

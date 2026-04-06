@@ -191,6 +191,7 @@ public sealed class ToolboxCommandHandlerTests
         await handler.Handle(new RemoveToolFromToolboxCommand(toolbox.Id, tool.Id), CancellationToken.None);
 
         // Assert
+        toolbox.Tools.Should().BeEmpty();
         _repo.Verify(r => r.UpdateAsync(toolbox, It.IsAny<CancellationToken>()), Times.Once);
         _repo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

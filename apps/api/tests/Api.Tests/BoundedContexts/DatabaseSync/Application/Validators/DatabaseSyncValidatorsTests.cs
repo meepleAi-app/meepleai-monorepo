@@ -78,6 +78,15 @@ public sealed class DatabaseSyncValidatorsTests
     }
 
     [Fact]
+    public void SyncTableDataCommand_WhitespaceTableName_FailsValidation()
+    {
+        var cmd = new SyncTableDataCommand("   ", SyncDirection.StagingToLocal, "CONFIRM", Guid.NewGuid());
+
+        var result = _syncValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.TableName);
+    }
+
+    [Fact]
     public void SyncTableDataCommand_EmptyConfirmation_FailsValidation()
     {
         var cmd = new SyncTableDataCommand("games", SyncDirection.StagingToLocal, "", Guid.NewGuid());

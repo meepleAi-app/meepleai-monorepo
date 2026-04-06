@@ -50,9 +50,9 @@ export function AdminGameImportWizardClient() {
 
   const {
     currentStep,
-    uploadedPdf,
-    reviewedMetadata,
-    importResult,
+    uploadedPdf: _uploadedPdf,
+    reviewedMetadata: _reviewedMetadata,
+    importResult: _importResult,
     isProcessing,
     error,
     goNext,

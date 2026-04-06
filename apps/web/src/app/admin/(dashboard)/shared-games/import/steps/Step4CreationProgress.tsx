@@ -29,7 +29,13 @@ const PHASE_LABELS: Record<SagaPhase, string> = {
 };
 
 export function Step4CreationProgress(): JSX.Element {
-  const { importResult, isProcessing, error, executeImport, goNext } = useGameImportWizardStore();
+  const {
+    importResult,
+    isProcessing: _isProcessing,
+    error,
+    executeImport,
+    goNext,
+  } = useGameImportWizardStore();
 
   const [phase, setPhase] = useState<SagaPhase>('creating');
   const hasStarted = useRef(false);
@@ -65,8 +71,6 @@ export function Step4CreationProgress(): JSX.Element {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const isRunning = isProcessing || (phase !== 'done' && phase !== 'error');
 
   return (
     <div className="flex flex-col items-center gap-6 py-8">

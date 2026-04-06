@@ -1,7 +1,7 @@
-using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.DatabaseSync.Application.Queries;
 using Api.BoundedContexts.DatabaseSync.Domain.Models;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +19,7 @@ internal class GetSyncOperationsHistoryHandler : IQueryHandler<GetSyncOperations
     public async Task<IReadOnlyList<SyncOperationEntry>> Handle(
         GetSyncOperationsHistoryQuery query, CancellationToken cancellationToken)
     {
-        var auditEntries = await _dbContext.Set<AuditLog>()
+        var auditEntries = await _dbContext.AuditLogs
             .Where(a => a.Action.StartsWith("DatabaseSync."))
             .OrderByDescending(a => a.CreatedAt)
             .Take(query.Limit)

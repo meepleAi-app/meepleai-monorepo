@@ -303,7 +303,12 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
           currentStep: state.currentStep,
           uploadedPdf: state.uploadedPdf,
           reviewedMetadata: state.reviewedMetadata,
-          coverImage: state.coverImage,
+          // Sanitize blob: URLs — they are session-scoped and invalid after reload.
+          // Upload mode loses its preview; other modes (none/pdfPage) are URL-safe.
+          coverImage:
+            state.coverImage?.mode === 'upload'
+              ? { ...state.coverImage, imageUrl: null }
+              : state.coverImage,
         }),
       }
     ),

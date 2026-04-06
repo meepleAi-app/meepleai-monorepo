@@ -70,8 +70,11 @@ export function useIndexingStatus(
     setIsLoading(true);
 
     const poll = async () => {
-      await fetch();
-      setIsLoading(false);
+      try {
+        await fetch();
+      } finally {
+        setIsLoading(false);
+      }
       if (isPollingRef.current) {
         timerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
       }

@@ -68,7 +68,6 @@ internal sealed class GetPdfPageImageQueryHandler : IQueryHandler<GetPdfPageImag
         CancellationToken cancellationToken)
     {
         var client = _httpClientFactory.CreateClient("SmolDoclingService");
-        client.Timeout = TimeSpan.FromSeconds(30);
 
         using var pdfContent = new ByteArrayContent(pdfBytes);
         pdfContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
@@ -96,7 +95,7 @@ internal sealed class GetPdfPageImageQueryHandler : IQueryHandler<GetPdfPageImag
     {
         var fileName = Path.GetFileName(filePath);
         var parts = fileName.Split('_');
-        return parts.Length > 0 ? parts[0] : string.Empty;
+        return parts.Length > 1 ? parts[0] : string.Empty;
     }
 
     private static async Task<byte[]> ReadStreamAsync(Stream stream, CancellationToken ct)

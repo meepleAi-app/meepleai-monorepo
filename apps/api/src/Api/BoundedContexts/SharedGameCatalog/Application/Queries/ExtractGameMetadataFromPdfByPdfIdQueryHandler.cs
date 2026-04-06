@@ -143,7 +143,7 @@ internal sealed class ExtractGameMetadataFromPdfByPdfIdQueryHandler
     {
         var fileName = Path.GetFileName(filePath);
         var parts = fileName.Split('_');
-        return parts.Length > 0 ? parts[0] : string.Empty;
+        return parts.Length > 1 ? parts[0] : string.Empty;
     }
 
     private async Task<Stream?> RetrievePdfAsync(string fileId, string bucket, string requestId, CancellationToken ct)

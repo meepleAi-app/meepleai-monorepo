@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
@@ -19,13 +20,16 @@ internal sealed class ImportGameFromPdfCommandHandler
     private const string PlaceholderImageUrl = "/images/game-placeholder.svg";
 
     private readonly IMediator _mediator;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ImportGameFromPdfCommandHandler> _logger;
 
     public ImportGameFromPdfCommandHandler(
         IMediator mediator,
+        IServiceScopeFactory scopeFactory,
         ILogger<ImportGameFromPdfCommandHandler> logger)
     {
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -58,7 +62,7 @@ internal sealed class ImportGameFromPdfCommandHandler
             // Compensation: delete the just-created game
             try
             {
-                await _mediator.Send(new DeleteSharedGameCommand(gameId, command.RequestedBy), cancellationToken)
+                await _mediator.Send(new DeleteSharedGameCommand(gameId, command.RequestedBy), CancellationToken.None)
                     .ConfigureAwait(false);
                 _logger.LogInformation("Compensation complete: SharedGame {GameId} deleted", gameId);
             }
@@ -77,22 +81,31 @@ internal sealed class ImportGameFromPdfCommandHandler
 
         try
         {
-            // Dispatch asynchronously - do not block or await with the request cancellation token
+            // Dispatch asynchronously using a new DI scope to avoid ObjectDisposedException
+            // when the request scope is disposed before Task.Run completes.
+            var pdfId = command.PdfDocumentId;
+            var scopeFactory = _scopeFactory;
+            var logger = _logger;
             _ = Task.Run(async () =>
             {
-                try
+                var scope = scopeFactory.CreateAsyncScope();
+                await using (scope.ConfigureAwait(false))
                 {
-                    await _mediator.Send(
-                        new IndexDocumentCommand(command.PdfDocumentId, gameId),
-                        CancellationToken.None).ConfigureAwait(false);
-                    _logger.LogInformation("Step 3 complete: IndexDocumentCommand dispatched for pdfId={PdfId}, gameId={GameId}",
-                        command.PdfDocumentId, gameId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex,
-                        "Step 3 async FAILED: IndexDocumentCommand failed for pdfId={PdfId}, gameId={GameId}",
-                        command.PdfDocumentId, gameId);
+                    var scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                    try
+                    {
+                        await scopedMediator.Send(
+                            new IndexDocumentCommand(pdfId, gameId),
+                            CancellationToken.None).ConfigureAwait(false);
+                        logger.LogInformation("Step 3 complete: IndexDocumentCommand dispatched for pdfId={PdfId}, gameId={GameId}",
+                            pdfId, gameId);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex,
+                            "Step 3 async FAILED: IndexDocumentCommand failed for pdfId={PdfId}, gameId={GameId}",
+                            pdfId, gameId);
+                    }
                 }
             }, CancellationToken.None);
 

@@ -33,6 +33,7 @@ export function Step4CreationProgress(): JSX.Element {
 
   const [phase, setPhase] = useState<SagaPhase>('creating');
   const hasStarted = useRef(false);
+  const goNextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Start the import saga once on mount
   useEffect(() => {
@@ -47,7 +48,7 @@ export function Step4CreationProgress(): JSX.Element {
       .then(() => {
         setPhase('done');
         // Short delay then auto-advance to Step 5
-        setTimeout(() => goNext(), 1200);
+        goNextTimerRef.current = setTimeout(() => goNext(), 1200);
       })
       .catch(() => {
         setPhase('error');
@@ -60,6 +61,7 @@ export function Step4CreationProgress(): JSX.Element {
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      if (goNextTimerRef.current) clearTimeout(goNextTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -191,7 +193,7 @@ export function Step4CreationProgress(): JSX.Element {
               executeImport()
                 .then(() => {
                   setPhase('done');
-                  setTimeout(() => goNext(), 1200);
+                  goNextTimerRef.current = setTimeout(() => goNext(), 1200);
                 })
                 .catch(() => setPhase('error'))
                 .finally(() => {

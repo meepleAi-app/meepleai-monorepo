@@ -13,6 +13,8 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { StatsRow } from '@/components/dashboard/StatsRow';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { SessionSummaryDto, TrendingGameDto, UserGameDto } from '@/lib/api/dashboard-client';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 import { cn } from '@/lib/utils';
@@ -562,93 +564,50 @@ function TrendingWidget({ games, isLoading }: { games: TrendingGameDto[]; isLoad
 // ─── Dashboard Client ─────────────────────────────────────────────────────────
 
 export function DashboardClient() {
-  const {
-    stats,
-    isLoadingStats,
-    fetchStats,
-    recentSessions,
-    isLoadingSessions,
-    fetchRecentSessions,
-    updateFilters,
-    games,
-    isLoadingGames,
-    totalGamesCount,
-    trendingGames,
-    isLoadingTrending,
-    fetchTrendingGames,
-  } = useDashboardStore();
+  const router = useRouter();
+  const { fetchStats, fetchGames, updateFilters, games, isLoadingGames } = useDashboardStore();
 
   useEffect(() => {
     fetchStats();
-    fetchRecentSessions(8);
-    fetchTrendingGames(6);
-    updateFilters({ sort: 'alphabetical', pageSize: 8, page: 1 });
+    updateFilters({ sort: 'alphabetical', pageSize: 12, page: 1 });
+    fetchGames();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- store actions are stable Zustand references
   }, []);
 
-  const latestSession = recentSessions[0];
-
-  const monthlyPlays = stats?.monthlyPlays ?? 0;
-  const playsChange = stats?.monthlyPlaysChange;
-  const weeklyHours = stats ? parsePlayTimeHours(stats.weeklyPlayTime) : '—';
-  const totalGames = stats?.totalGames ?? 0;
-
   return (
-    <div className="flex-1 overflow-y-auto p-3.5">
-      <div
-        className="grid grid-cols-6 lg:grid-cols-12"
-        style={{ gridAutoRows: '60px', gap: '8px' }}
-      >
-        {/* Row 1-2: Live Session (8×2) + Partite (4×2) */}
-        <LiveSessionWidget session={latestSession} isLoading={isLoadingSessions} />
-        <KpiWidget
-          label="Partite (mese)"
-          value={isLoadingStats ? '…' : monthlyPlays}
-          badge={
-            playsChange !== null && playsChange !== undefined && playsChange !== 0
-              ? `${playsChange > 0 ? '+' : ''}${playsChange}%`
-              : undefined
-          }
-          badgePositive={(playsChange ?? 0) > 0}
-          accentColor={C.game}
-          colSpan={4}
-          tabletColSpan={6}
-          rowSpan={2}
-          href="/sessions"
-        />
+    <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
+      {/* Stats row */}
+      <StatsRow />
 
-        {/* Row 3-6: Library (6×4) + Ore (3×2) + Giochi (3×2) */}
-        <LibraryWidget
-          games={games}
-          totalCount={totalGamesCount || totalGames}
-          isLoading={isLoadingGames}
-        />
-        <KpiWidget
-          label="Ore sett."
-          value={isLoadingStats ? '…' : weeklyHours}
-          sub="questa settimana"
-          accentColor={C.session}
-          colSpan={3}
-          rowSpan={2}
-        />
-        <KpiWidget
-          label="Giochi in lib."
-          value={isLoadingStats ? '…' : totalGames}
-          accentColor={C.event}
-          colSpan={3}
-          rowSpan={2}
-          href="/library"
-        />
-
-        {/* Row 5-8: Chat AI (6×4) */}
-        <ChatPreviewWidget />
-
-        {/* Row 7-9: Leaderboard (6×3) */}
-        <LeaderboardWidget sessions={recentSessions} />
-
-        {/* Row 9-10: Trending (6×2) */}
-        <TrendingWidget games={trendingGames} isLoading={isLoadingTrending} />
+      {/* Games grid header */}
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold text-lg text-foreground">Recenti</h2>
       </div>
+
+      {/* MeepleCard grid */}
+      {isLoadingGames ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-48 rounded-xl bg-secondary/50 animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {games.map(game => (
+            <MeepleCard
+              key={game.id}
+              entity="game"
+              variant="grid"
+              title={game.title}
+              subtitle={game.publisher}
+              imageUrl={game.imageUrl ?? game.thumbnailUrl}
+              rating={game.averageRating}
+              ratingMax={10}
+              onClick={() => router.push(`/library/${game.id}`)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

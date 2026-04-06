@@ -167,7 +167,7 @@ services:
     container_name: meepleai-ssh-tunnel-sidecar
     restart: "no"
     volumes:
-      - ${SSH_KEY_PATH:-~/.ssh/meepleai-staging}:/root/.ssh/key:ro
+      - ${SSH_KEY_PATH:-~/.ssh/meepleai-staging}:/home/tunnel/.ssh/key:ro
     env_file:
       - ./secrets/db-sync.secret
     environment:

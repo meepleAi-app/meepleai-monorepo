@@ -20,8 +20,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Pre-download the model so runtime container starts fast
+ARG EMBEDDING_MODEL=intfloat/multilingual-e5-base
 ENV HF_HOME=/model-cache
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-large')"
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('${EMBEDDING_MODEL}')"
 
 # === Stage 2: Lean runtime image ===
 FROM python:3.11-slim

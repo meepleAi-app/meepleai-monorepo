@@ -1,271 +1,312 @@
 /**
- * Game Import Wizard Store
- * Issue #4161: PDF Wizard Container & State Management
+ * Game Import Wizard Store — 5-step PDF direct import flow
  *
- * Zustand store for managing the multi-step PDF import wizard state.
- * Integrates with backend endpoints from Issue #4157 (Wizard Endpoints).
+ * Steps:
+ * 1. Upload PDF (chunked, up to 150MB) → { pdfDocumentId }
+ * 2. Review metadata (LLM-extracted) + cover image picker + live MeepleCard preview
+ * 3. Preview & Confirm (read-only MeepleCard)
+ * 4. Creation progress (ImportGameFromPdfCommand saga)
+ * 5. RAG test panel (wait for indexing, then interactive Q&A)
  */
 
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 
 import { toast } from '@/components/layout';
 import { api } from '@/lib/api';
 
-/**
- * Metadata extracted from uploaded PDF
- */
-export interface ExtractedMetadata {
-  title?: string;
-  year?: number;
-  minPlayers?: number;
-  maxPlayers?: number;
-  playingTime?: number;
-  minAge?: number;
-  description?: string;
-  confidenceScore?: number; // Backend sends 0.0-1.0; UI can multiply by 100 for display
-}
+// ─── Domain Types ─────────────────────────────────────────────────────────────
 
-/**
- * BoardGameGeek game data
- */
-export interface BggGameData {
-  bggId: number;
-  name: string;
-  yearPublished?: number;
-  minPlayers?: number;
-  maxPlayers?: number;
-  playingTime?: number;
-  minAge?: number;
-  description?: string;
-  imageUrl?: string;
-  thumbnailUrl?: string;
-}
-
-/**
- * Enriched game data after conflict resolution
- */
-export interface EnrichedGameData {
-  title: string;
-  minPlayers?: number;
-  maxPlayers?: number;
-  playingTime?: number;
-  description?: string;
-  bggId?: number;
-  imageUrl?: string;
-  year?: number;
-  minAge?: number;
-}
-
-/**
- * Wizard step type (1-4)
- * 1: Upload PDF
- * 2: Review Extracted Metadata
- * 3: Select BGG Game
- * 4: Resolve Conflicts & Finalize
- */
-export type WizardStep = 1 | 2 | 3 | 4;
-
-/**
- * Uploaded PDF reference
- */
 export interface UploadedPdf {
-  id: string;
+  pdfDocumentId: string;
   fileName: string;
+  /** @deprecated alias for pdfDocumentId — kept for client.tsx compatibility */
+  id: string;
 }
 
-/**
- * Game Import Wizard state interface
- */
+export interface GameMetadata {
+  title: string;
+  yearPublished?: number;
+  description?: string;
+  minPlayers?: number;
+  maxPlayers?: number;
+  playingTimeMinutes?: number;
+  minAge?: number;
+  publishers?: string[];
+  designers?: string[];
+  categories?: string[];
+  mechanics?: string[];
+  confidenceScore?: number;
+}
+
+export type CoverImageMode = 'placeholder' | 'pdf-page' | 'upload';
+
+export interface CoverImageSelection {
+  mode: CoverImageMode;
+  /** URL of the selected image (blob URL for uploads, API URL for pdf-page, null for placeholder) */
+  imageUrl: string | null;
+  /** Page number selected (only for mode=pdf-page) */
+  pdfPageNumber?: number;
+}
+
+export interface ImportResult {
+  gameId: string;
+  pdfDocumentId: string;
+  indexingStatus: 'pending' | 'failed';
+  warning?: string;
+}
+
+export interface RagTestMessage {
+  id: string;
+  question: string;
+  answer?: string;
+  sources?: Array<{ text: string; pageNumber?: number }>;
+  isLoading: boolean;
+  error?: string;
+}
+
+export type WizardStep = 1 | 2 | 3 | 4 | 5;
+
+// ─── Store Interface ───────────────────────────────────────────────────────────
+
 export interface GameImportWizardState {
-  // Current step (1: Upload, 2: Metadata, 3: BGG, 4: Conflicts)
   currentStep: WizardStep;
 
-  // Step 1: PDF upload
+  // Step 1
   uploadedPdf: UploadedPdf | null;
 
-  // Step 2: Extracted metadata from PDF
-  extractedMetadata: ExtractedMetadata | null;
+  // Step 2
+  reviewedMetadata: GameMetadata | null;
+  coverImage: CoverImageSelection;
 
-  // Step 3: Selected BGG game ID
-  selectedBggId: number | null;
-  bggGameData: BggGameData | null;
+  // Step 3 (no extra state — read from reviewedMetadata + coverImage)
 
-  // Step 4: Enriched data after conflict resolution
-  enrichedData: EnrichedGameData | null;
+  // Step 4
+  importResult: ImportResult | null;
 
-  // UI state
+  // Step 5
+  ragTestHistory: RagTestMessage[];
+  isIndexingReady: boolean;
+
+  // UI
   isProcessing: boolean;
   error: string | null;
 
-  // Actions: Navigation
+  // Navigation
   setStep: (step: WizardStep) => void;
   goNext: () => void;
   goBack: () => void;
   canGoNext: () => boolean;
   canGoBack: () => boolean;
 
-  // Actions: Data
+  // Step 1 actions
   setUploadedPdf: (pdf: UploadedPdf) => void;
-  setExtractedMetadata: (metadata: ExtractedMetadata) => void;
-  setSelectedBggId: (id: number, data?: BggGameData) => void;
-  resolveConflicts: (data: EnrichedGameData) => void;
 
-  // Actions: Submission
-  submitWizard: () => Promise<void>;
+  // Step 2 actions
+  setReviewedMetadata: (metadata: GameMetadata) => void;
+  setCoverImage: (cover: CoverImageSelection) => void;
 
-  // Actions: Reset
+  // Step 4 actions
+  executeImport: () => Promise<void>;
+
+  // Step 5 actions
+  setIndexingReady: (ready: boolean) => void;
+  addRagMessage: (question: string) => string;
+  updateRagMessage: (id: string, update: Partial<RagTestMessage>) => void;
+
   reset: () => void;
+
+  // Legacy compat props (used by client.tsx)
+  extractedMetadata: GameMetadata | null;
+  selectedBggId: null;
+  enrichedData: null;
+  bggGameData: null;
+  setSelectedBggId: (id: number, data?: unknown) => void;
+  submitWizard: () => Promise<void>;
 }
+
+// ─── Initial State ─────────────────────────────────────────────────────────────
 
 const initialState = {
   currentStep: 1 as WizardStep,
   uploadedPdf: null,
-  extractedMetadata: null,
-  selectedBggId: null,
-  bggGameData: null,
-  enrichedData: null,
+  reviewedMetadata: null,
+  coverImage: { mode: 'placeholder' as CoverImageMode, imageUrl: null },
+  importResult: null,
+  ragTestHistory: [] as RagTestMessage[],
+  isIndexingReady: false,
   isProcessing: false,
   error: null,
+  // legacy compat
+  extractedMetadata: null as GameMetadata | null,
+  selectedBggId: null as null,
+  enrichedData: null as null,
+  bggGameData: null as null,
 };
+
+// ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useGameImportWizardStore = create<GameImportWizardState>()(
   devtools(
-    (set, get) => ({
-      ...initialState,
+    persist(
+      (set, get) => ({
+        ...initialState,
 
-      // NAVIGATION ACTIONS
+        // ── Navigation ──────────────────────────────────────────────────────
 
-      setStep: step => {
-        set({ currentStep: step, error: null });
-      },
+        setStep: step => set({ currentStep: step, error: null }),
 
-      goNext: () => {
-        const current = get().currentStep;
-        if (current < 4) {
-          set({ currentStep: (current + 1) as WizardStep, error: null });
-        }
-      },
+        goNext: () => {
+          const { currentStep } = get();
+          if (currentStep < 5) {
+            set({ currentStep: (currentStep + 1) as WizardStep, error: null });
+          }
+        },
 
-      goBack: () => {
-        const current = get().currentStep;
-        if (current > 1) {
-          set({ currentStep: (current - 1) as WizardStep, error: null });
-        }
-      },
+        goBack: () => {
+          const { currentStep } = get();
+          if (currentStep > 1) {
+            set({ currentStep: (currentStep - 1) as WizardStep, error: null });
+          }
+        },
 
-      canGoNext: () => {
-        const { currentStep, uploadedPdf, extractedMetadata, selectedBggId } = get();
+        canGoNext: () => {
+          const { currentStep, uploadedPdf, reviewedMetadata, importResult } = get();
+          switch (currentStep) {
+            case 1:
+              return uploadedPdf !== null;
+            case 2:
+              return reviewedMetadata !== null && !!reviewedMetadata.title?.trim();
+            case 3:
+              return reviewedMetadata !== null;
+            case 4:
+              // Auto-advance to step 5 on success; can't manually go "next" from step 4
+              return importResult !== null;
+            case 5:
+              return false;
+            default:
+              return false;
+          }
+        },
 
-        switch (currentStep) {
-          case 1:
-            // Need PDF uploaded
-            return uploadedPdf !== null;
-          case 2:
-            // Need extracted metadata (can be empty object)
-            return extractedMetadata !== null;
-          case 3:
-            // Need BGG game selected
-            return selectedBggId !== null;
-          case 4:
-            // Review step, can't go next (submit instead)
-            return false;
-          default:
-            return false;
-        }
-      },
+        canGoBack: () => {
+          const { currentStep } = get();
+          // Can't go back from step 4 (saga in progress) or step 5
+          return currentStep > 1 && currentStep < 4;
+        },
 
-      canGoBack: () => {
-        const currentStep = get().currentStep;
-        // Can always go back except from first step
-        return currentStep > 1;
-      },
+        // ── Step 1 ─────────────────────────────────────────────────────────
 
-      // DATA ACTIONS
+        setUploadedPdf: pdf => {
+          set({ uploadedPdf: pdf, extractedMetadata: null, error: null });
+        },
 
-      setUploadedPdf: pdf => {
-        set({
-          uploadedPdf: pdf,
-          error: null,
-        });
-      },
+        // ── Step 2 ─────────────────────────────────────────────────────────
 
-      setExtractedMetadata: metadata => {
-        set({
-          extractedMetadata: metadata,
-          error: null,
-        });
-      },
+        setReviewedMetadata: metadata => {
+          set({ reviewedMetadata: metadata, extractedMetadata: metadata, error: null });
+        },
 
-      setSelectedBggId: (id, data) => {
-        set({
-          selectedBggId: id,
-          bggGameData: data || null,
-          error: null,
-        });
-      },
+        setCoverImage: cover => {
+          set({ coverImage: cover });
+        },
 
-      resolveConflicts: data => {
-        set({
-          enrichedData: data,
-          error: null,
-        });
-      },
+        // ── Step 4: Import saga ────────────────────────────────────────────
 
-      // SUBMISSION ACTION
+        executeImport: async () => {
+          const { uploadedPdf, reviewedMetadata, coverImage } = get();
 
-      submitWizard: async () => {
-        set({ isProcessing: true, error: null });
-
-        try {
-          const { uploadedPdf, enrichedData, selectedBggId } = get();
-
-          // Validate final state
           if (!uploadedPdf) {
-            throw new Error('No PDF uploaded');
+            set({ error: 'Nessun PDF caricato' });
+            return;
+          }
+          if (!reviewedMetadata?.title?.trim()) {
+            set({ error: 'Il titolo del gioco è obbligatorio' });
+            return;
           }
 
-          if (!enrichedData || !enrichedData.title.trim()) {
-            throw new Error('Game title is required');
+          set({ isProcessing: true, error: null });
+
+          try {
+            const result = await api.sharedGames.importGameFromPdf({
+              title: reviewedMetadata.title,
+              pdfDocumentId: uploadedPdf.pdfDocumentId,
+              yearPublished: reviewedMetadata.yearPublished,
+              description: reviewedMetadata.description,
+              minPlayers: reviewedMetadata.minPlayers,
+              maxPlayers: reviewedMetadata.maxPlayers,
+              playingTimeMinutes: reviewedMetadata.playingTimeMinutes,
+              minAge: reviewedMetadata.minAge,
+              coverImageUrl: coverImage.mode !== 'placeholder' ? coverImage.imageUrl : null,
+              publishers: reviewedMetadata.publishers,
+              designers: reviewedMetadata.designers,
+              categories: reviewedMetadata.categories,
+              mechanics: reviewedMetadata.mechanics,
+            });
+            const importResult: ImportResult = {
+              gameId: result.gameId,
+              pdfDocumentId: result.pdfDocumentId,
+              indexingStatus:
+                (result.indexingStatus as ImportResult['indexingStatus']) ?? 'pending',
+              warning: result.warning ?? undefined,
+            };
+
+            set({ importResult, isProcessing: false });
+
+            if (importResult.warning) {
+              toast.warning(importResult.warning);
+            }
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Import fallito';
+            set({ error: message, isProcessing: false });
+            toast.error(message);
+            throw err;
           }
+        },
 
-          // Submit via API client to correct endpoint
-          // POST /api/v1/admin/shared-games/wizard/create
-          const result = await api.sharedGames.wizardCreateGame({
-            pdfDocumentId: uploadedPdf.id,
-            extractedTitle: enrichedData.title,
-            minPlayers: enrichedData.minPlayers,
-            maxPlayers: enrichedData.maxPlayers,
-            playingTimeMinutes: enrichedData.playingTime,
-            minAge: enrichedData.minAge,
-            selectedBggId: selectedBggId ?? enrichedData.bggId,
-          });
+        // ── Step 5 ─────────────────────────────────────────────────────────
 
-          toast.success(
-            `Game "${enrichedData.title}" imported successfully! (${result.approvalStatus})`
-          );
+        setIndexingReady: ready => set({ isIndexingReady: ready }),
 
-          // Reset wizard on success
-          get().reset();
+        addRagMessage: question => {
+          const id = crypto.randomUUID();
+          set(state => ({
+            ragTestHistory: [...state.ragTestHistory, { id, question, isLoading: true }],
+          }));
+          return id;
+        },
 
-          // Navigate to admin games list
-          if (typeof window !== 'undefined') {
-            window.location.href = '/admin/shared-games';
-          }
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'Failed to import game';
-          set({ error: message, isProcessing: false });
-          toast.error(message);
-          throw err;
-        }
-      },
+        updateRagMessage: (id, update) => {
+          set(state => ({
+            ragTestHistory: state.ragTestHistory.map(m => (m.id === id ? { ...m, ...update } : m)),
+          }));
+        },
 
-      // RESET ACTION
+        // ── Reset ──────────────────────────────────────────────────────────
 
-      reset: () => {
-        set(initialState);
-      },
-    }),
+        reset: () => set(initialState),
+
+        // ── Legacy compat (client.tsx uses these) ─────────────────────────
+
+        setSelectedBggId: () => {
+          // no-op: BGG flow removed
+        },
+
+        submitWizard: async () => {
+          await get().executeImport();
+        },
+      }),
+      {
+        name: 'game-import-wizard-v2',
+        version: 2,
+        partialize: state => ({
+          currentStep: state.currentStep,
+          uploadedPdf: state.uploadedPdf,
+          reviewedMetadata: state.reviewedMetadata,
+          coverImage: state.coverImage,
+        }),
+      }
+    ),
     { name: 'GameImportWizardStore' }
   )
 );

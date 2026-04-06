@@ -274,7 +274,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             storageResult = await _blobStorageService.StoreAsync(
                 assembledStream,
                 sanitizedFileName,
-                (session.PrivateGameId ?? session.GameId)?.ToString() ?? string.Empty,
+                (session.PrivateGameId ?? session.GameId)?.ToString() ?? "wizard-temp",
                 cancellationToken).ConfigureAwait(false);
         }
 

@@ -2,14 +2,13 @@
 
 /**
  * Step 1: Upload PDF
- * Issue #4162: PDF upload step for game import wizard
  *
  * Features:
  * - Native file input (project standard, no react-dropzone)
- * - Client-side validation: PDF format (magic bytes), max 50MB
- * - Upload progress tracking
+ * - Client-side validation: PDF format (magic bytes), max 150 MB
+ * - Chunked upload via wizardChunkedUpload (10 MB chunks, no gameId → orphaned)
+ * - Real upload progress tracking
  * - Error handling with clear messages
- * - Integration with wizard store
  */
 
 import { type ChangeEvent, useState, useCallback } from 'react';
@@ -23,15 +22,14 @@ import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
-import { useUploadPdf } from '@/hooks/queries/useUploadPdf';
+import { api } from '@/lib/api';
 import type { UploadedPdf } from '@/stores/useGameImportWizardStore';
 
 export interface Step1UploadPdfProps {
   onUploadComplete?: (pdf: UploadedPdf) => void;
 }
 
-// Validation constants (stricter than project's 100MB)
-const MAX_PDF_SIZE_BYTES = 52428800; // 50 MB
+const MAX_PDF_SIZE_BYTES = 150 * 1024 * 1024; // 150 MB
 const ALLOWED_MIME_TYPES = ['application/pdf'];
 const PDF_MAGIC_BYTES = '%PDF-';
 
@@ -90,14 +88,10 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
   const [file, setFile] = useState<File | null>(null);
   const [validating, setValidating] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState<number>(0);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-
-  const {
-    mutate: uploadPdf,
-    isPending: isUploading,
-    progress,
-    error: uploadError,
-  } = useUploadPdf();
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Handle file selection
   const handleFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
@@ -106,14 +100,15 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
       setFile(null);
       setValidationErrors({});
       setUploadSuccess(false);
+      setUploadError(null);
       return;
     }
 
     setValidating(true);
     setValidationErrors({});
     setUploadSuccess(false);
+    setUploadError(null);
 
-    // Validate file
     const validation = await validatePdfFile(selectedFile);
 
     if (!validation.isValid) {
@@ -127,20 +122,28 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
     setValidating(false);
   }, []);
 
-  // Handle upload
-  const handleUpload = useCallback(() => {
+  // Handle upload — always use chunked upload (supports up to 150 MB)
+  const handleUpload = useCallback(async () => {
     if (!file) return;
 
-    uploadPdf(file, {
-      onSuccess: data => {
-        setUploadSuccess(true);
-        onUploadComplete?.({
-          id: data.documentId,
-          fileName: data.fileName,
-        });
-      },
-    });
-  }, [file, uploadPdf, onUploadComplete]);
+    setIsUploading(true);
+    setProgress(0);
+    setUploadError(null);
+
+    try {
+      const result = await api.sharedGames.wizardChunkedUpload(file, pct => setProgress(pct));
+      setUploadSuccess(true);
+      onUploadComplete?.({
+        pdfDocumentId: result.pdfDocumentId,
+        id: result.pdfDocumentId, // deprecated alias
+        fileName: result.fileName,
+      });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload fallito');
+    } finally {
+      setIsUploading(false);
+    }
+  }, [file, onUploadComplete]);
 
   const hasValidationErrors = Object.keys(validationErrors).length > 0;
   const canUpload = file && !hasValidationErrors && !isUploading && !uploadSuccess;
@@ -148,9 +151,10 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold">Upload PDF Rulebook</h3>
+        <h3 className="text-lg font-semibold">Carica regolamento PDF</h3>
         <p className="text-sm text-muted-foreground">
-          Select a PDF file to extract game metadata. Maximum file size: 50 MB.
+          Seleziona il PDF del regolamento per estrarre i metadati del gioco. Dimensione massima:
+          150 MB.
         </p>
       </div>
 
@@ -167,7 +171,9 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
               disabled={isUploading || uploadSuccess}
               className="cursor-pointer file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
             />
-            <p className="text-xs text-muted-foreground">Supported format: PDF | Max size: 50 MB</p>
+            <p className="text-xs text-muted-foreground">
+              Formato supportato: PDF | Dimensione max: 150 MB
+            </p>
           </div>
 
           {/* Validation Errors */}
@@ -189,12 +195,8 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
           {uploadError && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Upload Failed</AlertTitle>
-              <AlertDescription className="text-sm">
-                {uploadError instanceof Error
-                  ? uploadError.message
-                  : 'An error occurred during upload'}
-              </AlertDescription>
+              <AlertTitle>Upload fallito</AlertTitle>
+              <AlertDescription className="text-sm">{uploadError}</AlertDescription>
             </Alert>
           )}
 
@@ -227,9 +229,9 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
           {uploadSuccess && (
             <Alert>
               <CheckCircle className="h-4 w-4 text-green-500" />
-              <AlertTitle>Upload Successful</AlertTitle>
+              <AlertTitle>Upload completato</AlertTitle>
               <AlertDescription className="text-sm">
-                PDF uploaded successfully. Click "Next" to continue.
+                PDF caricato con successo. Clicca &quot;Avanti&quot; per continuare.
               </AlertDescription>
             </Alert>
           )}

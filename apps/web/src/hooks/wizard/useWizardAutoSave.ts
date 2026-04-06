@@ -119,7 +119,7 @@ export function useWizardAutoSave() {
     // Restore wizard state
     if (draft.currentStep) store.setStep(draft.currentStep);
     if (draft.uploadedPdf) store.setUploadedPdf(draft.uploadedPdf);
-    if (draft.extractedMetadata) store.setExtractedMetadata(draft.extractedMetadata);
+    if (draft.extractedMetadata) store.setReviewedMetadata(draft.extractedMetadata);
     if (draft.selectedBggId)
       store.setSelectedBggId(draft.selectedBggId, draft.bggGameData ?? undefined);
     // Note: enrichedData is not directly restorable as it's typically computed in Step 4

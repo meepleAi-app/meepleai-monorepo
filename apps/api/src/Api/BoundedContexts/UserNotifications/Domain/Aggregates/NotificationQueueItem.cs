@@ -31,6 +31,7 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
     public DateTime CreatedAt { get; private set; }
     public DateTime? ProcessedAt { get; private set; }
     public Guid CorrelationId { get; private set; }
+    public string? DeepLinkPath { get; private set; }
 
 #pragma warning disable CS8618
     private NotificationQueueItem() : base() { }
@@ -45,7 +46,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         string? slackChannelTarget,
         string? slackTeamId,
         Guid correlationId,
-        DateTime? createdAt = null)
+        DateTime? createdAt = null,
+        string? deepLinkPath = null)
         : base(id)
     {
         ChannelType = channelType ?? throw new ArgumentNullException(nameof(channelType));
@@ -62,6 +64,7 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         CreatedAt = createdAt ?? DateTime.UtcNow;
         ProcessedAt = null;
         CorrelationId = correlationId;
+        DeepLinkPath = deepLinkPath;
     }
 
     /// <summary>
@@ -75,7 +78,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         string? slackChannelTarget = null,
         string? slackTeamId = null,
         Guid? correlationId = null,
-        DateTime? createdAt = null)
+        DateTime? createdAt = null,
+        string? deepLinkPath = null)
     {
         return new NotificationQueueItem(
             Guid.NewGuid(),
@@ -86,7 +90,8 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
             slackChannelTarget,
             slackTeamId,
             correlationId ?? Guid.NewGuid(),
-            createdAt);
+            createdAt,
+            deepLinkPath);
     }
 
     /// <summary>
@@ -148,6 +153,21 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Marks the notification as temporarily unavailable due to API rate limiting.
+    /// Does NOT increment RetryCount — rate limit backpressure is not a delivery failure.
+    /// The item will be retried after the specified time.
+    /// </summary>
+    public void MarkAsRateLimited(DateTime retryAt)
+    {
+        if (!Status.IsProcessing)
+            throw new InvalidOperationException($"Cannot mark as rate-limited from status '{Status.Value}'");
+
+        Status = NotificationQueueStatus.Failed;
+        NextRetryAt = retryAt;
+        LastError = "rate limit — retry after backoff";
+    }
+
+    /// <summary>
     /// Moves the notification to dead letter queue.
     /// No further retry attempts will be made.
     /// </summary>
@@ -177,17 +197,19 @@ internal sealed class NotificationQueueItem : AggregateRoot<Guid>
         string? lastError,
         DateTime createdAt,
         DateTime? processedAt,
-        Guid correlationId)
+        Guid correlationId,
+        string? deepLinkPath = null)
     {
         var item = new NotificationQueueItem(
             id, channelType, recipientUserId, notificationType,
-            payload, slackChannelTarget, slackTeamId, correlationId);
+            payload, slackChannelTarget, slackTeamId, correlationId,
+            createdAt: createdAt,
+            deepLinkPath: deepLinkPath);
         item.Status = status;
         item.RetryCount = retryCount;
         item.MaxRetries = maxRetries;
         item.NextRetryAt = nextRetryAt;
         item.LastError = lastError;
-        item.CreatedAt = createdAt;
         item.ProcessedAt = processedAt;
         return item;
     }

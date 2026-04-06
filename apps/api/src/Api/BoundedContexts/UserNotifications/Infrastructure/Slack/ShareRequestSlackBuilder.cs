@@ -34,19 +34,34 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
             throw new ArgumentException($"Expected {nameof(ShareRequestPayload)} but received {payload.GetType().Name}", nameof(payload));
         }
 
-        var timestamp = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
-        var blockId = $"sr:{sr.ShareRequestId}:{timestamp}";
-        var deepLink = $"{_frontendBaseUrl.TrimEnd('/')}/share-requests/{sr.ShareRequestId}";
+        var (headerEmoji, headerText) = sr.Status.ToLowerInvariant() switch
+        {
+            "created"  => ("\ud83d\udce5", "Nuova Share Request"),
+            "approved" => ("\u2705", "Approvata"),
+            "rejected" => ("\u274c", "Rifiutata"),
+            var unknown => throw new ArgumentException(
+                $"Unrecognised ShareRequest status: '{unknown}'", nameof(payload))
+        };
 
         var blocks = new List<object>
         {
             new
             {
                 type = "header",
-                text = new { type = "plain_text", text = "\ud83d\udce5 Nuova Share Request", emoji = true }
+                text = new { type = "plain_text", text = $"{headerEmoji} {headerText}", emoji = true }
             },
-            BuildSectionBlock(sr),
-            new
+            BuildSectionBlock(sr)
+        };
+
+        if (sr.Status.Equals("created", StringComparison.OrdinalIgnoreCase))
+        {
+            var timestamp = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
+            var blockId = $"sr:{sr.ShareRequestId}:{timestamp}";
+            var deepLink = !string.IsNullOrEmpty(deepLinkPath)
+                ? $"{_frontendBaseUrl.TrimEnd('/')}{deepLinkPath}"
+                : $"{_frontendBaseUrl.TrimEnd('/')}/share-requests/{sr.ShareRequestId}";
+
+            blocks.Add(new
             {
                 type = "actions",
                 block_id = blockId,
@@ -76,15 +91,20 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
                         url = deepLink
                     }
                 }
-            }
-        };
+            });
+        }
 
         return new { blocks };
     }
 
     private static object BuildSectionBlock(ShareRequestPayload sr)
     {
-        var text = $"*{sr.RequesterName}* vuole condividere il regolamento di *{sr.GameTitle}* con te.";
+        var text = sr.Status.ToLowerInvariant() switch
+        {
+            "approved" => $"\u2705 La tua richiesta di condivisione per *{sr.GameTitle}* è stata approvata da {sr.RequesterName}.",
+            "rejected" => $"\u274c La tua richiesta di condivisione per *{sr.GameTitle}* è stata rifiutata da {sr.RequesterName}.",
+            _ => $"\ud83c\udfb2 *Gioco*: {sr.GameTitle}\n\ud83d\udc64 *Richiedente*: {sr.RequesterName}"
+        };
 
         if (!string.IsNullOrEmpty(sr.GameImageUrl))
         {

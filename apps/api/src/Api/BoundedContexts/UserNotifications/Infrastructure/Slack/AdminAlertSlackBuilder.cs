@@ -10,6 +10,13 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 /// </summary>
 internal sealed class AdminAlertSlackBuilder : ISlackMessageBuilder
 {
+    private readonly TimeProvider _timeProvider;
+
+    public AdminAlertSlackBuilder(TimeProvider timeProvider)
+    {
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+    }
+
     public bool CanHandle(NotificationType type)
     {
         // All admin notification types
@@ -51,7 +58,7 @@ internal sealed class AdminAlertSlackBuilder : ISlackMessageBuilder
                 type = "context",
                 elements = new object[]
                 {
-                    new { type = "mrkdwn", text = $"MeepleAI Monitoring | {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} UTC" }
+                    new { type = "mrkdwn", text = $"MeepleAI Monitoring | {_timeProvider.GetUtcNow().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} UTC" }
                 }
             }
         };

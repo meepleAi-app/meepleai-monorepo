@@ -18,7 +18,8 @@ public class NotificationQueueItemTests
         NotificationType? notificationType = null,
         INotificationPayload? payload = null,
         string? slackChannelTarget = null,
-        string? slackTeamId = null)
+        string? slackTeamId = null,
+        string? deepLinkPath = null)
     {
         return NotificationQueueItem.Create(
             channelType ?? NotificationChannelType.SlackUser,
@@ -26,7 +27,8 @@ public class NotificationQueueItemTests
             notificationType ?? NotificationType.DocumentReady,
             payload ?? new GenericPayload("Test", "Body"),
             slackChannelTarget,
-            slackTeamId);
+            slackTeamId,
+            deepLinkPath: deepLinkPath);
     }
 
     [Fact]
@@ -308,6 +310,98 @@ public class NotificationQueueItemTests
 
         // Assert
         item.NextRetryAt.Should().Be(retryAt);
+    }
+
+    [Fact]
+    public void MarkAsRateLimited_FromProcessing_DoesNotIncrementRetryCount()
+    {
+        // Arrange
+        var item = CreateDefaultItem();
+        item.MarkAsProcessing();
+        var expectedRetryCount = item.RetryCount; // 0
+
+        // Act
+        var retryAt = new DateTime(2026, 3, 15, 12, 5, 0, DateTimeKind.Utc);
+        item.MarkAsRateLimited(retryAt);
+
+        // Assert
+        item.RetryCount.Should().Be(expectedRetryCount); // still 0
+        item.Status.Should().Be(NotificationQueueStatus.Failed);
+        item.NextRetryAt.Should().Be(retryAt);
+        item.LastError.Should().Contain("rate limit");
+    }
+
+    [Fact]
+    public void MarkAsRateLimited_FromPending_Throws()
+    {
+        // Arrange
+        var item = CreateDefaultItem();
+        var fixedRetryAt = new DateTime(2026, 3, 15, 12, 0, 30, DateTimeKind.Utc);
+
+        // Act & Assert
+        var act = () => item.MarkAsRateLimited(fixedRetryAt);
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void MarkAsRateLimited_MultipleTimes_NeverExceedsMaxRetries()
+    {
+        var item = CreateDefaultItem();
+        var fixedRetryAt = new DateTime(2026, 3, 15, 12, 0, 30, DateTimeKind.Utc);
+
+        for (int i = 0; i < 10; i++)
+        {
+            item.MarkAsProcessing();
+            item.MarkAsRateLimited(fixedRetryAt);
+        }
+
+        item.RetryCount.Should().Be(0);
+        item.Status.Should().Be(NotificationQueueStatus.Failed);
+    }
+
+    [Fact]
+    public void Create_WithDeepLinkPath_SetsProperty()
+    {
+        var item = CreateDefaultItem(deepLinkPath: "/library/documents/abc123");
+        item.DeepLinkPath.Should().Be("/library/documents/abc123");
+    }
+
+    [Fact]
+    public void Create_WithoutDeepLinkPath_PropertyIsNull()
+    {
+        var item = CreateDefaultItem();
+        item.DeepLinkPath.Should().BeNull();
+    }
+
+    [Fact]
+    public void Reconstitute_WithDeepLinkPath_PreservesProperty()
+    {
+        // Arrange — simulate DB round-trip via Reconstitute
+        var id = Guid.NewGuid();
+        var expectedPath = "/library/documents/xyz789";
+
+        // Act
+        var item = NotificationQueueItem.Reconstitute(
+            id: id,
+            channelType: NotificationChannelType.SlackUser,
+            recipientUserId: DefaultRecipientUserId,
+            notificationType: NotificationType.DocumentReady,
+            payload: new GenericPayload("Test", "Body"),
+            slackChannelTarget: null,
+            slackTeamId: null,
+            status: NotificationQueueStatus.Pending,
+            retryCount: 0,
+            maxRetries: 3,
+            nextRetryAt: null,
+            lastError: null,
+            createdAt: new DateTime(2026, 3, 15, 12, 0, 0, DateTimeKind.Utc),
+            processedAt: null,
+            correlationId: Guid.NewGuid(),
+            deepLinkPath: expectedPath);
+
+        // Assert
+        item.DeepLinkPath.Should().Be(expectedPath);
+        item.Id.Should().Be(id);
     }
 
     [Fact]

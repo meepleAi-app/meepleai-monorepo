@@ -13,11 +13,15 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 internal class SlackSignatureValidator
 {
     private readonly string _signingSecret;
+    private readonly TimeProvider _timeProvider;
 
-    public SlackSignatureValidator(IOptions<SlackNotificationConfiguration> config)
+    public SlackSignatureValidator(IOptions<SlackNotificationConfiguration> config, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(config);
         _signingSecret = config.Value.SigningSecret;
+        if (string.IsNullOrWhiteSpace(_signingSecret))
+            throw new ArgumentException("Slack signing secret must not be empty.", nameof(config));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     /// <summary>
@@ -32,13 +36,13 @@ internal class SlackSignatureValidator
     {
         if (string.IsNullOrEmpty(timestamp) || string.IsNullOrEmpty(signature))
             return false;
+        body ??= string.Empty;
 
-        // Replay protection: reject requests older than 5 minutes
         if (!long.TryParse(timestamp, System.Globalization.CultureInfo.InvariantCulture, out var ts))
             return false;
 
         var requestTime = DateTimeOffset.FromUnixTimeSeconds(ts);
-        var now = DateTimeOffset.UtcNow;
+        var now = _timeProvider.GetUtcNow();
         if (Math.Abs((now - requestTime).TotalSeconds) > 300)
             return false;
 
@@ -47,8 +51,12 @@ internal class SlackSignatureValidator
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(baseString));
         var computed = "v0=" + Convert.ToHexString(hash).ToLowerInvariant();
 
-        return CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(computed),
-            Encoding.UTF8.GetBytes(signature));
+        var computedBytes = Encoding.UTF8.GetBytes(computed);
+        var signatureBytes = Encoding.UTF8.GetBytes(signature);
+
+        if (computedBytes.Length != signatureBytes.Length)
+            return false;
+
+        return CryptographicOperations.FixedTimeEquals(computedBytes, signatureBytes);
     }
 }

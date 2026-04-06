@@ -88,6 +88,9 @@ internal sealed class NotificationType : ValueObject
     // GDPR Art. 7: AI consent updated
     public static readonly NotificationType GdprAiConsentUpdated = new("gdpr_ai_consent_updated");
 
+    // Slack connection forcibly revoked by workspace admin
+    public static readonly NotificationType SlackConnectionRevoked = new("slack_connection_revoked");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -100,6 +103,7 @@ internal sealed class NotificationType : ValueObject
     public bool IsGameNightRsvpReceived => string.Equals(Value, GameNightRsvpReceived.Value, StringComparison.Ordinal);
     public bool IsGameNightReminder => string.Equals(Value, GameNightReminder.Value, StringComparison.Ordinal);
     public bool IsGameNightCancelled => string.Equals(Value, GameNightCancelled.Value, StringComparison.Ordinal);
+    public bool IsSlackConnectionRevoked => string.Equals(Value, SlackConnectionRevoked.Value, StringComparison.Ordinal);
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {
@@ -153,6 +157,7 @@ internal sealed class NotificationType : ValueObject
             "admin_access_request_created" => AdminAccessRequestCreated,
             "admin_manual_notification" => AdminManualNotification,
             "admin_pdf_processing_started" => AdminPdfProcessingStarted,
+            "slack_connection_revoked" => SlackConnectionRevoked,
             // Legacy aliases — old type strings from DB or older clients map to new types
             "pdf_upload_completed" => DocumentReady,
             "processing_job_completed" => DocumentReady,

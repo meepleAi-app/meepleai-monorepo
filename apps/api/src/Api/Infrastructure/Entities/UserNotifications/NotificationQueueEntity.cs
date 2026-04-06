@@ -74,4 +74,8 @@ public class NotificationQueueEntity
     [Required]
     [Column("correlation_id")]
     public Guid CorrelationId { get; set; }
+
+    [MaxLength(500)]
+    [Column("deep_link_path")]
+    public string? DeepLinkPath { get; set; }
 }

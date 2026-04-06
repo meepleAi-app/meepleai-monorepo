@@ -108,7 +108,7 @@ export default function SessionScoreboardPage({ params }: SessionPageProps) {
   };
 
   return (
-    <div className="pb-32">
+    <div className="max-w-[1200px] mx-auto px-4 py-6 pb-32 lg:pb-24">
       <SessionHeader session={session} onPause={handlePause} onFinalize={completeSession} />
 
       <LiveIndicator

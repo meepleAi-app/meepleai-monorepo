@@ -88,6 +88,8 @@ internal class SlackConnectionRepository : RepositoryBase, ISlackConnectionRepos
 
         foreach (var chunk in ids.Chunk(BatchChunkSize))
         {
+            ct.ThrowIfCancellationRequested();
+
             var entities = await DbContext.Set<SlackConnectionEntity>()
                 .AsNoTracking()
                 .Where(e => chunk.Contains(e.UserId) && e.IsActive)

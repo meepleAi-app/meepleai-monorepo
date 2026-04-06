@@ -107,7 +107,12 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
             _ => $"\ud83c\udfb2 *Gioco*: {sr.GameTitle}\n\ud83d\udc64 *Richiedente*: {sr.RequesterName}"
         };
 
-        if (!string.IsNullOrEmpty(sr.GameImageUrl))
+        var safeImageUrl = sr.GameImageUrl is not null
+            && sr.GameImageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            ? sr.GameImageUrl
+            : null;
+
+        if (safeImageUrl is not null)
         {
             return new
             {
@@ -116,7 +121,7 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
                 accessory = new
                 {
                     type = "image",
-                    image_url = sr.GameImageUrl,
+                    image_url = safeImageUrl,
                     alt_text = sr.GameTitle
                 }
             };

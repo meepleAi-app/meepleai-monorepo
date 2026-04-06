@@ -290,6 +290,11 @@ internal sealed class SlackNotificationProcessorJob : IJob
 
         var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Slack API HTTP error: {response.StatusCode} - {responseBody}");
+        }
+
         // Slack API returns 200 with ok=false for errors
         using var jsonDoc = JsonDocument.Parse(responseBody);
         var root = jsonDoc.RootElement;
@@ -302,11 +307,6 @@ internal sealed class SlackNotificationProcessorJob : IJob
                 throw new SlackTokenRevokedException($"Token revoked: {error}");
 
             throw new HttpRequestException($"Slack API error: {error}");
-        }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new HttpRequestException($"Slack API HTTP error: {response.StatusCode} - {responseBody}");
         }
     }
 
@@ -420,10 +420,11 @@ internal sealed class SlackNotificationProcessorJob : IJob
     }
 }
 
+#pragma warning disable S3871 // Exception types are internal by design — never cross bounded context boundary
 /// <summary>
 /// Exception thrown when Slack returns HTTP 429 (Too Many Requests).
 /// </summary>
-public sealed class SlackRateLimitException : Exception
+internal sealed class SlackRateLimitException : Exception
 {
     public int RetryAfterSeconds { get; }
 
@@ -437,7 +438,8 @@ public sealed class SlackRateLimitException : Exception
 /// <summary>
 /// Exception thrown when Slack token has been revoked or is invalid.
 /// </summary>
-public sealed class SlackTokenRevokedException : Exception
+internal sealed class SlackTokenRevokedException : Exception
 {
     public SlackTokenRevokedException(string message) : base(message) { }
 }
+#pragma warning restore S3871

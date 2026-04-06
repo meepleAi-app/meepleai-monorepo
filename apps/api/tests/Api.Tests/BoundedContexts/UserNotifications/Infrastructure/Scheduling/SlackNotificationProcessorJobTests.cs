@@ -258,4 +258,25 @@ public class SlackNotificationProcessorJobTests : IDisposable
             "CorrelationId header must be present for distributed tracing");
         Assert.True(Guid.TryParse(values!.First(), out _), "header value must be a valid GUID");
     }
+
+    [Fact]
+    public async Task Execute_OnSuccess_MetricsInstrumentationDoesNotThrow()
+    {
+        // Arrange
+        var teamItem = CreateSlackTeamItem();
+        _queueRepoMock.Setup(r => r.GetPendingByChannelAsync(NotificationChannelType.SlackUser, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NotificationQueueItem>());
+        _queueRepoMock.Setup(r => r.GetPendingByChannelAsync(NotificationChannelType.SlackTeam, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NotificationQueueItem> { teamItem });
+
+        SetupHttpClient(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("ok") });
+
+        var sut = CreateSut();
+
+        // Act — metrics (RecordSlackMessageSent) are static fire-and-forget side effects;
+        // verify the instrumented path completes without exceptions.
+        var ex = await Record.ExceptionAsync(() => sut.Execute(_jobContextMock.Object));
+
+        Assert.Null(ex);
+    }
 }

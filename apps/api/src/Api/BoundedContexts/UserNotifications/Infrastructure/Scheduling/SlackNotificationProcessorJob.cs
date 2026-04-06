@@ -7,6 +7,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.Infrastructure;
+using Api.Observability;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -126,6 +127,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                         await _queueRepository.UpdateAsync(item, context.CancellationToken).ConfigureAwait(false);
                         await _dbContext.SaveChangesAsync(context.CancellationToken).ConfigureAwait(false);
 
+                        MeepleAiMetrics.RecordSlackMessageSent(item.ChannelType.Value, item.NotificationType.Value);
                         sentCount++;
 
                         _logger.LogInformation(
@@ -142,6 +144,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                             "Slack rate limited for team {TeamId}, retryAfter={RetryAfter}s. Deferring remaining items.",
                             teamId, ex.RetryAfterSeconds);
 
+                        MeepleAiMetrics.RecordSlackRateLimited(teamId);
                         await HandleRateLimitAsync(item, ex.RetryAfterSeconds, context.CancellationToken)
                             .ConfigureAwait(false);
                         break; // Move to next team
@@ -155,6 +158,7 @@ internal sealed class SlackNotificationProcessorJob : IJob
                             "Slack token revoked for team {TeamId}, deactivating connection. Item {ItemId} dead-lettered.",
                             teamId, item.Id);
 
+                        MeepleAiMetrics.RecordSlackTokenRevocation();
                         await HandleTokenRevocationAsync(item, context.CancellationToken).ConfigureAwait(false);
                     }
 #pragma warning disable CA1031
@@ -167,6 +171,10 @@ internal sealed class SlackNotificationProcessorJob : IJob
                             "Failed to send Slack notification {ItemId} to {Channel}, team={TeamId}",
                             item.Id, item.SlackChannelTarget, item.SlackTeamId);
 
+                        MeepleAiMetrics.RecordSlackMessageFailed(
+                            item.ChannelType.Value,
+                            item.NotificationType.Value,
+                            ex is HttpRequestException ? "http_error" : "unknown");
                         await HandleFailureAsync(item, ex.Message, context.CancellationToken).ConfigureAwait(false);
                     }
 #pragma warning restore CA1031

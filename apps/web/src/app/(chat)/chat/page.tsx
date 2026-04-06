@@ -15,6 +15,7 @@ import { AlertTriangle, ChevronDown, ChevronRight, MessageCircle, Plus, Bot } fr
 import { useRouter } from 'next/navigation';
 
 import { ChatListMobile } from '@/components/chat-unified/ChatListMobile';
+import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -308,6 +309,7 @@ export default function ChatListPage() {
           )}
         </main>
       </div>
+      <FloatingActionPill page="chat" />
     </>
   );
 }

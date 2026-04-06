@@ -89,4 +89,64 @@ public sealed class SlackSignatureValidatorTests
         var sut = CreateSut(DateTimeOffset.UtcNow);
         sut.Validate("", "body", "v0=sig").Should().BeFalse();
     }
+
+    [Fact]
+    public void Validate_WithEmptySignature_ReturnsFalse()
+    {
+        var now = new DateTimeOffset(2026, 3, 15, 12, 0, 0, TimeSpan.Zero);
+        var timestamp = now.ToUnixTimeSeconds().ToString();
+
+        var sut = CreateSut(now);
+        sut.Validate(timestamp, "payload=test", "").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Validate_WithNullBody_ReturnsFalse()
+    {
+        var now = new DateTimeOffset(2026, 3, 15, 12, 0, 0, TimeSpan.Zero);
+        var timestamp = now.ToUnixTimeSeconds().ToString();
+        var sig = ComputeSignature(timestamp, "");
+
+        var sut = CreateSut(now);
+        // null body should be treated as empty and validated — or return false for wrong sig
+        // With null body coerced to "" and valid sig for "", this should return true
+        sut.Validate(timestamp, null!, sig).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_WithTimestampAtExactBoundary_ReturnsTrue()
+    {
+        var now = new DateTimeOffset(2026, 3, 15, 12, 0, 0, TimeSpan.Zero);
+        // Exactly 300 seconds old — should still be accepted (boundary is > 300, not >= 300)
+        var boundaryTimestamp = now.AddSeconds(-300).ToUnixTimeSeconds().ToString();
+        var body = "payload=test";
+        var sig = ComputeSignature(boundaryTimestamp, body);
+
+        var sut = CreateSut(now);
+        sut.Validate(boundaryTimestamp, body, sig).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_WithSignatureOfDifferentLength_ReturnsFalse()
+    {
+        var now = new DateTimeOffset(2026, 3, 15, 12, 0, 0, TimeSpan.Zero);
+        var timestamp = now.ToUnixTimeSeconds().ToString();
+
+        var sut = CreateSut(now);
+        sut.Validate(timestamp, "payload=test", "v0=short").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Constructor_WithEmptySigningSecret_ThrowsArgumentException()
+    {
+        var config = Options.Create(new SlackNotificationConfiguration
+        {
+            SigningSecret = "",
+            ClientId = "client",
+            ClientSecret = "secret",
+            RedirectUri = "https://meepleai.app/slack/callback"
+        });
+        var act = () => new SlackSignatureValidator(config, new FakeTimeProvider(DateTimeOffset.UtcNow));
+        act.Should().Throw<ArgumentException>();
+    }
 }

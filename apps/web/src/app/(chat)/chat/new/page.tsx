@@ -7,6 +7,7 @@
  * Supports query params:
  * - ?game={id} - Pre-selects a game
  * - ?agent={type} - Pre-selects an agent type
+ * - ?kbIds={id1,id2,id3} - Pre-selects knowledge base documents
  */
 
 'use client';

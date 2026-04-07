@@ -18,8 +18,8 @@ internal static class AdminRagExecutionEndpoints
             .AddEndpointFilter<RequireAdminSessionFilter>();
 
         group.MapGet("/", async (
-            [FromQuery] int skip,
-            [FromQuery] int take,
+            [FromQuery] int? skip,
+            [FromQuery] int? take,
             [FromQuery] string? strategy,
             [FromQuery] string? status,
             [FromQuery] int? minLatencyMs,
@@ -31,8 +31,8 @@ internal static class AdminRagExecutionEndpoints
             CancellationToken ct) =>
         {
             var query = new GetRagExecutionsQuery(
-                Skip: Math.Max(0, skip),
-                Take: Math.Clamp(take, 1, 100),
+                Skip: Math.Max(0, skip ?? 0),
+                Take: Math.Clamp(take ?? 10, 1, 100),
                 Strategy: strategy,
                 Status: status,
                 MinLatencyMs: minLatencyMs,

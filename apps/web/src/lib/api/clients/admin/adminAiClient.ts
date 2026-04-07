@@ -780,8 +780,8 @@ export function createAdminAiClient(http: HttpClient) {
       dateTo?: string;
     }): Promise<RagExecutionListResult> {
       const searchParams = new URLSearchParams();
-      if (params?.skip) searchParams.set('skip', params.skip.toString());
-      if (params?.take) searchParams.set('take', params.take.toString());
+      searchParams.set('skip', (params?.skip ?? 0).toString());
+      searchParams.set('take', (params?.take ?? 10).toString());
       if (params?.strategy) searchParams.set('strategy', params.strategy);
       if (params?.status) searchParams.set('status', params.status);
       if (params?.minLatencyMs) searchParams.set('minLatencyMs', params.minLatencyMs.toString());

@@ -64,6 +64,21 @@ internal static class TestSessionHelper
     }
 
     /// <summary>
+    /// Creates a super admin user and session in the database, returning the raw token for HTTP requests.
+    /// </summary>
+    /// <param name="dbContext">The database context to use</param>
+    /// <param name="userId">Optional user ID (generates new if not provided)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Tuple of (UserId, RawSessionToken) for use in HTTP cookie header</returns>
+    public static async Task<(Guid UserId, string RawToken)> CreateSuperAdminSessionAsync(
+        MeepleAiDbContext dbContext,
+        Guid? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateSessionAsync(dbContext, "SuperAdmin", userId, cancellationToken);
+    }
+
+    /// <summary>
     /// Creates an editor user and session in the database, returning the raw token for HTTP requests.
     /// </summary>
     /// <param name="dbContext">The database context to use</param>

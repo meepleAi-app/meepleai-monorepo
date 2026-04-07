@@ -257,6 +257,34 @@ async def metrics_endpoint():
     return PlainTextResponse("\n".join(lines) + "\n")
 
 
+class EmbeddingConfigResponse(BaseModel):
+    model: str
+    max_text_chars: int
+    max_total_chars: int
+
+
+class EmbeddingConfigUpdate(BaseModel):
+    model: str | None = None
+
+
+@app.get("/config", tags=["Config"])
+async def get_config():
+    """Return current embedding service configuration."""
+    return EmbeddingConfigResponse(
+        model=MODEL_NAME,
+        max_text_chars=MAX_TEXT_CHARS,
+        max_total_chars=MAX_TOTAL_CHARS,
+    )
+
+
+@app.put("/config", tags=["Config"])
+async def update_config(update: EmbeddingConfigUpdate):
+    """Update runtime configuration. Model changes require a service restart."""
+    if update.model is not None:
+        raise HTTPException(status_code=400, detail="Model change requires service restart")
+    return {"updated": []}
+
+
 @app.get("/", tags=["Info"])
 async def root():
     """Root endpoint with service info"""

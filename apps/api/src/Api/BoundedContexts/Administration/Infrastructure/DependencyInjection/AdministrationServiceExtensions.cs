@@ -105,6 +105,41 @@ internal static class AdministrationServiceExtensions
             client.Timeout = TimeSpan.FromSeconds(15);
         });
 
+        // Infrastructure Dashboard - Cooldown Registry
+        services.AddSingleton<IServiceCooldownRegistry, ServiceCooldownRegistry>();
+
+        // Infrastructure Dashboard - HttpClients for AI services
+        services.AddHttpClient("ai-embedding", client =>
+        {
+            var host = Environment.GetEnvironmentVariable("EMBEDDING_SERVICE_HOST") ?? "embedding-service";
+            client.BaseAddress = new Uri($"http://{host}:8000");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+        services.AddHttpClient("ai-reranker", client =>
+        {
+            var host = Environment.GetEnvironmentVariable("RERANKER_SERVICE_HOST") ?? "reranker-service";
+            client.BaseAddress = new Uri($"http://{host}:8003");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+        services.AddHttpClient("ai-unstructured", client =>
+        {
+            var host = Environment.GetEnvironmentVariable("UNSTRUCTURED_SERVICE_HOST") ?? "unstructured-service";
+            client.BaseAddress = new Uri($"http://{host}:8001");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+        services.AddHttpClient("ai-orchestrator", client =>
+        {
+            var host = Environment.GetEnvironmentVariable("ORCHESTRATOR_SERVICE_HOST") ?? "orchestration-service";
+            client.BaseAddress = new Uri($"http://{host}:8004");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+        services.AddHttpClient("ai-ollama", client =>
+        {
+            var host = Environment.GetEnvironmentVariable("OLLAMA_HOST") ?? "ollama";
+            client.BaseAddress = new Uri($"http://{host}:11434");
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
+
         // Issue #891: Infrastructure health monitoring service
         services.AddScoped<IInfrastructureHealthService, InfrastructureHealthService>();
 

@@ -13,6 +13,7 @@ from typing import AsyncIterator
 import httpx
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel
 
 from src.api import (
     ExecuteWorkflowRequest,
@@ -100,6 +101,44 @@ async def root():
             "metrics": "/metrics",
         },
     }
+
+
+class OrchestrationConfigResponse(BaseModel):
+    langgraph_timeout: int
+    max_workflow_depth: int
+    log_level: str
+
+
+class OrchestrationConfigUpdate(BaseModel):
+    langgraph_timeout: int | None = None
+    max_workflow_depth: int | None = None
+
+
+@app.get("/config", tags=["Config"])
+async def get_config():
+    """Return current orchestration service configuration."""
+    return OrchestrationConfigResponse(
+        langgraph_timeout=settings.langgraph_timeout,
+        max_workflow_depth=settings.max_workflow_depth,
+        log_level=settings.log_level,
+    )
+
+
+@app.put("/config", tags=["Config"])
+async def update_config(update: OrchestrationConfigUpdate):
+    """Update runtime configuration (langgraph_timeout, max_workflow_depth)."""
+    updated = []
+    if update.langgraph_timeout is not None:
+        if not (5 <= update.langgraph_timeout <= 120):
+            raise HTTPException(status_code=400, detail="langgraph_timeout must be 5-120")
+        settings.langgraph_timeout = update.langgraph_timeout
+        updated.append("langgraph_timeout")
+    if update.max_workflow_depth is not None:
+        if not (1 <= update.max_workflow_depth <= 20):
+            raise HTTPException(status_code=400, detail="max_workflow_depth must be 1-20")
+        settings.max_workflow_depth = update.max_workflow_depth
+        updated.append("max_workflow_depth")
+    return {"updated": updated}
 
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])

@@ -4,6 +4,8 @@ import { useState } from 'react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 
+import { UploadAndQueueTab } from './upload-and-queue-tab';
+
 export function RagPipelineClient() {
   const [activeTab, setActiveTab] = useState('upload-queue');
 
@@ -23,9 +25,7 @@ export function RagPipelineClient() {
         </TabsList>
 
         <TabsContent value="upload-queue" className="mt-4">
-          <div className="rounded-lg border p-8 text-center text-muted-foreground">
-            Upload & Coda — Tab principale (Task 7)
-          </div>
+          <UploadAndQueueTab />
         </TabsContent>
         <TabsContent value="history" className="mt-4">
           <div className="rounded-lg border p-8 text-center text-muted-foreground">

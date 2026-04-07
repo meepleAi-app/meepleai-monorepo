@@ -44,6 +44,9 @@ export function ServiceCard({
   const cooldownActive =
     service.cooldownRemainingSeconds !== null && service.cooldownRemainingSeconds > 0;
   const restartDisabled = !isSuperAdmin || cooldownActive;
+  const healthCheckDisabled = !isSuperAdmin || isCheckPending;
+
+  const healthCheckTooltip = !isSuperAdmin ? 'Requires SuperAdmin' : 'Run health check';
 
   const restartTooltip = !isSuperAdmin
     ? 'Requires SuperAdmin'
@@ -105,14 +108,14 @@ export function ServiceCard({
                 size="sm"
                 className="h-7 w-7 p-0"
                 onClick={() => onCheck(service.name)}
-                disabled={isCheckPending}
+                disabled={healthCheckDisabled}
               >
                 <Stethoscope className="h-3.5 w-3.5" />
                 <span className="sr-only">Health check</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              Run health check
+              {healthCheckTooltip}
             </TooltipContent>
           </Tooltip>
 

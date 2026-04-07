@@ -1,13 +1,11 @@
-import { type Metadata } from 'next';
+'use client';
 
 import { InfrastructureDashboard } from '@/components/admin/infrastructure/InfrastructureDashboard';
-
-export const metadata: Metadata = {
-  title: 'AI Infrastructure',
-  description: 'Monitor and manage AI services infrastructure',
-};
+import { useAdminRole } from '@/hooks/useAdminRole';
 
 export default function InfrastructurePage() {
+  const { isSuperAdmin } = useAdminRole();
+
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <div>
@@ -16,7 +14,7 @@ export default function InfrastructurePage() {
           Monitor service health, test connectivity, and manage AI infrastructure
         </p>
       </div>
-      <InfrastructureDashboard isSuperAdmin={true} />
+      <InfrastructureDashboard isSuperAdmin={isSuperAdmin} />
     </div>
   );
 }

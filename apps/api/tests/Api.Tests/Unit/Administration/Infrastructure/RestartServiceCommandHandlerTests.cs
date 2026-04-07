@@ -14,18 +14,18 @@ public sealed class RestartServiceCommandHandlerTests
 {
     private readonly IDockerProxyService _dockerProxy = Substitute.For<IDockerProxyService>();
     private readonly IServiceCooldownRegistry _cooldownRegistry = Substitute.For<IServiceCooldownRegistry>();
-    private readonly RestartServiceCommandHandler _handler;
+    private readonly RestartInfraServiceCommandHandler _handler;
 
     public RestartServiceCommandHandlerTests()
     {
-        _handler = new RestartServiceCommandHandler(
+        _handler = new RestartInfraServiceCommandHandler(
             _dockerProxy,
             _cooldownRegistry,
-            NullLogger<RestartServiceCommandHandler>.Instance);
+            NullLogger<RestartInfraServiceCommandHandler>.Instance);
     }
 
     [Fact]
-    public async Task Handle_NotInCooldown_RestartsSuccessfully()
+    public async Task Handle_NotInCooldown_ReturnsNotAvailableMessage()
     {
         // Arrange
         _cooldownRegistry.IsInCooldown("embedding", out Arg.Any<int>())
@@ -39,12 +39,12 @@ public sealed class RestartServiceCommandHandlerTests
 
         // Act
         var result = await _handler.Handle(
-            new RestartServiceCommand("embedding"), CancellationToken.None);
+            new RestartInfraServiceCommand("embedding"), CancellationToken.None);
 
-        // Assert
-        result.Success.Should().BeTrue();
+        // Assert — restart is not yet available (docker proxy is read-only)
+        result.Success.Should().BeFalse();
         result.ServiceName.Should().Be("embedding");
-        _cooldownRegistry.Received(1).RecordRestart("embedding");
+        result.Message.Should().Contain("not yet available");
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed class RestartServiceCommandHandlerTests
 
         // Act
         var act = () => _handler.Handle(
-            new RestartServiceCommand("embedding"), CancellationToken.None);
+            new RestartInfraServiceCommand("embedding"), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<ConflictException>()
@@ -74,7 +74,7 @@ public sealed class RestartServiceCommandHandlerTests
 
         // Act
         var act = () => _handler.Handle(
-            new RestartServiceCommand("embedding"), CancellationToken.None);
+            new RestartInfraServiceCommand("embedding"), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<NotFoundException>();

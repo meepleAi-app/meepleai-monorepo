@@ -4,9 +4,9 @@ using FluentValidation;
 
 namespace Api.BoundedContexts.Administration.Application.Validators.Infrastructure;
 
-internal sealed class RestartServiceCommandValidator : AbstractValidator<RestartServiceCommand>
+internal sealed class RestartInfraServiceCommandValidator : AbstractValidator<RestartInfraServiceCommand>
 {
-    public RestartServiceCommandValidator()
+    public RestartInfraServiceCommandValidator()
     {
         RuleFor(x => x.ServiceName)
             .NotEmpty()

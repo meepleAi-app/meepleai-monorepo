@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.DTOs;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
@@ -39,9 +40,10 @@ internal class UpdateServiceConfigCommandHandler
 
         if (!response.IsSuccessStatusCode)
         {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            throw new InvalidOperationException(
-                $"Config update failed for {command.ServiceName}: {response.StatusCode} - {body}");
+            _logger.LogWarning("Config update failed for {Service}: {StatusCode}",
+                command.ServiceName, response.StatusCode);
+            throw new ExternalServiceException(
+                $"Configuration update failed for service '{command.ServiceName}'. The service returned status {(int)response.StatusCode}.");
         }
 
         return new ConfigUpdateResponse(command.ServiceName, command.Parameters.Keys.ToList());

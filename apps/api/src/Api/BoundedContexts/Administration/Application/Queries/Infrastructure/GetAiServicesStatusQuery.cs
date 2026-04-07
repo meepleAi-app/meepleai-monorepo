@@ -58,7 +58,7 @@ internal class GetAiServicesStatusQueryHandler
                 DisplayName: def.DisplayName,
                 Type: def.Type,
                 Status: status,
-                Uptime: "—",
+                Uptime: "N/A",
                 AvgLatencyMs: Math.Round(latencyMs, 1),
                 ErrorRate24h: 0,
                 LastCheckedAt: hasHealth ? health!.CheckedAt : DateTime.MinValue,

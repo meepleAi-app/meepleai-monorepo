@@ -54,7 +54,8 @@ internal record ServiceConfigResponse(
 internal record RestartResponse(
     bool Success,
     string ServiceName,
-    DateTime? CooldownExpiresAt);
+    DateTime? CooldownExpiresAt,
+    string? Message = null);
 
 internal record HealthCheckResponse(
     string ServiceName,

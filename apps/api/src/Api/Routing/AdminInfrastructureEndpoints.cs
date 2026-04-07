@@ -96,7 +96,7 @@ internal static class AdminInfrastructureEndpoints
             var (authorized, _, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            var result = await mediator.Send(new RestartServiceCommand(name), ct).ConfigureAwait(false);
+            var result = await mediator.Send(new RestartInfraServiceCommand(name), ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireAuthorization("RequireSuperAdmin")

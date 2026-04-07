@@ -12,24 +12,24 @@ public class InfrastructureValidatorsTests
     [Fact]
     public void RestartValidator_ValidService_Passes()
     {
-        var validator = new RestartServiceCommandValidator();
-        var result = validator.TestValidate(new RestartServiceCommand("embedding"));
+        var validator = new RestartInfraServiceCommandValidator();
+        var result = validator.TestValidate(new RestartInfraServiceCommand("embedding"));
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
     public void RestartValidator_UnknownService_Fails()
     {
-        var validator = new RestartServiceCommandValidator();
-        var result = validator.TestValidate(new RestartServiceCommand("unknown-service"));
+        var validator = new RestartInfraServiceCommandValidator();
+        var result = validator.TestValidate(new RestartInfraServiceCommand("unknown-service"));
         result.ShouldHaveValidationErrorFor(x => x.ServiceName);
     }
 
     [Fact]
     public void RestartValidator_EmptyService_Fails()
     {
-        var validator = new RestartServiceCommandValidator();
-        var result = validator.TestValidate(new RestartServiceCommand(""));
+        var validator = new RestartInfraServiceCommandValidator();
+        var result = validator.TestValidate(new RestartInfraServiceCommand(""));
         result.ShouldHaveValidationErrorFor(x => x.ServiceName);
     }
 

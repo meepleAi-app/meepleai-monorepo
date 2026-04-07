@@ -7,19 +7,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Administration.Application.Commands.Infrastructure;
 
-internal record RestartServiceCommand(string ServiceName) : ICommand<RestartResponse>;
+internal record RestartInfraServiceCommand(string ServiceName) : ICommand<RestartResponse>;
 
-internal class RestartServiceCommandHandler
-    : ICommandHandler<RestartServiceCommand, RestartResponse>
+internal class RestartInfraServiceCommandHandler
+    : ICommandHandler<RestartInfraServiceCommand, RestartResponse>
 {
     private readonly IDockerProxyService _dockerProxy;
     private readonly IServiceCooldownRegistry _cooldownRegistry;
-    private readonly ILogger<RestartServiceCommandHandler> _logger;
+    private readonly ILogger<RestartInfraServiceCommandHandler> _logger;
 
-    public RestartServiceCommandHandler(
+    public RestartInfraServiceCommandHandler(
         IDockerProxyService dockerProxy,
         IServiceCooldownRegistry cooldownRegistry,
-        ILogger<RestartServiceCommandHandler> logger)
+        ILogger<RestartInfraServiceCommandHandler> logger)
     {
         _dockerProxy = dockerProxy ?? throw new ArgumentNullException(nameof(dockerProxy));
         _cooldownRegistry = cooldownRegistry ?? throw new ArgumentNullException(nameof(cooldownRegistry));
@@ -27,7 +27,7 @@ internal class RestartServiceCommandHandler
     }
 
     public async Task<RestartResponse> Handle(
-        RestartServiceCommand command, CancellationToken cancellationToken)
+        RestartInfraServiceCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -47,12 +47,20 @@ internal class RestartServiceCommandHandler
             throw new NotFoundException("Container", def.ContainerName);
         }
 
-        _logger.LogWarning("Restarting service {Service} (container {Container}) by admin request",
+        // Container restart via Docker Socket Proxy is not yet available.
+        // The docker-socket-proxy (tecnativa/docker-socket-proxy) is configured read-only
+        // and does not expose POST endpoints for container lifecycle operations.
+        // When write access is enabled, this handler should POST to
+        // /v1.43/containers/{id}/restart via the proxy's HttpClient.
+        _logger.LogWarning(
+            "Restart requested for service {Service} (container {Container}) but container restart " +
+            "is not yet available in the current infrastructure setup. Docker socket proxy is read-only.",
             command.ServiceName, container.Id);
 
-        _cooldownRegistry.RecordRestart(command.ServiceName);
-
-        var cooldownExpires = DateTime.UtcNow.AddMinutes(5);
-        return new RestartResponse(true, command.ServiceName, cooldownExpires);
+        return new RestartResponse(
+            false,
+            command.ServiceName,
+            null,
+            "Restart is not yet available. Docker socket proxy is configured as read-only.");
     }
 }

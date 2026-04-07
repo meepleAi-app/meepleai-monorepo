@@ -39,13 +39,12 @@ internal static class ServiceRegistry
             },
             ["reranker"] = new[]
             {
-                new ConfigParamDefinition("rate_limit", "Rate Limit (req/min)", "int", null, 10, 1000),
                 new ConfigParamDefinition("batch_size", "Batch Size", "int", null, 1, 128)
             },
             ["unstructured"] = new[]
             {
                 new ConfigParamDefinition("strategy", "Extraction Strategy", "enum",
-                    new[] { "fast", "hi-res" })
+                    new[] { "fast", "hi_res" })
             },
             ["orchestrator"] = new[]
             {

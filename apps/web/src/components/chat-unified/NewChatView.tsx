@@ -558,6 +558,7 @@ export function NewChatView() {
     isDirectGameMode,
     isLoadingCustomAgents,
     selectedGameId,
+    selectedKbIds,
     customAgents,
     privateGames,
     sharedGames,
@@ -640,7 +641,14 @@ export function NewChatView() {
         setIsCreating(false);
       }
     },
-    [selectedGameId, selectedGame?.title, selectedCustomAgentId, resolveAgentId, router]
+    [
+      selectedGameId,
+      selectedKbIds,
+      selectedGame?.title,
+      selectedCustomAgentId,
+      resolveAgentId,
+      router,
+    ]
   );
 
   const handleQuickStart = useCallback(

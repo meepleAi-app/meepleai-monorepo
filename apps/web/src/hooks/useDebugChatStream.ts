@@ -378,9 +378,9 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
         })
         .catch(error => {
           clearTimeout(timeoutId);
-          if (error.name === 'AbortError') {
+          if (error.name === 'AbortError' || error.name === 'TimeoutError') {
             // Check if it was a timeout abort
-            if (error.message === 'Stream timeout') {
+            if (error.name === 'TimeoutError' || error.message === 'Stream timeout') {
               const errorMsg = 'Stream timeout: nessuna risposta entro 2 minuti';
               setState(prev => ({
                 ...prev,

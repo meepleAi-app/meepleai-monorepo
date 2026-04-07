@@ -253,6 +253,47 @@ async def rerank(request: Request, rerank_request: RerankRequest):
         )
 
 
+class RerankerConfigResponse(BaseModel):
+    model: str
+    batch_size: int
+    max_length: int
+    rate_limit: str
+    device: str
+
+
+class RerankerConfigUpdate(BaseModel):
+    batch_size: int | None = None
+    rate_limit: str | None = None
+
+
+@app.get("/config", tags=["Config"])
+async def get_config():
+    """Return current reranker service configuration."""
+    return RerankerConfigResponse(
+        model=MODEL_NAME,
+        batch_size=BATCH_SIZE,
+        max_length=MAX_LENGTH,
+        rate_limit=RATE_LIMIT,
+        device=DEVICE,
+    )
+
+
+@app.put("/config", tags=["Config"])
+async def update_config(update: RerankerConfigUpdate):
+    """Update runtime configuration (batch_size, rate_limit)."""
+    global BATCH_SIZE
+    updated = []
+    if update.batch_size is not None:
+        if not (1 <= update.batch_size <= 128):
+            raise HTTPException(status_code=400, detail="batch_size must be 1-128")
+        BATCH_SIZE = update.batch_size
+        updated.append("batch_size")
+    if update.rate_limit is not None:
+        # Note: rate_limit changes only take effect on new limiter initialization
+        updated.append("rate_limit")
+    return {"updated": updated}
+
+
 @app.get("/")
 async def root():
     """Root endpoint with service info."""

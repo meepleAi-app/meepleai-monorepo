@@ -769,6 +769,7 @@ if (!isAlphaMode)
     v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
     v1Api.MapAdminAnalyticsEndpoints();      // Admin analytics: overview, chat, PDF, model performance, MAU
     v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
+    v1Api.MapAdminInfrastructureEndpoints(); // AI Infrastructure Dashboard: service status, config, restart
     v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel
     v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)
     v1Api.MapAdminLogEndpoints();          // Structured application log viewer (Seq)

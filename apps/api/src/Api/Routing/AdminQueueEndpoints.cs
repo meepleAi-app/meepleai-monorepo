@@ -112,6 +112,12 @@ internal static class AdminQueueEndpoints
             .Produces(404)
             .WithSummary("Preview extracted text for a document before embedding");
 
+        // Batch ETA estimates for all active jobs
+        group.MapGet("/eta", HandleGetBatchETA)
+            .WithName("GetBatchETA")
+            .Produces<BatchETAResult>(200)
+            .WithSummary("Get ETA estimates for all queued and processing jobs");
+
         // Issue #5457: Queue status with backpressure info
         group.MapGet("/status", HandleGetQueueStatus)
             .WithName("GetQueueStatus")
@@ -338,6 +344,14 @@ internal static class AdminQueueEndpoints
     {
         var result = await mediator.Send(new GetPdfTextQuery(pdfDocumentId), ct).ConfigureAwait(false);
         return result is null ? Results.NotFound() : Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetBatchETA(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetBatchETAQuery(), ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleGetQueueStatus(

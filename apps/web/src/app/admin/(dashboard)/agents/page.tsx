@@ -19,6 +19,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { InfraStatusBar } from '@/components/admin/infrastructure/InfraStatusBar';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -256,6 +257,9 @@ export default function MissionControlPage() {
           Panoramica dell&apos;infrastruttura AI, agenti e RAG pipeline
         </p>
       </div>
+
+      {/* Infrastructure Status Bar */}
+      <InfraStatusBar />
 
       {/* Row 1 — KPI Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">

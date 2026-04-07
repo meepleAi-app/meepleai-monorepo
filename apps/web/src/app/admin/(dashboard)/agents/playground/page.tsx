@@ -9,7 +9,7 @@
  * Protected by admin layout (RequireRole(['Admin'])).
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import { SendIcon } from 'lucide-react';
@@ -21,11 +21,6 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import { cn } from '@/lib/utils';
-
-// ─── Module-level client (stable reference) ───────────────────────────────────
-
-const _httpClient = new HttpClient();
-const _adminClient = createAdminClient({ httpClient: _httpClient });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,7 +46,11 @@ function ChatDebugTab() {
   const messageIdRef = useRef(0);
   const [showDebug, setShowDebug] = useLocalStorage('playground-debug-panel-visible', true);
 
-  const adminClient = _adminClient;
+  const adminClient = useMemo(() => {
+    const httpClient = new HttpClient();
+    return createAdminClient({ httpClient });
+  }, []);
+
   const { data: aiModels, isLoading: modelsLoading } = useQuery({
     queryKey: ['admin', 'ai-models', 'active'],
     queryFn: () => adminClient.getAiModels({ status: 'active' }),

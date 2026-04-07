@@ -8,6 +8,9 @@
 
 import { useState, useCallback, useRef } from 'react';
 
+/** Maximum stream duration before auto-abort (2 minutes) */
+const STREAM_TIMEOUT_MS = 120_000;
+
 // StreamingEventType enum values from backend
 const StreamingEventType = {
   StateUpdate: 0,
@@ -131,6 +134,8 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
   const callbacksRef = useRef(callbacks);
   const activeRequestIdRef = useRef<number>(0);
   const debugEventCounterRef = useRef<number>(0);
+  const pendingDebugEventsRef = useRef<DebugEvent[]>([]);
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   callbacksRef.current = callbacks;
 
   const stopStreaming = useCallback(() => {
@@ -144,8 +149,23 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
   const reset = useCallback(() => {
     stopStreaming();
     debugEventCounterRef.current = 0;
+    pendingDebugEventsRef.current = [];
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
     setState(INITIAL_STATE);
   }, [stopStreaming]);
+
+  const flushDebugEvents = useCallback(() => {
+    const pending = pendingDebugEventsRef.current;
+    if (pending.length === 0) return;
+    pendingDebugEventsRef.current = [];
+    setState(prev => ({
+      ...prev,
+      debugEvents: [...prev.debugEvents, ...pending],
+    }));
+  }, []);
 
   const sendMessage = useCallback(
     (
@@ -172,6 +192,10 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
 
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
+
+      const timeoutId = setTimeout(() => {
+        abortController.abort(new DOMException('Stream timeout', 'TimeoutError'));
+      }, STREAM_TIMEOUT_MS);
 
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
       const url = `${baseUrl}/api/v1/admin/agents/debug-chat/stream`;
@@ -236,10 +260,13 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
                   elapsedMs: Date.now() - streamStartTime,
                 };
 
-                setState(prev => ({
-                  ...prev,
-                  debugEvents: [...prev.debugEvents, debugEvent],
-                }));
+                pendingDebugEventsRef.current.push(debugEvent);
+                if (!flushTimerRef.current) {
+                  flushTimerRef.current = setTimeout(() => {
+                    flushTimerRef.current = null;
+                    flushDebugEvents();
+                  }, 50);
+                }
 
                 callbacksRef.current?.onDebugEvent?.(debugEvent);
                 continue;
@@ -281,13 +308,23 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
                 case StreamingEventType.Complete: {
                   if (activeRequestIdRef.current !== requestId) break;
 
+                  // Flush pending debug events
+                  if (flushTimerRef.current) {
+                    clearTimeout(flushTimerRef.current);
+                    flushTimerRef.current = null;
+                  }
+                  const pendingEvents = pendingDebugEventsRef.current;
+                  pendingDebugEventsRef.current = [];
+
                   const data = event.data as {
                     totalTokens?: number;
                     chatThreadId?: string;
                   };
                   setState(prev => {
+                    const allDebugEvents = [...prev.debugEvents, ...pendingEvents];
                     const finalState = {
                       ...prev,
+                      debugEvents: allDebugEvents,
                       totalTokens: data?.totalTokens || 0,
                       chatThreadId: data?.chatThreadId || prev.chatThreadId,
                       isStreaming: false,
@@ -327,6 +364,8 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
             }
           }
 
+          clearTimeout(timeoutId);
+
           // If stream ended without Complete event
           if (activeRequestIdRef.current === requestId) {
             setState(prev => {
@@ -338,7 +377,20 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
           }
         })
         .catch(error => {
+          clearTimeout(timeoutId);
           if (error.name === 'AbortError') {
+            // Check if it was a timeout abort
+            if (error.message === 'Stream timeout') {
+              const errorMsg = 'Stream timeout: nessuna risposta entro 2 minuti';
+              setState(prev => ({
+                ...prev,
+                error: errorMsg,
+                isStreaming: false,
+                statusMessage: null,
+              }));
+              callbacksRef.current?.onError?.(errorMsg);
+              return;
+            }
             setState(prev => ({ ...prev, isStreaming: false, statusMessage: null }));
             return;
           }
@@ -352,7 +404,7 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
           callbacksRef.current?.onError?.(errorMsg);
         });
     },
-    [stopStreaming]
+    [stopStreaming, flushDebugEvents]
   );
 
   return { state, sendMessage, stopStreaming, reset };

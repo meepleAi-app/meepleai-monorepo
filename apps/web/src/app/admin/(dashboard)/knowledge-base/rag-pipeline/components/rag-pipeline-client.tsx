@@ -4,6 +4,9 @@ import { useState } from 'react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 
+import { ConfigTab } from './config-tab';
+import { EmbeddingTab } from './embedding-tab';
+import { HistoryTab } from './history-tab';
 import { UploadAndQueueTab } from './upload-and-queue-tab';
 
 export function RagPipelineClient() {
@@ -28,19 +31,13 @@ export function RagPipelineClient() {
           <UploadAndQueueTab />
         </TabsContent>
         <TabsContent value="history" className="mt-4">
-          <div className="rounded-lg border p-8 text-center text-muted-foreground">
-            Storico & Analytics (Task 9)
-          </div>
+          <HistoryTab />
         </TabsContent>
         <TabsContent value="embedding" className="mt-4">
-          <div className="rounded-lg border p-8 text-center text-muted-foreground">
-            Embedding Service (Task 10)
-          </div>
+          <EmbeddingTab />
         </TabsContent>
         <TabsContent value="config" className="mt-4">
-          <div className="rounded-lg border p-8 text-center text-muted-foreground">
-            Configurazione (Task 11)
-          </div>
+          <ConfigTab />
         </TabsContent>
       </Tabs>
     </div>

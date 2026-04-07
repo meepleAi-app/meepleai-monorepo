@@ -17,7 +17,7 @@ import { Gamepad2, History, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { EmptyStateCard, SkeletonCardGrid } from '@/components/features/common';
-import { MeepleCard, entityColors } from '@/components/ui/data-display/meeple-card';
+import { MeepleCard, entityHsl } from '@/components/ui/data-display/meeple-card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/navigation/tabs';
 import { useActiveSessions, sessionsKeys } from '@/hooks/queries/useActiveSessions';
 import { useNavigation } from '@/hooks/useNavigation';
@@ -83,7 +83,7 @@ export function PlayPanel() {
               ctaLabel="Nuova Sessione"
               onCtaClick={() => router.push('/sessions/new')}
               icon={Gamepad2}
-              entityColor={entityColors.session.hsl}
+              entityColor={entityHsl('session')}
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
@@ -98,7 +98,7 @@ export function PlayPanel() {
                   badge={getStatusLabel(session.status)}
                   metadata={[
                     {
-                      icon: Gamepad2,
+                      icon: <Gamepad2 className="h-4 w-4" />,
                       label: `${session.durationMinutes} min`,
                     },
                   ]}
@@ -126,7 +126,7 @@ export function PlayPanel() {
               ctaLabel="Vai alle Sessioni"
               onCtaClick={() => setActiveTab('active')}
               icon={History}
-              entityColor={entityColors.session.hsl}
+              entityColor={entityHsl('session')}
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
@@ -145,7 +145,7 @@ export function PlayPanel() {
                   badge={getStatusLabel(session.status)}
                   metadata={[
                     {
-                      icon: Gamepad2,
+                      icon: <Gamepad2 className="h-4 w-4" />,
                       label: `${session.durationMinutes} min`,
                     },
                   ]}
@@ -164,7 +164,7 @@ export function PlayPanel() {
                    w-14 h-14 rounded-full flex items-center justify-center
                    text-white shadow-lg hover:shadow-xl
                    transition-all duration-200 hover:scale-105 active:scale-95"
-        style={{ backgroundColor: `hsl(${entityColors.session.hsl})` }}
+        style={{ backgroundColor: entityHsl('session') }}
         aria-label="Nuova Sessione"
       >
         <Plus className="w-6 h-6" />

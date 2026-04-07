@@ -11,7 +11,7 @@ import { Crown, Trophy } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-import { PLAYER_COLOR_BG, PLAYER_COLOR_TEXT } from '../../meeple-card-features/session-types';
+import { PLAYER_COLOR_BG, PLAYER_COLOR_TEXT } from '../session-types-compat';
 
 import type { ScoreboardTabData, SessionPlayerInfo } from '../types';
 
@@ -45,7 +45,7 @@ function PlayerScoreRow({ player, isLeader }: { player: SessionPlayerInfo; isLea
         isLeader ? 'bg-amber-50/80 border border-amber-200/50' : 'bg-white/60'
       )}
     >
-      <RankBadge rank={player.currentRank} />
+      <RankBadge rank={player.currentRank ?? 0} />
       <div
         className={cn(
           'flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white flex-shrink-0',
@@ -86,11 +86,11 @@ export function ScoreboardTab({ data }: ScoreboardTabProps) {
   }
 
   // Sort players by rank
-  const sortedPlayers = [...data.players].sort((a, b) => a.currentRank - b.currentRank);
+  const sortedPlayers = [...data.players].sort((a, b) => (a.currentRank ?? 0) - (b.currentRank ?? 0));
   const leaderId = sortedPlayers[0]?.id;
 
   // Group round scores by round number
-  const roundNumbers = [...new Set(data.roundScores.map(s => s.round))].sort((a, b) => a - b);
+  const roundNumbers = [...new Set(data.roundScores.map(s => s.round))].sort((a, b) => (a ?? 0) - (b ?? 0));
 
   return (
     <div className="space-y-4">
@@ -158,7 +158,7 @@ export function ScoreboardTab({ data }: ScoreboardTabProps) {
       {/* Scoring config info */}
       {data.scoringConfig && (
         <div className="rounded-lg bg-indigo-50/40 px-3 py-2 text-xs text-indigo-600 font-nunito">
-          Scoring: {data.scoringConfig.enabledDimensions.join(', ')}
+          Scoring: {data.scoringConfig.enabledDimensions?.join(', ')}
         </div>
       )}
     </div>

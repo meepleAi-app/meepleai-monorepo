@@ -123,7 +123,7 @@ function LibraryGameCard({
         entry.currentState === 'Owned'
           ? 'owned'
           : entry.currentState === 'Wishlist'
-            ? 'wishlisted'
+            ? 'wishlist'
             : undefined
       }
       metadata={[

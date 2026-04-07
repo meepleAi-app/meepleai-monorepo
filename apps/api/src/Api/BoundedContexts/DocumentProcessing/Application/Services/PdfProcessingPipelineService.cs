@@ -534,7 +534,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // Index embeddings in pgvector for semantic search
         if (_vectorStore != null && embeddings.Count == translatedChunks.Count)
         {
-            var gameId = pdfDoc.GameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
+            // GameId resolution: same strategy as IndexPdfCommandHandler.effectiveGameId
+            var gameId = pdfDoc.PrivateGameId ?? pdfDoc.GameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
             if (gameId == Guid.Empty)
             {
                 _logger.LogWarning(
@@ -598,7 +599,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             .Select((chunk, index) => new TextChunkEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = pdfDoc.SharedGameId ?? pdfDoc.GameId,
+                // GameId resolution: same strategy as IndexPdfCommandHandler.effectiveGameId
+                GameId = pdfDoc.PrivateGameId ?? pdfDoc.GameId ?? pdfDoc.SharedGameId,
                 SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfDoc.Id,
                 Content = chunk.Text,

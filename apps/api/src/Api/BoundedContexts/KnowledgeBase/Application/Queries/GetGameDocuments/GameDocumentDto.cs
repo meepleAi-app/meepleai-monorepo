@@ -9,5 +9,7 @@ internal sealed record GameDocumentDto(
     string Title,
     string Status,
     int PageCount,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string Category,
+    string? VersionLabel
 );

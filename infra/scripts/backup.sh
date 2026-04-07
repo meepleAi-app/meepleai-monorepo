@@ -13,8 +13,9 @@ set -euo pipefail
 trap 'on_error $LINENO' ERR
 
 on_error() {
+  local exit_code=$?
   local line="${1:-unknown}"
-  log "ERROR" "Backup failed at line ${line} — exit code: $?"
+  log "ERROR" "Backup failed at line ${line} — exit code: ${exit_code}"
   notify_webhook "failure" "Backup failed at line ${line}"
   exit 1
 }
@@ -201,6 +202,11 @@ upload_to_s3() {
     return 0
   fi
 
+  if [[ -z "${S3_ENDPOINT}" ]]; then
+    log "ERROR" "S3_BACKUP_ENABLED=true but S3_BACKUP_ENDPOINT is empty — skipping upload"
+    return 1
+  fi
+
   log "INFO" "Uploading backup to S3/R2 bucket: ${S3_BUCKET_NAME}..."
 
   local s3_prefix="s3://${S3_BUCKET_NAME}/${TIMESTAMP}/"
@@ -219,6 +225,10 @@ upload_to_s3() {
 # ─────────────────────────────────────────────
 clean_s3_backups() {
   if [[ "${S3_BACKUP_ENABLED}" != "true" ]]; then
+    return 0
+  fi
+
+  if [[ -z "${S3_ENDPOINT}" ]]; then
     return 0
   fi
 

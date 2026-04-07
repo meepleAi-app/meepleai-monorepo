@@ -69,7 +69,7 @@ docker run -d \
   --name "${TEMP_CONTAINER}" \
   -e POSTGRES_USER="${DB_USER}" \
   -e POSTGRES_PASSWORD="restore_test_pass" \
-  -e POSTGRES_DB="${DB_NAME}" \
+  -e POSTGRES_DB=postgres \
   -p "${TEMP_PORT}:5432" \
   "${PG_IMAGE}" > /dev/null
 
@@ -78,7 +78,7 @@ docker run -d \
 echo "Waiting for PostgreSQL to be ready (timeout: ${WAIT_TIMEOUT}s)..."
 
 ELAPSED=0
-until docker exec "${TEMP_CONTAINER}" pg_isready -U "${DB_USER}" -d "${DB_NAME}" -q 2>/dev/null; do
+until docker exec "${TEMP_CONTAINER}" pg_isready -U "${DB_USER}" -d postgres -q 2>/dev/null; do
   if [[ ${ELAPSED} -ge ${WAIT_TIMEOUT} ]]; then
     echo "ERROR: PostgreSQL not ready after ${WAIT_TIMEOUT} seconds" >&2
     exit 1
@@ -95,7 +95,7 @@ echo "Restoring backup from ${PG_FILE}..."
 
 RESTORE_START=$(date +%s)
 
-gunzip -c "${PG_FILE}" | docker exec -i "${TEMP_CONTAINER}" psql -U "${DB_USER}" -q --set ON_ERROR_STOP=1
+gunzip -c "${PG_FILE}" | docker exec -i "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d postgres -q
 
 RESTORE_END=$(date +%s)
 RESTORE_TIME=$((RESTORE_END - RESTORE_START))
@@ -107,15 +107,15 @@ echo "Restore completed in ${RESTORE_TIME}s"
 echo "Verifying restored data..."
 
 # Query Administration.Users count
-USERS_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d "${DB_NAME}" -t -c \
+USERS_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai -t -c \
   'SELECT COUNT(*) FROM "Administration"."Users";' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
 
 # Query GameManagement.Games count
-GAMES_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d "${DB_NAME}" -t -c \
+GAMES_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai -t -c \
   'SELECT COUNT(*) FROM "GameManagement"."Games";' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
 
 # Query schema count (exclude pg_catalog, information_schema, pg_toast, public)
-SCHEMA_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d "${DB_NAME}" -t -c \
+SCHEMA_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai -t -c \
   "SELECT COUNT(*) FROM information_schema.schemata
    WHERE schema_name NOT IN ('pg_catalog','information_schema','pg_toast','public')
      AND schema_name NOT LIKE 'pg_toast_%'

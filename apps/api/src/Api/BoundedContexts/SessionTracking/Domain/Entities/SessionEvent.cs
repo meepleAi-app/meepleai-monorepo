@@ -20,6 +20,12 @@ public class SessionEvent
     public Guid SessionId { get; private set; }
 
     /// <summary>
+    /// Optional GameNight reference for cross-game diary entries.
+    /// When set, this event appears in the game night diary spanning all sessions.
+    /// </summary>
+    public Guid? GameNightId { get; private set; }
+
+    /// <summary>
     /// Type of event (e.g., "dice_roll", "score_update", "player_joined", "note_added").
     /// </summary>
     [MaxLength(50)]
@@ -71,13 +77,15 @@ public class SessionEvent
     /// <param name="payload">JSON payload with event data (defaults to "{}").</param>
     /// <param name="createdBy">User who triggered the event (null for system events).</param>
     /// <param name="source">Source of the event (max 50 chars).</param>
+    /// <param name="gameNightId">Optional GameNight ID for cross-game diary entries.</param>
     /// <returns>New SessionEvent instance.</returns>
     public static SessionEvent Create(
         Guid sessionId,
         string eventType,
         string? payload = null,
         Guid? createdBy = null,
-        string? source = null)
+        string? source = null,
+        Guid? gameNightId = null)
     {
         if (sessionId == Guid.Empty)
             throw new ArgumentException("Session ID cannot be empty.", nameof(sessionId));
@@ -100,6 +108,7 @@ public class SessionEvent
             Payload = payload ?? "{}",
             CreatedBy = createdBy,
             Source = source,
+            GameNightId = gameNightId,
             IsDeleted = false
         };
     }

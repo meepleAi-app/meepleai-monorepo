@@ -237,7 +237,7 @@ const _ALL_DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'AI',
     icon: BrainCircuitIcon,
     baseRoute: '/admin/agents',
-    additionalRoutes: ['/admin/ai'],
+    additionalRoutes: ['/admin/ai', '/admin/agents/infrastructure'],
     actions: [
       {
         id: 'new-agent',
@@ -267,6 +267,11 @@ const _ALL_DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Mission Control',
         icon: GaugeIcon,
         activePattern: /^\/admin\/agents$/,
+      },
+      {
+        href: '/admin/agents/infrastructure',
+        label: 'Infrastructure',
+        icon: ServerIcon,
       },
       {
         href: '/admin/agents/inspector',

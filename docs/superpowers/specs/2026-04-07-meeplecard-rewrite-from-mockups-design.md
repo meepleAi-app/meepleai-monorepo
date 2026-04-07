@@ -157,7 +157,7 @@ Extracted directly from mockup CSS. These replace current design-tokens.css Meep
 ### Dark Theme
 
 ```css
-[data-theme="dark"] {
+.dark {
   --mc-bg-page: #0f0d0b;
   --mc-bg-card: rgba(30, 27, 24, 0.80);
   --mc-bg-card-hover: rgba(40, 36, 32, 0.92);
@@ -629,7 +629,7 @@ Shared touch gesture utility:
 
 ### Approach
 
-CSS custom properties with `[data-theme="dark"]` selector, matching mockup definitions exactly.
+CSS custom properties with `.dark` selector, matching mockup definitions exactly.
 
 ### Theme Toggle
 

@@ -4,9 +4,15 @@
 
 **Goal:** Rewrite the entire MeepleCard component system from the 6 HTML mockups in `admin-mockups/`, replacing all legacy code with a clean implementation that pixel-matches the mockups.
 
-**Architecture:** Delete-and-rebuild approach. Create feature branch, remove all legacy MeepleCard code, build new components from mockup CSS as source of truth, update all 161 consumer files, add mobile hand+focused layout and dark theme.
+**Architecture:** Delete-and-rebuild approach. Create feature branch, remove all legacy MeepleCard code, build new components from mockup CSS as source of truth, update all ~161 consumer files, add mobile hand+focused layout and dark theme.
 
 **Tech Stack:** React 19, TypeScript, Tailwind 4, CSS custom properties, Next.js App Router
+
+**Build Note:** The branch will NOT compile between Task 1 (deletion) and Task 14 (router + public exports). This is expected — all intermediate commits are stepping stones. Full compilation is restored at Task 15.
+
+**Font Variables:** Quicksand and Nunito are already loaded in `layout.tsx` as `--font-quicksand` and `--font-nunito`. All components use these CSS variables.
+
+**Theme System:** next-themes is already configured with `attribute="class"` (adds `.dark` to `<html>`). Dark theme CSS uses `.dark` selector, NOT `.dark`.
 
 **Spec:** `docs/superpowers/specs/2026-04-07-meeplecard-rewrite-from-mockups-design.md`
 
@@ -30,6 +36,13 @@
 - Delete: `apps/web/src/components/ui/data-display/meeple-card-styles.ts`
 - Delete: `apps/web/src/components/ui/data-display/meeple-card-compound.tsx`
 - Delete: `apps/web/src/components/ui/data-display/meeple-card-mobile-tags.tsx`
+- Delete: `apps/web/src/components/ui/data-display/meeple-card-info-button.tsx`
+- Delete: `apps/web/src/components/ui/data-display/meeple-card-parts.tsx`
+- Delete: `apps/web/src/components/ui/data-display/meeple-card-quick-actions.tsx`
+- Delete: `apps/web/src/components/ui/data-display/meeple-card.stories.tsx`
+- Delete: `apps/web/src/components/ui/data-display/meeple-card-browser/` (entire directory)
+- Delete: `apps/web/src/components/ui/data-display/card-back-blocks/` (entire directory)
+- Delete: `apps/web/src/components/ui/data-display/holo/` (entire directory)
 
 - [ ] **Step 1: Create feature branch from main-dev**
 
@@ -45,9 +58,16 @@ git config branch.feature/meeplecard-rewrite.parent main-dev
 ```bash
 rm -rf apps/web/src/components/ui/data-display/meeple-card
 rm -rf apps/web/src/components/ui/data-display/meeple-card-features
+rm -rf apps/web/src/components/ui/data-display/meeple-card-browser
+rm -rf apps/web/src/components/ui/data-display/card-back-blocks
+rm -rf apps/web/src/components/ui/data-display/holo
 rm -f apps/web/src/components/ui/data-display/meeple-card-styles.ts
 rm -f apps/web/src/components/ui/data-display/meeple-card-compound.tsx
 rm -f apps/web/src/components/ui/data-display/meeple-card-mobile-tags.tsx
+rm -f apps/web/src/components/ui/data-display/meeple-card-info-button.tsx
+rm -f apps/web/src/components/ui/data-display/meeple-card-parts.tsx
+rm -f apps/web/src/components/ui/data-display/meeple-card-quick-actions.tsx
+rm -f apps/web/src/components/ui/data-display/meeple-card.stories.tsx
 ```
 
 - [ ] **Step 3: Commit deletion**
@@ -57,7 +77,9 @@ git add -A
 git commit -m "chore: delete legacy MeepleCard system for rewrite
 
 Removes all legacy components, features, styles, compound API,
-and mobile tags. Will be rebuilt from admin-mockups."
+mobile tags, card browser, card-back blocks, holo overlay,
+info button, parts, quick actions, and stories.
+Will be rebuilt from admin-mockups."
 ```
 
 ---
@@ -354,10 +376,10 @@ Read `apps/web/src/styles/design-tokens.css`, then append MeepleCard tokens insi
   --e-tool-h: 195;    --e-tool-s: 80%;     --e-tool-l: 50%;
 ```
 
-Also add the dark theme block. Find or create `[data-theme="dark"]` and add:
+Also add the dark theme block. Find or create `.dark` and add:
 
 ```css
-[data-theme="dark"] {
+.dark {
   --mc-bg-page: #0f0d0b;
   --mc-bg-card: rgba(30, 27, 24, 0.80);
   --mc-bg-card-hover: rgba(40, 36, 32, 0.92);
@@ -668,7 +690,7 @@ export function MetaChips({ metadata }: MetaChipsProps) {
       {metadata.map((m, i) => (
         <span
           key={i}
-          className="flex items-center gap-[3px] rounded-md bg-slate-100 px-2 py-0.5 text-[10px] text-[var(--mc-text-secondary)]"
+          className="flex items-center gap-[3px] rounded-md bg-[var(--mc-bg-muted)] px-2 py-0.5 text-[10px] text-[var(--mc-text-secondary)]"
         >
           {m.icon && <span className="text-[11px]">{m.icon}</span>}
           {m.label}
@@ -737,11 +759,11 @@ export function NavFooter({ items, size = 'sm' }: NavFooterProps) {
           >
             {/* Icon circle */}
             <div
-              className={`relative flex ${iconSize} items-center justify-center rounded-full border border-[var(--mc-nav-icon-border)] bg-[var(--mc-nav-icon-bg)] transition-all duration-200 group-hover/nav:scale-[1.08] group-active/nav:scale-95`}
+              className={`relative flex ${iconSize} items-center justify-center rounded-full border border-[var(--mc-nav-icon-border)] bg-[var(--mc-nav-icon-bg)] transition-all duration-200 group-hover/nav:scale-[1.08] group-hover/nav:border-[var(--nav-hover-border)] group-hover/nav:bg-[var(--nav-hover-bg)] group-hover/nav:shadow-[var(--nav-hover-shadow)] group-active/nav:scale-95 group-active/nav:shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]`}
               style={{
-                '--hover-border': borderHover,
-                '--hover-bg': entityHsl(item.entity, 0.08),
-                '--hover-shadow': `0 2px 8px ${glowColor}`,
+                '--nav-hover-border': borderHover,
+                '--nav-hover-bg': entityHsl(item.entity, 0.08),
+                '--nav-hover-shadow': `0 2px 8px ${glowColor}`,
               } as React.CSSProperties}
             >
               <span className="pointer-events-none">{item.icon}</span>
@@ -884,9 +906,9 @@ export function GridCard(props: MeepleCardProps) {
 
   return (
     <div
-      className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-card)] shadow-[var(--mc-shadow-sm)] outline-2 outline-offset-2 outline-transparent backdrop-blur-[12px] backdrop-saturate-[180%] transition-all duration-[350ms] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1.5 hover:shadow-[var(--mc-shadow-xl)] hover:outline-[${glowColor}] ${className}`}
+      className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-card)] shadow-[var(--mc-shadow-sm)] outline-2 outline-offset-2 outline-transparent backdrop-blur-[12px] backdrop-saturate-[180%] transition-all duration-[350ms] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1.5 hover:shadow-[var(--mc-shadow-xl)] hover:outline-[var(--mc-glow)] ${className}`}
       style={{
-        '--glow': glowColor,
+        '--mc-glow': glowColor,
       } as React.CSSProperties}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
@@ -1086,8 +1108,8 @@ export function FeaturedCard(props: MeepleCardProps) {
 
   return (
     <div
-      className={`group relative flex w-[400px] cursor-pointer flex-col overflow-hidden rounded-[20px] border border-[var(--mc-border)] bg-[var(--mc-bg-card)] shadow-[var(--mc-shadow-lg)] outline-2 outline-offset-2 outline-transparent backdrop-blur-[12px] backdrop-saturate-[180%] transition-all duration-[350ms] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1.5 hover:shadow-[var(--mc-shadow-2xl)] ${className}`}
-      style={{ outlineColor: 'transparent' }}
+      className={`group relative flex w-[400px] cursor-pointer flex-col overflow-hidden rounded-[20px] border border-[var(--mc-border)] bg-[var(--mc-bg-card)] shadow-[var(--mc-shadow-lg)] outline-2 outline-offset-2 outline-transparent backdrop-blur-[12px] backdrop-saturate-[180%] transition-all duration-[350ms] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1.5 hover:shadow-[var(--mc-shadow-2xl)] hover:outline-[var(--mc-glow)] ${className}`}
+      style={{ '--mc-glow': entityHsl(entity, 0.4) } as React.CSSProperties}
       onClick={onClick}
     >
       <AccentBorder entity={entity} />
@@ -1896,83 +1918,215 @@ Public API exports all components, types, and tokens."
 
 ## Phase 7: Consumer Updates
 
-### Task 15: Update All Consumer Imports and Entity Type References
+Phase 7 is split into sub-tasks to reduce blast radius and enable parallel work.
 
-This is the largest task — 161 files import from the old MeepleCard system. The approach:
-1. Fix TypeScript compilation errors by updating imports
-2. Rename `chatSession` → `chat` and `document` → `kb` across all consumers
-3. Remove references to deleted entity types
+### Task 15a: Update Adjacent Component Directories
 
-**Files:** All files listed in Section 5-7 of the file mapping (161 files). Key categories:
+These directories import from deleted meeple-card files and must be updated to use the new API.
 
-**Card mappers** (update entity type names):
-- `apps/web/src/lib/card-mappers/kb-card-mapper.ts`
-- `apps/web/src/lib/card-mappers/session-card-mapper.ts`
-- `apps/web/src/lib/card-mappers/game-card-mapper.ts`
-- `apps/web/src/lib/card-mappers/player-card-mapper.ts`
+**Files:**
+- Modify: `apps/web/src/components/ui/data-display/extra-meeple-card/` (32 files — drawer, entity detail hooks, tabs)
+- Modify: `apps/web/src/components/ui/data-display/deck-stack/` (7 files)
+- Modify: `apps/web/src/components/ui/data-display/entity-list-view/` (26 files)
+- Modify: `apps/web/src/components/ui/data-display/game-carousel/` (14 files)
+- Modify: `apps/web/src/components/ui/data-display/mana/` (6 files)
 
-**Config files** (update entity types):
-- `apps/web/src/config/entity-actions.ts`
-- `apps/web/src/config/entity-navigation.ts`
-- `apps/web/src/config/component-registry.ts`
+- [ ] **Step 1: Update extra-meeple-card/ imports and entity types**
 
-**Icon components** (update entity types):
-- `apps/web/src/components/icons/entities/EntityIcon.tsx`
-- `apps/web/src/components/icons/entity-types/EntityTypeIcon.tsx`
+Update `ExtraMeepleCardDrawer.tsx`, `EntityExtraMeepleCard.tsx`, entity detail hooks, and all tab components to:
+- Import `MeepleEntityType` from `@/components/ui/data-display/meeple-card`
+- Rename `chatSession` → `chat`, `document` → `kb`
+- Remove references to deleted entity types (`collection`, `group`, `location`, `expansion`, `achievement`, `note`, `custom`)
+- Remove `CollectionExtraMeepleCard.tsx` (collection entity deleted)
 
-**Pages with card grids** (wrap with mobile layout detection):
-- `apps/web/src/app/(authenticated)/agents/page.tsx`
-- `apps/web/src/app/(authenticated)/library/library-mobile.tsx`
-- `apps/web/src/app/(authenticated)/library/private/PrivateGamesClient.tsx`
-- `apps/web/src/app/(authenticated)/sessions/_content.tsx`
-- `apps/web/src/app/(chat)/chat/page.tsx`
+- [ ] **Step 2: Update deck-stack/ imports**
 
-- [ ] **Step 1: Run TypeScript compiler to get full error list**
+Update `deck-stack-types.ts` and components to use new `MeepleEntityType` import.
+
+- [ ] **Step 3: Update entity-list-view/ entity type references**
+
+Update `entity-list-view.types.ts`, filter utilities, and components to use new 9-entity type system.
+
+- [ ] **Step 4: Update game-carousel/ imports**
+
+Update `types.ts` and `GameCarousel.tsx` to use new `MeepleCard` import.
+
+- [ ] **Step 5: Update mana/ entity type references**
+
+Update `mana-types.ts` and `mana-config.ts` to use new 9-entity type system.
+
+- [ ] **Step 6: Commit**
 
 ```bash
-cd apps/web && pnpm typecheck 2>&1 | head -100
+git add -A
+git commit -m "refactor: update adjacent card directories for new MeepleCard API
+
+extra-meeple-card, deck-stack, entity-list-view, game-carousel, mana
+updated to new 9-entity type system and import paths."
 ```
 
-Use the error output to identify every file that needs updating. The errors will be import paths and type mismatches.
+---
 
-- [ ] **Step 2: Fix imports in all consumer files**
+### Task 15b: Update Card Mappers and Config Files
 
-For each broken import, update the import path to point to the new `meeple-card/index.ts`. The public API is designed to be import-compatible:
+**Files:**
+- Modify: `apps/web/src/lib/card-mappers/kb-card-mapper.ts`
+- Modify: `apps/web/src/lib/card-mappers/session-card-mapper.ts`
+- Modify: `apps/web/src/lib/card-mappers/game-card-mapper.ts`
+- Modify: `apps/web/src/lib/card-mappers/player-card-mapper.ts`
+- Modify: `apps/web/src/config/entity-actions.ts`
+- Modify: `apps/web/src/config/entity-navigation.ts`
+- Modify: `apps/web/src/config/component-registry.ts`
+- Modify: `apps/web/src/components/icons/entities/EntityIcon.tsx`
+- Modify: `apps/web/src/components/icons/entity-types/EntityTypeIcon.tsx`
+
+- [ ] **Step 1: Update card mappers — import paths and entity type renames**
 
 ```typescript
-// Old: import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-// New: Same path, same import — should work if index.ts exports match
-
 // Old: import { MeepleEntityType } from '@/components/ui/data-display/meeple-card-styles';
 // New: import { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
-
-// Old: import { MeepleCards } from '@/components/ui/data-display/meeple-card-compound';
-// New: import { MeepleCards } from '@/components/ui/data-display/meeple-card';
-
-// Old: import { FlipCard } from '@/components/ui/data-display/meeple-card-features';
-// New: import { FlipCard } from '@/components/ui/data-display/meeple-card';
 ```
 
-- [ ] **Step 3: Rename entity types across codebase**
+In kb-card-mapper: rename `entity: 'document'` → `entity: 'kb'`.
 
-Search and replace:
-- `'chatSession'` → `'chat'` (as entity type value)
-- `chatSession` → `chat` (in type unions and interfaces)
-- `'document'` → `'kb'` (as entity type in MeepleCard context only — be careful not to rename DOM `document`)
+- [ ] **Step 2: Update config files — remove deleted entity types**
+
+In `entity-actions.ts`, `entity-navigation.ts`, `component-registry.ts`:
+- Remove cases/entries for: `collection`, `group`, `location`, `expansion`, `achievement`, `note`, `custom`
+- Rename `chatSession` → `chat`
+
+- [ ] **Step 3: Update icon components**
+
+In `EntityIcon.tsx` and `EntityTypeIcon.tsx`:
+- Remove cases for deleted entity types
+- Rename `chatSession` → `chat`, `document` → `kb`
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "refactor: update card mappers, configs, icons for new entity types
+
+Rename chatSession→chat, document→kb. Remove 7 deleted entity types."
+```
+
+---
+
+### Task 15c: Rename Entity Types Across Remaining Consumers
+
+**SAFETY NOTE on `document` → `kb` rename:**
+Do NOT use global find/replace on `document`. Use these SAFE patterns only:
+
+```bash
+# Safe patterns (match entity context only):
+grep -rn "entity.*['\"]document['\"]" apps/web/src/ --include="*.ts" --include="*.tsx"
+grep -rn "'document'" apps/web/src/ --include="*.ts" --include="*.tsx" | grep -i "entity\|type\|meeple"
+grep -rn "chatSession" apps/web/src/ --include="*.ts" --include="*.tsx"
+```
+
+- [ ] **Step 1: Rename `chatSession` → `chat` (safe — unique string)**
+
+```bash
+# This is safe — chatSession is unique to MeepleCard context
+grep -rn "chatSession" apps/web/src/ --include="*.ts" --include="*.tsx" -l
+```
+
+For each file: replace `'chatSession'` with `'chat'` and `chatSession` with `chat` in type contexts.
+
+- [ ] **Step 2: Rename `document` → `kb` (CAREFUL — context-specific)**
+
+Only replace `document` when it appears as an entity type value:
 - `entity: 'document'` → `entity: 'kb'`
 - `entity === 'document'` → `entity === 'kb'`
+- `'document' |` → `'kb' |` (in type unions)
+- `case 'document':` → `case 'kb':` (in switch statements)
 
-- [ ] **Step 4: Remove deleted entity types from switch/case and maps**
+**NEVER replace**: `document.getElementById`, `document.querySelector`, `document.body`, etc.
 
-Search for `'collection'`, `'group'`, `'location'`, `'expansion'`, `'achievement'`, `'note'`, `'custom'` in entity type contexts and remove those cases.
+- [ ] **Step 3: Remove deleted entity types from all switch/case and maps**
 
-- [ ] **Step 5: Remove old feature-specific prop references**
+Search each pattern and remove matching code:
+```bash
+grep -rn "'collection'\|'group'\|'location'\|'expansion'\|'achievement'\|'note'\|'custom'" apps/web/src/ --include="*.ts" --include="*.tsx" | grep -i "entity\|type\|meeple\|case"
+```
 
-The old props like `agentStatus`, `agentModel`, `chatStatus`, `sessionPlayers`, `kbCards`, etc. no longer exist on MeepleCardProps. Consumers that pass these props need to either:
-- Remove them (if purely visual)
-- Map them into `metadata`, `status`, or `actions` props
+- [ ] **Step 4: Commit**
 
-- [ ] **Step 6: Run typecheck to verify zero errors**
+```bash
+git add -A
+git commit -m "refactor: rename chatSession→chat, document→kb across codebase
+
+Safe context-specific rename. Remove 7 deleted entity types from
+all switch/case, type unions, and entity maps."
+```
+
+---
+
+### Task 15d: Fix Remaining Import Paths and Remove Old Props
+
+- [ ] **Step 1: Run TypeScript compiler to get remaining errors**
+
+```bash
+cd apps/web && pnpm typecheck 2>&1 | head -200
+```
+
+- [ ] **Step 2: Fix all remaining import paths**
+
+```typescript
+// Old: import { ... } from '@/components/ui/data-display/meeple-card-styles';
+// New: import { ... } from '@/components/ui/data-display/meeple-card';
+
+// Old: import { ... } from '@/components/ui/data-display/meeple-card-compound';
+// New: import { ... } from '@/components/ui/data-display/meeple-card';
+
+// Old: import { ... } from '@/components/ui/data-display/meeple-card-features';
+// New: import { ... } from '@/components/ui/data-display/meeple-card';
+
+// Old: import { ... } from '@/components/ui/data-display/meeple-card-features/...';
+// New: import { ... } from '@/components/ui/data-display/meeple-card';
+
+// Old: import { ... } from '@/components/ui/data-display/meeple-card-browser';
+// New: REMOVE (deleted) — consumers must remove these imports
+
+// Old: import { ... } from '@/components/ui/data-display/card-back-blocks';
+// New: REMOVE (deleted)
+
+// Old: import { ... } from '@/components/ui/data-display/holo';
+// New: REMOVE (deleted)
+```
+
+- [ ] **Step 3: Remove old feature-specific prop references**
+
+The following old props NO LONGER EXIST on MeepleCardProps and must be removed from consumer call sites:
+
+| Old Prop | Migration |
+|----------|-----------|
+| `agentStatus` | Map to `status` prop (e.g., `status="active"`) |
+| `agentModel` | Map to `metadata` array entry |
+| `agentStats` | Map to `metadata` array entries |
+| `chatStatus` | Map to `status` prop |
+| `chatAgent` | Map to `metadata` array entry |
+| `chatGame` | Map to `subtitle` prop |
+| `chatStats` | Map to `metadata` array entries |
+| `unreadCount` | Map to `badge` prop (e.g., `badge="3 unread"`) |
+| `sessionPlayers` | Map to `metadata` array entries |
+| `sessionBackData` | Map to `flipBackContent` prop |
+| `sessionSnapshots` | Remove (not in new API) |
+| `gameBackData` | Map to `flipBackContent` prop |
+| `gameBackActions` | Map to `actions` array |
+| `hasAgent` | Map to `navItems` entry |
+| `hasKb` | Map to `navItems` entry |
+| `kbCards` | Remove (not in new API) |
+| `documentStatus` | Map to `status` prop |
+| `showWishlist` | Remove (use `actions` with wishlist action) |
+| `showPreview` | Remove (wrap with `HoverPreview` explicitly) |
+| `selectable` | Remove (not in new API) |
+| `showStatusIcon` | Remove (use `status` prop) |
+| `showTagStrip` | Remove (tags shown when `tags` prop provided) |
+| `showInfoButton` | Remove (not in new API) |
+| `capabilities` | Remove (not in new API) |
+
+- [ ] **Step 4: Run typecheck to verify zero errors**
 
 ```bash
 cd apps/web && pnpm typecheck
@@ -1980,50 +2134,47 @@ cd apps/web && pnpm typecheck
 
 Expected: 0 errors.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add -A
-git commit -m "refactor(meeple-card): update all consumers for rewritten API
+git commit -m "refactor(meeple-card): fix remaining imports and remove old props
 
-- Update 161 import paths to new meeple-card barrel
-- Rename chatSession→chat, document→kb entity types
-- Remove deleted entity types (collection, group, location, etc.)
-- Map old feature-specific props to new generic props"
+All consumers now use new MeepleCard public API.
+Old feature-specific props mapped to generic props.
+Zero TypeScript errors."
 ```
 
 ---
 
-## Phase 8: Dark Theme Toggle
+## Phase 8: Dark Theme Verification
 
-### Task 16: Add Theme Toggle and data-theme Attribute
+### Task 16: Verify Dark Theme Works with MeepleCard Tokens
 
-**Files:**
-- Modify: `apps/web/src/app/layout.tsx` (add `data-theme` attribute)
-- Create or modify: theme provider/toggle component (location TBD based on existing theme infrastructure)
+**Existing infrastructure (already in place — NO new code needed):**
+- `apps/web/src/components/providers/ThemeProvider.tsx` — next-themes with `attribute="class"`, `defaultTheme="light"`, `enableSystem`
+- `apps/web/src/components/ui/navigation/ThemeToggle.tsx` — toggle component in header
+- `apps/web/src/app/layout.tsx` — fonts loaded, providers wrapped
 
-- [ ] **Step 1: Check existing theme infrastructure**
+The CSS tokens added in Task 3 use `.dark` selector which matches next-themes `attribute="class"` behavior.
 
-```bash
-cd apps/web && grep -r "data-theme\|dark.*mode\|theme.*toggle\|ThemeProvider" src/ --include="*.tsx" --include="*.ts" -l | head -20
-```
+- [ ] **Step 1: Verify dark theme CSS tokens are applied**
 
-- [ ] **Step 2: Add `data-theme` attribute to html element in layout.tsx**
+Start dev server, toggle to dark mode, inspect a MeepleCard element. Check that:
+- `--mc-bg-card` resolves to `rgba(30, 27, 24, 0.80)` (dark value)
+- `--mc-text-primary` resolves to `#f0ece8` (dark value)
+- `--mc-shadow-sm` uses `rgba(0, 0, 0, ...)` (dark shadow)
 
-If not already present, add `data-theme="light"` to the `<html>` tag and set up a theme context that toggles between `light` and `dark`, storing preference in `localStorage` and respecting `prefers-color-scheme`.
+- [ ] **Step 2: Fix any dark-mode-specific issues**
 
-- [ ] **Step 3: Ensure theme toggle exists in app header**
+If MetaChips or other parts use hardcoded colors, replace with CSS variables.
+If entity gradients don't look right on dark backgrounds, adjust alpha values.
 
-If no toggle exists, create a minimal one. If one exists, ensure it sets `document.documentElement.dataset.theme`.
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit any dark mode fixes**
 
 ```bash
 git add -A
-git commit -m "feat(meeple-card): add dark theme toggle with data-theme attribute
-
-Persists to localStorage, respects prefers-color-scheme.
-MeepleCard CSS variables respond to [data-theme='dark']."
+git commit -m "fix(meeple-card): dark theme adjustments for MeepleCard tokens"
 ```
 
 ---
@@ -2307,15 +2458,35 @@ Body should cover:
 
 | Phase | Tasks | Description |
 |-------|-------|-------------|
-| 1. Foundation | 1-3 | Branch, delete legacy, types, tokens |
+| 1. Foundation | 1-3 | Branch, delete legacy (expanded list), types, tokens |
 | 2. Parts | 4-7 | Cover, badges, actions, rating, meta, nav footer, tags |
-| 3. Variants | 8-10 | Grid, List, Compact, Featured, Hero |
+| 3. Variants | 8-10 | Grid, List, Compact, Featured, Hero (with entity glow via CSS var) |
 | 4. Features | 11-12 | FlipCard, HoverPreview, Carousel3D, DragHandle, Swipe |
 | 5. Mobile | 13 | Hand sidebar, focused card, mobile layout |
 | 6. Router | 14 | MeepleCard router, compound API, skeleton, exports |
-| 7. Consumers | 15 | Update 161 imports, rename entities, fix props |
-| 8. Dark Theme | 16 | Theme toggle, data-theme attribute |
+| 7. Consumers | 15a-15d | Adjacent dirs → mappers/configs → entity renames → import fixes |
+| 8. Dark Theme | 16 | Verify existing next-themes + new CSS tokens work |
 | 9. Testing | 17-18 | Unit tests for components, tokens, mobile layout |
 | 10. Verify | 19-20 | Build, visual compare, mobile test, dark theme, PR |
 
-**Total: 20 tasks, ~10 phases**
+**Total: 23 tasks (20 + 3 sub-tasks), ~10 phases**
+
+### Review Fixes Applied
+
+| Issue | Severity | Fix Applied |
+|-------|----------|-------------|
+| NavFooter hover CSS not applied | Critical | Added `group-hover/nav:border-[var(--nav-hover-border)]`, `bg`, `shadow` classes |
+| GridCard glow uses dynamic Tailwind (purged) | Critical | Changed to `hover:outline-[var(--mc-glow)]` with CSS variable |
+| Missing files in deletion list | Critical | Added 4 standalone files + 3 directories (browser, card-back, holo) |
+| Adjacent directories would break | Critical | Added Task 15a for extra-meeple-card, deck-stack, entity-list-view, game-carousel, mana |
+| `document`→`kb` rename risk | Critical | Added safe grep patterns and context-specific-only rules in Task 15c |
+| Font loading task missing | Important | Documented: already loaded in layout.tsx as `--font-quicksand`/`--font-nunito` |
+| `--font-quicksand` vs `--mc-font-heading` mismatch | Important | Plan uses `--font-quicksand` (matches layout.tsx) |
+| Theme uses `.dark` not `[data-theme]` | Important | Changed all CSS to use `.dark` selector (matches next-themes) |
+| MetaChips `bg-slate-100` not theme-aware | Important | Changed to `bg-[var(--mc-bg-muted)]` |
+| Task 15 too large | Important | Split into 15a, 15b, 15c, 15d sub-tasks |
+| Theme toggle location TBD | Important | Resolved: `ThemeToggle.tsx` already exists, Task 16 = verify only |
+| Old props migration vague | Important | Added explicit prop migration table in Task 15d |
+| FeaturedCard missing entity glow | Suggestion | Added `hover:outline-[var(--mc-glow)]` with CSS variable |
+| NavFooter active inset shadow missing | Important | Added `group-active/nav:shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]` |
+| Build ordering note missing | Important | Added "Build Note" to plan header |

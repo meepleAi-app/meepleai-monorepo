@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card-styles';
+import {
+  MeepleCard,
+  MeepleCardSkeleton,
+  type MeepleCardMetadata,
+} from '@/components/ui/data-display/meeple-card';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -13,11 +16,7 @@ export interface GameItem {
   title: string;
   subtitle?: string;
   imageUrl?: string;
-  mechanics?: Array<{ icon: string; tooltip: string }>;
-  state?: { text: string; variant: 'success' | 'warning' | 'error' | 'info' };
-  linkedEntities?: Array<{ entityType: MeepleEntityType; count: number }>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata?: Array<{ icon?: any; label?: string; value?: string }>;
+  metadata?: MeepleCardMetadata[];
   rating?: number;
 }
 
@@ -32,9 +31,9 @@ export interface RecentGamesProps {
 function LoadingSkeletons() {
   return (
     <>
-      <MeepleCard entity="game" variant="grid" title="" loading={true} />
-      <MeepleCard entity="game" variant="grid" title="" loading={true} />
-      <MeepleCard entity="game" variant="grid" title="" loading={true} />
+      <MeepleCardSkeleton variant="grid" />
+      <MeepleCardSkeleton variant="grid" />
+      <MeepleCardSkeleton variant="grid" />
     </>
   );
 }
@@ -82,16 +81,12 @@ export function RecentGames({ games, loading = false, className }: RecentGamesPr
               key={game.id}
               entity="game"
               variant="grid"
-              id={game.id}
-              entityId={game.id}
               title={game.title}
               subtitle={game.subtitle}
               imageUrl={game.imageUrl}
-              linkedEntities={game.linkedEntities}
               metadata={game.metadata}
               rating={game.rating}
               ratingMax={10}
-              showInfoButton
             />
           ))
         )}

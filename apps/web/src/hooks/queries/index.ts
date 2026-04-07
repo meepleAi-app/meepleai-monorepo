@@ -220,6 +220,9 @@ export { useGameMemory, useAddHouseRule, gameMemoryKeys } from './useGameMemory'
 // Feature Flags queries
 export { useUserFeatures, featureFlagKeys } from './useFeatureFlags';
 
+// KB Game Documents queries (Mobile Library → KB flow)
+export { useKbGameDocuments, kbGameDocumentKeys } from './useGameDocuments';
+
 // Next Session queries (Library Hero Banner)
 
 // Re-export from @tanstack/react-query for convenience

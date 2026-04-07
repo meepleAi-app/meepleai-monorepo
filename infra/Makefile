@@ -108,6 +108,35 @@ alpha-core: ## Start Alpha Zero core only (no AI services)
 alpha-down: ## Stop Alpha Zero environment
 	$(COMPOSE) -f compose.dev.yml -f compose.alpha.yml --profile ai down
 
+# === Backup & Disaster Recovery ===
+
+backup: ## Run full backup (PostgreSQL + PDFs → local + R2)
+	bash scripts/backup.sh
+
+backup-verify: ## Verify latest backup integrity
+	bash scripts/backup-verify.sh
+
+backup-restore-test: ## Test restore on temp PostgreSQL container
+	bash scripts/backup-restore-test.sh
+
+backup-status: ## Show latest backup info
+	@echo "📊 Latest local backups:"
+	@ls -lht /backups/meepleai/ 2>/dev/null | head -8 || echo "  No backups found in /backups/meepleai/"
+	@echo ""
+	@echo "📊 Disk usage:"
+	@du -sh /backups/meepleai/ 2>/dev/null || echo "  No backup directory"
+
+backup-cron-install: ## Install daily backup cron job (3 AM)
+	@echo "Installing backup cron job..."
+	@(crontab -l 2>/dev/null | grep -v "meepleai.*backup"; \
+	  echo "0 3 * * * cd /opt/meepleai/repo/infra && bash scripts/backup.sh >> /var/log/meepleai-backup.log 2>&1"; \
+	  echo "30 3 * * * cd /opt/meepleai/repo/infra && bash scripts/backup-verify.sh >> /var/log/meepleai-backup-verify.log 2>&1"; \
+	  echo "0 4 * * 0 cd /opt/meepleai/repo/infra && bash scripts/backup-restore-test.sh >> /var/log/meepleai-restore-test.log 2>&1") | crontab -
+	@echo "✅ Cron installed: backup daily 3:00, verify 3:30, restore test weekly Sunday 4:00"
+
+backup-cron-show: ## Show installed backup cron jobs
+	@crontab -l 2>/dev/null | grep meepleai || echo "No MeepleAI cron jobs found"
+
 # === Utilities ===
 
 logs: ## Tail logs for a service (usage: make logs s=api)
@@ -234,4 +263,5 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
         snapshot restore-staging restore-local seed-games \
         logs logging logging-down logs-ui ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
-        sec-scan sec-pentest test-e2e test-visual test-perf validate-workflows
+        sec-scan sec-pentest test-e2e test-visual test-perf validate-workflows \
+        backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show

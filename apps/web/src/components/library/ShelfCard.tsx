@@ -14,15 +14,14 @@ import React from 'react';
 
 import { Plus, Check } from 'lucide-react';
 
-import { entityColors } from '@/components/ui/data-display/meeple-card-styles';
-import { coverOverlayStyles } from '@/components/ui/data-display/meeple-card-styles';
+import { entityHsl } from '@/components/ui/data-display/meeple-card';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type ManaPipType = 'agent' | 'kb' | 'session' | 'chatSession';
+export type ManaPipType = 'agent' | 'kb' | 'session' | 'chat';
 
 export interface ManaPip {
   type: ManaPipType;
@@ -40,7 +39,7 @@ export interface ShelfCardProps {
   coverGradient?: string;
   /** Full cover image URL — takes priority over coverGradient / coverIcon */
   imageUrl?: string;
-  /** Mana pip indicators (agent, kb, session, chatSession) */
+  /** Mana pip indicators (agent, kb, session, chat) */
   manaPips?: ManaPip[];
   /** Whether this item is already in the user's library */
   inLibrary?: boolean;
@@ -62,45 +61,24 @@ export interface ShelfCardProps {
 // Constants
 // ============================================================================
 
-/**
- * Map ManaPipType → HSL value string from the shared entityColors palette.
- * entityColors values are { hsl: string; name: string } objects.
- */
-const PIP_COLORS: Record<ManaPipType, string> = {
-  agent: entityColors.agent.hsl,
-  kb: entityColors.kb.hsl,
-  session: entityColors.session.hsl,
-  chatSession: entityColors.chatSession.hsl,
-};
-
 const PIP_LABELS: Record<ManaPipType, string> = {
   agent: 'Agent',
   kb: 'KB',
   session: 'Session',
-  chatSession: 'Chat',
+  chat: 'Chat',
+};
+
+const stateLabelVariantClasses: Record<'success' | 'warning' | 'error' | 'info', string> = {
+  success: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  warning: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  error: 'bg-red-500/20 text-red-300 border-red-500/30',
+  info: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
 };
 
 // ============================================================================
 // Component
 // ============================================================================
 
-/**
- * ShelfCard — 140px vetrina card for horizontal library shelves.
- *
- * @example
- * ```tsx
- * <ShelfCard
- *   title="Catan"
- *   subtitle="Klaus Teuber"
- *   imageUrl="/catan.jpg"
- *   manaPips={[
- *     { type: 'kb', active: true },
- *     { type: 'agent', active: false },
- *   ]}
- *   inLibrary
- * />
- * ```
- */
 export function ShelfCard({
   title,
   subtitle,
@@ -169,11 +147,14 @@ export function ShelfCard({
 
         {/* MtG overlay bar: mechanicIcon (bottom-left) + stateLabel (bottom-right) */}
         {(mechanicIcon || stateLabel) && (
-          <div className={coverOverlayStyles.container}>
+          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between p-1">
             {/* Bottom-left: mechanic classification icon */}
             <div>
               {mechanicIcon && (
-                <span className={coverOverlayStyles.subtypeIcon} data-testid="mechanic-icon">
+                <span
+                  className="inline-flex items-center justify-center w-5 h-5 rounded bg-black/40 text-[10px]"
+                  data-testid="mechanic-icon"
+                >
                   {mechanicIcon}
                 </span>
               )}
@@ -184,8 +165,8 @@ export function ShelfCard({
               {stateLabel && (
                 <span
                   className={cn(
-                    coverOverlayStyles.stateLabel.base,
-                    coverOverlayStyles.stateLabel[stateLabel.variant]
+                    'inline-flex items-center px-1 py-0.5 rounded text-[8px] font-medium border',
+                    stateLabelVariantClasses[stateLabel.variant]
                   )}
                   data-testid="state-label"
                 >
@@ -229,7 +210,7 @@ export function ShelfCard({
                   'transition-opacity duration-150',
                   pip.active ? 'opacity-100' : 'opacity-30'
                 )}
-                style={{ backgroundColor: `hsl(${PIP_COLORS[pip.type]})` }}
+                style={{ backgroundColor: entityHsl(pip.type) }}
                 title={PIP_LABELS[pip.type]}
                 aria-label={`${PIP_LABELS[pip.type]}${pip.active ? ' (attivo)' : ' (inattivo)'}`}
                 data-testid={`mana-pip-${pip.type}`}

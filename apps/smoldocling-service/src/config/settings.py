@@ -15,7 +15,9 @@ class Settings(BaseSettings):
     max_pages_per_request: int = 20  # Prevent excessive GPU/CPU usage
     timeout: int = 60  # seconds (longer than Unstructured due to VLM inference)
     temp_dir: Path = Path("/tmp/pdf-processing")
-    model_cache_dir: Path = Path("/root/.cache/huggingface")
+    model_cache_dir: Path = Path(
+        __import__("os").environ.get("HF_HOME", "/home/smoldocling/.cache/huggingface")
+    )
 
     # SmolDocling VLM Configuration
     device: Literal["cuda", "cpu", "auto"] = "auto"  # auto = use CUDA if available

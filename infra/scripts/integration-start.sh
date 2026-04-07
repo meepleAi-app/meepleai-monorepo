@@ -24,32 +24,33 @@ STAGING_HOST="deploy@204.168.135.69"
 
 ACTION="${1:-all}"
 
-# Resolve staging DB credentials from the actual running container
+# Resolve staging DB credentials from staging secret files (not container env,
+# which may differ from the actual DB password if the container was recreated)
 resolve_staging_db() {
     echo "Resolving staging database credentials..."
-    local env_output
-    env_output=$(ssh -i "$SSH_KEY" "$STAGING_HOST" \
-        "docker inspect meepleai-postgres --format '{{range .Config.Env}}{{println .}}{{end}}'" 2>/dev/null)
+    local secret_content
+    secret_content=$(ssh -i "$SSH_KEY" "$STAGING_HOST" \
+        "cat /opt/meepleai/repo/infra/secrets/database.secret" 2>/dev/null)
 
-    STAGING_POSTGRES_USER=$(echo "$env_output" | grep "^POSTGRES_USER=" | cut -d= -f2-)
-    STAGING_POSTGRES_PASSWORD=$(echo "$env_output" | grep "^POSTGRES_PASSWORD=" | cut -d= -f2-)
-    STAGING_POSTGRES_DB=$(echo "$env_output" | grep "^POSTGRES_DB=" | cut -d= -f2-)
+    STAGING_POSTGRES_USER=$(echo "$secret_content" | grep "^POSTGRES_USER=" | cut -d= -f2-)
+    STAGING_POSTGRES_PASSWORD=$(echo "$secret_content" | grep "^POSTGRES_PASSWORD=" | cut -d= -f2-)
+    STAGING_POSTGRES_DB=$(echo "$secret_content" | grep "^POSTGRES_DB=" | cut -d= -f2-)
 
     if [ -z "$STAGING_POSTGRES_PASSWORD" ]; then
-        echo "ERROR: Cannot resolve staging DB credentials. Is staging running?"
+        echo "ERROR: Cannot resolve staging DB credentials. Check staging secrets."
         exit 1
     fi
     echo "  User: $STAGING_POSTGRES_USER | DB: $STAGING_POSTGRES_DB"
 }
 
-# Resolve staging Redis password from the actual running container
+# Resolve staging Redis password from staging secret files
 resolve_staging_redis() {
     echo "Resolving staging Redis credentials..."
-    local env_output
-    env_output=$(ssh -i "$SSH_KEY" "$STAGING_HOST" \
-        "docker inspect meepleai-redis --format '{{range .Config.Env}}{{println .}}{{end}}'" 2>/dev/null)
+    local secret_content
+    secret_content=$(ssh -i "$SSH_KEY" "$STAGING_HOST" \
+        "cat /opt/meepleai/repo/infra/secrets/redis.secret" 2>/dev/null)
 
-    STAGING_REDIS_PASSWORD=$(echo "$env_output" | grep "^REDIS_PASSWORD=" | cut -d= -f2-)
+    STAGING_REDIS_PASSWORD=$(echo "$secret_content" | grep "^REDIS_PASSWORD=" | cut -d= -f2-)
 
     if [ -z "$STAGING_REDIS_PASSWORD" ]; then
         echo "WARNING: Cannot resolve staging Redis password. Redis may reject connections."

@@ -3,10 +3,8 @@
  * Issue #4859: Migrated to MeepleCard design system
  *
  * Featured card showing detailed BGG game info before import.
- * Uses MeepleCard with entity="game" variant="featured" and preview data.
+ * Uses MeepleCard with entity="game" variant="featured".
  */
-
-import { Clock, Star, Users } from 'lucide-react';
 
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import type { BggGameDetailsDto } from '@/types/bgg';
@@ -22,9 +20,9 @@ export function BggPreviewCard({ game }: BggPreviewCardProps) {
       : `${game.minPlayers}-${game.maxPlayers} players`;
 
   const metadata: MeepleCardMetadata[] = [
-    { icon: Users, label: playerLabel },
-    { icon: Clock, label: `${game.playingTime} min` },
-    { icon: Star, label: `${game.rating.toFixed(1)} / 10` },
+    { label: playerLabel },
+    { label: `${game.playingTime} min` },
+    { label: `${game.rating.toFixed(1)} / 10` },
   ];
 
   return (
@@ -38,12 +36,6 @@ export function BggPreviewCard({ game }: BggPreviewCardProps) {
       ratingMax={10}
       metadata={metadata}
       badge={`ID #${game.id}`}
-      showPreview={!!game.description}
-      previewData={{
-        description: game.description,
-        categories: game.categories,
-        mechanics: game.mechanics,
-      }}
       data-testid={`bgg-preview-card-${game.id}`}
     />
   );

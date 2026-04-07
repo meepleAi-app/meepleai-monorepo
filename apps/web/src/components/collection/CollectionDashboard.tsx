@@ -156,11 +156,11 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
   const games = useMemo(() => {
     if (!libraryData?.items) return [];
     return libraryData.items.map(entry => {
-      const stateToStatus: Record<string, 'owned' | 'wishlisted' | 'borrowed'> = {
+      const stateToStatus: Record<string, 'owned' | 'wishlist'> = {
         Owned: 'owned',
         Nuovo: 'owned',
-        Wishlist: 'wishlisted',
-        InPrestito: 'borrowed',
+        Wishlist: 'wishlist',
+        InPrestito: 'owned',
       };
       return {
         id: entry.gameId,

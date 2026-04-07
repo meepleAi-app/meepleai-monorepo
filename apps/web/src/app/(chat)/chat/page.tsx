@@ -21,7 +21,6 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
-import { getNavigationLinks } from '@/config/entity-navigation';
 import { useChatSessionLimit, useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
 import { useCardHand } from '@/stores/use-card-hand';
@@ -101,27 +100,14 @@ function formatRelativeDate(dateString: string | null | undefined): string {
 function renderChatSessionCard(
   session: ChatSessionSummaryDto
 ): Omit<MeepleCardProps, 'entity' | 'variant'> {
-  const navLinks = getNavigationLinks('chatSession', {
-    id: session.id,
-    gameId: session.gameId,
-  });
-
   return {
     title: session.title || 'Chat senza titolo',
     subtitle: session.gameTitle ?? undefined,
     metadata: [
-      { icon: MessageCircle, value: `${session.messageCount} messaggi` },
-      { value: formatRelativeDate(session.lastMessageAt) },
+      { label: `${session.messageCount} messaggi` },
+      { label: formatRelativeDate(session.lastMessageAt) },
     ],
     badge: session.isArchived ? 'Archiviata' : undefined,
-    chatPreview: session.lastMessagePreview
-      ? { lastMessage: session.lastMessagePreview, sender: 'agent' as const }
-      : undefined,
-    linkedEntities: navLinks.map(l => ({ entityType: l.entity, count: 1 })),
-    onManaPipClick: entityType => {
-      const link = navLinks.find(l => l.entity === entityType);
-      if (link?.href) window.location.href = link.href;
-    },
   };
 }
 
@@ -165,7 +151,7 @@ function AgentGroupSection({
             return (
               <MeepleCard
                 key={session.id}
-                entity="chatSession"
+                entity="chat"
                 variant="grid"
                 {...cardProps}
                 onClick={() => onSessionClick(session)}
@@ -189,7 +175,7 @@ export default function ChatListPage() {
   useEffect(() => {
     drawCard({
       id: 'section-chat',
-      entity: 'chatSession',
+      entity: 'chat',
       title: 'Chat',
       href: '/chat',
     });

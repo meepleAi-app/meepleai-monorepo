@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, status
 from fastapi.responses import JSONResponse, PlainTextResponse
+from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 from typing import Literal
 
@@ -342,6 +343,41 @@ async def health_check():
                 "memory": "error",
             },
         )
+
+
+class UnstructuredConfigResponse(BaseModel):
+    strategy: str
+    max_file_size: int
+    language: str
+
+
+class UnstructuredConfigUpdate(BaseModel):
+    strategy: str | None = None
+
+
+@app.get("/config", summary="Get service configuration", tags=["Config"])
+async def get_config():
+    """Return current unstructured service configuration."""
+    return UnstructuredConfigResponse(
+        strategy=settings.unstructured_strategy,
+        max_file_size=settings.max_file_size,
+        language=settings.language,
+    )
+
+
+@app.put("/config", summary="Update service configuration", tags=["Config"])
+async def update_config(update: UnstructuredConfigUpdate):
+    """Update runtime configuration (strategy)."""
+    updated = []
+    if update.strategy is not None:
+        if update.strategy not in ("fast", "hi_res"):
+            raise HTTPException(
+                status_code=400,
+                detail="strategy must be 'fast' or 'hi_res'",
+            )
+        settings.unstructured_strategy = update.strategy
+        updated.append("strategy")
+    return {"updated": updated}
 
 
 @app.get("/", summary="Root endpoint")

@@ -22,8 +22,6 @@ import { useState, useCallback } from 'react';
 import { AgentCreationSheet } from '@/components/agent/config';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import { getNavigationLinks } from '@/config/entity-navigation';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { useEntityActions } from '@/hooks/useEntityActions';
 import type { Game } from '@/lib/api';
 import { buildGameCardProps } from '@/lib/card-mappers';
@@ -53,9 +51,6 @@ export function MeepleGameCard({
   onClick,
   className,
 }: MeepleGameCardProps) {
-  // Auth state — navigation footer only for authenticated users
-  const { user } = useAuthUser();
-
   // Issue #4777: Agent creation sheet state
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
   const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
@@ -89,6 +84,17 @@ export function MeepleGameCard({
   // Build card props from mapper
   const mapperProps = buildGameCardProps(game);
 
+  // Map QuickAction (icon: LucideIcon) → MeepleCardAction (icon: ReactNode)
+  const cardActions = entityActions.quickActions
+    .filter(a => !a.hidden)
+    .map(a => ({
+      icon: <a.icon className="h-4 w-4" />,
+      label: a.label,
+      onClick: a.onClick,
+      disabled: a.disabled,
+      variant: a.destructive ? ('danger' as const) : ('default' as const),
+    }));
+
   return (
     <>
       <MeepleCard
@@ -100,40 +106,9 @@ export function MeepleGameCard({
         imageUrl={mapperProps.imageUrl}
         rating={mapperProps.rating}
         ratingMax={mapperProps.ratingMax}
-        playerCountDisplay={mapperProps.playerCountDisplay}
-        playTimeDisplay={mapperProps.playTimeDisplay}
         onClick={onClick ? () => onClick(game.id) : undefined}
         className={className}
-        // Issue #4041: Quick actions + Info button
-        entityQuickActions={entityActions.quickActions}
-        showInfoButton
-        entityId={game.id}
-        infoTooltip="Vai al dettaglio"
-        // Epic #4688: Navigation footer — only for authenticated users
-        linkedEntities={
-          user
-            ? getNavigationLinks('game', { id: game.id }).map(l => ({
-                entityType: l.entity,
-                count: 1,
-              }))
-            : undefined
-        }
-        onManaPipClick={
-          user
-            ? entityType => {
-                const link = getNavigationLinks('game', { id: game.id }).find(
-                  l => l.entity === entityType
-                );
-                if (link?.href) window.location.href = link.href;
-              }
-            : undefined
-        }
-        // Issue #4777, #4999: Agent action footer
-        // Catalog context: show "Aggiungi" CTA via !hasKb + onAddToCollection
-        hasAgent={false}
-        hasKb={false}
-        onAddToCollection={handleAddToCollection}
-        onCreateAgent={handleCreateAgent}
+        actions={cardActions}
         data-testid={`game-card-${game.id}`}
       />
 

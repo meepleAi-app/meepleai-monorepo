@@ -12,6 +12,13 @@ public class TextChunkEntity
     public Guid Id { get; set; } = Guid.NewGuid();
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid? GameId { get; set; }
+
+    /// <summary>
+    /// Cross-BC reference to SharedGameCatalog for hybrid search on shared games.
+    /// When set, FTS queries match on this ID in addition to GameId.
+    /// </summary>
+    public Guid? SharedGameId { get; set; }
+
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid PdfDocumentId { get; set; }
     public string Content { get; set; } = default!;

@@ -22,10 +22,10 @@ import {
   XCircle,
 } from 'lucide-react';
 
-import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
+import { KbStatusBadge } from '../badge-stubs';
 import {
   ENTITY_COLORS,
   EntityHeader,

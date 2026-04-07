@@ -32,6 +32,7 @@ export interface CreateChatThreadRequest {
   agentId?: string | null;
   title?: string | null;
   initialMessage?: string | null;
+  selectedKnowledgeBaseIds?: string[] | null;
 }
 
 export interface AddMessageRequest {

@@ -1,19 +1,13 @@
 import type { ComponentType } from 'react';
 
-import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card-styles';
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 
-import { AchievementIcon } from './icons/AchievementIcon';
 import { AgentIcon } from './icons/AgentIcon';
 import { ChatIcon } from './icons/ChatIcon';
-import { CollectionIcon } from './icons/CollectionIcon';
 import { CustomIcon } from './icons/CustomIcon';
 import { EventIcon } from './icons/EventIcon';
-import { GroupIcon } from './icons/GroupIcon';
-import { LocationIcon } from './icons/LocationIcon';
-import { ExpansionIcon } from './icons/ExpansionIcon';
 import { GameIcon } from './icons/GameIcon';
 import { KnowledgeIcon } from './icons/KnowledgeIcon';
-import { NoteIcon } from './icons/NoteIcon';
 import { PlayerIcon } from './icons/PlayerIcon';
 import { SessionIcon } from './icons/SessionIcon';
 import { ToolIcon } from './icons/ToolIcon';
@@ -29,18 +23,11 @@ const ENTITY_ICONS: Record<MeepleEntityType, ComponentType<IconProps>> = {
   session: SessionIcon,
   player: PlayerIcon,
   event: EventIcon,
-  collection: CollectionIcon,
-  group: GroupIcon,
-  location: LocationIcon,
-  expansion: ExpansionIcon,
   agent: AgentIcon,
   kb: KnowledgeIcon,
-  chatSession: ChatIcon,
-  note: NoteIcon,
+  chat: ChatIcon,
   toolkit: ToolkitIcon,
   tool: ToolIcon,
-  achievement: AchievementIcon,
-  custom: CustomIcon,
 };
 
 interface EntityIconProps {

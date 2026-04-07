@@ -1,23 +1,9 @@
-/**
- * MeepleCard shared parts
- *
- * Re-exports all extracted part components for convenient importing.
- *
- * @module components/ui/data-display/meeple-card/parts
- */
-
-export { CardCover } from './CardCover';
-export { CoverOverlay } from './CoverOverlay';
-export { CardBadges } from './CardBadges';
-export { CardMetadata } from './CardMetadata';
-export { CardActions, CardActionStrip } from './CardActions';
-export { CardFlipWrapper } from './CardFlip';
-export { CardTagStrip } from './CardTagStrip';
-
-export type { CardCoverProps } from './CardCover';
-export type { CoverOverlayProps } from './CoverOverlay';
-export type { CardBadgesProps } from './CardBadges';
-export type { CardMetadataProps } from './CardMetadata';
-export type { CardActionsProps, CardActionStripProps } from './CardActions';
-export type { CardFlipProps } from './CardFlip';
-export type { CardTagStripProps } from './CardTagStrip';
+export { Cover } from './Cover';
+export { EntityBadge } from './EntityBadge';
+export { AccentBorder } from './AccentBorder';
+export { StatusBadge } from './StatusBadge';
+export { QuickActions } from './QuickActions';
+export { Rating } from './Rating';
+export { MetaChips } from './MetaChips';
+export { NavFooter } from './NavFooter';
+export { TagStrip } from './TagStrip';

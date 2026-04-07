@@ -4,7 +4,7 @@
  * Two modes:
  * 1. Full mode (no ?game param): Game grid → Agent grid → Start
  * 2. Direct game mode (?game=id from MeepleCard chat button):
- *    - 0 custom agents → redirect to agent creation
+ *    - 0 custom agents → show system agent selection (tutor/arbitro/strategist)
  *    - 1 custom agent  → auto-create thread and redirect to chat
  *    - 2+ custom agents → show agent picker only (no game grid)
  *
@@ -414,6 +414,13 @@ export function NewChatView() {
   const directGameId = searchParams?.get('gameId') ?? searchParams?.get('game') ?? null;
   const isDirectGameMode = !!directGameId;
 
+  // Pre-selected KB IDs from KB selector (?kbIds=id1,id2,id3)
+  const kbIdsParam = searchParams?.get('kbIds');
+  const selectedKbIds = useMemo(
+    () => (kbIdsParam ? kbIdsParam.split(',').filter(Boolean) : undefined),
+    [kbIdsParam]
+  );
+
   // State — tabbed game sources
   const [activeTab, setActiveTab] = useState<'private' | 'shared'>('private');
   const [privateGames, setPrivateGames] = useState<Game[]>([]);
@@ -520,9 +527,9 @@ export function NewChatView() {
     if (!selectedGameId) return;
 
     if (customAgents.length === 0) {
-      // No agents → redirect to agent creation
+      // No custom agents — fall through to show system agent selection UI.
+      // System agents (tutor, arbitro, strategist) work with shared game KB.
       autoStartedRef.current = true;
-      router.replace(`/chat/agents/create?gameId=${selectedGameId}`);
     } else if (customAgents.length === 1) {
       // Exactly 1 agent → auto-create thread
       autoStartedRef.current = true;
@@ -537,6 +544,7 @@ export function NewChatView() {
           agentId: agent.id,
           title: gameName ? `Chat: ${gameName}` : 'Nuova conversazione',
           initialMessage: null,
+          selectedKnowledgeBaseIds: selectedKbIds,
         })
         .then(thread => {
           if (thread?.id) {
@@ -553,6 +561,7 @@ export function NewChatView() {
     isDirectGameMode,
     isLoadingCustomAgents,
     selectedGameId,
+    selectedKbIds,
     customAgents,
     privateGames,
     sharedGames,
@@ -618,6 +627,7 @@ export function NewChatView() {
           agentId: agentId ?? null,
           title: selectedGame?.title ? `Chat: ${selectedGame.title}` : 'Nuova conversazione',
           initialMessage: initialMessage ?? null,
+          selectedKnowledgeBaseIds: selectedKbIds,
         });
 
         if (thread?.id) {
@@ -634,7 +644,14 @@ export function NewChatView() {
         setIsCreating(false);
       }
     },
-    [selectedGameId, selectedGame?.title, selectedCustomAgentId, resolveAgentId, router]
+    [
+      selectedGameId,
+      selectedKbIds,
+      selectedGame?.title,
+      selectedCustomAgentId,
+      resolveAgentId,
+      router,
+    ]
   );
 
   const handleQuickStart = useCallback(
@@ -651,7 +668,7 @@ export function NewChatView() {
   // Direct game mode: show loading spinner while resolving agents (0 or 1 → auto-redirect)
   if (
     isDirectGameMode &&
-    (isLoadingCustomAgents || isCreating || (customAgents.length <= 1 && !error))
+    (isLoadingCustomAgents || isCreating || (customAgents.length === 1 && !error))
   ) {
     return (
       <div className="min-h-dvh bg-background flex items-center justify-center">

@@ -29,10 +29,6 @@ import {
 } from 'lucide-react';
 
 import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
-import { AgentModelInfo } from '@/components/ui/data-display/meeple-card-features/AgentModelInfo';
-import { AgentStatsDisplay } from '@/components/ui/data-display/meeple-card-features/AgentStatsDisplay';
-import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
-import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
@@ -40,6 +36,7 @@ import { useAgentStatus } from '@/hooks/useAgentStatus';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
+import { AgentModelInfo, AgentStatsDisplay, AgentStatusBadge, KbStatusBadge } from '../badge-stubs';
 import {
   ENTITY_COLORS,
   EntityHeader,

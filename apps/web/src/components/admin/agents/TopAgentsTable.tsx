@@ -93,10 +93,10 @@ export function TopAgentsTable({ agents, className }: TopAgentsTableProps) {
           title: agent.typologyName,
           id: agent.agentDefinitionId,
           metadata: [
-            { value: agent.invocations.toLocaleString() },
-            { value: formatCost(agent.cost) },
-            { value: `${(agent.avgConfidence * 100).toFixed(0)}%` },
-            { value: formatLatency(agent.avgLatencyMs) },
+            { label: agent.invocations.toLocaleString() },
+            { label: formatCost(agent.cost) },
+            { label: `${(agent.avgConfidence * 100).toFixed(0)}%` },
+            { label: formatLatency(agent.avgLatencyMs) },
           ],
         })}
         tableColumns={tableColumns}

@@ -73,7 +73,7 @@ function getDefaultHref(item: QuickCardItem): string {
       return `/agents/${item.id}`;
     case 'session':
       return `/sessions/${item.id}`;
-    case 'chatSession':
+    case 'chat':
       return `/chat`;
     default:
       return `/library`;

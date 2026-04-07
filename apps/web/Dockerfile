@@ -31,10 +31,9 @@ RUN pnpm install --frozen-lockfile
 FROM node:20.18-alpine3.21 AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage (pnpm available via node_modules/.bin)
+# Copy dependencies from deps stage and install pnpm
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /usr/local/lib/node_modules/pnpm /usr/local/lib/node_modules/pnpm
-COPY --from=deps /usr/local/bin/pnpm /usr/local/bin/pnpm
+RUN npm install -g pnpm@10
 
 # Copy application source
 COPY . .

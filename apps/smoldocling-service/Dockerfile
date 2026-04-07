@@ -60,6 +60,10 @@ RUN groupadd -r smoldocling && useradd -r -g smoldocling -m -d /home/smoldocling
 
 # Copy the pre-built virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
+# Fix venv shebang: builder uses /opt/venv/bin/python but runtime has python3.11 elsewhere
+RUN ln -sf /usr/bin/python3.11 /opt/venv/bin/python && \
+    ln -sf /usr/bin/python3.11 /opt/venv/bin/python3 && \
+    ln -sf /usr/bin/python3.11 /opt/venv/bin/python3.11
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy pre-downloaded model weights from builder and set ownership

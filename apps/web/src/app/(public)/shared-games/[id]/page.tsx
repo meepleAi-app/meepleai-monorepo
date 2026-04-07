@@ -11,7 +11,7 @@
 
 import { use, useMemo } from 'react';
 
-import { AlertCircle, Clock, Gauge, Users } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 import { GameRelationships } from '@/components/game-detail/GameRelationships';
 import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
@@ -34,22 +34,22 @@ export default function SharedGamePage({ params }: SharedGamePageProps) {
   // Build metadata for MeepleCard
   const metadata = useMemo(() => {
     if (!game) return [];
-    const items = [];
+    const items: Array<{ label: string }> = [];
 
     if (game.minPlayers && game.maxPlayers) {
       const players =
         game.minPlayers === game.maxPlayers
           ? `${game.minPlayers}`
           : `${game.minPlayers}-${game.maxPlayers}`;
-      items.push({ icon: Users, value: players });
+      items.push({ label: players });
     }
 
     if (game.playingTimeMinutes) {
-      items.push({ icon: Clock, value: `${game.playingTimeMinutes} min` });
+      items.push({ label: `${game.playingTimeMinutes} min` });
     }
 
     if (game.complexityRating) {
-      items.push({ icon: Gauge, value: `${game.complexityRating.toFixed(1)}/5` });
+      items.push({ label: `${game.complexityRating.toFixed(1)}/5` });
     }
 
     return items;
@@ -98,16 +98,6 @@ export default function SharedGamePage({ params }: SharedGamePageProps) {
           rating={game.averageRating ?? undefined}
           ratingMax={10}
           metadata={metadata}
-          flippable
-          flipData={{
-            description: game.description || undefined,
-            categories: game.categories,
-            mechanics: game.mechanics,
-            designers: game.designers,
-            publishers: game.publishers,
-            complexityRating: game.complexityRating,
-            minAge: game.minAge,
-          }}
         />
 
         {/* Info Card - KB & Social (readOnly for public page) */}

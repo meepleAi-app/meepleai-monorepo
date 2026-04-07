@@ -36,16 +36,14 @@ const tableColumns: TableColumnConfig[] = [
     id: 'gameCount',
     header: 'Games',
     accessorKey: 'meta_0',
-    cell: (value) => (
-      <span className="font-mono text-sm">{String(value ?? '0')}</span>
-    ),
+    cell: value => <span className="font-mono text-sm">{String(value ?? '0')}</span>,
   },
   {
     id: 'description',
     header: 'Description',
     accessorKey: 'subtitle',
     sortable: false,
-    cell: (value) => (
+    cell: value => (
       <span className="text-sm text-muted-foreground line-clamp-1">
         {value ? String(value) : '—'}
       </span>
@@ -53,22 +51,18 @@ const tableColumns: TableColumnConfig[] = [
   },
 ];
 
-export function CategoriesTable({
-  categories,
-  onCategoryClick,
-  className,
-}: CategoriesTableProps) {
+export function CategoriesTable({ categories, onCategoryClick, className }: CategoriesTableProps) {
   return (
     <div className={className}>
       <EntityTableView
         displayItems={categories}
         items={categories}
         entity="game"
-        renderItem={(category) => ({
+        renderItem={category => ({
           title: category.name,
           id: category.id,
           subtitle: category.description,
-          metadata: [{ value: String(category.gameCount) }],
+          metadata: [{ label: String(category.gameCount) }],
         })}
         tableColumns={tableColumns}
         onItemClick={onCategoryClick}

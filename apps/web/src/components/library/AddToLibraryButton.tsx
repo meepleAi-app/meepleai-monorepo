@@ -112,18 +112,29 @@ export const AddToLibraryButton = React.memo(function AddToLibraryButton({
   // Check if button should be disabled (Issue #2445)
   const isDisabled = disabled || isLoading || (!isInLibrary && isQuotaReached);
 
+  // Quota count badge text (e.g. "3/10")
+  const quotaCountText = quota != null ? `${quota.currentCount}/${quota.maxAllowed}` : undefined;
+
   const button = (
     <Button
-      variant={isInLibrary ? 'secondary' : variant}
+      variant={isInLibrary ? 'secondary' : isQuotaReached ? 'outline' : variant}
       size={size}
       className={cn('gap-2', className)}
       onClick={handleClick}
       disabled={isDisabled}
       aria-label={label}
+      data-testid="add-to-library-button"
       {...props}
     >
       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
-      {showLabel && <span>{label}</span>}
+      {showLabel && (
+        <span>{!isInLibrary && isQuotaReached ? 'Upgrade per aggiungere' : label}</span>
+      )}
+      {showLabel && quotaCountText && (
+        <span className="ml-1 text-xs text-muted-foreground opacity-70" data-testid="quota-count">
+          {quotaCountText}
+        </span>
+      )}
     </Button>
   );
 

@@ -1,6 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Events;
-using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
+using GameNightEvents = Api.BoundedContexts.GameManagement.Domain.Events;
 using MediatR;
 
 namespace Api.BoundedContexts.SessionTracking.Domain.Services;
@@ -71,11 +71,11 @@ public static class SseEventTypeMapper
         [typeof(WidgetStateUpdatedEvent)] = "session:toolkit",
 
         // Game Night diary → session:gamenight
-        [typeof(GameStartedInNightEvent)] = "session:gamenight",
-        [typeof(GameCompletedInNightEvent)] = "session:gamenight",
-        [typeof(NightStartedEvent)] = "session:gamenight",
-        [typeof(NightFinalizedEvent)] = "session:gamenight",
-        [typeof(GameNightResourceUpdateEvent)] = "session:gamenight",
+        [typeof(GameNightEvents.GameStartedInNightEvent)] = "session:gamenight",
+        [typeof(GameNightEvents.GameCompletedInNightEvent)] = "session:gamenight",
+        [typeof(GameNightEvents.NightStartedEvent)] = "session:gamenight",
+        [typeof(GameNightEvents.NightFinalizedEvent)] = "session:gamenight",
+        [typeof(GameNightEvents.GameNightResourceUpdateEvent)] = "session:gamenight",
     };
 
     /// <summary>

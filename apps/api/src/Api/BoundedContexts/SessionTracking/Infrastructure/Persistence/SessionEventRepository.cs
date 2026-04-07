@@ -80,4 +80,23 @@ public class SessionEventRepository : RepositoryBase, ISessionEventRepository
         var entity = SessionEventMapper.ToEntity(sessionEvent);
         await DbContext.SessionEvents.AddAsync(entity, ct).ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<SessionEvent>> GetByGameNightIdAsync(
+        Guid gameNightId,
+        int limit = 200,
+        int offset = 0,
+        CancellationToken ct = default)
+    {
+        var entities = await DbContext.SessionEvents
+            .AsNoTracking()
+            .Where(e => e.GameNightId == gameNightId && !e.IsDeleted)
+            .OrderBy(e => e.Timestamp)
+            .Skip(offset)
+            .Take(limit)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return entities.Select(SessionEventMapper.ToDomain);
+    }
 }

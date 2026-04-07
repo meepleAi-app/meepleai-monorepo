@@ -68,6 +68,18 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
+        builder.AddCheck<OrchestrationHealthCheck>(
+            "orchestrator",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
+        builder.AddCheck<OllamaHealthCheck>(
+            "ollama",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
         // External APIs
         builder.AddCheck<BggApiHealthCheck>(
             "bggapi",

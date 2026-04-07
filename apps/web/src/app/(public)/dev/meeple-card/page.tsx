@@ -62,7 +62,19 @@ export default function MeepleCardDevPage() {
         {/* Entity Types */}
         <Section title="Entity Types" description="9 entity types with distinct color tokens.">
           <CardRow>
-            {(['game', 'player', 'session', 'agent', 'kb', 'chat', 'event', 'toolkit', 'tool'] as const).map(entity => (
+            {(
+              [
+                'game',
+                'player',
+                'session',
+                'agent',
+                'kb',
+                'chat',
+                'event',
+                'toolkit',
+                'tool',
+              ] as const
+            ).map(entity => (
               <div key={entity}>
                 <Label>{entity}</Label>
                 <MeepleCard
@@ -129,8 +141,20 @@ export default function MeepleCardDevPage() {
 
           <Label>compact</Label>
           <div className="max-w-lg space-y-1">
-            <MeepleCard entity="agent" variant="compact" title="RulesBot Pro" subtitle="RAG Agent" badge="Attivo" />
-            <MeepleCard entity="kb" variant="compact" title="Manuale Catan" subtitle="PDF · 48 pagine" badge="Indicizzato" />
+            <MeepleCard
+              entity="agent"
+              variant="compact"
+              title="RulesBot Pro"
+              subtitle="RAG Agent"
+              badge="Attivo"
+            />
+            <MeepleCard
+              entity="kb"
+              variant="compact"
+              title="Manuale Catan"
+              subtitle="PDF · 48 pagine"
+              badge="Indicizzato"
+            />
             <MeepleCard entity="chat" variant="compact" title="Chat Catan" subtitle="12 messaggi" />
           </div>
 
@@ -172,7 +196,12 @@ export default function MeepleCardDevPage() {
               actions={[
                 { icon: '▶', label: 'Avvia partita', onClick: () => alert('Avvia!') },
                 { icon: '📖', label: 'Regolamento', onClick: () => alert('Regolamento') },
-                { icon: '🗑️', label: 'Rimuovi', onClick: () => alert('Rimuovi'), variant: 'danger' },
+                {
+                  icon: '🗑️',
+                  label: 'Rimuovi',
+                  onClick: () => alert('Rimuovi'),
+                  variant: 'danger',
+                },
               ]}
             />
           </CardRow>
@@ -181,14 +210,23 @@ export default function MeepleCardDevPage() {
         {/* Status badges */}
         <Section title="Status Badges" description="Stato delle entità tramite CardStatus.">
           <CardRow>
-            {(['owned', 'wishlist', 'active', 'idle', 'archived', 'processing', 'indexed', 'failed', 'inprogress', 'setup', 'completed', 'paused'] as const).map(s => (
-              <MeepleCard
-                key={s}
-                entity="game"
-                variant="compact"
-                title={s}
-                status={s}
-              />
+            {(
+              [
+                'owned',
+                'wishlist',
+                'active',
+                'idle',
+                'archived',
+                'processing',
+                'indexed',
+                'failed',
+                'inprogress',
+                'setup',
+                'completed',
+                'paused',
+              ] as const
+            ).map(s => (
+              <MeepleCard key={s} entity="game" variant="compact" title={s} status={s} />
             ))}
           </CardRow>
         </Section>

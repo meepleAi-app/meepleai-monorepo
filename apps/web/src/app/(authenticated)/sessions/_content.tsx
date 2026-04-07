@@ -161,7 +161,11 @@ export function SessionsContent() {
                 },
               ]}
               actions={[
-                { icon: '▶', label: 'Riprendi', onClick: () => router.push(`/sessions/${session.id}`) },
+                {
+                  icon: '▶',
+                  label: 'Riprendi',
+                  onClick: () => router.push(`/sessions/${session.id}`),
+                },
               ]}
               onClick={() => router.push(`/sessions/${session.id}`)}
             />

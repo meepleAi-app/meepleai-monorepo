@@ -21,7 +21,6 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
-
 import { useChatSessionLimit, useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
 import { useCardHand } from '@/stores/use-card-hand';

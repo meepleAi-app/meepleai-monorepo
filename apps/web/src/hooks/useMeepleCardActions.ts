@@ -19,13 +19,13 @@ import { useMemo } from 'react';
 
 import { BookMarked, BookX, Library } from 'lucide-react';
 
-import type { QuickAction } from '@/types/quick-action';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import {
   useAddGameToLibrary,
   useGameInLibraryStatus,
   useRemoveGameFromLibrary,
 } from '@/hooks/queries/useLibrary';
+import type { QuickAction } from '@/types/quick-action';
 
 // ============================================================================
 // Types
@@ -66,10 +66,7 @@ function useGameCatalogActions(
 
   // Guard: only query when both authenticated AND gameId is non-empty
   // Non-game entities pass gameId='' to this function — we must not fire a bad API call
-  const { data: libraryStatus } = useGameInLibraryStatus(
-    gameId,
-    isAuthenticated && !!gameId
-  );
+  const { data: libraryStatus } = useGameInLibraryStatus(gameId, isAuthenticated && !!gameId);
 
   const isInLibrary = libraryStatus?.inLibrary ?? false;
 
@@ -141,23 +138,26 @@ function useGameLibraryActions(
   // Destructure callback to avoid options object reference in deps
   const { onRemoveFromLibrary } = options;
 
-  return useMemo((): QuickAction[] => [
-    {
-      icon: BookMarked,
-      label: 'Rimuovi da Libreria',
-      onClick: () => {
-        if (onRemoveFromLibrary) {
-          onRemoveFromLibrary();
-        } else {
-          removeFromLibrary.mutate(gameId);
-        }
+  return useMemo(
+    (): QuickAction[] => [
+      {
+        icon: BookMarked,
+        label: 'Rimuovi da Libreria',
+        onClick: () => {
+          if (onRemoveFromLibrary) {
+            onRemoveFromLibrary();
+          } else {
+            removeFromLibrary.mutate(gameId);
+          }
+        },
+        // Should always be enabled in library context, but guard against edge cases
+        disabled: !isAuthenticated,
+        disabledTooltip: 'Accedi per rimuovere dalla libreria',
+        hidden: false,
       },
-      // Should always be enabled in library context, but guard against edge cases
-      disabled: !isAuthenticated,
-      disabledTooltip: 'Accedi per rimuovere dalla libreria',
-      hidden: false,
-    },
-  ], [gameId, isAuthenticated, removeFromLibrary, onRemoveFromLibrary]);
+    ],
+    [gameId, isAuthenticated, removeFromLibrary, onRemoveFromLibrary]
+  );
 }
 
 // ============================================================================
@@ -185,20 +185,23 @@ function useGameLibraryActions(
  * />
  */
 export function useMeepleCardActions(
-  entityType: 'game' | 'player' | 'session' | 'agent' | 'kb' | 'chat' | 'event' | 'toolkit' | 'tool',
+  entityType:
+    | 'game'
+    | 'player'
+    | 'session'
+    | 'agent'
+    | 'kb'
+    | 'chat'
+    | 'event'
+    | 'toolkit'
+    | 'tool',
   entityId: string,
   context: MeepleCardContext,
   options: UseMeepleCardActionsOptions = {}
 ): QuickAction[] {
   // Game-specific context handlers
-  const gameCatalogActions = useGameCatalogActions(
-    entityType === 'game' ? entityId : '',
-    options
-  );
-  const gameLibraryActions = useGameLibraryActions(
-    entityType === 'game' ? entityId : '',
-    options
-  );
+  const gameCatalogActions = useGameCatalogActions(entityType === 'game' ? entityId : '', options);
+  const gameLibraryActions = useGameLibraryActions(entityType === 'game' ? entityId : '', options);
 
   return useMemo((): QuickAction[] => {
     if (entityType === 'game') {

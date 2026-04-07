@@ -522,7 +522,14 @@ function PrivateGameCard({ game, onEdit, onDelete, onPropose, onClick }: Private
     ...(onEdit ? [{ icon: '✏️', label: 'Edit', onClick: () => onEdit(game) }] : []),
     ...(onPropose ? [{ icon: '📤', label: 'Propose', onClick: () => onPropose(game) }] : []),
     ...(onDelete
-      ? [{ icon: '🗑️', label: 'Delete', onClick: () => onDelete(game.id), variant: 'danger' as const }]
+      ? [
+          {
+            icon: '🗑️',
+            label: 'Delete',
+            onClick: () => onDelete(game.id),
+            variant: 'danger' as const,
+          },
+        ]
       : []),
   ];
 

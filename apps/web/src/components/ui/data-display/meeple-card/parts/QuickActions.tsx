@@ -12,7 +12,7 @@ export function QuickActions({ actions }: QuickActionsProps) {
       {actions.map((action, i) => (
         <button
           key={i}
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             action.onClick();
           }}

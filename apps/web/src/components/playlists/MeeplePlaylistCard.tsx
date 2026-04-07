@@ -49,9 +49,7 @@ export function MeeplePlaylistCard({ playlist }: MeeplePlaylistCardProps) {
 
   const metadata: MeepleCardMetadata[] = [
     { label: formatGameCount(gameCount) },
-    ...(playlist.scheduledDate
-      ? [{ label: formatScheduledDate(playlist.scheduledDate) }]
-      : []),
+    ...(playlist.scheduledDate ? [{ label: formatScheduledDate(playlist.scheduledDate) }] : []),
   ];
 
   return (

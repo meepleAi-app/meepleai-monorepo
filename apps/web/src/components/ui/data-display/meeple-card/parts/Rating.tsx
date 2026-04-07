@@ -12,11 +12,15 @@ export function Rating({ value, max = 5 }: RatingProps) {
   return (
     <div className="mt-0.5 flex items-center gap-0.5">
       {Array.from({ length: fullStars }, (_, i) => (
-        <span key={`f${i}`} className="text-[0.78rem] text-amber-400">★</span>
+        <span key={`f${i}`} className="text-[0.78rem] text-amber-400">
+          ★
+        </span>
       ))}
       {hasHalf && <span className="text-[0.78rem] text-amber-400/50">★</span>}
       {Array.from({ length: emptyStars }, (_, i) => (
-        <span key={`e${i}`} className="text-[0.78rem] text-[var(--mc-text-muted)]">★</span>
+        <span key={`e${i}`} className="text-[0.78rem] text-[var(--mc-text-muted)]">
+          ★
+        </span>
       ))}
       <span className="ml-1 text-[0.7rem] font-semibold text-[var(--mc-text-secondary)]">
         {value.toFixed(1)}

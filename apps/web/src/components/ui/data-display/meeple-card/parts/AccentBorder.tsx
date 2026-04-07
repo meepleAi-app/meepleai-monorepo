@@ -1,4 +1,5 @@
 import { entityHsl } from '../tokens';
+
 import type { MeepleEntityType } from '../types';
 
 interface AccentBorderProps {

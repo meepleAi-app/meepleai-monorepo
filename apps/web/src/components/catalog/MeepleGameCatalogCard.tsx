@@ -28,7 +28,6 @@ import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
-import { mapToIndexingStatus } from '@/components/library/kb-utils';
 
 // Dynamic imports to avoid DOMMatrix SSR error on statically generated pages
 const KbDrawerSheet = dynamic(

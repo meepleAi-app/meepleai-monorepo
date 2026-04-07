@@ -2,7 +2,11 @@
 
 import Link from 'next/link';
 
-import { MeepleCard, MeepleCardSkeleton, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
+import {
+  MeepleCard,
+  MeepleCardSkeleton,
+  type MeepleCardMetadata,
+} from '@/components/ui/data-display/meeple-card';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

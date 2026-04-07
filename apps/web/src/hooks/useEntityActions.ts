@@ -35,8 +35,8 @@ import {
 import { useRouter } from 'next/navigation';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
-import type { QuickAction } from '@/types/quick-action';
 import type { EntityType } from '@/lib/api/schemas/collections.schemas';
+import type { QuickAction } from '@/types/quick-action';
 
 import {
   useAddToCollection,

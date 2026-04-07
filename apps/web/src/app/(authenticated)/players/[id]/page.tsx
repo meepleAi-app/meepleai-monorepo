@@ -11,7 +11,7 @@
 
 import { use } from 'react';
 
-import { ArrowLeft, Gamepad2, Trophy } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';

@@ -1,5 +1,5 @@
-import type { LinkedEntityInfo } from '@/types/linked-entity';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import type { LinkedEntityInfo } from '@/types/linked-entity';
 
 /**
  * Maps UserLibraryEntry DTO fields to LinkedEntityInfo[] for ManaLinkFooter.

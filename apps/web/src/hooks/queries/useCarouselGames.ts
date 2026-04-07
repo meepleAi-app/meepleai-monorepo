@@ -17,7 +17,6 @@
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 
-
 import type { CarouselGame, CarouselSortValue } from '@/components/ui/data-display/game-carousel';
 import { api } from '@/lib/api';
 import type { PaginatedLibraryResponse, UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
@@ -72,10 +71,8 @@ export interface CarouselGamesResult {
 export const carouselGamesKeys = {
   all: ['carouselGames'] as const,
   lists: () => [...carouselGamesKeys.all, 'list'] as const,
-  list: (options: UseCarouselGamesOptions) =>
-    [...carouselGamesKeys.lists(), { options }] as const,
-  source: (source: CarouselSource) =>
-    [...carouselGamesKeys.all, 'source', source] as const,
+  list: (options: UseCarouselGamesOptions) => [...carouselGamesKeys.lists(), { options }] as const,
+  source: (source: CarouselSource) => [...carouselGamesKeys.all, 'source', source] as const,
 };
 
 // ============================================================================
@@ -85,10 +82,7 @@ export const carouselGamesKeys = {
 /**
  * Transform SharedGame from API to CarouselGame format
  */
-function transformSharedGameToCarousel(
-  game: SharedGame,
-  badge?: string
-): CarouselGame {
+function transformSharedGameToCarousel(game: SharedGame, badge?: string): CarouselGame {
   return {
     id: game.id,
     title: game.title,
@@ -98,9 +92,10 @@ function transformSharedGameToCarousel(
     ratingMax: 10,
     metadata: [
       {
-        label: game.minPlayers === game.maxPlayers
-          ? `${game.minPlayers} giocatori`
-          : `${game.minPlayers}-${game.maxPlayers} giocatori`,
+        label:
+          game.minPlayers === game.maxPlayers
+            ? `${game.minPlayers} giocatori`
+            : `${game.minPlayers}-${game.maxPlayers} giocatori`,
       },
       {
         label: `${game.playingTimeMinutes} min`,
@@ -121,9 +116,7 @@ function transformLibraryEntryToCarousel(entry: UserLibraryEntry): CarouselGame 
     imageUrl: entry.gameImageUrl ?? entry.gameIconUrl ?? undefined,
     rating: undefined, // Library entries don't include ratings
     ratingMax: 10,
-    metadata: entry.gameYearPublished
-      ? [{ label: `${entry.gameYearPublished}` }]
-      : undefined,
+    metadata: entry.gameYearPublished ? [{ label: `${entry.gameYearPublished}` }] : undefined,
     badge: entry.isFavorite ? '❤️ Favorite' : undefined,
     hasKb: entry.hasKb,
   };

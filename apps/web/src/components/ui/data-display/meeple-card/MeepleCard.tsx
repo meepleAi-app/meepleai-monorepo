@@ -1,12 +1,14 @@
 'use client';
 
 import { memo } from 'react';
-import type { MeepleCardProps } from './types';
-import { GridCard } from './variants/GridCard';
-import { ListCard } from './variants/ListCard';
+
 import { CompactCard } from './variants/CompactCard';
 import { FeaturedCard } from './variants/FeaturedCard';
+import { GridCard } from './variants/GridCard';
 import { HeroCard } from './variants/HeroCard';
+import { ListCard } from './variants/ListCard';
+
+import type { MeepleCardProps } from './types';
 
 const variantMap = {
   grid: GridCard,

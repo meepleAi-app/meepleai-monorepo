@@ -1,6 +1,7 @@
 'use client';
 
 import { entityHsl } from '../tokens';
+
 import type { NavFooterItem } from '../types';
 
 interface NavFooterProps {
@@ -23,7 +24,7 @@ export function NavFooter({ items, size = 'sm' }: NavFooterProps) {
         return (
           <button
             key={i}
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               item.onClick?.();
             }}
@@ -33,11 +34,13 @@ export function NavFooter({ items, size = 'sm' }: NavFooterProps) {
           >
             <div
               className={`relative flex ${iconSize} items-center justify-center rounded-full border border-[var(--mc-nav-icon-border)] bg-[var(--mc-nav-icon-bg)] transition-all duration-200 group-hover/nav:scale-[1.08] group-hover/nav:border-[var(--nav-hover-border)] group-hover/nav:bg-[var(--nav-hover-bg)] group-hover/nav:shadow-[var(--nav-hover-shadow)] group-active/nav:scale-95 group-active/nav:shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]`}
-              style={{
-                '--nav-hover-border': borderHover,
-                '--nav-hover-bg': entityHsl(item.entity, 0.08),
-                '--nav-hover-shadow': `0 2px 8px ${glowColor}`,
-              } as React.CSSProperties}
+              style={
+                {
+                  '--nav-hover-border': borderHover,
+                  '--nav-hover-bg': entityHsl(item.entity, 0.08),
+                  '--nav-hover-shadow': `0 2px 8px ${glowColor}`,
+                } as React.CSSProperties
+              }
             >
               <span className="pointer-events-none">{item.icon}</span>
 

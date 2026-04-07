@@ -86,11 +86,15 @@ export function ScoreboardTab({ data }: ScoreboardTabProps) {
   }
 
   // Sort players by rank
-  const sortedPlayers = [...data.players].sort((a, b) => (a.currentRank ?? 0) - (b.currentRank ?? 0));
+  const sortedPlayers = [...data.players].sort(
+    (a, b) => (a.currentRank ?? 0) - (b.currentRank ?? 0)
+  );
   const leaderId = sortedPlayers[0]?.id;
 
   // Group round scores by round number
-  const roundNumbers = [...new Set(data.roundScores.map(s => s.round))].sort((a, b) => (a ?? 0) - (b ?? 0));
+  const roundNumbers = [...new Set(data.roundScores.map(s => s.round))].sort(
+    (a, b) => (a ?? 0) - (b ?? 0)
+  );
 
   return (
     <div className="space-y-4">

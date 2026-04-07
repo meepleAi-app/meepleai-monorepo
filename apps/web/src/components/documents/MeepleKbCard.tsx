@@ -34,8 +34,8 @@ import {
   type MeepleCardAction,
   type MeepleCardVariant,
 } from '@/components/ui/data-display/meeple-card';
-import { buildKbCardProps } from '@/lib/card-mappers';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+import { buildKbCardProps } from '@/lib/card-mappers';
 
 // ============================================================================
 // Types

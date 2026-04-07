@@ -114,9 +114,7 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
               ...(document.uploadedAt
                 ? [{ label: new Date(document.uploadedAt).toLocaleDateString('it-IT') }]
                 : []),
-              ...(document.chunkCount
-                ? [{ label: `${document.chunkCount} chunks` }]
-                : []),
+              ...(document.chunkCount ? [{ label: `${document.chunkCount} chunks` }] : []),
             ]}
           />
         </section>

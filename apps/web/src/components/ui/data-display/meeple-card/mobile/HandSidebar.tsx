@@ -1,6 +1,7 @@
 'use client';
 
 import { HandCard } from './HandCard';
+
 import type { MeepleCardProps } from '../types';
 
 interface HandSidebarProps {

@@ -1,4 +1,5 @@
 import { entityHsl, entityLabel } from '../tokens';
+
 import type { MeepleEntityType } from '../types';
 
 interface EntityBadgeProps {

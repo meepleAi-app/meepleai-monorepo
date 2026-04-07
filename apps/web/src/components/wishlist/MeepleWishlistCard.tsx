@@ -60,7 +60,14 @@ export function MeepleWishlistCard({
   const actions = [
     ...(onUpdate ? [{ icon: '✏️', label: 'Edit', onClick: () => onUpdate(item.id) }] : []),
     ...(onRemove
-      ? [{ icon: '🗑️', label: 'Remove', onClick: () => onRemove(item.id), variant: 'danger' as const }]
+      ? [
+          {
+            icon: '🗑️',
+            label: 'Remove',
+            onClick: () => onRemove(item.id),
+            variant: 'danger' as const,
+          },
+        ]
       : []),
   ];
 

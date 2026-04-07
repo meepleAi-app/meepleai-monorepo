@@ -60,13 +60,14 @@ export function MeepleSessionCard({
     ? `${playerLabel} · Vincitore: ${session.winnerName}`
     : playerLabel;
 
-  const statusBadge = session.status === 'Completed'
-    ? 'Completata'
-    : session.status === 'InProgress'
-      ? 'In corso'
-      : session.status === 'Paused'
-        ? 'In pausa'
-        : undefined;
+  const statusBadge =
+    session.status === 'Completed'
+      ? 'Completata'
+      : session.status === 'InProgress'
+        ? 'In corso'
+        : session.status === 'Paused'
+          ? 'In pausa'
+          : undefined;
 
   return (
     <MeepleCard
@@ -88,12 +89,7 @@ export function MeepleSessionCard({
  */
 export function MeepleSessionCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant }) {
   return (
-    <MeepleCard
-      entity="session"
-      variant={variant}
-      title=""
-      data-testid="session-card-skeleton"
-    />
+    <MeepleCard entity="session" variant={variant} title="" data-testid="session-card-skeleton" />
   );
 }
 

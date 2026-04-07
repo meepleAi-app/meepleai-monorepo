@@ -5,8 +5,6 @@
 
 import { useEffect, useState } from 'react';
 
-
-
 import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
 import type { CoverImageSelection, GameMetadata } from '@/stores/useGameImportWizardStore';
 

@@ -1,21 +1,32 @@
 'use client';
 
-import { entityHsl } from '../tokens';
-import type { MeepleCardProps } from '../types';
+import { AccentBorder } from '../parts/AccentBorder';
 import { Cover } from '../parts/Cover';
 import { EntityBadge } from '../parts/EntityBadge';
-import { AccentBorder } from '../parts/AccentBorder';
-import { StatusBadge } from '../parts/StatusBadge';
-import { QuickActions } from '../parts/QuickActions';
-import { Rating } from '../parts/Rating';
 import { MetaChips } from '../parts/MetaChips';
 import { NavFooter } from '../parts/NavFooter';
+import { QuickActions } from '../parts/QuickActions';
+import { Rating } from '../parts/Rating';
+import { StatusBadge } from '../parts/StatusBadge';
+import { entityHsl } from '../tokens';
+
+import type { MeepleCardProps } from '../types';
 
 export function FeaturedCard(props: MeepleCardProps) {
   const {
-    entity, title, subtitle, imageUrl, rating, ratingMax,
-    metadata = [], status, actions = [], navItems = [],
-    showQuickActions, onClick, className = '',
+    entity,
+    title,
+    subtitle,
+    imageUrl,
+    rating,
+    ratingMax,
+    metadata = [],
+    status,
+    actions = [],
+    navItems = [],
+    showQuickActions,
+    onClick,
+    className = '',
   } = props;
 
   return (
@@ -34,7 +45,9 @@ export function FeaturedCard(props: MeepleCardProps) {
         {showQuickActions && actions.length > 0 && <QuickActions actions={actions} />}
       </div>
       <div className="flex flex-1 flex-col gap-1 px-4 py-3">
-        <h3 className="font-[var(--font-quicksand)] text-[1.1rem] font-bold leading-tight text-[var(--mc-text-primary)]">{title}</h3>
+        <h3 className="font-[var(--font-quicksand)] text-[1.1rem] font-bold leading-tight text-[var(--mc-text-primary)]">
+          {title}
+        </h3>
         {subtitle && <p className="text-[0.82rem] text-[var(--mc-text-secondary)]">{subtitle}</p>}
         {rating !== undefined && <Rating value={rating} max={ratingMax} />}
         {metadata.length > 0 && <MetaChips metadata={metadata} />}

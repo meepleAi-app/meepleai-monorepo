@@ -26,6 +26,7 @@ interface QueueItemProps {
   job: ProcessingJobDto;
   isSelected: boolean;
   onSelect: (jobId: string) => void;
+  etaSeconds?: number | null;
 }
 
 const STATUS_CONFIG: Record<
@@ -73,7 +74,15 @@ function formatRelativeTime(dateStr: string): string {
   return `${diffDays}d ago`;
 }
 
-export function QueueItem({ job, isSelected, onSelect }: QueueItemProps) {
+function formatETASeconds(totalSeconds: number): string {
+  if (totalSeconds <= 0) return '';
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  if (minutes === 0) return `~${seconds}s`;
+  return `~${minutes}m ${seconds > 0 ? `${seconds}s` : ''}`.trim();
+}
+
+export function QueueItem({ job, isSelected, onSelect, etaSeconds }: QueueItemProps) {
   const isDraggable = job.status === 'Queued';
   const config = STATUS_CONFIG[job.status];
   const StatusIcon = config.icon;
@@ -121,10 +130,19 @@ export function QueueItem({ job, isSelected, onSelect }: QueueItemProps) {
                 {job.pdfFileName}
               </span>
             </div>
-            <Badge variant="outline" className={`shrink-0 text-[10px] px-1.5 py-0 ${config.badge}`}>
-              <StatusIcon className="h-3 w-3 mr-0.5" />
-              {config.label}
-            </Badge>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {etaSeconds != null &&
+                etaSeconds > 0 &&
+                (job.status === 'Queued' || job.status === 'Processing') && (
+                  <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                    ETA {formatETASeconds(etaSeconds)}
+                  </span>
+                )}
+              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${config.badge}`}>
+                <StatusIcon className="h-3 w-3 mr-0.5" />
+                {config.label}
+              </Badge>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">

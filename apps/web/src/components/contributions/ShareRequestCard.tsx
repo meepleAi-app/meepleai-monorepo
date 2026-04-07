@@ -11,7 +11,11 @@
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
-import { MeepleCard, type MeepleCardAction, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
+import {
+  MeepleCard,
+  type MeepleCardAction,
+  type MeepleCardMetadata,
+} from '@/components/ui/data-display/meeple-card';
 import type { UserShareRequestDto } from '@/lib/api/schemas/share-requests.schemas';
 
 interface ShareRequestCardProps {

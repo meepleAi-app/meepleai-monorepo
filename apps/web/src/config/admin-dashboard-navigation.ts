@@ -224,6 +224,11 @@ const _ALL_DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Upload & Process',
         icon: UploadIcon,
       },
+      {
+        href: '/admin/knowledge-base/rag-pipeline',
+        label: 'RAG Pipeline',
+        icon: ZapIcon,
+      },
       // Email Templates (Issue #52)
       {
         href: '/admin/content/email-templates',

@@ -2,10 +2,20 @@ import { describe, it, expect } from 'vitest';
 import { entityColors, entityHsl, entityLabel, entityIcon } from '../tokens';
 import type { MeepleEntityType } from '../types';
 
-const allEntities: MeepleEntityType[] = ['game', 'player', 'session', 'agent', 'kb', 'chat', 'event', 'toolkit', 'tool'];
+const allEntities: MeepleEntityType[] = [
+  'game',
+  'player',
+  'session',
+  'agent',
+  'kb',
+  'chat',
+  'event',
+  'toolkit',
+  'tool',
+];
 
 describe('entityColors', () => {
-  it.each(allEntities)('has color definition for %s', (entity) => {
+  it.each(allEntities)('has color definition for %s', entity => {
     const color = entityColors[entity];
     expect(color).toBeDefined();
     expect(color.h).toBeTypeOf('number');
@@ -29,14 +39,14 @@ describe('entityHsl', () => {
 });
 
 describe('entityLabel', () => {
-  it.each(allEntities)('has label for %s', (entity) => {
+  it.each(allEntities)('has label for %s', entity => {
     expect(entityLabel[entity]).toBeTypeOf('string');
     expect(entityLabel[entity].length).toBeGreaterThan(0);
   });
 });
 
 describe('entityIcon', () => {
-  it.each(allEntities)('has icon for %s', (entity) => {
+  it.each(allEntities)('has icon for %s', entity => {
     expect(entityIcon[entity]).toBeTypeOf('string');
   });
 });

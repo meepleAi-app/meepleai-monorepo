@@ -1,4 +1,5 @@
 import { statusColors } from '../tokens';
+
 import type { CardStatus } from '../types';
 
 interface StatusBadgeProps {

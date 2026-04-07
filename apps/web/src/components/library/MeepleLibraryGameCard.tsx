@@ -170,9 +170,7 @@ export function MeepleLibraryGameCard({
   // ============================================================================
 
   const metadata: MeepleCardMetadata[] = useMemo(() => {
-    const items: MeepleCardMetadata[] = [
-      { label: formatPlayCount(0) },
-    ];
+    const items: MeepleCardMetadata[] = [{ label: formatPlayCount(0) }];
 
     if (agentConfigured) {
       items.push({ label: `Agent: ${modelDisplayName[agentModel]}` });
@@ -187,7 +185,15 @@ export function MeepleLibraryGameCard({
     }
 
     return items;
-  }, [agentConfigured, agentModel, game.hasKb, game.kbCardCount, game.kbIndexedCount, game.kbProcessingCount, modelDisplayName]);
+  }, [
+    agentConfigured,
+    agentModel,
+    game.hasKb,
+    game.kbCardCount,
+    game.kbIndexedCount,
+    game.kbProcessingCount,
+    modelDisplayName,
+  ]);
 
   // ============================================================================
   // Build Props
@@ -303,12 +309,7 @@ export function MeepleLibraryGameCardSkeleton({
   variant?: MeepleCardVariant;
 }) {
   return (
-    <MeepleCard
-      entity="game"
-      variant={variant}
-      title=""
-      data-testid="library-game-card-skeleton"
-    />
+    <MeepleCard entity="game" variant={variant} title="" data-testid="library-game-card-skeleton" />
   );
 }
 

@@ -23,10 +23,10 @@ import {
 
 import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
 import { EntityLinkBadge } from '@/components/ui/data-display/entity-link-badge';
-import { AgentStatusBadge, KbStatusBadge } from '../badge-stubs';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
+import { AgentStatusBadge, KbStatusBadge } from '../badge-stubs';
 import {
   ENTITY_COLORS,
   EntityHeader,

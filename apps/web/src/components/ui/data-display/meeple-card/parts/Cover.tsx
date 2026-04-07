@@ -1,6 +1,7 @@
 'use client';
 
 import { entityHsl, entityIcon } from '../tokens';
+
 import type { MeepleEntityType, MeepleCardVariant } from '../types';
 
 interface CoverProps {
@@ -42,7 +43,8 @@ export function Cover({ entity, variant, imageUrl, alt }: CoverProps) {
       <div
         className="pointer-events-none absolute inset-0 -translate-x-full transition-none group-hover:animate-[shimmer_0.8s_ease-out_forwards]"
         style={{
-          background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%)',
+          background:
+            'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%)',
         }}
       />
       {/* Entity gradient overlay */}

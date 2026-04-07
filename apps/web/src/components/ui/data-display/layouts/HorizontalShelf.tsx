@@ -31,10 +31,7 @@ export function HorizontalShelf({
           }}
           aria-hidden="true"
         />
-        <span
-          className="font-quicksand text-[13px] font-bold"
-          style={{ color: colorStr }}
-        >
+        <span className="font-quicksand text-[13px] font-bold" style={{ color: colorStr }}>
           {title}
         </span>
         <span className="text-[10px] text-[var(--nh-text-muted,#555)]">{count}</span>

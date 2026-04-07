@@ -1,6 +1,7 @@
 'use client';
 
 import { entityHsl } from '../tokens';
+
 import type { MeepleCardProps } from '../types';
 
 export function CompactCard(props: MeepleCardProps) {
@@ -13,8 +14,13 @@ export function CompactCard(props: MeepleCardProps) {
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
-      <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: entityHsl(entity) }} />
-      <span className="truncate font-[var(--font-quicksand)] text-[0.85rem] font-semibold text-[var(--mc-text-primary)]">{title}</span>
+      <div
+        className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+        style={{ background: entityHsl(entity) }}
+      />
+      <span className="truncate font-[var(--font-quicksand)] text-[0.85rem] font-semibold text-[var(--mc-text-primary)]">
+        {title}
+      </span>
     </div>
   );
 }

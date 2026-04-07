@@ -14,10 +14,10 @@ export function useQueueETA(enabled: boolean = true) {
   });
 }
 
-export function formatETA(totalSeconds: number): string {
-  if (totalSeconds <= 0) return '\u2014';
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = Math.floor(totalSeconds % 60);
-  if (minutes === 0) return `~${seconds}s`;
-  return `~${minutes}m ${seconds > 0 ? `${seconds}s` : ''}`.trim();
+export function formatETA(totalMinutes: number): string {
+  if (totalMinutes <= 0) return '\u2014';
+  const wholeMinutes = Math.floor(totalMinutes);
+  const seconds = Math.round((totalMinutes - wholeMinutes) * 60);
+  if (wholeMinutes === 0) return `~${seconds}s`;
+  return `~${wholeMinutes}m ${seconds > 0 ? `${seconds}s` : ''}`.trim();
 }

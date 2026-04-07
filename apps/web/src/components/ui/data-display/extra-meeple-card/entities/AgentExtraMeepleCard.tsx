@@ -29,12 +29,6 @@ import {
 } from 'lucide-react';
 
 import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
-import {
-  AgentModelInfo,
-  AgentStatsDisplay,
-  AgentStatusBadge,
-  KbStatusBadge,
-} from '../badge-stubs';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
@@ -42,6 +36,7 @@ import { useAgentStatus } from '@/hooks/useAgentStatus';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
+import { AgentModelInfo, AgentStatsDisplay, AgentStatusBadge, KbStatusBadge } from '../badge-stubs';
 import {
   ENTITY_COLORS,
   EntityHeader,

@@ -1,4 +1,5 @@
 import { entityHsl } from '../tokens';
+
 import type { MeepleEntityType } from '../types';
 
 interface TagStripProps {
@@ -28,9 +29,7 @@ export function TagStrip({ tags, entity, maxVisible = 3 }: TagStripProps) {
         </span>
       ))}
       {overflow > 0 && (
-        <span className="text-[8px] font-bold text-[var(--mc-text-muted)]">
-          +{overflow}
-        </span>
+        <span className="text-[8px] font-bold text-[var(--mc-text-muted)]">+{overflow}</span>
       )}
     </div>
   );

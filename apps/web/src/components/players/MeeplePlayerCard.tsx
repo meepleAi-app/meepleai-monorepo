@@ -143,12 +143,7 @@ export function MeeplePlayerCard({
  */
 export function MeeplePlayerCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant }) {
   return (
-    <MeepleCard
-      entity="player"
-      variant={variant}
-      title="..."
-      data-testid="player-card-skeleton"
-    />
+    <MeepleCard entity="player" variant={variant} title="..." data-testid="player-card-skeleton" />
   );
 }
 

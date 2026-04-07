@@ -10,20 +10,29 @@ interface SwipeGestureProps {
   className?: string;
 }
 
-export function SwipeGesture({ children, onSwipeLeft, onSwipeRight, threshold = 50, className = '' }: SwipeGestureProps) {
+export function SwipeGesture({
+  children,
+  onSwipeLeft,
+  onSwipeRight,
+  threshold = 50,
+  className = '',
+}: SwipeGestureProps) {
   const startX = useRef(0);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     startX.current = e.touches[0].clientX;
   }, []);
 
-  const handleTouchEnd = useCallback((e: TouchEvent) => {
-    const diff = e.changedTouches[0].clientX - startX.current;
-    if (Math.abs(diff) >= threshold) {
-      if (diff > 0) onSwipeRight?.();
-      else onSwipeLeft?.();
-    }
-  }, [threshold, onSwipeLeft, onSwipeRight]);
+  const handleTouchEnd = useCallback(
+    (e: TouchEvent) => {
+      const diff = e.changedTouches[0].clientX - startX.current;
+      if (Math.abs(diff) >= threshold) {
+        if (diff > 0) onSwipeRight?.();
+        else onSwipeLeft?.();
+      }
+    },
+    [threshold, onSwipeLeft, onSwipeRight]
+  );
 
   return (
     <div className={className} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>

@@ -22,10 +22,10 @@ import {
   XCircle,
 } from 'lucide-react';
 
-import { KbStatusBadge } from '../badge-stubs';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
+import { KbStatusBadge } from '../badge-stubs';
 import {
   ENTITY_COLORS,
   EntityHeader,

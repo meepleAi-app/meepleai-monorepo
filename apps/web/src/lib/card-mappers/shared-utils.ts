@@ -1,5 +1,5 @@
-import type { LinkedEntityInfo } from '@/types/linked-entity';
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
+import type { LinkedEntityInfo } from '@/types/linked-entity';
 
 /**
  * Formatta una durata in minuti in una stringa leggibile.

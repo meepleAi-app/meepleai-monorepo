@@ -50,9 +50,7 @@ export function YourAgents({ agents, loading, className, onCreateAgent }: YourAg
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
         {loading ? (
           // Loading skeletons
-          Array.from({ length: 3 }).map((_, i) => (
-            <MeepleCardSkeleton key={i} variant="grid" />
-          ))
+          Array.from({ length: 3 }).map((_, i) => <MeepleCardSkeleton key={i} variant="grid" />)
         ) : (
           <>
             {agents.map(agent => (
@@ -63,7 +61,13 @@ export function YourAgents({ agents, loading, className, onCreateAgent }: YourAg
                 title={agent.name}
                 subtitle={agent.gameTitle}
                 imageUrl={agent.imageUrl}
-                badge={agent.status === 'active' ? 'Attivo' : agent.status === 'error' ? 'Errore' : undefined}
+                badge={
+                  agent.status === 'active'
+                    ? 'Attivo'
+                    : agent.status === 'error'
+                      ? 'Errore'
+                      : undefined
+                }
                 metadata={
                   agent.stats
                     ? [{ label: `${agent.stats.invocationCount} invocazioni` }]

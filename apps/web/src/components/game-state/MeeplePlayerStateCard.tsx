@@ -47,7 +47,8 @@ export function MeeplePlayerStateCard({
 
   // Resolve entity color: player hex color → HSL, or default player purple
   const playerHsl = player.color ? hexToHsl(player.color) : undefined;
-  const entityColor = playerHsl || `${entityColors.player.h}, ${entityColors.player.s}, ${entityColors.player.l}`;
+  const entityColor =
+    playerHsl || `${entityColors.player.h}, ${entityColors.player.s}, ${entityColors.player.l}`;
 
   return (
     <article

@@ -20,10 +20,10 @@ import {
   User,
 } from 'lucide-react';
 
-import { ChatStatusBadge } from '../badge-stubs';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
+import { ChatStatusBadge } from '../badge-stubs';
 import {
   ENTITY_COLORS,
   EntityHeader,

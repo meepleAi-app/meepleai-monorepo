@@ -17,7 +17,6 @@ import { useRouter } from 'next/navigation';
 import { EntityListView } from '@/components/ui/data-display/entity-list-view';
 import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
 
 interface PlayerListItem {

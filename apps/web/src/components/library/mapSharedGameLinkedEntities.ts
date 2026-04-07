@@ -7,9 +7,7 @@ import type { LinkedEntityInfo } from '@/types/linked-entity';
  * Unlike personal library entries which track kbIndexedCount,
  * shared games only expose a boolean flag.
  */
-export function mapSharedGameToLinkedEntities(game: {
-  isRagPublic?: boolean;
-}): LinkedEntityInfo[] {
+export function mapSharedGameToLinkedEntities(game: { isRagPublic?: boolean }): LinkedEntityInfo[] {
   const entities: LinkedEntityInfo[] = [{ entityType: 'game', count: 1 }];
 
   if (game.isRagPublic) {

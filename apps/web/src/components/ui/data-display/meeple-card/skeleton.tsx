@@ -14,5 +14,9 @@ const skeletonHeight: Record<MeepleCardVariant, string> = {
 };
 
 export function MeepleCardSkeleton({ variant = 'grid', className = '' }: MeepleCardSkeletonProps) {
-  return <div className={`animate-pulse rounded-2xl bg-[var(--mc-bg-muted)] ${skeletonHeight[variant]} ${className}`} />;
+  return (
+    <div
+      className={`animate-pulse rounded-2xl bg-[var(--mc-bg-muted)] ${skeletonHeight[variant]} ${className}`}
+    />
+  );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { MeepleCard } from './MeepleCard';
+
 import type { MeepleCardProps, MeepleEntityType } from './types';
 
 function createEntityCard(entity: MeepleEntityType) {

@@ -83,9 +83,7 @@ export function MeepleUserLibraryCard({
     game.minPlayers && game.maxPlayers
       ? { label: `${game.minPlayers}-${game.maxPlayers} giocatori` }
       : null,
-    game.playingTimeMinutes
-      ? { label: formatPlaytime(game.playingTimeMinutes) }
-      : null,
+    game.playingTimeMinutes ? { label: formatPlaytime(game.playingTimeMinutes) } : null,
     game.playCount > 0 ? { label: `${game.playCount} partite` } : null,
   ].filter((m): m is NonNullable<typeof m> => m !== null);
 
@@ -164,12 +162,7 @@ export function MeepleUserLibraryCardSkeleton({
   variant?: MeepleCardVariant;
 }) {
   return (
-    <MeepleCard
-      entity="game"
-      variant={variant}
-      title=""
-      data-testid="library-game-card-skeleton"
-    />
+    <MeepleCard entity="game" variant={variant} title="" data-testid="library-game-card-skeleton" />
   );
 }
 

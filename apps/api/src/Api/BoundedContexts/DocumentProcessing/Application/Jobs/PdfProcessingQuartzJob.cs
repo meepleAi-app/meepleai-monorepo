@@ -27,6 +27,21 @@ public sealed class PdfProcessingQuartzJob : IJob
     private readonly ILogger<PdfProcessingQuartzJob> _logger;
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Maps ProcessingStepType names (used by the job) to PdfProcessingState enum values
+    /// (used by IProcessingMetricsService). The two enums use different naming conventions:
+    /// steps use verb roots (Upload, Extract) while states use gerunds (Uploading, Extracting).
+    /// </summary>
+    private static readonly Dictionary<string, PdfProcessingState> StepToStateMap =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Upload"] = PdfProcessingState.Uploading,
+            ["Extract"] = PdfProcessingState.Extracting,
+            ["Chunk"] = PdfProcessingState.Chunking,
+            ["Embed"] = PdfProcessingState.Embedding,
+            ["Index"] = PdfProcessingState.Indexing,
+        };
+
     public PdfProcessingQuartzJob(
         MeepleAiDbContext dbContext,
         IServiceProvider serviceProvider,
@@ -206,6 +221,11 @@ public sealed class PdfProcessingQuartzJob : IJob
                     QueueStreamEventType.StepCompleted, jobEntity.Id,
                     new StepCompletedData(stepName, perStepMs / 1000.0, null),
                     completedAt), ct).ConfigureAwait(false);
+
+                // Record step duration for historical ETA accuracy
+                await RecordStepMetricsSafeAsync(
+                    pdfDoc.Id, stepName, TimeSpan.FromMilliseconds(perStepMs),
+                    pdfDoc.FileSizeBytes, pdfDoc.PageCount ?? 0, ct).ConfigureAwait(false);
             }
 
             // Mark job as completed
@@ -307,6 +327,35 @@ public sealed class PdfProcessingQuartzJob : IJob
             QueueStreamEventType.JobFailed, jobEntity.Id,
             new JobFailedData(error, jobEntity.CurrentStep, jobEntity.RetryCount, null, null, null),
             now), ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Best-effort metrics recording. Maps step names to PdfProcessingState and delegates
+    /// to IProcessingMetricsService. Failures are logged but never break the pipeline.
+    /// </summary>
+    private async Task RecordStepMetricsSafeAsync(
+        Guid pdfId, string stepName, TimeSpan duration,
+        long fileSizeBytes, int pageCount, CancellationToken ct)
+    {
+        try
+        {
+            if (!StepToStateMap.TryGetValue(stepName, out var state))
+            {
+                _logger.LogWarning("Unknown step name '{StepName}' — skipping metrics recording", stepName);
+                return;
+            }
+
+            var metricsService = _serviceProvider.GetRequiredService<IProcessingMetricsService>();
+            await metricsService.RecordStepDurationAsync(
+                pdfId, state, duration, fileSizeBytes, pageCount, ct).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Metrics failures must not break pipeline
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to record metrics for step {StepName} of PDF {PdfId}",
+                stepName, pdfId);
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>

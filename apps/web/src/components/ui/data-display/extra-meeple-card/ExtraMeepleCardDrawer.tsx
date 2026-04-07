@@ -19,24 +19,17 @@
 import React from 'react';
 
 import {
-  Award,
   Bot,
   Calendar,
   FileText,
   Gamepad2,
   Layers,
   Link as LinkIcon,
-  Map,
   MessageCircle,
-  PackagePlus,
-  StickyNote,
   ToolCase,
-  Trophy,
   User,
-  Users,
   Wrench,
   X,
-  Zap,
 } from 'lucide-react';
 
 import { EmbeddedChatView } from '@/components/chat-unified/EmbeddedChatView';
@@ -56,7 +49,7 @@ import { useGameDetail, useAgentDetail, useChatDetail, useKbDetail } from './hoo
 import { RelatedEntitiesSection } from '../entity-link/related-entities-section';
 
 import type { LinkEntityType } from '../entity-link/entity-link-types';
-import type { MeepleEntityType } from '../meeple-card-styles';
+import type { MeepleEntityType } from '../meeple-card';
 
 // ============================================================================
 // Types
@@ -65,10 +58,9 @@ import type { MeepleEntityType } from '../meeple-card-styles';
 /**
  * All supported drawer entity types.
  * Includes all MeepleEntityType values plus:
- *   - 'chat'  — legacy alias for 'chatSession' (backward compat)
  *   - 'links' — shows the RelatedEntitiesSection
  */
-export type DrawerEntityType = MeepleEntityType | 'chat' | 'links';
+export type DrawerEntityType = MeepleEntityType | 'links';
 
 export interface ExtraMeepleCardDrawerProps {
   /** Type of entity to display */
@@ -111,23 +103,15 @@ const ENTITY_CONFIG: Record<
   // Implemented entity types
   game: { label: 'Dettaglio Gioco', color: '25 95% 45%', Icon: Gamepad2 },
   agent: { label: 'Dettaglio Agente', color: '38 92% 50%', Icon: Bot },
-  chatSession: { label: 'Dettaglio Chat', color: '220 80% 55%', Icon: MessageCircle },
   chat: { label: 'Dettaglio Chat', color: '220 80% 55%', Icon: MessageCircle },
   kb: { label: 'Documento KB', color: '174 60% 40%', Icon: FileText },
   links: { label: 'Connections', color: '210 40% 55%', Icon: LinkIcon },
-  // New entity types (Coming Soon)
+  // Other entity types (Coming Soon)
   player: { label: 'Dettaglio Giocatore', color: '262 83% 58%', Icon: User },
   session: { label: 'Dettaglio Sessione', color: '240 60% 55%', Icon: Layers },
   event: { label: 'Dettaglio Evento', color: '350 89% 60%', Icon: Calendar },
-  collection: { label: 'Dettaglio Collezione', color: '20 70% 42%', Icon: Trophy },
-  group: { label: 'Dettaglio Gruppo', color: '280 50% 48%', Icon: Users },
-  location: { label: 'Dettaglio Luogo', color: '200 55% 45%', Icon: Map },
-  expansion: { label: 'Dettaglio Espansione', color: '290 65% 50%', Icon: PackagePlus },
   toolkit: { label: 'Dettaglio Toolkit', color: '142 70% 45%', Icon: ToolCase },
   tool: { label: 'Dettaglio Strumento', color: '195 80% 50%', Icon: Wrench },
-  achievement: { label: 'Dettaglio Achievement', color: '45 90% 48%', Icon: Award },
-  note: { label: 'Dettaglio Nota', color: '40 30% 42%', Icon: StickyNote },
-  custom: { label: 'Entità Personalizzata', color: '220 15% 45%', Icon: Zap },
 };
 
 // ============================================================================
@@ -247,7 +231,6 @@ function DrawerEntityRouter({
       return <GameDrawerContent entityId={entityId} />;
     case 'agent':
       return <AgentDrawerContent entityId={entityId} />;
-    case 'chatSession':
     case 'chat':
       if (liveChatData) {
         return (
@@ -264,19 +247,12 @@ function DrawerEntityRouter({
       return <KbDrawerContent entityId={entityId} />;
     case 'links':
       return <LinksDrawerContent entityType={linkEntityType ?? 'Game'} entityId={entityId} />;
-    // New entity types — Coming Soon until dedicated content components are implemented
+    // Other entity types — Coming Soon until dedicated content components are implemented
     case 'player':
     case 'session':
     case 'event':
-    case 'collection':
-    case 'group':
-    case 'location':
-    case 'expansion':
     case 'toolkit':
     case 'tool':
-    case 'achievement':
-    case 'note':
-    case 'custom':
       return <DrawerComingSoon label={ENTITY_CONFIG[entityType].label} issueNumber={0} />;
     default:
       return <DrawerErrorState error="Tipo entità non supportato" />;

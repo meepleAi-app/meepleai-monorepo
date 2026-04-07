@@ -14,7 +14,7 @@ import { useMemo } from 'react';
 
 import { BookmarkPlus, BookmarkMinus, Heart, HeartOff } from 'lucide-react';
 
-import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
+import type { QuickAction } from '@/types/quick-action';
 
 import {
   useEntityActions,

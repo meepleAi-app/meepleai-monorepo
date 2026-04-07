@@ -5,6 +5,8 @@ import { X } from 'lucide-react';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { GameNightGame } from '@/stores/game-night';
 
+const XIcon = <X className="h-4 w-4" />;
+
 interface MeepleDealtGameCardProps {
   game: GameNightGame;
   onRemove: (gameId: string) => void;
@@ -23,9 +25,9 @@ export function MeepleDealtGameCard({ game, onRemove, rotation }: MeepleDealtGam
         variant="compact"
         title={game.title}
         imageUrl={game.thumbnailUrl}
-        quickActions={[
+        actions={[
           {
-            icon: X,
+            icon: XIcon,
             label: `Rimuovi ${game.title}`,
             onClick: () => onRemove(game.id),
           },

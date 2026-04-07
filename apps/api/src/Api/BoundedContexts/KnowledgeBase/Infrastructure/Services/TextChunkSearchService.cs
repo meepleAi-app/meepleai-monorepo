@@ -41,7 +41,7 @@ internal sealed class TextChunkSearchService : ITextChunkSearchService
                 .FromSqlInterpolated($@"
                     SELECT tc.*
                     FROM text_chunks tc
-                    WHERE tc.""GameId"" = {gameId}
+                    WHERE (tc.""GameId"" = {gameId} OR tc.""SharedGameId"" = {gameId})
                       AND tc.search_vector @@ plainto_tsquery('english', {sanitizedQuery})
                     ORDER BY ts_rank(tc.search_vector, plainto_tsquery('english', {sanitizedQuery})) DESC
                     LIMIT {limit}")

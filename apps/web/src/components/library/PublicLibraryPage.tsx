@@ -17,12 +17,11 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 
-import { ChevronDown, Filter, Loader2, Plus, Search, X } from 'lucide-react';
+import { ChevronDown, Filter, Loader2, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { EmptyState } from '@/components/empty-state/EmptyState';
 import { MechanicIcon } from '@/components/icons/mechanics';
-import { toast } from '@/components/layout';
 import { ShelfRow } from '@/components/library/ShelfRow';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/overlays/popover';
@@ -162,7 +161,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
     return ids;
   }, [libraryData]);
 
-  const { mutate: addToLibrary } = useAddGameToLibrary();
+  const { mutate: _addToLibrary } = useAddGameToLibrary();
 
   const availableMechanicSlugs = useMemo(() => {
     return mechanicsData?.map(m => m.slug) ?? [];
@@ -194,19 +193,6 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
   const handleLoadMore = useCallback(() => {
     setPage(p => p + 1);
   }, []);
-
-  const handleAddToLibrary = useCallback(
-    (gameId: string) => {
-      addToLibrary(
-        { gameId },
-        {
-          onSuccess: () => toast.success('Gioco aggiunto alla libreria'),
-          onError: () => toast.error('Impossibile aggiungere il gioco'),
-        }
-      );
-    },
-    [addToLibrary]
-  );
 
   // ------------------------------------------------------------------
   // Derived state
@@ -287,19 +273,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
                     subtitle={`#${game.rank} trending`}
                     imageUrl={game.thumbnailUrl ?? undefined}
                     status={inLibrary ? 'owned' : undefined}
-                    showStatusIcon={inLibrary}
                     onClick={() => router.push(`/library/games/${game.gameId}`)}
-                    entityQuickActions={
-                      !inLibrary
-                        ? [
-                            {
-                              icon: Plus,
-                              label: 'Aggiungi',
-                              onClick: () => handleAddToLibrary(game.gameId),
-                            },
-                          ]
-                        : undefined
-                    }
                   />
                 </div>
               );
@@ -450,19 +424,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
                   rating={game.averageRating ?? undefined}
                   ratingMax={10}
                   status={inLibrary ? 'owned' : undefined}
-                  showStatusIcon={inLibrary}
                   onClick={() => router.push(`/library/games/${game.id}`)}
-                  entityQuickActions={
-                    !inLibrary
-                      ? [
-                          {
-                            icon: Plus,
-                            label: 'Aggiungi',
-                            onClick: () => handleAddToLibrary(game.id),
-                          },
-                        ]
-                      : undefined
-                  }
                 />
               );
             })}

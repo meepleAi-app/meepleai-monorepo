@@ -359,3 +359,24 @@ export function useChunksPreview(
     enabled: !!pdfDocumentId,
   });
 }
+
+// ── Batch ETA ─────────────────────────────────────────────────────────
+
+export interface JobETADto {
+  jobId: string;
+  pdfDocumentId: string;
+  status: string;
+  currentStep: string | null;
+  estimatedMinutesRemaining: number | null;
+}
+
+export interface BatchETAResponse {
+  jobs: JobETADto[];
+  totalDrainTimeMinutes: number;
+  jobCount: number;
+}
+
+export async function fetchBatchETA(): Promise<BatchETAResponse> {
+  const result = await apiClient.get<BatchETAResponse>('/api/v1/admin/queue/eta');
+  return result ?? { jobs: [], totalDrainTimeMinutes: 0, jobCount: 0 };
+}

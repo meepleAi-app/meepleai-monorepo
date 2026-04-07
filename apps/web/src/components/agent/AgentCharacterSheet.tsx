@@ -24,8 +24,8 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
-import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
-import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
+import { KbStatusBadge } from '@/components/ui/data-display/extra-meeple-card/badge-stubs';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
@@ -122,7 +122,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
           </div>
 
           {/* Status badge */}
-          <AgentStatusBadge status={agentStatus} showLabel size="sm" />
+          <AgentStatusBadge status={agentStatus} showLabel />
         </div>
 
         {/* Linked game */}

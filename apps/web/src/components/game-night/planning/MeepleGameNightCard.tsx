@@ -30,8 +30,8 @@ export function MeepleGameNightCard({ night }: MeepleGameNightCardProps) {
   const subtitle = [dateStr, night.location].filter(Boolean).join(' \u00B7 ');
 
   const metadata: MeepleCardMetadata[] = [
-    { icon: Users, value: String(night.playerCount) },
-    { icon: Gamepad2, value: String(night.gameCount) },
+    { icon: <Users className="h-4 w-4" />, label: String(night.playerCount) },
+    { icon: <Gamepad2 className="h-4 w-4" />, label: String(night.gameCount) },
   ];
 
   return (

@@ -31,10 +31,7 @@
  * ```
  */
 
-import { Settings, UserPlus } from 'lucide-react';
-
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import { getNavigationLinks } from '@/config/entity-navigation';
 import type { SessionPlayer } from '@/lib/api/schemas/play-records.schemas';
 import { buildPlayerCardProps } from '@/lib/card-mappers';
 
@@ -92,23 +89,28 @@ export function MeeplePlayerCard({
   // Quick Actions Configuration
   // ============================================================================
 
-  const entityQuickActions = [
+  const actions = [
     // Configura/Edit: visible only for owner + non-meeple-user
-    {
-      icon: Settings,
-      label: 'Configura',
-      onClick: () => onConfigure?.(player.id),
-      hidden: !isCreatedByCurrentUser || isMeepleAiUser,
-    },
+    ...(isCreatedByCurrentUser && !isMeepleAiUser
+      ? [
+          {
+            icon: '⚙️',
+            label: 'Configura',
+            onClick: () => onConfigure?.(player.id),
+          },
+        ]
+      : []),
     // Invita a Sessione: visible for authenticated users, disabled if no active session
-    {
-      icon: UserPlus,
-      label: 'Invita a Sessione',
-      onClick: () => onInvite?.(player.id),
-      hidden: !isAuthenticated,
-      disabled: !hasActiveSession,
-      disabledTooltip: 'Nessuna sessione attiva',
-    },
+    ...(isAuthenticated
+      ? [
+          {
+            icon: '➕',
+            label: 'Invita a Sessione',
+            onClick: () => onInvite?.(player.id),
+            disabled: !hasActiveSession,
+          },
+        ]
+      : []),
   ];
 
   // ============================================================================
@@ -130,22 +132,7 @@ export function MeeplePlayerCard({
       subtitle={subtitle}
       className={className}
       onClick={onClick ? () => onClick(player.id) : undefined}
-      // Issue #5004: Quick actions with conditional visibility
-      entityQuickActions={entityQuickActions}
-      showInfoButton
-      entityId={player.id}
-      infoTooltip="Vai al profilo"
-      // Navigation footer
-      linkedEntities={getNavigationLinks('player', { id: player.id }).map(l => ({
-        entityType: l.entity,
-        count: 1,
-      }))}
-      onManaPipClick={entityType => {
-        const link = getNavigationLinks('player', { id: player.id }).find(
-          l => l.entity === entityType
-        );
-        if (link?.href) window.location.href = link.href;
-      }}
+      actions={actions.length > 0 ? actions : undefined}
       data-testid={`player-card-${player.id}`}
     />
   );
@@ -156,13 +143,7 @@ export function MeeplePlayerCard({
  */
 export function MeeplePlayerCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant }) {
   return (
-    <MeepleCard
-      entity="player"
-      variant={variant}
-      title=""
-      loading
-      data-testid="player-card-skeleton"
-    />
+    <MeepleCard entity="player" variant={variant} title="..." data-testid="player-card-skeleton" />
   );
 }
 

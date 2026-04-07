@@ -17,9 +17,6 @@ export * from './activity-list';
 
 // Issue #3326: MeepleCard - Universal card component system (base component)
 export * from './meeple-card';
-// Issue #4030: MeepleCard action components (quick actions + info button)
-export * from './meeple-card-quick-actions';
-export * from './meeple-card-info-button';
 
 // GameCarousel - Immersive 3D carousel for browsing games
 export * from './game-carousel';

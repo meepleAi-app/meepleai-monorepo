@@ -567,8 +567,8 @@ export function createAdminAiClient(http: HttpClient) {
       pageSize?: number;
     }): Promise<ProcessingQueueResponse> {
       const queryParams = new URLSearchParams();
-      if (params?.status) queryParams.set('status', params.status);
-      if (params?.search) queryParams.set('search', params.search);
+      if (params?.status) queryParams.set('statusFilter', params.status);
+      if (params?.search) queryParams.set('searchText', params.search);
       if (params?.page) queryParams.set('page', params.page.toString());
       if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
 
@@ -780,13 +780,13 @@ export function createAdminAiClient(http: HttpClient) {
       dateTo?: string;
     }): Promise<RagExecutionListResult> {
       const searchParams = new URLSearchParams();
-      if (params?.skip) searchParams.set('skip', params.skip.toString());
-      if (params?.take) searchParams.set('take', params.take.toString());
+      if (params?.skip !== undefined) searchParams.set('skip', params.skip.toString());
+      if (params?.take !== undefined) searchParams.set('take', params.take.toString());
       if (params?.strategy) searchParams.set('strategy', params.strategy);
       if (params?.status) searchParams.set('status', params.status);
-      if (params?.minLatencyMs) searchParams.set('minLatencyMs', params.minLatencyMs.toString());
-      if (params?.maxLatencyMs) searchParams.set('maxLatencyMs', params.maxLatencyMs.toString());
-      if (params?.minConfidence) searchParams.set('minConfidence', params.minConfidence.toString());
+      if (params?.minLatencyMs !== undefined) searchParams.set('minLatencyMs', params.minLatencyMs.toString());
+      if (params?.maxLatencyMs !== undefined) searchParams.set('maxLatencyMs', params.maxLatencyMs.toString());
+      if (params?.minConfidence !== undefined) searchParams.set('minConfidence', params.minConfidence.toString());
       if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
       if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
       const qs = searchParams.toString();

@@ -8,7 +8,7 @@
 
 import Link from 'next/link';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { MeepleCard, MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -50,9 +50,7 @@ export function YourAgents({ agents, loading, className, onCreateAgent }: YourAg
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
         {loading ? (
           // Loading skeletons
-          Array.from({ length: 3 }).map((_, i) => (
-            <MeepleCard key={i} entity="agent" variant="grid" title="" loading={true} />
-          ))
+          Array.from({ length: 3 }).map((_, i) => <MeepleCardSkeleton key={i} variant="grid" />)
         ) : (
           <>
             {agents.map(agent => (
@@ -60,15 +58,21 @@ export function YourAgents({ agents, loading, className, onCreateAgent }: YourAg
                 key={agent.id}
                 entity="agent"
                 variant="grid"
-                id={agent.id}
-                entityId={agent.id}
                 title={agent.name}
                 subtitle={agent.gameTitle}
                 imageUrl={agent.imageUrl}
-                agentStatus={agent.status}
-                agentStats={agent.stats}
-                showInfoButton
-                loading={false}
+                badge={
+                  agent.status === 'active'
+                    ? 'Attivo'
+                    : agent.status === 'error'
+                      ? 'Errore'
+                      : undefined
+                }
+                metadata={
+                  agent.stats
+                    ? [{ label: `${agent.stats.invocationCount} invocazioni` }]
+                    : undefined
+                }
               />
             ))}
 

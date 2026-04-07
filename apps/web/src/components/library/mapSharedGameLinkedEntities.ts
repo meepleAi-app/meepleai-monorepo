@@ -1,0 +1,18 @@
+import type { LinkedEntityInfo } from '@/types/linked-entity';
+
+/**
+ * Maps shared game fields to LinkedEntityInfo[] for ManaLinkFooter.
+ * ManaPip KB appears when isRagPublic is true (game has public KB docs).
+ *
+ * Unlike personal library entries which track kbIndexedCount,
+ * shared games only expose a boolean flag.
+ */
+export function mapSharedGameToLinkedEntities(game: { isRagPublic?: boolean }): LinkedEntityInfo[] {
+  const entities: LinkedEntityInfo[] = [{ entityType: 'game', count: 1 }];
+
+  if (game.isRagPublic) {
+    entities.push({ entityType: 'kb', count: 1 });
+  }
+
+  return entities;
+}

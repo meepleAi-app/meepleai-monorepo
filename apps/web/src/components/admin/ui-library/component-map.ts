@@ -142,48 +142,7 @@ import { ExtraMeepleCard } from '@/components/ui/data-display/extra-meeple-card/
 import { ExtraMeepleCardDrawer } from '@/components/ui/data-display/extra-meeple-card/ExtraMeepleCardDrawer';
 import { GameCarousel } from '@/components/ui/data-display/game-carousel';
 import { ListPageHeader } from '@/components/ui/data-display/ListPageHeader';
-import { CartaEstesa } from '@/components/ui/data-display/meeple-card/CartaEstesa';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
-import { MeepleCardCompact } from '@/components/ui/data-display/meeple-card/variants/MeepleCardCompact';
-import { MeepleCardExpanded } from '@/components/ui/data-display/meeple-card/variants/MeepleCardExpanded';
-import { MeepleCardFeatured } from '@/components/ui/data-display/meeple-card/variants/MeepleCardFeatured';
-import { MeepleCardGrid } from '@/components/ui/data-display/meeple-card/variants/MeepleCardGrid';
-import { MeepleCardHero } from '@/components/ui/data-display/meeple-card/variants/MeepleCardHero';
-import { MeepleCardList } from '@/components/ui/data-display/meeple-card/variants/MeepleCardList';
-import { MeepleCardBrowser } from '@/components/ui/data-display/meeple-card-browser/MeepleCardBrowser';
-import { MeepleCards } from '@/components/ui/data-display/meeple-card-compound'; // compound
-import { AgentModelInfo } from '@/components/ui/data-display/meeple-card-features/AgentModelInfo';
-import { BulkSelectCheckbox } from '@/components/ui/data-display/meeple-card-features/BulkSelectCheckbox';
-import { CardAgentAction } from '@/components/ui/data-display/meeple-card-features/CardAgentAction';
-import { CardNavigationFooter } from '@/components/ui/data-display/meeple-card-features/CardNavigationFooter';
-import { ChatAgentInfo } from '@/components/ui/data-display/meeple-card-features/ChatAgentInfo';
-import { ChatGameContext } from '@/components/ui/data-display/meeple-card-features/ChatGameContext';
-import { ChatStatsDisplay } from '@/components/ui/data-display/meeple-card-features/ChatStatsDisplay';
-import { ChatStatusBadge } from '@/components/ui/data-display/meeple-card-features/ChatStatusBadge';
-import { ChatUnreadBadge } from '@/components/ui/data-display/meeple-card-features/ChatUnreadBadge';
-import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
-import { DragHandle } from '@/components/ui/data-display/meeple-card-features/DragHandle';
-
-// ─── MeepleCard Features ──────────────────────────────────────────────────────
-
-import { FlipCard } from '@/components/ui/data-display/meeple-card-features/FlipCard';
-import { GameBackContent } from '@/components/ui/data-display/meeple-card-features/GameBackContent';
-import { HoverPreview } from '@/components/ui/data-display/meeple-card-features/HoverPreview';
-import { QuickActionsMenu } from '@/components/ui/data-display/meeple-card-features/QuickActionsMenu';
-import { SessionActionButtons } from '@/components/ui/data-display/meeple-card-features/SessionActionButtons';
-import { SessionBackContent } from '@/components/ui/data-display/meeple-card-features/SessionBackContent';
-import { SessionPlayerPopup } from '@/components/ui/data-display/meeple-card-features/SessionPlayerPopup';
-import { SessionScoreModal } from '@/components/ui/data-display/meeple-card-features/SessionScoreModal';
-import { SessionScoreTable } from '@/components/ui/data-display/meeple-card-features/SessionScoreTable';
-import { SessionStatusBadge } from '@/components/ui/data-display/meeple-card-features/SessionStatusBadge';
-import { SessionTurnSequence } from '@/components/ui/data-display/meeple-card-features/SessionTurnSequence';
-import { SnapshotHistorySlider } from '@/components/ui/data-display/meeple-card-features/SnapshotHistorySlider';
-import { StatusBadge } from '@/components/ui/data-display/meeple-card-features/StatusBadge';
-import { TimeTravelOverlay } from '@/components/ui/data-display/meeple-card-features/TimeTravelOverlay';
-import { WishlistButton } from '@/components/ui/data-display/meeple-card-features/WishlistButton';
-import { MeepleCardInfoButton } from '@/components/ui/data-display/meeple-card-info-button';
-import { MobileTagDisplay } from '@/components/ui/data-display/meeple-card-mobile-tags'; // registry name: MeepleCardMobileTags
-import { MeepleCardQuickActions } from '@/components/ui/data-display/meeple-card-quick-actions';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
 import { RatingStars } from '@/components/ui/data-display/rating-stars';
 import { StatCard } from '@/components/ui/data-display/stat-card';
@@ -307,15 +266,6 @@ type AnyComponent = ComponentType<any>;
 export const COMPONENT_MAP: Record<string, AnyComponent> = {
   // Data Display
   'meeple-card': MeepleCard,
-  'meeple-card-compact': MeepleCardCompact,
-  'meeple-card-expanded': MeepleCardExpanded,
-  'meeple-card-featured': MeepleCardFeatured,
-  'meeple-card-grid': MeepleCardGrid,
-  'meeple-card-hero': MeepleCardHero,
-  'meeple-card-list': MeepleCardList,
-  'carta-estesa': CartaEstesa,
-  'meeple-card-compound': MeepleCards as unknown as AnyComponent,
-  'meeple-card-browser': MeepleCardBrowser,
   'extra-meeple-card': ExtraMeepleCard,
   'extra-meeple-card-drawer': ExtraMeepleCardDrawer,
   'entity-extra-meeple-card': GameExtraMeepleCard, // representative variant
@@ -350,36 +300,7 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'user-status-indicator': UserStatusIndicator,
   'activity-list': ActivityList,
 
-  // MeepleCard Features
-  'agent-model-info': AgentModelInfo,
-  'bulk-select-checkbox': BulkSelectCheckbox,
-  'card-agent-action': CardAgentAction,
-  'card-navigation-footer': CardNavigationFooter,
-  'document-status-badge': KbStatusBadge,
-  'drag-handle': DragHandle,
-  'flip-card': FlipCard,
-  'game-back-content': GameBackContent,
-  'hover-preview': HoverPreview,
-  'quick-actions-menu': QuickActionsMenu,
-  'session-action-buttons': SessionActionButtons,
-  'session-back-content': SessionBackContent,
-  'session-player-popup': SessionPlayerPopup,
-  'session-score-modal': SessionScoreModal,
-  'session-score-table': SessionScoreTable,
-  'session-status-badge': SessionStatusBadge,
-  'session-turn-sequence': SessionTurnSequence,
-  'snapshot-history-slider': SnapshotHistorySlider,
-  'status-badge': StatusBadge,
-  'time-travel-overlay': TimeTravelOverlay,
-  'wishlist-button': WishlistButton,
-  'chat-agent-info': ChatAgentInfo,
-  'chat-game-context': ChatGameContext,
-  'chat-stats-display': ChatStatsDisplay,
-  'chat-status-badge': ChatStatusBadge,
-  'chat-unread-badge': ChatUnreadBadge,
-  'meeple-card-info-button': MeepleCardInfoButton,
-  'meeple-card-quick-actions': MeepleCardQuickActions,
-  'meeple-card-mobile-tags': MobileTagDisplay,
+  // MeepleCard Features (legacy — stubs only)
 
   // Feedback
   alert: Alert,

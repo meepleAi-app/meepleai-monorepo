@@ -44,7 +44,6 @@ export function MeepleContributorCard({
         variant="list"
         title={contributor.userName}
         subtitle={`${contributionText} \u00b7 ${timeAgo}`}
-        avatarUrl={contributor.avatarUrl ?? undefined}
         badge={contributor.isPrimaryContributor ? 'Original' : undefined}
         className={cn(featured && 'bg-primary/5')}
         data-testid="meeple-contributor-card"

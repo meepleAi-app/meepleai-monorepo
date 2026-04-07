@@ -5,8 +5,6 @@
 
 import { useEffect, useState } from 'react';
 
-import { Users, Clock, Calendar } from 'lucide-react';
-
 import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
 import type { CoverImageSelection, GameMetadata } from '@/stores/useGameImportWizardStore';
 
@@ -22,15 +20,15 @@ function buildProps(metadata: GameMetadata | null, cover: CoverImageSelection): 
       metadata.minPlayers != null && metadata.maxPlayers != null
         ? `${metadata.minPlayers}–${metadata.maxPlayers}`
         : `${metadata?.minPlayers ?? metadata?.maxPlayers}`;
-    metaItems.push({ icon: Users, label: `${players} giocatori` });
+    metaItems.push({ label: `${players} giocatori` });
   }
 
   if (metadata?.playingTimeMinutes != null) {
-    metaItems.push({ icon: Clock, label: `${metadata.playingTimeMinutes} min` });
+    metaItems.push({ label: `${metadata.playingTimeMinutes} min` });
   }
 
   if (metadata?.yearPublished != null) {
-    metaItems.push({ icon: Calendar, label: String(metadata.yearPublished) });
+    metaItems.push({ label: String(metadata.yearPublished) });
   }
 
   return {
@@ -40,7 +38,6 @@ function buildProps(metadata: GameMetadata | null, cover: CoverImageSelection): 
     subtitle: metadata?.publishers?.join(', ') || metadata?.designers?.join(', ') || undefined,
     imageUrl,
     metadata: metaItems.length > 0 ? metaItems : undefined,
-    isInteractive: false,
   };
 }
 

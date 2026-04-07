@@ -69,6 +69,7 @@ import {
   createContactClient,
   createAgentMemoryClient,
   createAgentDocumentsClient,
+  createInfrastructureClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -118,6 +119,7 @@ import {
   type ContactClient,
   type AgentMemoryClient,
   type AgentDocumentsClient,
+  type InfrastructureClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -353,6 +355,9 @@ export interface ApiClient {
   /** User-scoped agent document selection */
   agentDocuments: AgentDocumentsClient;
 
+  /** AI Infrastructure Dashboard (admin) */
+  infrastructure: InfrastructureClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -452,6 +457,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     contact: createContactClient({ httpClient }), // Public contact form
     agentMemory: createAgentMemoryClient({ httpClient }), // AgentMemory
     agentDocuments: createAgentDocumentsClient({ httpClient }), // User agent document selection
+    infrastructure: createInfrastructureClient({ httpClient }), // AI Infrastructure Dashboard
     delete: (path: string) => httpClient.delete(path),
   };
 

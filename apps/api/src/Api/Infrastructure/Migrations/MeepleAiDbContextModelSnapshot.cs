@@ -10534,6 +10534,9 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SharedGameId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ChunkIndex");
@@ -10543,6 +10546,8 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("PageNumber");
 
                     b.HasIndex("PdfDocumentId");
+
+                    b.HasIndex("SharedGameId");
 
                     b.ToTable("text_chunks", (string)null);
                 });

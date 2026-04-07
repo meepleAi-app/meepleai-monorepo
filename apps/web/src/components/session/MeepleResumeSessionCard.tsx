@@ -9,7 +9,6 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Camera, Hash, Users } from 'lucide-react';
 import Link from 'next/link';
 
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
@@ -48,11 +47,9 @@ export function MeepleResumeSessionCard({
   const hasPhotos = typeof photoCount === 'number' && photoCount > 0;
 
   const metadata: MeepleCardMetadata[] = [
-    { icon: Users, label: `${playerCount} giocatori` },
-    { icon: Hash, label: sessionCode },
-    ...(hasPhotos
-      ? [{ icon: Camera, label: `${photoCount} foto salvate` } as MeepleCardMetadata]
-      : []),
+    { label: `${playerCount} giocatori` },
+    { label: sessionCode },
+    ...(hasPhotos ? [{ label: `${photoCount} foto salvate` } as MeepleCardMetadata] : []),
   ];
 
   return (
@@ -64,16 +61,7 @@ export function MeepleResumeSessionCard({
         subtitle={`In pausa \u2022 ${timeAgo}`}
         metadata={metadata}
         badge="In pausa"
-        sessionStatus="paused"
-        primaryActions={[
-          {
-            icon: '\u25B6',
-            label: 'Riprendi partita',
-            onClick: () => {
-              /* navigation handled by Link wrapper */
-            },
-          },
-        ]}
+        status="paused"
       />
     </Link>
   );

@@ -5,6 +5,9 @@
  * Used by useEmbeddingStatus hook to poll RAG readiness.
  */
 
+import { z } from 'zod';
+
+import { GameDocumentSchema, type GameDocument } from '../schemas/game-documents.schemas';
 import {
   KnowledgeBaseStatusSchema,
   RagConfigSchema,
@@ -206,6 +209,19 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
         settings,
         GameKbSettingsSchema
       );
+    },
+
+    /**
+     * Get user-facing KB documents for a game
+     * @param gameId Game ID (GUID format)
+     * @returns List of indexed documents with category and version info
+     */
+    async getGameDocuments(gameId: string): Promise<GameDocument[]> {
+      const result = await httpClient.get(
+        `/api/v1/knowledge-base/${encodeURIComponent(gameId)}/documents`,
+        z.array(GameDocumentSchema)
+      );
+      return result ?? [];
     },
   };
 }

@@ -11,7 +11,7 @@ import { Calendar, Clock, Hash, Pause, Play, RotateCcw, Save, UserPlus, Users } 
 
 import { cn } from '@/lib/utils';
 
-import { PLAYER_COLOR_BG } from '../../meeple-card-features/session-types';
+import { PLAYER_COLOR_BG } from '../session-types-compat';
 
 import type {
   OverviewTabData,

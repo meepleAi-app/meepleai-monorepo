@@ -70,6 +70,8 @@ export interface DashboardSidebarItem {
   badgeKey?: string;
   /** Active state pattern (defaults to prefix match) */
   activePattern?: RegExp;
+  /** Hide this item when ALPHA_MODE is active */
+  hideInAlpha?: boolean;
 }
 
 export interface DashboardSectionAction {
@@ -222,6 +224,11 @@ const _ALL_DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Upload & Process',
         icon: UploadIcon,
       },
+      {
+        href: '/admin/knowledge-base/rag-pipeline',
+        label: 'RAG Pipeline',
+        icon: ZapIcon,
+      },
       // Email Templates (Issue #52)
       {
         href: '/admin/content/email-templates',
@@ -237,7 +244,7 @@ const _ALL_DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'AI',
     icon: BrainCircuitIcon,
     baseRoute: '/admin/agents',
-    additionalRoutes: ['/admin/ai'],
+    additionalRoutes: ['/admin/ai', '/admin/agents/infrastructure'],
     actions: [
       {
         id: 'new-agent',
@@ -267,6 +274,12 @@ const _ALL_DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Mission Control',
         icon: GaugeIcon,
         activePattern: /^\/admin\/agents$/,
+      },
+      {
+        href: '/admin/agents/infrastructure',
+        label: 'Infrastructure',
+        icon: ServerIcon,
+        hideInAlpha: true,
       },
       {
         href: '/admin/agents/inspector',
@@ -582,9 +595,14 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = isAlphaMode
         s.id === 'content'
           ? {
               ...s,
-              sidebarItems: s.sidebarItems.filter(i => ALPHA_CONTENT_SIDEBAR_LABELS.has(i.label)),
+              sidebarItems: s.sidebarItems.filter(
+                i => ALPHA_CONTENT_SIDEBAR_LABELS.has(i.label) && !i.hideInAlpha
+              ),
             }
-          : s
+          : {
+              ...s,
+              sidebarItems: s.sidebarItems.filter(i => !i.hideInAlpha),
+            }
       )
   : _ALL_DASHBOARD_SECTIONS;
 

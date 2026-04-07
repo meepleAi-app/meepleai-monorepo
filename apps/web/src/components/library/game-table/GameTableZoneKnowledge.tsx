@@ -16,9 +16,35 @@ import { useRouter } from 'next/navigation';
 
 import { DocumentSelectionPanel } from '@/components/library/DocumentSelectionPanel';
 import { Badge } from '@/components/ui/data-display/badge';
-import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
-import type { AgentStatus } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
-import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+// AgentStatusBadge and KbStatusBadge removed in MeepleCard rewrite — inline replacements
+type AgentStatus = 'active' | 'idle' | 'training' | 'error';
+function AgentStatusBadge({ status }: { status: AgentStatus; size?: string; showLabel?: boolean }) {
+  const colors: Record<string, string> = {
+    active: 'bg-green-100 text-green-700',
+    idle: 'bg-gray-100 text-gray-600',
+    training: 'bg-blue-100 text-blue-700',
+    error: 'bg-red-100 text-red-700',
+  };
+  return (
+    <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${colors[status] ?? ''}`}>
+      {status}
+    </span>
+  );
+}
+type KbStatus = 'indexed' | 'processing' | 'failed' | 'none';
+function KbStatusBadge({ status }: { status: KbStatus; size?: string }) {
+  const colors: Record<string, string> = {
+    indexed: 'bg-green-100 text-green-700',
+    processing: 'bg-blue-100 text-blue-700',
+    failed: 'bg-red-100 text-red-700',
+    none: 'bg-gray-100 text-gray-600',
+  };
+  return (
+    <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${colors[status] ?? ''}`}>
+      {status}
+    </span>
+  );
+}
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';

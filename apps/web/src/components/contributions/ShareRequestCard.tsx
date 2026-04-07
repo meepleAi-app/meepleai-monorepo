@@ -9,10 +9,13 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { FileText, Eye, Edit, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
+import {
+  MeepleCard,
+  type MeepleCardAction,
+  type MeepleCardMetadata,
+} from '@/components/ui/data-display/meeple-card';
 import type { UserShareRequestDto } from '@/lib/api/schemas/share-requests.schemas';
 
 interface ShareRequestCardProps {
@@ -45,18 +48,17 @@ export function ShareRequestCard({ request }: ShareRequestCardProps) {
     ...(request.attachedDocumentCount > 0
       ? [
           {
-            icon: FileText,
             label: `${request.attachedDocumentCount} doc${request.attachedDocumentCount !== 1 ? 's' : ''}`,
           },
         ]
       : []),
   ];
 
-  const quickActions = [
+  const actions: MeepleCardAction[] = [
     ...(hasResult
       ? [
           {
-            icon: ExternalLink,
+            icon: '🔗',
             label: 'View Game',
             onClick: () => router.push(`/library/games/${request.resultingSharedGameId}`),
           },
@@ -65,27 +67,18 @@ export function ShareRequestCard({ request }: ShareRequestCardProps) {
     ...(canUpdate
       ? [
           {
-            icon: Edit,
+            icon: '✏️',
             label: 'Update',
             onClick: () => router.push(`/contributions/requests/${request.id}/edit`),
           },
         ]
       : []),
     {
-      icon: Eye,
+      icon: '👁',
       label: 'Details',
       onClick: () => router.push(`/contributions/requests/${request.id}`),
     },
   ];
-
-  // Build preview from notes and admin feedback
-  const previewParts: string[] = [];
-  if (request.userNotes) previewParts.push(request.userNotes);
-  if (request.adminFeedback) previewParts.push(`Admin: ${request.adminFeedback}`);
-  if (request.resolvedAt) {
-    const resolvedAgo = formatDistanceToNow(new Date(request.resolvedAt), { addSuffix: true });
-    previewParts.push(`Resolved ${resolvedAgo}`);
-  }
 
   return (
     <MeepleCard
@@ -96,9 +89,7 @@ export function ShareRequestCard({ request }: ShareRequestCardProps) {
       imageUrl={request.gameThumbnailUrl || undefined}
       badge={statusLabels[request.status] || request.status}
       metadata={metadata.length > 0 ? metadata : undefined}
-      quickActions={quickActions}
-      showPreview={previewParts.length > 0}
-      previewData={previewParts.length > 0 ? { description: previewParts.join('\n\n') } : undefined}
+      actions={actions.length > 0 ? actions : undefined}
       data-testid={`share-request-card-${request.id}`}
     />
   );

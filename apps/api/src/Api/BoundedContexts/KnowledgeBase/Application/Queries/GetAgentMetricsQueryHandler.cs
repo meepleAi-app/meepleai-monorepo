@@ -33,8 +33,8 @@ internal sealed class GetAgentMetricsQueryHandler : IRequestHandler<GetAgentMetr
         var endDate = request.EndDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var startDate = request.StartDate ?? endDate.AddDays(-30);
 
-        var from = startDate.ToDateTime(TimeOnly.MinValue);
-        var to = endDate.ToDateTime(TimeOnly.MaxValue);
+        var from = startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var to = endDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
 
         _logger.LogInformation(
             "Fetching agent metrics from {From} to {To}, TypologyId: {TypologyId}, Strategy: {Strategy}",

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Events;
+using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using MediatR;
 
@@ -68,6 +69,13 @@ public static class SseEventTypeMapper
 
         // Widget state → session:toolkit (P2-1: Widget State SSE Broadcast)
         [typeof(WidgetStateUpdatedEvent)] = "session:toolkit",
+
+        // Game Night diary → session:gamenight
+        [typeof(GameStartedInNightEvent)] = "session:gamenight",
+        [typeof(GameCompletedInNightEvent)] = "session:gamenight",
+        [typeof(NightStartedEvent)] = "session:gamenight",
+        [typeof(NightFinalizedEvent)] = "session:gamenight",
+        [typeof(GameNightResourceUpdateEvent)] = "session:gamenight",
     };
 
     /// <summary>

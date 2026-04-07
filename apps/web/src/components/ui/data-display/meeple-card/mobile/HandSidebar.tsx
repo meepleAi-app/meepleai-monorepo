@@ -15,15 +15,18 @@ export function HandSidebar({ cards, activeId, onSelect }: HandSidebarProps) {
       <span className="mb-1 font-[var(--font-quicksand)] text-[7px] font-bold uppercase tracking-widest text-[var(--mc-text-muted)] [writing-mode:vertical-rl] [transform:rotate(180deg)]">
         Cards
       </span>
-      {cards.map((card) => (
-        <HandCard
-          key={card.id ?? card.title}
-          entity={card.entity}
-          title={card.title}
-          isActive={(card.id ?? card.title) === activeId}
-          onClick={() => onSelect(card.id ?? card.title)}
-        />
-      ))}
+      {cards.map((card, i) => {
+        const key = card.id ?? `${card.title}-${i}`;
+        return (
+          <HandCard
+            key={key}
+            entity={card.entity}
+            title={card.title}
+            isActive={key === activeId}
+            onClick={() => onSelect(key)}
+          />
+        );
+      })}
     </div>
   );
 }

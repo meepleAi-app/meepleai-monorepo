@@ -16,7 +16,7 @@ export function Rating({ value, max = 5 }: RatingProps) {
       ))}
       {hasHalf && <span className="text-[0.78rem] text-amber-400/50">★</span>}
       {Array.from({ length: emptyStars }, (_, i) => (
-        <span key={`e${i}`} className="text-[0.78rem] text-black/[0.12]">★</span>
+        <span key={`e${i}`} className="text-[0.78rem] text-[var(--mc-text-muted)]">★</span>
       ))}
       <span className="ml-1 text-[0.7rem] font-semibold text-[var(--mc-text-secondary)]">
         {value.toFixed(1)}

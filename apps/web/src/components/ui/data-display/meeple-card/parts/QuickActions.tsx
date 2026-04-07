@@ -18,7 +18,7 @@ export function QuickActions({ actions }: QuickActionsProps) {
           }}
           disabled={action.disabled}
           title={action.label}
-          className="flex h-[30px] w-[30px] items-center justify-center rounded-full border border-white/60 bg-white/85 text-sm backdrop-blur-lg transition-transform duration-300 hover:scale-110 hover:shadow-[var(--mc-shadow-md)] disabled:cursor-not-allowed disabled:opacity-45"
+          className="flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[var(--mc-nav-icon-border)] bg-[var(--mc-nav-icon-bg)] text-sm backdrop-blur-lg transition-transform duration-300 hover:scale-110 hover:shadow-[var(--mc-shadow-md)] disabled:cursor-not-allowed disabled:opacity-45"
         >
           {action.icon}
         </button>

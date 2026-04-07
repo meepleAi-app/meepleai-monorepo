@@ -165,17 +165,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     mockProps: { entity: 'game', title: 'Catan', id: '550e8400-e29b-41d4-a716-446655440000' },
   },
   {
-    id: 'meeple-card-browser',
-    name: 'MeepleCardBrowser',
-    importPath: '@/components/ui/data-display/meeple-card-browser/MeepleCardBrowser',
-    category: 'Data Display',
-    areas: ['shared'],
-    tier: 'interactive',
-    description:
-      'Full browsing UI with deck-stack drawer and card link bar for navigating entity cards.',
-    tags: ['browser', 'deck', 'navigation', 'card'],
-  },
-  {
     id: 'extra-meeple-card',
     name: 'ExtraMeepleCard',
     importPath: '@/components/ui/data-display/extra-meeple-card/ExtraMeepleCard',

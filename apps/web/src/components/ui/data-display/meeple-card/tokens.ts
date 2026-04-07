@@ -1,4 +1,4 @@
-import type { MeepleEntityType, MeepleCardVariant } from './types';
+import type { MeepleEntityType } from './types';
 
 export const entityColors: Record<MeepleEntityType, { h: number; s: string; l: string }> = {
   game:    { h: 25,  s: '95%',  l: '45%' },
@@ -42,22 +42,6 @@ export const entityIcon: Record<MeepleEntityType, string> = {
   event: '📅',
   toolkit: '🧰',
   tool: '🔧',
-};
-
-export const variantDimensions: Record<MeepleCardVariant, { width: number; height: number }> = {
-  grid:     { width: 270, height: 378 },
-  list:     { width: 0,   height: 72 },
-  compact:  { width: 160, height: 48 },
-  featured: { width: 400, height: 225 },
-  hero:     { width: 360, height: 320 },
-};
-
-export const coverAspectRatio: Record<MeepleCardVariant, string> = {
-  grid: '7 / 10',
-  list: '1 / 1',
-  compact: '1 / 1',
-  featured: '16 / 9',
-  hero: '16 / 9',
 };
 
 export const statusColors: Record<string, { bg: string; text: string }> = {

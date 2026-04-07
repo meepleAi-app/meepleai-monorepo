@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, type ReactNode } from 'react';
+import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
 
 interface HoverPreviewProps {
   children: ReactNode;
@@ -19,6 +19,12 @@ export function HoverPreview({ children, content, delay = 500 }: HoverPreviewPro
   const handleLeave = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setVisible(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
   return (

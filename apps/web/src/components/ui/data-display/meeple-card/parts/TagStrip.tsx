@@ -14,7 +14,7 @@ export function TagStrip({ tags, entity, maxVisible = 3 }: TagStripProps) {
   const overflow = tags.length - maxVisible;
 
   return (
-    <div className="absolute left-2 top-2 z-[9] flex flex-col gap-1">
+    <div className="absolute left-2 top-8 z-[9] flex flex-col gap-1">
       {visible.map((tag, i) => (
         <span
           key={i}

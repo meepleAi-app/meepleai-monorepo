@@ -2,6 +2,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
+using Api.BoundedContexts.SessionTracking.Infrastructure.Scheduling;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -46,6 +47,9 @@ internal static class SessionTrackingServiceExtensions
 
         // Issue #3345: Register timer state manager (singleton for in-memory timer state)
         services.AddSingleton<TimerStateManager>();
+
+        // Auto-save scheduler service (dynamic per-session Quartz jobs)
+        services.AddScoped<IAutoSaveSchedulerService, QuartzAutoSaveSchedulerService>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

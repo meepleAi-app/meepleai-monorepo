@@ -95,7 +95,7 @@ echo "Restoring backup from ${PG_FILE}..."
 
 RESTORE_START=$(date +%s)
 
-gunzip -c "${PG_FILE}" | docker exec -i "${TEMP_CONTAINER}" psql -U "${DB_USER}" -q
+gunzip -c "${PG_FILE}" | docker exec -i "${TEMP_CONTAINER}" psql -U "${DB_USER}" -q --set ON_ERROR_STOP=1
 
 RESTORE_END=$(date +%s)
 RESTORE_TIME=$((RESTORE_END - RESTORE_START))

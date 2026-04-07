@@ -11,7 +11,7 @@
 |---------|----------------------|
 | Backup locali (server) | `/backups/meepleai/YYYYMMDD-HHMMSS/` |
 | Backup R2 | `s3://meepleai-backups/` |
-| Log backup | `/backups/meepleai/backup.log` |
+| Log backup | `/var/log/meepleai-backup.log` |
 | Cron jobs | `/etc/cron.d/meepleai-backup` |
 | Repo sul server | `/opt/meepleai/repo/` |
 | Secrets | `/opt/meepleai/repo/infra/secrets/` |
@@ -126,7 +126,7 @@ Server non risponde, SSH non disponibile, datacenter KO.
 8. **Ripristina PostgreSQL dal backup**
 
    ```bash
-   BACKUP_FILE=$(ls /backups/meepleai/restore/meepleai_*.sql.gz | sort | tail -1)
+   BACKUP_FILE="/backups/meepleai/restore/postgres.sql.gz"
    echo "Ripristino da: $BACKUP_FILE"
 
    gunzip -c "$BACKUP_FILE" | docker exec -i meepleai-postgres \
@@ -212,7 +212,7 @@ Dati corrotti, migrazione fallita, tabelle danneggiate o drop accidentale.
 3. **Ripristina dal backup più recente**
 
    ```bash
-   BACKUP_FILE=$(ls /backups/meepleai/*/meepleai_*.sql.gz 2>/dev/null | sort | tail -1)
+   BACKUP_FILE=$(ls /backups/meepleai/*/postgres.sql.gz 2>/dev/null | sort | tail -1)
    echo "Ripristino da: $BACKUP_FILE"
    gunzip -c "$BACKUP_FILE" | docker exec -i meepleai-postgres \
        psql -U meepleai -d meepleai

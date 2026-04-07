@@ -55,21 +55,21 @@ load_secret_file "${SECRETS_DIR}/storage.secret"
 # ─────────────────────────────────────────────
 # Configuration defaults (override via secret files)
 # ─────────────────────────────────────────────
-: "${PG_USER:=postgres}"
+: "${PG_USER:=${POSTGRES_USER:-meepleai}}"
 : "${PG_CONTAINER:=meepleai-postgres}"
 : "${REDIS_CONTAINER:=meepleai-redis}"
 : "${PDF_VOLUME:=meepleai_pdf_uploads}"
 : "${BACKUP_BASE_DIR:=/backups/meepleai}"
-: "${RETENTION_DAYS:=7}"
+RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
 : "${S3_BACKUP_ENABLED:=false}"
-: "${WEBHOOK_URL:=}"
+WEBHOOK_URL="${BACKUP_WEBHOOK_URL:-}"
 
-# S3/R2 settings (only required when S3_BACKUP_ENABLED=true)
-: "${S3_ENDPOINT:=}"
-: "${S3_BUCKET_NAME:=}"
-: "${AWS_ACCESS_KEY_ID:=}"
-: "${AWS_SECRET_ACCESS_KEY:=}"
-: "${S3_REGION:=auto}"
+# S3/R2 — map from backup.secret variable names
+S3_ENDPOINT="${S3_BACKUP_ENDPOINT:-}"
+S3_BUCKET_NAME="${S3_BACKUP_BUCKET_NAME:-meepleai-backups}"
+export AWS_ACCESS_KEY_ID="${S3_BACKUP_ACCESS_KEY:-}"
+export AWS_SECRET_ACCESS_KEY="${S3_BACKUP_SECRET_KEY:-}"
+S3_REGION="${S3_REGION:-auto}"
 
 # ─────────────────────────────────────────────
 # Webhook notification
@@ -108,7 +108,7 @@ mkdir -p "${BACKUP_DIR}"
 backup_postgres() {
   log "INFO" "Starting PostgreSQL backup..."
 
-  local pg_dump_file="${BACKUP_DIR}/postgres_full_${TIMESTAMP}.sql.gz"
+  local pg_dump_file="${BACKUP_DIR}/postgres.sql.gz"
 
   docker exec "${PG_CONTAINER}" \
     pg_dumpall -U "${PG_USER}" \
@@ -132,7 +132,12 @@ backup_postgres() {
 backup_pdf_uploads() {
   log "INFO" "Starting PDF uploads backup..."
 
-  local pdf_archive="${BACKUP_DIR}/pdf_uploads_${TIMESTAMP}.tar.gz"
+  if ! docker volume inspect "${PDF_VOLUME}" > /dev/null 2>&1; then
+    log "INFO" "PDF volume ${PDF_VOLUME} not found — skipping (S3 storage?)"
+    return 0
+  fi
+
+  local pdf_archive="${BACKUP_DIR}/pdf_uploads.tar.gz"
 
   docker run --rm \
     -v "${PDF_VOLUME}:/data:ro" \
@@ -153,7 +158,7 @@ backup_redis() {
   mkdir -p "${redis_dir}"
 
   # Trigger a synchronous save
-  docker exec "${REDIS_CONTAINER}" redis-cli BGSAVE
+  docker exec "${REDIS_CONTAINER}" redis-cli ${REDIS_PASSWORD:+-a "$REDIS_PASSWORD"} BGSAVE
   log "INFO" "Redis BGSAVE triggered — waiting for completion..."
 
   # Poll until save completes (max 60 seconds)
@@ -161,9 +166,9 @@ backup_redis() {
   local waited=0
   while true; do
     local last_save_status
-    last_save_status=$(docker exec "${REDIS_CONTAINER}" redis-cli LASTSAVE 2>/dev/null || echo "0")
+    last_save_status=$(docker exec "${REDIS_CONTAINER}" redis-cli ${REDIS_PASSWORD:+-a "$REDIS_PASSWORD"} LASTSAVE 2>/dev/null || echo "0")
     local in_progress
-    in_progress=$(docker exec "${REDIS_CONTAINER}" redis-cli INFO persistence \
+    in_progress=$(docker exec "${REDIS_CONTAINER}" redis-cli ${REDIS_PASSWORD:+-a "$REDIS_PASSWORD"} INFO persistence \
       | grep "rdb_bgsave_in_progress" | tr -d '[:space:]' | cut -d: -f2 | tr -d '\r')
 
     if [[ "${in_progress}" == "0" ]]; then
@@ -198,10 +203,8 @@ upload_to_s3() {
 
   log "INFO" "Uploading backup to S3/R2 bucket: ${S3_BUCKET_NAME}..."
 
-  local s3_prefix="s3://${S3_BUCKET_NAME}/backups/${TIMESTAMP}/"
+  local s3_prefix="s3://${S3_BUCKET_NAME}/${TIMESTAMP}/"
 
-  AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
-  AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
   aws s3 sync "${BACKUP_DIR}/" "${s3_prefix}" \
     --endpoint-url "${S3_ENDPOINT}" \
     --region "${S3_REGION}" \
@@ -226,9 +229,7 @@ clean_s3_backups() {
 
   # List top-level backup prefixes (date-stamped directories)
   local prefixes
-  prefixes=$(AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
-             AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-             aws s3 ls "s3://${S3_BUCKET_NAME}/backups/" \
+  prefixes=$(aws s3 ls "s3://${S3_BUCKET_NAME}/" \
                --endpoint-url "${S3_ENDPOINT}" \
                --region "${S3_REGION}" \
              | awk '{print $NF}' | grep -E '^[0-9]{8}-[0-9]{6}/$' || true)
@@ -242,9 +243,7 @@ clean_s3_backups() {
 
     if [[ "${dir_epoch}" -lt "${cutoff_epoch}" ]]; then
       log "INFO" "Deleting old S3/R2 backup: ${prefix}"
-      AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
-      AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-      aws s3 rm "s3://${S3_BUCKET_NAME}/backups/${prefix}" \
+      aws s3 rm "s3://${S3_BUCKET_NAME}/${prefix}" \
         --endpoint-url "${S3_ENDPOINT}" \
         --region "${S3_REGION}" \
         --recursive

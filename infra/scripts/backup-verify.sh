@@ -95,13 +95,7 @@ fi
 # Check 2: PostgreSQL dump
 # ---------------------------------------------------------------------------
 
-# Locate the dump file (accept .sql.gz or postgres_*.gz variants)
-PG_DUMP=$(find "${LATEST_DIR}" -maxdepth 1 -name "*.sql.gz" -o -name "postgres_*.gz" 2>/dev/null | sort | head -1 || true)
-
-if [[ -z "${PG_DUMP}" ]]; then
-  # Try broader search for any .gz file that could be the DB dump
-  PG_DUMP=$(find "${LATEST_DIR}" -maxdepth 1 -name "*.gz" 2>/dev/null | grep -v "uploads\|pdfs\|tar" | sort | head -1 || true)
-fi
+PG_DUMP="${LATEST_DIR}/postgres.sql.gz"
 
 # 2a: File exists
 if [[ -n "${PG_DUMP}" && -f "${PG_DUMP}" ]]; then
@@ -164,10 +158,10 @@ if [[ "${S3_BACKUP_ENABLED}" == "true" ]]; then
   log "S3_BACKUP_ENABLED=true — verifying R2/S3 sync for date prefix: ${BACKUP_DATE}"
 
   # Required vars
-  S3_ENDPOINT="${S3_ENDPOINT:-}"
-  S3_BUCKET_NAME="${S3_BUCKET_NAME:-}"
-  AWS_ACCESS_KEY_ID="${S3_ACCESS_KEY:-${AWS_ACCESS_KEY_ID:-}}"
-  AWS_SECRET_ACCESS_KEY="${S3_SECRET_KEY:-${AWS_SECRET_ACCESS_KEY:-}}"
+  S3_ENDPOINT="${S3_BACKUP_ENDPOINT:-}"
+  S3_BUCKET_NAME="${S3_BACKUP_BUCKET_NAME:-}"
+  AWS_ACCESS_KEY_ID="${S3_BACKUP_ACCESS_KEY:-}"
+  AWS_SECRET_ACCESS_KEY="${S3_BACKUP_SECRET_KEY:-}"
   S3_REGION="${S3_REGION:-auto}"
 
   export AWS_ACCESS_KEY_ID

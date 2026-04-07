@@ -158,8 +158,8 @@ backup_redis() {
   local redis_dir="${BACKUP_DIR}/redis"
   mkdir -p "${redis_dir}"
 
-  # Trigger a synchronous save
-  docker exec "${REDIS_CONTAINER}" redis-cli ${REDIS_PASSWORD:+-a "$REDIS_PASSWORD"} BGSAVE
+  # Trigger a synchronous save (use REDISCLI_AUTH env var to avoid password in process list)
+  docker exec ${REDIS_PASSWORD:+-e REDISCLI_AUTH="$REDIS_PASSWORD"} "${REDIS_CONTAINER}" redis-cli BGSAVE
   log "INFO" "Redis BGSAVE triggered — waiting for completion..."
 
   # Poll until save completes (max 60 seconds)
@@ -167,9 +167,9 @@ backup_redis() {
   local waited=0
   while true; do
     local last_save_status
-    last_save_status=$(docker exec "${REDIS_CONTAINER}" redis-cli ${REDIS_PASSWORD:+-a "$REDIS_PASSWORD"} LASTSAVE 2>/dev/null || echo "0")
+    last_save_status=$(docker exec ${REDIS_PASSWORD:+-e REDISCLI_AUTH="$REDIS_PASSWORD"} "${REDIS_CONTAINER}" redis-cli LASTSAVE 2>/dev/null || echo "0")
     local in_progress
-    in_progress=$(docker exec "${REDIS_CONTAINER}" redis-cli ${REDIS_PASSWORD:+-a "$REDIS_PASSWORD"} INFO persistence \
+    in_progress=$(docker exec ${REDIS_PASSWORD:+-e REDISCLI_AUTH="$REDIS_PASSWORD"} "${REDIS_CONTAINER}" redis-cli INFO persistence \
       | grep "rdb_bgsave_in_progress" | tr -d '[:space:]' | cut -d: -f2 | tr -d '\r')
 
     if [[ "${in_progress}" == "0" ]]; then

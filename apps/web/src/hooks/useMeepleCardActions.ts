@@ -19,7 +19,7 @@ import { useMemo } from 'react';
 
 import { BookMarked, BookX, Library } from 'lucide-react';
 
-import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
+import type { QuickAction } from '@/types/quick-action';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import {
   useAddGameToLibrary,
@@ -185,7 +185,7 @@ function useGameLibraryActions(
  * />
  */
 export function useMeepleCardActions(
-  entityType: 'game' | 'player' | 'session' | 'agent' | 'kb' | 'chatSession' | 'event' | 'custom',
+  entityType: 'game' | 'player' | 'session' | 'agent' | 'kb' | 'chat' | 'event' | 'toolkit' | 'tool',
   entityId: string,
   context: MeepleCardContext,
   options: UseMeepleCardActionsOptions = {}

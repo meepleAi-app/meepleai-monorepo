@@ -17,7 +17,7 @@ import {
   User,
 } from 'lucide-react';
 
-import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card-styles';
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import type { HandCard } from '@/stores/use-card-hand';
 
 import type { LucideIcon } from 'lucide-react';

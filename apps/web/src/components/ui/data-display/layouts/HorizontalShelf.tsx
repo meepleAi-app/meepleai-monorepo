@@ -1,6 +1,4 @@
-import { entityColors } from '../meeple-card-styles';
-
-import type { MeepleEntityType } from '../meeple-card-styles';
+import { entityHsl, type MeepleEntityType } from '../meeple-card';
 
 interface HorizontalShelfProps {
   entity: MeepleEntityType;
@@ -19,8 +17,8 @@ export function HorizontalShelf({
 }: HorizontalShelfProps) {
   if (count < 2) return null;
 
-  const color = entityColors[entity];
-  if (!color) return null;
+  const colorStr = entityHsl(entity);
+  if (!colorStr) return null;
 
   return (
     <div className={`mb-8 ${className}`}>
@@ -28,14 +26,14 @@ export function HorizontalShelf({
         <div
           className="h-[18px] w-[18px] rounded-full"
           style={{
-            background: `radial-gradient(circle at 35% 35%, hsl(${color.hsl}), hsl(${color.hsl}))`,
-            border: `1px solid hsla(${color.hsl}, 0.3)`,
+            background: `radial-gradient(circle at 35% 35%, ${colorStr}, ${colorStr})`,
+            border: `1px solid ${entityHsl(entity, 0.3)}`,
           }}
           aria-hidden="true"
         />
         <span
           className="font-quicksand text-[13px] font-bold"
-          style={{ color: `hsl(${color.hsl})` }}
+          style={{ color: colorStr }}
         >
           {title}
         </span>

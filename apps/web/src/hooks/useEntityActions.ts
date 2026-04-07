@@ -35,7 +35,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
-import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
+import type { QuickAction } from '@/types/quick-action';
 import type { EntityType } from '@/lib/api/schemas/collections.schemas';
 
 import {
@@ -311,7 +311,7 @@ export function useEntityActions({
         };
       }
 
-      case 'chatSession': {
+      case 'chat': {
         // Issue #4263: Collection action for chatSession (Pin/Unpin)
         const pinAction: QuickAction =
           (genericStatus?.inCollection ?? false)
@@ -418,7 +418,6 @@ export function useEntityActions({
         };
       }
 
-      case 'custom':
       default:
         return {
           quickActions: [],

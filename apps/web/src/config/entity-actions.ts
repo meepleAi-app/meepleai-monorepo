@@ -63,7 +63,7 @@ export const DEFAULT_ACTIONS: BottomNavActionDef[] = [
     label: 'Home',
     icon: Home,
     variant: 'ghost',
-    drawCard: { entity: 'custom', href: '/library' },
+    drawCard: { entity: 'game', href: '/library' },
   },
   {
     id: 'library',
@@ -84,7 +84,7 @@ export const DEFAULT_ACTIONS: BottomNavActionDef[] = [
     label: 'Chat',
     icon: MessageSquare,
     variant: 'ghost',
-    drawCard: { entity: 'chatSession', href: '/chat' },
+    drawCard: { entity: 'chat', href: '/chat' },
   },
   {
     id: 'profile',
@@ -99,9 +99,7 @@ export const DEFAULT_ACTIONS: BottomNavActionDef[] = [
  * Entity-specific actions shown when a card of that type is focused.
  * Each array is rendered as the bottom nav action set.
  */
-export const ENTITY_ACTIONS: Partial<Record<MeepleEntityType, BottomNavActionDef[]>> & {
-  custom: BottomNavActionDef[];
-} = {
+export const ENTITY_ACTIONS: Partial<Record<MeepleEntityType, BottomNavActionDef[]>> = {
   game: [
     { id: 'rules', label: 'Regole', icon: BookOpen, variant: 'primary', route: '/rules' },
     { id: 'faqs', label: 'FAQ', icon: HelpCircle, route: '/faqs' },
@@ -112,11 +110,10 @@ export const ENTITY_ACTIONS: Partial<Record<MeepleEntityType, BottomNavActionDef
     { id: 'scores', label: 'Punteggi', icon: Trophy, route: '/scoreboard' },
     { id: 'ask-ai', label: 'Chiedi AI', icon: Bot, variant: 'primary' },
   ],
-  chatSession: [
+  chat: [
     { id: 'chat', label: 'Chat', icon: MessageSquare, variant: 'primary' },
     { id: 'ask-ai', label: 'Chiedi AI', icon: Bot },
   ],
-  custom: [{ id: 'home', label: 'Home', icon: Home, variant: 'ghost' }],
 };
 
 /** Default pinned card definitions — auto-seeded on first load */

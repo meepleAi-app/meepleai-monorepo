@@ -26,8 +26,10 @@ import { memo } from 'react';
 
 import { RefreshCw, FileText } from 'lucide-react';
 
-import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
-import type { KbIndexingStatus } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '@/components/ui/data-display/extra-meeple-card/badge-stubs';
+import type { KbStatusBadgeProps } from '@/components/ui/data-display/extra-meeple-card/badge-stubs';
+
+type KbIndexingStatus = KbStatusBadgeProps['status'];
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 import { cn } from '@/lib/utils';
 

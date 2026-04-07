@@ -1,8 +1,7 @@
 'use client';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
-import type { TagPresetKey } from '@/components/ui/data-display/meeple-card-features/tag-presets';
-import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card-styles';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 
 interface MockCard {
   entity: MeepleEntityType;
@@ -10,7 +9,6 @@ interface MockCard {
   subtitle: string;
   rating?: number;
   ratingMax?: 5 | 10;
-  tags?: TagPresetKey[];
 }
 
 const MOCK_CARDS: MockCard[] = [
@@ -20,7 +18,6 @@ const MOCK_CARDS: MockCard[] = [
     subtitle: 'Stonemaier Games',
     rating: 8.1,
     ratingMax: 10,
-    tags: ['owned', 'new'],
   },
   {
     entity: 'player',
@@ -31,13 +28,11 @@ const MOCK_CARDS: MockCard[] = [
     entity: 'kb',
     title: 'Rulebook Collection',
     subtitle: '14 documents',
-    tags: ['pdf', 'ready'],
   },
   {
     entity: 'agent',
     title: 'Wingspan Assistant',
     subtitle: 'RAG + Rules QA',
-    tags: ['rag', 'rules-qa'],
   },
 ];
 
@@ -63,7 +58,6 @@ export default function EntityCardsScene() {
             subtitle={card.subtitle}
             rating={card.rating}
             ratingMax={card.ratingMax}
-            tags={card.tags}
           />
         ))}
       </div>
@@ -80,7 +74,6 @@ export default function EntityCardsScene() {
               variant="list"
               title={card.title}
               subtitle={card.subtitle}
-              tags={card.tags}
             />
           ))}
         </div>

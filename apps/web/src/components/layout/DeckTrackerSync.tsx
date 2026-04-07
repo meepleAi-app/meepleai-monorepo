@@ -1,7 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 
-import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card-styles';
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import { useCardHand } from '@/stores/use-card-hand';
 
 interface DeckTrackerSyncProps {

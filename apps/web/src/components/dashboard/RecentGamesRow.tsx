@@ -34,7 +34,7 @@ export function RecentGamesRow() {
               variant="compact"
               title={entry.gameTitle}
               imageUrl={entry.gameImageUrl ?? entry.gameIconUrl ?? undefined}
-              detailHref={`/library/games/${entry.gameId}`}
+              onClick={() => { window.location.href = `/library/games/${entry.gameId}`; }}
             />
           </div>
         ))}

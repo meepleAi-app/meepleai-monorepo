@@ -25,7 +25,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { Check, Plus, Users, Clock, BarChart2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
@@ -50,11 +49,11 @@ const SessionDrawerSheet = dynamic(
 );
 import {
   MeepleCard,
+  MeepleCardSkeleton,
+  type MeepleCardAction,
+  type MeepleCardMetadata,
   type MeepleCardVariant,
-  type MeepleEntityType,
 } from '@/components/ui/data-display/meeple-card';
-import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
-import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
 import { useGameInLibraryStatus } from '@/hooks/queries';
 import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
 import { api } from '@/lib/api';
@@ -71,8 +70,6 @@ export interface MeepleGameCatalogCardProps {
   variant?: MeepleCardVariant;
   /** Click handler for card navigation */
   onClick?: (gameId: string) => void;
-  /** Enable flip card with back content */
-  flippable?: boolean;
   /** Additional CSS classes */
   className?: string;
   /**
@@ -123,15 +120,10 @@ function formatPlaytime(minutes: number | null | undefined): string {
 // Component
 // ============================================================================
 
-function isDetailGame(game: SharedGame | SharedGameDetail): game is SharedGameDetail {
-  return 'categories' in game;
-}
-
 export function MeepleGameCatalogCard({
   game,
   variant = 'grid',
   onClick,
-  flippable,
   className,
   libraryStatus,
 }: MeepleGameCatalogCardProps) {
@@ -158,34 +150,13 @@ export function MeepleGameCatalogCard({
   }, [openWizard, game]);
 
   // Check if game is already in user's library
-  // Use provided batch status if available, otherwise fetch individually
   const { data: individualStatus, isLoading: statusLoading } = useGameInLibraryStatus(
     game.id,
-    !libraryStatus // Only fetch if libraryStatus not provided
+    !libraryStatus
   );
 
   const status = libraryStatus || individualStatus;
   const inLibrary = status?.inLibrary || false;
-
-  // Catalog-specific quick actions: only "Add to library"
-  const catalogQuickActions: QuickAction[] = useMemo(
-    () => [
-      inLibrary
-        ? {
-            icon: Check,
-            label: 'Gioco gia nella tua libreria',
-            onClick: () => {},
-            disabled: true,
-            disabledTooltip: 'Gioco gia nella tua libreria',
-          }
-        : {
-            icon: Plus,
-            label: 'Aggiungi alla libreria',
-            onClick: handleAddToCollection,
-          },
-    ],
-    [inLibrary, handleAddToCollection]
-  );
 
   // Drawer states
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
@@ -201,47 +172,19 @@ export function MeepleGameCatalogCard({
     staleTime: 2 * 60 * 1000,
   });
 
-  // Navigation footer: drawers when in library, single kb link otherwise
-  const catalogLinkedEntities = useMemo(
-    () =>
-      inLibrary
-        ? [
-            { entityType: 'kb' as MeepleEntityType, count: 1 },
-            { entityType: 'agent' as MeepleEntityType, count: 1 },
-            { entityType: 'chatSession' as MeepleEntityType, count: 1 },
-            { entityType: 'session' as MeepleEntityType, count: 1 },
-          ]
-        : [{ entityType: 'kb' as MeepleEntityType, count: 1 }],
-    [inLibrary]
-  );
-
-  const handleCatalogPipClick = useCallback(
-    (entityType: MeepleEntityType) => {
-      if (inLibrary) {
-        if (entityType === 'kb') setKbDrawerOpen(true);
-        else if (entityType === 'agent') setAgentDrawerOpen(true);
-        else if (entityType === 'chatSession') setChatDrawerOpen(true);
-        else if (entityType === 'session') setSessionDrawerOpen(true);
-      } else {
-        window.location.href = `/library/games/${game.id}`;
-      }
-    },
-    [inLibrary, game.id]
-  );
+  void kbDocuments; // used indirectly via drawer
 
   // Build metadata array
-  const metadata = [
-    { icon: Users, value: formatPlayers(game.minPlayers, game.maxPlayers) },
-    { icon: Clock, value: formatPlaytime(game.playingTimeMinutes) },
-  ];
-
-  // Add complexity if available
-  if (game.complexityRating) {
-    metadata.push({
-      icon: BarChart2,
-      value: formatComplexity(game.complexityRating),
-    });
-  }
+  const metadata = useMemo<MeepleCardMetadata[]>(() => {
+    const items: MeepleCardMetadata[] = [
+      { label: formatPlayers(game.minPlayers, game.maxPlayers) },
+      { label: formatPlaytime(game.playingTimeMinutes) },
+    ];
+    if (game.complexityRating) {
+      items.push({ label: formatComplexity(game.complexityRating) });
+    }
+    return items;
+  }, [game]);
 
   // Build subtitle with publisher/year if available
   const subtitleParts: string[] = [];
@@ -253,46 +196,34 @@ export function MeepleGameCatalogCard({
   }
   const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : 'N/A';
 
-  // Build actions for featured variant
-  const showActions = variant === 'featured' || variant === 'hero';
   // Loading state: only show loading if fetching individually (no batch status provided)
   const isLoadingStatus = !libraryStatus && statusLoading;
-  const actions =
-    showActions && !isLoadingStatus
-      ? [
-          {
-            label: inLibrary ? 'Nella Libreria' : 'Aggiungi',
-            primary: !inLibrary,
-            disabled: inLibrary,
-            onClick: inLibrary ? undefined : handleAddToCollection,
-          },
-        ]
-      : undefined;
+
+  // Build actions for featured/hero variant
+  const showActions = variant === 'featured' || variant === 'hero';
+  const actions = useMemo<MeepleCardAction[] | undefined>(() => {
+    if (!showActions || isLoadingStatus) return undefined;
+    return [
+      {
+        icon: inLibrary ? '✓' : '+',
+        label: inLibrary ? 'Nella Libreria' : 'Aggiungi',
+        onClick: inLibrary ? () => {} : handleAddToCollection,
+        disabled: inLibrary,
+        variant: inLibrary ? 'default' : 'primary',
+      },
+    ];
+  }, [showActions, isLoadingStatus, inLibrary, handleAddToCollection]);
 
   // Build badge
   const badge = inLibrary && !isLoadingStatus ? 'In Libreria' : undefined;
 
-  // Build flip data from game fields
-  const flipData: MeepleCardFlipData | undefined = flippable
-    ? {
-        description: game.description || undefined,
-        complexityRating: game.complexityRating,
-        minAge: game.minAge || undefined,
-        ...(isDetailGame(game)
-          ? {
-              categories: game.categories,
-              mechanics: game.mechanics,
-              designers: game.designers,
-              publishers: game.publishers,
-            }
-          : {}),
-      }
-    : undefined;
+  if (isLoadingStatus) {
+    return <MeepleCardSkeleton variant={variant} />;
+  }
 
   return (
     <>
       <MeepleCard
-        id={game.id}
         entity="game"
         variant={variant}
         title={game.title}
@@ -303,20 +234,9 @@ export function MeepleGameCatalogCard({
         metadata={metadata}
         badge={badge}
         actions={actions}
-        loading={isLoadingStatus}
         onClick={onClick ? () => onClick(game.id) : undefined}
-        flippable={flippable && !!game.description}
-        flipData={flipData}
-        flipTrigger="button"
         className={className}
-        kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
-        linkedEntities={catalogLinkedEntities}
-        onManaPipClick={handleCatalogPipClick}
         data-testid={`catalog-game-card-${game.id}`}
-        entityQuickActions={catalogQuickActions}
-        showInfoButton
-        entityId={game.id}
-        infoTooltip="Vai al dettaglio"
       />
 
       {/* Drawers — only rendered when user has game in library */}
@@ -360,15 +280,7 @@ export function MeepleGameCatalogCardSkeleton({
 }: {
   variant?: MeepleCardVariant;
 }) {
-  return (
-    <MeepleCard
-      entity="game"
-      variant={variant}
-      title=""
-      loading
-      data-testid="catalog-game-card-skeleton"
-    />
-  );
+  return <MeepleCardSkeleton variant={variant} data-testid="catalog-game-card-skeleton" />;
 }
 
 export default MeepleGameCatalogCard;

@@ -16,13 +16,13 @@ export type MeepleEntityType =
 export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero';
 
 export interface MeepleCardMetadata {
-  icon?: string;
+  icon?: ReactNode;
   label: string;
   value?: string;
 }
 
 export interface MeepleCardAction {
-  icon: string;
+  icon: ReactNode;
   label: string;
   onClick: () => void;
   variant?: 'default' | 'primary' | 'danger';
@@ -30,7 +30,7 @@ export interface MeepleCardAction {
 }
 
 export interface NavFooterItem {
-  icon: string;
+  icon: ReactNode;
   label: string;
   entity: MeepleEntityType;
   count?: number;

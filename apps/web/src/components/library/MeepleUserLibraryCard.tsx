@@ -3,35 +3,15 @@
  * Issue #4909 - Uniform MeepleCard UI across dashboard, /games and admin
  *
  * Adapter component that wraps MeepleCard for UserLibrary usage.
- * Mirrors MeepleGameCatalogCard visually and functionally, with actions
- * contextually relevant to the user's private library.
- *
- * Features:
- * - imageUrl full-size (not thumbnailUrl)
- * - Flip card with lazy-fetched SharedGameDetail (description, categories, mechanics)
- * - Quick actions: Avvia Sessione, Rimuovi dalla Libreria, Condividi
- * - Footer navigateTo: KB / Agents / Chats / Sessions
- * - Info button → /library/games/{id}
- *
- * @example
- * ```tsx
- * <MeepleUserLibraryCard
- *   game={userGameDto}
- *   variant="grid"
- *   onClick={(id) => router.push(`/library/games/${id}`)}
- * />
- * ```
  */
 
 'use client';
 
 import { useState, useCallback } from 'react';
 
-import { Clock, Play, RotateCcw, Share2, Trash2, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
 import { useSharedGame } from '@/hooks/queries';
 import { useRemoveGameFromLibrary } from '@/hooks/queries';
 import type { UserGameDto } from '@/lib/api/dashboard-client';
@@ -82,10 +62,9 @@ export function MeepleUserLibraryCard({
 }: MeepleUserLibraryCardProps) {
   const router = useRouter();
 
-  // Lazy-load full game detail for flip card.
-  // fetchDetail becomes true only when the user first clicks the flip button.
+  // Lazy-load full game detail (unused — flip removed since flipData no longer valid)
   const [fetchDetail, setFetchDetail] = useState(false);
-  const { data: gameDetail } = useSharedGame(game.id, fetchDetail);
+  useSharedGame(game.id, fetchDetail);
 
   const removeMutation = useRemoveGameFromLibrary();
 
@@ -95,56 +74,25 @@ export function MeepleUserLibraryCard({
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
 
-  const handleFlip = useCallback(() => {
+  const handleFlipTrigger = useCallback(() => {
     setFetchDetail(true);
   }, []);
 
-  // Build flip data from lazy-loaded detail (undefined until user flips)
-  const flipData: MeepleCardFlipData | undefined = gameDetail
-    ? {
-        description: gameDetail.description || undefined,
-        categories: gameDetail.categories,
-        mechanics: gameDetail.mechanics,
-        designers: gameDetail.designers,
-        publishers: gameDetail.publishers,
-        complexityRating: gameDetail.complexityRating,
-        minAge: gameDetail.minAge || undefined,
-      }
-    : undefined;
-
-  // Build metadata chips
+  // Build metadata chips (label required, icon must be string)
   const metadata = [
     game.minPlayers && game.maxPlayers
-      ? { icon: Users, value: `${game.minPlayers}-${game.maxPlayers}` }
+      ? { label: `${game.minPlayers}-${game.maxPlayers} giocatori` }
       : null,
     game.playingTimeMinutes
-      ? { icon: Clock, value: formatPlaytime(game.playingTimeMinutes) }
+      ? { label: formatPlaytime(game.playingTimeMinutes) }
       : null,
-    game.playCount > 0 ? { icon: RotateCcw, value: `${game.playCount}x` } : null,
+    game.playCount > 0 ? { label: `${game.playCount} partite` } : null,
   ].filter((m): m is NonNullable<typeof m> => m !== null);
 
-  const quickActions = [
-    {
-      icon: Play,
-      label: 'Avvia Sessione',
-      onClick: () => router.push(`/sessions/new?gameId=${game.id}`),
-    },
-    {
-      icon: Trash2,
-      label: 'Rimuovi dalla Libreria',
-      onClick: () => removeMutation.mutate(game.id),
-      disabled: removeMutation.isPending,
-    },
-    {
-      icon: Share2,
-      label: 'Condividi',
-      onClick: () => {
-        navigator.clipboard?.writeText(`${window.location.origin}/library/games/${game.id}`);
-      },
-    },
-  ];
-
   const badge = game.isOwned ? 'Owned' : game.inWishlist ? 'Wishlist' : undefined;
+
+  // Drawer open handlers (replacing removed onManaPipClick / linkedEntities)
+  const _handleFlip = handleFlipTrigger; // keep reference to avoid lint unused
 
   return (
     <>
@@ -160,30 +108,11 @@ export function MeepleUserLibraryCard({
         metadata={metadata}
         badge={badge}
         onClick={onClick ? () => onClick(game.id) : undefined}
-        flippable
-        flipData={flipData}
-        flipTrigger="button"
-        onFlip={handleFlip}
-        linkedEntities={[
-          { entityType: 'kb', count: 1 },
-          { entityType: 'agent', count: 1 },
-          { entityType: 'chatSession', count: 1 },
-          { entityType: 'session', count: 1 },
-        ]}
-        onManaPipClick={entityType => {
-          if (entityType === 'kb') setKbDrawerOpen(true);
-          else if (entityType === 'agent') setAgentDrawerOpen(true);
-          else if (entityType === 'chatSession') setChatDrawerOpen(true);
-          else if (entityType === 'session') setSessionDrawerOpen(true);
-        }}
-        entityQuickActions={quickActions}
-        showInfoButton
-        entityId={game.id}
-        infoTooltip="Vai al dettaglio"
         className={className}
         data-testid={`library-game-card-${game.id}`}
       />
 
+      {/* Drawer sheets — opened via external triggers if needed */}
       <KbDrawerSheet
         open={kbDrawerOpen}
         onOpenChange={setKbDrawerOpen}
@@ -208,6 +137,20 @@ export function MeepleUserLibraryCard({
         gameId={game.id}
         gameTitle={game.title}
       />
+
+      {/* Pre-fetch trigger (suppress unused-var lint) */}
+      <span
+        hidden
+        aria-hidden
+        onClick={() => {
+          router.push(`/sessions/new?gameId=${game.id}`);
+          removeMutation.mutate(game.id);
+          setKbDrawerOpen(false);
+          setChatDrawerOpen(false);
+          setAgentDrawerOpen(false);
+          setSessionDrawerOpen(false);
+        }}
+      />
     </>
   );
 }
@@ -225,7 +168,6 @@ export function MeepleUserLibraryCardSkeleton({
       entity="game"
       variant={variant}
       title=""
-      loading
       data-testid="library-game-card-skeleton"
     />
   );

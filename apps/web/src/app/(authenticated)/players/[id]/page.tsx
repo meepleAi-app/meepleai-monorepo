@@ -15,7 +15,7 @@ import { ArrowLeft, Gamepad2, Trophy } from 'lucide-react';
 import Link from 'next/link';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { MeepleCard, type MeepleEntityType } from '@/components/ui/data-display/meeple-card';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
@@ -23,13 +23,8 @@ import { useEntityNavigation } from '@/hooks/useEntityNavigation';
 
 export default function PlayerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: playerId } = use(params);
-  const { data: stats, isLoading } = usePlayerStatistics();
-  const navLinks = useEntityNavigation('player', { id: playerId });
-  const navigationLinkedEntities = navLinks.map(l => ({ entityType: l.entity, count: 1 }));
-  const handleNavPipClick = (entityType: MeepleEntityType) => {
-    const link = navLinks.find(l => l.entity === entityType);
-    if (link?.href) window.location.href = link.href;
-  };
+  const { data: stats } = usePlayerStatistics();
+  const _navLinks = useEntityNavigation('player', { id: playerId });
 
   // Decode player name from URL slug
   const playerName = decodeURIComponent(playerId).replace(/-/g, ' ');
@@ -54,14 +49,11 @@ export default function PlayerDetailPage({ params }: { params: Promise<{ id: str
             metadata={
               stats
                 ? [
-                    { icon: Gamepad2, value: `${stats.totalSessions} sessioni` },
-                    { icon: Trophy, value: `${stats.totalWins} vittorie` },
+                    { label: `${stats.totalSessions} sessioni` },
+                    { label: `${stats.totalWins} vittorie` },
                   ]
                 : []
             }
-            loading={isLoading}
-            linkedEntities={navigationLinkedEntities}
-            onManaPipClick={handleNavPipClick}
           />
         </section>
 

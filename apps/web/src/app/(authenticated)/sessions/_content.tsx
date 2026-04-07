@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { formatDistanceToNow, format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Clock, Crown, History, Loader2, Search, Users } from 'lucide-react';
+import { Clock, History, Loader2, Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
@@ -41,13 +41,13 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 
 function buildHistoryMeta(session: SessionSummaryDto): MeepleCardMetadata[] {
   const meta: MeepleCardMetadata[] = [
-    { icon: Clock, value: format(new Date(session.sessionDate), 'd MMM yyyy', { locale: it }) },
+    { label: format(new Date(session.sessionDate), 'd MMM yyyy', { locale: it }) },
   ];
   if (session.durationMinutes > 0) {
-    meta.push({ icon: Clock, value: `${session.durationMinutes} min` });
+    meta.push({ label: `${session.durationMinutes} min` });
   }
   if (session.winnerName) {
-    meta.push({ icon: Crown, value: session.winnerName });
+    meta.push({ label: session.winnerName });
   }
   return meta;
 }
@@ -152,17 +152,16 @@ export function SessionsContent() {
               subtitle={`Turno ${session.currentTurnIndex + 1}`}
               badge={STATUS_CONFIG[session.status]?.label ?? session.status}
               metadata={[
-                { icon: Users, value: `${session.playerCount} giocatori` },
+                { label: `${session.playerCount} giocatori` },
                 {
-                  icon: Clock,
-                  value: formatDistanceToNow(new Date(session.updatedAt), {
+                  label: formatDistanceToNow(new Date(session.updatedAt), {
                     addSuffix: false,
                     locale: it,
                   }),
                 },
               ]}
               actions={[
-                { label: 'Riprendi', onClick: () => router.push(`/sessions/${session.id}`) },
+                { icon: '▶', label: 'Riprendi', onClick: () => router.push(`/sessions/${session.id}`) },
               ]}
               onClick={() => router.push(`/sessions/${session.id}`)}
             />
@@ -207,7 +206,7 @@ export function SessionsContent() {
                         variant="list"
                         title={session.gameName}
                         badge={STATUS_CONFIG[session.status]?.label ?? session.status}
-                        metadata={[{ icon: Users, value: `${session.playerCount} giocatori` }]}
+                        metadata={[{ label: `${session.playerCount} giocatori` }]}
                         onClick={() => router.push(`/sessions/${session.id}`)}
                       />
                     ))}
@@ -223,7 +222,7 @@ export function SessionsContent() {
                         variant="grid"
                         title={session.gameName}
                         badge={STATUS_CONFIG[session.status]?.label ?? session.status}
-                        metadata={[{ icon: Users, value: `${session.playerCount} giocatori` }]}
+                        metadata={[{ label: `${session.playerCount} giocatori` }]}
                         onClick={() => router.push(`/sessions/${session.id}`)}
                       />
                     ))}

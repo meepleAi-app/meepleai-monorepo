@@ -68,7 +68,7 @@ export function CategoriesTable({
           title: category.name,
           id: category.id,
           subtitle: category.description,
-          metadata: [{ value: String(category.gameCount) }],
+          metadata: [{ label: String(category.gameCount) }],
         })}
         tableColumns={tableColumns}
         onItemClick={onCategoryClick}

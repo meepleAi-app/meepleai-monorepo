@@ -16,7 +16,7 @@
  */
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { Clock, Users } from 'lucide-react';
+
 
 import type { CarouselGame, CarouselSortValue } from '@/components/ui/data-display/game-carousel';
 import { api } from '@/lib/api';
@@ -98,14 +98,12 @@ function transformSharedGameToCarousel(
     ratingMax: 10,
     metadata: [
       {
-        icon: Users,
-        value: game.minPlayers === game.maxPlayers
-          ? `${game.minPlayers}`
-          : `${game.minPlayers}-${game.maxPlayers}`,
+        label: game.minPlayers === game.maxPlayers
+          ? `${game.minPlayers} giocatori`
+          : `${game.minPlayers}-${game.maxPlayers} giocatori`,
       },
       {
-        icon: Clock,
-        value: `${game.playingTimeMinutes} min`,
+        label: `${game.playingTimeMinutes} min`,
       },
     ],
     badge,
@@ -124,12 +122,7 @@ function transformLibraryEntryToCarousel(entry: UserLibraryEntry): CarouselGame 
     rating: undefined, // Library entries don't include ratings
     ratingMax: 10,
     metadata: entry.gameYearPublished
-      ? [
-          {
-            icon: Clock,
-            value: `${entry.gameYearPublished}`,
-          },
-        ]
+      ? [{ label: `${entry.gameYearPublished}` }]
       : undefined,
     badge: entry.isFavorite ? '❤️ Favorite' : undefined,
     hasKb: entry.hasKb,

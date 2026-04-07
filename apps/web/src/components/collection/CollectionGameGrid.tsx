@@ -31,7 +31,7 @@ export interface CollectionGame {
   hasPdf: boolean;
   hasActiveChat: boolean;
   chatCount: number;
-  status: 'owned' | 'wishlisted' | 'borrowed';
+  status: 'owned' | 'wishlist';
 }
 
 // ============================================================================

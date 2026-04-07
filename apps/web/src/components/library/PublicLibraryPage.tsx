@@ -24,7 +24,9 @@ import { EmptyState } from '@/components/empty-state/EmptyState';
 import { MechanicIcon } from '@/components/icons/mechanics';
 import { toast } from '@/components/layout';
 import { ShelfRow } from '@/components/library/ShelfRow';
+import { mapSharedGameToLinkedEntities } from '@/components/library/mapSharedGameLinkedEntities';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/overlays/popover';
 import { SectionBlock } from '@/components/ui/SectionBlock';
 import { useCatalogTrending } from '@/hooks/queries/useCatalogTrending';
@@ -207,6 +209,13 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
     },
     [addToLibrary]
   );
+
+  /** KB pip on shared games shows a toast instead of opening KbBottomSheet */
+  const handleSharedGamePipClick = useCallback((entityType: MeepleEntityType) => {
+    if (entityType === 'kb') {
+      toast.info("Aggiungi alla tua libreria per chattare con l'agente");
+    }
+  }, []);
 
   // ------------------------------------------------------------------
   // Derived state
@@ -452,6 +461,8 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
                   status={inLibrary ? 'owned' : undefined}
                   showStatusIcon={inLibrary}
                   onClick={() => router.push(`/library/games/${game.id}`)}
+                  linkedEntities={mapSharedGameToLinkedEntities(game)}
+                  onManaPipClick={handleSharedGamePipClick}
                   entityQuickActions={
                     !inLibrary
                       ? [

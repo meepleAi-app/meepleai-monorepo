@@ -44,7 +44,9 @@ internal sealed class GetGameDocumentsHandler : IQueryHandler<GetGameDocumentsQu
                 pdf.FileName,
                 MapIndexingStatus(vd.IndexingStatus),
                 pdf.PageCount ?? 0,
-                vd.IndexedAt ?? pdf.UploadedAt
+                vd.IndexedAt ?? pdf.UploadedAt,
+                pdf.DocumentCategory,
+                pdf.VersionLabel
             )
         ).ToListAsync(cancellationToken).ConfigureAwait(false);
 

@@ -414,6 +414,13 @@ export function NewChatView() {
   const directGameId = searchParams?.get('gameId') ?? searchParams?.get('game') ?? null;
   const isDirectGameMode = !!directGameId;
 
+  // Pre-selected KB IDs from KB selector (?kbIds=id1,id2,id3)
+  const kbIdsParam = searchParams?.get('kbIds');
+  const selectedKbIds = useMemo(
+    () => (kbIdsParam ? kbIdsParam.split(',').filter(Boolean) : undefined),
+    [kbIdsParam]
+  );
+
   // State — tabbed game sources
   const [activeTab, setActiveTab] = useState<'private' | 'shared'>('private');
   const [privateGames, setPrivateGames] = useState<Game[]>([]);
@@ -537,6 +544,7 @@ export function NewChatView() {
           agentId: agent.id,
           title: gameName ? `Chat: ${gameName}` : 'Nuova conversazione',
           initialMessage: null,
+          selectedKnowledgeBaseIds: selectedKbIds,
         })
         .then(thread => {
           if (thread?.id) {
@@ -553,6 +561,7 @@ export function NewChatView() {
     isDirectGameMode,
     isLoadingCustomAgents,
     selectedGameId,
+    selectedKbIds,
     customAgents,
     privateGames,
     sharedGames,
@@ -618,6 +627,7 @@ export function NewChatView() {
           agentId: agentId ?? null,
           title: selectedGame?.title ? `Chat: ${selectedGame.title}` : 'Nuova conversazione',
           initialMessage: initialMessage ?? null,
+          selectedKnowledgeBaseIds: selectedKbIds,
         });
 
         if (thread?.id) {
@@ -634,7 +644,14 @@ export function NewChatView() {
         setIsCreating(false);
       }
     },
-    [selectedGameId, selectedGame?.title, selectedCustomAgentId, resolveAgentId, router]
+    [
+      selectedGameId,
+      selectedKbIds,
+      selectedGame?.title,
+      selectedCustomAgentId,
+      resolveAgentId,
+      router,
+    ]
   );
 
   const handleQuickStart = useCallback(

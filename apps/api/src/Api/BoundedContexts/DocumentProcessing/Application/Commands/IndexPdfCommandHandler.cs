@@ -84,7 +84,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // Step 3: Update VectorDocument status
             // For private PDFs GameId is null — fall back to PrivateGameId so vectors are scoped
             // to the correct private game rather than collapsed under Guid.Empty.
-            var effectiveGameId = pdf.PrivateGameId ?? pdf.GameId ?? Guid.Empty;
+            var effectiveGameId = pdf.PrivateGameId ?? pdf.GameId ?? pdf.SharedGameId ?? Guid.Empty;
             var indexingSuccess = await IndexChunksInVectorStoreAsync(
                 pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)
@@ -94,7 +94,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             }
 
             // Step 4: Save text chunks to PostgreSQL for hybrid search
-            await SaveTextChunksToPostgresAsync(pdfId, effectiveGameId, documentChunks!, cancellationToken).ConfigureAwait(false);
+            await SaveTextChunksToPostgresAsync(pdfId, effectiveGameId, pdf.SharedGameId, documentChunks!, cancellationToken).ConfigureAwait(false);
 
             // Mark processing complete
             pdf.ProcessingState = "Ready";
@@ -366,6 +366,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     private async Task SaveTextChunksToPostgresAsync(
         string pdfId,
         Guid gameId,
+        Guid? sharedGameId,
         List<DocumentChunk> documentChunks,
         CancellationToken cancellationToken)
     {
@@ -386,6 +387,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             {
                 Id = Guid.NewGuid(),
                 GameId = gameId,
+                SharedGameId = sharedGameId,
                 PdfDocumentId = pdfGuid,
                 Content = chunk.Text,
                 ChunkIndex = index,

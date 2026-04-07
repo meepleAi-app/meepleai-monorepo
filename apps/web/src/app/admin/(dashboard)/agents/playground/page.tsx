@@ -196,11 +196,13 @@ function ChatDebugTab() {
         onTemperatureChange={setTemperature}
         topK={topK}
         onTopKChange={setTopK}
-        availableModels={(aiModels?.items ?? []).map((m: any) => ({
-          id: m.id,
-          displayName: m.displayName,
-          modelIdentifier: m.modelIdentifier,
-        }))}
+        availableModels={(aiModels?.items ?? []).map(
+          (m: { id: string; displayName: string; modelIdentifier: string }) => ({
+            id: m.id,
+            displayName: m.displayName,
+            modelIdentifier: m.modelIdentifier,
+          })
+        )}
         modelsLoading={modelsLoading}
         onReExecute={handleReExecute}
         isStreaming={state.isStreaming}

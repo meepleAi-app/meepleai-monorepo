@@ -8,7 +8,6 @@
 
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
-import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
 import type {
   SessionStatus,
   SessionPlayerInfo,
@@ -18,7 +17,10 @@ import type {
   SessionTimelineEvent,
   SessionMediaCounts,
   SessionActionHandlers,
-} from '../meeple-card-features/session-types';
+} from './session-types-compat';
+
+/** Chat status */
+export type ChatStatus = 'active' | 'archived' | 'pending' | 'waiting' | 'closed';
 import type { LucideIcon } from 'lucide-react';
 
 // Re-export session types for convenience
@@ -332,8 +334,7 @@ export interface KbDocumentPreview {
   status: 'processing' | 'indexed' | 'failed' | 'none';
 }
 
-/** Chat status — re-exported from ChatStatusBadge to avoid duplication */
-export type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
+// ChatStatus is defined above
 
 /** Single message in a chat thread (Issue #5027 — ChatExtraMeepleCard) */
 export interface ChatDetailMessage {

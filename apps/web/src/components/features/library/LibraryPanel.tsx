@@ -16,7 +16,7 @@ import { useState } from 'react';
 import { BookOpen, Search, Heart } from 'lucide-react';
 
 import { EmptyStateCard, SkeletonCardGrid } from '@/components/features/common';
-import { MeepleCard, entityColors } from '@/components/ui/data-display/meeple-card';
+import { MeepleCard, entityHsl } from '@/components/ui/data-display/meeple-card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/navigation/tabs';
 import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useSharedGames } from '@/hooks/queries/useSharedGames';
@@ -67,7 +67,7 @@ export function LibraryPanel() {
               ctaLabel="Esplora Catalogo"
               onCtaClick={() => setActiveTab('catalog')}
               icon={BookOpen}
-              entityColor={entityColors.game.hsl}
+              entityColor={entityHsl('game')}
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
@@ -110,7 +110,7 @@ export function LibraryPanel() {
               ctaLabel="Cancella Filtri"
               onCtaClick={() => setCatalogSearch('')}
               icon={Search}
-              entityColor={entityColors.game.hsl}
+              entityColor={entityHsl('game')}
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -155,7 +155,7 @@ export function LibraryPanel() {
                   variant="grid"
                   title={item.notes ?? `Gioco ${item.gameId.slice(0, 8)}`}
                   subtitle={`Priorita: ${item.priority}`}
-                  status="wishlisted"
+                  status="wishlist"
                   onClick={() => openDetail(item.gameId, 'game')}
                 />
               ))}

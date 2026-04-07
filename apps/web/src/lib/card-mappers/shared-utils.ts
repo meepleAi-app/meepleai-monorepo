@@ -1,5 +1,5 @@
-import type { LinkedEntityInfo } from '@/components/ui/data-display/meeple-card-features/ManaLinkFooter';
-import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card-styles';
+import type { LinkedEntityInfo } from '@/types/linked-entity';
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 
 /**
  * Formatta una durata in minuti in una stringa leggibile.
@@ -61,7 +61,7 @@ export function buildLinkedEntities(counts: {
     ['agent', counts.agentCount],
     ['kb', counts.kbCount],
     ['session', counts.sessionCount],
-    ['chatSession', counts.chatCount],
+    ['chat', counts.chatCount],
   ];
   return pairs
     .filter(

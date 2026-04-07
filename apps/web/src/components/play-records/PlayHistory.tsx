@@ -276,8 +276,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
           {data.records.map(record => (
             <MeepleCard
               key={record.id}
-              entity="custom"
-              customColor={getStatusColor(record.status)}
+              entity="session"
               variant={viewMode === 'grid' ? 'grid' : 'list'}
               title={record.gameName}
               subtitle={new Date(record.sessionDate).toLocaleDateString('en-US', {

@@ -17,11 +17,7 @@ import React from 'react';
 
 import { Avatar } from '@/components/ui/data-display/avatar';
 import { Badge } from '@/components/ui/data-display/badge';
-import {
-  entityColors,
-  meepleCardVariants,
-  contentVariants,
-} from '@/components/ui/data-display/meeple-card-styles';
+import { entityColors, entityHsl } from '@/components/ui/data-display/meeple-card';
 import { hexToHsl } from '@/lib/color-utils';
 import { cn } from '@/lib/utils';
 import type { PlayerState } from '@/types/game-state';
@@ -51,13 +47,12 @@ export function MeeplePlayerStateCard({
 
   // Resolve entity color: player hex color → HSL, or default player purple
   const playerHsl = player.color ? hexToHsl(player.color) : undefined;
-  const entityColor = playerHsl || entityColors.player.hsl;
+  const entityColor = playerHsl || `${entityColors.player.h}, ${entityColors.player.s}, ${entityColors.player.l}`;
 
   return (
     <article
       className={cn(
-        meepleCardVariants({ variant: 'expanded' }),
-        // Remove the default cursor-pointer since this is an interactive editor, not a link
+        'relative flex flex-col overflow-hidden rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-card)] shadow-[var(--mc-shadow-sm)] backdrop-blur-[12px]',
         'cursor-default',
         // Current player highlight ring
         isCurrentPlayer && 'ring-2 ring-primary'
@@ -92,12 +87,12 @@ export function MeeplePlayerStateCard({
       )}
 
       {/* Content area */}
-      <div className={cn(contentVariants({ variant: 'expanded' }), 'pt-8')}>
+      <div className={cn('px-4 pb-4', 'pt-8')}>
         {/* Player header: avatar + name + order */}
         <div className="flex items-center gap-3">
           <Avatar
             className="h-10 w-10 flex items-center justify-center font-semibold flex-shrink-0"
-            style={{ backgroundColor: player.color || `hsl(${entityColors.player.hsl})` }}
+            style={{ backgroundColor: player.color || `hsl(${entityHsl('player')})` }}
             aria-label={`Player ${player.playerName} color: ${player.color || 'default'}`}
           >
             <span className="text-white text-sm">{player.playerName.charAt(0).toUpperCase()}</span>

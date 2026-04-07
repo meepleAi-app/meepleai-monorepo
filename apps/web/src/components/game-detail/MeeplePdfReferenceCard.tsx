@@ -38,7 +38,7 @@ export function MeeplePdfReferenceCard({ reference, onJumpToPage }: MeeplePdfRef
   const metadata: MeepleCardMetadata[] = [];
   if (reference.excerpt) {
     metadata.push({
-      icon: FileText,
+      icon: <FileText className="h-4 w-4" />,
       label: `"${reference.excerpt}"`,
     });
   }

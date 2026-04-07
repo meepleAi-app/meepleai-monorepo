@@ -9,7 +9,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card-styles';
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 
 // ============================================================================
 // Types

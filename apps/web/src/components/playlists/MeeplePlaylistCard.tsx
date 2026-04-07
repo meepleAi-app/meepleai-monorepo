@@ -7,7 +7,6 @@
  * using the MeepleCard design system with entity="collection".
  */
 
-import { CalendarDays, Gamepad2 } from 'lucide-react';
 import Link from 'next/link';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
@@ -49,16 +48,16 @@ export function MeeplePlaylistCard({ playlist }: MeeplePlaylistCardProps) {
   const gameCount = playlist.games.length;
 
   const metadata: MeepleCardMetadata[] = [
-    { icon: Gamepad2, label: formatGameCount(gameCount) },
+    { label: formatGameCount(gameCount) },
     ...(playlist.scheduledDate
-      ? [{ icon: CalendarDays, label: formatScheduledDate(playlist.scheduledDate) }]
+      ? [{ label: formatScheduledDate(playlist.scheduledDate) }]
       : []),
   ];
 
   return (
     <Link href={`/library/playlists/${playlist.id}`} className="block">
       <MeepleCard
-        entity="collection"
+        entity="game"
         variant="list"
         title={playlist.name}
         subtitle={playlist.isShared ? 'Condivisa' : undefined}

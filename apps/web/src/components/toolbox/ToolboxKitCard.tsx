@@ -2,8 +2,6 @@
 
 import React from 'react';
 
-import { Users, Wrench } from 'lucide-react';
-
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { ToolboxDto } from '@/lib/api/schemas/toolbox.schemas';
 
@@ -43,8 +41,8 @@ export function ToolboxKitCard({
         subtitle={toolSummary || `${toolbox.tools.length} tools`}
         badge={toolbox.mode}
         metadata={[
-          { icon: Users, value: `${toolbox.sharedContext.players.length} players` },
-          { icon: Wrench, value: `${toolbox.tools.length} tools` },
+          { label: `${toolbox.sharedContext.players.length} players` },
+          { label: `${toolbox.tools.length} tools` },
         ]}
         onClick={onClick}
       />

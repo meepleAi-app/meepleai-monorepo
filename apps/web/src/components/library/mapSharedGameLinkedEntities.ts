@@ -1,4 +1,4 @@
-import type { LinkedEntityInfo } from '@/components/ui/data-display/meeple-card-features/ManaLinkFooter';
+import type { LinkedEntityInfo } from '@/types/linked-entity';
 
 /**
  * Maps shared game fields to LinkedEntityInfo[] for ManaLinkFooter.

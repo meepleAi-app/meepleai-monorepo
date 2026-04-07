@@ -1,7 +1,7 @@
 'use client';
 import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
-import type { MeepleEntityType } from '../meeple-card-styles';
+import type { MeepleEntityType } from '../meeple-card';
 import type { DeckStackState, DeckStackContextValue, DeckStackItem } from './deck-stack-types';
 
 const INITIAL_STATE: DeckStackState = {

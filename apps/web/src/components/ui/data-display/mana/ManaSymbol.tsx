@@ -2,7 +2,7 @@ import { memo } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { entityColors, type MeepleEntityType } from '../meeple-card-styles';
+import { entityHsl, type MeepleEntityType } from '../meeple-card';
 import { MANA_DISPLAY } from './mana-config';
 
 import type { ManaSize } from './mana-types';
@@ -41,7 +41,7 @@ export const ManaSymbol = memo(function ManaSymbol({
   'data-testid': dataTestId,
 }: ManaSymbolProps) {
   const config = MANA_DISPLAY[entity];
-  const color = customColor ?? entityColors[entity].hsl;
+  const color = customColor ?? entityHsl(entity);
   const testId = dataTestId ?? `mana-symbol-${entity}`;
 
   return (
@@ -65,9 +65,9 @@ export const ManaSymbol = memo(function ManaSymbol({
         style={
           {
             '--mana-color': color,
-            background: `radial-gradient(circle at 35% 35%, hsl(${color}) 0%, hsl(${color} / 0.65) 100%)`,
-            boxShadow: `0 4px 14px hsl(${color} / 0.4)`,
-            outline: `2px solid hsl(${color} / 0.35)`,
+            background: `radial-gradient(circle at 35% 35%, ${color} 0%, ${entityHsl(entity, 0.65)} 100%)`,
+            boxShadow: `0 4px 14px ${entityHsl(entity, 0.4)}`,
+            outline: `2px solid ${entityHsl(entity, 0.35)}`,
             outlineOffset: '2px',
           } as React.CSSProperties
         }
@@ -90,7 +90,7 @@ export const ManaSymbol = memo(function ManaSymbol({
       {showLabel && (
         <span
           className={cn('font-quicksand font-bold uppercase tracking-wider', LABEL_CLASSES[size])}
-          style={{ color: `hsl(${color})` }}
+          style={{ color }}
         >
           {config.displayName}
         </span>

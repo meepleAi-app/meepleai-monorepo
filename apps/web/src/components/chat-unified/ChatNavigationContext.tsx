@@ -11,7 +11,8 @@
 
 import { useEffect, useState } from 'react';
 
-import { CardNavigationFooter } from '@/components/ui/data-display/meeple-card-features/CardNavigationFooter';
+import Link from 'next/link';
+
 import { getNavigationLinks, type ResolvedNavigationLink } from '@/config/entity-navigation';
 import { api } from '@/lib/api';
 
@@ -30,7 +31,7 @@ export function ChatNavigationContext({ threadId }: ChatNavigationContextProps) 
         const thread = await api.chat.getThreadById(threadId);
         if (cancelled || !thread) return;
 
-        const navLinks = getNavigationLinks('chatSession', {
+        const navLinks = getNavigationLinks('chat', {
           id: thread.id,
           gameId: thread.gameId ?? undefined,
         });
@@ -41,17 +42,26 @@ export function ChatNavigationContext({ threadId }: ChatNavigationContextProps) 
     }
 
     loadThread();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [threadId]);
 
   if (links.length === 0) return null;
 
   return (
-    <div className="sticky top-0 z-10">
-      <CardNavigationFooter
-        links={links}
-        className="rounded-none border-t-0 border-x-0"
-      />
+    <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-card px-4 py-2">
+      {links.map(link =>
+        link.href ? (
+          <Link
+            key={link.entity}
+            href={link.href}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {link.label}
+          </Link>
+        ) : null
+      )}
     </div>
   );
 }

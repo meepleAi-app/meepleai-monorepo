@@ -46,9 +46,6 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
           rating={rating > 0 ? rating : undefined}
           ratingMax={10}
           badge={badge || undefined}
-          showWishlist={showWishlist}
-          loading={loading}
-          selectable={selectable}
           imageUrl={entity === 'game' ? 'https://cf.geekdo-images.com/WPKk3MeT3EKhKnhFLB8OoA__itemrep/img/yJB95GXRb10MKzqxKOXGKjgMrPQ=/fit-in/246x300/filters:strip_icc()/pic3490053.jpg' : undefined}
         />
       </div>

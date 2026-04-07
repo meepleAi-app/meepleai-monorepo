@@ -12,7 +12,7 @@ import { MessageCircle, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { EmptyStateCard, SkeletonCardGrid } from '@/components/features/common';
-import { MeepleCard, entityColors } from '@/components/ui/data-display/meeple-card';
+import { MeepleCard, entityHsl } from '@/components/ui/data-display/meeple-card';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 
 export function ChatPanel() {
@@ -35,7 +35,7 @@ export function ChatPanel() {
           ctaLabel="Nuova Chat"
           onCtaClick={() => router.push('/chat/new')}
           icon={MessageCircle}
-          entityColor={entityColors.chatSession.hsl}
+          entityColor={entityHsl('chat')}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -45,22 +45,12 @@ export function ChatPanel() {
             return (
               <MeepleCard
                 key={chat.id}
-                id={chat.id}
-                entity="chatSession"
+                entity="chat"
                 variant="list"
                 title={chat.agentName ?? chat.title ?? 'Chat'}
                 subtitle={chat.gameTitle ?? undefined}
-                chatPreview={
-                  chat.lastMessagePreview
-                    ? { lastMessage: chat.lastMessagePreview, sender: 'agent' }
-                    : undefined
-                }
-                chatStats={{ messageCount: chat.messageCount }}
                 metadata={[
-                  {
-                    icon: MessageCircle,
-                    label: `${chat.messageCount} msg`,
-                  },
+                  { label: `${chat.messageCount} msg` },
                   ...(timeAgo ? [{ label: timeAgo }] : []),
                 ]}
                 onClick={() => router.push(`/chat/${chat.id}`)}
@@ -77,7 +67,7 @@ export function ChatPanel() {
                    w-14 h-14 rounded-full flex items-center justify-center
                    text-white shadow-lg hover:shadow-xl
                    transition-all duration-200 hover:scale-105 active:scale-95"
-        style={{ backgroundColor: `hsl(${entityColors.chatSession.hsl})` }}
+        style={{ backgroundColor: `hsl(${entityHsl('chat')})` }}
         aria-label="Nuova Chat"
       >
         <Plus className="w-6 h-6" />

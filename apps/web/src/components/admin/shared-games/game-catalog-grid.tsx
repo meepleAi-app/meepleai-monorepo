@@ -16,14 +16,10 @@ import {
   CheckSquare,
   ChevronLeftIcon,
   ChevronRightIcon,
-  Clock,
   LayoutGrid,
   List,
-  Pencil,
   Share2,
   Trash2,
-  Upload,
-  Users,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -108,34 +104,35 @@ function AdminGameCard({
   const router = useRouter();
 
   const metadata = [
-    { icon: Users, value: formatPlayers(game.minPlayers, game.maxPlayers) },
-    { icon: Clock, value: formatPlaytime(game.playingTimeMinutes) },
+    { label: formatPlayers(game.minPlayers, game.maxPlayers) },
+    { label: formatPlaytime(game.playingTimeMinutes) },
   ];
 
-  const quickActions = [
+  const actions = [
     {
-      icon: Pencil,
+      icon: '✏️',
       label: 'Modifica',
       onClick: () => router.push(`/admin/shared-games/${game.id}`),
     },
     game.status === 'Published'
       ? {
-          icon: ArchiveRestore,
+          icon: '📦',
           label: 'Archivia',
           onClick: () => onArchive(game.id),
         }
       : {
-          icon: Upload,
+          icon: '📤',
           label: 'Pubblica',
           onClick: () => onPublish(game.id),
         },
     {
-      icon: Trash2,
+      icon: '🗑️',
       label: 'Elimina',
       onClick: () => onDelete(game.id),
+      variant: 'danger' as const,
     },
     {
-      icon: Share2,
+      icon: '🔗',
       label: 'Condividi',
       onClick: () => {
         navigator.clipboard?.writeText(`${window.location.origin}/games/${game.id}`);
@@ -156,12 +153,7 @@ function AdminGameCard({
       metadata={metadata}
       badge={STATUS_LABELS[game.status]}
       onClick={() => router.push(`/admin/shared-games/${game.id}`)}
-      entityQuickActions={quickActions}
-      linkedEntities={[{ entityType: 'kb', count: 1 }]}
-      onManaPipClick={() => onOpenExtraCard(game.id)}
-      showInfoButton
-      entityId={game.id}
-      infoTooltip="Dettaglio admin"
+      actions={actions}
       data-testid={`admin-game-card-${game.id}`}
     />
   );
@@ -489,8 +481,7 @@ export function GameCatalogGrid({
               key={i}
               entity="game"
               variant={viewMode}
-              title=""
-              loading
+              title="..."
               data-testid="admin-game-card-skeleton"
             />
           ))}

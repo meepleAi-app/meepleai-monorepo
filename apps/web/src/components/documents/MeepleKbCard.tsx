@@ -28,13 +28,14 @@
 
 'use client';
 
-import { MessageCircle, RefreshCw, Download, Trash2 } from 'lucide-react';
-
-import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import type { KbIndexingStatus } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
-import { getNavigationLinks } from '@/config/entity-navigation';
-import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+import {
+  MeepleCard,
+  MeepleCardSkeleton,
+  type MeepleCardAction,
+  type MeepleCardVariant,
+} from '@/components/ui/data-display/meeple-card';
 import { buildKbCardProps } from '@/lib/card-mappers';
+import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
 // ============================================================================
 // Types
@@ -63,10 +64,7 @@ export interface MeepleKbCardProps {
 // Helper Functions
 // ============================================================================
 
-/**
- * Map PdfDocumentDto.processingStatus string to KbIndexingStatus.
- */
-function mapDocumentStatus(processingStatus: string): KbIndexingStatus {
+function mapDocumentStatus(processingStatus: string): 'indexed' | 'processing' | 'failed' | 'none' {
   switch (processingStatus) {
     case 'Completed':
     case 'Ready':
@@ -82,6 +80,12 @@ function mapDocumentStatus(processingStatus: string): KbIndexingStatus {
     default:
       return 'none';
   }
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // ============================================================================
@@ -104,86 +108,69 @@ export function MeepleKbCard({
   const isIndexed = documentStatus === 'indexed';
   const mapperProps = buildKbCardProps(document);
 
-  // ============================================================================
   // Quick Actions Configuration
-  // ============================================================================
-
-  const entityQuickActions = [
+  const actions: MeepleCardAction[] = [
     // Chat con documento: visible only if indexed
-    {
-      icon: MessageCircle,
-      label: 'Chat con documento',
-      onClick: () => {
-        window.location.href = `/chat/new?documentId=${document.id}`;
-      },
-      hidden: !isIndexed,
-    },
+    ...(isIndexed
+      ? [
+          {
+            icon: '💬',
+            label: 'Chat con documento',
+            onClick: () => {
+              window.location.href = `/chat/new?documentId=${document.id}`;
+            },
+          } satisfies MeepleCardAction,
+        ]
+      : []),
     // Re-indicizza: visible only for admin, disabled if currently processing
-    {
-      icon: RefreshCw,
-      label: isProcessing ? 'Indicizzazione già in corso' : 'Re-indicizza',
-      onClick: () => onReindex?.(document.id),
-      hidden: !isAdmin,
-      disabled: isProcessing,
-    },
+    ...(isAdmin
+      ? [
+          {
+            icon: '🔄',
+            label: isProcessing ? 'Indicizzazione già in corso' : 'Re-indicizza',
+            onClick: () => onReindex?.(document.id),
+            disabled: isProcessing,
+          } satisfies MeepleCardAction,
+        ]
+      : []),
     // Scarica: visible for editor/admin
-    {
-      icon: Download,
-      label: 'Scarica',
-      onClick: () => onDownload?.(document.id),
-      hidden: !isEditorOrAdmin,
-    },
+    ...(isEditorOrAdmin
+      ? [
+          {
+            icon: '⬇️',
+            label: 'Scarica',
+            onClick: () => onDownload?.(document.id),
+          } satisfies MeepleCardAction,
+        ]
+      : []),
     // Elimina: visible only for admin
-    {
-      icon: Trash2,
-      label: 'Elimina',
-      onClick: () => onDelete?.(document.id, document.fileName),
-      hidden: !isAdmin,
-    },
+    ...(isAdmin
+      ? [
+          {
+            icon: '🗑️',
+            label: 'Elimina',
+            onClick: () => onDelete?.(document.id, document.fileName),
+            variant: 'danger' as const,
+          } satisfies MeepleCardAction,
+        ]
+      : []),
   ];
-
-  // ============================================================================
-  // Card Data
-  // ============================================================================
 
   const subtitle = document.documentType
     ? `${document.documentType.charAt(0).toUpperCase()}${document.documentType.slice(1)} — ${formatFileSize(document.fileSizeBytes)}`
     : formatFileSize(document.fileSizeBytes);
 
-  // ============================================================================
-  // Render
-  // ============================================================================
-
   return (
     <MeepleCard
-      id={document.id}
       entity="kb"
       variant={variant}
       title={document.fileName}
       subtitle={subtitle}
-      documentStatus={documentStatus}
-      pageCount={mapperProps.pageCount}
-      identityChip1={mapperProps.identityChip1}
-      stateLabel={mapperProps.stateLabel}
+      badge={mapperProps.badge}
+      metadata={mapperProps.metadata}
       className={className}
       onClick={() => (window.location.href = `/documents/${document.id}`)}
-      // Issue #5001: Quick actions with conditional visibility
-      entityQuickActions={entityQuickActions}
-      showInfoButton
-      entityId={document.id}
-      infoTooltip="Vai al dettaglio"
-      // Navigation footer: Game + Agent links
-      linkedEntities={getNavigationLinks('kb', {
-        id: document.id,
-        gameId: document.gameId,
-      }).map(l => ({ entityType: l.entity, count: 1 }))}
-      onManaPipClick={entityType => {
-        const link = getNavigationLinks('kb', {
-          id: document.id,
-          gameId: document.gameId,
-        }).find(l => l.entity === entityType);
-        if (link?.href) window.location.href = link.href;
-      }}
+      actions={actions.length > 0 ? actions : undefined}
       data-testid={`kb-card-${document.id}`}
     />
   );
@@ -193,19 +180,7 @@ export function MeepleKbCard({
  * MeepleKbCard Skeleton for loading state
  */
 export function MeepleKbCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant }) {
-  return (
-    <MeepleCard entity="kb" variant={variant} title="" loading data-testid="kb-card-skeleton" />
-  );
-}
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return <MeepleCardSkeleton variant={variant} data-testid="kb-card-skeleton" />;
 }
 
 export default MeepleKbCard;

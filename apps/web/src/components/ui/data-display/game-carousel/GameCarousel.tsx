@@ -25,7 +25,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useEntityActions } from '@/hooks/useEntityActions';
 import { cn } from '@/lib/utils';
 
 import { MeepleCard } from '../meeple-card';
@@ -48,10 +47,10 @@ export const GameCarousel = React.memo(function GameCarousel({
   defaultSort = 'rating',
   sort: controlledSort,
   onSortChange,
-  flippable,
+  flippable: _flippable,
   className,
   'data-testid': testId,
-  userId,
+  userId: _userId,
 }: GameCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -61,19 +60,6 @@ export const GameCarousel = React.memo(function GameCarousel({
   const [internalSort, setInternalSort] = useState<CarouselSortValue>(defaultSort);
   const containerRef = useRef<HTMLDivElement>(null);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Issue #4040: Generate entity actions for current visible card
-  // Only generate for center card to avoid unnecessary hook calls
-  // Guard: Use first game's ID as fallback to prevent empty string (broken links)
-  const centerGame = games[currentIndex];
-  const fallbackId =
-    games.length > 0 ? centerGame?.id || games[0]?.id || 'placeholder' : 'placeholder';
-  const centerEntityActions = useEntityActions({
-    entity: 'game',
-    id: fallbackId,
-    userId,
-    data: { hasKb: centerGame?.hasKb ?? false },
-  });
 
   // Support controlled and uncontrolled sort modes
   const currentSort = controlledSort ?? internalSort;
@@ -294,21 +280,11 @@ export const GameCarousel = React.memo(function GameCarousel({
                     metadata={game.metadata}
                     badge={game.badge}
                     onClick={() => handleCardClick(game, position)}
-                    flippable={flippable && !!game.description}
-                    flipData={
-                      flippable && game.description ? { description: game.description } : undefined
-                    }
-                    flipTrigger="button"
                     className={cn(
                       // Enhanced shadow & glow for center card — v2 (Issue #4612)
                       isCenter && '[box-shadow:var(--shadow-warm-2xl)]'
                     )}
                     data-testid={`carousel-card-${position.index}`}
-                    // Issue #4040: Quick actions + Info button (only on center card)
-                    entityQuickActions={isCenter ? centerEntityActions.quickActions : undefined}
-                    showInfoButton={isCenter}
-                    entityId={isCenter ? game.id : undefined}
-                    infoTooltip="Vai al dettaglio"
                   />
                 </div>
               </div>

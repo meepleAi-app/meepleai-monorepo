@@ -1,4 +1,4 @@
-import type { LinkedEntityInfo } from '@/components/ui/data-display/meeple-card-features/ManaLinkFooter';
+import type { LinkedEntityInfo } from '@/types/linked-entity';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 /**

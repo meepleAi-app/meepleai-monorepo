@@ -1,4 +1,4 @@
-import type { MeepleEntityType } from '../meeple-card-styles';
+import type { MeepleEntityType } from '../meeple-card';
 
 export type DeckStackPresentation = 'popover' | 'bottomSheet';
 

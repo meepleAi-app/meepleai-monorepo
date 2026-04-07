@@ -8,8 +8,6 @@
  * Uses the MeepleCard design system with entity="game".
  */
 
-import { DollarSign, Edit, Trash2 } from 'lucide-react';
-
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import type { WishlistItemDto } from '@/lib/api/schemas/wishlist.schemas';
@@ -56,32 +54,15 @@ export function MeepleWishlistCard({
   const metadata: MeepleCardMetadata[] = [];
 
   if (item.targetPrice != null) {
-    metadata.push({ icon: DollarSign, label: `Target: ${item.targetPrice.toFixed(2)}` });
+    metadata.push({ label: `Target: ${item.targetPrice.toFixed(2)}` });
   }
 
-  const quickActions: Array<{
-    icon: typeof Edit;
-    label: string;
-    onClick: () => void;
-    destructive?: boolean;
-  }> = [];
-
-  if (onUpdate) {
-    quickActions.push({
-      icon: Edit,
-      label: 'Edit',
-      onClick: () => onUpdate(item.id),
-    });
-  }
-
-  if (onRemove) {
-    quickActions.push({
-      icon: Trash2,
-      label: 'Remove',
-      onClick: () => onRemove(item.id),
-      destructive: true,
-    });
-  }
+  const actions = [
+    ...(onUpdate ? [{ icon: '✏️', label: 'Edit', onClick: () => onUpdate(item.id) }] : []),
+    ...(onRemove
+      ? [{ icon: '🗑️', label: 'Remove', onClick: () => onRemove(item.id), variant: 'danger' as const }]
+      : []),
+  ];
 
   return (
     <MeepleCard
@@ -91,7 +72,7 @@ export function MeepleWishlistCard({
       subtitle={item.notes ?? undefined}
       badge={formatPriorityItalian(item.priority)}
       metadata={metadata}
-      quickActions={quickActions.length > 0 ? quickActions : undefined}
+      actions={actions.length > 0 ? actions : undefined}
       data-testid="wishlist-card"
     />
   );

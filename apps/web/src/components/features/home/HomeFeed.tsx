@@ -17,8 +17,7 @@ import { useRouter } from 'next/navigation';
 
 import { EmptyStateCard } from '@/components/features/common';
 import { SkeletonCardGrid } from '@/components/features/common';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { entityColors } from '@/components/ui/data-display/meeple-card';
+import { MeepleCard, entityHsl } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
@@ -53,25 +52,19 @@ export function HomeFeed() {
             ctaLabel="Nuova Sessione"
             onCtaClick={() => router.push('/sessions/new')}
             icon={Gamepad2}
-            entityColor={entityColors.session.hsl}
+            entityColor={entityHsl('session')}
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {sessions.map(session => (
               <MeepleCard
                 key={session.id}
-                id={session.id}
                 entity="session"
                 variant="list"
                 title={session.notes || `Sessione ${session.id.slice(0, 8)}`}
                 subtitle={`${session.playerCount} giocatori`}
                 badge={session.status}
-                metadata={[
-                  {
-                    icon: Gamepad2,
-                    label: `${session.durationMinutes} min`,
-                  },
-                ]}
+                metadata={[{ label: `${session.durationMinutes} min` }]}
                 onClick={() => {
                   if (session.status === 'Setup' || session.status === 'Paused') {
                     router.push(`/sessions/live/${session.id}`);
@@ -97,14 +90,13 @@ export function HomeFeed() {
             ctaLabel="Esplora Catalogo"
             onCtaClick={() => router.push('/library')}
             icon={BookOpen}
-            entityColor={entityColors.game.hsl}
+            entityColor={entityHsl('game')}
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {games.map(entry => (
               <MeepleCard
                 key={entry.gameId}
-                id={entry.gameId}
                 entity="game"
                 variant="grid"
                 title={entry.gameTitle ?? 'Gioco senza nome'}
@@ -131,14 +123,13 @@ export function HomeFeed() {
             ctaLabel="Crea Serata"
             onCtaClick={() => router.push('/game-nights/new')}
             icon={CalendarDays}
-            entityColor={entityColors.event.hsl}
+            entityColor={entityHsl('event')}
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {nights.map(night => (
               <MeepleCard
                 key={night.id}
-                id={night.id}
                 entity="event"
                 variant="list"
                 title={night.title}
@@ -146,7 +137,6 @@ export function HomeFeed() {
                 badge={night.status}
                 metadata={[
                   {
-                    icon: CalendarDays,
                     label: new Date(night.scheduledAt).toLocaleDateString('it-IT', {
                       day: 'numeric',
                       month: 'short',
@@ -174,30 +164,18 @@ export function HomeFeed() {
             ctaLabel="Nuova Chat"
             onCtaClick={() => router.push('/chat/new')}
             icon={MessageCircle}
-            entityColor={entityColors.chatSession.hsl}
+            entityColor={entityHsl('chat')}
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {chats.map(chat => (
               <MeepleCard
                 key={chat.id}
-                id={chat.id}
-                entity="chatSession"
+                entity="chat"
                 variant="list"
                 title={chat.agentName ?? chat.title ?? 'Chat'}
                 subtitle={chat.gameTitle ?? undefined}
-                chatPreview={
-                  chat.lastMessagePreview
-                    ? { lastMessage: chat.lastMessagePreview, sender: 'agent' }
-                    : undefined
-                }
-                chatStats={{ messageCount: chat.messageCount }}
-                metadata={[
-                  {
-                    icon: MessageCircle,
-                    label: `${chat.messageCount} messaggi`,
-                  },
-                ]}
+                metadata={[{ label: `${chat.messageCount} messaggi` }]}
                 onClick={() => router.push(`/chat/${chat.id}`)}
               />
             ))}

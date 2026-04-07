@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 
-import type { MeepleEntityType } from '../meeple-card-styles';
+import type { MeepleEntityType } from '../meeple-card';
 
 export type ManaSize = 'full' | 'medium' | 'small' | 'mini';
 

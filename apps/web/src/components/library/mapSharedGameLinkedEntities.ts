@@ -1,4 +1,4 @@
-import type { LinkedEntityInfo } from '@/components/ui/data-display/meeple-card-features/ManaLinkFooter';
+import type { LinkedEntityInfo } from '@/types/linked-entity';
 
 /**
  * Maps shared game fields to LinkedEntityInfo[] for ManaLinkFooter.
@@ -7,9 +7,7 @@ import type { LinkedEntityInfo } from '@/components/ui/data-display/meeple-card-
  * Unlike personal library entries which track kbIndexedCount,
  * shared games only expose a boolean flag.
  */
-export function mapSharedGameToLinkedEntities(game: {
-  isRagPublic?: boolean;
-}): LinkedEntityInfo[] {
+export function mapSharedGameToLinkedEntities(game: { isRagPublic?: boolean }): LinkedEntityInfo[] {
   const entities: LinkedEntityInfo[] = [{ entityType: 'game', count: 1 }];
 
   if (game.isRagPublic) {

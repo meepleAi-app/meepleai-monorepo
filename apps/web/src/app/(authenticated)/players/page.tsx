@@ -17,7 +17,6 @@ import { useRouter } from 'next/navigation';
 import { EntityListView } from '@/components/ui/data-display/entity-list-view';
 import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { getNavigationLinks } from '@/config/entity-navigation';
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
 
 interface PlayerListItem {
@@ -28,17 +27,10 @@ interface PlayerListItem {
 }
 
 function renderPlayerCard(player: PlayerListItem): Omit<MeepleCardProps, 'entity' | 'variant'> {
-  const navLinks = getNavigationLinks('player', { id: player.id });
-
   return {
     title: player.displayName,
     subtitle: player.gameName,
-    metadata: [{ icon: Gamepad2, value: `${player.playCount} partite` }],
-    linkedEntities: navLinks.map(l => ({ entityType: l.entity, count: 1 })),
-    onManaPipClick: entityType => {
-      const link = navLinks.find(l => l.entity === entityType);
-      if (link?.href) window.location.href = link.href;
-    },
+    metadata: [{ label: `${player.playCount} partite` }],
   };
 }
 

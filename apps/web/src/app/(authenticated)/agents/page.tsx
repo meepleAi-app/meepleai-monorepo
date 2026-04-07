@@ -20,8 +20,7 @@ import { useRouter } from 'next/navigation';
 import { AgentCreationSheet } from '@/components/agent/config';
 import { CardGridSkeletons } from '@/components/ui/data-display/CardGridSkeletons';
 import { ListPageHeader, useViewPreference } from '@/components/ui/data-display/ListPageHeader';
-import { MeepleCard, entityColors } from '@/components/ui/data-display/meeple-card';
-import { useCardBrowser, type CardRef } from '@/components/ui/data-display/meeple-card-browser';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import {
   Select,
   SelectContent,
@@ -31,10 +30,8 @@ import {
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { getNavigationLinks } from '@/config/entity-navigation';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
-import { useEntityActions } from '@/hooks/useEntityActions';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useCardHand } from '@/stores/use-card-hand';
@@ -47,8 +44,6 @@ function AgentCard({
   agent: { id: string; name: string; type: string; invocationCount: number; strategyName: string };
   onClick: () => void;
 }) {
-  const entityActions = useEntityActions({ entity: 'agent', id: agent.id });
-
   return (
     <MeepleCard
       entity="agent"
@@ -56,23 +51,9 @@ function AgentCard({
       title={agent.name}
       subtitle={`${agent.type} agent`}
       metadata={[
-        { value: `${agent.invocationCount} uses`, label: 'Usage' },
-        { value: agent.strategyName, label: 'Strategy' },
+        { label: 'Usage', value: `${agent.invocationCount} uses` },
+        { label: 'Strategy', value: agent.strategyName },
       ]}
-      linkedEntities={getNavigationLinks('agent', { id: agent.id }).map(l => ({
-        entityType: l.entity,
-        count: 1,
-      }))}
-      onManaPipClick={entityType => {
-        const link = getNavigationLinks('agent', { id: agent.id }).find(
-          l => l.entity === entityType
-        );
-        if (link?.href) window.location.href = link.href;
-      }}
-      entityQuickActions={entityActions.quickActions}
-      showInfoButton
-      entityId={agent.id}
-      infoTooltip="Dettagli agent"
       onClick={onClick}
     />
   );
@@ -85,8 +66,7 @@ export default function AgentsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
   const [creationSheetOpen, setCreationSheetOpen] = useState(false);
-  const { open: openBrowser } = useCardBrowser();
-  const { isMobile } = useResponsive();
+  const { isMobile: _isMobile } = useResponsive();
   const [viewMode, setViewMode] = useViewPreference('agents');
 
   useEffect(() => {
@@ -165,18 +145,6 @@ export default function AgentsPage() {
   React.useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [searchQuery, typeFilter, sortBy]);
-
-  const cardRefs: CardRef[] = useMemo(
-    () =>
-      filteredAgents.map(agent => ({
-        id: agent.id,
-        entity: 'agent' as const,
-        title: agent.name,
-        subtitle: `${agent.type} agent`,
-        color: entityColors.agent.hsl,
-      })),
-    [filteredAgents]
-  );
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -282,23 +250,12 @@ export default function AgentsPage() {
         }
         data-testid="card-grid"
       >
-        {visibleAgents.map((agent, index) => (
-          <div
+        {visibleAgents.map(agent => (
+          <AgentCard
             key={agent.id}
-            onClick={e => {
-              if (isMobile) {
-                const rect = e.currentTarget.getBoundingClientRect();
-                openBrowser(cardRefs, index, {
-                  x: rect.left + rect.width / 2,
-                  y: rect.top + rect.height / 2,
-                });
-              } else {
-                router.push(`/agents/${agent.id}`);
-              }
-            }}
-          >
-            <AgentCard agent={agent} onClick={() => {}} />
-          </div>
+            agent={agent}
+            onClick={() => router.push(`/agents/${agent.id}`)}
+          />
         ))}
         {isLoadingMore && <CardGridSkeletons count={4} />}
       </div>

@@ -3,7 +3,7 @@ import { memo } from 'react';
 import { cn } from '@/lib/utils';
 
 import { ManaSymbol } from '../mana/ManaSymbol';
-import { entityColors } from '../meeple-card-styles';
+import { entityHsl } from '../meeple-card';
 
 import type { DeckStackItem } from './deck-stack-types';
 
@@ -27,7 +27,7 @@ export const DeckStackCard = memo(function DeckStackCard({
   onClick,
   className,
 }: DeckStackCardProps) {
-  const color = entityColors[item.entityType].hsl;
+  const color = entityHsl(item.entityType);
 
   return (
     <div
@@ -39,8 +39,8 @@ export const DeckStackCard = memo(function DeckStackCard({
         className
       )}
       style={{
-        backgroundColor: `hsl(${color} / 0.05)`,
-        borderLeft: `3px solid hsl(${color})`,
+        backgroundColor: entityHsl(item.entityType, 0.05),
+        borderLeft: `3px solid ${color}`,
         transform: `rotate(${getRotation(index)}deg)`,
       }}
     >

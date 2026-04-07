@@ -338,7 +338,7 @@ export default function ProfilePage() {
   useEffect(() => {
     drawCard({
       id: 'section-profile',
-      entity: 'custom',
+      entity: 'player',
       title: 'Profile',
       href: '/profile',
     });

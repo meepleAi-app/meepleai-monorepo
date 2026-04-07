@@ -14,6 +14,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Play, Trash2, Users } from 'lucide-react';
 
+const PlayIcon = <Play className="h-4 w-4" />;
+const Trash2Icon = <Trash2 className="h-4 w-4" />;
+
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
 
@@ -60,7 +63,7 @@ export function MeeplePausedSessionCard({
     .join(' | ');
 
   const metadata: MeepleCardMetadata[] = [
-    { icon: Users, label: `${session.participants.length} giocatori` },
+    { icon: <Users className="h-4 w-4" />, label: `${session.participants.length} giocatori` },
     ...(turnInfo ? [{ label: turnInfo } as MeepleCardMetadata] : []),
   ];
 
@@ -83,18 +86,17 @@ export function MeeplePausedSessionCard({
         subtitle={subtitle}
         metadata={metadata}
         badge={isOld ? 'Vecchia' : undefined}
-        sessionStatus="paused"
-        quickActions={[
+        actions={[
           {
-            icon: Play,
+            icon: PlayIcon,
             label: 'Riprendi',
             onClick: handleResumeClick,
           },
           {
-            icon: Trash2,
+            icon: Trash2Icon,
             label: 'Abbandona',
             onClick: () => onAbandon(session.id),
-            destructive: true,
+            variant: 'danger' as const,
           },
         ]}
       />

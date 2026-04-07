@@ -15,7 +15,7 @@
 
 'use client';
 
-import { BookOpen, AlertTriangle, Calendar, Star, Library, Clock } from 'lucide-react';
+import { BookOpen, AlertTriangle, Star, Library, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -144,7 +144,7 @@ export default function SharedLibraryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {sharedLibrary.games.map(game => {
               const metadata: MeepleCardMetadata[] = game.yearPublished
-                ? [{ icon: Calendar, label: `${game.yearPublished}` }]
+                ? [{ label: `${game.yearPublished}` }]
                 : [];
               return (
                 <MeepleCard
@@ -156,8 +156,6 @@ export default function SharedLibraryPage() {
                   imageUrl={game.imageUrl || undefined}
                   badge={game.isFavorite ? 'Preferito' : undefined}
                   metadata={metadata.length > 0 ? metadata : undefined}
-                  showPreview={hasNotes && !!game.notes}
-                  previewData={hasNotes && game.notes ? { description: game.notes } : undefined}
                 />
               );
             })}

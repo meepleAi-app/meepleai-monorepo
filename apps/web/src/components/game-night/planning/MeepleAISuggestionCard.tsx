@@ -18,7 +18,7 @@ export function MeepleAISuggestionCard({ suggestions }: MeepleAISuggestionCardPr
     return (
       <MeepleCard
         entity="agent"
-        variant="expanded"
+        variant="featured"
         title="Suggerimenti AI"
         subtitle="Aggiungi giocatori per suggerimenti"
         badge="AI"
@@ -29,7 +29,7 @@ export function MeepleAISuggestionCard({ suggestions }: MeepleAISuggestionCardPr
 
   return (
     <div data-testid="ai-suggestion-card">
-      <MeepleCard entity="agent" variant="expanded" title="Suggerimenti AI" badge="AI" />
+      <MeepleCard entity="agent" variant="featured" title="Suggerimenti AI" badge="AI" />
       <div className="space-y-2 px-4 pb-4 -mt-2 rounded-b-2xl border border-t-0 border-border/50 bg-card">
         {suggestions.map(s => (
           <div key={s.gameTitle} className="flex items-start gap-2">

@@ -3,21 +3,14 @@ import {
   SessionIcon,
   PlayerIcon,
   EventIcon,
-  CollectionIcon,
-  GroupIcon,
-  LocationIcon,
-  ExpansionIcon,
   AgentIcon,
   KnowledgeIcon,
   ChatIcon,
-  NoteIcon,
   ToolkitIcon,
   ToolIcon,
-  AchievementIcon,
-  CustomIcon,
 } from '@/components/icons/entities';
 
-import type { MeepleEntityType } from '../meeple-card-styles';
+import type { MeepleEntityType } from '../meeple-card';
 import type { ManaDisplayConfig, EntityRelationshipMap } from './mana-types';
 
 export const MANA_DISPLAY: Record<MeepleEntityType, ManaDisplayConfig> = {
@@ -31,38 +24,15 @@ export const MANA_DISPLAY: Record<MeepleEntityType, ManaDisplayConfig> = {
   },
   player: { key: 'player', displayName: 'Player', symbol: '♟', tier: 'core', Icon: PlayerIcon },
   event: { key: 'event', displayName: 'Event', symbol: '✦', tier: 'core', Icon: EventIcon },
-  collection: {
-    key: 'collection',
-    displayName: 'Collection',
-    symbol: '📦',
-    tier: 'social',
-    Icon: CollectionIcon,
-  },
-  group: { key: 'group', displayName: 'Group', symbol: '👥', tier: 'social', Icon: GroupIcon },
-  location: {
-    key: 'location',
-    displayName: 'Location',
-    symbol: '📍',
-    tier: 'social',
-    Icon: LocationIcon,
-  },
-  expansion: {
-    key: 'expansion',
-    displayName: 'Expansion',
-    symbol: '🃏',
-    tier: 'social',
-    Icon: ExpansionIcon,
-  },
   agent: { key: 'agent', displayName: 'Agent', symbol: '⚡', tier: 'ai', Icon: AgentIcon },
   kb: { key: 'kb', displayName: 'Knowledge', symbol: '📜', tier: 'ai', Icon: KnowledgeIcon },
-  chatSession: {
-    key: 'chatSession',
+  chat: {
+    key: 'chat',
     displayName: 'Chat',
     symbol: '💬',
     tier: 'ai',
     Icon: ChatIcon,
   },
-  note: { key: 'note', displayName: 'Note', symbol: '📝', tier: 'ai', Icon: NoteIcon },
   toolkit: {
     key: 'toolkit',
     displayName: 'Toolkit',
@@ -71,33 +41,18 @@ export const MANA_DISPLAY: Record<MeepleEntityType, ManaDisplayConfig> = {
     Icon: ToolkitIcon,
   },
   tool: { key: 'tool', displayName: 'Tool', symbol: '🔧', tier: 'tools', Icon: ToolIcon },
-  achievement: {
-    key: 'achievement',
-    displayName: 'Achievement',
-    symbol: '🏆',
-    tier: 'tools',
-    Icon: AchievementIcon,
-  },
-  custom: { key: 'custom', displayName: 'Custom', symbol: '✧', tier: 'tools', Icon: CustomIcon },
 };
 
 export const ENTITY_RELATIONSHIPS: EntityRelationshipMap = {
-  game: ['session', 'kb', 'agent', 'expansion', 'collection', 'note'],
-  session: ['game', 'player', 'event', 'location', 'note', 'group'],
-  player: ['session', 'group', 'achievement', 'collection', 'note'],
-  event: ['session', 'game', 'player', 'location', 'group'],
-  collection: ['game', 'expansion', 'player'],
-  group: ['player', 'event', 'session', 'location'],
-  location: ['event', 'session', 'group'],
-  expansion: ['game', 'collection'],
-  agent: ['game', 'kb', 'chatSession', 'tool'],
-  kb: ['game', 'agent', 'note'],
-  chatSession: ['agent', 'game', 'player'],
+  game: ['session', 'kb', 'agent'],
+  session: ['game', 'player', 'event'],
+  player: ['session', 'event'],
+  event: ['session', 'game', 'player'],
+  agent: ['game', 'kb', 'chat', 'tool'],
+  kb: ['game', 'agent'],
+  chat: ['agent', 'game', 'player'],
   toolkit: ['tool', 'game'],
   tool: ['toolkit', 'game'],
-  achievement: ['player', 'game', 'session'],
-  note: ['game', 'session', 'player', 'kb', 'event'],
-  custom: [],
 };
 
 export function getManaDisplayName(entityType: MeepleEntityType): string {

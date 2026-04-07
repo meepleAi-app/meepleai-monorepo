@@ -8,8 +8,6 @@
 
 'use client';
 
-import { AlertTriangle, Database } from 'lucide-react';
-
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import type { VectorGameBreakdown } from '@/lib/api/schemas/admin-knowledge-base.schemas';
 
@@ -31,8 +29,8 @@ function healthVariant(healthPercent: number): 'success' | 'warning' | 'error' {
 
 export function VectorGameCard({ game }: VectorGameCardProps) {
   const metadata: MeepleCardMetadata[] = [
-    { icon: Database, label: `${game.vectorCount.toLocaleString()} vectors` },
-    ...(game.failedCount > 0 ? [{ icon: AlertTriangle, label: `${game.failedCount} failed` }] : []),
+    { label: `${game.vectorCount.toLocaleString()} vectors` },
+    ...(game.failedCount > 0 ? [{ label: `${game.failedCount} failed` }] : []),
   ];
 
   return (
@@ -41,10 +39,7 @@ export function VectorGameCard({ game }: VectorGameCardProps) {
       variant="grid"
       title={game.gameName}
       subtitle={`${game.vectorCount.toLocaleString()} vectors · ${game.healthPercent.toFixed(0)}% health`}
-      stateLabel={{
-        text: healthLabel(game.healthPercent),
-        variant: healthVariant(game.healthPercent),
-      }}
+      badge={healthLabel(game.healthPercent)}
       metadata={metadata}
       data-testid={`vector-game-card-${game.gameId}`}
     />

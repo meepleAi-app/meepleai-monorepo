@@ -13,20 +13,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AlertTriangle,
-  Calendar,
   ChevronLeft,
   ChevronRight,
-  Clock,
-  Edit2,
   Gamepad2,
   Loader2,
   Plus,
   Search,
-  Share2,
   SortAsc,
   SortDesc,
-  Trash2,
-  Users,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -519,15 +513,24 @@ function PrivateGameCard({ game, onEdit, onDelete, onPropose, onClick }: Private
     .join(' \u00b7 ');
 
   const metadata: MeepleCardMetadata[] = [
-    { icon: Users, label: `${game.minPlayers}-${game.maxPlayers}` },
-    ...(game.playingTimeMinutes ? [{ icon: Clock, label: `${game.playingTimeMinutes} min` }] : []),
-    ...(game.yearPublished ? [{ icon: Calendar, label: `${game.yearPublished}` }] : []),
+    { label: `${game.minPlayers}-${game.maxPlayers}` },
+    ...(game.playingTimeMinutes ? [{ label: `${game.playingTimeMinutes} min` }] : []),
+    ...(game.yearPublished ? [{ label: `${game.yearPublished}` }] : []),
   ];
 
-  const entityQuickActions = [
-    ...(onEdit ? [{ icon: Edit2, label: 'Edit', onClick: () => onEdit(game) }] : []),
-    ...(onPropose ? [{ icon: Share2, label: 'Propose', onClick: () => onPropose(game) }] : []),
-    ...(onDelete ? [{ icon: Trash2, label: 'Delete', onClick: () => onDelete(game.id) }] : []),
+  const actions = [
+    ...(onEdit ? [{ icon: '✏️', label: 'Edit', onClick: () => onEdit(game) }] : []),
+    ...(onPropose ? [{ icon: '📤', label: 'Propose', onClick: () => onPropose(game) }] : []),
+    ...(onDelete
+      ? [
+          {
+            icon: '🗑️',
+            label: 'Delete',
+            onClick: () => onDelete(game.id),
+            variant: 'danger' as const,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -540,7 +543,7 @@ function PrivateGameCard({ game, onEdit, onDelete, onPropose, onClick }: Private
       badge="Private"
       metadata={metadata}
       onClick={onClick}
-      entityQuickActions={entityQuickActions.length > 0 ? entityQuickActions : undefined}
+      actions={actions.length > 0 ? actions : undefined}
       data-testid={`game-card-${game.id}`}
     />
   );

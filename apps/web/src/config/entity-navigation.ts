@@ -84,7 +84,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
         buildHref: id => `/library/${id}?tab=agent`,
       },
       {
-        entity: 'chatSession',
+        entity: 'chat',
         label: 'Chats',
         buildHref: _id => `/chat`,
       },
@@ -107,7 +107,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
         buildHref: _id => `/library`,
       },
       {
-        entity: 'chatSession',
+        entity: 'chat',
         label: 'Chats',
         buildHref: _id => `/chat`,
       },
@@ -152,7 +152,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
         buildHref: id => `/agents/${id}`,
       },
       {
-        entity: 'chatSession',
+        entity: 'chat',
         label: 'Chats',
         buildHref: id => `/sessions/${id}/chats`,
       },
@@ -171,7 +171,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
       },
     ],
 
-    chatSession: [
+    chat: [
       {
         entity: 'game',
         label: 'Game',

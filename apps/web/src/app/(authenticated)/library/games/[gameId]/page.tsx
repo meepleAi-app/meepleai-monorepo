@@ -9,10 +9,9 @@
 
 'use client';
 
-import { ArrowLeft, Users, Clock, BarChart3 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 
-import { MechanicIcon } from '@/components/icons/mechanics/MechanicIcon';
 import {
   GameTableLayout,
   GameTableDrawer,
@@ -23,7 +22,7 @@ import {
 } from '@/components/library/game-table';
 import { GameHeader } from '@/components/library/GameHeader';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
+import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
@@ -120,44 +119,19 @@ export default function LibraryGameDetailPage() {
 
   const playerLabel = buildPlayerLabel(gameDetail.minPlayers, gameDetail.maxPlayers);
   if (playerLabel) {
-    metadata.push({ icon: Users, label: `${playerLabel} giocatori` });
+    metadata.push({ label: `${playerLabel} giocatori` });
   }
 
   if (gameDetail.playingTimeMinutes) {
-    metadata.push({ icon: Clock, label: `${gameDetail.playingTimeMinutes} min` });
+    metadata.push({ label: `${gameDetail.playingTimeMinutes} min` });
   }
 
   if (gameDetail.complexityRating != null) {
-    metadata.push({
-      icon: BarChart3,
-      label: `${gameDetail.complexityRating.toFixed(1)} / 5`,
-    });
+    metadata.push({ label: `${gameDetail.complexityRating.toFixed(1)} / 5` });
   }
 
-  // --- Mechanic icon for cover overlay ---
-  const firstMechanic = gameDetail.mechanics?.[0];
-  const subtypeIcons = firstMechanic
-    ? [
-        {
-          icon: <MechanicIcon mechanic={firstMechanic.slug} size={18} />,
-          tooltip: firstMechanic.name || firstMechanic.slug,
-        },
-      ]
-    : undefined;
-
-  // --- State label for cover overlay ---
-  const stateLabel = mapStateToLabel(gameDetail.currentState);
-
-  // --- Flip data ---
-  const flipData = {
-    description: gameDetail.description || undefined,
-    categories: gameDetail.categories,
-    mechanics: gameDetail.mechanics,
-    designers: gameDetail.designers,
-    publishers: gameDetail.publishers,
-    complexityRating: gameDetail.complexityRating,
-    minAge: gameDetail.minAge,
-  };
+  // --- State badge from library state ---
+  const _stateLabel = mapStateToLabel(gameDetail.currentState);
 
   return (
     <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -185,17 +159,13 @@ export default function LibraryGameDetailPage() {
             <MeepleCard
               entity="game"
               variant="hero"
-              flippable
-              entityId={gameId}
               title={gameDetail.gameTitle}
               subtitle={buildSubtitle(gameDetail.gamePublisher, gameDetail.gameYearPublished)}
               imageUrl={gameDetail.gameImageUrl || undefined}
               rating={gameDetail.averageRating ?? undefined}
               ratingMax={10}
               metadata={metadata}
-              subtypeIcons={subtypeIcons}
-              stateLabel={stateLabel}
-              flipData={flipData}
+              badge={_stateLabel?.text}
               data-testid="game-hero-card"
             />
           }

@@ -94,7 +94,14 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
             new JobQueuedData(notification.PdfDocumentId, notification.UserId, job.Priority),
             _timeProvider.GetUtcNow());
 
-        await _streamService.PublishJobEventAsync(sseEvent, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _streamService.PublishJobEventAsync(sseEvent, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to publish SSE event for job {JobId}", job.Id);
+        }
 
         _logger.LogInformation(
             "Created processing job {JobId} for private PDF {PdfDocumentId}",

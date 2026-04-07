@@ -92,7 +92,7 @@ internal sealed class GetBatchETAQueryHandler : IQueryHandler<GetBatchETAQuery, 
             ProcessingStepType.Chunk => PdfProcessingState.Chunking,
             ProcessingStepType.Embed => PdfProcessingState.Embedding,
             ProcessingStepType.Index => PdfProcessingState.Indexing,
-            null => PdfProcessingState.Pending,
+            null => null,
             _ => null
         };
     }

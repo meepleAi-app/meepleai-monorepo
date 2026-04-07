@@ -70,8 +70,8 @@ export function UploadAndQueueTab() {
   // ETA
   const { data: etaData } = useQueueETA(true);
   const etaDisplay = useMemo(
-    () => formatETA(etaData?.totalDrainTimeSeconds ?? 0),
-    [etaData?.totalDrainTimeSeconds]
+    () => formatETA(etaData?.totalDrainTimeMinutes ?? 0),
+    [etaData?.totalDrainTimeMinutes]
   );
 
   return (

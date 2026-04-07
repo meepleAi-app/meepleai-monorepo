@@ -164,7 +164,7 @@ export function QueueETASidebar() {
   });
 
   const togglePauseMutation = useMutation({
-    mutationFn: (pause: boolean) => updateQueueConfig(pause),
+    mutationFn: (pause: boolean) => updateQueueConfig(pause, queueConfig?.maxConcurrentWorkers),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin', 'queue', 'config'] }),
   });
 

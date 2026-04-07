@@ -364,17 +364,19 @@ export function useChunksPreview(
 
 export interface JobETADto {
   jobId: string;
-  etaSeconds: number | null;
-  currentStep: string;
-  isProcessing: boolean;
+  pdfDocumentId: string;
+  status: string;
+  currentStep: string | null;
+  estimatedMinutesRemaining: number | null;
 }
 
 export interface BatchETAResponse {
-  jobETAs: JobETADto[];
-  totalDrainTimeSeconds: number;
+  jobs: JobETADto[];
+  totalDrainTimeMinutes: number;
+  jobCount: number;
 }
 
 export async function fetchBatchETA(): Promise<BatchETAResponse> {
   const result = await apiClient.get<BatchETAResponse>('/api/v1/admin/queue/eta');
-  return result ?? { jobETAs: [], totalDrainTimeSeconds: 0 };
+  return result ?? { jobs: [], totalDrainTimeMinutes: 0, jobCount: 0 };
 }

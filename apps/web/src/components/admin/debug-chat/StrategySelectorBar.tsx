@@ -22,18 +22,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { RAG_STRATEGIES } from '@/lib/constants/rag-strategies';
 import { cn } from '@/lib/utils';
-
-// Known RAG strategies (matching backend AgentStrategy value object)
-const RAG_STRATEGIES = [
-  { value: '', label: 'Default (auto)' },
-  { value: 'HybridSearch', label: 'Hybrid Search' },
-  { value: 'VectorOnly', label: 'Vector Only' },
-  { value: 'KeywordOnly', label: 'Keyword Only' },
-  { value: 'SingleModel', label: 'Single Model' },
-  { value: 'IterativeRAG', label: 'Iterative RAG' },
-  { value: 'MultiModel', label: 'Multi-Model' },
-] as const;
 
 interface GameOption {
   id: string;
@@ -141,7 +131,7 @@ export function StrategySelectorBar({
             </SelectTrigger>
             <SelectContent>
               {RAG_STRATEGIES.map(s => (
-                <SelectItem key={s.value} value={s.value || '__default__'} className="text-xs">
+                <SelectItem key={s.value} value={s.value} className="text-xs">
                   {s.label}
                 </SelectItem>
               ))}
@@ -151,6 +141,7 @@ export function StrategySelectorBar({
 
         {/* Re-execute button */}
         <button
+          data-testid="playground-reexecute-btn"
           onClick={onReExecute}
           disabled={isStreaming || !hasLastQuery}
           className={cn(
@@ -170,6 +161,7 @@ export function StrategySelectorBar({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                data-testid="playground-debug-toggle"
                 onClick={onToggleDebug}
                 className={cn(
                   'inline-flex items-center justify-center rounded-md p-1.5 transition-colors',

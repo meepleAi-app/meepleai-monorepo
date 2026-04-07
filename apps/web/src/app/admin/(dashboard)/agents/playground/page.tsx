@@ -212,13 +212,16 @@ function ChatDebugTab() {
       {/* Split view: chat + debug */}
       <div
         className={cn(
-          'flex-1 grid min-h-0',
-          showDebug ? 'grid-cols-1 lg:grid-cols-[55%_45%]' : 'grid-cols-1'
+          'flex-1 flex flex-col lg:grid min-h-0',
+          showDebug ? 'lg:grid-cols-[55%_45%]' : 'lg:grid-cols-1'
         )}
       >
         {/* Chat Panel */}
         <div className="flex flex-col border-r min-h-0">
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          <div
+            data-testid="playground-chat-messages"
+            className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+          >
             {displayMessages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
                 <p className="text-sm text-muted-foreground text-center max-w-xs">
@@ -264,6 +267,7 @@ function ChatDebugTab() {
           <div className="border-t px-4 py-3">
             <div className="flex items-end gap-2">
               <textarea
+                data-testid="playground-chat-input"
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -279,6 +283,7 @@ function ChatDebugTab() {
               />
               {state.isStreaming ? (
                 <button
+                  data-testid="playground-stop-btn"
                   onClick={stopStreaming}
                   className="shrink-0 rounded-md bg-destructive px-3 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
                   type="button"
@@ -287,6 +292,7 @@ function ChatDebugTab() {
                 </button>
               ) : (
                 <button
+                  data-testid="playground-send-btn"
                   onClick={handleSend}
                   disabled={!inputValue.trim() || !selectedGameId}
                   className={cn(
@@ -302,7 +308,10 @@ function ChatDebugTab() {
           </div>
 
           {state.error && (
-            <div className="border-t border-destructive/20 bg-destructive/5 px-4 py-2 text-xs text-destructive">
+            <div
+              data-testid="playground-error"
+              className="border-t border-destructive/20 bg-destructive/5 px-4 py-2 text-xs text-destructive"
+            >
               {state.error}
             </div>
           )}
@@ -310,9 +319,16 @@ function ChatDebugTab() {
 
         {/* Debug Timeline Panel */}
         {showDebug && (
-          <div className="min-h-0 hidden lg:flex lg:flex-col">
-            <DebugTimeline events={state.debugEvents} isStreaming={state.isStreaming} />
-          </div>
+          <>
+            {/* Desktop: side panel */}
+            <div className="min-h-0 hidden lg:flex lg:flex-col">
+              <DebugTimeline events={state.debugEvents} isStreaming={state.isStreaming} />
+            </div>
+            {/* Mobile: bottom panel */}
+            <div className="lg:hidden border-t max-h-[40vh] overflow-y-auto">
+              <DebugTimeline events={state.debugEvents} isStreaming={state.isStreaming} />
+            </div>
+          </>
         )}
       </div>
     </div>

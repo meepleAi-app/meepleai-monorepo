@@ -416,7 +416,10 @@ export function NewChatView() {
 
   // Pre-selected KB IDs from KB selector (?kbIds=id1,id2,id3)
   const kbIdsParam = searchParams?.get('kbIds');
-  const selectedKbIds = kbIdsParam ? kbIdsParam.split(',').filter(Boolean) : undefined;
+  const selectedKbIds = useMemo(
+    () => (kbIdsParam ? kbIdsParam.split(',').filter(Boolean) : undefined),
+    [kbIdsParam]
+  );
 
   // State — tabbed game sources
   const [activeTab, setActiveTab] = useState<'private' | 'shared'>('private');

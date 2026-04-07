@@ -1,335 +1,34 @@
 'use client';
 
 /**
- * RAG Playground - Unified testing, debugging, and comparison page.
+ * RAG Playground - Debug chat with RAG agents.
  *
- * Three tabs:
- *   1. Query Tester — interactive RAG query testing with parameter controls
- *   2. Chat Debug — streaming debug chat with pipeline events
- *   3. Compare — side-by-side execution comparison
+ * Single-view debug chat with streaming, pipeline debug events,
+ * and parameter overrides (model, temperature, top-K).
  *
- * Supports deep linking via ?tab=chat | ?tab=compare.
  * Protected by admin layout (RequireRole(['Admin'])).
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { PlayIcon, SendIcon } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { SendIcon } from 'lucide-react';
 
 import { DebugTimeline, StrategySelectorBar } from '@/components/admin/debug-chat';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/overlays/select';
+import type { DebugChatConfigOverride } from '@/hooks/useDebugChatStream';
 import { useDebugChatStream } from '@/hooks/useDebugChatStream';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import { cn } from '@/lib/utils';
 
-// ─── Module-level client (stable reference) ───────────────────────────────────
-
-const _httpClient = new HttpClient();
-const _adminClient = createAdminClient({ httpClient: _httpClient });
-
-import { CompareTab } from './compare-tab';
-
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type RagStrategy = 'POC' | 'SingleModel' | 'MultiModelConsensus' | 'HybridRAG';
-
-interface QueryResult {
-  answer: string;
-  chunks: { id: string; text: string; score: number }[];
-  metrics: {
-    latencyMs: number;
-    tokens: number;
-    cost: number;
-    confidence: number;
-  };
-}
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const STRATEGIES: RagStrategy[] = ['POC', 'SingleModel', 'MultiModelConsensus', 'HybridRAG'];
-
-const TAB_MAP: Record<string, string> = {
-  chat: 'chat-debug',
-  compare: 'compare',
-};
-
-// ─── Query Tester Tab ─────────────────────────────────────────────────────────
-
-function QueryTesterTab() {
-  const [query, setQuery] = useState('');
-  const [strategy, setStrategy] = useState<RagStrategy>('HybridRAG');
-  const [model, setModel] = useState('');
-  const [temperature, setTemperature] = useState(0.7);
-
-  const { data: aiModels, isLoading: modelsLoading } = useQuery({
-    queryKey: ['admin', 'ai-models', 'active'],
-    queryFn: () => _adminClient.getAiModels({ status: 'active' }),
-    staleTime: 300_000,
-  });
-  const [topK, setTopK] = useState(5);
-  const [gameScope, setGameScope] = useState('');
-  const [agent, setAgent] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<QueryResult | null>(null);
-
-  const handleExecute = useCallback(async () => {
-    if (!query.trim()) return;
-    setIsLoading(true);
-    setResult(null);
-
-    try {
-      const res = await fetch('/api/v1/agents/chat/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          Question: query,
-          Strategy: strategy,
-          TopK: topK,
-          GameId: gameScope || undefined,
-          Language: 'auto',
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setResult({
-        answer: data.answer ?? '[Nessuna risposta]',
-        chunks: (data.retrievedChunks ?? []).map(
-          (c: { id?: string; text?: string; score?: number }, i: number) => ({
-            id: c.id ?? String(i),
-            text: c.text ?? '',
-            score: c.score ?? 0,
-          })
-        ),
-        metrics: {
-          latencyMs: data.latencyMs ?? 0,
-          tokens: data.tokenUsage?.totalTokens ?? 0,
-          cost: data.costBreakdown?.totalCost ?? 0,
-          confidence: data.confidence ?? 0,
-        },
-      });
-    } catch (err) {
-      setResult({
-        answer: `Errore: ${err instanceof Error ? err.message : 'Richiesta fallita'}`,
-        chunks: [],
-        metrics: { latencyMs: 0, tokens: 0, cost: 0, confidence: 0 },
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [query, strategy, topK, gameScope]);
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {/* Left Panel: Query + Parameters */}
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground" htmlFor="query-input">
-            Query
-          </label>
-          <textarea
-            id="query-input"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Scrivi una domanda da testare..."
-            className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[100px]"
-            rows={4}
-          />
-        </div>
-
-        {/* Parameter Controls */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="strategy-select">
-              Strategy
-            </label>
-            <select
-              id="strategy-select"
-              value={strategy}
-              onChange={e => setStrategy(e.target.value as RagStrategy)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              {STRATEGIES.map(s => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Modello</label>
-            <Select value={model} onValueChange={setModel} disabled={modelsLoading}>
-              <SelectTrigger className="w-full text-sm">
-                <SelectValue placeholder={modelsLoading ? 'Caricamento…' : 'Seleziona modello'} />
-              </SelectTrigger>
-              <SelectContent>
-                {(aiModels?.items ?? []).map(m => (
-                  <SelectItem key={m.id} value={m.modelIdentifier}>
-                    {m.displayName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="temp-input">
-              Temperature
-            </label>
-            <input
-              id="temp-input"
-              type="number"
-              value={temperature}
-              onChange={e => setTemperature(Number(e.target.value))}
-              min={0}
-              max={1}
-              step={0.1}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="topk-input">
-              Top-K Chunks
-            </label>
-            <input
-              id="topk-input"
-              type="number"
-              value={topK}
-              onChange={e => setTopK(Number(e.target.value))}
-              min={1}
-              max={20}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="game-scope-input">
-              Game Scope
-            </label>
-            <input
-              id="game-scope-input"
-              type="text"
-              value={gameScope}
-              onChange={e => setGameScope(e.target.value)}
-              placeholder="ID o nome gioco"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="agent-input">
-              Agent
-            </label>
-            <input
-              id="agent-input"
-              type="text"
-              value={agent}
-              onChange={e => setAgent(e.target.value)}
-              placeholder="Agent ID"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
-        </div>
-
-        <button
-          onClick={handleExecute}
-          disabled={!query.trim() || isLoading}
-          className={cn(
-            'flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
-          type="button"
-        >
-          <PlayIcon className="h-4 w-4" />
-          {isLoading ? 'Esecuzione in corso...' : 'Esegui Query'}
-        </button>
-      </div>
-
-      {/* Right Panel: Results */}
-      <div className="space-y-4">
-        {result ? (
-          <>
-            {/* Metrics */}
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: 'Latenza', value: `${result.metrics.latencyMs}ms` },
-                { label: 'Token', value: result.metrics.tokens },
-                { label: 'Costo', value: `$${result.metrics.cost}` },
-                { label: 'Confidence', value: `${(result.metrics.confidence * 100).toFixed(0)}%` },
-              ].map(m => (
-                <div key={m.label} className="rounded-md border bg-muted/30 px-3 py-2 text-center">
-                  <div className="text-xs text-muted-foreground">{m.label}</div>
-                  <div className="text-sm font-semibold font-mono">{m.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Answer */}
-            <div className="space-y-1">
-              <h3 className="text-sm font-medium text-foreground">Risposta</h3>
-              <div className="rounded-md border bg-background p-3 text-sm whitespace-pre-wrap">
-                {result.answer}
-              </div>
-            </div>
-
-            {/* Chunks */}
-            <div className="space-y-1">
-              <h3 className="text-sm font-medium text-foreground">
-                Chunks Recuperati ({result.chunks.length})
-              </h3>
-              <div className="space-y-2">
-                {result.chunks.map(chunk => (
-                  <div key={chunk.id} className="rounded-md border p-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-mono text-muted-foreground">#{chunk.id}</span>
-                      <span
-                        className={cn(
-                          'rounded-full px-2 py-0.5 text-xs font-medium',
-                          chunk.score >= 0.9
-                            ? 'bg-green-100 text-green-700'
-                            : chunk.score >= 0.75
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
-                        )}
-                      >
-                        {chunk.score.toFixed(2)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-foreground">{chunk.text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex h-full min-h-[300px] items-center justify-center rounded-lg border border-dashed">
-            <p className="text-sm text-muted-foreground">
-              Esegui una query per visualizzare i risultati
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 }
 
 // ─── Chat Debug Tab ───────────────────────────────────────────────────────────
@@ -339,10 +38,24 @@ function ChatDebugTab() {
   const [inputValue, setInputValue] = useState('');
   const [selectedGameId, setSelectedGameId] = useState('');
   const [selectedStrategy, setSelectedStrategy] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [temperature, setTemperature] = useState(0.7);
+  const [topK, setTopK] = useState(5);
   const lastQueryRef = useRef<{ gameId: string; query: string } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const messageIdRef = useRef(0);
   const [showDebug, setShowDebug] = useLocalStorage('playground-debug-panel-visible', true);
+
+  const adminClient = useMemo(() => {
+    const httpClient = new HttpClient();
+    return createAdminClient({ httpClient });
+  }, []);
+
+  const { data: aiModels, isLoading: modelsLoading } = useQuery({
+    queryKey: ['admin', 'ai-models', 'active'],
+    queryFn: () => adminClient.getAiModels({ status: 'active' }),
+    staleTime: 300_000,
+  });
 
   const handleToggleDebug = useCallback(() => {
     setShowDebug(prev => !prev);
@@ -388,12 +101,25 @@ function ChatDebugTab() {
     setInputValue('');
 
     const strategy = selectedStrategy === '__default__' ? undefined : selectedStrategy || undefined;
-    sendMessage(selectedGameId, query, strategy, state.chatThreadId ?? undefined);
+
+    const configOverride: DebugChatConfigOverride | undefined =
+      (selectedModel && selectedModel !== '__default__') || temperature !== 0.7 || topK !== 5
+        ? {
+            model: selectedModel && selectedModel !== '__default__' ? selectedModel : undefined,
+            temperature,
+            topK,
+          }
+        : undefined;
+
+    sendMessage(selectedGameId, query, strategy, state.chatThreadId ?? undefined, configOverride);
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   }, [
     inputValue,
     selectedGameId,
     selectedStrategy,
+    selectedModel,
+    temperature,
+    topK,
     state.isStreaming,
     state.chatThreadId,
     sendMessage,
@@ -421,8 +147,18 @@ function ChatDebugTab() {
       },
     ]);
     const strategy = selectedStrategy === '__default__' ? undefined : selectedStrategy || undefined;
-    sendMessage(gameId, query, strategy);
-  }, [state.isStreaming, selectedStrategy, sendMessage, reset]);
+
+    const configOverride: DebugChatConfigOverride | undefined =
+      (selectedModel && selectedModel !== '__default__') || temperature !== 0.7 || topK !== 5
+        ? {
+            model: selectedModel && selectedModel !== '__default__' ? selectedModel : undefined,
+            temperature,
+            topK,
+          }
+        : undefined;
+
+    sendMessage(gameId, query, strategy, undefined, configOverride);
+  }, [state.isStreaming, selectedStrategy, selectedModel, temperature, topK, sendMessage, reset]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -454,6 +190,20 @@ function ChatDebugTab() {
         onGameChange={setSelectedGameId}
         selectedStrategy={selectedStrategy}
         onStrategyChange={setSelectedStrategy}
+        selectedModel={selectedModel}
+        onModelChange={setSelectedModel}
+        temperature={temperature}
+        onTemperatureChange={setTemperature}
+        topK={topK}
+        onTopKChange={setTopK}
+        availableModels={(aiModels?.items ?? []).map(
+          (m: { id: string; displayName: string; modelIdentifier: string }) => ({
+            id: m.id,
+            displayName: m.displayName,
+            modelIdentifier: m.modelIdentifier,
+          })
+        )}
+        modelsLoading={modelsLoading}
         onReExecute={handleReExecute}
         isStreaming={state.isStreaming}
         hasLastQuery={!!lastQueryRef.current}
@@ -464,13 +214,16 @@ function ChatDebugTab() {
       {/* Split view: chat + debug */}
       <div
         className={cn(
-          'flex-1 grid min-h-0',
-          showDebug ? 'grid-cols-1 lg:grid-cols-[55%_45%]' : 'grid-cols-1'
+          'flex-1 flex flex-col lg:grid min-h-0',
+          showDebug ? 'lg:grid-cols-[55%_45%]' : 'lg:grid-cols-1'
         )}
       >
         {/* Chat Panel */}
         <div className="flex flex-col border-r min-h-0">
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          <div
+            data-testid="playground-chat-messages"
+            className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+          >
             {displayMessages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
                 <p className="text-sm text-muted-foreground text-center max-w-xs">
@@ -516,6 +269,7 @@ function ChatDebugTab() {
           <div className="border-t px-4 py-3">
             <div className="flex items-end gap-2">
               <textarea
+                data-testid="playground-chat-input"
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -531,6 +285,7 @@ function ChatDebugTab() {
               />
               {state.isStreaming ? (
                 <button
+                  data-testid="playground-stop-btn"
                   onClick={stopStreaming}
                   className="shrink-0 rounded-md bg-destructive px-3 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
                   type="button"
@@ -539,6 +294,7 @@ function ChatDebugTab() {
                 </button>
               ) : (
                 <button
+                  data-testid="playground-send-btn"
                   onClick={handleSend}
                   disabled={!inputValue.trim() || !selectedGameId}
                   className={cn(
@@ -554,7 +310,10 @@ function ChatDebugTab() {
           </div>
 
           {state.error && (
-            <div className="border-t border-destructive/20 bg-destructive/5 px-4 py-2 text-xs text-destructive">
+            <div
+              data-testid="playground-error"
+              className="border-t border-destructive/20 bg-destructive/5 px-4 py-2 text-xs text-destructive"
+            >
               {state.error}
             </div>
           )}
@@ -562,9 +321,16 @@ function ChatDebugTab() {
 
         {/* Debug Timeline Panel */}
         {showDebug && (
-          <div className="min-h-0 hidden lg:flex lg:flex-col">
-            <DebugTimeline events={state.debugEvents} isStreaming={state.isStreaming} />
-          </div>
+          <>
+            {/* Desktop: side panel */}
+            <div className="min-h-0 hidden lg:flex lg:flex-col">
+              <DebugTimeline events={state.debugEvents} isStreaming={state.isStreaming} />
+            </div>
+            {/* Mobile: bottom panel */}
+            <div className="lg:hidden border-t max-h-[40vh] overflow-y-auto">
+              <DebugTimeline events={state.debugEvents} isStreaming={state.isStreaming} />
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -574,42 +340,17 @@ function ChatDebugTab() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function PlaygroundPage() {
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get('tab');
-  const defaultTab = (tabParam && TAB_MAP[tabParam]) || 'query-tester';
-
   return (
     <div className="space-y-6 p-4 lg:p-6">
-      {/* Header */}
       <div>
         <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
           RAG Playground
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Testa query RAG, conversa con gli agenti e confronta esecuzioni
+          Debug chat con gli agenti RAG — streaming, pipeline debug e override parametri
         </p>
       </div>
-
-      {/* Tabs */}
-      <Tabs defaultValue={defaultTab}>
-        <TabsList>
-          <TabsTrigger value="query-tester">Query Tester</TabsTrigger>
-          <TabsTrigger value="chat-debug">Chat Debug</TabsTrigger>
-          <TabsTrigger value="compare">Compare</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="query-tester">
-          <QueryTesterTab />
-        </TabsContent>
-
-        <TabsContent value="chat-debug">
-          <ChatDebugTab />
-        </TabsContent>
-
-        <TabsContent value="compare">
-          <CompareTab />
-        </TabsContent>
-      </Tabs>
+      <ChatDebugTab />
     </div>
   );
 }

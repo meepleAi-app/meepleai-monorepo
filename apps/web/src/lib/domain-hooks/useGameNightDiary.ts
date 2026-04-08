@@ -6,6 +6,17 @@ import { gameNightSessionClient } from '@/lib/api/clients/gameNightSessionClient
 import { useGameNightStore } from '@/stores/game-night/store';
 import type { DiaryEntry } from '@/stores/game-night/types';
 
+/**
+ * Hook for managing game night diary entries.
+ *
+ * Usage: The consuming component should connect handleSseEvent to useSessionSSE:
+ * ```
+ * const { entries, handleSseEvent } = useGameNightDiary(gameNightId);
+ * useSessionSSE(sessionId, { onEvent: (evt) => {
+ *   if (evt.type === 'session:gamenight') handleSseEvent(evt.data);
+ * }});
+ * ```
+ */
 export function useGameNightDiary(gameNightId: string) {
   const diary = useGameNightStore(s => s.diary);
   const setDiary = useGameNightStore(s => s.setDiary);

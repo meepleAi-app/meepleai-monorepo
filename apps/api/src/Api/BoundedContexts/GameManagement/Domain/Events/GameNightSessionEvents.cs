@@ -1,4 +1,4 @@
-using MediatR;
+using Api.SharedKernel.Domain.Interfaces;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Events;
 
@@ -10,7 +10,11 @@ internal record GameStartedInNightEvent(
     Guid SessionId,
     Guid GameId,
     string GameTitle,
-    int PlayOrder) : INotification;
+    int PlayOrder) : IDomainEvent
+{
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+}
 
 /// <summary>
 /// Domain event raised when a game is completed within a game night.
@@ -20,7 +24,11 @@ internal record GameCompletedInNightEvent(
     Guid SessionId,
     Guid GameId,
     string GameTitle,
-    Guid? WinnerId) : INotification;
+    Guid? WinnerId) : IDomainEvent
+{
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+}
 
 /// <summary>
 /// Domain event raised when a game night begins (first session starts).
@@ -28,7 +36,11 @@ internal record GameCompletedInNightEvent(
 internal record NightStartedEvent(
     Guid GameNightId,
     Guid OrganizerId,
-    string Title) : INotification;
+    string Title) : IDomainEvent
+{
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+}
 
 /// <summary>
 /// Domain event raised when a game night is finalized (all games done).
@@ -37,7 +49,11 @@ internal record NightFinalizedEvent(
     Guid GameNightId,
     Guid OrganizerId,
     string Title,
-    int TotalGamesPlayed) : INotification;
+    int TotalGamesPlayed) : IDomainEvent
+{
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+}
 
 /// <summary>
 /// Domain event raised when player resources are updated during a game night.
@@ -47,4 +63,8 @@ internal record GameNightResourceUpdateEvent(
     Guid SessionId,
     Guid PlayerId,
     string ResourceType,
-    string Payload) : INotification;
+    string Payload) : IDomainEvent
+{
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+}

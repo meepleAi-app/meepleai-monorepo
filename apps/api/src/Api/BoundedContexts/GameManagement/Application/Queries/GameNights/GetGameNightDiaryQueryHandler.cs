@@ -31,11 +31,32 @@ internal sealed class GetGameNightDiaryQueryHandler
             e.Id,
             e.SessionId,
             e.EventType,
-            e.Payload,
+            GenerateDescription(e.EventType, e.Payload),
             e.Payload,
             e.CreatedBy,
             e.Timestamp)).ToList();
 
         return new GameNightDiaryDto(query.GameNightId, entries);
+    }
+
+    private static string GenerateDescription(string eventType, string? payload)
+    {
+        return eventType switch
+        {
+            "game_started" => "🎲 Partita iniziata",
+            "game_completed" => "🏆 Partita completata",
+            "night_started" => "🎮 Game Night iniziata",
+            "night_finalized" => "📊 Serata completata",
+            "score_update" => "📊 Punteggio aggiornato",
+            "dice_roll" => "🎲 Dado lanciato",
+            "card_draw" => "🃏 Carta pescata",
+            "photo" => "📸 Foto aggiunta",
+            "pause_resume" => "⏸️ Pausa/Ripresa",
+            "player_joined" => "👤 Giocatore entrato",
+            "note_added" => "📝 Nota aggiunta",
+            "dispute_resolved" => "⚖️ Disputa risolta",
+            "resource_update" => "📦 Risorse aggiornate",
+            _ => eventType
+        };
     }
 }

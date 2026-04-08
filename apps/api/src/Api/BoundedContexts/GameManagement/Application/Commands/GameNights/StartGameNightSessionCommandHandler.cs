@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -18,15 +19,18 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
     private readonly IGameNightEventRepository _repository;
     private readonly IMediator _mediator;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAutoSaveSchedulerService _autoSaveScheduler;
 
     public StartGameNightSessionCommandHandler(
         IGameNightEventRepository repository,
         IMediator mediator,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IAutoSaveSchedulerService autoSaveScheduler)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _autoSaveScheduler = autoSaveScheduler ?? throw new ArgumentNullException(nameof(autoSaveScheduler));
     }
 
     public async Task<StartGameNightSessionResult> Handle(
@@ -57,6 +61,8 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
 
             await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            await _autoSaveScheduler.RegisterAsync(createResult.SessionId, cancellationToken).ConfigureAwait(false);
 
             return new StartGameNightSessionResult(
                 createResult.SessionId, gns.Id, createResult.SessionCode, gns.PlayOrder);

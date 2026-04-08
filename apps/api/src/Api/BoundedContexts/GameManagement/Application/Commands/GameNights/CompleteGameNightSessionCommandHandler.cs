@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -12,13 +13,16 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
 {
     private readonly IGameNightEventRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAutoSaveSchedulerService _autoSaveScheduler;
 
     public CompleteGameNightSessionCommandHandler(
         IGameNightEventRepository repository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IAutoSaveSchedulerService autoSaveScheduler)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _autoSaveScheduler = autoSaveScheduler ?? throw new ArgumentNullException(nameof(autoSaveScheduler));
     }
 
     public async Task Handle(CompleteGameNightSessionCommand command, CancellationToken cancellationToken)
@@ -33,9 +37,13 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
 
         try
         {
+            var currentSession = gameNight.CurrentSession;
             gameNight.CompleteCurrentSession(command.WinnerId);
             await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            if (currentSession != null)
+                await _autoSaveScheduler.RemoveAsync(currentSession.SessionId, cancellationToken).ConfigureAwait(false);
         }
         catch (InvalidOperationException ex)
         {

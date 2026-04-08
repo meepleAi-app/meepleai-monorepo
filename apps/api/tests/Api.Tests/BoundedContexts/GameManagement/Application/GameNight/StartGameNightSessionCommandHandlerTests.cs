@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -23,6 +24,7 @@ public class StartGameNightSessionCommandHandlerTests
     private readonly Mock<IGameNightEventRepository> _mockRepository;
     private readonly Mock<IMediator> _mockMediator;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
+    private readonly Mock<IAutoSaveSchedulerService> _mockAutoSaveScheduler;
     private readonly StartGameNightSessionCommandHandler _handler;
 
     public StartGameNightSessionCommandHandlerTests()
@@ -30,10 +32,12 @@ public class StartGameNightSessionCommandHandlerTests
         _mockRepository = new Mock<IGameNightEventRepository>();
         _mockMediator = new Mock<IMediator>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
+        _mockAutoSaveScheduler = new Mock<IAutoSaveSchedulerService>();
         _handler = new StartGameNightSessionCommandHandler(
             _mockRepository.Object,
             _mockMediator.Object,
-            _mockUnitOfWork.Object);
+            _mockUnitOfWork.Object,
+            _mockAutoSaveScheduler.Object);
     }
 
     private static GameNightEvent CreatePublishedEvent(Guid? organizerId = null)

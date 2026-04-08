@@ -278,6 +278,9 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         var session = GameNightSession.Create(Id, sessionId, gameId, gameTitle, playOrder);
         _sessions.Add(session);
         UpdatedAt = DateTimeOffset.UtcNow;
+
+        AddDomainEvent(new GameStartedInNightEvent(Id, sessionId, gameId, gameTitle, playOrder));
+
         return session;
     }
 
@@ -301,6 +304,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
             ?? throw new InvalidOperationException("No in-progress session to complete.");
         session.Complete(winnerId);
         UpdatedAt = DateTimeOffset.UtcNow;
+
+        AddDomainEvent(new GameCompletedInNightEvent(Id, session.SessionId, session.GameId, session.GameTitle, winnerId));
     }
 
     /// <summary>
@@ -315,6 +320,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
             throw new InvalidOperationException("Cannot finalize: a session is still in progress.");
         Status = GameNightStatus.Completed;
         UpdatedAt = DateTimeOffset.UtcNow;
+
+        AddDomainEvent(new NightFinalizedEvent(Id, OrganizerId, Title, _sessions.Count));
     }
 
     /// <summary>

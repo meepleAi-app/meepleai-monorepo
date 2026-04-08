@@ -105,7 +105,9 @@ export const useGameNightStore = create<GameNightState>()(
         }),
       addDiaryEntry: entry =>
         set(s => {
-          s.diary.push(entry);
+          if (!s.diary.some(e => e.id === entry.id)) {
+            s.diary.push(entry);
+          }
         }),
       setDiary: entries =>
         set(s => {

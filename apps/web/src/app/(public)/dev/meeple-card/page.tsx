@@ -10,6 +10,17 @@ export const dynamic = 'force-dynamic';
  */
 
 import { MeepleCard, MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card';
+import {
+  buildAgentNavItems,
+  buildChatNavItems,
+  buildEventNavItems,
+  buildGameNavItems,
+  buildKbNavItems,
+  buildPlayerNavItems,
+  buildSessionNavItems,
+  buildToolNavItems,
+  buildToolkitNavItems,
+} from '@/components/ui/data-display/meeple-card/nav-items';
 
 const GAME_IMAGE = 'https://picsum.photos/seed/catan/400/300';
 
@@ -229,6 +240,203 @@ export default function MeepleCardDevPage() {
               <MeepleCard key={s} entity="game" variant="compact" title={s} status={s} />
             ))}
           </CardRow>
+        </Section>
+
+        {/* NavFooter showcase */}
+        <Section
+          title="NavFooter — tutti gli stati"
+          description="Esempi di navItems per ogni entity con count, plus indicator e disabled."
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <Label>game · counts pieni</Label>
+              <MeepleCard
+                entity="game"
+                variant="grid"
+                title="Catan"
+                subtitle="Klaus Teuber · 1995"
+                imageUrl={GAME_IMAGE}
+                rating={4.2}
+                ratingMax={5}
+                metadata={[{ label: '3-4' }, { label: '60min' }]}
+                navItems={buildGameNavItems(
+                  { kbCount: 3, agentCount: 1, chatCount: 5, sessionCount: 12 },
+                  {
+                    onKbClick: () => alert('KB!'),
+                    onAgentClick: () => alert('Agent!'),
+                    onChatClick: () => alert('Chat!'),
+                    onSessionClick: () => alert('Sessions!'),
+                  }
+                )}
+              />
+            </div>
+
+            <div>
+              <Label>game · vuoto (plus)</Label>
+              <MeepleCard
+                entity="game"
+                variant="grid"
+                title="Azul"
+                subtitle="2017"
+                imageUrl="https://picsum.photos/seed/azul/400/300"
+                rating={4.0}
+                ratingMax={5}
+                navItems={buildGameNavItems(
+                  { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
+                  {
+                    onKbPlus: () => alert('Add KB!'),
+                    onAgentPlus: () => alert('Create agent!'),
+                    onChatPlus: () => alert('Start chat!'),
+                    onSessionPlus: () => alert('New session!'),
+                  }
+                )}
+              />
+            </div>
+
+            <div>
+              <Label>player</Label>
+              <MeepleCard
+                entity="player"
+                variant="grid"
+                title="Alice Rossi"
+                subtitle="Giocatrice attiva"
+                navItems={buildPlayerNavItems(
+                  { totalWins: 18, totalSessions: 42 },
+                  {
+                    onWinsClick: () => alert('Wins!'),
+                    onSessionsClick: () => alert('Sessions!'),
+                  }
+                )}
+              />
+            </div>
+
+            <div>
+              <Label>session</Label>
+              <MeepleCard
+                entity="session"
+                variant="grid"
+                title="Game Night #42"
+                subtitle="Catan · 2h 15min"
+                navItems={buildSessionNavItems(
+                  { playerCount: 4, hasNotes: true, toolCount: 6, photoCount: 12 },
+                  {
+                    onPlayersClick: () => alert('Players!'),
+                    onNotesClick: () => alert('Notes!'),
+                    onToolsClick: () => alert('Tools!'),
+                    onPhotosClick: () => alert('Photos!'),
+                  }
+                )}
+              />
+            </div>
+
+            <div>
+              <Label>agent</Label>
+              <MeepleCard
+                entity="agent"
+                variant="grid"
+                title="RulesBot Pro"
+                subtitle="RAG · 12 fonti"
+                navItems={buildAgentNavItems(
+                  { chatCount: 3, kbCount: 12 },
+                  {
+                    onChatClick: () => alert('Chat!'),
+                    onKbClick: () => alert('KB!'),
+                    onConfigClick: () => alert('Config!'),
+                  }
+                )}
+              />
+            </div>
+
+            <div>
+              <Label>kb</Label>
+              <MeepleCard
+                entity="kb"
+                variant="grid"
+                title="Manuale Catan"
+                subtitle="48 pagine"
+                navItems={buildKbNavItems(
+                  { chunkCount: 124 },
+                  {
+                    onChunksClick: () => alert('Chunks!'),
+                    onReindexClick: () => alert('Reindex!'),
+                    onPreviewClick: () => alert('Preview!'),
+                    onDownloadClick: () => alert('Download!'),
+                  }
+                )}
+              />
+            </div>
+
+            <div>
+              <Label>chat</Label>
+              <MeepleCard
+                entity="chat"
+                variant="grid"
+                title="Chat Catan"
+                subtitle="ieri"
+                navItems={buildChatNavItems(
+                  { messageCount: 18 },
+                  {
+                    onMessagesClick: () => alert('Messages!'),
+                    onAgentLinkClick: () => alert('Agent!'),
+                  }
+                )}
+              />
+            </div>
+
+            <div>
+              <Label>event</Label>
+              <MeepleCard
+                entity="event"
+                variant="grid"
+                title="Serata Lupus"
+                subtitle="Sabato 12 Apr"
+                navItems={buildEventNavItems(
+                  { participantCount: 8, gameCount: 3 },
+                  {
+                    onParticipantsClick: () => alert('Participants!'),
+                    onLocationClick: () => alert('Location!'),
+                    onGamesClick: () => alert('Games!'),
+                    onDateClick: () => alert('Date!'),
+                  }
+                )}
+              />
+            </div>
+
+            <div>
+              <Label>toolkit</Label>
+              <MeepleCard
+                entity="toolkit"
+                variant="grid"
+                title="Catan Tools"
+                subtitle="6 strumenti"
+                navItems={buildToolkitNavItems(
+                  { toolCount: 6, deckCount: 2, phaseCount: 4, useCount: 18 },
+                  {
+                    onToolsClick: () => alert('Tools!'),
+                    onDecksClick: () => alert('Decks!'),
+                    onPhasesClick: () => alert('Phases!'),
+                    onHistoryClick: () => alert('History!'),
+                  }
+                )}
+              />
+            </div>
+
+            <div>
+              <Label>tool</Label>
+              <MeepleCard
+                entity="tool"
+                variant="grid"
+                title="Dice Roller"
+                subtitle="6d6"
+                navItems={buildToolNavItems({
+                  onUseClick: () => alert('Use!'),
+                  onEditClick: () => alert('Edit!'),
+                  onDuplicateClick: () => alert('Duplicate!'),
+                  onHistoryClick: () => alert('History!'),
+                })}
+              />
+            </div>
+          </div>
         </Section>
 
         {/* Skeleton */}

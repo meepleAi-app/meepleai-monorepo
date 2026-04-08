@@ -7,5 +7,18 @@ $ErrorActionPreference = 'Stop'
 
 # --- Functions are added below by subsequent tasks ---
 
+function Test-LocalhostHost {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyString()]
+        [string]$PgHost
+    )
+    if ([string]::IsNullOrWhiteSpace($PgHost)) { return $false }
+    $normalized = $PgHost.Trim().ToLowerInvariant()
+    return ($normalized -eq 'localhost') -or ($normalized -eq '127.0.0.1')
+}
+
 # --- Exports ---
-Export-ModuleMember -Function @()
+Export-ModuleMember -Function @('Test-LocalhostHost')

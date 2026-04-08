@@ -59,8 +59,8 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         AuthRole userRole,
         CancellationToken cancellationToken = default)
     {
-        // Admin and Editor bypass quota checks (unlimited)
-        if (userRole.IsAdmin() || userRole.IsEditor())
+        // SuperAdmin, Admin and Editor bypass quota checks (unlimited)
+        if (userRole.IsSuperAdmin() || userRole.IsAdmin() || userRole.IsEditor())
         {
             return PdfUploadQuotaResult.Success(0, int.MaxValue, 0, int.MaxValue, DateTime.MaxValue, DateTime.MaxValue);
         }
@@ -343,8 +343,8 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(userTier);
-        // Admin and Editor have unlimited quota
-        if (userRole.IsAdmin() || userRole.IsEditor())
+        // SuperAdmin, Admin and Editor have unlimited quota
+        if (userRole.IsSuperAdmin() || userRole.IsAdmin() || userRole.IsEditor())
         {
             return new PdfUploadQuotaInfo
             {
@@ -513,8 +513,8 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         AuthRole userRole,
         CancellationToken cancellationToken = default)
     {
-        // Admin and Editor bypass quota checks (unlimited)
-        if (userRole.IsAdmin() || userRole.IsEditor())
+        // SuperAdmin, Admin and Editor bypass quota checks (unlimited)
+        if (userRole.IsSuperAdmin() || userRole.IsAdmin() || userRole.IsEditor())
         {
             return PerGameQuotaResult.Unlimited();
         }
@@ -603,8 +603,8 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         AuthRole userRole,
         CancellationToken cancellationToken = default)
     {
-        // Admin and Editor have unlimited quota
-        if (userRole.IsAdmin() || userRole.IsEditor())
+        // SuperAdmin, Admin and Editor have unlimited quota
+        if (userRole.IsSuperAdmin() || userRole.IsAdmin() || userRole.IsEditor())
         {
             return new PerGameQuotaInfo
             {

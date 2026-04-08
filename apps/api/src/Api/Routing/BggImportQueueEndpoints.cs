@@ -135,6 +135,7 @@ internal static class BggImportQueueEndpoints
     private static async Task<IResult> EnqueueSingle(
         [FromBody] EnqueueBggRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         try
@@ -142,7 +143,8 @@ internal static class BggImportQueueEndpoints
             var command = new EnqueueBggCommand
             {
                 BggId = request.BggId,
-                GameName = request.GameName
+                GameName = request.GameName,
+                RequestedByUserId = GetUserIdFromContext(httpContext)
             };
 
             var entity = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
@@ -163,16 +165,24 @@ internal static class BggImportQueueEndpoints
     private static async Task<IResult> EnqueueBatch(
         [FromBody] EnqueueBggBatchRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var command = new EnqueueBggBatchCommand
         {
-            BggIds = request.BggIds
+            BggIds = request.BggIds,
+            RequestedByUserId = GetUserIdFromContext(httpContext)
         };
 
         var entities = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
 
         return Results.Created("/api/v1/admin/bgg-queue/status", entities);
+    }
+
+    private static Guid? GetUserIdFromContext(HttpContext httpContext)
+    {
+        var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        return userId != null && Guid.TryParse(userId, out var userGuid) ? userGuid : (Guid?)null;
     }
 
     private static async Task<IResult> EnqueueBatchFromJson(

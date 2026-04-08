@@ -31,7 +31,7 @@ internal class EnqueueBggCommandHandler : IRequestHandler<EnqueueBggCommand, Bgg
             // autoPublish is intentionally false: single-enqueue admin endpoint is not a seeding operation.
             // Bulk seeding uses EnqueueBggBatchFromJsonCommand which propagates AutoPublish from the request.
             return await _queueService
-                .EnqueueAsync(request.BggId, request.GameName, requestedByUserId: null, autoPublish: false, cancellationToken)
+                .EnqueueAsync(request.BggId, request.GameName, request.RequestedByUserId, autoPublish: false, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (InvalidOperationException ex)

@@ -222,8 +222,39 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<IOpenRouterFileLogger>(sp =>
         {
             var config = sp.GetRequiredService<IConfiguration>();
-            var logDir = config["OPENROUTER_LOG_PATH"] ?? Path.Combine("logs", "openrouter");
-            Directory.CreateDirectory(logDir);
+            var logger = sp.GetRequiredService<ILogger<OpenRouterFileLogger>>();
+            var configuredPath = config["OPENROUTER_LOG_PATH"];
+
+            // Prefer configured path, otherwise fall back to system temp dir to avoid
+            // permission issues when running under restricted users (e.g. non-root in containers).
+            var logDir = !string.IsNullOrWhiteSpace(configuredPath)
+                ? configuredPath
+                : Path.Combine(Path.GetTempPath(), "meepleai", "openrouter");
+
+            try
+            {
+                Directory.CreateDirectory(logDir);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Fallback: try system temp if configured path is not writable
+                var fallbackDir = Path.Combine(Path.GetTempPath(), "meepleai", "openrouter");
+                logger.LogWarning(ex,
+                    "OpenRouter log directory {ConfiguredDir} is not writable, falling back to {FallbackDir}",
+                    logDir, fallbackDir);
+                logDir = fallbackDir;
+                Directory.CreateDirectory(logDir);
+            }
+            catch (IOException ex)
+            {
+                var fallbackDir = Path.Combine(Path.GetTempPath(), "meepleai", "openrouter");
+                logger.LogWarning(ex,
+                    "Failed to create OpenRouter log directory {ConfiguredDir}, falling back to {FallbackDir}",
+                    logDir, fallbackDir);
+                logDir = fallbackDir;
+                Directory.CreateDirectory(logDir);
+            }
+
             return new OpenRouterFileLogger(logDir);
         });
 

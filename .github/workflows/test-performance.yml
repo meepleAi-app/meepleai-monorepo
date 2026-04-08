@@ -159,7 +159,7 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y k6
           fi
-          sudo apt-get update && sudo apt-get install -y redis-tools
+          sudo apt-get update && sudo apt-get install -y redis-tools postgresql-client
 
       - name: Clean API build outputs
         working-directory: apps/api/src/Api

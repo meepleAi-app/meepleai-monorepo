@@ -20,6 +20,7 @@ export function ListCard(props: MeepleCardProps) {
     onClick,
     className = '',
   } = props;
+  const testId = props['data-testid'];
 
   return (
     <div
@@ -27,6 +28,7 @@ export function ListCard(props: MeepleCardProps) {
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      data-testid={testId}
     >
       <div
         className="h-2 w-2 flex-shrink-0 rounded-full"

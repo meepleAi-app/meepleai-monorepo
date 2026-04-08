@@ -6,6 +6,7 @@ import type { MeepleCardProps } from '../types';
 
 export function HeroCard(props: MeepleCardProps) {
   const { entity, title, subtitle, imageUrl, rating, ratingMax, onClick, className = '' } = props;
+  const testId = props['data-testid'];
 
   return (
     <div
@@ -13,6 +14,7 @@ export function HeroCard(props: MeepleCardProps) {
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      data-testid={testId}
     >
       {imageUrl ? (
         <img

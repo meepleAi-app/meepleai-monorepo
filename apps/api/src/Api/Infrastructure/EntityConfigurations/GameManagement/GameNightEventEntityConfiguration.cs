@@ -39,5 +39,10 @@ internal class GameNightEventEntityConfiguration : IEntityTypeConfiguration<Game
             .WithOne(r => r.Event)
             .HasForeignKey(r => r.EventId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(e => e.Sessions)
+            .WithOne(s => s.GameNightEvent)
+            .HasForeignKey(s => s.GameNightEventId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

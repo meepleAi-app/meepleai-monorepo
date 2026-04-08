@@ -7,6 +7,7 @@ public class SessionEventEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid SessionId { get; set; }
+    public Guid? GameNightId { get; set; }
     public string EventType { get; set; } = default!;
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public string? Payload { get; set; }

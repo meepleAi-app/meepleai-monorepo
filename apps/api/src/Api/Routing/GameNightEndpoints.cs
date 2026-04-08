@@ -113,6 +113,51 @@ internal static class GameNightEndpoints
             .WithSummary("Respond to a game night invitation")
             .WithDescription("Submits an RSVP response (Accepted, Declined, Maybe) to a game night invitation.");
 
+        // ── Game Night Experience v2 Endpoints ──────────────────────────────
+
+        gameNights.MapPost("/{id:guid}/sessions", HandleStartGameNightSession)
+            .RequireAuthenticatedUser()
+            .Produces<StartGameNightSessionResult>(201)
+            .Produces(400)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .Produces(401)
+            .WithName("StartGameNightSession")
+            .WithSummary("Start next game in the night")
+            .WithDescription("Creates and starts a new game session within the game night. Only the organizer can start sessions.");
+
+        gameNights.MapPost("/{id:guid}/sessions/complete", HandleCompleteGameNightSession)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .Produces(401)
+            .WithName("CompleteGameNightSession")
+            .WithSummary("Complete current game in the night")
+            .WithDescription("Completes the currently in-progress game session, optionally recording a winner.");
+
+        gameNights.MapPost("/{id:guid}/finalize", HandleFinalizeGameNight)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .Produces(401)
+            .WithName("FinalizeGameNight")
+            .WithSummary("Finalize the game night")
+            .WithDescription("Ends the entire game night, transitioning to Completed status. All sessions must be finished.");
+
+        gameNights.MapGet("/{id:guid}/diary", HandleGetGameNightDiary)
+            .RequireAuthenticatedUser()
+            .Produces<GameNightDiaryDto>(200)
+            .Produces(404)
+            .Produces(401)
+            .WithName("GetGameNightDiary")
+            .WithSummary("Get game night diary timeline")
+            .WithDescription("Retrieves the cross-game diary timeline with all session events for the game night.");
+
         return group;
     }
 
@@ -217,9 +262,67 @@ internal static class GameNightEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> HandleStartGameNightSession(
+        Guid id,
+        [FromBody] StartGameNightSessionRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+
+        var command = new StartGameNightSessionCommand(
+            GameNightId: id,
+            GameId: request.GameId,
+            GameTitle: request.GameTitle,
+            UserId: userId);
+
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Created($"/api/v1/game-nights/{id}/sessions/{result.GameNightSessionId}", result);
+    }
+
+    private static async Task<IResult> HandleCompleteGameNightSession(
+        Guid id,
+        [FromBody] CompleteGameNightSessionRequest? request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+
+        var command = new CompleteGameNightSessionCommand(
+            GameNightId: id,
+            WinnerId: request?.WinnerId,
+            UserId: userId);
+
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleFinalizeGameNight(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var command = new FinalizeGameNightCommand(id, userId);
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
     #endregion
 
     #region Query Handlers
+
+    private static async Task<IResult> HandleGetGameNightDiary(
+        Guid id,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetGameNightDiaryQuery(id), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 
     private static async Task<IResult> HandleGetUpcomingGameNights(
         [FromServices] IMediator mediator,
@@ -281,6 +384,10 @@ internal static class GameNightEndpoints
     private sealed record InviteToGameNightRequest(List<Guid> UserIds);
 
     private sealed record RespondToGameNightRequest(string Response);
+
+    // Game Night Experience v2 request records
+    private sealed record StartGameNightSessionRequest(Guid GameId, string GameTitle);
+    private sealed record CompleteGameNightSessionRequest(Guid? WinnerId);
 
     #endregion
 }

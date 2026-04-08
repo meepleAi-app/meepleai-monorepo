@@ -34,5 +34,9 @@ internal class SessionEventEntityConfiguration : IEntityTypeConfiguration<Sessio
         builder.HasIndex(e => new { e.SessionId, e.Timestamp });
         builder.HasIndex(e => new { e.SessionId, e.EventType });
         builder.HasIndex(e => e.CreatedBy);
+        builder.Property(e => e.GameNightId)
+            .HasColumnName("game_night_id");
+
+        builder.HasIndex(e => e.GameNightId);
     }
 }

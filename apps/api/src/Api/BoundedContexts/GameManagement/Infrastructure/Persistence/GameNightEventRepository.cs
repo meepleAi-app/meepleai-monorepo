@@ -26,6 +26,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         var entity = await DbContext.GameNightEvents
             .AsNoTracking()
             .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
@@ -36,6 +37,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         var entities = await DbContext.GameNightEvents
             .AsNoTracking()
             .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
             .OrderByDescending(e => e.ScheduledAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -47,6 +49,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         var entities = await DbContext.GameNightEvents
             .AsNoTracking()
             .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt > DateTimeOffset.UtcNow)
             .OrderBy(e => e.ScheduledAt)
             .Take(50)
@@ -60,6 +63,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         var entities = await DbContext.GameNightEvents
             .AsNoTracking()
             .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
             .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(50)
@@ -74,6 +78,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         // No AsNoTracking — reminder job must persist SentAt flag changes via SaveChangesAsync.
         var entities = await DbContext.GameNightEvents
             .Include(e => e.Rsvps)
+            .Include(e => e.Sessions)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt >= from && e.ScheduledAt <= to)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -148,6 +153,23 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             });
         }
 
+        foreach (var session in domain.Sessions)
+        {
+            entity.Sessions.Add(new GameNightSessionEntity
+            {
+                Id = session.Id,
+                GameNightEventId = session.GameNightEventId,
+                SessionId = session.SessionId,
+                GameId = session.GameId,
+                GameTitle = session.GameTitle,
+                PlayOrder = session.PlayOrder,
+                Status = session.Status.ToString(),
+                WinnerId = session.WinnerId,
+                StartedAt = session.StartedAt,
+                CompletedAt = session.CompletedAt
+            });
+        }
+
         return entity;
     }
 
@@ -196,6 +218,27 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             createdAt: r.CreatedAt)).ToList();
 
         evt.RestoreRsvps(rsvps);
+
+        // Restore Sessions
+        if (entity.Sessions?.Count > 0)
+        {
+            var sessions = entity.Sessions
+                .OrderBy(s => s.PlayOrder)
+                .Select(s => GameNightSession.Reconstitute(
+                    id: s.Id,
+                    gameNightEventId: s.GameNightEventId,
+                    sessionId: s.SessionId,
+                    gameId: s.GameId,
+                    gameTitle: s.GameTitle,
+                    playOrder: s.PlayOrder,
+                    status: Enum.Parse<GameNightSessionStatus>(s.Status),
+                    winnerId: s.WinnerId,
+                    startedAt: s.StartedAt,
+                    completedAt: s.CompletedAt))
+                .ToList();
+
+            evt.RestoreSessions(sessions);
+        }
 
         // Clear domain events from reconstruction
         evt.ClearDomainEvents();

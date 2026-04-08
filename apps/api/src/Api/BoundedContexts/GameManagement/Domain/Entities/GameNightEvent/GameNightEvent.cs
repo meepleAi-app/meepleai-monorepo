@@ -251,4 +251,85 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         _rsvps.Clear();
         _rsvps.AddRange(rsvps);
     }
+
+    // ── Sessions aggregate ──────────────────────────────────────────────
+
+    private readonly List<GameNightSession> _sessions = new();
+    public IReadOnlyList<GameNightSession> Sessions => _sessions.AsReadOnly();
+
+    /// <summary>
+    /// Returns the in-progress session, or the first pending session if none is active.
+    /// </summary>
+    public GameNightSession? CurrentSession =>
+        _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.InProgress)
+        ?? _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending);
+
+    /// <summary>
+    /// Adds a game session to this game night. Max 5 sessions per event.
+    /// </summary>
+    public GameNightSession AddSession(Guid sessionId, Guid gameId, string gameTitle)
+    {
+        if (Status != GameNightStatus.Published)
+            throw new InvalidOperationException($"Cannot add sessions to a {Status} game night.");
+        if (_sessions.Count >= 5)
+            throw new InvalidOperationException("A game night can have at most 5 sessions.");
+
+        var playOrder = _sessions.Count + 1;
+        var session = GameNightSession.Create(Id, sessionId, gameId, gameTitle, playOrder);
+        _sessions.Add(session);
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        AddDomainEvent(new GameStartedInNightEvent(Id, sessionId, gameId, gameTitle, playOrder));
+
+        return session;
+    }
+
+    /// <summary>
+    /// Starts the first pending session.
+    /// </summary>
+    public void StartCurrentSession()
+    {
+        var session = _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending)
+            ?? throw new InvalidOperationException("No pending session to start.");
+        session.Start();
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Completes the in-progress session, optionally recording a winner.
+    /// </summary>
+    public void CompleteCurrentSession(Guid? winnerId)
+    {
+        var session = _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.InProgress)
+            ?? throw new InvalidOperationException("No in-progress session to complete.");
+        session.Complete(winnerId);
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        AddDomainEvent(new GameCompletedInNightEvent(Id, session.SessionId, session.GameId, session.GameTitle, winnerId));
+    }
+
+    /// <summary>
+    /// Finalizes the game night, transitioning to Completed status.
+    /// All sessions must be finished (not in-progress).
+    /// </summary>
+    public void FinalizeNight()
+    {
+        if (Status != GameNightStatus.Published)
+            throw new InvalidOperationException($"Cannot finalize a {Status} game night.");
+        if (_sessions.Any(s => s.Status == GameNightSessionStatus.InProgress))
+            throw new InvalidOperationException("Cannot finalize: a session is still in progress.");
+        Status = GameNightStatus.Completed;
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        AddDomainEvent(new NightFinalizedEvent(Id, OrganizerId, Title, _sessions.Count));
+    }
+
+    /// <summary>
+    /// Internal method to restore sessions list from persistence.
+    /// </summary>
+    internal void RestoreSessions(IEnumerable<GameNightSession> sessions)
+    {
+        _sessions.Clear();
+        _sessions.AddRange(sessions.OrderBy(s => s.PlayOrder));
+    }
 }

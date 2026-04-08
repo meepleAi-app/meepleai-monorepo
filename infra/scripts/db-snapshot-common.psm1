@@ -66,5 +66,16 @@ function Get-PostgresConfig {
     }
 }
 
+function Assert-LocalhostOnly {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [pscustomobject]$Config
+    )
+    if (-not (Test-LocalhostHost -PgHost $Config.Host)) {
+        throw "REFUSED: target host is '$($Config.Host)' but only 'localhost' or '127.0.0.1' are allowed for safety. This script is for LOCAL DEV ONLY."
+    }
+}
+
 # --- Exports ---
-Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig')
+Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig', 'Assert-LocalhostOnly')

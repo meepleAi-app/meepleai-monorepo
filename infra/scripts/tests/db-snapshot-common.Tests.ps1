@@ -141,3 +141,22 @@ Describe 'Get-PostgresConfig' {
         { Get-PostgresConfig -SecretPath $script:tmpFile } | Should -Throw '*POSTGRES_PASSWORD*'
     }
 }
+
+Describe 'Assert-LocalhostOnly' {
+    It 'does not throw for localhost config' {
+        $cfg = [pscustomobject]@{ Host = 'localhost'; Port = 5432; Db = 'meepleai_db'; User = 'u'; Password = 'p' }
+        { Assert-LocalhostOnly -Config $cfg } | Should -Not -Throw
+    }
+    It 'does not throw for 127.0.0.1 config' {
+        $cfg = [pscustomobject]@{ Host = '127.0.0.1'; Port = 5432; Db = 'meepleai_db'; User = 'u'; Password = 'p' }
+        { Assert-LocalhostOnly -Config $cfg } | Should -Not -Throw
+    }
+    It 'throws for staging.meepleai.app config' {
+        $cfg = [pscustomobject]@{ Host = 'staging.meepleai.app'; Port = 5432; Db = 'meepleai_db'; User = 'u'; Password = 'p' }
+        { Assert-LocalhostOnly -Config $cfg } | Should -Throw '*staging.meepleai.app*'
+    }
+    It 'throws and includes the host name in the error' {
+        $cfg = [pscustomobject]@{ Host = 'prod.example.com'; Port = 5432; Db = 'meepleai_db'; User = 'u'; Password = 'p' }
+        { Assert-LocalhostOnly -Config $cfg } | Should -Throw '*prod.example.com*'
+    }
+}

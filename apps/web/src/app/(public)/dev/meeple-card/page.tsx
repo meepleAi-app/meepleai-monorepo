@@ -19,6 +19,7 @@ import {
   MobileCardDrawer,
   FlipCard,
   Carousel3D,
+  EntityTable,
   entityHsl,
   entityLabel,
 } from '@/components/ui/data-display/meeple-card';
@@ -1065,20 +1066,137 @@ export default function MeepleCardDevPage() {
           </div>
         </Section>
 
-        {/* Table View — not yet implemented */}
+        {/* Table View — EntityTable component */}
         <Section
-          title="Table View (mockup only)"
-          description="La sezione 3 del visual-test mostra una tabella con righe entity-colored, sorting, e nav icons. Il componente EntityTable non è ancora implementato — questa sezione documenta il gap."
+          title="Table View — EntityTable"
+          description="Tabella con righe entity-colored (border-left 4px), header sortable (Titolo/Tipo/Rating), entity badge, status label semantico, nav icons con count. Match visual-test Section 3."
         >
-          <div className="rounded-lg border border-dashed border-[var(--mc-border)] bg-[var(--mc-bg-muted)] px-6 py-8 text-center">
-            <p className="text-sm text-[var(--mc-text-secondary)]">
-              📋 <strong>EntityTable</strong> — componente non ancora implementato.
-            </p>
-            <p className="mt-1 text-xs text-[var(--mc-text-muted)]">
-              Vedere <code>admin-mockups/meeple-card-visual-test.html</code> Section 3 per il
-              wireframe di riferimento. Colonne: Titolo, Tipo, Dettagli, Rating, Stato, Nav.
-            </p>
-          </div>
+          <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+            💡 Clicca sugli header <strong>Titolo</strong>, <strong>Tipo</strong> o{' '}
+            <strong>Rating</strong> per cambiare ordinamento (▲/▼).
+          </p>
+          <EntityTable
+            cards={[
+              {
+                entity: 'game',
+                id: 'tbl-catan',
+                title: 'I Coloni di Catan',
+                subtitle: 'Klaus Teuber',
+                imageUrl: GAME_IMAGE,
+                rating: 7.1,
+                ratingMax: 10,
+                status: 'owned',
+                metadata: [{ label: '3-4' }, { label: '60-120m' }],
+                navItems: buildGameNavItems(
+                  { kbCount: 3, agentCount: 1, chatCount: 2, sessionCount: 5 },
+                  {
+                    onKbClick: () => alert('KB'),
+                    onAgentClick: () => alert('Agent'),
+                    onChatClick: () => alert('Chat'),
+                    onSessionClick: () => alert('Session'),
+                  }
+                ),
+              },
+              {
+                entity: 'session',
+                id: 'tbl-session',
+                title: 'Serata Catan #5',
+                subtitle: '15 Feb 2026',
+                status: 'completed',
+                metadata: [{ label: 'Catan' }, { label: '4 giocatori' }],
+                navItems: buildSessionNavItems(
+                  { playerCount: 4, hasNotes: false, toolCount: 0, photoCount: 0 },
+                  { onPlayersClick: () => alert('Players') }
+                ),
+              },
+              {
+                entity: 'agent',
+                id: 'tbl-agent',
+                title: 'CatanHelper AI',
+                subtitle: 'GPT-4o · Hybrid RAG',
+                status: 'active',
+                metadata: [{ label: 'Catan' }, { label: '450 chunks' }],
+                navItems: buildAgentNavItems(
+                  { chatCount: 2, kbCount: 3 },
+                  {
+                    onChatClick: () => alert('Chat'),
+                    onKbClick: () => alert('KB'),
+                    onConfigClick: () => alert('Config'),
+                  }
+                ),
+              },
+              {
+                entity: 'kb',
+                id: 'tbl-kb',
+                title: 'Regolamento TFM',
+                subtitle: 'PDF · 32 pg',
+                rating: 9.1,
+                ratingMax: 10,
+                status: 'indexed',
+                metadata: [{ label: '200 chunks' }, { label: '2.4 MB' }],
+                navItems: buildKbNavItems(
+                  { chunkCount: 200 },
+                  {
+                    onChunksClick: () => alert('Chunks'),
+                    onReindexClick: () => alert('Reindex'),
+                    onPreviewClick: () => alert('Preview'),
+                    onDownloadClick: () => alert('Download'),
+                  }
+                ),
+              },
+              {
+                entity: 'chat',
+                id: 'tbl-chat',
+                title: 'Strategie Catan',
+                subtitle: 'Oggi · 12:45',
+                status: 'active',
+                metadata: [{ label: '12 messaggi' }],
+                navItems: buildChatNavItems(
+                  { messageCount: 12 },
+                  {
+                    onMessagesClick: () => alert('Messages'),
+                    onAgentLinkClick: () => alert('Agent'),
+                  }
+                ),
+              },
+              {
+                entity: 'player',
+                id: 'tbl-player',
+                title: 'Marco Rossi',
+                subtitle: '@marco_games',
+                status: 'active',
+                metadata: [{ label: '142 plays' }, { label: '68% win' }],
+                navItems: buildPlayerNavItems(
+                  { totalWins: 96, totalSessions: 142 },
+                  {
+                    onWinsClick: () => alert('Wins'),
+                    onSessionsClick: () => alert('Sessions'),
+                  }
+                ),
+              },
+              {
+                entity: 'game',
+                id: 'tbl-azul',
+                title: 'Azul',
+                subtitle: 'Michael Kiesling · 2017',
+                rating: 7.8,
+                ratingMax: 10,
+                status: 'wishlist',
+                metadata: [{ label: '2-4' }, { label: '30-45m' }],
+                navItems: buildGameNavItems(
+                  { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
+                  {
+                    onKbPlus: () => alert('Add KB'),
+                    onAgentPlus: () => alert('Create agent'),
+                    onChatPlus: () => alert('Start chat'),
+                    onSessionPlus: () => alert('New session'),
+                  }
+                ),
+              },
+            ]}
+            onRowClick={card => alert(`Row clicked: ${card.title}`)}
+            caption="Esempio di EntityTable con 7 entità miste"
+          />
         </Section>
 
         {/* Mobile Card Layout — match admin-mockups/mobile-card-layout-mockup.html */}

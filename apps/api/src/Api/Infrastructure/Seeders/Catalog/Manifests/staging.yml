@@ -9254,76 +9254,7 @@ catalog:
   - title: 'Skytear: Arena of Legends'
     bggId: 373106
     language: en
-    bggEnhanced: true
-    description: 'Sky Team is a co-operative game, exclusively for two players, in which you play a pilot and co-pilot at
-      the controls of an airliner. Your goal is to work together as a team to land your airplane in different airports around
-      the world.
-
-
-      To land your plane, you need to silently assign your dice to the correct spaces in your cockpit to balance the axis
-      of your plane, control its speed, deploy the flaps, extend the landing gear, contact the control tower to clear your
-      path, and even have a little coffee to improve your concentration enough to change the value of your dice.
-
-
-      If the aircraft tilts too much and stalls, overshoots the airport, or collides with another aircraft, you lose the game...and
-      your pilot''s license...and probably your life.
-
-
-      From Montreal to Tokyo, each airport offers its own set of challenges. Watch out for the turbulence as this could end
-      up being a bumpy ride!
-
-
-      &mdash;description from the publisher
-
-
-      '
-    yearPublished: 2023
-    minPlayers: 2
-    maxPlayers: 2
-    playingTime: 20
-    minAge: 10
-    averageRating: 8.12
-    averageWeight: 2.04
-    imageUrl: https://cf.geekdo-images.com/uXMeQzNenHb3zK7Hoa6b2w__original/img/mWOQnkpyYBorh_Y1-0Y2o-ew17k=/0x0/filters:format(jpeg)/pic7398904.jpg
-    thumbnailUrl: https://cf.geekdo-images.com/uXMeQzNenHb3zK7Hoa6b2w__small/img/WyPClajMWU9lV5BdCXiZnqdZgmU=/fit-in/200x150/filters:strip_icc()/pic7398904.jpg
-    fallbackImageUrl: https://cf.geekdo-images.com/uXMeQzNenHb3zK7Hoa6b2w__original/img/mWOQnkpyYBorh_Y1-0Y2o-ew17k=/0x0/filters:format(jpeg)/pic7398904.jpg
-    fallbackThumbnailUrl: https://cf.geekdo-images.com/uXMeQzNenHb3zK7Hoa6b2w__small/img/WyPClajMWU9lV5BdCXiZnqdZgmU=/fit-in/200x150/filters:strip_icc()/pic7398904.jpg
-    categories:
-    - Aviation / Flight
-    - Dice
-    mechanics:
-    - Communication Limits
-    - Cooperative Game
-    - Dice Rolling
-    - Scenario / Mission / Campaign Game
-    - 'Turn Order: Progressive'
-    - Variable Player Powers
-    - Variable Set-up
-    - Worker Placement with Dice Workers
-    designers:
-    - Luc Rémond
-    publishers:
-    - Scorpion Masqué
-    - 999 Games
-    - ADC Blackfire Entertainment
-    - asmodee
-    - Brädspel.se
-    - Galápagos Jogos
-    - Games4you
-    - Geekach LLC
-    - Hachette Boardgames USA
-    - Kaissa Chess & Games
-    - KOSMOS
-    - Lautapelit.fi
-    - Lavka Games
-    - Lucky Duck Games
-    - Reflexshop
-    - Regatul Jocurilor
-    - Salta da Caixa
-    - Spilbræt.dk
-    - Sugorokuya
-    - Tabletop KZ
-    - YOKA Games
+    bggEnhanced: false
     pdfBlobKey: rulebooks/v1/skytear_rulebook.pdf
     pdfSha256: 2f316d16c5001b55097b9966c7c697bbde6a50e7e5c9b1c3df336ff5c3775960
     pdfVersion: '1.0'
@@ -10984,64 +10915,7 @@ catalog:
   - title: 'Great Western Trail: Argentina'
     bggId: 380607
     language: en
-    bggEnhanced: true
-    description: 'Kia ora, and welcome to Great Western Trail New Zealand!
-
-
-      Towards the end of the 19th century, you established yourself as a runholder (owner of a sheep station) on the South
-      Island of New Zealand. Recent years have seen your family farm prosper by diversifying your breeds of sheep and increasing
-      the value of your wool.
-
-
-      With the dawn of the new century, difficult challenges have arisen. You must acquire improved and valuable breeds of
-      sheep to ensure the prosperity of your family business and the labourers who work for you. Decide whether to focus on
-      your past strengths or to diversify into new ventures. Will the beginning of the 20th century be as rewarding as earlier
-      years, or will the efforts of others surpass your strategy? Good luck, and kia kaha!
-
-
-      In Great Western Trail New Zealand, you move your runholder along a trail that winds and forks from the lower left corner
-      of the game board to Wellington in the upper right. Along your path, you perform actions that provide you with various
-      ways to earn victory points.
-
-
-      Each time your runholder reaches Wellington, you deliver sheep to a local or foreign trading post, which may also be
-      worth victory points. Afterwards, your runholder continues its movement again.
-
-
-      '
-    yearPublished: 2023
-    minPlayers: 1
-    maxPlayers: 4
-    playingTime: 150
-    minAge: 12
-    averageRating: 8.47
-    averageWeight: 4.01
-    imageUrl: https://cf.geekdo-images.com/X4KaD6ADLW1ohOznNay7xg__original/img/HhxsLMIsz6Te567qXEbRBen4Sm8=/0x0/filters:format(png)/pic7350809.png
-    thumbnailUrl: https://cf.geekdo-images.com/X4KaD6ADLW1ohOznNay7xg__small/img/iCWpe4ydO3Rtu6yBjn01eQ97xLc=/fit-in/200x150/filters:strip_icc()/pic7350809.png
-    fallbackImageUrl: https://cf.geekdo-images.com/X4KaD6ADLW1ohOznNay7xg__original/img/HhxsLMIsz6Te567qXEbRBen4Sm8=/0x0/filters:format(png)/pic7350809.png
-    fallbackThumbnailUrl: https://cf.geekdo-images.com/X4KaD6ADLW1ohOznNay7xg__small/img/iCWpe4ydO3Rtu6yBjn01eQ97xLc=/fit-in/200x150/filters:strip_icc()/pic7350809.png
-    categories:
-    - Animals
-    mechanics:
-    - Deck, Bag, and Pool Building
-    - Hand Management
-    - Ownership
-    - Set Collection
-    - Solo / Solitaire Game
-    - Track Movement
-    - Variable Set-up
-    designers:
-    - Alexander Pfister
-    publishers:
-    - eggertspiele
-    - Arclight Games
-    - Delta Vision Publishing
-    - Ediciones MasQueOca
-    - Galápagos Jogos
-    - Ghenos Games
-    - Rebel Sp. z o.o.
-    - Yayoi The Dreamer
-    - Zvezda
+    bggEnhanced: false
     pdfBlobKey: rulebooks/v1/great-western-trail-argentina_rulebook.pdf
     pdfSha256: 88be4a0b83dda037566941e46d1e936ec6280c37e9860c0405a58a9bd412c2fa
     pdfVersion: '1.0'
@@ -11582,54 +11456,7 @@ catalog:
   - title: Voidfall
     bggId: 338111
     language: en
-    bggEnhanced: true
-    description: 'A trick-taking card game with cards featuring photos of contemporary United States Navy aircraft, surface
-      ships, and submarines.
-
-
-      The cards are marked with letters from A to Z and some of the cards are numbered as well (i.e. A1, A2, A3, A4). At the
-      start of the game, each player is dealt seven cards. The goal is to capture the most Navy equipment by winning tricks.
-      The highest card played wins the trick, with A being the highest and Z being the lowest. In addition, among the numbered
-      cards with the same letter, the highest number wins (so B4 beats B2).
-
-
-      At the end of the game a player receives 10 points for each card having a number and 5 points for each card that only
-      has a letter. A player can score a bonus 100 points during the game if the cards in the player''s hand spell out N-A-V-Y,
-      J-E-T, or S-H-I-P. The first player to reach 1000 points wins the game.
-
-
-      The contents include the rules folder, 54 cards, a score pad, and a small cardboard box-insert tray. The rules folder
-      provides a description of each photo used on the cards.
-
-
-      &mdash;user summary
-
-
-      '
-    yearPublished: 1957
-    minPlayers: 2
-    maxPlayers: 6
-    playingTime: 45
-    minAge: 9
-    averageRating: 0
-    averageWeight: 0
-    imageUrl: https://cf.geekdo-images.com/NSNqLPStIevgazzFvDjBXg__original/img/IBBihaLB4Gf7bfMVbyrWiyHFzrQ=/0x0/filters:format(jpeg)/pic6166941.jpg
-    thumbnailUrl: https://cf.geekdo-images.com/NSNqLPStIevgazzFvDjBXg__small/img/wGkH7Z1C44mG3xCZ1NyOgpbWge8=/fit-in/200x150/filters:strip_icc()/pic6166941.jpg
-    fallbackImageUrl: https://cf.geekdo-images.com/NSNqLPStIevgazzFvDjBXg__original/img/IBBihaLB4Gf7bfMVbyrWiyHFzrQ=/0x0/filters:format(jpeg)/pic6166941.jpg
-    fallbackThumbnailUrl: https://cf.geekdo-images.com/NSNqLPStIevgazzFvDjBXg__small/img/wGkH7Z1C44mG3xCZ1NyOgpbWge8=/fit-in/200x150/filters:strip_icc()/pic6166941.jpg
-    categories:
-    - Aviation / Flight
-    - Card Game
-    - Modern Warfare
-    - Nautical
-    mechanics:
-    - Race
-    - Set Collection
-    - Trick-taking
-    designers:
-    - (Uncredited)
-    publishers:
-    - Exclusive Playing Card Company
+    bggEnhanced: false
     pdfBlobKey: rulebooks/v1/voidfall_rulebook.pdf
     pdfSha256: 29847a547dcec0deac860cfb658cd3ea694dcaab319258fcf286c27161243157
     pdfVersion: '1.0'

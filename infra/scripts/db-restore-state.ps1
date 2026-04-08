@@ -129,5 +129,150 @@ if ($driftClass -eq 'minor') {
     Write-Host "⚠ Minor schema drift detected (whitespace/cosmetic). Proceeding." -ForegroundColor Yellow
 }
 
-# Placeholder for next task
-Write-Timestamped 'TODO: data restore + sequences (Task 17)'
+# ============================================================================
+# Restore data
+# ============================================================================
+$dataDumpPath = Join-Path $SnapshotPath $manifest.files.dataDump.name
+Write-Timestamped "[7/9] Restoring data from $($manifest.files.dataDump.name)..."
+$restoreStart = Get-Date
+Invoke-PgRestore -Config $cfg -Arguments @(
+    '--data-only', '--no-owner', '--no-acl',
+    '--disable-triggers', '--single-transaction',
+    $dataDumpPath
+)
+$restoreSeconds = ((Get-Date) - $restoreStart).TotalSeconds
+Write-Timestamped "    Data restored in $([math]::Round($restoreSeconds,1))s"
+
+# ============================================================================
+# Reset sequences (via pg_depend join, owns table+column for each sequence)
+# ============================================================================
+Write-Timestamped '[8/9] Resetting sequences...'
+$seqDiscoverySql = @"
+SELECT
+  ns.nspname || '|' || s.relname || '|' || tns.nspname || '|' || t.relname || '|' || a.attname
+FROM pg_class s
+JOIN pg_namespace ns ON ns.oid = s.relnamespace
+JOIN pg_depend d ON d.objid = s.oid AND d.deptype = 'a'
+JOIN pg_class t ON t.oid = d.refobjid
+JOIN pg_namespace tns ON tns.oid = t.relnamespace
+JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+WHERE s.relkind = 'S'
+  AND ns.nspname NOT IN ('pg_catalog','information_schema');
+"@
+$seqRows = Invoke-Psql -Config $cfg -Sql $seqDiscoverySql | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+$sequencesReset = 0
+foreach ($row in $seqRows) {
+    $parts = $row -split '\|'
+    if ($parts.Count -ne 5) { continue }
+    $seqSchema = $parts[0]
+    $seqName = $parts[1]
+    $tblSchema = $parts[2]
+    $tblName = $parts[3]
+    $colName = $parts[4]
+    $setvalSql = "SELECT setval('""$seqSchema"".""$seqName""', (SELECT COALESCE(MAX(""$colName""),0) + 1 FROM ""$tblSchema"".""$tblName""), false);"
+    $null = Invoke-Psql -Config $cfg -Sql $setvalSql
+    $sequencesReset++
+}
+Write-Timestamped "    $sequencesReset sequences reset"
+
+# ============================================================================
+# Verify row counts
+# ============================================================================
+Write-Timestamped '[9/9] Verifying row counts...'
+$mismatches = New-Object System.Collections.Generic.List[pscustomobject]
+$matched = 0
+foreach ($prop in $manifest.rowCountsPre.PSObject.Properties) {
+    $qualified = $prop.Name
+    $expected = [long]$prop.Value
+    $parts = $qualified -split '\.', 2
+    $schema = $parts[0]
+    $table = $parts[1]
+    $sql = "SELECT COUNT(*) FROM ""$schema"".""$table"";"
+    try {
+        $actualRaw = Invoke-Psql -Config $cfg -Sql $sql
+        $actual = [long]($actualRaw.Trim())
+    } catch {
+        $actual = -1
+    }
+    # If sanitize was used and the table is in excludedTables, expect 0
+    $isExcluded = $false
+    if ($manifest.sanitize) {
+        foreach ($ex in $manifest.excludedTables) {
+            if ($table -eq $ex) { $isExcluded = $true; break }
+        }
+    }
+    $expectedActual = if ($isExcluded) { 0 } else { $expected }
+    if ($actual -eq $expectedActual) {
+        $matched++
+    } else {
+        $mismatches.Add([pscustomobject]@{
+            Table = $qualified
+            Expected = $expectedActual
+            Actual = $actual
+        })
+    }
+}
+$rowCountMatch = ($mismatches.Count -eq 0)
+if (-not $rowCountMatch) {
+    Write-Host "⚠ Row count mismatches:" -ForegroundColor Yellow
+    foreach ($m in $mismatches) {
+        Write-Host "    $($m.Table): expected=$($m.Expected), actual=$($m.Actual)" -ForegroundColor Yellow
+    }
+}
+Write-Timestamped "    $matched/$($matched + $mismatches.Count) tables match"
+
+# ============================================================================
+# Restore PDF volume (if applicable)
+# ============================================================================
+$pdfRestored = $false
+$pdfFilesRestored = 0
+if ($RestorePdfVolume -and $manifest.pdfVolumeIncluded) {
+    $pdfTarPath = Join-Path $SnapshotPath 'pdf_uploads.tar.gz'
+    if (Test-Path -LiteralPath $pdfTarPath) {
+        Write-Timestamped 'Restoring PDF volume...'
+        & docker run --rm -v "meepleai_pdf_uploads:/dst" -v "${SnapshotPath}:/src:ro" alpine sh -c 'rm -rf /dst/* && tar xzf /src/pdf_uploads.tar.gz -C /dst'
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "⚠ PDF volume restore failed (exit $LASTEXITCODE)" -ForegroundColor Yellow
+        } else {
+            $stats = Get-DockerVolumeStats -VolumeName 'meepleai_pdf_uploads'
+            $pdfFilesRestored = $stats.FileCount
+            $pdfRestored = $true
+            Write-Timestamped "    $pdfFilesRestored PDF files restored"
+        }
+    }
+}
+
+# ============================================================================
+# Write restore-result.json
+# ============================================================================
+$restoreResult = [pscustomobject]@{
+    schemaVersion          = 1
+    completedAt            = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    mode                   = 'data-only'
+    schemaDriftClass       = $driftClass
+    schemaDiffFile         = [pscustomobject]@{
+        name = 'schema-diff.txt'
+        sha256 = (Get-FileSha256 -Path $diffPath)
+        bytes = (Get-Item $diffPath).Length
+    }
+    rowCountMatch          = $rowCountMatch
+    rowCountMismatches     = @($mismatches)
+    pdfVolumeRestored      = $pdfRestored
+    pdfFilesRestoredCount  = $pdfFilesRestored
+    sequencesReset         = $sequencesReset
+    durationSeconds        = [math]::Round($restoreSeconds, 1)
+}
+Write-Manifest -Path (Join-Path $SnapshotPath 'restore-result.json') -Object $restoreResult
+
+# ============================================================================
+# Summary
+# ============================================================================
+Write-Timestamped ''
+Write-Timestamped '=== Restore complete ==='
+Write-Timestamped "    Schema:    $driftClass"
+Write-Timestamped "    Rows:      $matched/$($matched + $mismatches.Count) tables match"
+Write-Timestamped "    Sequences: $sequencesReset reset"
+if ($pdfRestored) {
+    Write-Timestamped "    PDFs:      $pdfFilesRestored files restored"
+}
+Write-Timestamped "    Duration:  $([math]::Round($restoreSeconds,1))s"

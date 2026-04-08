@@ -124,23 +124,27 @@ login() {
 # 3. Import games from BGG (batch)
 # ============================================================================
 import_games_from_bgg() {
-  log "Collecting BGG IDs to import..."
-  local bgg_ids
-  bgg_ids=$(read_manifest | jq '[.games[] | select(.bggFound == true and .sharedGameId == null) | .bggId]')
+  log "Collecting BGG games to import..."
+  # Build [{bggId, name}, ...] array of games needing import
+  local games_json
+  games_json=$(read_manifest | jq '[.games[] | select(.bggFound == true and .sharedGameId == null) | {bggId, name}]')
   local count
-  count=$(echo "$bgg_ids" | jq 'length')
+  count=$(echo "$games_json" | jq 'length')
 
   if [[ "$count" -eq 0 ]]; then
     log "No BGG games to import (all already have sharedGameId or bggFound=false)."
     return
   fi
 
-  log "Enqueuing ${count} BGG IDs for batch import..."
+  log "Enqueuing ${count} BGG games via batch-json (with autoPublish)..."
+  # batch-json endpoint extracts userId from session and supports autoPublish
+  local json_content
+  json_content=$(echo "$games_json" | jq -c .)
   local body
-  body=$(jq -n --argjson ids "$bgg_ids" '{"bggIds":$ids}')
+  body=$(jq -n --arg jc "$json_content" '{"jsonContent": $jc, "autoPublish": true}')
   local resp
-  resp=$(api_post "/admin/bgg-queue/batch" "$body")
-  log "Batch enqueue response: $resp"
+  resp=$(api_post "/admin/bgg-queue/batch-json" "$body")
+  log "Batch-json enqueue response: $resp"
 
   # Poll queue until empty or timeout (5 min)
   log "Polling BGG queue status..."

@@ -615,11 +615,32 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
 
             _logger.LogInformation("Saved PDF file to {FilePath}", storageResult.FilePath);
 
+            // Resolve SharedGameId when gameId matches a shared_games row
+            Guid? resolvedGameId = !string.IsNullOrEmpty(gameId) ? Guid.Parse(gameId) : null;
+            Guid? resolvedSharedGameId = null;
+
+            if (resolvedGameId.HasValue)
+            {
+                var sharedGameMatch = await _db.SharedGames
+                    .AsNoTracking()
+                    .Where(sg => sg.Id == resolvedGameId.Value)
+                    .Select(sg => sg.Id)
+                    .FirstOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (sharedGameMatch != Guid.Empty)
+                {
+                    resolvedSharedGameId = sharedGameMatch;
+                    resolvedGameId = null;
+                }
+            }
+
             // Create database record
             var pdfDoc = new PdfDocumentEntity
             {
                 Id = Guid.Parse(storageResult.FileId!),
-                GameId = !string.IsNullOrEmpty(gameId) ? Guid.Parse(gameId) : null,
+                GameId = resolvedGameId,
+                SharedGameId = resolvedSharedGameId,
                 FileName = fileName,
                 FilePath = storageResult.FilePath!,
                 FileSizeBytes = storageResult.FileSizeBytes,

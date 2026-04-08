@@ -87,8 +87,10 @@ export function createToolkitClient({ httpClient }: { httpClient: HttpClient }):
     async getSessionEvents(sessionId, params) {
       const searchParams = new URLSearchParams();
       if (params?.type) searchParams.set('type', params.type);
-      if (params?.round != null) searchParams.set('round', String(params.round));
-      if (params?.limit != null) searchParams.set('limit', String(params.limit));
+      if (params?.round !== undefined && params.round !== null)
+        searchParams.set('round', String(params.round));
+      if (params?.limit !== undefined && params.limit !== null)
+        searchParams.set('limit', String(params.limit));
       if (params?.cursor) searchParams.set('cursor', params.cursor);
 
       const qs = searchParams.toString();

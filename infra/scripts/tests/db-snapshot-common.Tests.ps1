@@ -321,3 +321,51 @@ CREATE TABLE bar (id int);
         $result | Should -Match "O''Brien"
     }
 }
+
+Describe 'Test-SchemaDriftClass' {
+    It 'returns identical for byte-equal schemas' {
+        $a = "CREATE TABLE foo (id int);"
+        $b = "CREATE TABLE foo (id int);"
+        Test-SchemaDriftClass -PreSchema $a -PostSchema $b | Should -Be 'identical'
+    }
+    It 'returns identical for whitespace-only differences (already normalized)' {
+        $a = "CREATE TABLE foo (id int);"
+        $b = "CREATE TABLE foo (id int);"
+        Test-SchemaDriftClass -PreSchema $a -PostSchema $b | Should -Be 'identical'
+    }
+    It 'returns significant for an added column' {
+        $a = "CREATE TABLE foo (id int);"
+        $b = "CREATE TABLE foo (id int, name text);"
+        Test-SchemaDriftClass -PreSchema $a -PostSchema $b | Should -Be 'significant'
+    }
+    It 'returns significant for a removed column' {
+        $a = "CREATE TABLE foo (id int, name text);"
+        $b = "CREATE TABLE foo (id int);"
+        Test-SchemaDriftClass -PreSchema $a -PostSchema $b | Should -Be 'significant'
+    }
+    It 'returns significant for a renamed column' {
+        $a = "CREATE TABLE foo (id int, name text);"
+        $b = "CREATE TABLE foo (id int, full_name text);"
+        Test-SchemaDriftClass -PreSchema $a -PostSchema $b | Should -Be 'significant'
+    }
+    It 'returns significant for an added table' {
+        $a = "CREATE TABLE foo (id int);"
+        $b = "CREATE TABLE foo (id int);`n`nCREATE TABLE bar (id int);"
+        Test-SchemaDriftClass -PreSchema $a -PostSchema $b | Should -Be 'significant'
+    }
+    It 'returns significant for a removed table' {
+        $a = "CREATE TABLE foo (id int);`n`nCREATE TABLE bar (id int);"
+        $b = "CREATE TABLE foo (id int);"
+        Test-SchemaDriftClass -PreSchema $a -PostSchema $b | Should -Be 'significant'
+    }
+    It 'returns significant for a column type change' {
+        $a = "CREATE TABLE foo (id int);"
+        $b = "CREATE TABLE foo (id bigint);"
+        Test-SchemaDriftClass -PreSchema $a -PostSchema $b | Should -Be 'significant'
+    }
+    It 'returns minor for trailing-whitespace-only diff that survived normalization' {
+        $a = "CREATE TABLE foo (id int);"
+        $b = "CREATE TABLE foo (id int);   "
+        Test-SchemaDriftClass -PreSchema $a -PostSchema $b | Should -BeIn @('identical','minor')
+    }
+}

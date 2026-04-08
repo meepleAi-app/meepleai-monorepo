@@ -187,5 +187,29 @@ function Normalize-PgSchema {
     return ($sorted -join "`n`n")
 }
 
+function Test-SchemaDriftClass {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyString()]
+        [string]$PreSchema,
+        [Parameter(Mandatory)]
+        [AllowEmptyString()]
+        [string]$PostSchema
+    )
+
+    # Byte-equal short circuit
+    if ($PreSchema -ceq $PostSchema) { return 'identical' }
+
+    # Whitespace-only difference → minor (or identical after trim)
+    $preTrimmed = ($PreSchema -replace '\s+', ' ').Trim()
+    $postTrimmed = ($PostSchema -replace '\s+', ' ').Trim()
+    if ($preTrimmed -ceq $postTrimmed) { return 'minor' }
+
+    # Anything else is significant
+    return 'significant'
+}
+
 # --- Exports ---
-Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig', 'Assert-LocalhostOnly', 'Get-RequiredDiskSpaceBytes', 'Read-Manifest', 'Write-Manifest', 'Normalize-PgSchema')
+Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig', 'Assert-LocalhostOnly', 'Get-RequiredDiskSpaceBytes', 'Read-Manifest', 'Write-Manifest', 'Normalize-PgSchema', 'Test-SchemaDriftClass')

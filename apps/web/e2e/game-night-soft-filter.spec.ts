@@ -13,14 +13,18 @@
 
 import { test, expect, Page } from '@playwright/test';
 
+import { setupMockAuth } from './fixtures/auth';
+
 // ============================================================================
 // Constants
 // ============================================================================
 
-const API_BASE =
-  process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+// In the browser the API client uses relative paths and Next.js proxies them.
+// All page.route() calls below use a `**/api/v1/...` glob to match both the
+// proxied request (http://localhost:3000/api/...) and direct backend requests
+// (http://localhost:8080/api/...).
 
-const WIZARD_URL = '/game-nights/new';
+const WIZARD_URL = '/sessions/new';
 
 // ============================================================================
 // Mock Data
@@ -74,71 +78,87 @@ const NON_INDEXED_GAME = {
 // ============================================================================
 
 async function setupMockRoutes(page: Page) {
-  // Auth
-  await page.route(`${API_BASE}/api/v1/auth/session`, route =>
-    route.fulfill({ status: 200, json: MOCK_USER })
-  );
-  await page.route(`${API_BASE}/api/v1/auth/me`, route =>
-    route.fulfill({ status: 200, json: MOCK_USER })
-  );
+  // Use shared auth helper which sets cookies, mocks /auth/me, /auth/login, and
+  // standard authenticated endpoints. This satisfies both the AuthProvider's
+  // initial fetch and any server-side cookie check.
+  await setupMockAuth(page, 'User', 'host@meepleai.dev');
 
   // Feature flags — wizard depends on GameNight feature flag
-  await page.route(`${API_BASE}/api/v1/system-config/features/**`, route =>
-    route.fulfill({ status: 200, json: { enabled: true, key: 'Features.GameNight' } })
+  await page.route('**/api/v1/system-config/features/**', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ enabled: true, key: 'Features.GameNight' }),
+    })
   );
 
   // Shared games catalog search — return both games
-  await page.route(`${API_BASE}/api/v1/shared-games**`, route => {
-    const url = new URL(route.request().url());
-    if (url.pathname.startsWith('/api/v1/shared-games') && route.request().method() === 'GET') {
+  await page.route('**/api/v1/shared-games**', route => {
+    if (route.request().method() === 'GET') {
       return route.fulfill({
         status: 200,
-        json: {
+        contentType: 'application/json',
+        body: JSON.stringify({
           items: [INDEXED_GAME, NON_INDEXED_GAME],
           totalCount: 2,
           page: 1,
           pageSize: 20,
-        },
+        }),
       });
     }
     return route.continue();
   });
 
   // KB status — indexed for Catan, not indexed for ObscureGame
-  await page.route(`${API_BASE}/api/v1/games/${INDEXED_GAME.id}/knowledge-base`, route =>
+  await page.route(`**/api/v1/games/${INDEXED_GAME.id}/knowledge-base`, route =>
     route.fulfill({
       status: 200,
-      json: {
+      contentType: 'application/json',
+      body: JSON.stringify({
         gameId: INDEXED_GAME.id,
         isIndexed: true,
         documentCount: 3,
         coverageScore: 80,
         coverageLevel: 'Standard',
         suggestedQuestions: [],
-      },
+      }),
     })
   );
 
-  await page.route(`${API_BASE}/api/v1/games/${NON_INDEXED_GAME.id}/knowledge-base`, route =>
+  await page.route(`**/api/v1/games/${NON_INDEXED_GAME.id}/knowledge-base`, route =>
     route.fulfill({
       status: 200,
-      json: {
+      contentType: 'application/json',
+      body: JSON.stringify({
         gameId: NON_INDEXED_GAME.id,
         isIndexed: false,
         documentCount: 0,
         coverageScore: 0,
         coverageLevel: 'None',
         suggestedQuestions: [],
-      },
+      }),
     })
   );
 
   // Catch-all for unmatched API requests (200 empty)
-  await page.route(`${API_BASE}/api/**`, route => route.fulfill({ status: 200, json: {} }));
+  await page.route('**/api/**', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: '{}',
+    })
+  );
 }
 
-async function searchCatan(page: Page) {
+async function openWizardAndSearchCatan(page: Page) {
+  // The wizard is hidden behind a state toggle on the desktop view.
+  // Click "Inizia Serata di Gioco" to reveal the GameNightWizard.
+  const startBtn = page.getByTestId('start-game-night-button');
+  await startBtn.waitFor({ state: 'visible', timeout: 10000 });
+  await startBtn.click();
+
   const input = page.getByTestId('game-search-input');
+  await input.waitFor({ state: 'visible', timeout: 5000 });
   await input.fill('catan');
   await input.press('Enter');
   await expect(page.getByTestId('game-search-results')).toBeVisible({ timeout: 5000 });
@@ -159,7 +179,7 @@ test.describe('Game Night Wizard — PDF-aware soft filter (F1)', () => {
     await page.goto(WIZARD_URL);
     await page.waitForLoadState('networkidle');
 
-    await searchCatan(page);
+    await openWizardAndSearchCatan(page);
 
     // Wait for both kb-status fetches to resolve (badges are conditionally rendered)
     const indexedOption = page.locator(`[data-game-id="${INDEXED_GAME.id}"]`);
@@ -185,7 +205,7 @@ test.describe('Game Night Wizard — PDF-aware soft filter (F1)', () => {
     await page.goto(WIZARD_URL);
     await page.waitForLoadState('networkidle');
 
-    await searchCatan(page);
+    await openWizardAndSearchCatan(page);
 
     // Warning should NOT be present before selection
     await expect(page.getByTestId('kb-warning')).not.toBeVisible();
@@ -213,7 +233,7 @@ test.describe('Game Night Wizard — PDF-aware soft filter (F1)', () => {
     await page.goto(WIZARD_URL);
     await page.waitForLoadState('networkidle');
 
-    await searchCatan(page);
+    await openWizardAndSearchCatan(page);
 
     // Select indexed game
     const indexedOption = page.locator(`[data-game-id="${INDEXED_GAME.id}"]`);
@@ -233,7 +253,7 @@ test.describe('Game Night Wizard — PDF-aware soft filter (F1)', () => {
     await page.goto(WIZARD_URL);
     await page.waitForLoadState('networkidle');
 
-    await searchCatan(page);
+    await openWizardAndSearchCatan(page);
 
     // First: select non-indexed → warning visible
     await page.locator(`[data-game-id="${NON_INDEXED_GAME.id}"]`).click();

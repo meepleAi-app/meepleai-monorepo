@@ -236,3 +236,71 @@ Describe 'Manifest read/write' {
         Test-Path $tmpSibling | Should -BeFalse
     }
 }
+
+Describe 'Normalize-PgSchema' {
+    It 'strips line comments starting with --' {
+        $input = @"
+-- Dumped from database version 16.3
+CREATE TABLE foo (id int);
+"@
+        $result = Normalize-PgSchema -Sql $input
+        $result | Should -Not -Match '--'
+        $result | Should -Match 'CREATE TABLE foo'
+    }
+
+    It 'strips SET statements' {
+        $input = @"
+SET client_min_messages = warning;
+SET statement_timeout = 0;
+CREATE TABLE foo (id int);
+"@
+        $result = Normalize-PgSchema -Sql $input
+        $result | Should -Not -Match 'SET '
+        $result | Should -Match 'CREATE TABLE foo'
+    }
+
+    It 'strips SELECT pg_catalog.set_config calls' {
+        $input = @"
+SELECT pg_catalog.set_config('search_path', '', false);
+CREATE TABLE foo (id int);
+"@
+        $result = Normalize-PgSchema -Sql $input
+        $result | Should -Not -Match 'set_config'
+    }
+
+    It 'collapses multiple blank lines into one' {
+        $input = "CREATE TABLE foo (id int);`n`n`n`nCREATE TABLE bar (id int);"
+        $result = Normalize-PgSchema -Sql $input
+        ($result -split "`n").Count | Should -BeLessThan 4
+    }
+
+    It 'sorts CREATE TABLE statements alphabetically by name' {
+        $input = @"
+CREATE TABLE zebra (id int);
+CREATE TABLE alpha (id int);
+"@
+        $result = Normalize-PgSchema -Sql $input
+        $alphaIdx = $result.IndexOf('CREATE TABLE alpha')
+        $zebraIdx = $result.IndexOf('CREATE TABLE zebra')
+        $alphaIdx | Should -BeLessThan $zebraIdx
+    }
+
+    It 'is idempotent (normalize twice = normalize once)' {
+        $input = @"
+SET client_min_messages = warning;
+-- comment
+CREATE TABLE foo (id int);
+CREATE TABLE bar (id int);
+"@
+        $once = Normalize-PgSchema -Sql $input
+        $twice = Normalize-PgSchema -Sql $once
+        $twice | Should -Be $once
+    }
+
+    It 'preserves CREATE TABLE column definitions' {
+        $input = "CREATE TABLE foo (id int NOT NULL, name text);"
+        $result = Normalize-PgSchema -Sql $input
+        $result | Should -Match 'id int NOT NULL'
+        $result | Should -Match 'name text'
+    }
+}

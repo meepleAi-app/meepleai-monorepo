@@ -120,5 +120,57 @@ function Write-Manifest {
     Move-Item -LiteralPath $tmpPath -Destination $Path -Force
 }
 
+function Normalize-PgSchema {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyString()]
+        [string]$Sql
+    )
+    if ([string]::IsNullOrWhiteSpace($Sql)) { return '' }
+
+    # Phase 1: line-by-line filter
+    $kept = New-Object System.Collections.Generic.List[string]
+    foreach ($rawLine in ($Sql -split "`r?`n")) {
+        $line = $rawLine.TrimEnd()
+        if ($line -match '^\s*--') { continue }                        # comment
+        if ($line -match '^\s*SET\s') { continue }                     # SET statements
+        if ($line -match '^\s*SELECT\s+pg_catalog\.set_config') { continue }
+        $kept.Add($line)
+    }
+
+    # Phase 2: collapse runs of blank lines into a single blank
+    $compact = New-Object System.Collections.Generic.List[string]
+    $prevBlank = $false
+    foreach ($line in $kept) {
+        $isBlank = [string]::IsNullOrWhiteSpace($line)
+        if ($isBlank -and $prevBlank) { continue }
+        $compact.Add($line)
+        $prevBlank = $isBlank
+    }
+
+    # Phase 3: sort top-level statements alphabetically
+    $joined = ($compact -join "`n").Trim()
+    if ($joined.Length -eq 0) { return '' }
+
+    # Split into statements by semicolon-then-newline boundary
+    $statements = New-Object System.Collections.Generic.List[string]
+    $current = New-Object System.Text.StringBuilder
+    foreach ($ch in $joined.ToCharArray()) {
+        [void]$current.Append($ch)
+        if ($ch -eq ';') {
+            $stmt = $current.ToString().Trim()
+            if ($stmt.Length -gt 0) { $statements.Add($stmt) }
+            [void]$current.Clear()
+        }
+    }
+    $tail = $current.ToString().Trim()
+    if ($tail.Length -gt 0) { $statements.Add($tail) }
+
+    $sorted = $statements | Sort-Object { $_ }
+    return ($sorted -join "`n`n")
+}
+
 # --- Exports ---
-Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig', 'Assert-LocalhostOnly', 'Get-RequiredDiskSpaceBytes', 'Read-Manifest', 'Write-Manifest')
+Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig', 'Assert-LocalhostOnly', 'Get-RequiredDiskSpaceBytes', 'Read-Manifest', 'Write-Manifest', 'Normalize-PgSchema')

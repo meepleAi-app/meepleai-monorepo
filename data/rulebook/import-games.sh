@@ -228,17 +228,19 @@ import_games_manual() {
     log "  Creating shared game: ${name}..."
     local body
     body=$(jq -n \
-      --arg name "$name" \
+      --arg title "$name" \
       --arg slug "$slug" \
       --argjson meta "$meta" \
       '{
-        "name": $name,
-        "description": ("Board game: " + $name),
-        "yearPublished": ($meta.yearPublished // null),
-        "minPlayers": ($meta.minPlayers // null),
-        "maxPlayers": ($meta.maxPlayers // null),
-        "playingTimeMinutes": ($meta.playingTimeMinutes // null),
-        "minAge": ($meta.minAge // null),
+        "title": $title,
+        "description": ("Board game: " + $title),
+        "yearPublished": ($meta.yearPublished // 2020),
+        "minPlayers": ($meta.minPlayers // 1),
+        "maxPlayers": ($meta.maxPlayers // 4),
+        "playingTimeMinutes": ($meta.playingTimeMinutes // 60),
+        "minAge": ($meta.minAge // 14),
+        "imageUrl": "",
+        "thumbnailUrl": "",
         "designers": ($meta.designers // []),
         "publishers": ($meta.publishers // []),
         "categories": ($meta.categories // []),

@@ -57,6 +57,38 @@ public class S3SeedBlobReaderTests
     }
 
     [Fact]
+    public async Task ExistsAsync_Forbidden_ThrowsConfigurationError()
+    {
+        _s3Mock
+            .Setup(x => x.GetObjectMetadataAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonS3Exception("Forbidden") { StatusCode = HttpStatusCode.Forbidden });
+
+        var act = async () => await _sut.ExistsAsync("rulebooks/v1/forbidden.pdf", CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*access denied*SEED_BUCKET_ACCESS_KEY*");
+    }
+
+    [Fact]
+    public async Task ExistsAsync_Unauthorized_ThrowsConfigurationError()
+    {
+        _s3Mock
+            .Setup(x => x.GetObjectMetadataAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonS3Exception("Unauthorized") { StatusCode = HttpStatusCode.Unauthorized });
+
+        var act = async () => await _sut.ExistsAsync("rulebooks/v1/unauthorized.pdf", CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*access denied*");
+    }
+
+    [Fact]
     public async Task OpenReadAsync_ReturnsResponseStream()
     {
         var payload = new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }); // "%PDF"

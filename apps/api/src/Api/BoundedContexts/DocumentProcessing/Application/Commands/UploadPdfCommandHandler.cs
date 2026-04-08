@@ -615,24 +615,22 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
 
             _logger.LogInformation("Saved PDF file to {FilePath}", storageResult.FilePath);
 
-            // Resolve SharedGameId when gameId matches a shared_games row
+            // Bug #2 fix: at this point `gameId` is always a resolved games.Id
+            // (FindOrCreateGameAsync returns games.Id, not an input SharedGameId).
+            // Look up the games row to propagate its SharedGameId FK to the new
+            // PdfDocumentEntity, enabling RAG queries by shared_games.id through
+            // the downstream backfill logic.
             Guid? resolvedGameId = !string.IsNullOrEmpty(gameId) ? Guid.Parse(gameId) : null;
             Guid? resolvedSharedGameId = null;
 
             if (resolvedGameId.HasValue)
             {
-                var sharedGameMatch = await _db.SharedGames
+                resolvedSharedGameId = await _db.Games
                     .AsNoTracking()
-                    .Where(sg => sg.Id == resolvedGameId.Value)
-                    .Select(sg => sg.Id)
+                    .Where(g => g.Id == resolvedGameId.Value)
+                    .Select(g => g.SharedGameId)
                     .FirstOrDefaultAsync(cancellationToken)
                     .ConfigureAwait(false);
-
-                if (sharedGameMatch != Guid.Empty)
-                {
-                    resolvedSharedGameId = sharedGameMatch;
-                    resolvedGameId = null;
-                }
             }
 
             // Create database record

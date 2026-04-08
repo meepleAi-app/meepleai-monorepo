@@ -41,5 +41,16 @@ internal sealed class S3SeedBlobReader : ISeedBlobReader
         {
             return false;
         }
+        catch (AmazonS3Exception ex) when (
+            ex.StatusCode == HttpStatusCode.Forbidden ||
+            ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            // Credentials/policy issue — surface clearly so the operator knows
+            // it is a configuration problem, not a missing blob.
+            throw new InvalidOperationException(
+                $"Seed bucket access denied for key '{blobKey}'. "
+                + "Verify SEED_BUCKET_ACCESS_KEY / SEED_BUCKET_SECRET_KEY and bucket policy.",
+                ex);
+        }
     }
 }

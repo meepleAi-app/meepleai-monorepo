@@ -20,6 +20,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ChevronDown, Filter, Loader2, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { MeepleGameCatalogCard } from '@/components/catalog/MeepleGameCatalogCard';
 import { EmptyState } from '@/components/empty-state/EmptyState';
 import { MechanicIcon } from '@/components/icons/mechanics';
 import { ShelfRow } from '@/components/library/ShelfRow';
@@ -410,24 +411,14 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
             className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
             data-testid="catalog-grid"
           >
-            {accumulatedItems.map(game => {
-              const inLibrary = userGameIds.has(game.id);
-              return (
-                <MeepleCard
-                  key={game.id}
-                  entity="game"
-                  variant="grid"
-                  data-testid="catalog-game-card"
-                  title={game.title}
-                  subtitle={formatYear(game.yearPublished)}
-                  imageUrl={game.thumbnailUrl || game.imageUrl || undefined}
-                  rating={game.averageRating ?? undefined}
-                  ratingMax={10}
-                  status={inLibrary ? 'owned' : undefined}
-                  onClick={() => router.push(`/library/games/${game.id}`)}
-                />
-              );
-            })}
+            {accumulatedItems.map(game => (
+              <MeepleGameCatalogCard
+                key={game.id}
+                game={game}
+                variant="grid"
+                onClick={() => router.push(`/library/games/${game.id}`)}
+              />
+            ))}
           </div>
         )}
 

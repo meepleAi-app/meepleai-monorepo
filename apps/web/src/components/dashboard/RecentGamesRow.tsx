@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { MeepleLibraryGameCard } from '@/components/library/MeepleLibraryGameCard';
 import { useRecentlyAddedGames } from '@/hooks/queries/useLibrary';
 
 export function RecentGamesRow() {
@@ -29,14 +29,13 @@ export function RecentGamesRow() {
       <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none">
         {games.map(entry => (
           <div key={entry.id} className="w-28 shrink-0">
-            <MeepleCard
-              entity="game"
+            <MeepleLibraryGameCard
+              game={entry}
               variant="compact"
-              title={entry.gameTitle}
-              imageUrl={entry.gameImageUrl ?? entry.gameIconUrl ?? undefined}
-              onClick={() => {
-                window.location.href = `/library/games/${entry.gameId}`;
-              }}
+              onConfigureAgent={() => {}}
+              onUploadPdf={() => {}}
+              onEditNotes={() => {}}
+              onRemove={() => {}}
             />
           </div>
         ))}

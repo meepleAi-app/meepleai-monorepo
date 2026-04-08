@@ -15,9 +15,8 @@ import { AlertTriangle, ChevronDown, ChevronRight, MessageCircle, Plus, Bot } fr
 import { useRouter } from 'next/navigation';
 
 import { ChatListMobile } from '@/components/chat-unified/ChatListMobile';
+import { MeepleChatCard } from '@/components/chat-unified/MeepleChatCard';
 import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
-import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
@@ -80,37 +79,6 @@ function groupSessionsByAgent(sessions: ChatSessionSummaryDto[]): AgentGroup[] {
   );
 }
 
-// ─── Format helpers ───────────────────────────────────────────────────────────
-
-function formatRelativeDate(dateString: string | null | undefined): string {
-  if (!dateString) return 'Mai';
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60_000);
-  if (diffMins < 1) return 'Adesso';
-  if (diffMins < 60) return `${diffMins}m fa`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h fa`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}g fa`;
-  return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
-}
-
-function renderChatSessionCard(
-  session: ChatSessionSummaryDto
-): Omit<MeepleCardProps, 'entity' | 'variant'> {
-  return {
-    title: session.title || 'Chat senza titolo',
-    subtitle: session.gameTitle ?? undefined,
-    metadata: [
-      { label: `${session.messageCount} messaggi` },
-      { label: formatRelativeDate(session.lastMessageAt) },
-    ],
-    badge: session.isArchived ? 'Archiviata' : undefined,
-  };
-}
-
 // ─── Agent Group Row ──────────────────────────────────────────────────────────
 
 function AgentGroupSection({
@@ -146,18 +114,20 @@ function AgentGroupSection({
       {/* Sessions grid */}
       {expanded && (
         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {group.sessions.map(session => {
-            const cardProps = renderChatSessionCard(session);
-            return (
-              <MeepleCard
-                key={session.id}
-                entity="chat"
-                variant="grid"
-                {...cardProps}
-                onClick={() => onSessionClick(session)}
-              />
-            );
-          })}
+          {group.sessions.map(session => (
+            <MeepleChatCard
+              key={session.id}
+              chat={{
+                id: session.id,
+                title: session.title || 'Chat senza titolo',
+                lastMessageAt: session.lastMessageAt ?? new Date().toISOString(),
+                messageCount: session.messageCount,
+                agentId: session.agentId ?? null,
+              }}
+              variant="grid"
+              onClick={() => onSessionClick(session)}
+            />
+          ))}
         </div>
       )}
     </section>

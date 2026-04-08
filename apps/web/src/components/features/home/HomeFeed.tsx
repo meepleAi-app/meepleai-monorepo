@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 
 import { EmptyStateCard } from '@/components/features/common';
 import { SkeletonCardGrid } from '@/components/features/common';
+import { MeepleLibraryGameCard } from '@/components/library/MeepleLibraryGameCard';
 import { MeepleCard, entityHsl } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
@@ -95,16 +96,14 @@ export function HomeFeed() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {games.map(entry => (
-              <MeepleCard
+              <MeepleLibraryGameCard
                 key={entry.gameId}
-                entity="game"
+                game={entry}
                 variant="grid"
-                title={entry.gameTitle ?? 'Gioco senza nome'}
-                subtitle={entry.gamePublisher ?? undefined}
-                imageUrl={entry.gameImageUrl ?? entry.gameIconUrl ?? undefined}
-                rating={entry.averageRating ?? undefined}
-                ratingMax={10}
-                onClick={() => openDetail(entry.gameId, 'game')}
+                onConfigureAgent={() => {}}
+                onUploadPdf={() => {}}
+                onEditNotes={() => {}}
+                onRemove={() => {}}
               />
             ))}
           </div>

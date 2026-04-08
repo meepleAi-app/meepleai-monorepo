@@ -44,5 +44,27 @@ function ConvertFrom-SecretFile {
     return $result
 }
 
+function Get-PostgresConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$SecretPath
+    )
+    $secrets = ConvertFrom-SecretFile -Path $SecretPath
+    if (-not $secrets.ContainsKey('POSTGRES_USER')) {
+        throw "Missing POSTGRES_USER in $SecretPath"
+    }
+    if (-not $secrets.ContainsKey('POSTGRES_PASSWORD')) {
+        throw "Missing POSTGRES_PASSWORD in $SecretPath"
+    }
+    return [pscustomobject]@{
+        Host     = if ($secrets.ContainsKey('POSTGRES_HOST') -and -not [string]::IsNullOrWhiteSpace($secrets['POSTGRES_HOST'])) { $secrets['POSTGRES_HOST'] } else { 'localhost' }
+        Port     = if ($secrets.ContainsKey('POSTGRES_PORT') -and -not [string]::IsNullOrWhiteSpace($secrets['POSTGRES_PORT'])) { [int]$secrets['POSTGRES_PORT'] } else { 5432 }
+        Db       = if ($secrets.ContainsKey('POSTGRES_DB') -and -not [string]::IsNullOrWhiteSpace($secrets['POSTGRES_DB'])) { $secrets['POSTGRES_DB'] } else { 'meepleai_db' }
+        User     = $secrets['POSTGRES_USER']
+        Password = $secrets['POSTGRES_PASSWORD']
+    }
+}
+
 # --- Exports ---
-Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile')
+Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig')

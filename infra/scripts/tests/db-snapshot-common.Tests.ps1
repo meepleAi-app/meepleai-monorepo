@@ -89,3 +89,55 @@ Describe 'ConvertFrom-SecretFile' {
         $result.Count | Should -Be 0
     }
 }
+
+Describe 'Get-PostgresConfig' {
+    BeforeEach {
+        $script:tmpFile = New-TemporaryFile
+    }
+    AfterEach {
+        if (Test-Path $script:tmpFile) { Remove-Item $script:tmpFile -Force }
+    }
+
+    It 'returns config with defaults when only credentials are present' {
+        @(
+            'POSTGRES_USER=meepleai',
+            'POSTGRES_PASSWORD=secret'
+        ) | Set-Content $script:tmpFile
+        $cfg = Get-PostgresConfig -SecretPath $script:tmpFile
+        $cfg.Host | Should -Be 'localhost'
+        $cfg.Port | Should -Be 5432
+        $cfg.Db | Should -Be 'meepleai_db'
+        $cfg.User | Should -Be 'meepleai'
+        $cfg.Password | Should -Be 'secret'
+    }
+
+    It 'overrides defaults with explicit secret values' {
+        @(
+            'POSTGRES_HOST=otherhost',
+            'POSTGRES_PORT=6543',
+            'POSTGRES_DB=other_db',
+            'POSTGRES_USER=user',
+            'POSTGRES_PASSWORD=pw'
+        ) | Set-Content $script:tmpFile
+        $cfg = Get-PostgresConfig -SecretPath $script:tmpFile
+        $cfg.Host | Should -Be 'otherhost'
+        $cfg.Port | Should -Be 6543
+        $cfg.Db | Should -Be 'other_db'
+        $cfg.User | Should -Be 'user'
+        $cfg.Password | Should -Be 'pw'
+    }
+
+    It 'throws when POSTGRES_USER is missing' {
+        @(
+            'POSTGRES_PASSWORD=secret'
+        ) | Set-Content $script:tmpFile
+        { Get-PostgresConfig -SecretPath $script:tmpFile } | Should -Throw '*POSTGRES_USER*'
+    }
+
+    It 'throws when POSTGRES_PASSWORD is missing' {
+        @(
+            'POSTGRES_USER=meepleai'
+        ) | Set-Content $script:tmpFile
+        { Get-PostgresConfig -SecretPath $script:tmpFile } | Should -Throw '*POSTGRES_PASSWORD*'
+    }
+}

@@ -41,6 +41,19 @@ The primary use case is the one-off operation of collapsing the accumulated EF C
 | 11 | Sequence reset | Automatic, no flag |
 | 12 | PDF volume handling | Include by default when local storage is detected |
 
+## Preconditions
+
+The operator must satisfy these conditions before invoking `db-save-state.ps1`:
+
+| # | Precondition | Verified by |
+|---|---|---|
+| P1 | `Migrations/` folder is committed in git (not a hard requirement, but a redundant safety net) | Warning in reset script |
+| P2 | No pending unapplied migrations on the local DB (`dotnet ef migrations list` shows all applied) | Manual; documented in runbook |
+| P3 | API project compiles cleanly (`dotnet build` succeeds) | Hard pre-flight in reset script |
+| P4 | `meepleai_pdf_uploads` Docker volume is not in use by another process (only the local API container) | Manual; documented in runbook |
+| P5 | No long-running background tasks holding locks on the DB (no active migrations, no analyze, no large transactions) | Soft check via `pg_stat_activity` |
+| P6 | Operator has confirmed that the migration consolidation is intentional and reviewed by the team if needed | Manual |
+
 ## Architecture Overview
 
 Three complementary PowerShell scripts in `infra/scripts/`, a shared helper module, and a gitignored snapshot directory tree:
@@ -92,6 +105,117 @@ infra/
 - **Audit trail**: `manifest.json` tracks SHA256 hashes, phases completed, and timestamps for forensics.
 - **Single-transaction restores**: every `pg_restore` runs in `--single-transaction` so failures leave no partial state.
 
+## Worked Examples
+
+### Happy path scenario (Given/When/Then)
+
+```
+Given a local PostgreSQL with 227 user tables and ~98 MB of seeded data
+And STORAGE_PROVIDER=local with 42 PDFs (123 MB) in meepleai_pdf_uploads volume
+And a clean Migrations/ folder containing 37 migration files
+And the API project compiles cleanly
+And the API container is stopped
+
+When I run:
+  pwsh infra/scripts/db-save-state.ps1
+  pwsh infra/scripts/db-reset-migrations.ps1 -SnapshotPath infra/db-snapshots/20260408-143522
+  pwsh infra/scripts/db-restore-state.ps1  -SnapshotPath infra/db-snapshots/20260408-143522
+
+Then:
+  - The DB contains the same 227 tables with identical row counts
+  - The same 42 PDFs are accessible in meepleai_pdf_uploads
+  - Migrations/ contains exactly 1 file: <timestamp>_Initial.cs
+  - infra/db-snapshots/20260408-143522/ contains manifest.json, reset-result.json,
+    restore-result.json, and the schema-diff.txt is empty (identical)
+  - The API container starts successfully and serves /health = 200
+```
+
+### Schema diff — `minor` example
+
+`schema-diff.txt`:
+```diff
+--- schema-pre.normalized.sql
++++ schema-post.normalized.sql
+@@ -42,3 +42,5 @@
+ CREATE TABLE "GameManagement"."Games" (
+   "Id" uuid NOT NULL,
+   "Name" text NOT NULL,
++  "PublishedYear" integer,
++  "Bgg_Id" integer
+ );
+```
+
+Wait — this is **not minor**. This is added columns → `significant`. Below is an actual `minor` example:
+
+```diff
+--- schema-pre.normalized.sql
++++ schema-post.normalized.sql
+@@ -1 +1 @@
+--- Dumped from database version 16.3
++-- Dumped from database version 16.4
+```
+
+Header comment difference only → stripped during normalization → **never reaches the diff**, so this case results in `identical`.
+
+A real `minor` case after stripping is **whitespace inside a CREATE TABLE that survived normalization** (e.g., a trailing newline before the closing `)` in one but not the other). Allowed only because of allow-list rule #1.
+
+### Schema diff — `significant` example (operator action required)
+
+`schema-diff.txt`:
+```diff
+--- schema-pre.normalized.sql
++++ schema-post.normalized.sql
+@@ -42,7 +42,7 @@
+ CREATE TABLE "GameManagement"."Games" (
+   "Id" uuid NOT NULL,
+   "Name" text NOT NULL,
+-  "PublishedYear" integer
++  "ReleaseYear" integer
+ );
+```
+
+Stdout from `db-restore-state.ps1`:
+```
+[14:42:05] [3/8] Schema diff classification: significant
+[14:42:05] ❌ Schema drift detected: 1 column renamed in 1 table.
+[14:42:05]
+[14:42:05] Mismatch summary:
+[14:42:05]   GameManagement.Games:
+[14:42:05]     - PublishedYear (in saved data)
+[14:42:05]     + ReleaseYear   (in new schema)
+[14:42:05]
+[14:42:05] Options:
+[14:42:05]   a) Fix your model code (rename property back, or write a data-migration step)
+[14:42:05]      and re-run: pwsh db-reset-migrations.ps1 -SnapshotPath <snap>
+[14:42:05]   b) Rollback to safety net:
+[14:42:05]      pwsh db-restore-state.ps1 -SnapshotPath <snap> -UseSafetyNet
+[14:42:05]   c) Force restore (will fail on the renamed column):
+[14:42:05]      re-run with -AllowDrift
+[14:42:05]
+[14:42:05] Aborting. DB unchanged (fresh schema, empty).
+[14:42:05] Exit code: 2
+```
+
+### Failure scenario — build fails before reset
+
+```
+$ pwsh infra/scripts/db-reset-migrations.ps1 -SnapshotPath infra/db-snapshots/20260408-143522
+
+[14:36:01] === db-reset-migrations ===
+[14:36:01] ✓ Snapshot manifest valid
+[14:36:01] ✓ DB localhost
+[14:36:01] [pre-flight] Running dotnet build sanity check...
+[14:36:14] ❌ Build failed:
+[14:36:14]   apps/api/src/Api/BoundedContexts/GameManagement/Domain/Game.cs(45,12):
+[14:36:14]     error CS0103: The name 'PublishedYear' does not exist in the current context
+[14:36:14]
+[14:36:14] Refusing to drop the database while the project does not compile.
+[14:36:14] Fix the compile errors first, then retry.
+[14:36:14] Exit code: 3
+```
+
+DB intact. Snapshot intact. Operator fixes the code, retries.
+
 ## Component 1: `db-save-state.ps1`
 
 ### Purpose
@@ -115,8 +239,9 @@ Create a timestamped snapshot of the local DB (data + schema) with a full safety
 4. PostgreSQL reachable (`pg_isready`).
 5. `meepleai-postgres` container is running (via `docker inspect`), OR native PG is reachable — either is acceptable.
 6. `SnapshotRoot` writable.
-7. Free disk space > 2 × current DB size, computed via `pg_database_size('meepleai')`.
+7. **Free disk space check** — required bytes computed as `pg_database_size('meepleai') + docker_volume_size('meepleai_pdf_uploads') + 64 MB overhead`. Must have free space ≥ required × 1.1 (10% safety margin). Abort with exact numbers on failure.
 8. `storage.secret` read: detect `STORAGE_PROVIDER`. If `local`, inspect `meepleai_pdf_uploads` volume and record file count + size.
+9. **API backend not connected** — query `pg_stat_activity` for connections with `application_name LIKE 'Npgsql%' OR usename = <db_user>` excluding the current `pg_dump` session. If found, print active connections and require user confirmation (`-Force` bypasses). Rationale: concurrent writes during `pg_dump` can produce logically inconsistent dumps even though `pg_dump` uses a transaction snapshot (the snapshot is valid, but the business meaning can be split across the dump boundary).
 
 ### Actions
 
@@ -131,28 +256,30 @@ Create a timestamped snapshot of the local DB (data + schema) with a full safety
      tar czf /dst/pdf_uploads.tar.gz -C /src .
    ```
    Record file count and hash in manifest.
-7. **Manifest** — write `$snap/manifest.json`:
+7. **Manifest** — write `$snap/manifest.json` **once and never modify it again** (immutable):
    ```json
    {
-     "version": 1,
+     "schemaVersion": 1,
      "createdAt": "2026-04-08T14:35:22Z",
      "database": "meepleai",
      "host": "localhost",
      "dbSizeBytes": 123456789,
+     "xactCommitAtSave": 4827,
      "sanitize": false,
      "excludedTables": [],
      "storageProvider": "local",
      "pdfVolumeIncluded": true,
      "pdfFileCount": 42,
      "files": {
-       "safetyNet": { "name": "safety-net.dump", "sha256": "...", "bytes": 0 },
-       "dataDump":  { "name": "data.dump",       "sha256": "...", "bytes": 0 },
-       "schemaPre": { "name": "schema-pre.sql",  "sha256": "...", "bytes": 0 },
-       "pdfVolume": { "name": "pdf_uploads.tar.gz", "sha256": "...", "bytes": 0 }
+       "safetyNet": { "name": "safety-net.dump", "sha256": "abc...", "bytes": 12345678 },
+       "dataDump":  { "name": "data.dump",       "sha256": "def...", "bytes": 9876543 },
+       "schemaPre": { "name": "schema-pre.sql",  "sha256": "ghi...", "bytes": 12345 },
+       "pdfVolume": { "name": "pdf_uploads.tar.gz", "sha256": "jkl...", "bytes": 5432100 }
      },
      "rowCountsPre": { "Administration.Users": 42, "GameManagement.Games": 101 }
    }
    ```
+   Subsequent script phases write **separate, independently versioned** files: `reset-result.json` (by script 2) and `restore-result.json` (by script 3). The save manifest is never overwritten.
 8. **README** — write `$snap/README.md` with exact commands for steps 2 and 3 (copy-pasteable, with snapshot path already interpolated).
 9. **Summary to stdout** — paths, sizes, "next: `pwsh db-reset-migrations.ps1 -SnapshotPath $snap`".
 
@@ -180,13 +307,14 @@ Perform the controlled wipe: drop DB, delete `Migrations/`, create and apply a f
 
 ### Pre-flight checks
 
-1. `SnapshotPath` contains the expected files; manifest hashes verify against actual files.
-2. Manifest `createdAt` age check: warn if > 24h, do not block.
+1. `SnapshotPath` contains the expected files; manifest hashes verify against actual files (re-computed, not just trusted).
+2. **DB state drift since save** — manifest stores `pg_stat_database.xact_commit` snapshot at save time. If current value > saved value + tolerance (default 10), warn (non-blocking) that the DB has changed since the save and the snapshot may be stale.
 3. `POSTGRES_HOST` localhost enforcement.
 4. `dotnet` and `dotnet ef` tools present.
 5. API project found at `$ApiProjectPath`.
-6. `git status` check inside the project: warn (non-blocking) if `Migrations/` has uncommitted changes.
-7. Repo working directory cleanliness: warn if dirty, non-blocking.
+6. **Build sanity check** — `dotnet build $ApiProjectPath -c Debug --nologo --verbosity quiet`. If this fails, abort before any destructive action: the new `Initial` migration will not be generatable from a non-compiling project, and the operator would end up with a dropped DB and a deleted Migrations folder. Hard block. Override with `-Force` only.
+7. `git status` check inside the project: warn (non-blocking) if `Migrations/` has uncommitted changes.
+8. Repo working directory cleanliness: warn if dirty, non-blocking.
 
 ### Confirmation prompt
 
@@ -217,14 +345,16 @@ Only exact string `yes` proceeds. Any other input: clean abort (exit 0), snapsho
 4. **Add Initial migration** — `dotnet ef migrations add $InitialName --project $ApiProjectPath`. Failure (usually model compile errors) → exit 1 with instruction: restore from `migrations-backup/`, fix compile errors, retry; or rollback via safety-net.
 5. **Database update** — `dotnet ef database update --project $ApiProjectPath`. Failure → exit 1 with diagnostic hints.
 6. **Dump schema-post preliminary** — `pg_dump -s -f $SnapshotPath/schema-post.sql`. This is an early snapshot to enable the drift check as soon as possible; `db-restore-state.ps1` may re-dump it for freshness.
-7. **Update manifest**:
+7. **Write `reset-result.json`** (separate file, immutable, never overwrites `manifest.json`):
    ```json
    {
-     "reset": {
-       "completedAt": "2026-04-08T14:38:01Z",
-       "initialName": "Initial",
-       "schemaPostHash": "<sha256>"
-     }
+     "schemaVersion": 1,
+     "completedAt": "2026-04-08T14:38:01Z",
+     "initialName": "Initial",
+     "migrationsBackupPath": "migrations-backup/",
+     "migrationsBackedUpCount": 37,
+     "schemaPostFile": { "name": "schema-post.sql", "sha256": "<sha256>", "bytes": 12500 },
+     "buildSanityCheckPassed": true
    }
    ```
 8. **Summary** — next-step command for `db-restore-state.ps1`.
@@ -250,8 +380,7 @@ Verify the new schema is compatible with the saved data, restore the data, reset
 | `-SnapshotPath` | string | *required* | Snapshot path. |
 | `-UseSafetyNet` | switch | `$false` | Use `safety-net.dump` instead of `data.dump`. Full DB restore (clean + recreate). |
 | `-RestorePdfVolume` | nullable bool | `$null` (auto: true if `pdf_uploads.tar.gz` present) | Restore Docker PDF volume. |
-| `-SkipSchemaCheck` | switch | `$false` | Bypass schema diff. Dangerous. Requires extra confirmation. |
-| `-AllowDrift` | switch | `$false` | Accept non-identical schema, attempt best-effort restore. |
+| `-AllowDrift` | switch | `$false` | Accept non-identical schema (any classification), attempt best-effort restore. The diff is always computed and logged; this flag only controls whether `significant` drift is treated as STOP. |
 | `-Force` | switch | `$false` | Skip confirmations. |
 
 ### Pre-flight checks
@@ -272,10 +401,24 @@ Verify the new schema is compatible with the saved data, restore the data, reset
    - Sorting top-level statements by object name (stable ordering), preserving intra-statement order of columns.
    - Removing any timestamp/identifier of `__EFMigrationsHistory` row contents.
 3. **Diff** — `git diff --no-index --exit-code schema-pre.normalized.sql schema-post.normalized.sql`, output saved to `schema-diff.txt`.
-4. **Drift classification**:
+4. **Drift classification** — applied to the diff of the *normalized* schemas:
    - **Zero diff** → `identical` → proceed automatically.
-   - **Minor diff** (only default value normalization, trivial rewrites that are semantically equivalent per a small heuristic allow-list) → `minor` → proceed with a printed warning; log the minor diff.
-   - **Significant diff** (tables added/removed/renamed, columns missing in post, type changes) → `significant` → **STOP** unless `-AllowDrift` is set.
+   - **Minor diff** → only diffs matching the explicit allow-list below → `minor` → proceed with a printed warning; log the minor diff.
+   - **Significant diff** → anything not in the allow-list → `significant` → **STOP** unless `-AllowDrift` is set.
+
+   **Minor allow-list** (explicit, exhaustive):
+   1. **Whitespace-only changes**: trailing spaces, extra blank lines, indentation differences inside `CREATE TABLE` parentheses.
+   2. **Statement reordering**: same set of `CREATE` statements appearing in a different order. Detected post-normalization sorting, so this should never reach the diff in practice.
+   3. **`__EFMigrationsHistory` content**: row data of this table is excluded from the diff (it always changes).
+   4. **EF-generated comments**: lines starting with `-- *` produced by the dump that vary between runs.
+   5. **`SET` / `SELECT pg_catalog.set_config(...)`**: stripped during normalization, never reach the diff.
+
+   **Always classified as significant** (non-exhaustive examples):
+   - Any added/removed `CREATE TABLE`, `CREATE INDEX`, `CREATE TYPE`, `CREATE EXTENSION`, `CREATE SCHEMA`.
+   - Any added/removed/renamed column.
+   - Any column type change.
+   - Any added/removed `NOT NULL`, `DEFAULT`, `UNIQUE`, `PRIMARY KEY`, `FOREIGN KEY` constraint.
+   - Any change to `CHECK` constraint expressions.
 5. **On STOP** — print a compact diff summary and three options:
    ```
    Options:
@@ -302,7 +445,22 @@ Verify the new schema is compatible with the saved data, restore the data, reset
        sh -c "rm -rf /dst/* && tar xzf /src/pdf_uploads.tar.gz -C /dst"
      ```
    - Verify file count matches manifest.
-10. **Update manifest** with `restore` section (completed timestamp, mode, schema drift classification, row count match result).
+10. **Write `restore-result.json`** (separate file, immutable, never overwrites `manifest.json`):
+    ```json
+    {
+      "schemaVersion": 1,
+      "completedAt": "2026-04-08T14:42:10Z",
+      "mode": "data-only",
+      "schemaDriftClass": "identical",
+      "schemaDiffFile": { "name": "schema-diff.txt", "sha256": "<sha256>", "bytes": 0 },
+      "rowCountMatch": true,
+      "rowCountMismatches": [],
+      "pdfVolumeRestored": true,
+      "pdfFilesRestoredCount": 42,
+      "sequencesReset": 89,
+      "durationSeconds": 14.3
+    }
+    ```
 11. **Summary**:
     ```
     ✓ Restore complete.
@@ -335,9 +493,11 @@ Simpler path, bypasses diff and granular verify.
 - Restore failure leaves DB in its pre-restore state (fresh schema + empty, or unchanged for safety-net mode).
 - Full stdout+stderr captured in `$SnapshotPath/restore.log`.
 
-## Component 4: `db-snapshot-common.ps1`
+## Component 4: `db-snapshot-common.psm1`
 
-Shared helper module, dot-sourced from the three scripts. Contains:
+Shared PowerShell **module** (`.psm1`, not dot-sourced `.ps1`) imported via `Import-Module` by the three scripts. Using a module instead of dot-sourcing gives proper namespacing, `Export-ModuleMember` control, and enables Pester to test individual functions in isolation.
+
+Exported functions:
 
 - `Get-PostgresConfig` — parses `database.secret`, returns object with `Host`, `Port`, `Db`, `User`, `Password`.
 - `Assert-LocalhostOnly` — enforces host check, throws if not localhost/127.0.0.1.
@@ -380,10 +540,11 @@ All targets appended to the final `.PHONY` declaration.
 
 ### New files
 
-- `infra/scripts/db-snapshot-common.ps1`
+- `infra/scripts/db-snapshot-common.psm1` — shared PowerShell module
 - `infra/scripts/db-save-state.ps1`
 - `infra/scripts/db-reset-migrations.ps1`
 - `infra/scripts/db-restore-state.ps1`
+- `infra/scripts/tests/db-snapshot-common.Tests.ps1` — Pester tests for pure functions
 - `infra/db-snapshots/.gitignore` — contains `*` and `!.gitignore`
 - `docs/operations/migration-consolidation-runbook.md` — one-page runbook: when and how to use these scripts
 
@@ -411,26 +572,47 @@ All targets appended to the final `.PHONY` declaration.
 
 ## Testing Strategy
 
-Pragmatic, not exhaustive — this is a one-shot dev tool without CI.
+Two-tier: **automated Pester tests** for pure functions in the helper module, **manual smoke tests** for end-to-end workflows.
 
-### 1. Smoke tests (manual, after implementation)
+### 1. Pester unit tests for pure functions (automated)
 
-- `pwsh db-save-state.ps1` on seeded dev DB → verify manifest, file hashes, sizes.
+The `db-snapshot-common.psm1` module exposes pure functions that are deterministic and testable without PostgreSQL or Docker. These get a Pester test suite at `infra/scripts/tests/db-snapshot-common.Tests.ps1`. Target: ~20 tests, runtime <30s, zero infrastructure.
+
+**Functions under test**:
+
+| Function | Test cases |
+|---|---|
+| `Normalize-PgSchema` | strip comments, strip `SET ...`, collapse whitespace, sort statements, idempotency (normalize twice = same result) |
+| `Test-SchemaDriftClass` | identical input → `identical`; whitespace-only diff → `minor`; added column → `significant`; renamed column → `significant`; added table → `significant`; etc. |
+| `Read-Manifest` / `Write-Manifest` | round-trip preserves all fields; invalid JSON throws; missing required fields throws |
+| `ConvertTo-PsObjectFromConnectionString` (parses `database.secret`) | well-formed input → object; missing keys throw; extra whitespace tolerated |
+| `Get-RequiredDiskSpaceBytes` | computed correctly given DB size + volume size + overhead + safety margin |
+| `Test-LocalhostHost` | `localhost` → true; `127.0.0.1` → true; `staging.meepleai.app` → false; empty → throws |
+
+**Run**: `Invoke-Pester infra/scripts/tests/`
+
+**CI integration**: optional, can be added to existing GitHub Actions if PowerShell runner available; not blocking.
+
+### 2. Smoke tests (manual, after implementation)
+
+- `pwsh db-save-state.ps1` on seeded dev DB → verify `manifest.json`, file hashes, sizes.
 - `pwsh db-reset-migrations.ps1 -SnapshotPath $snap -DryRun` → verify printed commands.
-- Real execution of reset → verify fresh schema, empty DB.
-- `pwsh db-restore-state.ps1 -SnapshotPath $snap` → verify `identical` drift class, row counts match.
+- Real execution of reset → verify fresh schema, empty DB, `reset-result.json` written.
+- `pwsh db-restore-state.ps1 -SnapshotPath $snap` → verify `identical` drift class, row counts match, `restore-result.json` written.
 - Rollback path: save → reset → `-UseSafetyNet` → verify state identical to pre-reset.
 
-### 2. Negative path tests (manual, documented in runbook)
+### 3. Negative path tests (controlled, NOT against real environments)
 
-- Staging host rejection: temporarily set `POSTGRES_HOST=staging.meepleai.app` in a copy of `database.secret`, verify all three scripts refuse.
-- Corrupt snapshot detection: modify a hash in `manifest.json`, verify restore script fails pre-flight.
-- Drift detection: deliberately add a column in a model before the reset, run restore → verify `significant` classification and STOP.
-- Migration failure recovery: introduce a typo in a model attribute, run reset → verify `ef migrations add` fails, migrations-backup usable, safety-net rollback works.
+- **Staging host rejection** — done via a Pester test that mocks `Get-PostgresConfig` to return `{ Host = 'staging.meepleai.app' }` and asserts that `Assert-LocalhostOnly` throws. Never modify the real `database.secret` for testing.
+- **Corrupt snapshot detection** — Pester test creates a fake snapshot directory with mismatched SHA256, verifies restore script's pre-flight rejects it.
+- **Drift detection** — manual integration test: add a column to a model, run the full pipeline, verify `significant` classification and STOP exit code.
+- **Migration failure recovery** — manual integration test: introduce a typo in a model attribute, run reset, verify build sanity check (pre-flight 6) catches it before any destructive action.
 
-### 3. No automated unit tests
+### 4. Coverage philosophy
 
-Rationale: building a PostgreSQL testcontainer harness for these PowerShell scripts adds more complexity than the scripts themselves. Surface area is narrow, safety-net is the ultimate backstop. Coverage deferred to manual smoke tests during implementation PR.
+- **Pure logic** (parsing, classification, normalization): 100% Pester coverage required.
+- **Side-effecting steps** (`pg_dump`, `dotnet ef`, `docker run`): manually smoke-tested. Not worth a testcontainer harness for a one-shot tool.
+- **Safety net is the ultimate backstop** for everything else.
 
 ## Security Considerations
 
@@ -443,6 +625,27 @@ Rationale: building a PostgreSQL testcontainer harness for these PowerShell scri
 ## Open Questions
 
 None at design time. All identified concerns have been resolved with explicit choices (localhost-only, sanitize scope, drift heuristic, PDF volume defaults, rollback philosophy).
+
+## Spec Panel Review Summary
+
+Reviewed by simulated panel: Wiegers (requirements), Nygard (failure modes), Fowler (interface design), Crispin (testing), Adzic (examples), Cockburn (use cases). Critical and important findings applied inline:
+
+| Finding | Source expert(s) | Resolution |
+|---|---|---|
+| `dotnet build` sanity check pre-flight | Nygard, Cockburn | Added to script 2 pre-flight #6 |
+| Active connection check during dump | Nygard | Added to script 1 pre-flight #9 |
+| Disk space arbitrary "2× DB size" | Wiegers | Replaced with exact computation + 10% margin |
+| 24h age threshold arbitrary | Wiegers | Replaced with `xact_commit` delta check |
+| `-SkipSchemaCheck` duplicates `-AllowDrift` | Fowler | Removed `-SkipSchemaCheck` |
+| "Minor" allow-list undocumented | Wiegers, Adzic | Added explicit allow-list with rules 1-5 |
+| Manifest mutable mid-flow | Fowler, Nygard | Split into 3 immutable files: `manifest.json`, `reset-result.json`, `restore-result.json` |
+| Pure functions unit-testable | Crispin, Fowler | Added Pester suite for `db-snapshot-common.psm1` |
+| Helper as `.ps1` not testable cleanly | Fowler, Crispin | Switched to `.psm1` PowerShell module |
+| Missing concrete examples | Adzic | Added "Worked Examples" section |
+| Preconditions not enumerated | Cockburn | Added "Preconditions" section |
+| Negative tests modify real secret file (dangerous) | Crispin | Replaced with Pester mocks |
+
+Deferred to nice-to-have (post-implementation if time permits): role-aware error messages, business goal context section, `--disable-triggers` permission failure documentation.
 
 ## Out of Scope (explicit)
 

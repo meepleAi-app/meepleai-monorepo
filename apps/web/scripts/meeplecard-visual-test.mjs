@@ -11,13 +11,16 @@
 // The script uses the playwright package via dynamic import so it works
 // regardless of pnpm hoisting (playwright is a transitive dep via @playwright/test).
 
-import { createRequire } from 'module';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 import fs from 'fs';
 
-const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+// pnpm hoists playwright into .pnpm/playwright@*/node_modules/playwright (CJS module)
+// so we need a default-import workaround.
+const playwrightModule = await import(
+  '../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/index.js'
+);
+const { chromium } = playwrightModule.default ?? playwrightModule;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,6 +111,33 @@ const targets = [
       const matches = labels.filter(p => p.textContent && p.textContent.trim() === 'chat');
       const label = matches[matches.length - 1];
       return label ? label.parentElement : null;
+    `,
+  },
+  // Badge rendering verification (variants section uses badges)
+  {
+    name: '30-app-badge-bestseller',
+    url: `${APP_URL}/dev/meeple-card`,
+    evalSelector: `
+      const labels = Array.from(document.querySelectorAll('p'));
+      const label = labels.find(p => p.textContent && p.textContent.trim() === 'grid');
+      return label ? label.parentElement : null;
+    `,
+  },
+  // Single Catan card with bestseller badge
+  {
+    name: '31-app-catan-with-badge',
+    url: `${APP_URL}/dev/meeple-card`,
+    evalSelector: `
+      const cards = Array.from(document.querySelectorAll('h3'));
+      const catan = cards.find(h => h.textContent && h.textContent.includes('I Coloni di Catan'));
+      if (!catan) return null;
+      // Walk up to the card root (5 levels typically)
+      let el = catan;
+      for (let i = 0; i < 6 && el; i++) {
+        if (el.className && el.className.includes && el.className.includes('rounded-2xl')) return el;
+        el = el.parentElement;
+      }
+      return null;
     `,
   },
   // Admin mockups — full pages

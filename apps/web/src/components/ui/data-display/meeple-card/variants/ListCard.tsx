@@ -29,6 +29,7 @@ export function ListCard(props: MeepleCardProps) {
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      data-entity={entity}
       data-testid={testId}
     >
       <div

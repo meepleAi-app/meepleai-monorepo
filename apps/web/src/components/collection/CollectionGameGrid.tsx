@@ -188,9 +188,14 @@ export const CollectionGameGrid = React.memo(function CollectionGameGrid({
                 }
                 navItems={buildGameNavItems(
                   {
+                    // TODO: replace placeholder count with real PDF count once
+                    // CollectionGame DTO exposes a numeric pdfCount (currently boolean only).
                     kbCount: game.hasPdf ? 1 : 0,
                     agentCount: 0,
                     chatCount: game.chatCount,
+                    // playCount is BGG-style "times played"; the Sessioni nav slot
+                    // expects formal app GameSession count. Treated as best-available
+                    // approximation pending CollectionGame.sessionCount field.
                     sessionCount: game.playCount,
                   },
                   {

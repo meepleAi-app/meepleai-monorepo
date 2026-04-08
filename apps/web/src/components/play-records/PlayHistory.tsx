@@ -298,7 +298,11 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
                   toolCount: 0,
                   photoCount: 0,
                 },
-                { onPlayersClick: () => handleCardClick(record.id) }
+                {
+                  // No players sub-view exists for play records; slot remains
+                  // visually present (showing the count) but disabled.
+                  onPlayersClick: undefined,
+                }
               )}
               onClick={() => handleCardClick(record.id)}
               data-testid={`play-record-${record.id}`}

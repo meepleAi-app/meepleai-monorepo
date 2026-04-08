@@ -307,7 +307,8 @@ download_pdfs() {
     fi
 
     log "  Downloading ${slug} from ${pdf_url}..."
-    if curl -sL -f --connect-timeout 15 --max-time 300 -o "$dest" "$pdf_url"; then
+    # -k to skip SSL verification (some publisher CDNs have cert issues on Windows)
+    if curl -skL -f --connect-timeout 15 --max-time 300 -o "$dest" "$pdf_url"; then
       local filetype
       filetype=$(file -b "$dest" | head -c 3)
       if [[ "$filetype" == "PDF" ]]; then
@@ -390,6 +391,17 @@ upload_pdfs() {
       log "    Uploaded. Document/Job ID: ${doc_id}"
       update_game_field "$id" "documentId" "$doc_id"
       update_game_field "$id" "indexingStatus" "Processing"
+    elif echo "$resp" | jq -e '.existingKbFound == true' >/dev/null 2>&1; then
+      # PDF already in user's knowledge base — treat as success (idempotent re-run)
+      local existing_doc_id
+      existing_doc_id=$(echo "$resp" | jq -r '.existingKb.pdfDocumentId // empty')
+      if [[ -n "$existing_doc_id" ]]; then
+        log "    Already in KB. Document ID: ${existing_doc_id}"
+        update_game_field "$id" "documentId" "$existing_doc_id"
+        update_game_field "$id" "indexingStatus" "Processing"
+      else
+        warn "    Existing KB found but no document ID. Response: $resp"
+      fi
     else
       err "    Upload failed for ${slug}. Response: $resp"
     fi

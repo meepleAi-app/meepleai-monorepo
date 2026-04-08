@@ -21,6 +21,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { lockScroll, unlockScroll } from '@/lib/scroll-lock';
 import { cn } from '@/lib/utils';
 
+import { PlayerBar } from './shared/PlayerBar';
+import { DiceRollerTab } from './tabs/DiceRollerTab';
 import { ToolkitDrawerProvider, useToolkitDrawer } from './ToolkitDrawerProvider';
 
 import type { ToolkitDrawerProps, ToolkitTab } from './types';
@@ -147,9 +149,12 @@ function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Tab content */}
-        <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4">
+        <div className="flex-1 overflow-y-auto px-4 pb-4 pt-4">
           <TabContent tab={activeTab} />
         </div>
+
+        {/* Player bar — always visible at bottom */}
+        <PlayerBar />
       </motion.div>
     </AnimatePresence>
   );
@@ -162,7 +167,7 @@ function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
 function TabContent({ tab }: { tab: ToolkitTab }) {
   switch (tab) {
     case 'dice':
-      return <div data-testid="dice-tab-placeholder">Dadi</div>;
+      return <DiceRollerTab />;
     case 'notes':
       return <div data-testid="notes-tab-placeholder">Note</div>;
     case 'diary':

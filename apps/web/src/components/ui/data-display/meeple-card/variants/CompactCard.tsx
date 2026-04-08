@@ -26,7 +26,7 @@ export function CompactCard(props: MeepleCardProps) {
       </span>
       {badge && (
         <span
-          className="ml-auto shrink-0 rounded-full bg-[var(--mc-bg-muted)] px-1.5 py-0.5 text-[8px] font-semibold text-[var(--mc-text-secondary)]"
+          className="ml-auto shrink-0 rounded-full bg-black/10 px-1.5 py-0.5 text-[8px] font-bold text-[var(--mc-text-primary)] dark:bg-white/15"
           data-slot="badge"
         >
           {badge}

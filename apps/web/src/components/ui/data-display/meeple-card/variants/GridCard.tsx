@@ -60,7 +60,7 @@ export function GridCard(props: MeepleCardProps) {
           </h3>
           {badge && (
             <span
-              className="shrink-0 rounded-full border border-[var(--mc-border)] bg-[var(--mc-bg-muted)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--mc-text-secondary)]"
+              className="shrink-0 rounded-full border border-[var(--mc-border)] bg-black/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--mc-text-primary)] dark:bg-white/15"
               data-slot="badge"
             >
               {badge}

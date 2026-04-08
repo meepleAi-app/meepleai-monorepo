@@ -59,15 +59,6 @@ const MECHANIC_LABELS: Record<string, string> = {
 };
 
 // ============================================================================
-// Helpers
-// ============================================================================
-
-/** Returns the year as string, or "—" when yearPublished is 0 or falsy */
-function formatYear(year: number | null | undefined): string {
-  return year && year > 0 ? String(year) : '—';
-}
-
-// ============================================================================
 // Props
 // ============================================================================
 

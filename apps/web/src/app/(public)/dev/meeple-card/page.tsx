@@ -9,7 +9,16 @@ export const dynamic = 'force-dynamic';
  * Accessible without authentication: /dev/meeple-card
  */
 
-import { MeepleCard, MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card';
+import { useState, useMemo } from 'react';
+
+import {
+  MeepleCard,
+  MeepleCardSkeleton,
+  MobileCardLayout,
+  MobileDevicePreview,
+  MobileCardDrawer,
+} from '@/components/ui/data-display/meeple-card';
+import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
 import {
   buildAgentNavItems,
   buildChatNavItems,
@@ -23,6 +32,67 @@ import {
 } from '@/components/ui/data-display/meeple-card/nav-items';
 
 const GAME_IMAGE = 'https://picsum.photos/seed/catan/400/300';
+
+const MOBILE_DEMO_CARDS: MeepleCardProps[] = [
+  {
+    entity: 'game',
+    id: 'mob-catan',
+    title: 'Catan',
+    subtitle: 'Klaus Teuber · 1995',
+    imageUrl: 'https://picsum.photos/seed/mobile-catan/400/300',
+    rating: 7.2,
+    ratingMax: 10,
+    badge: 'Owned',
+    status: 'owned',
+    metadata: [{ label: '3-4' }, { label: '60m' }],
+  },
+  {
+    entity: 'game',
+    id: 'mob-azul',
+    title: 'Azul',
+    subtitle: 'Michael Kiesling · 2017',
+    imageUrl: 'https://picsum.photos/seed/mobile-azul/400/300',
+    rating: 7.8,
+    ratingMax: 10,
+    badge: 'Top 10',
+    status: 'owned',
+    metadata: [{ label: '2-4' }, { label: '30m' }],
+  },
+  {
+    entity: 'agent',
+    id: 'mob-agent',
+    title: 'Azul Rules Expert',
+    subtitle: 'RAG · GPT-4o-mini',
+    status: 'active',
+    badge: 'v2',
+    metadata: [{ label: '342 invoc.' }],
+  },
+  {
+    entity: 'session',
+    id: 'mob-session',
+    title: 'Serata Azul',
+    subtitle: '4 giocatori · Casa di Marco',
+    status: 'inprogress',
+    badge: 'Live',
+    metadata: [{ label: '45 min' }],
+  },
+  {
+    entity: 'kb',
+    id: 'mob-kb',
+    title: 'azul_rulebook.pdf',
+    subtitle: 'Regolamento base · 12 pg',
+    status: 'indexed',
+    metadata: [{ label: '2.4 MB' }],
+  },
+  {
+    entity: 'chat',
+    id: 'mob-chat',
+    title: 'Come si gioca ad Azul?',
+    subtitle: 'Azul · 12 messaggi',
+    badge: '12 nuovi',
+    metadata: [{ label: '12 msg' }],
+  },
+];
 
 function Section({
   title,
@@ -778,6 +848,9 @@ export default function MeepleCardDevPage() {
           </div>
         </Section>
 
+        {/* Mobile Card Layout — match admin-mockups/mobile-card-layout-mockup.html */}
+        <MobilePreviewSection />
+
         {/* Skeleton */}
         <Section title="Skeleton" description="Stato di caricamento.">
           <CardRow>
@@ -788,5 +861,80 @@ export default function MeepleCardDevPage() {
         </Section>
       </div>
     </div>
+  );
+}
+
+/**
+ * Interactive mobile preview section.
+ *
+ * Separated as a component so it can use useState without making the
+ * entire page re-render on every state change.
+ */
+function MobilePreviewSection() {
+  const [drawerCard, setDrawerCard] = useState<MeepleCardProps | null>(null);
+
+  const interactiveCards = useMemo(
+    () =>
+      MOBILE_DEMO_CARDS.map(card => ({
+        ...card,
+        onClick: () => setDrawerCard(card),
+      })),
+    []
+  );
+
+  return (
+    <Section
+      title="Mobile Card Layout — Focus Mode"
+      description="Il componente MobileCardLayout con phone-frame da mobile-card-layout-mockup.html. Hand-stack a sinistra, FocusedCard centrale con swipe. Click sulla card apre il drawer con tab specifici per entity type."
+    >
+      <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+        💡 Clicca sulla focused card (centro) per aprire il drawer con tab entity-specifici. Clicca
+        sulle card nella hand-stack (sinistra) per cambiare focus.
+      </p>
+      <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-start lg:justify-center">
+        {/* Phone frame */}
+        <MobileDevicePreview>
+          {/* MobileCardLayout uses md:hidden — override with md:!flex for desktop */}
+          <MobileCardLayout className="md:!flex" cards={interactiveCards} />
+          {/* Drawer overlay — renders inside the phone frame */}
+          <MobileCardDrawer card={drawerCard} onClose={() => setDrawerCard(null)} />
+        </MobileDevicePreview>
+
+        {/* Sidebar notes */}
+        <div className="max-w-sm space-y-4 text-sm text-[var(--mc-text-secondary)]">
+          <h3 className="text-base font-bold text-[var(--mc-text-primary)]">
+            Componenti del Mockup
+          </h3>
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              <strong>MobileDevicePreview</strong> — phone frame 390x720 con status bar, navbar
+              (logo MeepleAI + notifiche + avatar), search bar, action bar
+            </li>
+            <li>
+              <strong>HandSidebar</strong> — stack verticale a sinistra (44px) con le card come in
+              mano a un giocatore
+            </li>
+            <li>
+              <strong>FocusedCard</strong> — card centrale in focus con cover, entity badge, rating,
+              metadata e actions
+            </li>
+            <li>
+              <strong>SwipeGesture</strong> — swipe L/R per navigare tra card (o click su hand card)
+            </li>
+            <li>
+              <strong>MobileCardDrawer</strong> — drawer overlay con tabs entity-specifici. Si apre
+              cliccando sulla focused card. Tab diversi per ogni entity (game: Overview/AI/Sessioni/
+              Media/Scoreboard, agent: Overview/Config/Stats/Chat/Fonti, ecc.)
+            </li>
+          </ul>
+          <div className="rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-muted)] p-3 text-xs">
+            <strong>Stato implementazione:</strong> MobileCardLayout e subcomponenti sono
+            implementati ed esportati da <code>meeple-card/index.ts</code>. Attualmente{' '}
+            <em>nessun consumer</em> li usa in produzione — il componente è <code>md:hidden</code>{' '}
+            (mobile-only). Override <code>md:!flex</code> usato qui per il rendering desktop.
+          </div>
+        </div>
+      </div>
+    </Section>
   );
 }

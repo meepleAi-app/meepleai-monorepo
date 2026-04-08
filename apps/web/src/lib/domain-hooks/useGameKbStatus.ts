@@ -26,7 +26,10 @@ interface UseGameKbStatusResult {
  */
 export function useGameKbStatus(gameId: string | null): UseGameKbStatusResult {
   const query = useQuery({
-    queryKey: ['game-kb-status', gameId],
+    // 'normalized' suffix avoids cache-key collision with the legacy
+    // hook at @/hooks/use-game-kb-status which uses ['game-kb-status', gameId]
+    // and a different staleTime (5 minutes vs our 60s).
+    queryKey: ['game-kb-status', 'normalized', gameId],
     queryFn: () => api.knowledgeBase.getUserGameKbStatus(gameId as string),
     enabled: gameId !== null,
     staleTime: 60_000,

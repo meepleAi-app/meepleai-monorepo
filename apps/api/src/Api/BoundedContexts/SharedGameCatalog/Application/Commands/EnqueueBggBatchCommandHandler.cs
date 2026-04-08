@@ -26,11 +26,12 @@ internal class EnqueueBggBatchCommandHandler : IRequestHandler<EnqueueBggBatchCo
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Enqueuing batch of {Count} BGG IDs",
-            request.BggIds.Count);
+            "Enqueuing batch of {Count} BGG IDs for user {UserId}",
+            request.BggIds.Count,
+            request.RequestedByUserId);
 
         return await _queueService
-            .EnqueueBatchAsync(request.BggIds, cancellationToken)
+            .EnqueueBatchAsync(request.BggIds, request.RequestedByUserId, cancellationToken)
             .ConfigureAwait(false);
     }
 }

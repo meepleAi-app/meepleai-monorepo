@@ -75,7 +75,117 @@ if ($null -eq $RestorePdfVolume) {
 # Branch on mode
 if ($UseSafetyNet) {
     Write-Timestamped '[3/9] Mode: SAFETY-NET ROLLBACK'
-    Write-Timestamped 'TODO: safety-net mode (Task 18)'
+
+    $safetyNetPath = Join-Path $SnapshotPath $manifest.files.safetyNet.name
+    if (-not (Test-Path -LiteralPath $safetyNetPath)) {
+        throw "safety-net.dump not found at $safetyNetPath"
+    }
+
+    # Confirmation
+    $prompt = @"
+This will:
+  1. DROP database '$($cfg.Db)' (current contents will be LOST)
+  2. RESTORE from $($manifest.files.safetyNet.name) (full schema + data)
+
+After rollback, the DB will be in the state it had at $($manifest.createdAt).
+
+NOTE: If you have already run db-reset-migrations and the Migrations/ folder
+has been replaced, the restored DB will be INCONSISTENT with the code.
+You will need to also restore Migrations/ from $SnapshotPath/migrations-backup/.
+"@
+    if (-not (Confirm-UserAction -Prompt $prompt -Force:$Force)) {
+        Write-Timestamped 'Aborted by user.'
+        exit 0
+    }
+
+    # Drop and recreate DB
+    Write-Timestamped '[4/9] Dropping and recreating DB...'
+    $cfgPostgres = [pscustomobject]@{
+        Host = $cfg.Host; Port = $cfg.Port; User = $cfg.User; Password = $cfg.Password; Db = 'postgres'
+    }
+    $null = Invoke-Psql -Config $cfgPostgres -Sql "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$($cfg.Db)' AND pid <> pg_backend_pid();"
+    $null = Invoke-Psql -Config $cfgPostgres -Sql "DROP DATABASE IF EXISTS ""$($cfg.Db)"";"
+    $null = Invoke-Psql -Config $cfgPostgres -Sql "CREATE DATABASE ""$($cfg.Db)"";"
+    Write-Timestamped '    DB recreated'
+
+    # Restore from safety-net
+    Write-Timestamped '[5/9] pg_restore from safety-net...'
+    $restoreStart = Get-Date
+    Invoke-PgRestore -Config $cfg -Arguments @(
+        '--clean', '--if-exists', '--no-owner', '--no-acl',
+        $safetyNetPath
+    )
+    $restoreSeconds = ((Get-Date) - $restoreStart).TotalSeconds
+    Write-Timestamped "    Restored in $([math]::Round($restoreSeconds,1))s"
+
+    # Verify row counts (must all match)
+    Write-Timestamped '[6/9] Verifying row counts...'
+    $mismatches = New-Object System.Collections.Generic.List[pscustomobject]
+    $matched = 0
+    foreach ($prop in $manifest.rowCountsPre.PSObject.Properties) {
+        $qualified = $prop.Name
+        $expected = [long]$prop.Value
+        $parts = $qualified -split '\.', 2
+        $sql = "SELECT COUNT(*) FROM ""$($parts[0])"".""$($parts[1])"";"
+        try {
+            $actual = [long]((Invoke-Psql -Config $cfg -Sql $sql).Trim())
+        } catch {
+            $actual = -1
+        }
+        if ($actual -eq $expected) { $matched++ } else {
+            $mismatches.Add([pscustomobject]@{ Table = $qualified; Expected = $expected; Actual = $actual })
+        }
+    }
+    $rowCountMatch = ($mismatches.Count -eq 0)
+    if (-not $rowCountMatch) {
+        Write-Host '⚠ Row count mismatches after safety-net restore:' -ForegroundColor Yellow
+        foreach ($m in $mismatches) { Write-Host "    $($m.Table): expected=$($m.Expected), actual=$($m.Actual)" -ForegroundColor Yellow }
+    }
+    Write-Timestamped "    $matched/$($matched + $mismatches.Count) tables match"
+
+    # Restore PDF volume too if requested
+    $pdfRestored = $false
+    $pdfFilesRestored = 0
+    if ($RestorePdfVolume -and $manifest.pdfVolumeIncluded) {
+        $pdfTarPath = Join-Path $SnapshotPath 'pdf_uploads.tar.gz'
+        if (Test-Path -LiteralPath $pdfTarPath) {
+            Write-Timestamped '[7/9] Restoring PDF volume...'
+            & docker run --rm -v "meepleai_pdf_uploads:/dst" -v "${SnapshotPath}:/src:ro" alpine sh -c 'rm -rf /dst/* && tar xzf /src/pdf_uploads.tar.gz -C /dst'
+            if ($LASTEXITCODE -eq 0) {
+                $stats = Get-DockerVolumeStats -VolumeName 'meepleai_pdf_uploads'
+                $pdfFilesRestored = $stats.FileCount
+                $pdfRestored = $true
+                Write-Timestamped "    $pdfFilesRestored PDF files restored"
+            }
+        }
+    }
+
+    # Write restore-result.json
+    $restoreResult = [pscustomobject]@{
+        schemaVersion          = 1
+        completedAt            = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        mode                   = 'safety-net'
+        rowCountMatch          = $rowCountMatch
+        rowCountMismatches     = @($mismatches)
+        pdfVolumeRestored      = $pdfRestored
+        pdfFilesRestoredCount  = $pdfFilesRestored
+        durationSeconds        = [math]::Round($restoreSeconds, 1)
+    }
+    Write-Manifest -Path (Join-Path $SnapshotPath 'restore-result.json') -Object $restoreResult
+
+    # Migrations folder warning
+    $migrationsBackup = Join-Path $SnapshotPath 'migrations-backup'
+    if (Test-Path -LiteralPath $migrationsBackup) {
+        Write-Host ''
+        Write-Host '⚠ DB restored to pre-reset state.' -ForegroundColor Yellow
+        Write-Host '  Your Migrations/ folder may now conflict with the DB state.' -ForegroundColor Yellow
+        Write-Host "  To fully rollback, restore Migrations/ from $migrationsBackup :" -ForegroundColor Yellow
+        Write-Host "    Remove-Item -Recurse apps/api/src/Api/Migrations" -ForegroundColor Yellow
+        Write-Host "    Copy-Item -Recurse $migrationsBackup apps/api/src/Api/Migrations" -ForegroundColor Yellow
+    }
+
+    Write-Timestamped ''
+    Write-Timestamped '=== Safety-net rollback complete ==='
     exit 0
 }
 

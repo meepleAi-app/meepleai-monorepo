@@ -96,6 +96,11 @@ internal sealed class SeedManifestGame
     public List<string>? Mechanics { get; set; }
     public List<string>? Designers { get; set; }
     public List<string>? Publishers { get; set; }
+
+    // Blob-based PDF seeding (new)
+    public string? PdfBlobKey { get; set; }
+    public string? PdfSha256 { get; set; }
+    public string? PdfVersion { get; set; }
 }
 
 internal sealed class SeedManifestAgent

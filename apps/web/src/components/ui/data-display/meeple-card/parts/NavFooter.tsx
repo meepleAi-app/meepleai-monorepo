@@ -42,7 +42,9 @@ export function NavFooter({ items, size = 'sm' }: NavFooterProps) {
                 } as React.CSSProperties
               }
             >
-              <span className="pointer-events-none">{item.icon}</span>
+              <span className="pointer-events-none flex h-3.5 w-3.5 items-center justify-center [&>svg]:h-full [&>svg]:w-full">
+                {item.icon}
+              </span>
 
               {item.count !== undefined && item.count > 0 && (
                 <span
@@ -54,12 +56,18 @@ export function NavFooter({ items, size = 'sm' }: NavFooterProps) {
               )}
 
               {item.showPlus && (
-                <span
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.stopPropagation();
+                    item.onPlusClick?.();
+                  }}
                   className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
                   style={{ background: color }}
+                  aria-label={`Aggiungi ${item.label}`}
                 >
                   +
-                </span>
+                </button>
               )}
             </div>
 

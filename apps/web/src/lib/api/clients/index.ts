@@ -54,3 +54,4 @@ export * from './contactClient'; // Public contact form
 export * from './agentMemoryClient'; // AgentMemory — groups, game memory, player stats
 export * from './agentDocumentsClient'; // User-scoped agent document selection
 export * from './infrastructureClient'; // AI Infrastructure Dashboard
+export * from './toolkit'; // Default Game Toolkit — session events & dice presets

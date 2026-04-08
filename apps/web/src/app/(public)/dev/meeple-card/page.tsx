@@ -21,8 +21,6 @@ import {
   FlipBack,
   Carousel3D,
   EntityTable,
-  entityHsl,
-  entityLabel,
 } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
 import {
@@ -1297,10 +1295,29 @@ function EntityFlipShowcase() {
                   kind: 'actions',
                   title: 'Strumenti',
                   items: [
-                    { label: 'Dice Roller', meta: '2d6', icon: '🎲', onClick: () => alert('Dice Roller') },
-                    { label: 'Score Tracker', meta: '4p', icon: '📊', onClick: () => alert('Score Tracker') },
-                    { label: 'Turn Timer', meta: '60s', icon: '⏱', onClick: () => alert('Turn Timer') },
-                    { label: 'Resource Calculator', icon: '🧮', onClick: () => alert('Calculator') },
+                    {
+                      label: 'Dice Roller',
+                      meta: '2d6',
+                      icon: '🎲',
+                      onClick: () => alert('Dice Roller'),
+                    },
+                    {
+                      label: 'Score Tracker',
+                      meta: '4p',
+                      icon: '📊',
+                      onClick: () => alert('Score Tracker'),
+                    },
+                    {
+                      label: 'Turn Timer',
+                      meta: '60s',
+                      icon: '⏱',
+                      onClick: () => alert('Turn Timer'),
+                    },
+                    {
+                      label: 'Resource Calculator',
+                      icon: '🧮',
+                      onClick: () => alert('Calculator'),
+                    },
                     { label: 'Longest Road', meta: 'beta', icon: '🛣', disabled: true },
                   ],
                 },
@@ -1333,9 +1350,21 @@ function EntityFlipShowcase() {
                   kind: 'list',
                   title: 'Altre chat con CatanHelper AI',
                   items: [
-                    { title: 'Come costruire strade ottimali', subtitle: '8 messaggi', meta: '2g fa' },
-                    { title: 'Setup iniziale per 4 giocatori', subtitle: '15 messaggi', meta: '1w fa' },
-                    { title: 'Come bloccare chi porta alla vittoria', subtitle: '6 messaggi', meta: '2w fa' },
+                    {
+                      title: 'Come costruire strade ottimali',
+                      subtitle: '8 messaggi',
+                      meta: '2g fa',
+                    },
+                    {
+                      title: 'Setup iniziale per 4 giocatori',
+                      subtitle: '15 messaggi',
+                      meta: '1w fa',
+                    },
+                    {
+                      title: 'Come bloccare chi porta alla vittoria',
+                      subtitle: '6 messaggi',
+                      meta: '2w fa',
+                    },
                     { title: 'Regole cavaliere più grande', subtitle: '3 messaggi', meta: '3w fa' },
                     { title: 'Gestione carte sviluppo', subtitle: '10 messaggi', meta: '1m fa' },
                   ],
@@ -1520,7 +1549,12 @@ function EntityFlipShowcase() {
                   kind: 'social',
                   title: 'Social',
                   links: [
-                    { platform: 'BGG', handle: 'marcogames', icon: '🎲', href: 'https://boardgamegeek.com' },
+                    {
+                      platform: 'BGG',
+                      handle: 'marcogames',
+                      icon: '🎲',
+                      href: 'https://boardgamegeek.com',
+                    },
                     { platform: 'Twitter', handle: '@marco_games', icon: '🐦' },
                     { platform: 'Discord', handle: 'marco#4242', icon: '💬' },
                   ],
@@ -1683,7 +1717,9 @@ function DisabledNavItemsSection() {
                 onChatPlus: () => alert('Chat plus'),
                 onSessionPlus: () => alert('Session plus'),
               }
-            ).map((item, i) => (i === 1 ? { ...item, disabled: true, label: 'Agent (limite 0/1)' } : item))}
+            ).map((item, i) =>
+              i === 1 ? { ...item, disabled: true, label: 'Agent (limite 0/1)' } : item
+            )}
           />
         </div>
         <div>
@@ -1739,7 +1775,10 @@ function FeatureMatrixSection() {
       'Visual Effects',
       'Glassmorphism · Warm shadows · Entity glow rings · Shimmer on hover · Cover scale(1.06) · Badge pulse',
     ],
-    ['Flip Card', 'perspective 1000px · transition 600ms · Entity-colored back header · 5 section kinds (text/rows/actions/list/social)'],
+    [
+      'Flip Card',
+      'perspective 1000px · transition 600ms · Entity-colored back header · 5 section kinds (text/rows/actions/list/social)',
+    ],
     [
       'Quick Actions',
       'Hover-reveal glass buttons · showQuickActions={true} + actions[] · Entity-colored glow · WCAG 44px touch',

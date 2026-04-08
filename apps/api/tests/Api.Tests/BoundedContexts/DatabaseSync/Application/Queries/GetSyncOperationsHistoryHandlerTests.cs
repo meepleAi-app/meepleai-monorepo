@@ -45,18 +45,30 @@ public sealed class GetSyncOperationsHistoryHandlerTests : IDisposable
         _dbContext.AuditLogs.AddRange(
             new AuditLogEntity
             {
-                Id = Guid.NewGuid(), Action = "DatabaseSync.SyncTable", Resource = "games",
-                Result = "Success", CreatedAt = DateTime.UtcNow.AddMinutes(-2), UserId = Guid.NewGuid()
+                Id = Guid.NewGuid(),
+                Action = "DatabaseSync.SyncTable",
+                Resource = "games",
+                Result = "Success",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-2),
+                UserId = Guid.NewGuid()
             },
             new AuditLogEntity
             {
-                Id = Guid.NewGuid(), Action = "DatabaseSync.ApplyMigrations", Resource = "schema",
-                Result = "Success", CreatedAt = DateTime.UtcNow.AddMinutes(-1), UserId = Guid.NewGuid()
+                Id = Guid.NewGuid(),
+                Action = "DatabaseSync.ApplyMigrations",
+                Resource = "schema",
+                Result = "Success",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-1),
+                UserId = Guid.NewGuid()
             },
             new AuditLogEntity
             {
-                Id = Guid.NewGuid(), Action = "Authentication.Login", Resource = "user",
-                Result = "Success", CreatedAt = DateTime.UtcNow, UserId = Guid.NewGuid()
+                Id = Guid.NewGuid(),
+                Action = "Authentication.Login",
+                Resource = "user",
+                Result = "Success",
+                CreatedAt = DateTime.UtcNow,
+                UserId = Guid.NewGuid()
             } // NOT a DB sync entry — should be filtered out
         );
         await _dbContext.SaveChangesAsync();
@@ -125,13 +137,19 @@ public sealed class GetSyncOperationsHistoryHandlerTests : IDisposable
         // Arrange
         var old = new AuditLogEntity
         {
-            Id = Guid.NewGuid(), Action = "DatabaseSync.Op1", Resource = "t",
-            Result = "Success", CreatedAt = DateTime.UtcNow.AddHours(-2)
+            Id = Guid.NewGuid(),
+            Action = "DatabaseSync.Op1",
+            Resource = "t",
+            Result = "Success",
+            CreatedAt = DateTime.UtcNow.AddHours(-2)
         };
         var recent = new AuditLogEntity
         {
-            Id = Guid.NewGuid(), Action = "DatabaseSync.Op2", Resource = "t",
-            Result = "Success", CreatedAt = DateTime.UtcNow.AddHours(-1)
+            Id = Guid.NewGuid(),
+            Action = "DatabaseSync.Op2",
+            Resource = "t",
+            Result = "Success",
+            CreatedAt = DateTime.UtcNow.AddHours(-1)
         };
         _dbContext.AuditLogs.AddRange(old, recent);
         await _dbContext.SaveChangesAsync();

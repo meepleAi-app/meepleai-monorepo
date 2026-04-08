@@ -24,9 +24,19 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'meeple-card',
     title: 'MeepleCard',
     category: 'Data Display',
-    description: 'Universal card component for games, players, agents, sessions, and more.',
-    controlCount: 9,
-    presetCount: 6,
+    description:
+      'Universal card component for games, players, agents, sessions, and more. NavFooter states included.',
+    controlCount: 12,
+    presetCount: 11,
+  },
+  {
+    id: 'mobile-card-layout',
+    title: 'MobileCardLayout',
+    category: 'Data Display',
+    description:
+      '[ORPHAN] Mobile hand sidebar + focused card + swipe. Only consumer is /dev/meeple-card demo — real mobile pages use MeepleCard list/compact variants.',
+    controlCount: 2,
+    presetCount: 4,
   },
   {
     id: 'entity-list-view',
@@ -56,7 +66,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'rating-stars',
     title: 'RatingStars',
     category: 'Data Display',
-    description: 'Star rating display with BGG 10-point scale conversion. Supports half-stars.',
+    description:
+      '[ORPHAN] Star rating display with BGG scale conversion. Public API variant — MeepleCard uses the internal parts/Rating instead.',
     controlCount: 5,
     presetCount: 4,
   },
@@ -116,7 +127,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'rule-source-card',
     title: 'RuleSourceCard',
     category: 'Feedback',
-    description: 'Citation card per risposte RAG con fonti dal regolamento.',
+    description:
+      'Citation card per risposte RAG con fonti dal regolamento. Used by chat-unified/ChatMessageList.',
     controlCount: 4,
     presetCount: 4,
   },
@@ -151,7 +163,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'tag-strip',
     title: 'TagStrip',
     category: 'Tags',
-    description: 'Horizontal strip of colored tag badges with overflow indicator.',
+    description:
+      '[ORPHAN] Vertical strip of tag badges. Standalone API — MeepleCard uses an internal entity-color variant.',
     controlCount: 3,
     presetCount: 4,
   },
@@ -161,7 +174,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'page-transition',
     title: 'PageTransition',
     category: 'Animations',
-    description: 'Smooth page transition animations using Framer Motion.',
+    description:
+      '[ORPHAN] Smooth page transitions via Framer Motion. Not wired to any layout — integration deferred to UX motion pass.',
     controlCount: 1,
     presetCount: 3,
   },
@@ -282,7 +296,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'meeple-avatar',
     title: 'MeepleAvatar',
     category: 'Meeple',
-    description: 'Animated meeple character representing the AI assistant with 5 activity states.',
+    description:
+      '[ORPHAN] Animated meeple AI assistant with 5 states. Transitively orphan via ChatMessage.',
     controlCount: 2,
     presetCount: 5,
   },
@@ -299,7 +314,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'ChatMessage',
     category: 'Meeple',
     description:
-      'Chat message bubble with role-based layout, AI confidence badge, and feedback buttons.',
+      '[ORPHAN] Message bubble with role/confidence/feedback. ChatMessageList renders inline instead — refactor pending.',
     controlCount: 5,
     presetCount: 4,
   },
@@ -318,7 +333,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'AgentStatsDisplay',
     category: 'Agent',
     description:
-      'Agent metadata panel with status badge, invocation count, response time, and capabilities.',
+      '[ORPHAN] Compact horizontal agent metadata. AgentCharacterSheet uses a custom RPG layout instead — not interchangeable.',
     controlCount: 4,
     presetCount: 4,
   },
@@ -354,7 +369,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'upgrade-prompt',
     title: 'UpgradePrompt',
     category: 'Gates',
-    description: 'Upgrade CTA shown when a user tries to access a tier-locked feature.',
+    description:
+      '[ORPHAN] Tier-locked feature CTA. Built with CollectionProgressBar + TierBadge — only TierBadge made it into production (library/UsageWidget).',
     controlCount: 3,
     presetCount: 3,
   },
@@ -363,7 +379,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'CollectionProgress',
     category: 'Gates',
     description:
-      'Quota progress bar with color-coded warnings: green (<75%), amber (75-90%), red (>90%).',
+      '[ORPHAN] Quota progress bar with color-coded tiers (<75% green / 75-90% amber / >90% red). Integration blocked on product decision.',
     controlCount: 4,
     presetCount: 4,
   },

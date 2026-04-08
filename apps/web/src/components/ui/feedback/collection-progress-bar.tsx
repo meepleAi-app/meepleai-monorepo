@@ -2,7 +2,12 @@
  * Collection Progress Bar Component
  * Epic #4068 - Issue #4183
  *
- * Displays progress towards collection limits with color-coded warnings
+ * Displays progress towards collection limits with color-coded warnings.
+ *
+ * @status ORPHAN — built for tier-quota visualization but never wired to a
+ * page. Natural hosts: library dashboard (games quota), settings/billing
+ * (storage quota), admin user detail. Integration is blocked on a product
+ * decision about where and when to surface quota usage to users.
  */
 
 'use client';
@@ -40,16 +45,16 @@ export function CollectionProgressBar({
   label,
   unit = '',
   showWarning = true,
-  className
+  className,
 }: CollectionProgressBarProps) {
   const percentage = max === Number.MAX_SAFE_INTEGER ? 0 : Math.min((current / max) * 100, 100);
   const isUnlimited = max === Number.MAX_SAFE_INTEGER || max === 2147483647; // int.MaxValue
 
   // Color coding based on usage
   const getColor = () => {
-    if (percentage >= 90) return 'hsl(0 84% 60%)';      // Red
-    if (percentage >= 75) return 'hsl(38 92% 50%)';     // Amber
-    return 'hsl(142 76% 36%)';                          // Green
+    if (percentage >= 90) return 'hsl(0 84% 60%)'; // Red
+    if (percentage >= 75) return 'hsl(38 92% 50%)'; // Amber
+    return 'hsl(142 76% 36%)'; // Green
   };
 
   const getBgColor = () => {
@@ -82,11 +87,7 @@ export function CollectionProgressBar({
         <div className="flex items-center gap-2">
           <span className="font-medium text-foreground">{label}</span>
           {showWarningIcon && (
-            <AlertTriangle
-              className="w-4 h-4"
-              style={{ color }}
-              aria-label="Approaching limit"
-            />
+            <AlertTriangle className="w-4 h-4" style={{ color }} aria-label="Approaching limit" />
           )}
         </div>
         <span className="text-muted-foreground">
@@ -96,12 +97,15 @@ export function CollectionProgressBar({
 
       {/* Progress Bar */}
       {!isUnlimited && (
-        <div className="relative h-2 rounded-full overflow-hidden" style={{ backgroundColor: bgColor }}>
+        <div
+          className="relative h-2 rounded-full overflow-hidden"
+          style={{ backgroundColor: bgColor }}
+        >
           <div
             className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
             style={{
               width: `${percentage}%`,
-              backgroundColor: color
+              backgroundColor: color,
             }}
             role="progressbar"
             aria-valuenow={Math.round(percentage)}
@@ -120,9 +124,7 @@ export function CollectionProgressBar({
       )}
 
       {isUnlimited && (
-        <p className="text-xs text-muted-foreground">
-          ✨ Unlimited (Enterprise tier)
-        </p>
+        <p className="text-xs text-muted-foreground">✨ Unlimited (Enterprise tier)</p>
       )}
     </div>
   );

@@ -25,7 +25,8 @@ param(
     [switch]$UseSafetyNet,
     [Nullable[bool]]$RestorePdfVolume = $null,
     [switch]$AllowDrift,
-    [switch]$Force
+    [switch]$Force,
+    [string]$SecretFile = (Join-Path $PSScriptRoot '..' 'secrets' 'database.secret')
 )
 
 Set-StrictMode -Version Latest
@@ -41,6 +42,7 @@ Write-Timestamped '=== db-restore-state ==='
 if (-not (Test-Path -LiteralPath $SnapshotPath)) {
     throw "Snapshot path not found: $SnapshotPath"
 }
+$logFile = Join-Path $SnapshotPath 'restore.log'
 $manifestPath = Join-Path $SnapshotPath 'manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath)) {
     throw "manifest.json not found in $SnapshotPath"
@@ -59,13 +61,36 @@ foreach ($prop in $manifest.files.PSObject.Properties) {
         throw "Snapshot file CORRUPTED: $($f.name)"
     }
 }
-Write-Timestamped '[1/9] Snapshot validated'
+Write-Timestamped '[1/9] Snapshot validated' -LogFile $logFile
 
 # Localhost-only enforcement
-$secretFile = Join-Path $PSScriptRoot '..' 'secrets' 'database.secret'
-$cfg = Get-PostgresConfig -SecretPath $secretFile
+$cfg = Get-PostgresConfig -SecretPath $SecretFile
 Assert-LocalhostOnly -Config $cfg
-Write-Timestamped '[2/9] Localhost host check passed'
+Write-Timestamped '[2/9] Localhost host check passed' -LogFile $logFile
+
+# Empty-DB check for standard restore mode (skip in -UseSafetyNet which drops/recreates anyway)
+if (-not $UseSafetyNet) {
+    $rowCheckSql = @"
+SELECT COALESCE(SUM(n_live_tup), 0)::bigint
+FROM pg_stat_user_tables
+WHERE schemaname NOT IN ('pg_catalog','information_schema')
+"@
+    try {
+        $totalRows = [long]((Invoke-Psql -Config $cfg -Sql $rowCheckSql).Trim())
+    } catch {
+        $totalRows = 0
+    }
+    if ($totalRows -gt 0) {
+        Write-Host ''
+        Write-Host "⚠ Target DB '$($cfg.Db)' is NOT empty (~$totalRows rows in user tables)." -ForegroundColor Yellow
+        Write-Host '   Standard restore expects a fresh schema. Restoring into a populated DB' -ForegroundColor Yellow
+        Write-Host '   will likely cause primary key conflicts.' -ForegroundColor Yellow
+        if (-not (Confirm-UserAction -Prompt 'Continue restore into non-empty DB anyway?' -Force:$Force)) {
+            Write-Timestamped 'Aborted by user.' -LogFile $logFile
+            exit 0
+        }
+    }
+}
 
 # Resolve RestorePdfVolume default
 if ($null -eq $RestorePdfVolume) {
@@ -74,7 +99,7 @@ if ($null -eq $RestorePdfVolume) {
 
 # Branch on mode
 if ($UseSafetyNet) {
-    Write-Timestamped '[3/9] Mode: SAFETY-NET ROLLBACK'
+    Write-Timestamped '[3/9] Mode: SAFETY-NET ROLLBACK' -LogFile $logFile
 
     $safetyNetPath = Join-Path $SnapshotPath $manifest.files.safetyNet.name
     if (-not (Test-Path -LiteralPath $safetyNetPath)) {
@@ -94,32 +119,33 @@ has been replaced, the restored DB will be INCONSISTENT with the code.
 You will need to also restore Migrations/ from $SnapshotPath/migrations-backup/.
 "@
     if (-not (Confirm-UserAction -Prompt $prompt -Force:$Force)) {
-        Write-Timestamped 'Aborted by user.'
+        Write-Timestamped 'Aborted by user.' -LogFile $logFile
         exit 0
     }
 
     # Drop and recreate DB
-    Write-Timestamped '[4/9] Dropping and recreating DB...'
+    Write-Timestamped '[4/9] Dropping and recreating DB...' -LogFile $logFile
     $cfgPostgres = [pscustomobject]@{
         Host = $cfg.Host; Port = $cfg.Port; User = $cfg.User; Password = $cfg.Password; Db = 'postgres'
     }
     $null = Invoke-Psql -Config $cfgPostgres -Sql "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$($cfg.Db)' AND pid <> pg_backend_pid();"
     $null = Invoke-Psql -Config $cfgPostgres -Sql "DROP DATABASE IF EXISTS ""$($cfg.Db)"";"
     $null = Invoke-Psql -Config $cfgPostgres -Sql "CREATE DATABASE ""$($cfg.Db)"";"
-    Write-Timestamped '    DB recreated'
+    Write-Timestamped '    DB recreated' -LogFile $logFile
 
     # Restore from safety-net
-    Write-Timestamped '[5/9] pg_restore from safety-net...'
+    Write-Timestamped '[5/9] pg_restore from safety-net...' -LogFile $logFile
     $restoreStart = Get-Date
     Invoke-PgRestore -Config $cfg -Arguments @(
         '--clean', '--if-exists', '--no-owner', '--no-acl',
+        '--single-transaction',
         $safetyNetPath
     )
     $restoreSeconds = ((Get-Date) - $restoreStart).TotalSeconds
-    Write-Timestamped "    Restored in $([math]::Round($restoreSeconds,1))s"
+    Write-Timestamped "    Restored in $([math]::Round($restoreSeconds,1))s" -LogFile $logFile
 
     # Verify row counts (must all match)
-    Write-Timestamped '[6/9] Verifying row counts...'
+    Write-Timestamped '[6/9] Verifying row counts...' -LogFile $logFile
     $mismatches = New-Object System.Collections.Generic.List[pscustomobject]
     $matched = 0
     foreach ($prop in $manifest.rowCountsPre.PSObject.Properties) {
@@ -141,7 +167,7 @@ You will need to also restore Migrations/ from $SnapshotPath/migrations-backup/.
         Write-Host '⚠ Row count mismatches after safety-net restore:' -ForegroundColor Yellow
         foreach ($m in $mismatches) { Write-Host "    $($m.Table): expected=$($m.Expected), actual=$($m.Actual)" -ForegroundColor Yellow }
     }
-    Write-Timestamped "    $matched/$($matched + $mismatches.Count) tables match"
+    Write-Timestamped "    $matched/$($matched + $mismatches.Count) tables match" -LogFile $logFile
 
     # Restore PDF volume too if requested
     $pdfRestored = $false
@@ -149,13 +175,13 @@ You will need to also restore Migrations/ from $SnapshotPath/migrations-backup/.
     if ($RestorePdfVolume -and $manifest.pdfVolumeIncluded) {
         $pdfTarPath = Join-Path $SnapshotPath 'pdf_uploads.tar.gz'
         if (Test-Path -LiteralPath $pdfTarPath) {
-            Write-Timestamped '[7/9] Restoring PDF volume...'
+            Write-Timestamped '[7/9] Restoring PDF volume...' -LogFile $logFile
             & docker run --rm -v "meepleai_pdf_uploads:/dst" -v "${SnapshotPath}:/src:ro" alpine sh -c 'rm -rf /dst/* && tar xzf /src/pdf_uploads.tar.gz -C /dst'
             if ($LASTEXITCODE -eq 0) {
                 $stats = Get-DockerVolumeStats -VolumeName 'meepleai_pdf_uploads'
                 $pdfFilesRestored = $stats.FileCount
                 $pdfRestored = $true
-                Write-Timestamped "    $pdfFilesRestored PDF files restored"
+                Write-Timestamped "    $pdfFilesRestored PDF files restored" -LogFile $logFile
             }
         }
     }
@@ -184,16 +210,16 @@ You will need to also restore Migrations/ from $SnapshotPath/migrations-backup/.
         Write-Host "    Copy-Item -Recurse $migrationsBackup apps/api/src/Api/Migrations" -ForegroundColor Yellow
     }
 
-    Write-Timestamped ''
-    Write-Timestamped '=== Safety-net rollback complete ==='
+    Write-Timestamped '' -LogFile $logFile
+    Write-Timestamped '=== Safety-net rollback complete ===' -LogFile $logFile
     exit 0
 }
 
-Write-Timestamped '[3/9] Mode: standard data restore'
+Write-Timestamped '[3/9] Mode: standard data restore' -LogFile $logFile
 
 # Standard mode requires the new schema in place
 $schemaPostPath = Join-Path $SnapshotPath 'schema-post.sql'
-Write-Timestamped '[4/9] Re-dumping fresh schema-post.sql...'
+Write-Timestamped '[4/9] Re-dumping fresh schema-post.sql...' -LogFile $logFile
 Invoke-PgDump -Config $cfg -Arguments @('-s', '--no-owner', '--no-acl', '-f', $schemaPostPath)
 
 # Read both schemas, normalize
@@ -204,11 +230,11 @@ $preNormalized = Normalize-PgSchema -Sql $preSql
 $postNormalized = Normalize-PgSchema -Sql $postSql
 Set-Content -LiteralPath (Join-Path $SnapshotPath 'schema-pre.normalized.sql') -Value $preNormalized -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $SnapshotPath 'schema-post.normalized.sql') -Value $postNormalized -Encoding UTF8
-Write-Timestamped '[5/9] Schema normalized'
+Write-Timestamped '[5/9] Schema normalized' -LogFile $logFile
 
 # Classify drift
 $driftClass = Test-SchemaDriftClass -PreSchema $preNormalized -PostSchema $postNormalized
-Write-Timestamped "[6/9] Drift classification: $driftClass"
+Write-Timestamped "[6/9] Drift classification: $driftClass" -LogFile $logFile
 
 # Compute and save diff
 $diffPath = Join-Path $SnapshotPath 'schema-diff.txt'
@@ -231,7 +257,7 @@ if ($driftClass -eq 'significant' -and -not $AllowDrift) {
     Write-Host "  c) Force restore (will likely fail on missing/renamed columns):"
     Write-Host "     re-run with -AllowDrift"
     Write-Host ""
-    Write-Timestamped 'Aborting. DB unchanged (fresh schema, empty).'
+    Write-Timestamped 'Aborting. DB unchanged (fresh schema, empty).' -LogFile $logFile
     exit 2
 }
 
@@ -243,7 +269,7 @@ if ($driftClass -eq 'minor') {
 # Restore data
 # ============================================================================
 $dataDumpPath = Join-Path $SnapshotPath $manifest.files.dataDump.name
-Write-Timestamped "[7/9] Restoring data from $($manifest.files.dataDump.name)..."
+Write-Timestamped "[7/9] Restoring data from $($manifest.files.dataDump.name)..." -LogFile $logFile
 $restoreStart = Get-Date
 Invoke-PgRestore -Config $cfg -Arguments @(
     '--data-only', '--no-owner', '--no-acl',
@@ -251,12 +277,12 @@ Invoke-PgRestore -Config $cfg -Arguments @(
     $dataDumpPath
 )
 $restoreSeconds = ((Get-Date) - $restoreStart).TotalSeconds
-Write-Timestamped "    Data restored in $([math]::Round($restoreSeconds,1))s"
+Write-Timestamped "    Data restored in $([math]::Round($restoreSeconds,1))s" -LogFile $logFile
 
 # ============================================================================
 # Reset sequences (via pg_depend join, owns table+column for each sequence)
 # ============================================================================
-Write-Timestamped '[8/9] Resetting sequences...'
+Write-Timestamped '[8/9] Resetting sequences...' -LogFile $logFile
 $seqDiscoverySql = @"
 SELECT
   ns.nspname || '|' || s.relname || '|' || tns.nspname || '|' || t.relname || '|' || a.attname
@@ -283,12 +309,12 @@ foreach ($row in $seqRows) {
     $null = Invoke-Psql -Config $cfg -Sql $setvalSql
     $sequencesReset++
 }
-Write-Timestamped "    $sequencesReset sequences reset"
+Write-Timestamped "    $sequencesReset sequences reset" -LogFile $logFile
 
 # ============================================================================
 # Verify row counts
 # ============================================================================
-Write-Timestamped '[9/9] Verifying row counts...'
+Write-Timestamped '[9/9] Verifying row counts...' -LogFile $logFile
 $mismatches = New-Object System.Collections.Generic.List[pscustomobject]
 $matched = 0
 foreach ($prop in $manifest.rowCountsPre.PSObject.Properties) {
@@ -329,7 +355,7 @@ if (-not $rowCountMatch) {
         Write-Host "    $($m.Table): expected=$($m.Expected), actual=$($m.Actual)" -ForegroundColor Yellow
     }
 }
-Write-Timestamped "    $matched/$($matched + $mismatches.Count) tables match"
+Write-Timestamped "    $matched/$($matched + $mismatches.Count) tables match" -LogFile $logFile
 
 # ============================================================================
 # Restore PDF volume (if applicable)
@@ -339,7 +365,7 @@ $pdfFilesRestored = 0
 if ($RestorePdfVolume -and $manifest.pdfVolumeIncluded) {
     $pdfTarPath = Join-Path $SnapshotPath 'pdf_uploads.tar.gz'
     if (Test-Path -LiteralPath $pdfTarPath) {
-        Write-Timestamped 'Restoring PDF volume...'
+        Write-Timestamped 'Restoring PDF volume...' -LogFile $logFile
         & docker run --rm -v "meepleai_pdf_uploads:/dst" -v "${SnapshotPath}:/src:ro" alpine sh -c 'rm -rf /dst/* && tar xzf /src/pdf_uploads.tar.gz -C /dst'
         if ($LASTEXITCODE -ne 0) {
             Write-Host "⚠ PDF volume restore failed (exit $LASTEXITCODE)" -ForegroundColor Yellow
@@ -347,7 +373,7 @@ if ($RestorePdfVolume -and $manifest.pdfVolumeIncluded) {
             $stats = Get-DockerVolumeStats -VolumeName 'meepleai_pdf_uploads'
             $pdfFilesRestored = $stats.FileCount
             $pdfRestored = $true
-            Write-Timestamped "    $pdfFilesRestored PDF files restored"
+            Write-Timestamped "    $pdfFilesRestored PDF files restored" -LogFile $logFile
         }
     }
 }
@@ -377,12 +403,12 @@ Write-Manifest -Path (Join-Path $SnapshotPath 'restore-result.json') -Object $re
 # ============================================================================
 # Summary
 # ============================================================================
-Write-Timestamped ''
-Write-Timestamped '=== Restore complete ==='
-Write-Timestamped "    Schema:    $driftClass"
-Write-Timestamped "    Rows:      $matched/$($matched + $mismatches.Count) tables match"
-Write-Timestamped "    Sequences: $sequencesReset reset"
+Write-Timestamped '' -LogFile $logFile
+Write-Timestamped '=== Restore complete ===' -LogFile $logFile
+Write-Timestamped "    Schema:    $driftClass" -LogFile $logFile
+Write-Timestamped "    Rows:      $matched/$($matched + $mismatches.Count) tables match" -LogFile $logFile
+Write-Timestamped "    Sequences: $sequencesReset reset" -LogFile $logFile
 if ($pdfRestored) {
-    Write-Timestamped "    PDFs:      $pdfFilesRestored files restored"
+    Write-Timestamped "    PDFs:      $pdfFilesRestored files restored" -LogFile $logFile
 }
-Write-Timestamped "    Duration:  $([math]::Round($restoreSeconds,1))s"
+Write-Timestamped "    Duration:  $([math]::Round($restoreSeconds,1))s" -LogFile $logFile

@@ -229,19 +229,6 @@ if ($IncludePdfVolume) {
 $xactAtSave = Get-XactCommitCount -Config $cfg
 Write-Timestamped "[6/6] xact_commit at save: $xactAtSave" -LogFile $logFile
 
-# Capture for next task
-$script:snap = $snap
-$script:safetyNetSize = $safetyNetSize
-$script:dataDumpSize = $dataDumpSize
-$script:dbSize = $dbSize
-$script:storageProvider = $storageProvider
-$script:pdfDumpPath = $pdfDumpPath
-$script:pdfFileCount = $pdfFileCount
-$script:rowCounts = $rowCounts
-$script:xactAtSave = $xactAtSave
-$script:excludedTables = $excludedTables
-$script:logFile = $logFile
-
 # ============================================================================
 # Manifest
 # ============================================================================

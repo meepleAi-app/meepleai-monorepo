@@ -23,6 +23,7 @@ param(
     [string]$SnapshotPath,
     [string]$InitialName = 'Initial',
     [string]$ApiProjectPath = (Join-Path $PSScriptRoot '..' '..' 'apps' 'api' 'src' 'Api'),
+    [string]$SecretFile = (Join-Path $PSScriptRoot '..' 'secrets' 'database.secret'),
     [switch]$Force,
     [switch]$DryRun
 )
@@ -63,8 +64,7 @@ foreach ($prop in $manifest.files.PSObject.Properties) {
 Write-Timestamped "[1/7] Snapshot validated: $SnapshotPath"
 
 # Check 2: localhost-only enforcement
-$secretFile = Join-Path $PSScriptRoot '..' 'secrets' 'database.secret'
-$cfg = Get-PostgresConfig -SecretPath $secretFile
+$cfg = Get-PostgresConfig -SecretPath $SecretFile
 Assert-LocalhostOnly -Config $cfg
 Write-Timestamped '[2/7] Localhost host check passed'
 

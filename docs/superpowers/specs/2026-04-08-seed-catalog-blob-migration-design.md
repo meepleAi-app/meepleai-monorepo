@@ -102,7 +102,7 @@ seed bucket:  rulebooks/v1/mage-knight_rulebook.pdf
 ### 1. Seed bucket
 
 - **Name**: `meepleai-seeds`
-- **Backend**: S3-compatible (Cloudflare R2 preferred, AWS S3 or Backblaze B2 also work because `S3BlobStorageService` already abstracts the provider).
+- **Backend**: S3-compatible — Cloudflare R2 preferred, AWS S3 also supported. **Backblaze B2 is not supported for the seed bucket** because the upload script's idempotency check uses custom object metadata, which B2's S3 emulation does not support reliably. The primary blob storage (separate service) is unaffected.
 - **Structure**:
   ```
   rulebooks/
@@ -122,10 +122,19 @@ seed bucket:  rulebooks/v1/mage-knight_rulebook.pdf
 **`infra/scripts/upload-seed-pdfs.sh`**:
 - Sources `infra/secrets/storage.secret` for S3 credentials.
 - Iterates over `data/rulebook/*_rulebook.pdf`.
-- Computes SHA256 for each file.
-- Uploads with `aws s3 cp --metadata sha256=<hash>`.
-- Emits `data/rulebook/.seed-hashes.tsv` with `slug<TAB>sha256` lines.
-- Idempotent: if the object already exists with matching metadata hash, it skips upload.
+- For each file:
+  1. Computes SHA256 locally: `sha=$(sha256sum "$file" | cut -d' ' -f1)`
+  2. Checks if object exists with matching metadata:
+     ```bash
+     remote_sha=$(aws s3api head-object \
+       --bucket "$BUCKET" --key "$key" \
+       --query 'Metadata.sha256' --output text 2>/dev/null || echo "")
+     ```
+  3. If `remote_sha == $sha` → skip and log `already-uploaded`
+  4. Otherwise → `aws s3 cp "$file" "s3://$BUCKET/$key" --metadata "sha256=$sha"`
+- Emits `data/rulebook/.seed-hashes.tsv` with `slug<TAB>sha256` lines (one per input file, regardless of upload decision).
+- Exits non-zero if any SHA256 computation fails (e.g., unreadable file).
+- Assumes the S3-compatible backend supports custom object metadata. Cloudflare R2 and AWS S3 do; Backblaze B2 may require the native B2 API for metadata. The spec narrows the supported backends to R2 or S3 for the seed bucket; the primary blob storage is unaffected.
 
 **`infra/scripts/patch-manifest-from-hashes.sh`**:
 - Reads `.seed-hashes.tsv`.
@@ -142,35 +151,37 @@ Both scripts live only on the developer machine. They never run in CI.
 
 ### 3. Manifest schema update
 
-**`SeedManifestEntry`** gains four optional fields:
+**`SeedManifestGame`** (the actual type name in `SeedManifest.cs`; the record is a mutable class, not a record) gains four optional fields:
 
 ```csharp
-public sealed record SeedManifestEntry
+internal sealed class SeedManifestGame
 {
-    public required string Title { get; init; }
-    public int? BggId { get; init; }
-    // ... existing fields ...
-
-    // Legacy local-path PDF field — REMOVED in this spec.
-    // public string? Pdf { get; init; }
+    public string Title { get; set; } = string.Empty;
+    public int? BggId { get; set; }
+    public string Language { get; set; } = "en";
+    public string? Pdf { get; set; }                // REMOVED after migration
+    // ... other existing fields ...
 
     // New blob-based PDF fields
-    public string? PdfBlobKey { get; init; }
-    public string? PdfSha256 { get; init; }
-    public string? PdfLanguage { get; init; }   // default "en"
-    public string? PdfVersion { get; init; }    // default "1.0"
+    public string? PdfBlobKey { get; set; }
+    public string? PdfSha256 { get; set; }
+    public string? PdfVersion { get; set; }         // default "1.0"
+    // Note: no PdfLanguage — reuses the existing Language field
 }
 ```
+
+The YAML deserializer uses `CamelCaseNamingConvention`, so the YAML keys are `pdfBlobKey`, `pdfSha256`, `pdfVersion` (matching the existing `pdf` key convention).
 
 **Manifest entry example** (after migration):
 
 ```yaml
 - title: "Mage Knight Board Game"
   bggId: 96848
+  language: "en"              # existing field, unchanged
   yearPublished: 2011
   minPlayers: 1
   maxPlayers: 4
-  playingTimeMinutes: 240
+  playingTime: 240
   minAge: 14
   designers: ["Vlaada Chvátil"]
   publishers: ["WizKids"]
@@ -178,7 +189,6 @@ public sealed record SeedManifestEntry
   mechanics: ["Deck Building", "Dice Rolling", "Grid Movement"]
   pdfBlobKey: "rulebooks/v1/mage-knight_rulebook.pdf"
   pdfSha256: "<hash from upload script>"
-  pdfLanguage: "en"
   pdfVersion: "1.0"
 ```
 
@@ -186,110 +196,196 @@ The 9 games without rulebook PDFs keep their existing entries unchanged and have
 
 ### 4. PdfSeeder refactor
 
-The file is simplified to a single code path. Legacy local-path logic is removed.
+The file stays `internal static class PdfSeeder` (current shape) but gains an additional `ISeedBlobReader` parameter on the existing `SeedAsync` entry point. Legacy local-path logic is removed. `CatalogSeeder` is updated to pass the new parameter.
+
+**Key contract notes** (must match existing code exactly):
+
+- `IBlobStorageService.StoreAsync(Stream stream, string fileName, string gameId, CancellationToken ct)` returns `Task<BlobStorageResult>` containing `FileId`, `FilePath`, `FileSizeBytes`. **Not** a bare long.
+- `PdfDocumentEntity` required fields: `FilePath` (not nullable — set to the `BlobStorageResult.FilePath` returned by the primary blob store), `DocumentType` (enum-string: `"base"` / `"expansion"` / `"errata"` / `"homerule"`), `DocumentCategory` (enum-string: `"Rulebook"` default), `VersionLabel` (optional string for version tag).
+- `gameMap` from `GameSeeder` maps `BggId → GameEntity.Id` (the games table PK, which carries a FK to `SharedGameEntity.Id`). The seeded PDF is linked to `GameEntity.Id`, not directly to `SharedGame.Id`. The backfill and upload-handler fixes handle the `SharedGameId` propagation downstream.
 
 ```csharp
-internal sealed class PdfSeeder
+internal static class PdfSeeder
 {
-    private readonly MeepleAiDbContext _db;
-    private readonly IBlobStorageService _primaryBlob;
-    private readonly ISeedBlobReader _seedBlob;
-    private readonly ILogger<PdfSeeder> _logger;
-
-    public async Task SeedAsync(SeedContext ctx, CancellationToken ct)
+    public static async Task SeedAsync(
+        MeepleAiDbContext db,
+        SeedManifest manifest,
+        Dictionary<int, Guid> gameMap,
+        Guid systemUserId,
+        IBlobStorageService primaryBlob,
+        ISeedBlobReader seedBlob,
+        ILogger logger,
+        CancellationToken ct)
     {
-        foreach (var entry in ctx.Manifest.Games)
+        if (!seedBlob.IsConfigured)
         {
-            if (string.IsNullOrEmpty(entry.PdfBlobKey))
-                continue;
-
-            await SeedBlobPdfAsync(ctx, entry, ct);
-        }
-    }
-
-    private async Task SeedBlobPdfAsync(SeedContext ctx, SeedManifestEntry entry, CancellationToken ct)
-    {
-        var sharedGame = await _db.SharedGames
-            .FirstOrDefaultAsync(sg => sg.BggId == entry.BggId, ct);
-        if (sharedGame is null)
-        {
-            _logger.LogWarning("SharedGame not found for BggId {BggId}, skipping PDF seed", entry.BggId);
+            logger.LogInformation(
+                "PdfSeeder: ISeedBlobReader is NoOp (SEED_BUCKET_* env vars unset). Skipping PDF seeding.");
             return;
         }
 
-        var fileName = Path.GetFileName(entry.PdfBlobKey!);
-        var existing = await _db.PdfDocuments
-            .FirstOrDefaultAsync(
-                p => p.SharedGameId == sharedGame.Id && p.FileName == fileName,
-                ct);
+        var pdfEntries = manifest.Catalog.Games
+            .Where(g => !string.IsNullOrWhiteSpace(g.PdfBlobKey) && g.BggId is > 0)
+            .ToList();
 
-        if (existing is not null)
+        if (pdfEntries.Count == 0)
         {
-            if (string.Equals(existing.ContentHash, entry.PdfSha256, StringComparison.Ordinal))
-                return; // No change, idempotent skip
-
-            // Drift detected — delete the stale record cascade and reinsert
-            _logger.LogInformation(
-                "PDF hash drift for {BggId}: manifest={New}, existing={Old}. Re-seeding.",
-                entry.BggId, entry.PdfSha256, existing.ContentHash);
-            await DeletePdfCascadeAsync(existing.Id, ct);
-        }
-
-        var blobExists = await _seedBlob.ExistsAsync(entry.PdfBlobKey!, ct);
-        if (!blobExists)
-        {
-            _logger.LogError("Seed blob missing: {BlobKey} for BggId {BggId}", entry.PdfBlobKey, entry.BggId);
+            logger.LogInformation("PdfSeeder: no blob PDF entries in manifest. Skipping.");
             return;
         }
 
-        await using var stream = await _seedBlob.OpenReadAsync(entry.PdfBlobKey!, ct);
-        var pdfId = Guid.NewGuid();
-        var primaryKey = pdfId.ToString("N");
-        var sizeBytes = await _primaryBlob.StoreAsync(
-            primaryKey,
-            sharedGame.Id.ToString(),
-            stream,
-            "application/pdf",
-            ct);
+        // Idempotency check: existing pdf_documents keyed by (GameId, FileName)
+        var existing = await db.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.GameId != null)
+            .Select(p => new { p.Id, p.GameId, p.FileName, p.ContentHash })
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        var existingByKey = existing.ToDictionary(
+            e => $"{e.GameId}:{e.FileName}",
+            StringComparer.OrdinalIgnoreCase);
 
-        var pdfDoc = new PdfDocumentEntity
+        var seeded = 0; var skipped = 0; var drifted = 0;
+
+        foreach (var entry in pdfEntries)
         {
-            Id = pdfId,
-            SharedGameId = sharedGame.Id,
-            GameId = null,
-            FileName = fileName,
-            FileSizeBytes = sizeBytes,
-            ContentType = "application/pdf",
-            UploadedByUserId = ctx.SeedUserId,
-            UploadedAt = DateTime.UtcNow,
-            ProcessingState = "Pending",
-            Language = entry.PdfLanguage ?? "en",
-            VersionType = "base",
-            VersionNumber = entry.PdfVersion ?? "1.0",
-            ContentHash = entry.PdfSha256,
-            DocumentType = "Rulebook",
-            IsPublic = true,
-        };
+            try
+            {
+                if (!gameMap.TryGetValue(entry.BggId!.Value, out var gameId))
+                {
+                    logger.LogWarning(
+                        "PdfSeeder: no GameEntity for BggId={BggId} ('{Title}'). Skipping.",
+                        entry.BggId, entry.Title);
+                    skipped++;
+                    continue;
+                }
 
-        _db.PdfDocuments.Add(pdfDoc);
-        await _db.SaveChangesAsync(ct);
+                var fileName = Path.GetFileName(entry.PdfBlobKey!);
+                var key = $"{gameId}:{fileName}";
 
-        _logger.LogInformation(
-            "Seeded PDF {FileName} for SharedGame {SharedGameId}",
-            fileName,
-            sharedGame.Id);
+                if (existingByKey.TryGetValue(key, out var existingRow))
+                {
+                    if (string.Equals(existingRow.ContentHash, entry.PdfSha256, StringComparison.Ordinal))
+                    {
+                        skipped++;
+                        continue;
+                    }
+                    // Drift — delete old cascade + primary blob
+                    logger.LogInformation(
+                        "PdfSeeder: hash drift for '{FileName}' (BggId {BggId}). Re-seeding.",
+                        fileName, entry.BggId);
+                    await DeletePdfCascadeAsync(db, primaryBlob, existingRow.Id, gameId, ct).ConfigureAwait(false);
+                    existingByKey.Remove(key);
+                    drifted++;
+                }
+
+                if (!await seedBlob.ExistsAsync(entry.PdfBlobKey!, ct).ConfigureAwait(false))
+                {
+                    logger.LogWarning(
+                        "PdfSeeder: seed blob missing at '{BlobKey}' for BggId {BggId}. Skipping.",
+                        entry.PdfBlobKey, entry.BggId);
+                    skipped++;
+                    continue;
+                }
+
+                await using var stream = await seedBlob.OpenReadAsync(entry.PdfBlobKey!, ct).ConfigureAwait(false);
+                var result = await primaryBlob
+                    .StoreAsync(stream, fileName, gameId.ToString(), ct)
+                    .ConfigureAwait(false);
+
+                if (!result.Success || string.IsNullOrEmpty(result.FileId))
+                {
+                    logger.LogWarning(
+                        "PdfSeeder: primary blob store failed for '{FileName}': {Error}",
+                        fileName, result.ErrorMessage);
+                    skipped++;
+                    continue;
+                }
+
+                var pdfEntity = new PdfDocumentEntity
+                {
+                    Id = Guid.Parse(result.FileId!),
+                    GameId = gameId,                         // games.Id (FK to SharedGame via SharedGameId)
+                    FileName = fileName,
+                    FilePath = result.FilePath ?? string.Empty,
+                    FileSizeBytes = result.FileSizeBytes,
+                    ContentType = "application/pdf",
+                    Language = entry.Language ?? "en",
+                    ProcessingState = nameof(PdfProcessingState.Pending),
+                    IsPublic = true,
+                    DocumentType = "base",
+                    DocumentCategory = "Rulebook",
+                    VersionLabel = entry.PdfVersion ?? "1.0",
+                    ContentHash = entry.PdfSha256,
+                    IsActiveForRag = true,
+                    ProcessingPriority = "Normal",
+                    SortOrder = 0,
+                    UploadedAt = DateTime.UtcNow,
+                    UploadedByUserId = systemUserId,
+                };
+
+                db.PdfDocuments.Add(pdfEntity);
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                existingByKey[key] = new { Id = pdfEntity.Id, GameId = (Guid?)gameId, FileName = fileName, ContentHash = entry.PdfSha256 };
+                seeded++;
+
+                logger.LogInformation(
+                    "PdfSeeder: queued '{FileName}' for game '{Title}' ({Size} bytes, sha256={Hash})",
+                    fileName, entry.Title, pdfEntity.FileSizeBytes, entry.PdfSha256?[..8]);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "PdfSeeder: failed to seed BggId {BggId} ('{Title}'). Continuing.",
+                    entry.BggId, entry.Title);
+                db.ChangeTracker.Clear();
+                skipped++;
+            }
+        }
+
+        logger.LogInformation(
+            "PdfSeeder completed: {Seeded} queued, {Drifted} re-seeded (drift), {Skipped} skipped",
+            seeded, drifted, skipped);
     }
 
-    private async Task DeletePdfCascadeAsync(Guid pdfDocumentId, CancellationToken ct)
+    private static async Task DeletePdfCascadeAsync(
+        MeepleAiDbContext db,
+        IBlobStorageService primaryBlob,
+        Guid pdfDocumentId,
+        Guid gameId,
+        CancellationToken ct)
     {
-        // text_chunks and vector_documents have ON DELETE CASCADE to pdf_documents
-        var doc = await _db.PdfDocuments.FindAsync(new object[] { pdfDocumentId }, ct);
+        // text_chunks + vector_documents cascade on pdf_documents FK
+        var doc = await db.PdfDocuments.FindAsync(new object[] { pdfDocumentId }, ct).ConfigureAwait(false);
         if (doc is null) return;
-        _db.PdfDocuments.Remove(doc);
-        await _db.SaveChangesAsync(ct);
+
+        // Remove orphaned primary blob first (failures are logged but do not block)
+        try
+        {
+            await primaryBlob.DeleteAsync(doc.Id.ToString("N"), gameId.ToString(), ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Not throwing: a missing primary blob should not block re-seed
+            // logger not injected here — caller logs the drift, this is best-effort cleanup
+        }
+
+        db.PdfDocuments.Remove(doc);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 }
 ```
+
+**CatalogSeeder update**: the existing call site in `CatalogSeeder.cs` gains two extra args:
+
+```csharp
+await PdfSeeder.SeedAsync(
+    db, manifest, gameMap, systemUserId,
+    primaryBlob, seedBlob,   // NEW — resolved from DI
+    logger, ct);
+```
+
+`CatalogSeeder` receives `IBlobStorageService` and `ISeedBlobReader` via its own constructor/DI if it becomes instance-based, or via method parameters if it stays static. Either shape keeps the ordering guarantee: `GameSeeder.SeedAsync` completes before `PdfSeeder.SeedAsync` is called, ensuring `gameMap` is populated.
 
 ### 5. ISeedBlobReader
 
@@ -298,6 +394,12 @@ Isolated interface — the seed bucket client is separate from the primary blob 
 ```csharp
 public interface ISeedBlobReader
 {
+    /// <summary>
+    /// True if the reader is backed by a real seed bucket. False for NoOp fallback,
+    /// in which case PdfSeeder should skip entirely instead of logging per-entry errors.
+    /// </summary>
+    bool IsConfigured { get; }
+
     Task<Stream> OpenReadAsync(string blobKey, CancellationToken ct);
     Task<bool> ExistsAsync(string blobKey, CancellationToken ct);
 }
@@ -313,9 +415,11 @@ internal sealed class S3SeedBlobReader : ISeedBlobReader
         _bucket = bucket;
     }
 
+    public bool IsConfigured => true;
+
     public async Task<Stream> OpenReadAsync(string blobKey, CancellationToken ct)
     {
-        var response = await _client.GetObjectAsync(_bucket, blobKey, ct);
+        var response = await _client.GetObjectAsync(_bucket, blobKey, ct).ConfigureAwait(false);
         return response.ResponseStream;
     }
 
@@ -323,7 +427,7 @@ internal sealed class S3SeedBlobReader : ISeedBlobReader
     {
         try
         {
-            await _client.GetObjectMetadataAsync(_bucket, blobKey, ct);
+            await _client.GetObjectMetadataAsync(_bucket, blobKey, ct).ConfigureAwait(false);
             return true;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
@@ -335,17 +439,11 @@ internal sealed class S3SeedBlobReader : ISeedBlobReader
 
 internal sealed class NoOpSeedBlobReader : ISeedBlobReader
 {
-    private readonly ILogger<NoOpSeedBlobReader> _logger;
+    public bool IsConfigured => false;
 
-    public NoOpSeedBlobReader(ILogger<NoOpSeedBlobReader> logger) => _logger = logger;
-
-    public Task<Stream> OpenReadAsync(string blobKey, CancellationToken ct)
-    {
-        _logger.LogWarning(
-            "NoOp seed blob reader invoked for {BlobKey}; set SEED_BUCKET_* env vars to enable",
-            blobKey);
-        throw new InvalidOperationException("Seed bucket not configured");
-    }
+    public Task<Stream> OpenReadAsync(string blobKey, CancellationToken ct) =>
+        throw new InvalidOperationException(
+            "Seed bucket not configured. Set SEED_BUCKET_* env vars to enable PDF seeding.");
 
     public Task<bool> ExistsAsync(string blobKey, CancellationToken ct) => Task.FromResult(false);
 }
@@ -431,22 +529,38 @@ var createResult = await _mediator.Send(new CreateSessionCommand(
 
 #### Bug #4: GameNightEventRepository.MapToDomain fragile Enum.Parse
 
-Replace `Enum.Parse` with `Enum.TryParse` and log on unknown values.
+`GameNightEventRepository.cs` currently has **three** `Enum.Parse<T>()` calls that throw on unknown strings:
+
+- Line 182: `Enum.Parse<GameNightStatus>(entity.Status)`
+- Line 217: `Enum.Parse<RsvpStatus>(r.Status)`
+- Line 234 (approx): `Enum.Parse<GameNightSessionStatus>(s.Status)` in the Sessions mapping
+
+All three must be replaced with safe helpers. Add three static helpers on the repository class:
 
 ```csharp
-private GameNightSessionStatus ParseStatus(string raw)
+private GameNightStatus ParseGameNightStatus(string raw)
 {
-    if (Enum.TryParse<GameNightSessionStatus>(raw, ignoreCase: true, out var status))
-        return status;
+    if (Enum.TryParse<GameNightStatus>(raw, ignoreCase: true, out var v)) return v;
+    _logger.LogWarning("Unknown GameNightStatus '{Raw}', defaulting to Draft", raw);
+    return GameNightStatus.Draft;
+}
 
-    _logger.LogWarning(
-        "Unknown GameNightSession status '{Raw}', defaulting to Pending",
-        raw);
+private RsvpStatus ParseRsvpStatus(string raw)
+{
+    if (Enum.TryParse<RsvpStatus>(raw, ignoreCase: true, out var v)) return v;
+    _logger.LogWarning("Unknown RsvpStatus '{Raw}', defaulting to Pending", raw);
+    return RsvpStatus.Pending;
+}
+
+private GameNightSessionStatus ParseSessionStatus(string raw)
+{
+    if (Enum.TryParse<GameNightSessionStatus>(raw, ignoreCase: true, out var v)) return v;
+    _logger.LogWarning("Unknown GameNightSessionStatus '{Raw}', defaulting to Pending", raw);
     return GameNightSessionStatus.Pending;
 }
 ```
 
-Apply the same pattern to every `Enum.Parse` call in `MapToDomain`.
+The call sites in `MapToDomain` replace each `Enum.Parse<X>(raw)` with the corresponding `ParseX(raw)` helper. The exact default per enum should be picked from a "safe initial" value (`Draft` for GameNight, `Pending` for the other two).
 
 ### 7. Backfill migration
 
@@ -482,7 +596,7 @@ protected override void Up(MigrationBuilder migrationBuilder)
 protected override void Down(MigrationBuilder migrationBuilder) { /* no-op, forward-only */ }
 ```
 
-The migration is idempotent — it only updates NULL columns and can safely run on any environment.
+The migration is idempotent — it only updates NULL columns and can safely run on any environment. EF Core migrations run inside a transaction by default on PostgreSQL, so a partial failure rolls back all three `UPDATE` statements atomically; no intermediate inconsistent state is possible.
 
 ### 8. Deploy profile fix
 
@@ -554,12 +668,12 @@ Without this, `SeedOrchestrator` defaulted to `Dev` profile because the env-var 
 
 ### Deploy smoke test
 
-The existing `validate` job in `deploy-staging.yml` adds two steps after the 5-minute warm-up:
+The existing `validate` job in `deploy-staging.yml` adds two steps after the 5-minute warm-up. Both use the public shared-games search endpoint to avoid hardcoded internal IDs:
 
 1. `curl https://meepleai.app/api/v1/shared-games?search=Mage%20Knight%20Board%20Game` → expect HTTP 200 with at least one result.
-2. `curl https://meepleai.app/api/v1/knowledge-base/{known-bggId-gameId}/status` for one reference game → expect `Pending` or `Completed`, not 500.
+2. Parse the first `items[0].id` from step 1. That returns a `shared_games.id`, not a `games.Id` — so the workflow follows up with `curl https://meepleai.app/api/v1/shared-games/{id}` to fetch the associated `games` bridge record, takes `gameEntityId` from the response, and then calls `GET /api/v1/knowledge-base/{gameEntityId}/status`. Expect status `Pending`, `Processing`, or `Completed` — any 5xx fails the step.
 
-Neither check blocks the deploy — they surface issues in the Slack notification instead.
+Neither check blocks the deploy — they surface issues in the Slack notification instead. The script skips gracefully if step 1 returns zero results (e.g., before the first seed has completed).
 
 ### Manual verification checklist
 
@@ -600,6 +714,7 @@ Post-merge:
 
 - **Migration is forward-only but non-destructive**: it only populates NULL columns. Reverting the code does not require a schema rollback.
 - **Manifest change is a data change**: reverting the PR restores the old local-path manifest. Since the `PdfSeeder` legacy path has been removed, a pure-revert is not enough to restore old behavior — a follow-up PR restores the legacy branch if needed. For that reason, rolling back via `git revert` is acceptable only if the deploy is not already using blob keys in production.
+- **Partial-deploy failure mode**: if the new image ran `SeedOrchestrator` once and was then rolled back to the pre-PR image, the `pdf_documents` rows seeded by the new code remain. The old `PdfSeeder` keyed its idempotency check on `(GameId, FileName)` with `FileName` being the manifest `pdf:` value — the new rows have a matching `FileName` and the old seeder will skip them (it looks up by GameEntity, which still exists). So the seeded data stays intact and the catalog keeps working, but the old seeder can no longer create new PDFs for those games without first deleting the new rows. This is acceptable because rollback is an emergency path.
 - **Data already seeded**: rows remain in the database; they are not cleaned up on rollback. This is intentional — the seeded data is still valid.
 - **Bucket**: never touched on rollback.
 
@@ -627,7 +742,7 @@ apps/api/src/Api/
 │   │   │       ├── staging.yml                          [MODIFIED — blob keys]
 │   │   │       ├── dev.yml                              [MODIFIED — blob keys]
 │   │   │       └── prod.yml                             [MODIFIED — blob keys]
-│   │   └── SeedManifestEntry.cs                         [MODIFIED — blob fields]
+│   │   └── SeedManifest.cs                              [MODIFIED — SeedManifestGame blob fields]
 │   └── Migrations/
 │       └── 20260408_BackfillSharedGameIdFromGames.cs    [NEW]
 └── BoundedContexts/

@@ -1,17 +1,12 @@
 /**
- * @status ORPHAN — public API variant, not yet consumed in pages.
+ * RatingStars — star rating display with configurable scale and size.
  *
- * A richer alternative to the internal `meeple-card/parts/Rating.tsx` used by
- * Grid/List/Featured card variants. Supports sizes, half-stars, showValue, and
- * muted variant — features the internal one lacks.
+ * Use this on pages OUTSIDE the `MeepleCard` system (e.g., `GameHeader`, review
+ * lists, game detail hero). `MeepleCard` itself uses the internal token-based
+ * `parts/Rating.tsx` for its grid/list/featured variants.
  *
- * **When to use this instead of parts/Rating:**
- * - On pages that are NOT a MeepleCard (e.g., game detail header, reviews list).
- * - When you need the "muted" variant or configurable size.
- *
- * **Why not consumed today:** MeepleCard uses its internal token-based Rating;
- * non-card rating UIs haven't been built yet. Integrate when a dedicated rating
- * surface (reviews, game detail hero) ships.
+ * Features: half-stars, BGG 10-point → 5-star conversion, muted variant,
+ * optional numeric value display.
  */
 
 import React from 'react';

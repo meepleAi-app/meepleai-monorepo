@@ -116,5 +116,131 @@ Write-Timestamped '[8/9] Backend connection check complete'
 # All checks passed
 Write-Timestamped '[9/9] Pre-flight checks complete'
 
+# ============================================================================
+# Snapshot directory
+# ============================================================================
+$timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$snap = Join-Path $SnapshotRoot $timestamp
+New-Item -ItemType Directory -Path $snap -Force | Out-Null
+$logFile = Join-Path $snap 'save.log'
+Write-Timestamped "Created snapshot dir: $snap" -LogFile $logFile
+
+# ============================================================================
+# Step 1: Safety-net dump (full schema + data, ALWAYS complete)
+# ============================================================================
+$safetyNetPath = Join-Path $snap 'safety-net.dump'
+Write-Timestamped '[1/6] Safety-net dump (full schema + data)...' -LogFile $logFile
+try {
+    Invoke-PgDump -Config $cfg -Arguments @(
+        '-Fc', '--no-owner', '--no-acl',
+        '-f', $safetyNetPath
+    )
+} catch {
+    # Safety-net failure is fatal
+    Remove-Item $snap -Recurse -Force -ErrorAction SilentlyContinue
+    throw "Safety-net dump failed (FATAL): $_"
+}
+$safetyNetSize = (Get-Item $safetyNetPath).Length
+Write-Timestamped "    safety-net.dump: $safetyNetSize bytes" -LogFile $logFile
+
+# ============================================================================
+# Step 2: Schema-pre dump
+# ============================================================================
+$schemaPrePath = Join-Path $snap 'schema-pre.sql'
+Write-Timestamped '[2/6] Schema-pre dump...' -LogFile $logFile
+Invoke-PgDump -Config $cfg -Arguments @(
+    '-s', '--no-owner', '--no-acl',
+    '-f', $schemaPrePath
+)
+
+# ============================================================================
+# Step 3: Data-only dump
+# ============================================================================
+$dataDumpPath = Join-Path $snap 'data.dump'
+Write-Timestamped '[3/6] Data-only dump...' -LogFile $logFile
+$dataArgs = @(
+    '-Fc', '--data-only', '--no-owner', '--no-acl',
+    '--exclude-table', '*__EFMigrationsHistory*'
+)
+$excludedTables = @()
+if ($Sanitize) {
+    foreach ($table in $SENSITIVE_TABLES) {
+        $dataArgs += @('--exclude-table-data', "*.$table")
+        $excludedTables += $table
+    }
+    Write-Timestamped "    Sanitize: excluding data from $($SENSITIVE_TABLES -join ', ')" -LogFile $logFile
+}
+$dataArgs += @('-f', $dataDumpPath)
+Invoke-PgDump -Config $cfg -Arguments $dataArgs
+$dataDumpSize = (Get-Item $dataDumpPath).Length
+Write-Timestamped "    data.dump: $dataDumpSize bytes" -LogFile $logFile
+
+# ============================================================================
+# Step 4: Row counts (exact COUNT(*), not n_live_tup)
+# ============================================================================
+$rowCountsPath = Join-Path $snap 'rowcounts-pre.tsv'
+Write-Timestamped '[4/6] Row counts (exact)...' -LogFile $logFile
+
+$tableListSql = @"
+SELECT table_schema || '.' || table_name
+FROM information_schema.tables
+WHERE table_type = 'BASE TABLE'
+  AND table_schema NOT IN ('pg_catalog','information_schema')
+  AND table_name NOT LIKE '\_\_EFMigrationsHistory%' ESCAPE '\'
+ORDER BY table_schema, table_name;
+"@
+$tables = Invoke-Psql -Config $cfg -Sql $tableListSql | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+$rowCounts = @{}
+$tsvLines = New-Object System.Collections.Generic.List[string]
+foreach ($qualified in $tables) {
+    $parts = $qualified -split '\.', 2
+    $schema = $parts[0]
+    $table = $parts[1]
+    $countSql = "SELECT COUNT(*) FROM ""$schema"".""$table"";"
+    $count = [long]((Invoke-Psql -Config $cfg -Sql $countSql).Trim())
+    $rowCounts[$qualified] = $count
+    $tsvLines.Add("$schema`t$table`t$count")
+}
+Set-Content -LiteralPath $rowCountsPath -Value $tsvLines -Encoding UTF8
+Write-Timestamped "    $($rowCounts.Count) tables counted" -LogFile $logFile
+
+# ============================================================================
+# Step 5: PDF volume backup (optional)
+# ============================================================================
+$pdfDumpPath = $null
+$pdfFileCount = 0
+if ($IncludePdfVolume) {
+    $pdfDumpPath = Join-Path $snap 'pdf_uploads.tar.gz'
+    Write-Timestamped '[5/6] PDF volume backup...' -LogFile $logFile
+    & docker run --rm -v "meepleai_pdf_uploads:/src:ro" -v "${snap}:/dst" alpine tar czf /dst/pdf_uploads.tar.gz -C /src .
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to tar PDF volume (exit $LASTEXITCODE)"
+    }
+    if ($pdfVolumeStats) { $pdfFileCount = $pdfVolumeStats.FileCount }
+    $pdfDumpSize = (Get-Item $pdfDumpPath).Length
+    Write-Timestamped "    pdf_uploads.tar.gz: $pdfDumpSize bytes ($pdfFileCount files)" -LogFile $logFile
+} else {
+    Write-Timestamped '[5/6] PDF volume backup: SKIPPED (S3 storage or empty volume)' -LogFile $logFile
+}
+
+# ============================================================================
+# Step 6: xact_commit snapshot for drift check during reset
+# ============================================================================
+$xactAtSave = Get-XactCommitCount -Config $cfg
+Write-Timestamped "[6/6] xact_commit at save: $xactAtSave" -LogFile $logFile
+
+# Capture for next task
+$script:snap = $snap
+$script:safetyNetSize = $safetyNetSize
+$script:dataDumpSize = $dataDumpSize
+$script:dbSize = $dbSize
+$script:storageProvider = $storageProvider
+$script:pdfDumpPath = $pdfDumpPath
+$script:pdfFileCount = $pdfFileCount
+$script:rowCounts = $rowCounts
+$script:xactAtSave = $xactAtSave
+$script:excludedTables = $excludedTables
+$script:logFile = $logFile
+
 # Placeholder for next task
-Write-Timestamped 'TODO: dump operations (Task 12)'
+Write-Timestamped 'TODO: manifest + summary (Task 13)' -LogFile $logFile

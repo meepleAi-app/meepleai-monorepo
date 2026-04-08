@@ -93,25 +93,29 @@ describe('MeepleSessionCard', () => {
   });
 
   // --------------------------------------------------------------------------
-  // Status badge — the badge prop is accepted and passed to MeepleCard, but
-  // the current grid variant does not render it visually. This is a known gap
-  // in the MeepleCard implementation and will be addressed in a separate PR.
-  // Tests verify the component accepts the data without crashing.
+  // Status badge — MeepleCard now renders the badge prop in the title area.
   // --------------------------------------------------------------------------
 
-  it('accepts completed session status without error', () => {
+  it('shows "Completata" badge for completed session', () => {
     render(<MeepleSessionCard session={mockCompletedSession} />);
-    expect(screen.getByTestId('session-card-session-004')).toBeInTheDocument();
+    expect(screen.getByText('Completata')).toBeInTheDocument();
   });
 
-  it('accepts in-progress session status without error', () => {
+  it('shows "In corso" badge for in-progress session', () => {
     render(<MeepleSessionCard session={mockInProgressSession} />);
-    expect(screen.getByTestId('session-card-session-002')).toBeInTheDocument();
+    expect(screen.getByText('In corso')).toBeInTheDocument();
   });
 
-  it('accepts paused session status without error', () => {
+  it('shows "In pausa" badge for paused session', () => {
     render(<MeepleSessionCard session={mockPausedSession} />);
-    expect(screen.getByTestId('session-card-session-003')).toBeInTheDocument();
+    expect(screen.getByText('In pausa')).toBeInTheDocument();
+  });
+
+  it('does not show any status badge for setup session', () => {
+    render(<MeepleSessionCard session={mockSetupSession} />);
+    expect(screen.queryByText('Completata')).not.toBeInTheDocument();
+    expect(screen.queryByText('In corso')).not.toBeInTheDocument();
+    expect(screen.queryByText('In pausa')).not.toBeInTheDocument();
   });
 
   // --------------------------------------------------------------------------

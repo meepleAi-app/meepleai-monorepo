@@ -5,7 +5,7 @@ import { entityHsl } from '../tokens';
 import type { MeepleCardProps } from '../types';
 
 export function CompactCard(props: MeepleCardProps) {
-  const { entity, title, onClick, className = '' } = props;
+  const { entity, title, badge, onClick, className = '' } = props;
   const testId = props['data-testid'];
 
   return (
@@ -14,6 +14,7 @@ export function CompactCard(props: MeepleCardProps) {
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      data-entity={entity}
       data-testid={testId}
     >
       <div
@@ -23,6 +24,14 @@ export function CompactCard(props: MeepleCardProps) {
       <span className="truncate font-[var(--font-quicksand)] text-[0.85rem] font-semibold text-[var(--mc-text-primary)]">
         {title}
       </span>
+      {badge && (
+        <span
+          className="ml-auto shrink-0 rounded-full bg-[var(--mc-bg-muted)] px-1.5 py-0.5 text-[8px] font-semibold text-[var(--mc-text-secondary)]"
+          data-slot="badge"
+        >
+          {badge}
+        </span>
+      )}
     </div>
   );
 }

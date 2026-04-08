@@ -370,17 +370,8 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'UpgradePrompt',
     category: 'Gates',
     description:
-      '[ORPHAN] Tier-locked feature CTA. Built with CollectionProgressBar + TierBadge — only TierBadge made it into production (library/UsageWidget).',
+      'Tier-locked feature CTA. Consumed by FeatureGate, PermissionGate, and TierGate in the gate system.',
     controlCount: 3,
     presetCount: 3,
-  },
-  {
-    id: 'collection-progress',
-    title: 'CollectionProgress',
-    category: 'Gates',
-    description:
-      '[ORPHAN] Quota progress bar with color-coded tiers (<75% green / 75-90% amber / >90% red). Integration blocked on product decision.',
-    controlCount: 4,
-    presetCount: 4,
   },
 ];

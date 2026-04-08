@@ -15,8 +15,10 @@
 import { Gamepad2, BookOpen, CalendarDays, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { MeepleChatCard } from '@/components/chat-unified/MeepleChatCard';
 import { EmptyStateCard } from '@/components/features/common';
 import { SkeletonCardGrid } from '@/components/features/common';
+import { MeepleEventCard } from '@/components/game-night/MeepleEventCard';
 import { MeepleLibraryGameCard } from '@/components/library/MeepleLibraryGameCard';
 import { MeepleCard, entityHsl } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
@@ -127,23 +129,17 @@ export function HomeFeed() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {nights.map(night => (
-              <MeepleCard
+              <MeepleEventCard
                 key={night.id}
-                entity="event"
+                event={{
+                  id: night.id,
+                  title: night.title,
+                  scheduledAt: night.scheduledAt,
+                  location: night.location ?? null,
+                  participantCount: 0,
+                  gameCount: 0,
+                }}
                 variant="list"
-                title={night.title}
-                subtitle={night.location ?? undefined}
-                badge={night.status}
-                metadata={[
-                  {
-                    label: new Date(night.scheduledAt).toLocaleDateString('it-IT', {
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    }),
-                  },
-                ]}
                 onClick={() => openDetail(night.id, 'event')}
               />
             ))}
@@ -168,13 +164,16 @@ export function HomeFeed() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {chats.map(chat => (
-              <MeepleCard
+              <MeepleChatCard
                 key={chat.id}
-                entity="chat"
+                chat={{
+                  id: chat.id,
+                  title: chat.agentName ?? chat.title ?? 'Chat',
+                  lastMessageAt: chat.lastMessageAt ?? new Date().toISOString(),
+                  messageCount: chat.messageCount,
+                  agentId: chat.agentId ?? null,
+                }}
                 variant="list"
-                title={chat.agentName ?? chat.title ?? 'Chat'}
-                subtitle={chat.gameTitle ?? undefined}
-                metadata={[{ label: `${chat.messageCount} messaggi` }]}
                 onClick={() => router.push(`/chat/${chat.id}`)}
               />
             ))}

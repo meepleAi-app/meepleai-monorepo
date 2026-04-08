@@ -3,7 +3,7 @@
 /**
  * ChatPanel — Chat tab panel for AlphaShell.
  *
- * Displays a list of recent chat sessions as MeepleCards.
+ * Displays a list of recent chat sessions as MeepleChatCard adapters.
  * Each card shows agent name, last message preview, and message count.
  * Includes a FAB for creating new chats.
  */
@@ -11,8 +11,9 @@
 import { MessageCircle, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { MeepleChatCard } from '@/components/chat-unified/MeepleChatCard';
 import { EmptyStateCard, SkeletonCardGrid } from '@/components/features/common';
-import { MeepleCard, entityHsl } from '@/components/ui/data-display/meeple-card';
+import { entityHsl } from '@/components/ui/data-display/meeple-card';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 
 export function ChatPanel() {
@@ -39,24 +40,20 @@ export function ChatPanel() {
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {chats.map(chat => {
-            const timeAgo = chat.lastMessageAt ? formatRelativeTime(chat.lastMessageAt) : undefined;
-
-            return (
-              <MeepleCard
-                key={chat.id}
-                entity="chat"
-                variant="list"
-                title={chat.agentName ?? chat.title ?? 'Chat'}
-                subtitle={chat.gameTitle ?? undefined}
-                metadata={[
-                  { label: `${chat.messageCount} msg` },
-                  ...(timeAgo ? [{ label: timeAgo }] : []),
-                ]}
-                onClick={() => router.push(`/chat/${chat.id}`)}
-              />
-            );
-          })}
+          {chats.map(chat => (
+            <MeepleChatCard
+              key={chat.id}
+              chat={{
+                id: chat.id,
+                title: chat.agentName ?? chat.title ?? 'Chat',
+                lastMessageAt: chat.lastMessageAt ?? new Date().toISOString(),
+                messageCount: chat.messageCount,
+                agentId: chat.agentId ?? null,
+              }}
+              variant="list"
+              onClick={() => router.push(`/chat/${chat.id}`)}
+            />
+          ))}
         </div>
       )}
 
@@ -74,31 +71,4 @@ export function ChatPanel() {
       </button>
     </div>
   );
-}
-
-/**
- * Formats a datetime string as a relative time label (e.g. "2h fa", "3g fa").
- */
-function formatRelativeTime(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return 'ora';
-  if (minutes < 60) return `${minutes}m fa`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h fa`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}g fa`;
-
-  const weeks = Math.floor(days / 7);
-  if (weeks < 4) return `${weeks}s fa`;
-
-  return new Date(dateStr).toLocaleDateString('it-IT', {
-    day: 'numeric',
-    month: 'short',
-  });
 }

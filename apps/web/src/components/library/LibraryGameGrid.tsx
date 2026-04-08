@@ -3,10 +3,11 @@
 import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { SectionBlock } from '@/components/ui/SectionBlock';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
+
+import { MeepleLibraryGameCard } from './MeepleLibraryGameCard';
 
 // ── CTA card — "Crea gioco" at the end of the custom games section ──────────
 
@@ -43,6 +44,8 @@ function CreateGameCtaCard() {
 }
 
 // ── Game card renderer ──────────────────────────────────────────────────────
+// Delegates to MeepleLibraryGameCard adapter which provides navItems with
+// KB/Agent/Chat/Sessions drawers wired automatically.
 
 function LibraryGameCard({
   entry,
@@ -52,31 +55,13 @@ function LibraryGameCard({
   variant: 'grid' | 'list';
 }) {
   return (
-    <MeepleCard
-      id={entry.id}
-      entity="game"
+    <MeepleLibraryGameCard
+      game={entry}
       variant={variant}
-      title={entry.gameTitle}
-      subtitle={entry.gamePublisher ?? (entry.isPrivateGame ? 'Gioco personalizzato' : '')}
-      imageUrl={entry.gameImageUrl ?? undefined}
-      rating={entry.averageRating ?? undefined}
-      ratingMax={10}
-      status={
-        entry.currentState === 'Owned'
-          ? 'owned'
-          : entry.currentState === 'Wishlist'
-            ? 'wishlist'
-            : undefined
-      }
-      metadata={[
-        ...(entry.minPlayers != null && entry.maxPlayers != null
-          ? [{ label: 'Giocatori', value: `${entry.minPlayers}-${entry.maxPlayers}` }]
-          : []),
-        ...(entry.playingTimeMinutes != null
-          ? [{ label: 'Durata', value: `${entry.playingTimeMinutes} min` }]
-          : []),
-      ]}
-      data-testid={`library-card-${entry.id}`}
+      onConfigureAgent={() => {}}
+      onUploadPdf={() => {}}
+      onEditNotes={() => {}}
+      onRemove={() => {}}
     />
   );
 }

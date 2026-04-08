@@ -21,8 +21,9 @@ import { Filter, Plus, Search } from 'lucide-react';
 
 import { AddGameDrawer } from '@/app/(authenticated)/library/AddGameDrawer';
 import { LibraryFilterSheet, type LibraryFilters } from '@/components/library/LibraryFilterSheet';
+import { MeepleLibraryGameCard } from '@/components/library/MeepleLibraryGameCard';
 import { SegmentedControl, type Segment } from '@/components/library/SegmentedControl';
-import { MeepleCard, MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card';
+import { MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
@@ -202,17 +203,14 @@ export function LibraryMobile() {
         {!isLoading && games.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
             {games.map(entry => (
-              <MeepleCard
+              <MeepleLibraryGameCard
                 key={entry.id}
-                id={entry.gameId}
-                entity="game"
+                game={entry}
                 variant="grid"
-                title={entry.gameTitle}
-                subtitle={entry.gamePublisher ?? undefined}
-                imageUrl={entry.gameImageUrl ?? undefined}
-                rating={entry.averageRating ?? undefined}
-                ratingMax={10}
-                badge={entry.isFavorite ? '★' : undefined}
+                onConfigureAgent={() => {}}
+                onUploadPdf={() => {}}
+                onEditNotes={() => {}}
+                onRemove={() => {}}
               />
             ))}
           </div>

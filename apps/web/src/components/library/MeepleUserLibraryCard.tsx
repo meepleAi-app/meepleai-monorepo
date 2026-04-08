@@ -7,11 +7,12 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
+import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 import { useSharedGame } from '@/hooks/queries';
 import { useRemoveGameFromLibrary } from '@/hooks/queries';
 import type { UserGameDto } from '@/lib/api/dashboard-client';
@@ -89,6 +90,31 @@ export function MeepleUserLibraryCard({
 
   const badge = game.isOwned ? 'Owned' : game.inWishlist ? 'Wishlist' : undefined;
 
+  // Build navItems. UserGameDto only has playCount; other counts default to 0
+  // (drawers expose the actual data when opened).
+  const navItems = useMemo(
+    () =>
+      buildGameNavItems(
+        {
+          kbCount: 0,
+          agentCount: 0,
+          chatCount: 0,
+          sessionCount: game.playCount ?? 0,
+        },
+        {
+          onKbClick: () => setKbDrawerOpen(true),
+          onAgentClick: () => setAgentDrawerOpen(true),
+          onChatClick: () => setChatDrawerOpen(true),
+          onSessionClick: () => setSessionDrawerOpen(true),
+          onKbPlus: () => setKbDrawerOpen(true),
+          onAgentPlus: () => setAgentDrawerOpen(true),
+          onChatPlus: () => setChatDrawerOpen(true),
+          onSessionPlus: () => setSessionDrawerOpen(true),
+        }
+      ),
+    [game.playCount]
+  );
+
   // Drawer open handlers (replacing removed onManaPipClick / linkedEntities)
   const _handleFlip = handleFlipTrigger; // keep reference to avoid lint unused
 
@@ -105,6 +131,8 @@ export function MeepleUserLibraryCard({
         ratingMax={10}
         metadata={metadata}
         badge={badge}
+        status="owned"
+        navItems={navItems}
         onClick={onClick ? () => onClick(game.id) : undefined}
         className={className}
         data-testid={`library-game-card-${game.id}`}

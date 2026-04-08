@@ -15,6 +15,7 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
     private readonly List<CardToolConfig> _cardTools = new();
     private readonly List<TimerToolConfig> _timerTools = new();
     private readonly List<CounterToolConfig> _counterTools = new();
+    private readonly List<UserDicePreset> _userDicePresets = new();
 
     public Guid? GameId { get; private set; }
     public Guid? PrivateGameId { get; private set; }
@@ -35,6 +36,7 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
     public IReadOnlyList<CardToolConfig> CardTools => _cardTools.AsReadOnly();
     public IReadOnlyList<TimerToolConfig> TimerTools => _timerTools.AsReadOnly();
     public IReadOnlyList<CounterToolConfig> CounterTools => _counterTools.AsReadOnly();
+    public IReadOnlyList<UserDicePreset> UserDicePresets => _userDicePresets.AsReadOnly();
 
     // Template configurations
     public ScoringTemplateConfig? ScoringTemplate { get; private set; }
@@ -234,6 +236,45 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
         _counterTools.Remove(tool);
         UpdatedAt = DateTime.UtcNow;
         return true;
+    }
+
+    // ========================================================================
+    // User dice presets
+    // ========================================================================
+
+    public void AddUserDicePreset(Guid userId, string name, string formula)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId cannot be empty", nameof(userId));
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Preset name cannot be empty", nameof(name));
+        if (name.Length > 50)
+            throw new ArgumentException("Preset name cannot exceed 50 characters", nameof(name));
+        if (string.IsNullOrWhiteSpace(formula))
+            throw new ArgumentException("Formula cannot be empty", nameof(formula));
+        if (formula.Length > 100)
+            throw new ArgumentException("Formula cannot exceed 100 characters", nameof(formula));
+        if (_userDicePresets.Count >= 20)
+            throw new InvalidOperationException("Cannot add more than 20 user dice presets");
+
+        _userDicePresets.Add(new UserDicePreset(userId, name.Trim(), formula.Trim(), DateTime.UtcNow));
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public bool RemoveUserDicePreset(Guid userId, string name)
+    {
+        var preset = _userDicePresets.Find(p =>
+            p.UserId == userId && string.Equals(p.Name, name, StringComparison.Ordinal));
+        if (preset == null) return false;
+
+        _userDicePresets.Remove(preset);
+        UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
+    public IReadOnlyList<UserDicePreset> GetUserDicePresets(Guid userId)
+    {
+        return _userDicePresets.Where(p => p.UserId == userId).ToList().AsReadOnly();
     }
 
     // ========================================================================
@@ -494,6 +535,38 @@ internal sealed class CounterToolConfig
         IsPerPlayer = isPerPlayer;
         Icon = icon;
         Color = color;
+    }
+}
+
+// ============================================================================
+// User Dice Preset Value Object
+// ============================================================================
+
+/// <summary>User-specific dice preset (e.g. "Attack Roll" → "2d6+3").</summary>
+internal sealed class UserDicePreset
+{
+    public Guid UserId { get; }
+    public string Name { get; }
+    public string Formula { get; }
+    public DateTime CreatedAt { get; }
+
+    public UserDicePreset(Guid userId, string name, string formula, DateTime createdAt)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId cannot be empty", nameof(userId));
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Preset name cannot be empty", nameof(name));
+        if (name.Length > 50)
+            throw new ArgumentException("Preset name cannot exceed 50 characters", nameof(name));
+        if (string.IsNullOrWhiteSpace(formula))
+            throw new ArgumentException("Formula cannot be empty", nameof(formula));
+        if (formula.Length > 100)
+            throw new ArgumentException("Formula cannot exceed 100 characters", nameof(formula));
+
+        UserId = userId;
+        Name = name.Trim();
+        Formula = formula.Trim();
+        CreatedAt = createdAt;
     }
 }
 

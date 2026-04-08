@@ -36,6 +36,9 @@ internal static class ToolkitMapper
             CounterTools: toolkit.CounterTools.Select(c => new CounterToolDto(
                 c.Name, c.MinValue, c.MaxValue, c.DefaultValue, c.IsPerPlayer, c.Icon, c.Color
             )).ToList(),
+            UserDicePresets: toolkit.UserDicePresets.Select(p => new UserDicePresetDto(
+                p.UserId, p.Name, p.Formula, p.CreatedAt
+            )).ToList(),
             ScoringTemplate: toolkit.ScoringTemplate != null
                 ? new ScoringTemplateDto(
                     toolkit.ScoringTemplate.Dimensions,

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Infrastructure.Health;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -12,7 +13,8 @@ namespace Api.BoundedContexts.SessionTracking.Infrastructure.Scheduling;
 [DisallowConcurrentExecution]
 internal sealed class AutoSaveSessionJob(
     IMediator mediator,
-    ILogger<AutoSaveSessionJob> logger
+    ILogger<AutoSaveSessionJob> logger,
+    IAutoSaveHealthTracker healthTracker
 ) : IJob
 {
     /// <summary>
@@ -52,6 +54,12 @@ internal sealed class AutoSaveSessionJob(
             logger.LogWarning(ex, "AutoSaveSessionJob failed for session {SessionId}", sessionId);
         }
 #pragma warning restore CA1031
+        finally
+        {
+            // Record liveness regardless of mediator outcome — a handled exception
+            // is still a sign that the job runner is alive.
+            healthTracker.RecordRun();
+        }
     }
 
     /// <summary>

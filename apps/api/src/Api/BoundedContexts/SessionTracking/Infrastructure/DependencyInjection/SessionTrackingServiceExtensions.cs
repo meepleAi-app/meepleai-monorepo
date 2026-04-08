@@ -1,12 +1,14 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.BoundedContexts.SessionTracking.Infrastructure.Health;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Scheduling;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
 
@@ -50,6 +52,11 @@ internal static class SessionTrackingServiceExtensions
 
         // Auto-save scheduler service (dynamic per-session Quartz jobs)
         services.AddScoped<IAutoSaveSchedulerService, QuartzAutoSaveSchedulerService>();
+
+        // F3: AutoSave health observability — tracker, logger, and TimeProvider
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IAutoSaveHealthTracker, AutoSaveHealthTracker>();
+        services.AddHostedService<AutoSaveHealthLoggerService>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

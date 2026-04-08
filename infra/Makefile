@@ -137,6 +137,26 @@ backup-cron-install: ## Install daily backup cron job (3 AM)
 backup-cron-show: ## Show installed backup cron jobs
 	@crontab -l 2>/dev/null | grep meepleai || echo "No MeepleAI cron jobs found"
 
+# === DB Snapshot (local dev) ===
+
+db-snapshot: ## Create local DB snapshot before migration reset
+	pwsh scripts/db-save-state.ps1
+
+db-snapshot-sanitized: ## Create DB snapshot without sensitive tables
+	pwsh scripts/db-save-state.ps1 -Sanitize
+
+db-reset-migrations: ## Reset migrations using snapshot (requires SNAP=path)
+	@if [ -z "$(SNAP)" ]; then echo "ERROR: SNAP=<snapshot-path> required" && exit 1; fi
+	pwsh scripts/db-reset-migrations.ps1 -SnapshotPath $(SNAP)
+
+db-restore-snapshot: ## Restore data from snapshot (requires SNAP=path)
+	@if [ -z "$(SNAP)" ]; then echo "ERROR: SNAP=<snapshot-path> required" && exit 1; fi
+	pwsh scripts/db-restore-state.ps1 -SnapshotPath $(SNAP)
+
+db-rollback-safetynet: ## Rollback using snapshot safety-net (requires SNAP=path)
+	@if [ -z "$(SNAP)" ]; then echo "ERROR: SNAP=<snapshot-path> required" && exit 1; fi
+	pwsh scripts/db-restore-state.ps1 -SnapshotPath $(SNAP) -UseSafetyNet
+
 # === Utilities ===
 
 logs: ## Tail logs for a service (usage: make logs s=api)
@@ -264,4 +284,5 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
         logs logging logging-down logs-ui ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
         sec-scan sec-pentest test-e2e test-visual test-perf validate-workflows \
-        backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show
+        backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
+        db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet

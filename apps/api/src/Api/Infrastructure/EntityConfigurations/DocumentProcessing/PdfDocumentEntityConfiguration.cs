@@ -59,8 +59,8 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(e => new { e.GameId, e.UploadedAt });
 
-        // AI-14: Hybrid search - PostgreSQL tsvector column managed by trigger
-        // Ignore in EF Core since it's managed by database trigger, not application
+        // AI-14: Hybrid search - PostgreSQL GENERATED stored tsvector column
+        // Computed from "ExtractedText" + "FileName" via migration AddSearchVectorColumns. Ignored by EF Core since it's DB-managed.
         builder.Ignore(e => e.SearchVector);
 
         // Issue #2051: Multi-document collection support

@@ -31,7 +31,8 @@ describe('MeeplePlaylistCard', () => {
   it('renders with correct entity type', () => {
     render(<MeeplePlaylistCard playlist={mockPlaylist} />);
     const card = screen.getByTestId('playlist-card');
-    expect(card).toHaveAttribute('data-entity', 'collection');
+    // 'collection' is not a valid MeepleEntityType; playlists use 'game' as the closest match.
+    expect(card).toHaveAttribute('data-entity', 'game');
   });
 
   it('displays playlist name as title', () => {

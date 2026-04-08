@@ -7,11 +7,14 @@
  * Displays a paused session using the session entity variant.
  */
 
+import { useMemo } from 'react';
+
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import Link from 'next/link';
 
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
+import { buildSessionNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 
 export interface MeepleResumeSessionCardProps {
   /** Session ID used to build the resume link. */
@@ -52,6 +55,24 @@ export function MeepleResumeSessionCard({
     ...(hasPhotos ? [{ label: `${photoCount} foto salvate` } as MeepleCardMetadata] : []),
   ];
 
+  const navItems = useMemo(
+    () =>
+      buildSessionNavItems(
+        {
+          playerCount,
+          hasNotes: false,
+          toolCount: 0,
+          photoCount: photoCount ?? 0,
+        },
+        {
+          // All nav slots are no-ops since the Link wraps the card.
+          onPlayersClick: () => {},
+          onPhotosClick: hasPhotos ? () => {} : undefined,
+        }
+      ),
+    [playerCount, photoCount, hasPhotos]
+  );
+
   return (
     <Link href={`/sessions/${sessionId}/scoreboard`}>
       <MeepleCard
@@ -62,6 +83,7 @@ export function MeepleResumeSessionCard({
         metadata={metadata}
         badge="In pausa"
         status="paused"
+        navItems={navItems}
       />
     </Link>
   );

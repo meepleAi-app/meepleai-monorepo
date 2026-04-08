@@ -162,6 +162,19 @@ internal class OllamaLlmClient : ILlmClient
 
         if (!response.IsSuccessStatusCode)
         {
+            // Explicit detection: model not found (HTTP 404 with "model" mentioned in body).
+            // Surface a distinctive error guiding operators to pull the missing model so the
+            // RAG pipeline does not return silent empty responses.
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound
+                && responseBody.Contains("model", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogError(
+                    "Ollama model '{Model}' not found on server. Install with: ollama pull {Model}",
+                    model, model);
+                return LlmCompletionResult.CreateFailure(
+                    $"LLM model '{model}' is not available on the Ollama server. Run 'ollama pull {model}' on the server.");
+            }
+
             _logger.LogError("Ollama API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
             return LlmCompletionResult.CreateFailure($"Ollama API error: {(int)response.StatusCode} ({response.StatusCode})");
         }

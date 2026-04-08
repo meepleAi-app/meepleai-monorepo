@@ -127,8 +127,12 @@ public class OllamaLlmClientTests
 
     [Fact]
     [Trait("Category", TestCategories.Integration)]
-    public async Task GenerateCompletion_ModelNotFound_ReturnsError()
+    public async Task GenerateCompletion_ModelNotFound_ReturnsDistinctiveError()
     {
+        // Post-PR #267 fix: explicit detection of HTTP 404 with "model" in body returns
+        // a distinctive error guiding operators to pull the missing model, instead of a
+        // generic HTTP error code that the RAG pipeline could swallow.
+
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
         mockHandler.Protected()
@@ -139,7 +143,7 @@ public class OllamaLlmClientTests
             .ReturnsAsync(new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.NotFound,
-                Content = new StringContent("{\"error\": \"model not found\"}")
+                Content = new StringContent("{\"error\": \"model 'nonexistent:model' not found, try pulling it first\"}")
             });
 
         var client = CreateClient(mockHandler.Object);
@@ -155,7 +159,8 @@ public class OllamaLlmClientTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("404");
+        result.ErrorMessage.Should().Contain("not available");
+        result.ErrorMessage.Should().Contain("ollama pull nonexistent:model");
     }
 
     [Fact]

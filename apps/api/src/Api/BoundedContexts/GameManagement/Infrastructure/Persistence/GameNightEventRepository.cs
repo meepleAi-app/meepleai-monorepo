@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities.GameManagement;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 
@@ -16,9 +17,39 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 /// </summary>
 internal class GameNightEventRepository : RepositoryBase, IGameNightEventRepository
 {
-    public GameNightEventRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+    private readonly ILogger<GameNightEventRepository> _logger;
+
+    public GameNightEventRepository(
+        MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
+        ILogger<GameNightEventRepository> logger)
         : base(dbContext, eventCollector)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    /// <summary>
+    /// Defensive enum parser: returns the parsed value when valid, otherwise logs an error
+    /// and returns the corruption fallback. Used to prevent 500 errors when DB contains
+    /// legacy/typo'd status values.
+    /// </summary>
+    private TEnum ParseEnumSafe<TEnum>(
+        string rawValue,
+        TEnum corruptedFallback,
+        string entityId,
+        string fieldName) where TEnum : struct, Enum
+    {
+        if (Enum.TryParse<TEnum>(rawValue, ignoreCase: false, out var parsed)
+            && Enum.IsDefined(parsed))
+        {
+            return parsed;
+        }
+
+        _logger.LogError(
+            "Corrupted {EnumType} value '{RawValue}' for entity {EntityId}.{FieldName}. Mapped to {Fallback}.",
+            typeof(TEnum).Name, rawValue, entityId, fieldName, corruptedFallback);
+
+        return corruptedFallback;
     }
 
     public async Task<GameNightEvent?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -173,13 +204,17 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return entity;
     }
 
-    private static GameNightEvent MapToDomain(GameNightEventEntity entity)
+    private GameNightEvent MapToDomain(GameNightEventEntity entity)
     {
         var gameIds = string.IsNullOrEmpty(entity.GameIdsJson)
             ? new List<Guid>()
             : JsonSerializer.Deserialize<List<Guid>>(entity.GameIdsJson) ?? [];
 
-        var status = Enum.Parse<GameNightStatus>(entity.Status);
+        var status = ParseEnumSafe(
+            entity.Status,
+            GameNightStatus.Corrupted,
+            entity.Id.ToString(),
+            nameof(entity.Status));
 
         // Use the internal constructor to reconstitute from persistence
         var evt = new GameNightEvent(
@@ -213,7 +248,11 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             id: r.Id,
             eventId: r.EventId,
             userId: r.UserId,
-            status: Enum.Parse<RsvpStatus>(r.Status),
+            status: ParseEnumSafe(
+                r.Status,
+                RsvpStatus.Corrupted,
+                r.Id.ToString(),
+                nameof(r.Status)),
             respondedAt: r.RespondedAt,
             createdAt: r.CreatedAt)).ToList();
 
@@ -231,7 +270,11 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
                     gameId: s.GameId,
                     gameTitle: s.GameTitle,
                     playOrder: s.PlayOrder,
-                    status: Enum.Parse<GameNightSessionStatus>(s.Status),
+                    status: ParseEnumSafe(
+                        s.Status,
+                        GameNightSessionStatus.Corrupted,
+                        s.Id.ToString(),
+                        nameof(s.Status)),
                     winnerId: s.WinnerId,
                     startedAt: s.StartedAt,
                     completedAt: s.CompletedAt))

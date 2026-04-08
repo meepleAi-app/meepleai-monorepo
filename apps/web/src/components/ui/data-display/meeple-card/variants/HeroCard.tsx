@@ -5,7 +5,18 @@ import { entityHsl, entityIcon } from '../tokens';
 import type { MeepleCardProps } from '../types';
 
 export function HeroCard(props: MeepleCardProps) {
-  const { entity, title, subtitle, imageUrl, rating, ratingMax, onClick, className = '' } = props;
+  const {
+    entity,
+    title,
+    subtitle,
+    imageUrl,
+    rating,
+    ratingMax,
+    badge,
+    onClick,
+    className = '',
+  } = props;
+  const testId = props['data-testid'];
 
   return (
     <div
@@ -13,6 +24,8 @@ export function HeroCard(props: MeepleCardProps) {
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      data-entity={entity}
+      data-testid={testId}
     >
       {imageUrl ? (
         <img
@@ -35,6 +48,14 @@ export function HeroCard(props: MeepleCardProps) {
         }}
       />
       <div className="relative flex h-full min-h-[320px] flex-col justify-end p-6">
+        {badge && (
+          <span
+            className="absolute right-6 top-6 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm"
+            data-slot="badge"
+          >
+            {badge}
+          </span>
+        )}
         <h3 className="font-[var(--font-quicksand)] text-2xl font-bold leading-tight text-white drop-shadow-md">
           {title}
         </h3>

@@ -28,12 +28,15 @@
 
 'use client';
 
+import { useMemo } from 'react';
+
 import {
   MeepleCard,
   MeepleCardSkeleton,
   type MeepleCardAction,
   type MeepleCardVariant,
 } from '@/components/ui/data-display/meeple-card';
+import { buildKbNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 import { buildKbCardProps } from '@/lib/card-mappers';
 
@@ -160,6 +163,22 @@ export function MeepleKbCard({
     ? `${document.documentType.charAt(0).toUpperCase()}${document.documentType.slice(1)} — ${formatFileSize(document.fileSizeBytes)}`
     : formatFileSize(document.fileSizeBytes);
 
+  const navItems = useMemo(
+    () =>
+      buildKbNavItems(
+        { chunkCount: undefined }, // chunkCount not available on PdfDocumentDto
+        {
+          onChunksClick: undefined, // disabled in v1
+          onReindexClick: isAdmin && !isProcessing ? () => onReindex?.(document.id) : undefined,
+          onPreviewClick: () => {
+            window.location.href = `/documents/${document.id}`;
+          },
+          onDownloadClick: isEditorOrAdmin ? () => onDownload?.(document.id) : undefined,
+        }
+      ),
+    [isAdmin, isProcessing, isEditorOrAdmin, document.id, onReindex, onDownload]
+  );
+
   return (
     <MeepleCard
       entity="kb"
@@ -168,6 +187,7 @@ export function MeepleKbCard({
       subtitle={subtitle}
       badge={mapperProps.badge}
       metadata={mapperProps.metadata}
+      navItems={navItems}
       className={className}
       onClick={() => (window.location.href = `/documents/${document.id}`)}
       actions={actions.length > 0 ? actions : undefined}

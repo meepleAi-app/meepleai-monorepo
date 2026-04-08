@@ -125,3 +125,15 @@ Trigger batch job re-embedding via admin API (es. dopo cambio modello embedding)
 ```bash
 bash infra/scripts/reembed-vectors.sh http://localhost:8080 $ADMIN_TOKEN
 ```
+
+## Migration Consolidation (local dev only)
+
+| Script | Purpose |
+|--------|---------|
+| `db-save-state.ps1` | Save local DB state before consolidating EF migrations |
+| `db-reset-migrations.ps1` | Drop DB, delete Migrations/, create fresh Initial |
+| `db-restore-state.ps1` | Restore data into the fresh schema, with drift check and rollback |
+| `db-snapshot-common.psm1` | Shared PowerShell module (helpers + pure functions) |
+| `tests/db-snapshot-common.Tests.ps1` | Pester tests for module pure functions |
+
+See [docs/operations/migration-consolidation-runbook.md](../../docs/operations/migration-consolidation-runbook.md) for the workflow.

@@ -8,7 +8,8 @@
 
 import Link from 'next/link';
 
-import { MeepleCard, MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card';
+import { MeepleAgentCard } from '@/components/agent/MeepleAgentCard';
+import { MeepleCardSkeleton } from '@/components/ui/data-display/meeple-card';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -54,25 +55,16 @@ export function YourAgents({ agents, loading, className, onCreateAgent }: YourAg
         ) : (
           <>
             {agents.map(agent => (
-              <MeepleCard
+              <MeepleAgentCard
                 key={agent.id}
-                entity="agent"
+                agent={{
+                  id: agent.id,
+                  name: agent.name,
+                  description: agent.gameTitle ?? null,
+                  iconUrl: agent.imageUrl ?? null,
+                  chatCount: agent.stats?.invocationCount ?? 0,
+                }}
                 variant="grid"
-                title={agent.name}
-                subtitle={agent.gameTitle}
-                imageUrl={agent.imageUrl}
-                badge={
-                  agent.status === 'active'
-                    ? 'Attivo'
-                    : agent.status === 'error'
-                      ? 'Errore'
-                      : undefined
-                }
-                metadata={
-                  agent.stats
-                    ? [{ label: `${agent.stats.invocationCount} invocazioni` }]
-                    : undefined
-                }
               />
             ))}
 

@@ -65,7 +65,8 @@ export default function MeepleCardDevPage() {
         </p>
         <h1 className="text-3xl font-bold">MeepleCard Showcase</h1>
         <p className="text-muted-foreground mt-2 max-w-2xl">
-          Universal card component with 5 variants and 9 entity types.
+          Universal card component with 5 variants and 9 entity types. Tutte le feature dei mockup
+          in <code className="text-xs">admin-mockups/</code> sono dimostrate qui.
         </p>
       </div>
 
@@ -183,43 +184,381 @@ export default function MeepleCardDevPage() {
           />
 
           <Label>hero</Label>
-          <MeepleCard
-            entity="player"
-            variant="hero"
-            title="Alice Rossi"
-            subtitle="Giocatrice del mese"
-            metadata={[{ label: '42 partite' }, { label: '68% win rate' }]}
-          />
-        </Section>
-
-        {/* With Actions */}
-        <Section title="Con Azioni" description="MeepleCard con actions array.">
-          <CardRow>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <MeepleCard
               entity="game"
-              variant="grid"
-              title="Wingspan"
-              subtitle="Elizabeth Hargrave · 2019"
-              imageUrl="https://picsum.photos/seed/wingspan/400/300"
-              rating={4.8}
-              ratingMax={5}
-              metadata={[{ label: '1-5 giocatori' }]}
-              actions={[
-                { icon: '▶', label: 'Avvia partita', onClick: () => alert('Avvia!') },
-                { icon: '📖', label: 'Regolamento', onClick: () => alert('Regolamento') },
-                {
-                  icon: '🗑️',
-                  label: 'Rimuovi',
-                  onClick: () => alert('Rimuovi'),
-                  variant: 'danger',
-                },
-              ]}
+              variant="hero"
+              title="Game of the Month: Catan"
+              subtitle="The classic gateway game that started it all"
+              imageUrl="https://picsum.photos/seed/catan-hero/800/600"
+              rating={7.2}
+              ratingMax={10}
+              badge="Editor's Pick"
+              metadata={[{ label: 'Editor Pick' }, { label: '10K+ plays' }]}
             />
+            <MeepleCard
+              entity="player"
+              variant="hero"
+              title="Alice Rossi"
+              subtitle="Giocatrice del mese"
+              metadata={[{ label: '42 partite' }, { label: '68% win rate' }]}
+            />
+          </div>
+        </Section>
+
+        {/* Quick Actions — hover-reveal (fix showQuickActions prop) */}
+        <Section
+          title="Quick Actions (Hover)"
+          description="Le azioni rapide si rivelano al passaggio del mouse. Richiedono showQuickActions={true} AND actions.length > 0 (entrambe obbligatorie)."
+        >
+          <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+            💡 Passa il mouse sopra ogni card per vedere i pulsanti delle azioni in alto a destra.
+          </p>
+          <CardRow>
+            <div>
+              <Label>game · 3 azioni</Label>
+              <MeepleCard
+                entity="game"
+                variant="grid"
+                title="Wingspan"
+                subtitle="Elizabeth Hargrave · 2019"
+                imageUrl="https://picsum.photos/seed/wingspan/400/300"
+                rating={4.8}
+                ratingMax={5}
+                metadata={[{ label: '1-5 giocatori' }]}
+                showQuickActions
+                actions={[
+                  { icon: '▶', label: 'Avvia partita', onClick: () => alert('Avvia!') },
+                  { icon: '📖', label: 'Regolamento', onClick: () => alert('Regolamento') },
+                  {
+                    icon: '🗑️',
+                    label: 'Rimuovi',
+                    onClick: () => alert('Rimuovi'),
+                    variant: 'danger',
+                  },
+                ]}
+              />
+            </div>
+            <div>
+              <Label>agent · 2 azioni</Label>
+              <MeepleCard
+                entity="agent"
+                variant="grid"
+                title="RulesBot Pro"
+                subtitle="RAG · GPT-4o-mini"
+                status="active"
+                metadata={[{ label: '342 invocazioni' }]}
+                showQuickActions
+                actions={[
+                  { icon: '💬', label: 'Chat', onClick: () => alert('Chat!') },
+                  { icon: '⚙️', label: 'Configura', onClick: () => alert('Config!') },
+                ]}
+              />
+            </div>
+            <div>
+              <Label>kb · disabled + danger</Label>
+              <MeepleCard
+                entity="kb"
+                variant="grid"
+                title="Manuale Catan"
+                subtitle="PDF · 48 pagine"
+                status="indexed"
+                metadata={[{ label: '124 chunks' }, { label: '2.4 MB' }]}
+                showQuickActions
+                actions={[
+                  { icon: '👁', label: 'Anteprima', onClick: () => alert('Preview') },
+                  {
+                    icon: '🔄',
+                    label: 'Reindex in corso',
+                    onClick: () => alert('Reindex'),
+                    disabled: true,
+                  },
+                  {
+                    icon: '🗑️',
+                    label: 'Elimina',
+                    onClick: () => alert('Elimina'),
+                    variant: 'danger',
+                  },
+                ]}
+              />
+            </div>
           </CardRow>
         </Section>
 
-        {/* Status badges */}
-        <Section title="Status Badges" description="Stato delle entità tramite CardStatus.">
+        {/* Showcase Completo — tutte le feature combinate (match mockup summary Section 2) */}
+        <Section
+          title="Showcase Completo — Tutte le Feature"
+          description="Una card per ogni entity con image + badge + rating + metadata + status + tags + navItems + quickActions combinati. Mirrors admin-mockups/meeple-card-summary-render.html Section 2."
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <MeepleCard
+              entity="game"
+              variant="grid"
+              title="Catan"
+              subtitle="Klaus Teuber · 1995"
+              imageUrl="https://picsum.photos/seed/catan-full/400/300"
+              rating={7.2}
+              ratingMax={10}
+              badge="Bestseller"
+              status="owned"
+              tags={['Classic', 'Family', 'Strategy']}
+              metadata={[{ label: '3-4 giocatori' }, { label: '60-120 min' }]}
+              showQuickActions
+              actions={[
+                { icon: 'ℹ', label: 'Info', onClick: () => alert('Info') },
+                { icon: '📚', label: 'Library', onClick: () => alert('Library') },
+                { icon: '🤖', label: 'Crea agent', onClick: () => alert('Agent') },
+              ]}
+              navItems={buildGameNavItems(
+                { kbCount: 3, agentCount: 1, chatCount: 5, sessionCount: 12 },
+                {
+                  onKbClick: () => alert('KB'),
+                  onAgentClick: () => alert('Agent'),
+                  onChatClick: () => alert('Chat'),
+                  onSessionClick: () => alert('Session'),
+                }
+              )}
+            />
+            <MeepleCard
+              entity="player"
+              variant="grid"
+              title="Marco Rossi"
+              subtitle="@marco_games"
+              badge="Top 5%"
+              status="active"
+              metadata={[{ label: '142 plays' }, { label: '68% win' }]}
+              navItems={buildPlayerNavItems(
+                { totalWins: 96, totalSessions: 142 },
+                {
+                  onWinsClick: () => alert('Wins'),
+                  onSessionsClick: () => alert('Sessions'),
+                }
+              )}
+            />
+            <MeepleCard
+              entity="session"
+              variant="grid"
+              title="Serata Azul"
+              subtitle="Azul · Casa di Marco"
+              status="inprogress"
+              badge="Live"
+              metadata={[{ label: '4 giocatori' }, { label: '45 min' }]}
+              navItems={buildSessionNavItems(
+                { playerCount: 4, hasNotes: true, toolCount: 2, photoCount: 6 },
+                {
+                  onPlayersClick: () => alert('Players'),
+                  onNotesClick: () => alert('Notes'),
+                  onToolsClick: () => alert('Tools'),
+                  onPhotosClick: () => alert('Photos'),
+                }
+              )}
+            />
+            <MeepleCard
+              entity="agent"
+              variant="grid"
+              title="Azul Rules Expert"
+              subtitle="RAG Strategy · GPT-4o-mini"
+              status="active"
+              badge="v2"
+              metadata={[{ label: '342 invocazioni' }, { label: '12 fonti' }]}
+              showQuickActions
+              actions={[
+                { icon: '💬', label: 'Chat', onClick: () => alert('Chat') },
+                { icon: '⚙️', label: 'Config', onClick: () => alert('Config') },
+              ]}
+              navItems={buildAgentNavItems(
+                { chatCount: 18, kbCount: 12 },
+                {
+                  onChatClick: () => alert('Chat'),
+                  onKbClick: () => alert('KB'),
+                  onConfigClick: () => alert('Config'),
+                }
+              )}
+            />
+            <MeepleCard
+              entity="kb"
+              variant="grid"
+              title="azul_rulebook.pdf"
+              subtitle="Azul · Regolamento base"
+              status="indexed"
+              tags={['PDF', 'Base Rules']}
+              metadata={[{ label: '12 pagine' }, { label: '2.4 MB' }]}
+              showQuickActions
+              actions={[
+                { icon: '👁', label: 'Anteprima', onClick: () => alert('Preview') },
+                { icon: '⬇', label: 'Download', onClick: () => alert('Download') },
+              ]}
+              navItems={buildKbNavItems(
+                { chunkCount: 124 },
+                {
+                  onChunksClick: () => alert('Chunks'),
+                  onReindexClick: () => alert('Reindex'),
+                  onPreviewClick: () => alert('Preview'),
+                  onDownloadClick: () => alert('Download'),
+                }
+              )}
+            />
+            <MeepleCard
+              entity="chat"
+              variant="grid"
+              title="Come si gioca ad Azul?"
+              subtitle="Azul · Azul Rules Expert"
+              status="active"
+              badge="12 nuovi"
+              metadata={[{ label: '12 messaggi' }]}
+              navItems={buildChatNavItems(
+                { messageCount: 12 },
+                {
+                  onMessagesClick: () => alert('Messages'),
+                  onAgentLinkClick: () => alert('Agent'),
+                }
+              )}
+            />
+            <MeepleCard
+              entity="event"
+              variant="grid"
+              title="MeepleAI Tournament"
+              subtitle="Grand Finals · 15 Mar"
+              badge="Finals"
+              status="setup"
+              metadata={[{ label: '32 team' }, { label: '15 Mar' }]}
+              navItems={buildEventNavItems(
+                { participantCount: 32, gameCount: 4 },
+                {
+                  onParticipantsClick: () => alert('Participants'),
+                  onLocationClick: () => alert('Location'),
+                  onGamesClick: () => alert('Games'),
+                  onDateClick: () => alert('Date'),
+                }
+              )}
+            />
+            <MeepleCard
+              entity="toolkit"
+              variant="grid"
+              title="Catan Companion"
+              subtitle="Toolkit ufficiale · 6 strumenti"
+              badge="Ufficiale"
+              status="active"
+              tags={['Official', 'Stats', 'Dice']}
+              metadata={[{ label: '6 strumenti' }, { label: '124 uso' }]}
+              navItems={buildToolkitNavItems(
+                { toolCount: 6, deckCount: 2, phaseCount: 4, useCount: 124 },
+                {
+                  onToolsClick: () => alert('Tools'),
+                  onDecksClick: () => alert('Decks'),
+                  onPhasesClick: () => alert('Phases'),
+                  onHistoryClick: () => alert('History'),
+                }
+              )}
+            />
+            <MeepleCard
+              entity="tool"
+              variant="grid"
+              title="Dice Roller"
+              subtitle="Lancio dadi · 6d6"
+              badge="Beta"
+              metadata={[{ label: '18 uso' }]}
+              showQuickActions
+              actions={[
+                { icon: '🎲', label: 'Lancia', onClick: () => alert('Roll') },
+                { icon: '📋', label: 'Duplica', onClick: () => alert('Duplicate') },
+              ]}
+              navItems={buildToolNavItems({
+                onUseClick: () => alert('Use'),
+                onEditClick: () => alert('Edit'),
+                onDuplicateClick: () => alert('Duplicate'),
+                onHistoryClick: () => alert('History'),
+              })}
+            />
+          </div>
+        </Section>
+
+        {/* Tags showcase */}
+        <Section
+          title="Tags (TagStrip)"
+          description="Il prop tags produce una striscia verticale di tag sul bordo sinistro della cover. Supporta overflow con +N."
+        >
+          <CardRow>
+            <div>
+              <Label>3 tags</Label>
+              <MeepleCard
+                entity="game"
+                variant="grid"
+                title="Scythe"
+                subtitle="Jamey Stegmaier · 2016"
+                imageUrl="https://picsum.photos/seed/scythe/400/300"
+                rating={8.2}
+                ratingMax={10}
+                tags={['Heavy', 'Engine', 'Area Control']}
+                metadata={[{ label: '1-5' }, { label: '90-115m' }]}
+              />
+            </div>
+            <div>
+              <Label>overflow +2</Label>
+              <MeepleCard
+                entity="game"
+                variant="grid"
+                title="Gloomhaven"
+                subtitle="Isaac Childres · 2017"
+                imageUrl="https://picsum.photos/seed/gloomhaven/400/300"
+                rating={8.9}
+                ratingMax={10}
+                tags={['RPG', 'Campaign', 'Coop', 'Deckbuild', 'Legacy']}
+                metadata={[{ label: '1-4' }, { label: '60-120m' }]}
+              />
+            </div>
+            <div>
+              <Label>kb tags</Label>
+              <MeepleCard
+                entity="kb"
+                variant="grid"
+                title="rules_addendum.pdf"
+                subtitle="Scythe · FAQ ufficiali"
+                status="indexed"
+                tags={['FAQ', 'Errata']}
+                metadata={[{ label: '8 pagine' }]}
+              />
+            </div>
+          </CardRow>
+        </Section>
+
+        {/* Grid with Status Badges */}
+        <Section
+          title="Grid con Status Badge"
+          description="Lo status badge è mostrato sulla cover nei variant grid (oltre al rendering compact)."
+        >
+          <CardRow>
+            {(
+              [
+                { s: 'owned', t: 'Posseduto', e: 'game' },
+                { s: 'wishlist', t: 'Wishlist', e: 'game' },
+                { s: 'active', t: 'Attivo', e: 'agent' },
+                { s: 'indexed', t: 'Indicizzato', e: 'kb' },
+                { s: 'processing', t: 'Processing', e: 'kb' },
+                { s: 'failed', t: 'Fallito', e: 'kb' },
+                { s: 'inprogress', t: 'In corso', e: 'session' },
+                { s: 'completed', t: 'Completata', e: 'session' },
+              ] as const
+            ).map(({ s, t, e }) => (
+              <div key={s}>
+                <Label>{s}</Label>
+                <MeepleCard
+                  entity={e}
+                  variant="grid"
+                  title={t}
+                  subtitle={`status=${s}`}
+                  status={s}
+                />
+              </div>
+            ))}
+          </CardRow>
+        </Section>
+
+        {/* Status badges (compact) */}
+        <Section
+          title="Status Badges (compact)"
+          description="Tutti i 12 valori CardStatus nel variant compact."
+        >
           <CardRow>
             {(
               [

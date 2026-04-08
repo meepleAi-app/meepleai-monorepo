@@ -17,6 +17,10 @@ import {
   MobileCardLayout,
   MobileDevicePreview,
   MobileCardDrawer,
+  FlipCard,
+  Carousel3D,
+  entityHsl,
+  entityLabel,
 } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardProps } from '@/components/ui/data-display/meeple-card';
 import {
@@ -848,6 +852,235 @@ export default function MeepleCardDevPage() {
           </div>
         </Section>
 
+        {/* Flip Card — match visual-test Section 4 */}
+        <Section
+          title="Flip Card"
+          description="Click sulla card per girare. Front = card standard, back = entity-colored header + dettagli. Componente FlipCard con trigger='card'|'button'."
+        >
+          <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+            💡 Clicca sulle card per girarle. Il pulsante ✕ sul retro le rigira.
+          </p>
+          <CardRow>
+            <FlipCard
+              className="w-[220px] h-[420px]"
+              front={
+                <MeepleCard
+                  entity="game"
+                  variant="grid"
+                  title="I Coloni di Catan"
+                  subtitle="Klaus Teuber · Kosmos · 1995"
+                  imageUrl={GAME_IMAGE}
+                  rating={7.1}
+                  ratingMax={10}
+                  status="owned"
+                  tags={['Gioco', 'Posseduto']}
+                  metadata={[{ label: '3-4' }, { label: '60-120m' }, { label: '2.3' }]}
+                  className="h-full"
+                />
+              }
+              back={
+                <FlipBackContent
+                  entity="game"
+                  title="I Coloni di Catan"
+                  subtitle="Gioco da Tavolo · 1995"
+                  rows={[
+                    ['Giocatori', '3-4'],
+                    ['Durata', '60-120 min'],
+                    ['Complessità', '2.32 / 5'],
+                    ['Rating', '7.1 / 10'],
+                    ['Documenti KB', '3 PDF'],
+                    ['Sessioni', '5 giocate'],
+                    ['Agente AI', 'CatanHelper'],
+                    ['Chat', '2 conversazioni'],
+                  ]}
+                />
+              }
+            />
+            <FlipCard
+              className="w-[220px] h-[420px]"
+              front={
+                <MeepleCard
+                  entity="agent"
+                  variant="grid"
+                  title="CatanHelper AI"
+                  subtitle="Agente Strategico · GPT-4o"
+                  status="active"
+                  metadata={[{ label: '450 chunks' }, { label: '2 chat' }]}
+                  navItems={buildAgentNavItems(
+                    { chatCount: 2, kbCount: 3 },
+                    {
+                      onChatClick: () => alert('Chat'),
+                      onKbClick: () => alert('KB'),
+                      onConfigClick: () => alert('Config'),
+                    }
+                  )}
+                  className="h-full"
+                />
+              }
+              back={
+                <FlipBackContent
+                  entity="agent"
+                  title="CatanHelper AI"
+                  subtitle="Agente AI · 10 Feb 2026"
+                  rows={[
+                    ['Gioco', 'I Coloni di Catan'],
+                    ['Modello', 'GPT-4o'],
+                    ['Strategia RAG', 'Hybrid Search'],
+                    ['Documenti', '3 PDF (450 chunks)'],
+                    ['Chat', '2 conversazioni'],
+                    ['Ultimo uso', 'Oggi, 14:30'],
+                  ]}
+                />
+              }
+            />
+          </CardRow>
+        </Section>
+
+        {/* 3D Carousel — match visual-test Section 5 */}
+        <Section
+          title="3D Carousel"
+          description="Prospettiva 1200px. Centro: scale(1.1), opacity 1. Laterali: scale(0.85), opacity 0.6, blur 2px, rotateY(-5deg). Componente Carousel3D con nav buttons."
+        >
+          <Carousel3D
+            cards={[
+              {
+                entity: 'game',
+                id: 'car-catan',
+                title: 'I Coloni di Catan',
+                subtitle: 'Klaus Teuber',
+                imageUrl: GAME_IMAGE,
+                rating: 7.1,
+                ratingMax: 10,
+                tags: ['Gioco'],
+                metadata: [{ label: '3-4' }, { label: '60-120m' }],
+              },
+              {
+                entity: 'game',
+                id: 'car-wingspan',
+                title: 'Wingspan',
+                subtitle: 'Elizabeth Hargrave',
+                imageUrl: 'https://picsum.photos/seed/wingspan-car/400/300',
+                rating: 8.1,
+                ratingMax: 10,
+                metadata: [{ label: '1-5' }, { label: '40-70m' }],
+              },
+              {
+                entity: 'game',
+                id: 'car-azul',
+                title: 'Azul',
+                subtitle: 'Michael Kiesling',
+                rating: 7.8,
+                ratingMax: 10,
+                metadata: [{ label: '2-4' }, { label: '30-45m' }],
+              },
+              {
+                entity: 'game',
+                id: 'car-tfm',
+                title: 'Terraforming Mars',
+                subtitle: 'Jacob Fryxelius',
+                imageUrl: 'https://picsum.photos/seed/tfm-car/400/300',
+                rating: 8.4,
+                ratingMax: 10,
+                metadata: [{ label: '1-5' }, { label: '120m' }],
+              },
+              {
+                entity: 'game',
+                id: 'car-spirit',
+                title: 'Spirit Island',
+                subtitle: 'R. Eric Reuss',
+                rating: 8.3,
+                ratingMax: 10,
+                metadata: [{ label: '1-4' }, { label: '90-120m' }],
+              },
+              {
+                entity: 'game',
+                id: 'car-gloom',
+                title: 'Gloomhaven',
+                subtitle: 'Isaac Childres',
+                imageUrl: 'https://picsum.photos/seed/gloom-car/400/300',
+                rating: 8.7,
+                ratingMax: 10,
+                metadata: [{ label: '1-4' }, { label: '60-120m' }],
+              },
+            ]}
+          />
+          <p className="text-xs text-center text-muted-foreground mt-2">
+            Nota: Carousel3D usa <code className="text-xs">hidden md:flex</code> — visibile solo su
+            desktop (md+).
+          </p>
+        </Section>
+
+        {/* Multi-Entity Grid — match visual-test Section 6 */}
+        <Section
+          title="Multi-Entity Grid"
+          description="Card di entity diversi insieme (Chat, Player, Document) in un grid misto — come nella homepage o search results."
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <MeepleCard
+              entity="chat"
+              variant="grid"
+              title="Strategie Catan"
+              subtitle="12 messaggi · Oggi"
+              badge="12"
+              metadata={[{ label: '12 msg' }]}
+              navItems={buildChatNavItems(
+                { messageCount: 12 },
+                {
+                  onMessagesClick: () => alert('Messages'),
+                  onAgentLinkClick: () => alert('Agent'),
+                }
+              )}
+            />
+            <MeepleCard
+              entity="player"
+              variant="grid"
+              title="Marco R."
+              subtitle="12 sessioni · 5 vittorie"
+              metadata={[{ label: '12 sessioni' }, { label: '42% win' }]}
+              navItems={buildPlayerNavItems(
+                { totalWins: 5, totalSessions: 12 },
+                {
+                  onWinsClick: () => alert('Wins'),
+                  onSessionsClick: () => alert('Sessions'),
+                }
+              )}
+            />
+            <MeepleCard
+              entity="kb"
+              variant="grid"
+              title="Regolamento TFM"
+              subtitle="PDF · 32 pagine · 200 chunks"
+              status="indexed"
+              metadata={[{ label: '32 pg' }, { label: '200 chunks' }]}
+              navItems={buildKbNavItems(
+                { chunkCount: 200 },
+                {
+                  onChunksClick: () => alert('Chunks'),
+                  onReindexClick: () => alert('Reindex'),
+                  onPreviewClick: () => alert('Preview'),
+                  onDownloadClick: () => alert('Download'),
+                }
+              )}
+            />
+          </div>
+        </Section>
+
+        {/* Table View — not yet implemented */}
+        <Section
+          title="Table View (mockup only)"
+          description="La sezione 3 del visual-test mostra una tabella con righe entity-colored, sorting, e nav icons. Il componente EntityTable non è ancora implementato — questa sezione documenta il gap."
+        >
+          <div className="rounded-lg border border-dashed border-[var(--mc-border)] bg-[var(--mc-bg-muted)] px-6 py-8 text-center">
+            <p className="text-sm text-[var(--mc-text-secondary)]">
+              📋 <strong>EntityTable</strong> — componente non ancora implementato.
+            </p>
+            <p className="mt-1 text-xs text-[var(--mc-text-muted)]">
+              Vedere <code>admin-mockups/meeple-card-visual-test.html</code> Section 3 per il
+              wireframe di riferimento. Colonne: Titolo, Tipo, Dettagli, Rating, Stato, Nav.
+            </p>
+          </div>
+        </Section>
+
         {/* Mobile Card Layout — match admin-mockups/mobile-card-layout-mockup.html */}
         <MobilePreviewSection />
 
@@ -936,5 +1169,53 @@ function MobilePreviewSection() {
         </div>
       </div>
     </Section>
+  );
+}
+
+/**
+ * Flip card back content — entity-colored header + detail rows.
+ * Matches the visual-test mockup Section 4.
+ */
+function FlipBackContent({
+  entity,
+  title,
+  subtitle,
+  rows,
+}: {
+  entity: MeepleCardProps['entity'];
+  title: string;
+  subtitle: string;
+  rows: [string, string][];
+}) {
+  return (
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-card)]">
+      {/* Entity-colored header with diagonal stripe pattern */}
+      <div
+        className="relative px-4 py-4"
+        style={{
+          background: entityHsl(entity),
+          backgroundImage:
+            'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px)',
+        }}
+      >
+        <h3 className="font-[var(--font-quicksand)] text-base font-bold text-white">{title}</h3>
+        <p className="text-xs text-white/80">{subtitle}</p>
+      </div>
+      {/* Detail rows */}
+      <div className="flex-1 overflow-y-auto px-4 py-2">
+        {rows.map(([label, value]) => (
+          <div
+            key={label}
+            className="flex items-center justify-between border-b border-[var(--mc-border)] py-2 text-xs last:border-0"
+          >
+            <span className="font-semibold text-[var(--mc-text-secondary)]">{label}</span>
+            <span className="text-[var(--mc-text-primary)]">{value}</span>
+          </div>
+        ))}
+      </div>
+      <div className="px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--mc-text-muted)]">
+        {entityLabel[entity]}
+      </div>
+    </div>
   );
 }

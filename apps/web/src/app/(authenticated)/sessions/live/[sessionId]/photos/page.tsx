@@ -1,34 +1,31 @@
 /**
  * Photos Child Card — /sessions/live/[sessionId]/photos
  *
- * Game Night Improvvisata — Task 21
- *
- * Camera capture for board-state photos. Grid of captured photos with
- * timestamps. Photos are held locally in component state; if the
- * session attachment endpoint exists they can be uploaded there.
+ * Camera capture for board-state photos. Photos are persisted in IndexedDB
+ * via lib/storage/photo-store. Local-only (no cross-device sync).
  */
 
 'use client';
 
-import { use, useRef, useState, useCallback } from 'react';
+import { use, useRef, useState, useCallback, useEffect } from 'react';
 
-import { Camera, Image as ImageIcon, Trash2, Upload } from 'lucide-react';
+import { Camera, Image as ImageIcon, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
+import { addPhoto, listPhotos, deletePhoto, type StoredPhoto } from '@/lib/storage/photo-store';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface CapturedPhoto {
+interface DisplayPhoto {
   id: string;
-  dataUrl: string;
+  objectUrl: string;
   timestamp: number;
-  filename: string;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 interface PhotoCardProps {
-  photo: CapturedPhoto;
+  photo: DisplayPhoto;
   onDelete: (id: string) => void;
 }
 
@@ -43,7 +40,7 @@ function PhotoCard({ photo, onDelete }: PhotoCardProps) {
     <div className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-square shadow-sm border border-white/60">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={photo.dataUrl}
+        src={photo.objectUrl}
         alt={`Foto partita ${timeLabel}`}
         className="w-full h-full object-cover"
       />
@@ -71,53 +68,62 @@ interface PhotosPageProps {
   params: Promise<{ sessionId: string }>;
 }
 
+function toDisplay(stored: StoredPhoto): DisplayPhoto {
+  return {
+    id: stored.id,
+    objectUrl: URL.createObjectURL(stored.blob),
+    timestamp: stored.timestamp,
+  };
+}
+
 export default function PhotosPage({ params }: PhotosPageProps) {
-  const { sessionId: _sessionId } = use(params);
+  const { sessionId } = use(params);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
+  const [photos, setPhotos] = useState<DisplayPhoto[]>([]);
 
-  const handleCapture = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Reset input so same file can be re-selected
-    e.target.value = '';
-
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const dataUrl = ev.target?.result as string;
-      if (!dataUrl) return;
-      setPhotos(prev => [
-        ...prev,
-        {
-          id: `photo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          dataUrl,
-          timestamp: Date.now(),
-          filename: file.name,
-        },
-      ]);
+  // Load existing photos from IndexedDB on mount
+  useEffect(() => {
+    let cancelled = false;
+    listPhotos(sessionId).then(stored => {
+      if (cancelled) return;
+      setPhotos(stored.map(toDisplay));
+    });
+    return () => {
+      cancelled = true;
     };
-    reader.readAsDataURL(file);
+  }, [sessionId]);
+
+  // Revoke object URLs on unmount to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      photos.forEach(p => URL.revokeObjectURL(p.objectUrl));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleDelete(id: string) {
-    setPhotos(prev => prev.filter(p => p.id !== id));
-  }
+  const handleCapture = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-  async function handleUploadAll() {
-    if (photos.length === 0) return;
-    setIsUploading(true);
-    try {
-      // Placeholder: session attachment upload endpoint
-      // await api.sessions.uploadAttachment(sessionId, photoBlob)
-      // For now: simulate upload delay
-      await new Promise(r => setTimeout(r, 1000));
-    } finally {
-      setIsUploading(false);
-    }
-  }
+      // Reset input so same file can be re-selected
+      e.target.value = '';
+
+      const stored = await addPhoto(sessionId, file, file.name);
+      setPhotos(prev => [...prev, toDisplay(stored)]);
+    },
+    [sessionId]
+  );
+
+  const handleDelete = useCallback(async (id: string) => {
+    await deletePhoto(id);
+    setPhotos(prev => {
+      const target = prev.find(p => p.id === id);
+      if (target) URL.revokeObjectURL(target.objectUrl);
+      return prev.filter(p => p.id !== id);
+    });
+  }, []);
 
   return (
     <div className="space-y-4 p-4">
@@ -130,31 +136,15 @@ export default function PhotosPage({ params }: PhotosPageProps) {
           </p>
         </div>
 
-        <div className="flex gap-2">
-          {photos.length > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1 font-nunito text-xs"
-              onClick={handleUploadAll}
-              disabled={isUploading}
-              data-testid="upload-button"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              {isUploading ? 'Caricamento...' : 'Carica'}
-            </Button>
-          )}
-
-          <Button
-            size="sm"
-            className="gap-2 bg-amber-500 hover:bg-amber-600 text-white font-nunito"
-            onClick={() => fileInputRef.current?.click()}
-            data-testid="capture-button"
-          >
-            <Camera className="h-4 w-4" />
-            Scatta
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          className="gap-2 bg-amber-500 hover:bg-amber-600 text-white font-nunito"
+          onClick={() => fileInputRef.current?.click()}
+          data-testid="capture-button"
+        >
+          <Camera className="h-4 w-4" />
+          Scatta
+        </Button>
       </div>
 
       {/* Hidden file input (camera capture on mobile) */}

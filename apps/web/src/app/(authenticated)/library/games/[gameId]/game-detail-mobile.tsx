@@ -33,7 +33,7 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { GlassCard } from '@/components/ui/surfaces/GlassCard';
 import { useLibraryGameDetail, libraryKeys } from '@/hooks/queries/useLibrary';
-import { useGameKbStatus } from '@/hooks/use-game-kb-status';
+import { useGameKbStatus } from '@/lib/domain-hooks/useGameKbStatus';
 
 export interface GameDetailMobileProps {
   gameId: string;
@@ -69,7 +69,7 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: game, isLoading, error } = useLibraryGameDetail(gameId);
-  const { data: kbStatus } = useGameKbStatus(gameId);
+  const kbStatus = useGameKbStatus(gameId);
   const [uploadOpen, setUploadOpen] = useState(false);
 
   // -- Loading --
@@ -170,7 +170,7 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
             </div>
 
             {/* KB Coverage Badge */}
-            {kbStatus?.isIndexed && (
+            {kbStatus.isIndexed && (
               <div className="space-y-2" data-testid="kb-status-mobile">
                 <Badge
                   variant="secondary"

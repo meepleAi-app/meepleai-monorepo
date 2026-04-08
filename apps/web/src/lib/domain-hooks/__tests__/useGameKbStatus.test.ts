@@ -39,7 +39,7 @@ describe('useGameKbStatus', () => {
       documentCount: 3,
       coverageScore: 80,
       coverageLevel: 'Standard',
-      suggestedQuestions: [],
+      suggestedQuestions: ['How many players?', 'Setup time?'],
     });
 
     const { result } = renderHook(() => useGameKbStatus('g1'), { wrapper });
@@ -47,6 +47,7 @@ describe('useGameKbStatus', () => {
     expect(result.current.isIndexed).toBe(true);
     expect(result.current.documentCount).toBe(3);
     expect(result.current.coverageLevel).toBe('Standard');
+    expect(result.current.suggestedQuestions).toEqual(['How many players?', 'Setup time?']);
   });
 
   it('returns isIndexed=false on empty KB', async () => {
@@ -82,6 +83,13 @@ describe('useGameKbStatus', () => {
     expect(result.current.isIndexed).toBe(false);
     expect(result.current.documentCount).toBe(0);
     expect(result.current.coverageLevel).toBe('None');
+    expect(result.current.suggestedQuestions).toEqual([]);
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('skips fetch when gameId is undefined (legacy consumer compatibility)', () => {
+    const { result } = renderHook(() => useGameKbStatus(undefined), { wrapper });
+    expect(getUserGameKbStatusMock).not.toHaveBeenCalled();
+    expect(result.current.isIndexed).toBe(false);
   });
 });

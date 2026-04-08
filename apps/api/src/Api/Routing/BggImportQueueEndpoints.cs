@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
@@ -181,7 +182,7 @@ internal static class BggImportQueueEndpoints
 
     private static Guid? GetUserIdFromContext(HttpContext httpContext)
     {
-        var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
         return userId != null && Guid.TryParse(userId, out var userGuid) ? userGuid : (Guid?)null;
     }
 
@@ -191,12 +192,10 @@ internal static class BggImportQueueEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
         var command = new EnqueueBggBatchFromJsonCommand
         {
             JsonContent = request.JsonContent,
-            UserId = userId != null && Guid.TryParse(userId, out var userGuid) ? userGuid : Guid.Empty,
+            UserId = GetUserIdFromContext(httpContext) ?? Guid.Empty,
             AutoPublish = request.AutoPublish
         };
 

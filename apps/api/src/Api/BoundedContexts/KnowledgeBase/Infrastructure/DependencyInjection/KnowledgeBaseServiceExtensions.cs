@@ -224,38 +224,34 @@ internal static class KnowledgeBaseServiceExtensions
             var config = sp.GetRequiredService<IConfiguration>();
             var logger = sp.GetRequiredService<ILogger<OpenRouterFileLogger>>();
             var configuredPath = config["OPENROUTER_LOG_PATH"];
+            var fallbackDir = Path.Combine(Path.GetTempPath(), "meepleai", "openrouter");
 
             // Prefer configured path, otherwise fall back to system temp dir to avoid
             // permission issues when running under restricted users (e.g. non-root in containers).
-            var logDir = !string.IsNullOrWhiteSpace(configuredPath)
-                ? configuredPath
-                : Path.Combine(Path.GetTempPath(), "meepleai", "openrouter");
+            var logDir = !string.IsNullOrWhiteSpace(configuredPath) ? configuredPath : fallbackDir;
 
-            try
+            if (TryCreateDirectory(logDir, logger))
             {
-                Directory.CreateDirectory(logDir);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                // Fallback: try system temp if configured path is not writable
-                var fallbackDir = Path.Combine(Path.GetTempPath(), "meepleai", "openrouter");
-                logger.LogWarning(ex,
-                    "OpenRouter log directory {ConfiguredDir} is not writable, falling back to {FallbackDir}",
-                    logDir, fallbackDir);
-                logDir = fallbackDir;
-                Directory.CreateDirectory(logDir);
-            }
-            catch (IOException ex)
-            {
-                var fallbackDir = Path.Combine(Path.GetTempPath(), "meepleai", "openrouter");
-                logger.LogWarning(ex,
-                    "Failed to create OpenRouter log directory {ConfiguredDir}, falling back to {FallbackDir}",
-                    logDir, fallbackDir);
-                logDir = fallbackDir;
-                Directory.CreateDirectory(logDir);
+                return new OpenRouterFileLogger(logDir);
             }
 
-            return new OpenRouterFileLogger(logDir);
+            // Primary path failed. Try fallback only if it's different from the primary
+            // to avoid retrying the same failing path.
+            if (!string.Equals(Path.GetFullPath(logDir), Path.GetFullPath(fallbackDir), StringComparison.Ordinal)
+                && TryCreateDirectory(fallbackDir, logger))
+            {
+                logger.LogWarning(
+                    "OpenRouter log directory {ConfiguredDir} not writable, using fallback {FallbackDir}",
+                    logDir, fallbackDir);
+                return new OpenRouterFileLogger(fallbackDir);
+            }
+
+            // Both paths failed — degrade to no-op logger rather than poisoning DI.
+            logger.LogError(
+                "Unable to create OpenRouter log directory (tried {ConfiguredDir} and {FallbackDir}); "
+                + "file logging disabled for this process",
+                logDir, fallbackDir);
+            return new NoOpOpenRouterFileLogger();
         });
 
         // Issue #5074: OpenRouter usage cache — polls /auth/key every 60s, accumulates daily spend
@@ -285,6 +281,63 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #5477: Redis rate-limiting health monitor — pings Redis every 30s, alerts admins on failure
         services.AddSingleton<RedisRateLimitingHealthMonitor>();
         services.AddHostedService(sp => sp.GetRequiredService<RedisRateLimitingHealthMonitor>());
+    }
+
+    /// <summary>
+    /// Attempts to create a directory, catching permission and IO exceptions so
+    /// singleton factories don't poison DI when the target path is not writable.
+    /// </summary>
+    private static bool TryCreateDirectory(string path, ILogger logger)
+    {
+        try
+        {
+            Directory.CreateDirectory(path);
+            return true;
+        }
+        catch (Exception ex) when (
+            ex is UnauthorizedAccessException
+            or IOException
+            or ArgumentException
+            or NotSupportedException)
+        {
+            logger.LogDebug(ex, "Failed to create directory {Path}", path);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// No-op implementation used when OpenRouter file logging cannot be initialized.
+    /// Degrades gracefully to avoid failing DI resolution for a non-critical logging concern.
+    /// </summary>
+    private sealed class NoOpOpenRouterFileLogger : IOpenRouterFileLogger
+    {
+        public void LogRequest(
+            string requestId,
+            string model,
+            string provider,
+            string source,
+            Guid? userId,
+            int promptTokens,
+            int completionTokens,
+            decimal costUsd,
+            long latencyMs,
+            bool success,
+            bool isFreeModel,
+            string? sessionId,
+            string? errorMessage = null)
+        {
+            // no-op
+        }
+
+        public void LogRateLimitHit(string model, int httpStatus, int retryAfterMs, int currentRpm, int limitRpm)
+        {
+            // no-op
+        }
+
+        public void LogCircuitBreakerEvent(string provider, string newState, int consecutiveFailures)
+        {
+            // no-op
+        }
     }
 
     private static void AddInfrastructureServices(IServiceCollection services)

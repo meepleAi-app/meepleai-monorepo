@@ -1,3 +1,19 @@
+/**
+ * @status ORPHAN — public API variant, not yet consumed in pages.
+ *
+ * Standalone vertical tag strip with desktop/tablet/mobile variants, left/right
+ * positioning, and TagBadge/TagOverflow composition.
+ *
+ * **Not a duplicate** of `meeple-card/parts/TagStrip.tsx`: the internal one is
+ * entity-color-aware (uses MeepleCard tokens) and absolutely positioned inside
+ * a card. This standalone version is framework-agnostic and designed for card
+ * surfaces outside the MeepleCard system.
+ *
+ * **Why not consumed today:** no non-MeepleCard surface currently needs a
+ * vertical tag strip. Integrate when feature pages introduce custom card
+ * layouts that aren't built on MeepleCard.
+ */
+
 'use client';
 
 import React from 'react';
@@ -8,7 +24,12 @@ import type { TagStripProps } from '@/types/tags';
 import { TagBadge } from './TagBadge';
 import { TagOverflow } from './TagOverflow';
 
-export function TagStrip({ tags, maxVisible = 3, variant = 'desktop', position = 'left' }: TagStripProps) {
+export function TagStrip({
+  tags,
+  maxVisible = 3,
+  variant = 'desktop',
+  position = 'left',
+}: TagStripProps) {
   if (!tags || tags.length === 0) return null;
 
   const visibleTags = tags.slice(0, maxVisible);
@@ -33,7 +54,9 @@ export function TagStrip({ tags, maxVisible = 3, variant = 'desktop', position =
           <TagBadge tag={tag} variant={variant} showText={variant !== 'mobile'} />
         </div>
       ))}
-      {hiddenTags.length > 0 && <TagOverflow hiddenTags={hiddenTags} count={hiddenTags.length} variant={variant} />}
+      {hiddenTags.length > 0 && (
+        <TagOverflow hiddenTags={hiddenTags} count={hiddenTags.length} variant={variant} />
+      )}
     </div>
   );
 }

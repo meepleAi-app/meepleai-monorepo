@@ -1,3 +1,20 @@
+/**
+ * AgentStatsDisplay — compact horizontal metadata panel for agents.
+ *
+ * @status ORPHAN — public API variant, not adopted.
+ *
+ * `AgentCharacterSheet.tsx` (agent detail page) uses a custom RPG-style layout
+ * with 2x2 `StatPip` grid + mana pips, bound to `AgentDetailData`. This
+ * component targets `AgentMetadata` and renders a horizontal flex row.
+ *
+ * **Not a drop-in replacement for AgentCharacterSheet** (different types and
+ * visual design). Intended for compact contexts: agent list items, dashboard
+ * cards, or tooltips — none of which exist today.
+ *
+ * **When to use:** when a new admin/dashboard surface needs a terse agent
+ * metadata summary.
+ */
+
 'use client';
 
 import { MessageSquare, Clock, Brain, Eye, Code2 } from 'lucide-react';
@@ -12,19 +29,19 @@ const CAPABILITY_ICONS = {
   Vision: Eye,
   Code: Code2,
   Functions: MessageSquare,
-  MultiTurn: MessageSquare
+  MultiTurn: MessageSquare,
 };
 
 const CAPABILITY_COLORS = {
-  RAG: 'hsl(38 92% 50%)',      // Amber
-  Vision: 'hsl(262 83% 58%)',  // Purple
-  Code: 'hsl(210 40% 55%)',    // Slate
+  RAG: 'hsl(38 92% 50%)', // Amber
+  Vision: 'hsl(262 83% 58%)', // Purple
+  Code: 'hsl(210 40% 55%)', // Slate
   Functions: 'hsl(221 83% 53%)', // Blue
-  MultiTurn: 'hsl(142 76% 36%)'  // Green
+  MultiTurn: 'hsl(142 76% 36%)', // Green
 };
 
 export function AgentStatsDisplay({ metadata }: { metadata: AgentMetadata }) {
-  const formatCount = (n: number) => n < 1000 ? n.toString() : `${(n / 1000).toFixed(1)}K`;
+  const formatCount = (n: number) => (n < 1000 ? n.toString() : `${(n / 1000).toFixed(1)}K`);
 
   return (
     <div className="flex flex-col gap-2">
@@ -54,7 +71,7 @@ export function AgentStatsDisplay({ metadata }: { metadata: AgentMetadata }) {
       {/* Capabilities Tags (Epic #4068 - Issue #4184) */}
       {metadata.capabilities && metadata.capabilities.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {metadata.capabilities.map((cap) => {
+          {metadata.capabilities.map(cap => {
             const Icon = CAPABILITY_ICONS[cap];
             const color = CAPABILITY_COLORS[cap];
 
@@ -68,7 +85,7 @@ export function AgentStatsDisplay({ metadata }: { metadata: AgentMetadata }) {
                 style={{
                   color,
                   backgroundColor: `${color.replace(')', ' / 0.1)')}`,
-                  borderColor: color
+                  borderColor: color,
                 }}
                 role="status"
                 aria-label={`Capability: ${cap}`}

@@ -3,8 +3,17 @@
 /**
  * PageTransition Component (Issue #2965 Wave 8)
  *
- * Provides smooth page transition animations for route changes.
- * Use in layout.tsx or page-specific layouts.
+ * Provides smooth page transition animations for route changes (fade / slide /
+ * scale) via Framer Motion. Use in layout.tsx or page-specific layouts.
+ *
+ * @status ORPHAN — never wired into any layout. Candidate hosts:
+ *   - `app/layout.tsx` (global, high blast radius)
+ *   - `(authenticated)/layout.tsx` (scoped to authed pages)
+ *   - `(chat)/layout.tsx` (scoped to chat routes)
+ *
+ * Integration is non-trivial: wrapping layout `children` changes animation
+ * timing across the app and can interact badly with Next.js streaming and
+ * Suspense boundaries. Defer until a UX motion pass owns the decision.
  *
  * Usage:
  * <PageTransition>

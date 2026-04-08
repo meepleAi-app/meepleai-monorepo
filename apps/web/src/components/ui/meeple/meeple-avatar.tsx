@@ -4,6 +4,10 @@
  * Displays an animated meeple character representing the AI assistant
  * with different visual states to communicate AI activity/confidence.
  *
+ * @status ORPHAN (transitive) — only imported by `chat-message.tsx`, which is
+ * itself orphan. Revival depends on `ChatMessage` being adopted by
+ * `chat-unified/ChatMessageList.tsx`.
+ *
  * @see docs/04-frontend/wireframes-playful-boardroom.md (lines 358-389)
  * @see docs/04-frontend/improvements/03-brainstorm-ideas.md (#2.1 AI Avatar)
  */

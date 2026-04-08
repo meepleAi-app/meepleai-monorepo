@@ -1,3 +1,16 @@
+/**
+ * MobileCardLayout — mobile card browsing with hand sidebar + focused card.
+ *
+ * @status ORPHAN — not wired to any production mobile page.
+ *
+ * Only consumer: `app/(public)/dev/meeple-card/page.tsx` (demo route). Real
+ * mobile pages use `MeepleCard` directly with `variant="list"`/`"compact"`.
+ *
+ * **When to adopt:** the first mobile surface that needs tactile, one-card-
+ * at-a-time browsing (e.g., swipe-through library on phones). Wrap in
+ * `MobileDevicePreview` for dev validation before shipping.
+ */
+
 'use client';
 
 import { useState, useCallback } from 'react';

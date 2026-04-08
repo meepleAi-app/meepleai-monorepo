@@ -23,6 +23,9 @@ import { cn } from '@/lib/utils';
 
 import { PlayerBar } from './shared/PlayerBar';
 import { DiceRollerTab } from './tabs/DiceRollerTab';
+import { EventDiaryTab } from './tabs/EventDiaryTab';
+import { NotesTab } from './tabs/NotesTab';
+import { ScoreboardTab } from './tabs/ScoreboardTab';
 import { ToolkitDrawerProvider, useToolkitDrawer } from './ToolkitDrawerProvider';
 
 import type { ToolkitDrawerProps, ToolkitTab } from './types';
@@ -169,11 +172,11 @@ function TabContent({ tab }: { tab: ToolkitTab }) {
     case 'dice':
       return <DiceRollerTab />;
     case 'notes':
-      return <div data-testid="notes-tab-placeholder">Note</div>;
+      return <NotesTab />;
     case 'diary':
-      return <div data-testid="diary-tab-placeholder">Diario</div>;
+      return <EventDiaryTab />;
     case 'scores':
-      return <div data-testid="scores-tab-placeholder">Punti</div>;
+      return <ScoreboardTab />;
     default:
       return null;
   }

@@ -77,5 +77,21 @@ function Assert-LocalhostOnly {
     }
 }
 
+function Get-RequiredDiskSpaceBytes {
+    [CmdletBinding()]
+    [OutputType([long])]
+    param(
+        [Parameter(Mandatory)]
+        [long]$DbSizeBytes,
+        [Parameter(Mandatory)]
+        [long]$VolumeSizeBytes
+    )
+    if ($DbSizeBytes -lt 0) { throw "DbSizeBytes must be non-negative, got $DbSizeBytes" }
+    if ($VolumeSizeBytes -lt 0) { throw "VolumeSizeBytes must be non-negative, got $VolumeSizeBytes" }
+    $overheadBytes = 64L * 1024 * 1024
+    $rawTotal = $DbSizeBytes + $VolumeSizeBytes + $overheadBytes
+    return [long][math]::Ceiling($rawTotal * 1.1)
+}
+
 # --- Exports ---
-Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig', 'Assert-LocalhostOnly')
+Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig', 'Assert-LocalhostOnly', 'Get-RequiredDiskSpaceBytes')

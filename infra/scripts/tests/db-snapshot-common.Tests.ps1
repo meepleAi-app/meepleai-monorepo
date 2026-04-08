@@ -160,3 +160,24 @@ Describe 'Assert-LocalhostOnly' {
         { Assert-LocalhostOnly -Config $cfg } | Should -Throw '*prod.example.com*'
     }
 }
+
+Describe 'Get-RequiredDiskSpaceBytes' {
+    It 'returns DB size + 64 MB overhead + 10% safety margin when no volume' {
+        $required = Get-RequiredDiskSpaceBytes -DbSizeBytes 100000000 -VolumeSizeBytes 0
+        $expected = [math]::Ceiling((100000000 + 67108864) * 1.1)
+        $required | Should -Be $expected
+    }
+    It 'includes volume size when provided' {
+        $required = Get-RequiredDiskSpaceBytes -DbSizeBytes 100000000 -VolumeSizeBytes 50000000
+        $expected = [math]::Ceiling((100000000 + 50000000 + 67108864) * 1.1)
+        $required | Should -Be $expected
+    }
+    It 'returns at least the overhead + safety margin for zero db' {
+        $required = Get-RequiredDiskSpaceBytes -DbSizeBytes 0 -VolumeSizeBytes 0
+        $expected = [math]::Ceiling((0 + 67108864) * 1.1)
+        $required | Should -Be $expected
+    }
+    It 'throws for negative DB size' {
+        { Get-RequiredDiskSpaceBytes -DbSizeBytes -1 -VolumeSizeBytes 0 } | Should -Throw '*non-negative*'
+    }
+}

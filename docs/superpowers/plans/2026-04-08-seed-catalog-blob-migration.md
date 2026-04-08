@@ -417,6 +417,8 @@ services.AddSingleton<ISeedBlobReader>(sp =>
 });
 ```
 
+> **Note**: the `logger` variable in the factory above is used only for the factory's own `LogInformation` call before returning the fallback. `NoOpSeedBlobReader` itself (defined in Task 2) has a parameterless constructor — do NOT add a logger parameter to it.
+
 - [ ] **Step 3: Build to verify**
 
 Run: `cd apps/api/src/Api && dotnet build --nologo 2>&1 | tail -10`
@@ -726,6 +728,8 @@ git commit -m "test(seed): add failing PdfSeeder blob-based tests"
 
 **Files:**
 - Modify: `apps/api/src/Api/Infrastructure/Seeders/Catalog/PdfSeeder.cs` (full rewrite)
+
+> **Note**: the `DeletePdfCascadeAsync` signature below includes an `ILogger logger` parameter. The spec's inline snippet omits it in a comment — follow this plan's version (with logger) since the call site passes `logger` through.
 
 - [ ] **Step 1: Replace the file contents**
 
@@ -1219,11 +1223,14 @@ git commit -m "fix(upload): resolve SharedGameId when gameId matches shared_game
 - Modify: `apps/api/src/Api/BoundedContexts/GameManagement/Application/Commands/GameNights/StartGameNightSessionCommandHandler.cs`
 - Modify: the matching test file
 
-- [ ] **Step 1: Locate the test file**
+- [ ] **Step 1: Locate the test file and verify CreateSessionResult constructor shape**
 
 ```bash
 find apps/api/tests/Api.Tests -name "StartGameNightSessionCommandHandlerTests*" 2>/dev/null
+grep -rn "record CreateSessionResult\|class CreateSessionResult" apps/api/src/Api --include="*.cs"
 ```
+
+Confirm the exact constructor of `CreateSessionResult` before writing the test mock. If the record has fields beyond `(Guid SessionId, string SessionCode)`, adapt the `new CreateSessionResult(...)` call in Step 2 to include them.
 
 - [ ] **Step 2: Add a failing regression test**
 
@@ -1375,6 +1382,7 @@ public async Task MapToDomain_UnknownSessionStatus_DefaultsToPendingAndLogsWarni
     {
         Id = Guid.NewGuid(),
         GameNightEventId = gameNight.Id,
+        SessionId = Guid.NewGuid(),    // required FK, must not be Guid.Empty
         GameId = Guid.NewGuid(),
         GameTitle = "X",
         PlayOrder = 1,
@@ -1453,6 +1461,14 @@ public GameNightEventRepository(
 
 The DI container injects `ILogger<T>` automatically; no explicit registration is needed.
 
+**Important — update existing test construction calls**: if `GameNightEventRepository` is currently instantiated in existing tests as `new GameNightEventRepository(db, eventCollector)`, those call sites will break at compile time when the new `ILogger<GameNightEventRepository>` parameter is added. Locate them with:
+
+```bash
+grep -rn "new GameNightEventRepository(" apps/api/tests/Api.Tests --include="*.cs"
+```
+
+Update each to include the logger: `new GameNightEventRepository(db, eventCollector, Microsoft.Extensions.Logging.Abstractions.NullLogger<GameNightEventRepository>.Instance)`.
+
 - [ ] **Step 5: Build + run tests**
 
 ```bash
@@ -1482,7 +1498,7 @@ git commit -m "fix(game-night): safe Enum.TryParse in MapToDomain (#4)"
 
 ```bash
 cd apps/api/src/Api
-dotnet ef migrations add BackfillSharedGameIdFromGames --no-build
+dotnet ef migrations add BackfillSharedGameIdFromGames
 ```
 
 This creates two files under `Infrastructure/Migrations/`:
@@ -1858,7 +1874,8 @@ patch_file() {
     local idx
     idx="$(yq eval "(.catalog.games[] | select(.pdf == \"${expected_pdf}\")) | path | .[-1]" "$yml" 2>/dev/null || echo "")"
 
-    if [[ -n "$idx" ]]; then
+    # yq emits "null" (as a literal string) when select() has no match; treat as missing
+    if [[ -n "$idx" && "$idx" != "null" && "$idx" =~ ^[0-9]+$ ]]; then
       yq eval -i "
         .catalog.games[${idx}].pdfBlobKey = \"${blob_key}\" |
         .catalog.games[${idx}].pdfSha256  = \"${hash}\" |

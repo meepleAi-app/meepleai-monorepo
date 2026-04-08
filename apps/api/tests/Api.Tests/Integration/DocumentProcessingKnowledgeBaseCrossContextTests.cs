@@ -84,6 +84,11 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         var mockAgentDefRepo = new Moq.Mock<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentDefinitionRepository>();
         services.AddScoped(_ => mockAgentDefRepo.Object);
 
+        // Register SharedGameCatalog dependencies (required by SharedGameIndexingAdminNotificationHandler
+        // picked up by MediatR assembly scan on VectorDocumentReadyIntegrationEvent)
+        var mockSharedGameRepo = new Moq.Mock<Api.BoundedContexts.SharedGameCatalog.Domain.Repositories.ISharedGameRepository>();
+        services.AddScoped(_ => mockSharedGameRepo.Object);
+
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 

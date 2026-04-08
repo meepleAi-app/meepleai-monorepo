@@ -4,6 +4,7 @@
  * Zustand store for Toolbox lifecycle, tool management, card deck operations,
  * phase management, and real-time sync via SSE.
  */
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';

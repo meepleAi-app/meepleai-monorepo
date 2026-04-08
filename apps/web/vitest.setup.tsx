@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/consistent-type-assertions */
 // Force NODE_ENV to 'test' to ensure React development build is used in CI
 process.env.NODE_ENV = 'test';
 

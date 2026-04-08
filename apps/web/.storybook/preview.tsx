@@ -1,6 +1,3 @@
-// eslint-disable-next-line import/order -- Storybook Preview type import (edge case)
-import type { Preview } from '@storybook/react';
-
 import React from 'react';
 
 import { withThemeByClassName } from '@storybook/addon-themes';
@@ -8,11 +5,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initialize, mswLoader } from 'msw-storybook-addon';
 import { ThemeProvider } from 'next-themes';
 
-import { handlers } from '../src/mocks/handlers';
-
-import '../src/styles/globals.css'; // Import Tailwind CSS
 import { AuthContext } from '../src/components/auth/AuthProvider';
 import { TooltipProvider } from '../src/components/ui/overlays/tooltip';
+import { handlers } from '../src/mocks/handlers';
+
+import type { Preview } from '@storybook/react';
+
+import '../src/styles/globals.css'; // Import Tailwind CSS
 
 // Initialize MSW for API mocking in stories
 initialize();

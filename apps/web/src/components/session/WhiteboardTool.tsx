@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- canvas drawing code accesses array indices guarded by length checks; assertion is correct by construction */
 
 /**
  * WhiteboardTool Component (Issue #4977)

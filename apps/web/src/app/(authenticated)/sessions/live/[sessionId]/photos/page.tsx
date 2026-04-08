@@ -38,7 +38,6 @@ function PhotoCard({ photo, onDelete }: PhotoCardProps) {
 
   return (
     <div className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-square shadow-sm border border-white/60">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={photo.objectUrl}
         alt={`Foto partita ${timeLabel}`}

@@ -43,22 +43,14 @@ import { tabsStory } from './tabs.story';
 import { tagStripStory } from './tag-strip.story';
 import { textareaStory } from './textarea.story';
 import { tierBadgeStory } from './tier-badge.story';
-
 // ─── Forms ────────────────────────────────────────────────────────────────────
-
 // ─── Overlays ─────────────────────────────────────────────────────────────────
 import { tooltipStory } from './tooltip.story';
-
 // ─── Feedback ────────────────────────────────────────────────────────────────
-
 // ─── Navigation ──────────────────────────────────────────────────────────────
-
 // ─── Layout ──────────────────────────────────────────────────────────────────
-
 // ─── Meeple ──────────────────────────────────────────────────────────────────
-
 // ─── Agent ───────────────────────────────────────────────────────────────────
-
 // ─── Charts ──────────────────────────────────────────────────────────────────
 import { upgradePromptStory } from './upgrade-prompt.story';
 import { waterfallChartStory } from './waterfall-chart.story';

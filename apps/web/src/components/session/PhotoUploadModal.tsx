@@ -286,7 +286,6 @@ export function PhotoUploadModal({
             {preview && file ? (
               <div className="space-y-2">
                 <div className="relative mx-auto max-h-48 overflow-hidden rounded-lg">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={preview}
                     alt="Preview"

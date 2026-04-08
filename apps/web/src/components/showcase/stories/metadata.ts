@@ -175,7 +175,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'PageTransition',
     category: 'Animations',
     description:
-      '[ORPHAN] Smooth page transitions via Framer Motion. Not wired to any layout — integration deferred to UX motion pass.',
+      'Smooth page transitions via Framer Motion. Pilot active in (chat) layout behind NEXT_PUBLIC_ENABLE_PAGE_TRANSITIONS flag.',
     controlCount: 1,
     presetCount: 3,
   },

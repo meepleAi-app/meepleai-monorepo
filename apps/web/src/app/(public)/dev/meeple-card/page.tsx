@@ -18,6 +18,7 @@ import {
   MobileDevicePreview,
   MobileCardDrawer,
   FlipCard,
+  FlipBack,
   Carousel3D,
   EntityTable,
   entityHsl,
@@ -853,89 +854,11 @@ export default function MeepleCardDevPage() {
           </div>
         </Section>
 
-        {/* Flip Card — match visual-test Section 4 */}
-        <Section
-          title="Flip Card"
-          description="Click sulla card per girare. Front = card standard, back = entity-colored header + dettagli. Componente FlipCard con trigger='card'|'button'."
-        >
-          <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-            💡 Clicca sulle card per girarle. Il pulsante ✕ sul retro le rigira.
-          </p>
-          <CardRow>
-            <FlipCard
-              className="w-[220px] h-[420px]"
-              front={
-                <MeepleCard
-                  entity="game"
-                  variant="grid"
-                  title="I Coloni di Catan"
-                  subtitle="Klaus Teuber · Kosmos · 1995"
-                  imageUrl={GAME_IMAGE}
-                  rating={7.1}
-                  ratingMax={10}
-                  status="owned"
-                  tags={['Gioco', 'Posseduto']}
-                  metadata={[{ label: '3-4' }, { label: '60-120m' }, { label: '2.3' }]}
-                  className="h-full"
-                />
-              }
-              back={
-                <FlipBackContent
-                  entity="game"
-                  title="I Coloni di Catan"
-                  subtitle="Gioco da Tavolo · 1995"
-                  rows={[
-                    ['Giocatori', '3-4'],
-                    ['Durata', '60-120 min'],
-                    ['Complessità', '2.32 / 5'],
-                    ['Rating', '7.1 / 10'],
-                    ['Documenti KB', '3 PDF'],
-                    ['Sessioni', '5 giocate'],
-                    ['Agente AI', 'CatanHelper'],
-                    ['Chat', '2 conversazioni'],
-                  ]}
-                />
-              }
-            />
-            <FlipCard
-              className="w-[220px] h-[420px]"
-              front={
-                <MeepleCard
-                  entity="agent"
-                  variant="grid"
-                  title="CatanHelper AI"
-                  subtitle="Agente Strategico · GPT-4o"
-                  status="active"
-                  metadata={[{ label: '450 chunks' }, { label: '2 chat' }]}
-                  navItems={buildAgentNavItems(
-                    { chatCount: 2, kbCount: 3 },
-                    {
-                      onChatClick: () => alert('Chat'),
-                      onKbClick: () => alert('KB'),
-                      onConfigClick: () => alert('Config'),
-                    }
-                  )}
-                  className="h-full"
-                />
-              }
-              back={
-                <FlipBackContent
-                  entity="agent"
-                  title="CatanHelper AI"
-                  subtitle="Agente AI · 10 Feb 2026"
-                  rows={[
-                    ['Gioco', 'I Coloni di Catan'],
-                    ['Modello', 'GPT-4o'],
-                    ['Strategia RAG', 'Hybrid Search'],
-                    ['Documenti', '3 PDF (450 chunks)'],
-                    ['Chat', '2 conversazioni'],
-                    ['Ultimo uso', 'Oggi, 14:30'],
-                  ]}
-                />
-              }
-            />
-          </CardRow>
-        </Section>
+        {/* Flip Card — 8 entity-specific back contents */}
+        <EntityFlipShowcase />
+        <NavClickBehaviorSection />
+        <DisabledNavItemsSection />
+        <FeatureMatrixSection />
 
         {/* 3D Carousel — match visual-test Section 5 */}
         <Section
@@ -1291,49 +1214,590 @@ function MobilePreviewSection() {
 }
 
 /**
- * Flip card back content — entity-colored header + detail rows.
- * Matches the visual-test mockup Section 4.
+ * EntityFlipShowcase — 8 flip cards one per entity type, each with
+ * entity-specific back content matching the design brief:
+ *
+ * - game    → generic description text
+ * - toolkit → action list for each tool bound to the parent game
+ * - chat    → history of other chats with the same agent
+ * - kb      → rapid rules summary (rows + text mix)
+ * - agent   → most useful info rows
+ * - session → management action list
+ * - player  → info rows + social links
+ * - tool    → history of past results
  */
-function FlipBackContent({
-  entity,
+function EntityFlipShowcase() {
+  const FLIP_SIZE = 'w-[240px] h-[440px]';
+
+  return (
+    <Section
+      title="Flip Cards — Back per Entity Type"
+      description="8 flip cards, una per entity type. Il retro è diverso per ciascun tipo: game (descrizione), toolkit (azioni dei tool), chat (history con stesso agent), kb (regole riassuntive), agent (info utili), session (azioni gestione), player (info + social), tool (storico risultati)."
+    >
+      <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+        💡 Clicca sulle card per girarle. Il pulsante ✕ sul retro le rigira.
+      </p>
+      <div className="flex flex-wrap justify-center gap-5">
+        <FlipCard
+          className={FLIP_SIZE}
+          front={
+            <MeepleCard
+              entity="game"
+              variant="grid"
+              title="I Coloni di Catan"
+              subtitle="Klaus Teuber · 1995"
+              imageUrl={GAME_IMAGE}
+              rating={7.1}
+              ratingMax={10}
+              status="owned"
+              badge="Bestseller"
+              metadata={[{ label: '3-4' }, { label: '60-120m' }]}
+              className="h-full"
+            />
+          }
+          back={
+            <FlipBack
+              entity="game"
+              title="I Coloni di Catan"
+              subtitle="Eurogame · 1995"
+              sections={[
+                {
+                  kind: 'text',
+                  text: "Il classico gateway game di Klaus Teuber. I giocatori costruiscono insediamenti e strade sull'isola di Catan, raccogliendo risorse (legno, grano, pecore, argilla, minerali) in base ai tiri di dado. Vince chi raggiunge per primo 10 punti vittoria.",
+                },
+                {
+                  kind: 'text',
+                  text: 'Pubblicato da Kosmos. Vincitore dello Spiel des Jahres 1995 e del Deutscher Spiele Preis. Ha rivoluzionato il board gaming moderno introducendo meccaniche di scambio e gestione risorse.',
+                },
+              ]}
+              footer="Descrizione generica"
+            />
+          }
+        />
+        <FlipCard
+          className={FLIP_SIZE}
+          front={
+            <MeepleCard
+              entity="toolkit"
+              variant="grid"
+              title="Catan Toolkit"
+              subtitle="Strumenti per Catan · 5 tools"
+              badge="Ufficiale"
+              metadata={[{ label: '5 strumenti' }, { label: '124 uso' }]}
+              className="h-full"
+            />
+          }
+          back={
+            <FlipBack
+              entity="toolkit"
+              title="Catan Toolkit"
+              subtitle="5 strumenti disponibili"
+              sections={[
+                {
+                  kind: 'actions',
+                  title: 'Strumenti',
+                  items: [
+                    { label: 'Dice Roller', meta: '2d6', icon: '🎲', onClick: () => alert('Dice Roller') },
+                    { label: 'Score Tracker', meta: '4p', icon: '📊', onClick: () => alert('Score Tracker') },
+                    { label: 'Turn Timer', meta: '60s', icon: '⏱', onClick: () => alert('Turn Timer') },
+                    { label: 'Resource Calculator', icon: '🧮', onClick: () => alert('Calculator') },
+                    { label: 'Longest Road', meta: 'beta', icon: '🛣', disabled: true },
+                  ],
+                },
+              ]}
+              footer="Azioni per-tool"
+            />
+          }
+        />
+        <FlipCard
+          className={FLIP_SIZE}
+          front={
+            <MeepleCard
+              entity="chat"
+              variant="grid"
+              title="Strategie Catan"
+              subtitle="CatanHelper AI · 12 messaggi"
+              status="active"
+              badge="Oggi"
+              metadata={[{ label: '12 msg' }]}
+              className="h-full"
+            />
+          }
+          back={
+            <FlipBack
+              entity="chat"
+              title="Strategie Catan"
+              subtitle="CatanHelper AI"
+              sections={[
+                {
+                  kind: 'list',
+                  title: 'Altre chat con CatanHelper AI',
+                  items: [
+                    { title: 'Come costruire strade ottimali', subtitle: '8 messaggi', meta: '2g fa' },
+                    { title: 'Setup iniziale per 4 giocatori', subtitle: '15 messaggi', meta: '1w fa' },
+                    { title: 'Come bloccare chi porta alla vittoria', subtitle: '6 messaggi', meta: '2w fa' },
+                    { title: 'Regole cavaliere più grande', subtitle: '3 messaggi', meta: '3w fa' },
+                    { title: 'Gestione carte sviluppo', subtitle: '10 messaggi', meta: '1m fa' },
+                  ],
+                },
+              ]}
+              footer="5 chat precedenti · 42 totali"
+            />
+          }
+        />
+        <FlipCard
+          className={FLIP_SIZE}
+          front={
+            <MeepleCard
+              entity="kb"
+              variant="grid"
+              title="Manuale Catan"
+              subtitle="PDF · 24 pagine"
+              status="indexed"
+              tags={['Base Rules', 'PDF']}
+              metadata={[{ label: '24 pg' }, { label: '2.4 MB' }]}
+              className="h-full"
+            />
+          }
+          back={
+            <FlipBack
+              entity="kb"
+              title="Manuale Catan"
+              subtitle="Regole riassuntive"
+              sections={[
+                {
+                  kind: 'rows',
+                  title: 'Setup',
+                  rows: [
+                    ['Giocatori', '3-4 (5-6 con espansione)'],
+                    ['Durata', '60-120 minuti'],
+                    ['Età', '10+'],
+                    ['Carte iniziali', '2 settlement + 2 road'],
+                  ],
+                },
+                {
+                  kind: 'rows',
+                  title: 'Turno',
+                  rows: [
+                    ['1. Tira i dadi', '2d6'],
+                    ['2. Raccogli risorse', 'se 7 → ladro'],
+                    ['3. Commercio', 'con banca 4:1'],
+                    ['4. Costruisci', 'road/settlement/city'],
+                  ],
+                },
+                {
+                  kind: 'text',
+                  text: 'Vittoria: primo a 10 punti. Fonti: 1 settlement = 1pt, 1 city = 2pt, carta "victory point" = 1pt, longest road/largest army = 2pt ciascuno.',
+                },
+              ]}
+              footer="Estratto dalle prime 3 pagine"
+            />
+          }
+        />
+        <FlipCard
+          className={FLIP_SIZE}
+          front={
+            <MeepleCard
+              entity="agent"
+              variant="grid"
+              title="CatanHelper AI"
+              subtitle="Strategico · GPT-4o"
+              status="active"
+              badge="v2"
+              metadata={[{ label: '342 invoc.' }, { label: '12 fonti' }]}
+              className="h-full"
+            />
+          }
+          back={
+            <FlipBack
+              entity="agent"
+              title="CatanHelper AI"
+              subtitle="Info bot"
+              sections={[
+                {
+                  kind: 'rows',
+                  title: 'Configurazione',
+                  rows: [
+                    ['Gioco', 'I Coloni di Catan'],
+                    ['Modello', 'GPT-4o-mini'],
+                    ['Strategia RAG', 'Hybrid Search'],
+                    ['Temperature', '0.3'],
+                    ['Max tokens', '2048'],
+                  ],
+                },
+                {
+                  kind: 'rows',
+                  title: 'Utilizzo',
+                  rows: [
+                    ['Documenti', '3 PDF (450 chunks)'],
+                    ['Chat attive', '2 conversazioni'],
+                    ['Invocazioni', '342 totali'],
+                    ['Ultimo uso', 'Oggi, 14:30'],
+                    ['Accuratezza', '94%'],
+                  ],
+                },
+              ]}
+              footer="Info più utili"
+            />
+          }
+        />
+        <FlipCard
+          className={FLIP_SIZE}
+          front={
+            <MeepleCard
+              entity="session"
+              variant="grid"
+              title="Serata Catan #5"
+              subtitle="Casa di Marco · 4 players"
+              status="inprogress"
+              badge="Live"
+              metadata={[{ label: '4p' }, { label: '45 min' }]}
+              className="h-full"
+            />
+          }
+          back={
+            <FlipBack
+              entity="session"
+              title="Serata Catan #5"
+              subtitle="Azioni di gestione"
+              sections={[
+                {
+                  kind: 'actions',
+                  title: 'Durante la partita',
+                  items: [
+                    { label: 'Registra punteggi', icon: '📝', onClick: () => alert('Scores') },
+                    { label: 'Aggiungi foto', icon: '📷', onClick: () => alert('Photo') },
+                    { label: 'Nota evento', icon: '✏️', onClick: () => alert('Note') },
+                    { label: 'Timer turno', meta: 'on', icon: '⏱', onClick: () => alert('Timer') },
+                  ],
+                },
+                {
+                  kind: 'actions',
+                  title: 'Chiusura',
+                  items: [
+                    { label: 'Termina partita', icon: '🏁', onClick: () => alert('End') },
+                    { label: 'Condividi risultato', icon: '📤', onClick: () => alert('Share') },
+                    { label: 'Archivia', icon: '📦', onClick: () => alert('Archive') },
+                  ],
+                },
+              ]}
+              footer="7 azioni disponibili"
+            />
+          }
+        />
+        <FlipCard
+          className={FLIP_SIZE}
+          front={
+            <MeepleCard
+              entity="player"
+              variant="grid"
+              title="Marco Rossi"
+              subtitle="@marco_games"
+              badge="Top 5%"
+              status="active"
+              metadata={[{ label: '142 plays' }, { label: '68% win' }]}
+              className="h-full"
+            />
+          }
+          back={
+            <FlipBack
+              entity="player"
+              title="Marco Rossi"
+              subtitle="@marco_games"
+              sections={[
+                {
+                  kind: 'rows',
+                  title: 'Stats',
+                  rows: [
+                    ['Livello', 'Pro (Top 5%)'],
+                    ['Partite giocate', '142'],
+                    ['Vittorie', '96 (68%)'],
+                    ['Gioco preferito', 'Catan'],
+                    ['Membro dal', 'Gen 2023'],
+                  ],
+                },
+                {
+                  kind: 'social',
+                  title: 'Social',
+                  links: [
+                    { platform: 'BGG', handle: 'marcogames', icon: '🎲', href: 'https://boardgamegeek.com' },
+                    { platform: 'Twitter', handle: '@marco_games', icon: '🐦' },
+                    { platform: 'Discord', handle: 'marco#4242', icon: '💬' },
+                  ],
+                },
+              ]}
+              footer="Profilo pubblico"
+            />
+          }
+        />
+        <FlipCard
+          className={FLIP_SIZE}
+          front={
+            <MeepleCard
+              entity="tool"
+              variant="grid"
+              title="Dice Roller"
+              subtitle="2d6 per Catan"
+              badge="18 usi"
+              metadata={[{ label: '2d6' }, { label: '18 uso' }]}
+              className="h-full"
+            />
+          }
+          back={
+            <FlipBack
+              entity="tool"
+              title="Dice Roller"
+              subtitle="Storico risultati"
+              sections={[
+                {
+                  kind: 'list',
+                  title: 'Ultimi 8 tiri',
+                  items: [
+                    { title: '2d6 = 8', subtitle: '4 + 4', meta: 'Ora 14:32' },
+                    { title: '2d6 = 11', subtitle: '5 + 6', meta: 'Ora 14:30' },
+                    { title: '2d6 = 3', subtitle: '1 + 2', meta: 'Ora 14:28' },
+                    { title: '2d6 = 7', subtitle: '3 + 4 (ladro)', meta: 'Ora 14:25' },
+                    { title: '2d6 = 10', subtitle: '6 + 4', meta: 'Ora 14:22' },
+                    { title: '2d6 = 5', subtitle: '2 + 3', meta: 'Ora 14:20' },
+                    { title: '2d6 = 9', subtitle: '4 + 5', meta: 'Ora 14:17' },
+                    { title: '2d6 = 6', subtitle: '2 + 4', meta: 'Ora 14:15' },
+                  ],
+                },
+              ]}
+              footer="Media: 7.4 · Totali: 18 tiri"
+            />
+          }
+        />
+      </div>
+    </Section>
+  );
+}
+
+/**
+ * NavClickBehaviorSection — documentation of the 0/1/N/Chat click pattern
+ * from admin-mockups/meeple-card-nav-buttons-mockup.html Section 4.
+ */
+function NavClickBehaviorSection() {
+  return (
+    <Section
+      title="Nav Click Behavior"
+      description="Pattern di click sui nav button (da meeple-card-nav-buttons-mockup.html Section 4). Il comportamento dipende dal numero di entità collegate."
+    >
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <BehaviorCard
+          count="0"
+          title="Crea nuovo"
+          description="Apre direttamente il flusso di creazione (upload PDF, nuova sessione, ecc.)"
+          color="hsl(210,40%,55%)"
+          icon="+"
+        />
+        <BehaviorCard
+          count="1"
+          title="Navigazione diretta"
+          description="Click porta direttamente alla pagina dell'entità collegata"
+          color="hsl(240,60%,55%)"
+          icon="→"
+        />
+        <BehaviorCard
+          count="N"
+          title="Popover lista"
+          description="Mostra lista compact MeepleCard con header + pulsante [+] per crearne nuove"
+          color="hsl(38,92%,50%)"
+          icon="≡"
+        />
+        <BehaviorCard
+          count="Chat"
+          title="History page"
+          description="Naviga alla history per scegliere se riprendere una chat esistente o crearne una nuova"
+          color="hsl(220,80%,55%)"
+          icon="💬"
+        />
+      </div>
+    </Section>
+  );
+}
+
+function BehaviorCard({
+  count,
   title,
-  subtitle,
-  rows,
+  description,
+  color,
+  icon,
 }: {
-  entity: MeepleCardProps['entity'];
+  count: string;
   title: string;
-  subtitle: string;
-  rows: [string, string][];
+  description: string;
+  color: string;
+  icon: string;
 }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-card)]">
-      {/* Entity-colored header with diagonal stripe pattern */}
-      <div
-        className="relative px-4 py-4"
-        style={{
-          background: entityHsl(entity),
-          backgroundImage:
-            'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px)',
-        }}
-      >
-        <h3 className="font-[var(--font-quicksand)] text-base font-bold text-white">{title}</h3>
-        <p className="text-xs text-white/80">{subtitle}</p>
+    <div
+      className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-card)] p-4"
+      style={{ borderLeftWidth: 4, borderLeftColor: color }}
+    >
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--mc-text-muted)]">
+          {count} entità
+        </span>
+        <span className="text-xl font-bold" style={{ color }}>
+          {icon}
+        </span>
       </div>
-      {/* Detail rows */}
-      <div className="flex-1 overflow-y-auto px-4 py-2">
-        {rows.map(([label, value]) => (
-          <div
-            key={label}
-            className="flex items-center justify-between border-b border-[var(--mc-border)] py-2 text-xs last:border-0"
-          >
-            <span className="font-semibold text-[var(--mc-text-secondary)]">{label}</span>
-            <span className="text-[var(--mc-text-primary)]">{value}</span>
-          </div>
-        ))}
-      </div>
-      <div className="px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--mc-text-muted)]">
-        {entityLabel[entity]}
-      </div>
+      <h4 className="font-[var(--font-quicksand)] text-[0.88rem] font-bold text-[var(--mc-text-primary)]">
+        {title}
+      </h4>
+      <p className="mt-1 text-[0.7rem] leading-relaxed text-[var(--mc-text-secondary)]">
+        {description}
+      </p>
     </div>
+  );
+}
+
+/**
+ * DisabledNavItemsSection — demonstrates NavFooter with disabled items and
+ * tooltips explaining why (per-entity limits, license, etc).
+ */
+function DisabledNavItemsSection() {
+  return (
+    <Section
+      title="NavItems Disabled + Tooltip"
+      description="Nav items con stato disabled (45% opacity + cursor not-allowed). Hover mostra tooltip con la ragione. Da meeple-card-nav-buttons-mockup.html Section 5."
+    >
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <Label>agent disabled — limite 0/1</Label>
+          <MeepleCard
+            entity="game"
+            variant="grid"
+            title="Gloomhaven"
+            subtitle="Isaac Childres · 2017"
+            imageUrl="https://picsum.photos/seed/gloom-disabled/400/300"
+            rating={8.9}
+            ratingMax={10}
+            status="owned"
+            metadata={[{ label: '1-4' }, { label: '60-120m' }]}
+            navItems={buildGameNavItems(
+              { kbCount: 2, agentCount: 0, chatCount: 0, sessionCount: 0 },
+              {
+                onKbClick: () => alert('KB'),
+                onChatPlus: () => alert('Chat plus'),
+                onSessionPlus: () => alert('Session plus'),
+              }
+            ).map((item, i) => (i === 1 ? { ...item, disabled: true, label: 'Agent (limite 0/1)' } : item))}
+          />
+        </div>
+        <div>
+          <Label>kb+agent disabled — upload pending</Label>
+          <MeepleCard
+            entity="game"
+            variant="grid"
+            title="Spirit Island"
+            subtitle="R. Eric Reuss · 2017"
+            imageUrl="https://picsum.photos/seed/spirit-disabled/400/300"
+            rating={8.3}
+            ratingMax={10}
+            metadata={[{ label: '1-4' }, { label: '90-120m' }]}
+            navItems={buildGameNavItems(
+              { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
+              { onChatPlus: () => alert('Chat'), onSessionPlus: () => alert('Session') }
+            ).map((item, i) => (i <= 1 ? { ...item, disabled: true } : item))}
+          />
+        </div>
+        <div>
+          <Label>archived agent — solo KB readable</Label>
+          <MeepleCard
+            entity="agent"
+            variant="grid"
+            title="Frozen Agent"
+            subtitle="RAG · Deprecated"
+            status="archived"
+            badge="v1"
+            metadata={[{ label: '0 invoc.' }]}
+            navItems={buildAgentNavItems(
+              { chatCount: 0, kbCount: 3 },
+              { onKbClick: () => alert('KB') }
+            ).map((item, i) => (i !== 1 ? { ...item, disabled: true } : item))}
+          />
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+/**
+ * FeatureMatrixSection — high-level capability table from summary mockup
+ * Section 5. Documents what MeepleCard can do across all variants/entities.
+ */
+function FeatureMatrixSection() {
+  const rows: [string, string][] = [
+    ['Entity Types', 'game · player · session · agent · kb · chat · event · toolkit · tool (9)'],
+    [
+      'Layout Variants',
+      'grid (7:10 cover) · list (56px thumb) · compact (dot only) · featured (16:9) · hero (full-bleed)',
+    ],
+    [
+      'Visual Effects',
+      'Glassmorphism · Warm shadows · Entity glow rings · Shimmer on hover · Cover scale(1.06) · Badge pulse',
+    ],
+    ['Flip Card', 'perspective 1000px · transition 600ms · Entity-colored back header · 5 section kinds (text/rows/actions/list/social)'],
+    [
+      'Quick Actions',
+      'Hover-reveal glass buttons · showQuickActions={true} + actions[] · Entity-colored glow · WCAG 44px touch',
+    ],
+    ['Tags', 'Vertical left-edge TagStrip · entity color tint · overflow +N indicator'],
+    [
+      'Status Badges',
+      '12 CardStatus values (owned/wishlist/active/idle/archived/processing/indexed/failed/inprogress/setup/completed/paused)',
+    ],
+    [
+      'Navigation Footer',
+      'Entity-aware nav items · count badges · plus indicators · disabled + tooltip',
+    ],
+    [
+      'Click Behavior',
+      '0 entities → create new · 1 entity → direct nav · N entities → popover list · Chat → history page',
+    ],
+    [
+      'Mobile Layout',
+      'MobileDevicePreview (phone frame) + MobileCardLayout (hand stack + focused card + swipe) + MobileCardDrawer (entity tabs)',
+    ],
+    ['Table View', 'EntityTable with sortable headers (title/type/rating) + entity row borders'],
+    ['3D Carousel', 'perspective 1200px · translateX(35%) · rotateY(-5deg) · blur 2px laterally'],
+    [
+      'Accessibility',
+      'WCAG AA · keyboard nav (Tab/Enter/Space) · aria-label auto-gen · aria-sort · focus rings · screen reader support',
+    ],
+  ];
+
+  return (
+    <Section
+      title="Feature Matrix"
+      description="Capacità di MeepleCard a alto livello (da meeple-card-summary-render.html Section 5)."
+    >
+      <div className="overflow-x-auto rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-card)] shadow-[var(--mc-shadow-sm)]">
+        <table className="w-full border-separate border-spacing-0 text-[0.82rem]">
+          <tbody>
+            {rows.map(([key, value], i) => (
+              <tr key={key}>
+                <td
+                  className={`w-[160px] px-4 py-2.5 align-top font-[var(--font-quicksand)] text-[0.78rem] font-bold text-[var(--mc-text-secondary)] ${
+                    i < rows.length - 1 ? 'border-b border-[var(--mc-border)]' : ''
+                  }`}
+                >
+                  {key}
+                </td>
+                <td
+                  className={`px-4 py-2.5 text-[var(--mc-text-primary)] ${
+                    i < rows.length - 1 ? 'border-b border-[var(--mc-border)]' : ''
+                  }`}
+                >
+                  {value}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Section>
   );
 }

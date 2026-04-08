@@ -9,3 +9,5 @@ export type {
   EntityTableSortColumn,
   EntityTableSortDirection,
 } from './EntityTable';
+export { FlipBack } from './FlipBack';
+export type { FlipBackProps, FlipBackSection } from './FlipBack';

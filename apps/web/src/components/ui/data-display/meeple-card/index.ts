@@ -26,5 +26,7 @@ export type {
   EntityTableSortColumn,
   EntityTableSortDirection,
 } from './features/EntityTable';
+export { FlipBack } from './features/FlipBack';
+export type { FlipBackProps, FlipBackSection } from './features/FlipBack';
 export { MeepleCardSkeleton } from './skeleton';
 export { entityColors, entityHsl, entityLabel, entityIcon } from './tokens';

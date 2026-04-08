@@ -20,6 +20,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import { MeepleResumeSessionCard } from '@/components/session/MeepleResumeSessionCard';
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
+import { buildSessionNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 import { Input } from '@/components/ui/primitives/input';
 import { useResponsive } from '@/hooks/useResponsive';
 import { api } from '@/lib/api';
@@ -36,6 +37,15 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   Paused: { label: 'In pausa', color: 'bg-amber-100 text-amber-700' },
   Completed: { label: 'Completata', color: 'bg-indigo-100 text-indigo-700' },
 };
+
+// Minimal navItems for session cards — only player count is known in list views.
+// Individual detail pages expose the full session sub-entities.
+function sessionNavItems(playerCount: number, onOpen: () => void) {
+  return buildSessionNavItems(
+    { playerCount, hasNotes: false, toolCount: 0, photoCount: 0 },
+    { onPlayersClick: onOpen }
+  );
+}
 
 // ========== History Metadata Helper ==========
 
@@ -167,6 +177,9 @@ export function SessionsContent() {
                   onClick: () => router.push(`/sessions/${session.id}`),
                 },
               ]}
+              navItems={sessionNavItems(session.playerCount, () =>
+                router.push(`/sessions/${session.id}`)
+              )}
               onClick={() => router.push(`/sessions/${session.id}`)}
             />
           ))}
@@ -211,6 +224,9 @@ export function SessionsContent() {
                         title={session.gameName}
                         badge={STATUS_CONFIG[session.status]?.label ?? session.status}
                         metadata={[{ label: `${session.playerCount} giocatori` }]}
+                        navItems={sessionNavItems(session.playerCount, () =>
+                          router.push(`/sessions/${session.id}`)
+                        )}
                         onClick={() => router.push(`/sessions/${session.id}`)}
                       />
                     ))}
@@ -227,6 +243,9 @@ export function SessionsContent() {
                         title={session.gameName}
                         badge={STATUS_CONFIG[session.status]?.label ?? session.status}
                         metadata={[{ label: `${session.playerCount} giocatori` }]}
+                        navItems={sessionNavItems(session.playerCount, () =>
+                          router.push(`/sessions/${session.id}`)
+                        )}
                         onClick={() => router.push(`/sessions/${session.id}`)}
                       />
                     ))}
@@ -277,6 +296,9 @@ export function SessionsContent() {
                     subtitle={session.participantsNames}
                     badge={STATUS_CONFIG[session.status]?.label ?? session.status}
                     metadata={buildHistoryMeta(session)}
+                    navItems={sessionNavItems(session.participantsNames.split(',').length, () =>
+                      router.push(`/sessions/${session.id}`)
+                    )}
                     onClick={() => router.push(`/sessions/${session.id}`)}
                   />
                 ))}
@@ -292,6 +314,9 @@ export function SessionsContent() {
                     subtitle={session.participantsNames}
                     badge={STATUS_CONFIG[session.status]?.label ?? session.status}
                     metadata={buildHistoryMeta(session)}
+                    navItems={sessionNavItems(session.participantsNames.split(',').length, () =>
+                      router.push(`/sessions/${session.id}`)
+                    )}
                     onClick={() => router.push(`/sessions/${session.id}`)}
                   />
                 ))}

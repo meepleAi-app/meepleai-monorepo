@@ -144,5 +144,91 @@ if (-not (Confirm-UserAction -Prompt $prompt -Force:$Force)) {
     exit 0
 }
 
-# Placeholder for next task
-Write-Timestamped 'TODO: destructive actions (Task 15)'
+# ============================================================================
+# Destructive actions
+# ============================================================================
+$logFile = Join-Path $SnapshotPath 'reset.log'
+Write-Timestamped '' -LogFile $logFile
+
+if ($DryRun) {
+    Write-Timestamped '[DRY RUN] Would execute:' -LogFile $logFile
+    Write-Timestamped "  dotnet ef database drop --force --project $ApiProjectPath" -LogFile $logFile
+    Write-Timestamped "  Copy-Item -Recurse $migrationsFolder $SnapshotPath/migrations-backup/" -LogFile $logFile
+    Write-Timestamped "  Remove-Item -Recurse -Force $migrationsFolder" -LogFile $logFile
+    Write-Timestamped "  dotnet ef migrations add $InitialName --project $ApiProjectPath" -LogFile $logFile
+    Write-Timestamped "  dotnet ef database update --project $ApiProjectPath" -LogFile $logFile
+    Write-Timestamped 'Dry run complete. No changes made.' -LogFile $logFile
+    exit 0
+}
+
+# Step 1: Drop DB
+Write-Timestamped '[1/6] dotnet ef database drop --force...' -LogFile $logFile
+& dotnet ef database drop --force --project $ApiProjectPath 2>&1 | Tee-Object -FilePath $logFile -Append
+if ($LASTEXITCODE -ne 0) {
+    throw "dotnet ef database drop failed (exit $LASTEXITCODE). DB may still exist. No changes to Migrations/."
+}
+
+# Step 2: Backup Migrations folder
+$migrationsBackupDir = Join-Path $SnapshotPath 'migrations-backup'
+Write-Timestamped "[2/6] Backup Migrations/ to $migrationsBackupDir..." -LogFile $logFile
+Copy-Item -LiteralPath $migrationsFolder -Destination $migrationsBackupDir -Recurse -Force
+
+# Step 3: Delete Migrations folder
+Write-Timestamped '[3/6] Deleting Migrations/...' -LogFile $logFile
+try {
+    Remove-Item -LiteralPath $migrationsFolder -Recurse -Force
+} catch {
+    throw "Failed to delete $migrationsFolder. DB is dropped. Restore Migrations from $migrationsBackupDir manually."
+}
+
+# Step 4: dotnet ef migrations add Initial
+Write-Timestamped "[4/6] dotnet ef migrations add $InitialName..." -LogFile $logFile
+& dotnet ef migrations add $InitialName --project $ApiProjectPath 2>&1 | Tee-Object -FilePath $logFile -Append
+if ($LASTEXITCODE -ne 0) {
+    Write-Host '' -ForegroundColor Red
+    Write-Host '❌ dotnet ef migrations add failed.' -ForegroundColor Red
+    Write-Host "   The DB is DROPPED and Migrations/ is DELETED." -ForegroundColor Red
+    Write-Host '   To recover:' -ForegroundColor Yellow
+    Write-Host "     Copy-Item -Recurse $migrationsBackupDir $migrationsFolder" -ForegroundColor Yellow
+    Write-Host "   Then fix the model code and retry, OR rollback via:" -ForegroundColor Yellow
+    Write-Host "     pwsh db-restore-state.ps1 -SnapshotPath $SnapshotPath -UseSafetyNet" -ForegroundColor Yellow
+    throw "Migration generation failed"
+}
+
+# Step 5: dotnet ef database update
+Write-Timestamped '[5/6] dotnet ef database update...' -LogFile $logFile
+& dotnet ef database update --project $ApiProjectPath 2>&1 | Tee-Object -FilePath $logFile -Append
+if ($LASTEXITCODE -ne 0) {
+    Write-Host '' -ForegroundColor Red
+    Write-Host '❌ dotnet ef database update failed.' -ForegroundColor Red
+    Write-Host "   The new Initial migration was generated but failed to apply." -ForegroundColor Red
+    Write-Host '   Check the migration SQL in Migrations/, fix, and retry.' -ForegroundColor Yellow
+    Write-Host "   Or rollback via -UseSafetyNet." -ForegroundColor Yellow
+    throw 'Migration apply failed'
+}
+
+# Step 6: Dump preliminary schema-post + write reset-result.json
+Write-Timestamped '[6/6] Dumping schema-post and writing reset-result.json...' -LogFile $logFile
+$schemaPostPath = Join-Path $SnapshotPath 'schema-post.sql'
+Invoke-PgDump -Config $cfg -Arguments @('-s', '--no-owner', '--no-acl', '-f', $schemaPostPath)
+$schemaPostHash = Get-FileSha256 -Path $schemaPostPath
+
+$resetResult = [pscustomobject]@{
+    schemaVersion           = 1
+    completedAt             = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    initialName             = $InitialName
+    migrationsBackupPath    = 'migrations-backup/'
+    migrationsBackedUpCount = $migrationFiles.Count
+    schemaPostFile          = [pscustomobject]@{
+        name = 'schema-post.sql'
+        sha256 = $schemaPostHash
+        bytes = (Get-Item $schemaPostPath).Length
+    }
+    buildSanityCheckPassed  = $true
+}
+Write-Manifest -Path (Join-Path $SnapshotPath 'reset-result.json') -Object $resetResult
+
+# Summary
+Write-Timestamped '' -LogFile $logFile
+Write-Timestamped "=== Reset complete. DB has new schema, no data. ===" -LogFile $logFile
+Write-Timestamped "Next: pwsh infra/scripts/db-restore-state.ps1 -SnapshotPath $SnapshotPath" -LogFile $logFile

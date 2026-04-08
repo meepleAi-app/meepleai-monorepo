@@ -78,9 +78,10 @@
 
 ## Decision
 
-**Choice:** [ ] A  [ ] B  [ ] C  [ ] D
-**Signed:** _____________________
-**Date:** _____________________
+**Choice:** [x] A  [ ] B  [ ] C  [ ] D
+**Signed:** @user (autonomous execution delegation)
+**Date:** 2026-04-09
+**Rationale:** Follow spec-panel recommendation — pilot in `(chat)/layout.tsx` with feature flag `NEXT_PUBLIC_ENABLE_PAGE_TRANSITIONS`. Narrow scope, chat navigation benefits most, no streaming interaction risk.
 
 ## Go/No-Go Criteria (post-pilot)
 

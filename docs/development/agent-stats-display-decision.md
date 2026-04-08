@@ -96,9 +96,10 @@
 
 ## Decision
 
-**Choice:** [ ] A  [ ] B  [ ] C  [ ] D
-**Signed:** _____________________
-**Date:** _____________________
+**Choice:** [x] A  [ ] B  [ ] C  [ ] D
+**Signed:** @user (autonomous execution delegation)
+**Date:** 2026-04-09
+**Rationale:** Follow spec-panel recommendation — integrate in admin agent list table rows via mapper `AgentDefinition → AgentMetadata`. Admin-scoped (no user-facing risk), AgentCharacterSheet RPG design preserved.
 
 ## Mapper Specification (if A/B/C chosen)
 

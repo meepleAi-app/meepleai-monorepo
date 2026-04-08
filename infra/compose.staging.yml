@@ -46,6 +46,12 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
       ASPNETCORE_URLS: http://+:8080
+      SEED_PROFILE: Staging
+      SEED_BUCKET_NAME: ${SEED_BUCKET_NAME:-}
+      SEED_BUCKET_ENDPOINT: ${SEED_BUCKET_ENDPOINT:-}
+      SEED_BUCKET_REGION: ${SEED_BUCKET_REGION:-auto}
+      SEED_BUCKET_FORCE_PATH_STYLE: ${SEED_BUCKET_FORCE_PATH_STYLE:-false}
+      # SEED_BUCKET_ACCESS_KEY and SEED_BUCKET_SECRET_KEY are loaded from storage.secret
       POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER:-meepleai}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}

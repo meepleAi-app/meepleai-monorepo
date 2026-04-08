@@ -54,4 +54,20 @@ describe('MiniNavSlot', () => {
     render(<MiniNavSlot />);
     expect(screen.getByRole('button', { name: /Nuova partita/i })).toBeInTheDocument();
   });
+
+  it('renders the primary action icon when provided', () => {
+    useMiniNavConfigStore.getState().setConfig({
+      breadcrumb: 'Home',
+      tabs: [{ id: 'a', label: 'A', href: '/' }],
+      activeTabId: 'a',
+      primaryAction: {
+        label: 'Nuova partita',
+        icon: '＋',
+        onClick: () => {},
+      },
+    });
+    render(<MiniNavSlot />);
+    expect(screen.getByText('＋')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Nuova partita/i })).toBeInTheDocument();
+  });
 });

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/stores/use-card-hand', () => {
@@ -53,9 +54,19 @@ describe('DesktopHandRail', () => {
     expect(screen.getByRole('button', { name: /expand/i })).toBeInTheDocument();
   });
 
-  it('is 76px wide by default', () => {
+  it('is 76px wide when collapsed (default)', () => {
     const { container } = render(<DesktopHandRail />);
     const rail = container.querySelector('[data-testid="desktop-hand-rail"]');
     expect(rail).toHaveClass('w-[76px]');
+    expect(rail).toHaveAttribute('data-expanded', 'false');
+  });
+
+  it('expands to 220px when toggle is clicked', async () => {
+    const { container } = render(<DesktopHandRail />);
+    const expandBtn = screen.getByRole('button', { name: /expand/i });
+    await userEvent.click(expandBtn);
+    const rail = container.querySelector('[data-testid="desktop-hand-rail"]');
+    expect(rail).toHaveClass('w-[220px]');
+    expect(rail).toHaveAttribute('data-expanded', 'true');
   });
 });

@@ -344,12 +344,53 @@ internal static class E2ESharedInfrastructure
             using var dbContext = CreateDbContext();
             await dbContext.Database.MigrateAsync();
 
+            // Seed SystemConfiguration row required by RequirePublicRegistrationFilter.
+            // The filter fails closed (returns 403) when Registration:PublicEnabled is
+            // not present or false, which breaks every E2E test that calls
+            // RegisterUserAsync. ConfigurationService reads from the DB via CQRS, so
+            // setting IConfiguration alone is not enough — we must seed the row itself.
+            await SeedRegistrationEnabledConfigAsync(dbContext);
+
             _initialized = true;
         }
         finally
         {
             InitLock.Release();
         }
+    }
+
+    private static async Task SeedRegistrationEnabledConfigAsync(MeepleAiDbContext dbContext)
+    {
+        const string key = "Registration:PublicEnabled";
+
+        var exists = await dbContext
+            .Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+            .AnyAsync(c => c.Key == key);
+
+        if (exists)
+        {
+            return;
+        }
+
+        dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Add(
+            new Api.Infrastructure.Entities.SystemConfigurationEntity
+            {
+                Id = Guid.NewGuid(),
+                Key = key,
+                Value = "true",
+                ValueType = "bool",
+                Description = "E2E test seed: enable public registration so RegisterUserAsync succeeds.",
+                Category = "Registration",
+                IsActive = true,
+                RequiresRestart = false,
+                Environment = "All",
+                Version = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedByUserId = Guid.Empty,
+            });
+
+        await dbContext.SaveChangesAsync();
     }
 
     /// <summary>

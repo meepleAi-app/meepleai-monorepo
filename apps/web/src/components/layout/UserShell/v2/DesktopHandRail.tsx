@@ -48,7 +48,7 @@ export function DesktopHandRail() {
       }}
     >
       <span
-        className="text-[9px] font-extrabold font-[var(--font-quicksand)] uppercase tracking-[0.12em] text-[var(--nh-text-muted)] pb-2 self-center"
+        className="text-[9px] font-extrabold font-quicksand uppercase tracking-[0.12em] text-[var(--nh-text-muted)] pb-2 self-center"
         style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
       >
         La tua mano

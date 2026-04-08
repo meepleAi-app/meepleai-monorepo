@@ -82,7 +82,7 @@ export function HandRailItem({ card, isActive }: HandRailItemProps) {
           icon
         )}
       </div>
-      <span className="absolute bottom-[3px] left-[4px] right-[4px] text-[7px] font-bold font-[var(--font-quicksand)] leading-[1.1] text-[var(--nh-text-primary)] whitespace-nowrap overflow-hidden text-ellipsis text-center">
+      <span className="absolute bottom-[3px] left-[4px] right-[4px] text-[7px] font-bold font-quicksand leading-[1.1] text-[var(--nh-text-primary)] whitespace-nowrap overflow-hidden text-ellipsis text-center">
         {card.title}
       </span>
     </Link>

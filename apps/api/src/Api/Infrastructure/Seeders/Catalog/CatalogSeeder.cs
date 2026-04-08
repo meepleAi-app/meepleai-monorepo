@@ -1,9 +1,11 @@
 using System.Reflection;
+using Api.Infrastructure.Seeders.Catalog.SeedBlob;
+using Api.Services;
+using Api.Services.Pdf;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using Api.Services;
 
 namespace Api.Infrastructure.Seeders.Catalog;
 
@@ -55,6 +57,8 @@ internal static class CatalogSeeder
         MeepleAiDbContext db,
         IBggApiService bggService,
         Guid systemUserId,
+        IBlobStorageService primaryBlob,
+        ISeedBlobReader seedBlob,
         ILogger logger,
         CancellationToken ct,
         IEmbeddingService? embeddingService = null,
@@ -69,7 +73,7 @@ internal static class CatalogSeeder
             .ConfigureAwait(false);
 
         // Step 2: Seed PDFs in Pending state (deferred RAG processing via PdfProcessingQuartzJob)
-        await PdfSeeder.SeedAsync(db, manifest, gameMap, systemUserId, logger, ct)
+        await PdfSeeder.SeedAsync(db, manifest, gameMap, systemUserId, primaryBlob, seedBlob, logger, ct)
             .ConfigureAwait(false);
 
         // Step 3: Seed agents for games with seedAgent=true (Dev only)

@@ -1,4 +1,6 @@
+using Api.Infrastructure.Seeders.Catalog.SeedBlob;
 using Api.Services;
+using Api.Services.Pdf;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,12 +22,16 @@ internal sealed class CatalogSeedLayer : ISeedLayer
         var config = context.Services.GetService<IConfiguration>();
         var bggService = context.Services.GetRequiredService<IBggApiService>();
         var embeddingService = context.Services.GetService<IEmbeddingService>();
+        var primaryBlob = context.Services.GetRequiredService<IBlobStorageService>();
+        var seedBlob = context.Services.GetRequiredService<ISeedBlobReader>();
 
         await CatalogSeeder.SeedAsync(
             context.Profile,
             context.DbContext,
             bggService,
             context.SystemUserId,
+            primaryBlob,
+            seedBlob,
             context.Logger, cancellationToken,
             embeddingService,
             config).ConfigureAwait(false);

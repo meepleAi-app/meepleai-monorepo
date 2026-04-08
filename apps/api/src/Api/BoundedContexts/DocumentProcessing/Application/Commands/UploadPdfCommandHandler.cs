@@ -473,10 +473,22 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
                 return (false, "Invalid game ID format.", null);
             }
 
-            // Support both games.Id (library entry) and games.SharedGameId (catalog reference)
+            // Step 1: direct games.Id match (local or legacy path)
             var existingGame = await _db.Games
-                .Where(g => g.Id == parsedGameId || g.SharedGameId == parsedGameId)
-                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                .FirstOrDefaultAsync(g => g.Id == parsedGameId, cancellationToken)
+                .ConfigureAwait(false);
+
+            // Step 2: if not matched by Id, look up by SharedGameId with deterministic ordering
+            // (oldest games row wins to avoid non-deterministic FirstOrDefault behavior when
+            // multiple rows share the same SharedGameId — e.g. different version/language entries)
+            if (existingGame == null)
+            {
+                existingGame = await _db.Games
+                    .Where(g => g.SharedGameId == parsedGameId)
+                    .OrderBy(g => g.CreatedAt)
+                    .FirstOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
 
             if (existingGame == null)
             {

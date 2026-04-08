@@ -91,6 +91,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void Update(string title, string? description, DateTimeOffset scheduledAt, string? location, int? maxPlayers, List<Guid>? gameIds)
     {
+        ThrowIfCorrupted();
+
         if (Status == GameNightStatus.Cancelled || Status == GameNightStatus.Completed)
             throw new InvalidOperationException($"Cannot update a {Status} game night");
 
@@ -116,6 +118,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void Publish(List<Guid> invitedUserIds)
     {
+        ThrowIfCorrupted();
+
         if (Status != GameNightStatus.Draft)
             throw new InvalidOperationException("Only draft game nights can be published");
 
@@ -137,6 +141,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void Cancel()
     {
+        ThrowIfCorrupted();
+
         if (Status == GameNightStatus.Cancelled)
             return; // idempotent
 
@@ -155,6 +161,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void Complete()
     {
+        ThrowIfCorrupted();
+
         if (Status != GameNightStatus.Published)
             throw new InvalidOperationException("Only published game nights can be completed");
 
@@ -168,6 +176,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void AddInvitees(List<Guid> userIds)
     {
+        ThrowIfCorrupted();
+
         if (Status != GameNightStatus.Published)
             throw new InvalidOperationException("Can only invite to published game nights");
 
@@ -192,6 +202,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void PreInvite(List<Guid> userIds)
     {
+        ThrowIfCorrupted();
+
         if (Status != GameNightStatus.Draft)
             throw new InvalidOperationException("Can only pre-invite to draft game nights");
 
@@ -269,6 +281,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public GameNightSession AddSession(Guid sessionId, Guid gameId, string gameTitle)
     {
+        ThrowIfCorrupted();
+
         if (Status != GameNightStatus.Published)
             throw new InvalidOperationException($"Cannot add sessions to a {Status} game night.");
         if (_sessions.Count >= 5)
@@ -289,6 +303,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void StartCurrentSession()
     {
+        ThrowIfCorrupted();
+
         var session = _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending)
             ?? throw new InvalidOperationException("No pending session to start.");
         session.Start();
@@ -300,6 +316,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void CompleteCurrentSession(Guid? winnerId)
     {
+        ThrowIfCorrupted();
+
         var session = _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.InProgress)
             ?? throw new InvalidOperationException("No in-progress session to complete.");
         session.Complete(winnerId);
@@ -314,6 +332,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void FinalizeNight()
     {
+        ThrowIfCorrupted();
+
         if (Status != GameNightStatus.Published)
             throw new InvalidOperationException($"Cannot finalize a {Status} game night.");
         if (_sessions.Any(s => s.Status == GameNightSessionStatus.InProgress))
@@ -331,5 +351,16 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     {
         _sessions.Clear();
         _sessions.AddRange(sessions.OrderBy(s => s.PlayOrder));
+    }
+
+    /// <summary>
+    /// Guards mutating operations from running on entities loaded with a corrupted persisted status.
+    /// Such entities require manual intervention before any mutation can be applied.
+    /// </summary>
+    private void ThrowIfCorrupted()
+    {
+        if (Status == GameNightStatus.Corrupted)
+            throw new InvalidOperationException(
+                $"GameNightEvent {Id} is in Corrupted state. Manual intervention required before any mutation.");
     }
 }

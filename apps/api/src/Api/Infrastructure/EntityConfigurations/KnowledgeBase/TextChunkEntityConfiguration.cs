@@ -21,8 +21,8 @@ internal class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunk
         builder.Property(e => e.CharacterCount).IsRequired();
         builder.Property(e => e.CreatedAt).IsRequired();
 
-        // AI-14: Hybrid search - PostgreSQL tsvector column managed by trigger
-        // Ignore in EF Core since it's managed by database trigger, not application
+        // AI-14: Hybrid search - PostgreSQL GENERATED stored tsvector column
+        // Computed from "Content" via migration AddSearchVectorColumns. Ignored by EF Core since it's DB-managed.
         builder.Ignore(e => e.SearchVector);
 
         builder.HasOne(e => e.Game)

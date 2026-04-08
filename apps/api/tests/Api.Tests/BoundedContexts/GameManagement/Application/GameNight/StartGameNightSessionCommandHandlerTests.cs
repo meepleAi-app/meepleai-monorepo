@@ -1,3 +1,5 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
@@ -50,6 +52,26 @@ public class StartGameNightSessionCommandHandlerTests
         return evt;
     }
 
+    private static UserDto CreateOrganizerDto(Guid organizerId, string displayName = "Test Organizer")
+    {
+        return new UserDto(
+            Id: organizerId,
+            Email: "organizer@example.com",
+            DisplayName: displayName,
+            Role: "User",
+            Tier: "Free",
+            CreatedAt: DateTime.UtcNow,
+            IsTwoFactorEnabled: false,
+            TwoFactorEnabledAt: null,
+            Level: 1,
+            ExperiencePoints: 0,
+            EmailVerified: true,
+            EmailVerifiedAt: DateTime.UtcNow,
+            VerificationGracePeriodEndsAt: null,
+            OnboardingCompleted: true,
+            OnboardingSkipped: false);
+    }
+
     [Fact]
     public async Task Handle_CreatesSessionAndLinksToGameNight()
     {
@@ -60,6 +82,9 @@ public class StartGameNightSessionCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(gameNight);
+
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
 
         _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CreateSessionResult(newSessionId, "ABC123", []));
@@ -120,7 +145,7 @@ public class StartGameNightSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_DispatchesCreateSessionCommandWithCorrectParameters()
+    public async Task Handle_DispatchesCreateSessionCommandWithAutoSeededOrganizer()
     {
         // Arrange
         var gameNight = CreatePublishedEvent();
@@ -128,6 +153,9 @@ public class StartGameNightSessionCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(gameNight);
+
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId, displayName: "Alice Organizer"));
 
         _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CreateSessionResult(Guid.NewGuid(), "XYZ789", []));
@@ -138,14 +166,111 @@ public class StartGameNightSessionCommandHandlerTests
         // Act
         await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
+        // Assert — auto-seeded organizer becomes sole owner
         _mockMediator.Verify(m => m.Send(
             It.Is<CreateSessionCommand>(c =>
                 c.UserId == gameNight.OrganizerId &&
                 c.GameId == gameId &&
                 c.SessionType == "GameSpecific" &&
-                c.Participants.Count == 0),
+                c.Participants.Count == 1 &&
+                c.Participants[0].IsOwner &&
+                c.Participants[0].UserId == gameNight.OrganizerId &&
+                c.Participants[0].DisplayName == "Alice Organizer"),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithProvidedParticipants_UsesThemDirectly()
+    {
+        // Arrange
+        var gameNight = CreatePublishedEvent();
+        var customParticipants = new List<ParticipantDto>
+        {
+            new() {
+                Id = Guid.NewGuid(),
+                UserId = gameNight.OrganizerId,
+                DisplayName = "Host Bob",
+                IsOwner = true,
+                JoinOrder = 0
+            },
+            new() {
+                Id = Guid.NewGuid(),
+                DisplayName = "Guest Charlie",
+                IsOwner = false,
+                JoinOrder = 1
+            }
+        };
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(Guid.NewGuid(), "ABC123", []));
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan",
+            gameNight.OrganizerId, customParticipants);
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert — provided participants are passed through, no user lookup performed
+        _mockMediator.Verify(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateSessionCommand>(c =>
+                c.Participants.Count == 2 &&
+                c.Participants.Any(p => p.DisplayName == "Host Bob" && p.IsOwner) &&
+                c.Participants.Any(p => p.DisplayName == "Guest Charlie" && !p.IsOwner)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithProvidedParticipantsLackingOwner_ThrowsConflict()
+    {
+        // Arrange
+        var gameNight = CreatePublishedEvent();
+        var noOwnerParticipants = new List<ParticipantDto>
+        {
+            new() { Id = Guid.NewGuid(), DisplayName = "NonOwner", IsOwner = false, JoinOrder = 0 }
+        };
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan",
+            gameNight.OrganizerId, noOwnerParticipants);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ConflictException>(
+            () => _handler.Handle(command, CancellationToken.None));
+
+        _mockMediator.Verify(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_OrganizerNotFoundInUserQuery_ThrowsNotFound()
+    {
+        // Arrange
+        var gameNight = CreatePublishedEvent();
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserDto?)null);
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => _handler.Handle(command, CancellationToken.None));
+
+        _mockMediator.Verify(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -157,6 +282,9 @@ public class StartGameNightSessionCommandHandlerTests
 
         _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(gameNight);
+
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
 
         _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CreateSessionResult(sessionId, "DEF456", []));

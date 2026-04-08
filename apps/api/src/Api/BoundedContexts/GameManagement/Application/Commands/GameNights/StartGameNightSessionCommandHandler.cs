@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
@@ -13,6 +14,9 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 /// Handles starting a game session within a game night event.
 /// Cross-BC communication: dispatches CreateSessionCommand to SessionTracking BC via MediatR,
 /// then links the resulting session to the GameNightEvent aggregate.
+///
+/// If the command provides no participants, the handler auto-seeds the organizer
+/// (looked up via Authentication.GetUserByIdQuery) as the sole owner participant.
 /// </summary>
 internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<StartGameNightSessionCommand, StartGameNightSessionResult>
 {
@@ -44,6 +48,9 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
         if (gameNight.OrganizerId != command.UserId)
             throw new ForbiddenException("Only the organizer can start sessions.");
 
+        // Build participant list: auto-seed organizer when command provides none.
+        var participants = await BuildParticipantsAsync(command, cancellationToken).ConfigureAwait(false);
+
         // Cross-BC: create Session via MediatR dispatch to SessionTracking
         var createResult = await _mediator.Send(new CreateSessionCommand(
             command.UserId,
@@ -51,7 +58,7 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             "GameSpecific",
             DateTime.UtcNow,
             null,
-            new List<ParticipantDto>()), cancellationToken).ConfigureAwait(false);
+            participants), cancellationToken).ConfigureAwait(false);
 
         // Link the new session to the GameNight aggregate and start it
         try
@@ -71,5 +78,36 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
         {
             throw new ConflictException(ex.Message);
         }
+    }
+
+    private async Task<List<ParticipantDto>> BuildParticipantsAsync(
+        StartGameNightSessionCommand command, CancellationToken cancellationToken)
+    {
+        if (command.Participants is not null && command.Participants.Count > 0)
+        {
+            if (!command.Participants.Any(p => p.IsOwner))
+                throw new ConflictException("At least one participant must be the session owner.");
+            return command.Participants.ToList();
+        }
+
+        // Auto-seed: look up organizer via Authentication BC (cross-BC MediatR dispatch)
+        var organizer = await _mediator.Send(new GetUserByIdQuery(command.UserId), cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("User", command.UserId.ToString());
+
+        var displayName = !string.IsNullOrWhiteSpace(organizer.DisplayName)
+            ? organizer.DisplayName
+            : organizer.Email;
+
+        return new List<ParticipantDto>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                UserId = command.UserId,
+                DisplayName = displayName,
+                IsOwner = true,
+                JoinOrder = 0
+            }
+        };
     }
 }

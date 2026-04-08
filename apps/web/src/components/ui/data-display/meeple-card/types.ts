@@ -37,6 +37,7 @@ export interface NavFooterItem {
   showPlus?: boolean;
   disabled?: boolean;
   onClick?: () => void;
+  onPlusClick?: () => void;
 }
 
 export type CardStatus =

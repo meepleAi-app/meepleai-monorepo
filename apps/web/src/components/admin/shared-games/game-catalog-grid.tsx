@@ -99,7 +99,7 @@ function AdminGameCard({
   onPublish,
   onArchive,
   onDelete,
-  onOpenExtraCard,
+  onOpenExtraCard: _onOpenExtraCard,
 }: AdminGameCardProps) {
   const router = useRouter();
 

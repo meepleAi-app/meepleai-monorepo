@@ -67,7 +67,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'RatingStars',
     category: 'Data Display',
     description:
-      '[ORPHAN] Star rating display with BGG scale conversion. Public API variant — MeepleCard uses the internal parts/Rating instead.',
+      'Star rating display with BGG 10-point scale conversion. Supports half-stars. Used by GameHeader.',
     controlCount: 5,
     presetCount: 4,
   },

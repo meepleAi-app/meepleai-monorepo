@@ -320,6 +320,18 @@ CREATE TABLE bar (id int);
         $statementCount | Should -Be 1
         $result | Should -Match "O''Brien"
     }
+
+    It 'strips PG16+ \restrict and \unrestrict directives (random tokens)' {
+        $input = @"
+\restrict abc123randomToken
+CREATE TABLE foo (id int);
+\unrestrict abc123randomToken
+"@
+        $result = Normalize-PgSchema -Sql $input
+        $result | Should -Not -Match '\\restrict'
+        $result | Should -Not -Match '\\unrestrict'
+        $result | Should -Match 'CREATE TABLE foo'
+    }
 }
 
 Describe 'Test-SchemaDriftClass' {

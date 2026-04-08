@@ -160,12 +160,16 @@ $dataDumpPath = Join-Path $snap 'data.dump'
 Write-Timestamped '[3/6] Data-only dump...' -LogFile $logFile
 $dataArgs = @(
     '-Fc', '--data-only', '--no-owner', '--no-acl',
-    '--exclude-table', '*__EFMigrationsHistory*'
+    # NOTE: pg_dump requires double-quoted identifiers in --exclude-table patterns
+    # for case-sensitive (mixed-case) table names. Without the quotes, pg_dump
+    # lowercases the pattern and fails to match "__EFMigrationsHistory".
+    '--exclude-table', '*."__EFMigrationsHistory"'
 )
 $excludedTables = @()
 if ($Sanitize) {
     foreach ($table in $SENSITIVE_TABLES) {
-        $dataArgs += @('--exclude-table-data', "*.$table")
+        # Same case-sensitivity rule: quote the table name inside the pattern.
+        $dataArgs += @('--exclude-table-data', "*.`"$table`"")
         $excludedTables += $table
     }
     Write-Timestamped "    Sanitize: excluding data from $($SENSITIVE_TABLES -join ', ')" -LogFile $logFile

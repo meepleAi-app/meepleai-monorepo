@@ -137,6 +137,8 @@ function Normalize-PgSchema {
         if ($line -match '^\s*--') { continue }                        # comment
         if ($line -match '^\s*SET\s') { continue }                     # SET statements
         if ($line -match '^\s*SELECT\s+pg_catalog\.set_config') { continue }
+        if ($line -match '^\s*\\restrict\s') { continue }              # PG16+ psql directive (random token)
+        if ($line -match '^\s*\\unrestrict\s') { continue }            # PG16+ psql directive (random token)
         $kept.Add($line)
     }
 
@@ -215,6 +217,7 @@ function Write-Timestamped {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
+        [AllowEmptyString()]
         [string]$Message,
         [string]$LogFile = $null
     )
@@ -415,8 +418,8 @@ WHERE datname = '$($Config.Db)'
   AND (application_name LIKE 'Npgsql%' OR application_name LIKE '%api%' OR usename = '$($Config.User)')
 "@
     $output = Invoke-Psql -Config $Config -Sql $sql
-    if ([string]::IsNullOrWhiteSpace($output)) { return @() }
-    return ($output -split "`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($null -eq $output -or [string]::IsNullOrWhiteSpace([string]$output)) { return ,@() }
+    return ,@(($output -split "`n") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 }
 
 # --- Exports ---

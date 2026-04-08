@@ -9252,6 +9252,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/skytear_rulebook.pdf
     pdfSha256: 2f316d16c5001b55097b9966c7c697bbde6a50e7e5c9b1c3df336ff5c3775960
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Skytear%3A%20Arena%20of%20Legends
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Skytear%3A%20Arena%20of%20Legends
   - title: Terra Mystica
     bggId: 120677
     language: en
@@ -10913,6 +10915,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/great-western-trail-argentina_rulebook.pdf
     pdfSha256: 88be4a0b83dda037566941e46d1e936ec6280c37e9860c0405a58a9bd412c2fa
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Great%20Western%20Trail%3A%20Argentina
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Great%20Western%20Trail%3A%20Argentina
   - title: Agricola (Revised Edition)
     bggId: 200680
     language: en
@@ -11454,6 +11458,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/voidfall_rulebook.pdf
     pdfSha256: 29847a547dcec0deac860cfb658cd3ea694dcaab319258fcf286c27161243157
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Voidfall
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Voidfall
   - title: 'Wingspan: Asia'
     bggId: 366161
     language: en

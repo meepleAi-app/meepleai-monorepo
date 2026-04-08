@@ -21,6 +21,9 @@ import yaml
 BAD_BGG_IDS = {338111, 380607, 373106}
 
 # Fields populated by bgg-fetcher — all removed when a mismatch is detected
+# (fallbackImageUrl/Thumbnail are kept by replacing with a placehold.co URL
+# to preserve the CatalogSeederTests.LoadManifest_DevProfile_GamesHaveFallbackImages
+# invariant that every game has fallback images for UI rendering.)
 BGG_FIELDS = {
     "description",
     "yearPublished",
@@ -32,13 +35,16 @@ BGG_FIELDS = {
     "averageWeight",
     "imageUrl",
     "thumbnailUrl",
-    "fallbackImageUrl",
-    "fallbackThumbnailUrl",
     "categories",
     "mechanics",
     "designers",
     "publishers",
 }
+
+
+def _placeholder_image(title: str, width: int, height: int) -> str:
+    from urllib.parse import quote
+    return f"https://placehold.co/{width}x{height}?text={quote(title)}"
 
 
 def fix_entry(game: dict) -> bool:
@@ -51,6 +57,12 @@ def fix_entry(game: dict) -> bool:
         if field in BGG_FIELDS:
             del game[field]
             modified = True
+    # Replace fallback images with placeholders (test invariant: every dev
+    # game must have fallback image + thumbnail URLs)
+    title = game.get("title", "Unknown")
+    game["fallbackImageUrl"] = _placeholder_image(title, 400, 300)
+    game["fallbackThumbnailUrl"] = _placeholder_image(title, 150, 150)
+    modified = True
     return modified
 
 

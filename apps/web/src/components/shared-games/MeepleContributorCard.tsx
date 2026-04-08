@@ -17,6 +17,7 @@ import Link from 'next/link';
 
 import { BadgeIcon } from '@/components/badges/BadgeIcon';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { buildPlayerNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { GameContributorDto } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +46,10 @@ export function MeepleContributorCard({
         title={contributor.userName}
         subtitle={`${contributionText} \u00b7 ${timeAgo}`}
         badge={contributor.isPrimaryContributor ? 'Original' : undefined}
+        navItems={buildPlayerNavItems(
+          { totalWins: 0, totalSessions: contributor.contributionCount },
+          { onSessionsClick: () => {} }
+        )}
         className={cn(featured && 'bg-primary/5')}
         data-testid="meeple-contributor-card"
       />

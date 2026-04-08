@@ -8,6 +8,7 @@ import Link from 'next/link';
 
 import { GameCarousel, type CarouselGame } from '@/components/ui/data-display/game-carousel';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -185,6 +186,19 @@ export const CollectionGameGrid = React.memo(function CollectionGameGrid({
                     { label: t('collection.plays'), value: game.playCount.toString() },
                   ].filter(m => m.value) as Array<{ label: string; value: string }>
                 }
+                navItems={buildGameNavItems(
+                  {
+                    kbCount: game.hasPdf ? 1 : 0,
+                    agentCount: 0,
+                    chatCount: game.chatCount,
+                    sessionCount: game.playCount,
+                  },
+                  {
+                    onKbClick: game.hasPdf ? () => {} : undefined,
+                    onChatClick: game.chatCount > 0 ? () => {} : undefined,
+                    onSessionClick: game.playCount > 0 ? () => {} : undefined,
+                  }
+                )}
               />
             ))}
           </motion.div>

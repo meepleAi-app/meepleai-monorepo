@@ -16,6 +16,7 @@ export function ListCard(props: MeepleCardProps) {
     rating,
     ratingMax,
     metadata = [],
+    badge,
     navItems = [],
     onClick,
     className = '',
@@ -47,9 +48,19 @@ export function ListCard(props: MeepleCardProps) {
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <h3 className="truncate font-[var(--font-quicksand)] text-[0.88rem] font-bold text-[var(--mc-text-primary)]">
-          {title}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="truncate font-[var(--font-quicksand)] text-[0.88rem] font-bold text-[var(--mc-text-primary)]">
+            {title}
+          </h3>
+          {badge && (
+            <span
+              className="shrink-0 rounded-full border border-[var(--mc-border)] bg-[var(--mc-bg-muted)] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-[var(--mc-text-secondary)]"
+              data-slot="badge"
+            >
+              {badge}
+            </span>
+          )}
+        </div>
         {subtitle && (
           <p className="truncate text-[0.75rem] text-[var(--mc-text-secondary)]">{subtitle}</p>
         )}

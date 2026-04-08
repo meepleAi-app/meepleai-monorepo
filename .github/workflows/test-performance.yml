@@ -406,7 +406,7 @@ jobs:
             ${{ runner.os }}-${{ runner.arch }}-nextjs-
 
       - name: Build Next.js for Production
-        run: pnpm build
+        run: pnpm exec cross-env NODE_OPTIONS="--max-old-space-size=6144 --require ./scripts/dommatrix-polyfill.js" node ./node_modules/next/dist/bin/next build
         env:
           NODE_ENV: production
 

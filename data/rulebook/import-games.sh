@@ -64,20 +64,20 @@ update_game_field_raw() {
 
 # --- API helpers ------------------------------------------------------------
 api_get() {
-  curl -s -b "$COOKIES" -c "$COOKIES" "${API_BASE}$1"
+  curl -s "${CURL_TIMEOUTS[@]}" -b "$COOKIES" "${API_BASE}$1"
 }
 
 api_post() {
-  curl -s -b "$COOKIES" -c "$COOKIES" \
+  curl -s "${CURL_TIMEOUTS[@]}" -b "$COOKIES" -c "$COOKIES" \
     -H "Content-Type: application/json" \
     -d "$2" "${API_BASE}$1"
 }
 
-api_post_status() {
-  curl -s -o /dev/null -w "%{http_code}" -b "$COOKIES" -c "$COOKIES" \
-    -H "Content-Type: application/json" \
-    -d "$2" "${API_BASE}$1"
-}
+# Cleanup trap — remove cookies on exit
+trap 'rm -f "$COOKIES"' EXIT
+
+# Default curl timeouts (connect + total)
+CURL_TIMEOUTS=(--connect-timeout 10 --max-time 60)
 
 # ============================================================================
 # 1. Health check
@@ -108,7 +108,7 @@ login() {
     '{"email":$e,"password":$p}')
 
   local resp
-  resp=$(curl -s -c "$COOKIES" -b "$COOKIES" \
+  resp=$(curl -s "${CURL_TIMEOUTS[@]}" -c "$COOKIES" -b "$COOKIES" \
     -H "Content-Type: application/json" \
     -d "$body" "${API_BASE}/auth/login")
 
@@ -187,8 +187,7 @@ resolve_shared_game_ids() {
 
     log "  Searching for \"${name}\"..."
     local encoded_name
-    encoded_name=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$name'))" 2>/dev/null \
-      || printf '%s' "$name" | jq -sRr @uri)
+    encoded_name=$(printf '%s' "$name" | jq -sRr @uri)
 
     local resp
     resp=$(api_get "/shared-games?search=${encoded_name}&pageSize=5")
@@ -304,7 +303,7 @@ download_pdfs() {
     fi
 
     log "  Downloading ${slug} from ${pdf_url}..."
-    if curl -sL -o "$dest" "$pdf_url"; then
+    if curl -sL -f --connect-timeout 15 --max-time 300 -o "$dest" "$pdf_url"; then
       local filetype
       filetype=$(file -b "$dest" | head -c 3)
       if [[ "$filetype" == "PDF" ]]; then
@@ -314,11 +313,12 @@ download_pdfs() {
       else
         err "    Downloaded file is not a PDF (${filetype}). Removing."
         rm -f "$dest"
-        update_game_field "$id" "pdfStatus" "download_failed"
+        update_game_field "$id" "pdfStatus" "not_found"
       fi
     else
       err "    Download failed for ${slug}."
-      update_game_field "$id" "pdfStatus" "download_failed"
+      rm -f "$dest"
+      update_game_field "$id" "pdfStatus" "not_found"
     fi
   done <<< "$games"
 }
@@ -370,7 +370,7 @@ upload_pdfs() {
 
     log "  Uploading ${slug} (${shared_game_id})..."
     local resp
-    resp=$(curl -s -b "$COOKIES" -c "$COOKIES" \
+    resp=$(curl -s --connect-timeout 10 --max-time 600 -b "$COOKIES" \
       -F "file=@${pdf_path}" \
       -F "gameId=${shared_game_id}" \
       -F "gameName=${name}" \

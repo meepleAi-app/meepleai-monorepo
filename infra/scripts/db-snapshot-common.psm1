@@ -93,5 +93,32 @@ function Get-RequiredDiskSpaceBytes {
     return [long][math]::Ceiling($rawTotal * 1.1)
 }
 
+function Read-Manifest {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "Manifest not found: $Path"
+    }
+    $raw = Get-Content -LiteralPath $Path -Raw
+    return $raw | ConvertFrom-Json
+}
+
+function Write-Manifest {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+        [Parameter(Mandatory)]
+        [object]$Object
+    )
+    $tmpPath = "$Path.tmp"
+    $json = $Object | ConvertTo-Json -Depth 10
+    Set-Content -LiteralPath $tmpPath -Value $json -Encoding UTF8
+    Move-Item -LiteralPath $tmpPath -Destination $Path -Force
+}
+
 # --- Exports ---
-Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig', 'Assert-LocalhostOnly', 'Get-RequiredDiskSpaceBytes')
+Export-ModuleMember -Function @('Test-LocalhostHost', 'ConvertFrom-SecretFile', 'Get-PostgresConfig', 'Assert-LocalhostOnly', 'Get-RequiredDiskSpaceBytes', 'Read-Manifest', 'Write-Manifest')

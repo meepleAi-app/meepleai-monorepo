@@ -181,3 +181,58 @@ Describe 'Get-RequiredDiskSpaceBytes' {
         { Get-RequiredDiskSpaceBytes -DbSizeBytes -1 -VolumeSizeBytes 0 } | Should -Throw '*non-negative*'
     }
 }
+
+Describe 'Manifest read/write' {
+    BeforeEach {
+        $script:tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid())
+        New-Item -ItemType Directory -Path $script:tmpDir | Out-Null
+        $script:tmpFile = Join-Path $script:tmpDir 'manifest.json'
+    }
+    AfterEach {
+        Remove-Item $script:tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'round-trips a simple manifest' {
+        $obj = [pscustomobject]@{
+            schemaVersion = 1
+            createdAt     = '2026-04-08T14:35:22Z'
+            database      = 'meepleai_db'
+            sanitize      = $false
+        }
+        Write-Manifest -Path $script:tmpFile -Object $obj
+        $loaded = Read-Manifest -Path $script:tmpFile
+        $loaded.schemaVersion | Should -Be 1
+        $loaded.database | Should -Be 'meepleai_db'
+        $loaded.sanitize | Should -Be $false
+    }
+
+    It 'preserves nested objects' {
+        $obj = [pscustomobject]@{
+            files = [pscustomobject]@{
+                safetyNet = [pscustomobject]@{ name = 'a'; sha256 = 'b'; bytes = 123 }
+            }
+        }
+        Write-Manifest -Path $script:tmpFile -Object $obj
+        $loaded = Read-Manifest -Path $script:tmpFile
+        $loaded.files.safetyNet.name | Should -Be 'a'
+        $loaded.files.safetyNet.sha256 | Should -Be 'b'
+        $loaded.files.safetyNet.bytes | Should -Be 123
+    }
+
+    It 'Read-Manifest throws when file does not exist' {
+        { Read-Manifest -Path (Join-Path $script:tmpDir 'missing.json') } | Should -Throw '*not found*'
+    }
+
+    It 'Read-Manifest throws on invalid JSON' {
+        'not json' | Set-Content $script:tmpFile
+        { Read-Manifest -Path $script:tmpFile } | Should -Throw
+    }
+
+    It 'Write-Manifest is atomic (no partial file on success)' {
+        $obj = [pscustomobject]@{ a = 1 }
+        Write-Manifest -Path $script:tmpFile -Object $obj
+        Test-Path $script:tmpFile | Should -BeTrue
+        $tmpSibling = "$script:tmpFile.tmp"
+        Test-Path $tmpSibling | Should -BeFalse
+    }
+}

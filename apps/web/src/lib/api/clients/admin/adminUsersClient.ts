@@ -123,7 +123,6 @@ export function createAdminUsersClient(http: HttpClient) {
         { tier },
         AdminUserSchema
       );
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return result!;
     },
 
@@ -133,7 +132,6 @@ export function createAdminUsersClient(http: HttpClient) {
         { newRole, reason },
         AdminUserSchema
       );
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return result!;
     },
 

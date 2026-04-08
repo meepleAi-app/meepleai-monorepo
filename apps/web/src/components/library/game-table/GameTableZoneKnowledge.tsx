@@ -48,8 +48,8 @@ function KbStatusBadge({ status }: { status: KbStatus; size?: string }) {
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
-import { useGameKbStatus } from '@/hooks/use-game-kb-status';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
+import { useGameKbStatus } from '@/lib/domain-hooks/useGameKbStatus';
 import { useGameTableDrawer } from '@/lib/stores/game-table-drawer-store';
 
 import { HouseRulesSection } from './HouseRulesSection';
@@ -101,14 +101,14 @@ export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps):
   const { data: threads = [], isLoading: threadsLoading } = useAgentThreads(resolvedAgentId ?? '');
   const { status: agentStatus, isLoading: statusLoading } = useAgentStatus(resolvedAgentId ?? '');
   const drawerOpen = useGameTableDrawer(s => s.open);
-  const { data: kbStatus } = useGameKbStatus(gameId);
+  const kbStatus = useGameKbStatus(gameId);
 
   const lastThread = resolvedAgentId && threads.length > 0 ? threads[0] : null;
 
   return (
     <div className="space-y-3">
       {/* KB Coverage Badge + Suggested Questions */}
-      {kbStatus?.isIndexed && (
+      {kbStatus.isIndexed && (
         <div className={CARD_ROW} data-testid="kb-status-section">
           <div className="flex items-center gap-2 mb-2">
             <Badge

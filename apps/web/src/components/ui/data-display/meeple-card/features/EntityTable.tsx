@@ -269,7 +269,6 @@ function EntityTableRow({ card, onRowClick, isLast }: EntityTableRowProps) {
         <div className="flex items-center gap-2.5">
           {card.imageUrl ? (
             // Same convention as Cover.tsx: plain <img> for arbitrary remote URLs.
-            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={card.imageUrl}
               alt=""

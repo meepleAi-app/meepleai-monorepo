@@ -28,6 +28,18 @@ import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
+import {
+  MeepleCard,
+  MeepleCardSkeleton,
+  type MeepleCardAction,
+  type MeepleCardMetadata,
+  type MeepleCardVariant,
+} from '@/components/ui/data-display/meeple-card';
+import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { useGameInLibraryStatus } from '@/hooks/queries';
+import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
+import { api } from '@/lib/api';
+import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 // Dynamic imports to avoid DOMMatrix SSR error on statically generated pages
 const KbDrawerSheet = dynamic(
@@ -46,18 +58,6 @@ const SessionDrawerSheet = dynamic(
   () => import('@/components/library/SessionDrawerSheet').then(m => m.SessionDrawerSheet),
   { ssr: false }
 );
-import {
-  MeepleCard,
-  MeepleCardSkeleton,
-  type MeepleCardAction,
-  type MeepleCardMetadata,
-  type MeepleCardVariant,
-} from '@/components/ui/data-display/meeple-card';
-import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
-import { useGameInLibraryStatus } from '@/hooks/queries';
-import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
-import { api } from '@/lib/api';
-import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 // ============================================================================
 // Types

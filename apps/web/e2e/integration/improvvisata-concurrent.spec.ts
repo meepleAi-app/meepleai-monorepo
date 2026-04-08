@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 import {
   loginAsAdmin,
   createGenericSession,
@@ -13,14 +14,13 @@ import {
   ADMIN_EMAIL,
   ADMIN_PASSWORD,
 } from './helpers/improvvisata-helpers';
+
 import type { APIRequestContext } from '@playwright/test';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 /** Create a second authenticated API context (simulates another user) */
-async function createSecondContext(
-  playwright: any
-): Promise<APIRequestContext> {
+async function createSecondContext(playwright: any): Promise<APIRequestContext> {
   const api = await playwright.request.newContext({ baseURL: API_BASE });
   // Login as same admin for simplicity — in production, use a second user
   const loginRes = await api.post('/api/v1/auth/login', {
@@ -103,35 +103,29 @@ test.describe('Improvvisata Concurrent Access — Integration', () => {
     const joinBody = await joinRes.json();
 
     // Guest proposes score
-    const proposeRes = await apiGuest.post(
-      `/api/v1/live-sessions/${sessionId}/scores/propose`,
-      {
-        data: {
-          participantId: joinBody.participantId,
-          targetPlayerId: p1,
-          round: 1,
-          dimension: 'points',
-          value: 20,
-          proposerName: 'ProposerGuest',
-        },
-        headers: JSON_HEADERS,
-      }
-    );
+    const proposeRes = await apiGuest.post(`/api/v1/live-sessions/${sessionId}/scores/propose`, {
+      data: {
+        participantId: joinBody.participantId,
+        targetPlayerId: p1,
+        round: 1,
+        dimension: 'points',
+        value: 20,
+        proposerName: 'ProposerGuest',
+      },
+      headers: JSON_HEADERS,
+    });
     expect(proposeRes.status()).toBe(202);
 
     // Host confirms
-    const confirmRes = await apiHost.post(
-      `/api/v1/live-sessions/${sessionId}/scores/confirm`,
-      {
-        data: {
-          targetPlayerId: p1,
-          round: 1,
-          dimension: 'points',
-          value: 20,
-        },
-        headers: JSON_HEADERS,
-      }
-    );
+    const confirmRes = await apiHost.post(`/api/v1/live-sessions/${sessionId}/scores/confirm`, {
+      data: {
+        targetPlayerId: p1,
+        round: 1,
+        dimension: 'points',
+        value: 20,
+      },
+      headers: JSON_HEADERS,
+    });
     expect([200, 204]).toContain(confirmRes.status());
 
     // Verify score recorded
@@ -161,7 +155,7 @@ test.describe('Improvvisata Concurrent Access — Integration', () => {
 
     // All 3 vote in parallel
     const voteResults = await Promise.all(
-      playerIds.map((pid) =>
+      playerIds.map(pid =>
         apiHost.post(`/api/v1/live-sessions/${sessionId}/disputes/${disputeId}/vote`, {
           data: { playerId: pid, acceptsVerdict: true },
           headers: JSON_HEADERS,
@@ -236,9 +230,7 @@ test.describe('Improvvisata Concurrent Access — Integration', () => {
     expect(session.status).toBe('InProgress');
 
     // Participant visible
-    const participantsRes = await apiHost.get(
-      `/api/v1/live-sessions/${sessionId}/participants`
-    );
+    const participantsRes = await apiHost.get(`/api/v1/live-sessions/${sessionId}/participants`);
     if (participantsRes.ok()) {
       const participants = await participantsRes.json();
       const names = participants.map((p: any) => p.displayName);
@@ -276,12 +268,10 @@ test.describe('Improvvisata Concurrent Access — Integration', () => {
     expect(status1 === 200 || status1 === 204 || status2 === 200 || status2 === 204).toBe(true);
 
     // If concurrency is enforced, one should get 409 or 500
-    if ((status1 === 409 || status1 === 500) || (status2 === 409 || status2 === 500)) {
+    if (status1 === 409 || status1 === 500 || status2 === 409 || status2 === 500) {
       console.log(`[Concurrency] Conflict detected: edit1=${status1}, edit2=${status2}`);
     } else {
-      console.log(
-        `[Concurrency] Both edits succeeded (${status1}, ${status2}) — last-write-wins`
-      );
+      console.log(`[Concurrency] Both edits succeeded (${status1}, ${status2}) — last-write-wins`);
     }
 
     // No corruption: score should be either 20 or 30, not something else

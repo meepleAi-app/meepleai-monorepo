@@ -316,8 +316,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
                 ...state.pipeline,
                 edges: state.pipeline.edges.map(edge =>
                   edge.id === edgeId
-                    ? // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- spread requires assertion
-                      { ...edge, data: { ...edge.data, ...data } as PipelineEdgeData }
+                    ? { ...edge, data: { ...edge.data, ...data } as PipelineEdgeData }
                     : edge
                 ),
                 updatedAt: new Date().toISOString(),
@@ -687,7 +686,6 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
                   e.id === edgeId
                     ? {
                         ...e,
-                        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- spread requires assertion
                         data: { ...e.data, isValid, validationError: error } as PipelineEdgeData,
                       }
                     : e

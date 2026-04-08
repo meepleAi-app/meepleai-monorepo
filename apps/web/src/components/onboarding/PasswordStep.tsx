@@ -104,6 +104,7 @@ export function PasswordStep({ token, onComplete }: PasswordStepProps) {
       setErrorMessage('Password does not meet all requirements.');
       return;
     }
+    // eslint-disable-next-line security/detect-possible-timing-attacks -- client-side form match check; both values come from same user session, no attacker-observable timing
     if (password !== confirmPassword) {
       setErrorMessage('Passwords do not match.');
       return;

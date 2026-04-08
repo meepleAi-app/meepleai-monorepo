@@ -137,7 +137,6 @@ function PlayingCard({ card, isSelected, isFaceDown, onClick, className }: Playi
           {card.imageUrl ? (
             // Custom card with image
             <div className="w-full h-full flex flex-col items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={card.imageUrl}
                 alt={card.name}

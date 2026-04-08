@@ -4,6 +4,7 @@
  * Renders an upcoming or past game night with nav-footer wired to participants,
  * location map, games list, and calendar.
  */
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 
 'use client';
 

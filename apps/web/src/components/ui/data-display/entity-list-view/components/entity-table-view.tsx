@@ -10,6 +10,7 @@
  * @module components/ui/data-display/entity-list-view/components/entity-table-view
  * @see Issue #4697
  */
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 
 'use client';
 

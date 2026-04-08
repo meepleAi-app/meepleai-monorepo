@@ -1,3 +1,5 @@
+using Amazon.Runtime;
+using Amazon.S3;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
@@ -28,6 +30,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
+using Api.Infrastructure.Seeders.Catalog.SeedBlob;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -252,6 +255,39 @@ internal static class KnowledgeBaseServiceExtensions
                 + "file logging disabled for this process",
                 logDir, fallbackDir);
             return new NoOpOpenRouterFileLogger();
+        });
+
+        // Seed PDF bucket — readonly accessor for the meepleai-seeds bucket
+        services.AddSingleton<ISeedBlobReader>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var diLogger = sp.GetRequiredService<ILogger<NoOpSeedBlobReader>>();
+
+            var bucket = config["SEED_BUCKET_NAME"];
+            var endpoint = config["SEED_BUCKET_ENDPOINT"];
+            var accessKey = config["SEED_BUCKET_ACCESS_KEY"];
+            var secretKey = config["SEED_BUCKET_SECRET_KEY"];
+
+            if (string.IsNullOrWhiteSpace(bucket)
+                || string.IsNullOrWhiteSpace(endpoint)
+                || string.IsNullOrWhiteSpace(accessKey)
+                || string.IsNullOrWhiteSpace(secretKey))
+            {
+                diLogger.LogInformation(
+                    "SEED_BUCKET_* env vars not fully set; using NoOpSeedBlobReader (PDF seeding disabled)");
+                return new NoOpSeedBlobReader();
+            }
+
+            var s3Config = new AmazonS3Config
+            {
+                ServiceURL = endpoint,
+                ForcePathStyle = bool.TryParse(
+                    config["SEED_BUCKET_FORCE_PATH_STYLE"], out var fps) && fps,
+            };
+
+            var credentials = new BasicAWSCredentials(accessKey, secretKey);
+            var client = new AmazonS3Client(credentials, s3Config);
+            return new S3SeedBlobReader(client, bucket);
         });
 
         // Issue #5074: OpenRouter usage cache — polls /auth/key every 60s, accumulates daily spend

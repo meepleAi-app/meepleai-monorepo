@@ -242,5 +242,106 @@ $script:xactAtSave = $xactAtSave
 $script:excludedTables = $excludedTables
 $script:logFile = $logFile
 
-# Placeholder for next task
-Write-Timestamped 'TODO: manifest + summary (Task 13)' -LogFile $logFile
+# ============================================================================
+# Manifest
+# ============================================================================
+Write-Timestamped 'Writing manifest.json...' -LogFile $logFile
+
+$files = @{
+    safetyNet = [pscustomobject]@{
+        name = 'safety-net.dump'
+        sha256 = Get-FileSha256 -Path $safetyNetPath
+        bytes = $safetyNetSize
+    }
+    dataDump = [pscustomobject]@{
+        name = 'data.dump'
+        sha256 = Get-FileSha256 -Path $dataDumpPath
+        bytes = $dataDumpSize
+    }
+    schemaPre = [pscustomobject]@{
+        name = 'schema-pre.sql'
+        sha256 = Get-FileSha256 -Path $schemaPrePath
+        bytes = (Get-Item $schemaPrePath).Length
+    }
+}
+if ($pdfDumpPath) {
+    $files['pdfVolume'] = [pscustomobject]@{
+        name = 'pdf_uploads.tar.gz'
+        sha256 = Get-FileSha256 -Path $pdfDumpPath
+        bytes = (Get-Item $pdfDumpPath).Length
+    }
+}
+
+$manifest = [pscustomobject]@{
+    schemaVersion       = 1
+    createdAt           = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    database            = $cfg.Db
+    host                = $cfg.Host
+    dbSizeBytes         = $dbSize
+    xactCommitAtSave    = $xactAtSave
+    sanitize            = [bool]$Sanitize
+    excludedTables      = $excludedTables
+    storageProvider     = $storageProvider
+    pdfVolumeIncluded   = [bool]$pdfDumpPath
+    pdfFileCount        = $pdfFileCount
+    files               = [pscustomobject]$files
+    rowCountsPre        = [pscustomobject]$rowCounts
+}
+$manifestPath = Join-Path $snap 'manifest.json'
+Write-Manifest -Path $manifestPath -Object $manifest
+Write-Timestamped "    manifest.json written" -LogFile $logFile
+
+# ============================================================================
+# README inside the snapshot
+# ============================================================================
+$readmePath = Join-Path $snap 'README.md'
+$readmeContent = @"
+# Snapshot $timestamp
+
+Created by ``db-save-state.ps1`` on $((Get-Date).ToString('u')).
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| ``manifest.json`` | Immutable snapshot metadata (hashes, row counts, sizes) |
+| ``safety-net.dump`` | Full pg_dump (schema + data) — used by ``-UseSafetyNet`` rollback |
+| ``data.dump`` | Data-only pg_dump — used by standard restore |
+| ``schema-pre.sql`` | Schema dump before reset — used for drift detection |
+| ``rowcounts-pre.tsv`` | Exact row counts per table — used for restore verification |
+$(if ($pdfDumpPath) { "| ``pdf_uploads.tar.gz`` | Tar of meepleai_pdf_uploads volume |" })
+
+## Next steps
+
+1. Reset migrations:
+
+   ``````
+   pwsh infra/scripts/db-reset-migrations.ps1 -SnapshotPath $snap
+   ``````
+
+2. Restore data into the fresh schema:
+
+   ``````
+   pwsh infra/scripts/db-restore-state.ps1 -SnapshotPath $snap
+   ``````
+
+## Rollback
+
+If anything goes wrong, restore the full state from the safety-net:
+
+``````
+pwsh infra/scripts/db-restore-state.ps1 -SnapshotPath $snap -UseSafetyNet
+``````
+"@
+Set-Content -LiteralPath $readmePath -Value $readmeContent -Encoding UTF8
+Write-Timestamped "    README.md written" -LogFile $logFile
+
+# ============================================================================
+# Summary
+# ============================================================================
+$totalSize = (Get-ChildItem $snap -File | Measure-Object -Property Length -Sum).Sum
+Write-Timestamped '' -LogFile $logFile
+Write-Timestamped "=== Snapshot ready: $snap ===" -LogFile $logFile
+Write-Timestamped "    Total: $totalSize bytes ($($files.Count + $(if($pdfDumpPath){1}else{0})) dump files + manifest + README)" -LogFile $logFile
+Write-Timestamped '' -LogFile $logFile
+Write-Timestamped "Next: pwsh infra/scripts/db-reset-migrations.ps1 -SnapshotPath $snap" -LogFile $logFile

@@ -49,10 +49,13 @@ export function MeepleEventCard({
 }: MeepleEventCardProps) {
   const router = useRouter();
 
-  const subtitle = useMemo(
-    () => format(new Date(event.scheduledAt), "EEEE d MMM 'alle' HH:mm", { locale: it }),
-    [event.scheduledAt]
-  );
+  const subtitle = useMemo(() => {
+    try {
+      return format(new Date(event.scheduledAt), "EEEE d MMM 'alle' HH:mm", { locale: it });
+    } catch {
+      return event.scheduledAt ?? 'Data non disponibile';
+    }
+  }, [event.scheduledAt]);
 
   const navItems = useMemo(
     () =>

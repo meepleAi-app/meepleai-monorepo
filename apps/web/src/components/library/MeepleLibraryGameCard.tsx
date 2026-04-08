@@ -80,12 +80,6 @@ function mapGameStateToStatus(state: GameStateType | null | undefined): CardStat
   return undefined;
 }
 
-function formatPlayCount(count: number): string {
-  if (count === 0) return 'Mai giocato';
-  if (count === 1) return '1 partita';
-  return `${count} partite`;
-}
-
 // ============================================================================
 // Component
 // ============================================================================
@@ -174,7 +168,9 @@ export function MeepleLibraryGameCard({
   // ============================================================================
 
   const metadata: MeepleCardMetadata[] = useMemo(() => {
-    const items: MeepleCardMetadata[] = [{ label: formatPlayCount(0) }];
+    // Note: real play count not yet available on UserLibraryEntry — chip omitted
+    // until backend exposes it (deferred Task 5/6 in plan).
+    const items: MeepleCardMetadata[] = [];
 
     if (agentConfigured) {
       items.push({ label: `Agent: ${modelDisplayName[agentModel]}` });

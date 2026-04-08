@@ -16,7 +16,12 @@ export interface ChatNavHandlers {
 /**
  * Build the 4-slot nav-footer for chat session entity cards.
  *
- * Slots: Messaggi | Agente (link) | Sources (v1 disabled) | Archivia (action)
+ * Slot order matches the contract spec in
+ * docs/superpowers/plans/2026-04-08-meeplecard-consumers-completion.md:
+ *   0 = Messaggi (count)
+ *   1 = Sources (v1 disabled — no sources count in chat schema)
+ *   2 = Agente (link to source agent)
+ *   3 = Archivia (action)
  */
 export function buildChatNavItems(
   counts: ChatNavCounts,
@@ -32,19 +37,19 @@ export function buildChatNavItems(
       onClick: handlers.onMessagesClick,
     },
     {
-      icon: navIcons.agent,
-      label: 'Agente',
-      entity: 'agent',
-      disabled: !handlers.onAgentLinkClick,
-      onClick: handlers.onAgentLinkClick,
-    },
-    {
       icon: navIcons.kb,
       label: 'Sources',
       entity: 'kb',
       // v1: not implemented (no sources count in chat schema)
       disabled: !handlers.onSourcesClick,
       onClick: handlers.onSourcesClick,
+    },
+    {
+      icon: navIcons.agent,
+      label: 'Agente',
+      entity: 'agent',
+      disabled: !handlers.onAgentLinkClick,
+      onClick: handlers.onAgentLinkClick,
     },
     {
       icon: navIcons.archive,

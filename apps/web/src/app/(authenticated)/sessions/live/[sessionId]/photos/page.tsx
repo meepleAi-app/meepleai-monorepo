@@ -93,6 +93,8 @@ export default function PhotosPage({ params }: PhotosPageProps) {
     let cancelled = false;
     listPhotos(sessionId).then(stored => {
       if (cancelled) return;
+      // Revoke previous session's URLs before replacing state (handles sessionId change)
+      photosRef.current.forEach(p => URL.revokeObjectURL(p.objectUrl));
       setPhotos(stored.map(toDisplay));
     });
     return () => {

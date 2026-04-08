@@ -81,6 +81,12 @@ export default function PhotosPage({ params }: PhotosPageProps) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<DisplayPhoto[]>([]);
+  const photosRef = useRef<DisplayPhoto[]>([]);
+
+  // Keep ref in sync with state so unmount cleanup sees latest photos
+  useEffect(() => {
+    photosRef.current = photos;
+  }, [photos]);
 
   // Load existing photos from IndexedDB on mount
   useEffect(() => {
@@ -97,9 +103,8 @@ export default function PhotosPage({ params }: PhotosPageProps) {
   // Revoke object URLs on unmount to avoid memory leaks
   useEffect(() => {
     return () => {
-      photos.forEach(p => URL.revokeObjectURL(p.objectUrl));
+      photosRef.current.forEach(p => URL.revokeObjectURL(p.objectUrl));
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCapture = useCallback(
@@ -111,18 +116,21 @@ export default function PhotosPage({ params }: PhotosPageProps) {
       e.target.value = '';
 
       const stored = await addPhoto(sessionId, file, file.name);
-      setPhotos(prev => [...prev, toDisplay(stored)]);
+      // Compute display object ONCE outside the state updater to avoid
+      // double invocation (and double createObjectURL) in StrictMode.
+      const display = toDisplay(stored);
+      setPhotos(prev => [...prev, display]);
     },
     [sessionId]
   );
 
   const handleDelete = useCallback(async (id: string) => {
     await deletePhoto(id);
-    setPhotos(prev => {
-      const target = prev.find(p => p.id === id);
-      if (target) URL.revokeObjectURL(target.objectUrl);
-      return prev.filter(p => p.id !== id);
-    });
+    // Look up via ref and revoke OUTSIDE the updater to avoid double-revoke
+    // in StrictMode (keeps side effects out of the functional updater).
+    const target = photosRef.current.find(p => p.id === id);
+    if (target) URL.revokeObjectURL(target.objectUrl);
+    setPhotos(prev => prev.filter(p => p.id !== id));
   }, []);
 
   return (

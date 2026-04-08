@@ -170,7 +170,9 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Install EF Core tools
-        run: dotnet tool update --global dotnet-ef || dotnet tool install --global dotnet-ef
+        run: |
+          dotnet tool update --global dotnet-ef || dotnet tool install --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Create test database
         run: |

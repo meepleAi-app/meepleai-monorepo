@@ -31,10 +31,10 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
     title,
     subtitle,
     rating,
-    showWishlist,
-    loading,
+    showWishlist: _showWishlist,
+    loading: _loading,
     badge,
-    selectable,
+    selectable: _selectable,
   }: MeepleCardShowcaseProps) {
     return (
       <div className="w-72">

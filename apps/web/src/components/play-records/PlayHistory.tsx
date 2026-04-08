@@ -101,7 +101,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
     return duration;
   };
 
-  const getStatusColor = (status: string): string => {
+  const _getStatusColor = (status: string): string => {
     switch (status) {
       case 'Completed':
         return '120 100% 35%'; // Green

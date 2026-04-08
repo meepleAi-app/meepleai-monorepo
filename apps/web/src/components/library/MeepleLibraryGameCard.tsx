@@ -92,10 +92,10 @@ function formatPlayCount(count: number): string {
 export function MeepleLibraryGameCard({
   game,
   variant = 'grid',
-  onConfigureAgent,
-  onUploadPdf,
-  onEditNotes,
-  onRemove,
+  onConfigureAgent: _onConfigureAgent,
+  onUploadPdf: _onUploadPdf,
+  onEditNotes: _onEditNotes,
+  onRemove: _onRemove,
   onAskAgent: _onAskAgent,
   onChangeState: _onChangeState,
   onShare: _onShare,
@@ -109,7 +109,7 @@ export function MeepleLibraryGameCard({
   const queryClient = useQueryClient();
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
-  const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
+  const _handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
 
   const [wishlistDialogOpen, setWishlistDialogOpen] = useState(false);
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
@@ -132,15 +132,18 @@ export function MeepleLibraryGameCard({
     staleTime: 2 * 60 * 1000,
   });
 
-  const modelDisplayName: Record<string, string> = {
-    'llama-3.3-70b-free': 'Llama Free',
-    'google-gemini-pro': 'Gemini Pro',
-    'deepseek-chat': 'DeepSeek',
-    'llama-3.3-70b': 'Llama Pro',
-    default: 'Default',
-  };
+  const modelDisplayName = useMemo<Record<string, string>>(
+    () => ({
+      'llama-3.3-70b-free': 'Llama Free',
+      'google-gemini-pro': 'Gemini Pro',
+      'deepseek-chat': 'DeepSeek',
+      'llama-3.3-70b': 'Llama Pro',
+      default: 'Default',
+    }),
+    []
+  );
 
-  const handleToggleFavorite = useCallback(async () => {
+  const _handleToggleFavorite = useCallback(async () => {
     if (isTogglingFavorite) return;
     setIsTogglingFavorite(true);
     try {

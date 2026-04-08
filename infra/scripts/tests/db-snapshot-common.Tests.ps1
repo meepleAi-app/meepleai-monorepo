@@ -303,4 +303,21 @@ CREATE TABLE bar (id int);
         $result | Should -Match 'id int NOT NULL'
         $result | Should -Match 'name text'
     }
+
+    It 'does not split on semicolons inside single-quoted string literals' {
+        $input = "CREATE TABLE foo (id int, note text DEFAULT 'a;b;c');"
+        $result = Normalize-PgSchema -Sql $input
+        # Should be ONE statement, not three
+        $statementCount = ([regex]::Matches($result, 'CREATE TABLE')).Count
+        $statementCount | Should -Be 1
+        $result | Should -Match "DEFAULT 'a;b;c'"
+    }
+
+    It 'handles escaped single quotes inside string literals' {
+        $input = "CREATE TABLE foo (id int, note text DEFAULT 'O''Brien;test');"
+        $result = Normalize-PgSchema -Sql $input
+        $statementCount = ([regex]::Matches($result, 'CREATE TABLE')).Count
+        $statementCount | Should -Be 1
+        $result | Should -Match "O''Brien"
+    }
 }

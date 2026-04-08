@@ -154,12 +154,27 @@ function Normalize-PgSchema {
     $joined = ($compact -join "`n").Trim()
     if ($joined.Length -eq 0) { return '' }
 
-    # Split into statements by semicolon-then-newline boundary
+    # Split into statements by semicolon, respecting single-quoted string literals
+    # (PostgreSQL: '...' for strings, '' to escape a single quote inside)
     $statements = New-Object System.Collections.Generic.List[string]
     $current = New-Object System.Text.StringBuilder
-    foreach ($ch in $joined.ToCharArray()) {
+    $inString = $false
+    $chars = $joined.ToCharArray()
+    for ($i = 0; $i -lt $chars.Length; $i++) {
+        $ch = $chars[$i]
         [void]$current.Append($ch)
-        if ($ch -eq ';') {
+        if ($ch -eq "'") {
+            # Toggle string state, but handle '' (escaped quote) inside strings
+            if ($inString -and $i + 1 -lt $chars.Length -and $chars[$i + 1] -eq "'") {
+                # Escaped quote — append the next ' and skip it
+                [void]$current.Append($chars[$i + 1])
+                $i++
+            } else {
+                $inString = -not $inString
+            }
+            continue
+        }
+        if ($ch -eq ';' -and -not $inString) {
             $stmt = $current.ToString().Trim()
             if ($stmt.Length -gt 0) { $statements.Add($stmt) }
             [void]$current.Clear()

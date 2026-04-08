@@ -20,6 +20,7 @@ internal record GameToolkitDto(
     IReadOnlyList<CardToolDto> CardTools,
     IReadOnlyList<TimerToolDto> TimerTools,
     IReadOnlyList<CounterToolDto> CounterTools,
+    IReadOnlyList<UserDicePresetDto> UserDicePresets,
     ScoringTemplateDto? ScoringTemplate,
     TurnTemplateDto? TurnTemplate,
     StateTemplateDto? StateTemplate,
@@ -97,6 +98,18 @@ internal record StateTemplateDto(
     string? Description,
     TemplateCategory Category,
     string SchemaJson
+);
+
+internal record UserDicePresetDto(
+    Guid UserId,
+    string Name,
+    string Formula,
+    DateTime CreatedAt
+);
+
+internal record AddUserDicePresetRequest(
+    string Name,
+    string Formula
 );
 
 // Request DTOs

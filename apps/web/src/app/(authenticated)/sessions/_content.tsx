@@ -296,8 +296,11 @@ export function SessionsContent() {
                     subtitle={session.participantsNames}
                     badge={STATUS_CONFIG[session.status]?.label ?? session.status}
                     metadata={buildHistoryMeta(session)}
-                    navItems={sessionNavItems(session.participantsNames.split(',').length, () =>
-                      router.push(`/sessions/${session.id}`)
+                    navItems={sessionNavItems(
+                      session.participantsNames
+                        ? session.participantsNames.split(',').filter(Boolean).length
+                        : 0,
+                      () => router.push(`/sessions/${session.id}`)
                     )}
                     onClick={() => router.push(`/sessions/${session.id}`)}
                   />
@@ -314,8 +317,11 @@ export function SessionsContent() {
                     subtitle={session.participantsNames}
                     badge={STATUS_CONFIG[session.status]?.label ?? session.status}
                     metadata={buildHistoryMeta(session)}
-                    navItems={sessionNavItems(session.participantsNames.split(',').length, () =>
-                      router.push(`/sessions/${session.id}`)
+                    navItems={sessionNavItems(
+                      session.participantsNames
+                        ? session.participantsNames.split(',').filter(Boolean).length
+                        : 0,
+                      () => router.push(`/sessions/${session.id}`)
                     )}
                     onClick={() => router.push(`/sessions/${session.id}`)}
                   />

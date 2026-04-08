@@ -22,7 +22,10 @@ const { chromium } = require('playwright');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '../../..');
-const OUT_DIR = process.env.OUT_DIR || 'D:/tmp/meeplecard-screenshots';
+// Default: repo-relative tmp dir (works on Linux/macOS/Windows).
+// Override with OUT_DIR env var if needed.
+const OUT_DIR =
+  process.env.OUT_DIR || path.join(REPO_ROOT, 'tmp/meeplecard-screenshots');
 const APP_URL = process.env.APP_URL || 'http://localhost:3010';
 const MOCKUPS_DIR = path.join(REPO_ROOT, 'admin-mockups');
 

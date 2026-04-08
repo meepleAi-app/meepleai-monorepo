@@ -6,6 +6,7 @@ import type { MeepleCardProps } from '../types';
 
 export function CompactCard(props: MeepleCardProps) {
   const { entity, title, onClick, className = '' } = props;
+  const testId = props['data-testid'];
 
   return (
     <div
@@ -13,6 +14,7 @@ export function CompactCard(props: MeepleCardProps) {
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      data-testid={testId}
     >
       <div
         className="h-1.5 w-1.5 flex-shrink-0 rounded-full"

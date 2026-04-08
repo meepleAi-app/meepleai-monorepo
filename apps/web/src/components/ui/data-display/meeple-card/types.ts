@@ -86,6 +86,8 @@ export interface MeepleCardProps {
   onDragEnd?: () => void;
   className?: string;
   customColor?: string;
+  /** Optional test id forwarded to the root wrapper element. */
+  'data-testid'?: string;
 }
 
 export interface MobileCardLayoutProps {

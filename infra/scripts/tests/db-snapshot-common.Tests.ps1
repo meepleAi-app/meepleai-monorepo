@@ -33,3 +33,59 @@ Describe 'Test-LocalhostHost' {
         Test-LocalhostHost -PgHost 'LOCALHOST' | Should -BeTrue
     }
 }
+
+Describe 'ConvertFrom-SecretFile' {
+    BeforeEach {
+        $script:tmpFile = New-TemporaryFile
+    }
+    AfterEach {
+        if (Test-Path $script:tmpFile) { Remove-Item $script:tmpFile -Force }
+    }
+
+    It 'parses simple KEY=VALUE pairs' {
+        @(
+            'POSTGRES_USER=meepleai',
+            'POSTGRES_PASSWORD=secret123',
+            'POSTGRES_DB=meepleai_db'
+        ) | Set-Content $script:tmpFile
+        $result = ConvertFrom-SecretFile -Path $script:tmpFile
+        $result['POSTGRES_USER'] | Should -Be 'meepleai'
+        $result['POSTGRES_PASSWORD'] | Should -Be 'secret123'
+        $result['POSTGRES_DB'] | Should -Be 'meepleai_db'
+    }
+
+    It 'ignores blank lines and comments starting with #' {
+        @(
+            '# This is a comment',
+            '',
+            'KEY=value',
+            '   # indented comment',
+            ''
+        ) | Set-Content $script:tmpFile
+        $result = ConvertFrom-SecretFile -Path $script:tmpFile
+        $result.Count | Should -Be 1
+        $result['KEY'] | Should -Be 'value'
+    }
+
+    It 'handles values containing equals signs' {
+        'CONN=Host=localhost;Port=5432' | Set-Content $script:tmpFile
+        $result = ConvertFrom-SecretFile -Path $script:tmpFile
+        $result['CONN'] | Should -Be 'Host=localhost;Port=5432'
+    }
+
+    It 'trims whitespace around keys and values' {
+        '  KEY  =  value  ' | Set-Content $script:tmpFile
+        $result = ConvertFrom-SecretFile -Path $script:tmpFile
+        $result['KEY'] | Should -Be 'value'
+    }
+
+    It 'throws if the file does not exist' {
+        { ConvertFrom-SecretFile -Path '/nonexistent/file.secret' } | Should -Throw -ErrorId '*'
+    }
+
+    It 'returns an empty hashtable for an empty file' {
+        '' | Set-Content $script:tmpFile
+        $result = ConvertFrom-SecretFile -Path $script:tmpFile
+        $result.Count | Should -Be 0
+    }
+}

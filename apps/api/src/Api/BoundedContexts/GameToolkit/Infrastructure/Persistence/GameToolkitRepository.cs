@@ -192,6 +192,7 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         SetPrivateField(toolkit, "_cardTools", new List<CardToolConfig>());
         SetPrivateField(toolkit, "_timerTools", new List<TimerToolConfig>());
         SetPrivateField(toolkit, "_counterTools", new List<CounterToolConfig>());
+        SetPrivateField(toolkit, "_userDicePresets", new List<UserDicePreset>());
 
         // Deserialize JSONB tool configs directly into backing lists
         if (!string.IsNullOrEmpty(entity.DiceToolsJson))
@@ -243,6 +244,17 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
                 var counterList = GetPrivateField<List<CounterToolConfig>>(toolkit, "_counterTools");
                 foreach (var c in counterConfigs)
                     counterList.Add(new CounterToolConfig(c.Name, c.MinValue, c.MaxValue, c.DefaultValue, c.IsPerPlayer, c.Icon, c.Color));
+            }
+        }
+
+        if (!string.IsNullOrEmpty(entity.UserDicePresetsJson))
+        {
+            var presetConfigs = JsonSerializer.Deserialize<List<UserDicePresetJsonModel>>(entity.UserDicePresetsJson, JsonOptions);
+            if (presetConfigs != null)
+            {
+                var presetList = GetPrivateField<List<UserDicePreset>>(toolkit, "_userDicePresets");
+                foreach (var p in presetConfigs)
+                    presetList.Add(new UserDicePreset(p.UserId, p.Name, p.Formula, p.CreatedAt));
             }
         }
 
@@ -348,6 +360,15 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
                     IsPerPlayer = c.IsPerPlayer,
                     Icon = c.Icon,
                     Color = c.Color
+                }).ToList(), JsonOptions)
+                : null,
+            UserDicePresetsJson = toolkit.UserDicePresets.Count > 0
+                ? JsonSerializer.Serialize(toolkit.UserDicePresets.Select(p => new UserDicePresetJsonModel
+                {
+                    UserId = p.UserId,
+                    Name = p.Name,
+                    Formula = p.Formula,
+                    CreatedAt = p.CreatedAt
                 }).ToList(), JsonOptions)
                 : null,
             ScoringTemplateJson = toolkit.ScoringTemplate != null
@@ -469,6 +490,14 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         public bool IsPerPlayer { get; set; }
         public string? Icon { get; set; }
         public string? Color { get; set; }
+    }
+
+    private sealed class UserDicePresetJsonModel
+    {
+        public Guid UserId { get; set; }
+        public string Name { get; set; } = default!;
+        public string Formula { get; set; } = default!;
+        public DateTime CreatedAt { get; set; }
     }
 
     private sealed class ScoringTemplateJsonModel

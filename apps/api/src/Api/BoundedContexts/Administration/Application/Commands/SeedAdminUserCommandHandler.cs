@@ -60,12 +60,21 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
         // set by SecretLoader after IConfiguration was built
         var adminEmail = _configuration["INITIAL_ADMIN_EMAIL"]
             ?? Environment.GetEnvironmentVariable("INITIAL_ADMIN_EMAIL");
+        // Read password from either INITIAL_ADMIN_PASSWORD (matches the naming
+        // convention used for the email/display name keys) or ADMIN_PASSWORD
+        // (legacy naming; still supported for docker secrets + existing deploy scripts).
         var adminPassword = SecretsHelper.GetSecretOrValue(
-            _configuration,
-            "ADMIN_PASSWORD",
-            _logger,
-            required: false
-        ) ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+                _configuration,
+                "INITIAL_ADMIN_PASSWORD",
+                _logger,
+                required: false)
+            ?? Environment.GetEnvironmentVariable("INITIAL_ADMIN_PASSWORD")
+            ?? SecretsHelper.GetSecretOrValue(
+                _configuration,
+                "ADMIN_PASSWORD",
+                _logger,
+                required: false)
+            ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
         var adminDisplayName = _configuration["INITIAL_ADMIN_DISPLAY_NAME"]
             ?? Environment.GetEnvironmentVariable("INITIAL_ADMIN_DISPLAY_NAME")
             ?? "System Administrator";
@@ -75,16 +84,16 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
             throw new InvalidOperationException("INITIAL_ADMIN_EMAIL is not configured");
 
         if (string.IsNullOrWhiteSpace(adminPassword))
-            throw new InvalidOperationException("ADMIN_PASSWORD is not configured");
+            throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD (or ADMIN_PASSWORD) is not configured");
 
         if (adminPassword.Length < 8)
-            throw new InvalidOperationException("ADMIN_PASSWORD must be at least 8 characters");
+            throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD must be at least 8 characters");
 
         if (!adminPassword.Any(char.IsUpper))
-            throw new InvalidOperationException("ADMIN_PASSWORD must contain at least one uppercase letter");
+            throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD must contain at least one uppercase letter");
 
         if (!adminPassword.Any(char.IsDigit))
-            throw new InvalidOperationException("ADMIN_PASSWORD must contain at least one digit");
+            throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD must contain at least one digit");
 
         // Create domain objects
         var email = new Email(adminEmail);

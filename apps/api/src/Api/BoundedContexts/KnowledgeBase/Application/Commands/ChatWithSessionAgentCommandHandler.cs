@@ -41,12 +41,18 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly IAgentMemoryContextBuilder _agentMemoryContextBuilder;
     private readonly ILlmService _llmService;
     private readonly IUserBudgetService _userBudgetService;
+    private readonly ICircuitBreakerRegistry _circuitBreakerRegistry;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChatWithSessionAgentCommandHandler> _logger;
 
     // Summary generation thresholds
     private const int SummaryThreshold = 10;
     private const int SummaryTriggerDelta = 5;
+
+    // F3 follow-up: user-facing error codes for session agent chat
+    internal const string AgentUnavailableErrorCode = "AGENT_TEMPORARILY_UNAVAILABLE";
+    internal const string AgentUnavailableItalianMessage =
+        "Agente AI temporaneamente non disponibile. Riprova tra qualche minuto o usa gli strumenti manuali.";
 
     public ChatWithSessionAgentCommandHandler(
         IAgentSessionRepository sessionRepository,
@@ -60,6 +66,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         IAgentMemoryContextBuilder agentMemoryContextBuilder,
         ILlmService llmService,
         IUserBudgetService userBudgetService,
+        ICircuitBreakerRegistry circuitBreakerRegistry,
         IServiceScopeFactory scopeFactory,
         ILogger<ChatWithSessionAgentCommandHandler> logger)
     {
@@ -74,8 +81,32 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _agentMemoryContextBuilder = agentMemoryContextBuilder ?? throw new ArgumentNullException(nameof(agentMemoryContextBuilder));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _userBudgetService = userBudgetService ?? throw new ArgumentNullException(nameof(userBudgetService));
+        _circuitBreakerRegistry = circuitBreakerRegistry ?? throw new ArgumentNullException(nameof(circuitBreakerRegistry));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    /// <summary>
+    /// Checks whether all registered LLM providers have their circuit breaker in Open state.
+    /// Used as a pre-emptive short-circuit to emit a friendly "agent temporarily unavailable"
+    /// error instead of attempting a call that's guaranteed to fail.
+    /// Internal for unit-test access.
+    /// </summary>
+    internal bool AreAllProvidersUnavailable()
+    {
+        var statuses = _circuitBreakerRegistry.GetMonitoringStatus();
+        if (statuses.Count == 0)
+        {
+            return false; // No providers tracked yet → assume healthy
+        }
+        foreach (var (_, (circuitState, _)) in statuses)
+        {
+            if (!circuitState.StartsWith("Open", StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
 #pragma warning disable S4456 // Standard MediatR streaming pattern
@@ -300,6 +331,21 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
 
         if (streamError != null)
         {
+            // F3 follow-up: surface a friendly, localized error when the failure is
+            // caused by all LLM providers having their circuit breaker Open. The
+            // generic LLM_ERROR code stays for transient errors so the frontend can
+            // distinguish "retry later" from "one-off failure".
+            if (AreAllProvidersUnavailable())
+            {
+                _logger.LogWarning(
+                    "Session agent chat rejected: all LLM providers circuit breakers are Open (session={SessionId})",
+                    command.AgentSessionId);
+                yield return CreateEvent(
+                    StreamingEventType.Error,
+                    new StreamingError(AgentUnavailableItalianMessage, AgentUnavailableErrorCode));
+                yield break;
+            }
+
             yield return CreateEvent(
                 StreamingEventType.Error,
                 new StreamingError("LLM streaming failed: " + streamError, "LLM_ERROR"));

@@ -3,3 +3,11 @@ export { HoverPreview } from './HoverPreview';
 export { Carousel3D } from './Carousel3D';
 export { DragHandle } from './DragHandle';
 export { SwipeGesture } from './SwipeGesture';
+export { EntityTable } from './EntityTable';
+export type {
+  EntityTableProps,
+  EntityTableSortColumn,
+  EntityTableSortDirection,
+} from './EntityTable';
+export { FlipBack } from './FlipBack';
+export type { FlipBackProps, FlipBackSection } from './FlipBack';

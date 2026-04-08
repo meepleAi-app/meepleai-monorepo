@@ -18,9 +18,9 @@ import { Bot, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { AgentCreationSheet } from '@/components/agent/config';
+import { MeepleAgentCard } from '@/components/agent/MeepleAgentCard';
 import { CardGridSkeletons } from '@/components/ui/data-display/CardGridSkeletons';
 import { ListPageHeader, useViewPreference } from '@/components/ui/data-display/ListPageHeader';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import {
   Select,
   SelectContent,
@@ -36,7 +36,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useCardHand } from '@/stores/use-card-hand';
 
-/** Agent card wrapper to use entity actions hook per-card */
+/** Agent card wrapper using MeepleAgentCard adapter for navItems wiring */
 function AgentCard({
   agent,
   onClick,
@@ -45,15 +45,13 @@ function AgentCard({
   onClick: () => void;
 }) {
   return (
-    <MeepleCard
-      entity="agent"
+    <MeepleAgentCard
+      agent={{
+        id: agent.id,
+        name: agent.name,
+        description: `${agent.type} · ${agent.strategyName} · ${agent.invocationCount} uses`,
+      }}
       variant="grid"
-      title={agent.name}
-      subtitle={`${agent.type} agent`}
-      metadata={[
-        { label: 'Usage', value: `${agent.invocationCount} uses` },
-        { label: 'Strategy', value: agent.strategyName },
-      ]}
       onClick={onClick}
     />
   );

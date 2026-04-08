@@ -214,7 +214,6 @@ export function InviteSession({
               {/* QR Code - using <img> for data URL, next/image doesn't optimize data URLs */}
               <div className="flex justify-center">
                 <div className="rounded-lg border bg-white p-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={inviteData.qrCodeDataUrl}
                     alt="QR Code"

@@ -16,6 +16,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { Wifi, WifiOff } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
@@ -409,9 +410,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       <div className="flex h-dvh items-center justify-center" data-testid="chat-error">
         <div className="text-center max-w-md">
           <p className="text-red-600 dark:text-red-400 mb-3">{error}</p>
-          <a href="/chat/new" className="text-amber-600 hover:text-amber-700 underline text-sm">
+          <Link href="/chat/new" className="text-amber-600 hover:text-amber-700 underline text-sm">
             Torna alla selezione
-          </a>
+          </Link>
         </div>
       </div>
     );

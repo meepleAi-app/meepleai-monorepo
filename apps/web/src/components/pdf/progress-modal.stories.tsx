@@ -7,8 +7,10 @@
 import { useState } from 'react';
 
 import { fn } from 'storybook/test';
+import { vi } from 'vitest';
 
 import { Button } from '@/components/ui/primitives/button';
+import { usePdfProgress } from '@/hooks/usePdfProgress';
 
 import { ProgressModal } from './progress-modal';
 
@@ -245,10 +247,6 @@ const mockUsePdfProgress = (scenario: string) => {
 vi.mock('@/hooks/usePdfProgress', () => ({
   usePdfProgress: vi.fn(),
 }));
-
-import { usePdfProgress } from '@/hooks/usePdfProgress';
-
-import { vi } from 'vitest';
 
 // ============================================================================
 // Meta Configuration

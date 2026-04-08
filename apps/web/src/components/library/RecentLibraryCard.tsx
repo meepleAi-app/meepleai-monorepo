@@ -2,17 +2,15 @@
  * RecentLibraryCard Component (Issue #2612)
  * Issue #4858: Migrated to MeepleCard design system
  *
- * Compact MeepleCard for dashboard "Recently Added" widget.
- * Shows cover image, title, favorite badge, and "Added X ago" timestamp.
+ * Compact card for dashboard "Recently Added" widget.
+ * Delegates to MeepleLibraryGameCard adapter so navItems and drawers are wired.
  */
 
 'use client';
 
-import { formatDistanceToNow } from 'date-fns';
-import { it } from 'date-fns/locale';
-
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { UserLibraryEntry } from '@/lib/api';
+
+import { MeepleLibraryGameCard } from './MeepleLibraryGameCard';
 
 export interface RecentLibraryCardProps {
   /** Library entry data */
@@ -24,20 +22,15 @@ export interface RecentLibraryCardProps {
  * Links to library page for full management.
  */
 export function RecentLibraryCard({ game }: RecentLibraryCardProps) {
-  const addedAgo = formatDistanceToNow(new Date(game.addedAt), {
-    addSuffix: true,
-    locale: it,
-  });
-
   return (
     <div data-testid="recent-library-card">
-      <MeepleCard
-        entity="game"
+      <MeepleLibraryGameCard
+        game={game}
         variant="compact"
-        title={game.gameTitle}
-        subtitle={`Aggiunto ${addedAgo}`}
-        imageUrl={game.gameImageUrl || undefined}
-        badge={game.isFavorite ? 'Preferito' : undefined}
+        onConfigureAgent={() => {}}
+        onUploadPdf={() => {}}
+        onEditNotes={() => {}}
+        onRemove={() => {}}
       />
     </div>
   );

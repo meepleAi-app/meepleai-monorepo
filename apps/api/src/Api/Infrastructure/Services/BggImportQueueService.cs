@@ -79,6 +79,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
 
     public async Task<List<BggImportQueueEntity>> EnqueueBatchAsync(
         IEnumerable<int> bggIds,
+        Guid? requestedByUserId = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(bggIds);
@@ -123,7 +124,8 @@ internal sealed class BggImportQueueService : IBggImportQueueService
                 Status = BggImportStatus.Queued,
                 Position = nextPosition++,
                 RetryCount = 0,
-                CreatedAt = now
+                CreatedAt = now,
+                RequestedByUserId = requestedByUserId
             };
             entities.Add(entity);
         }

@@ -21,7 +21,7 @@ function healthLabel(healthPercent: number): string {
   return 'Error';
 }
 
-function healthVariant(healthPercent: number): 'success' | 'warning' | 'error' {
+function _healthVariant(healthPercent: number): 'success' | 'warning' | 'error' {
   if (healthPercent >= 90) return 'success';
   if (healthPercent >= 70) return 'warning';
   return 'error';

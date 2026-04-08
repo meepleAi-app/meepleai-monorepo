@@ -3,10 +3,11 @@
  * Showcases progress bar with all states and progress values
  */
 
+import React from 'react';
+
 import { PdfProgressBar } from './PdfProgressBar';
 
 import type { Meta, StoryObj } from '@storybook/react';
-
 
 const meta: Meta<typeof PdfProgressBar> = {
   title: 'Components/PDF/PdfProgressBar',
@@ -15,7 +16,16 @@ const meta: Meta<typeof PdfProgressBar> = {
   argTypes: {
     state: {
       control: 'select',
-      options: ['pending', 'uploading', 'extracting', 'chunking', 'embedding', 'indexing', 'ready', 'failed'],
+      options: [
+        'pending',
+        'uploading',
+        'extracting',
+        'chunking',
+        'embedding',
+        'indexing',
+        'ready',
+        'failed',
+      ],
       description: 'Current PDF processing state',
     },
     progress: {
@@ -140,7 +150,7 @@ export const AnimatedProgress: Story = {
 
     React.useEffect(() => {
       const timer = setInterval(() => {
-        setProgress((prev) => {
+        setProgress(prev => {
           if (prev >= 100) {
             clearInterval(timer);
             return 100;
@@ -207,6 +217,3 @@ export const InModalContext: Story = {
     </div>
   ),
 };
-
-// Add React import for AnimatedProgress story
-import React from 'react';

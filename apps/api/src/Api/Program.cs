@@ -24,6 +24,7 @@ using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.SessionTracking.Infrastructure.Health;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
@@ -525,6 +526,12 @@ using (var scope = app.Services.CreateScope())
             app.Logger.LogError(ex, "Seeding failed — API will continue startup");
         }
     }
+}
+
+// F3: Register observable gauges that depend on DI singletons
+{
+    var tracker = app.Services.GetRequiredService<IAutoSaveHealthTracker>();
+    MeepleAiMetrics.RegisterAutoSaveHealthGauge(tracker);
 }
 
 // Configure middleware pipeline

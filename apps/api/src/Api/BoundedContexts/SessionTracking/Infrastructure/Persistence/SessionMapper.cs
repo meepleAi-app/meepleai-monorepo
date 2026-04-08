@@ -400,6 +400,7 @@ internal static class SessionEventMapper
         {
             Id = domain.Id,
             SessionId = domain.SessionId,
+            GameNightId = domain.GameNightId,
             EventType = domain.EventType,
             Timestamp = domain.Timestamp,
             Payload = domain.Payload,
@@ -418,6 +419,7 @@ internal static class SessionEventMapper
 
         typeof(SessionEvent).GetProperty(nameof(SessionEvent.Id))!.SetValue(sessionEvent, entity.Id);
         typeof(SessionEvent).GetProperty(nameof(SessionEvent.SessionId))!.SetValue(sessionEvent, entity.SessionId);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.GameNightId))!.SetValue(sessionEvent, entity.GameNightId);
         typeof(SessionEvent).GetProperty(nameof(SessionEvent.EventType))!.SetValue(sessionEvent, entity.EventType);
         typeof(SessionEvent).GetProperty(nameof(SessionEvent.Timestamp))!.SetValue(sessionEvent, entity.Timestamp);
         typeof(SessionEvent).GetProperty(nameof(SessionEvent.Payload))!.SetValue(sessionEvent, entity.Payload);

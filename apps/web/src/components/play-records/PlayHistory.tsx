@@ -19,6 +19,7 @@ import { Calendar, Filter, Grid3X3, List, Search, X, AlertCircle } from 'lucide-
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { buildSessionNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
   Select,
@@ -101,7 +102,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
     return duration;
   };
 
-  const getStatusColor = (status: string): string => {
+  const _getStatusColor = (status: string): string => {
     switch (status) {
       case 'Completed':
         return '120 100% 35%'; // Green
@@ -290,6 +291,19 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
                 { label: record.status },
               ]}
               badge={record.status}
+              navItems={buildSessionNavItems(
+                {
+                  playerCount: record.playerCount,
+                  hasNotes: false,
+                  toolCount: 0,
+                  photoCount: 0,
+                },
+                {
+                  // No players sub-view exists for play records; slot remains
+                  // visually present (showing the count) but disabled.
+                  onPlayersClick: undefined,
+                }
+              )}
               onClick={() => handleCardClick(record.id)}
               data-testid={`play-record-${record.id}`}
             />

@@ -60,4 +60,6 @@ public class GameNightEventEntity
     public DateTimeOffset? UpdatedAt { get; set; }
 
     public List<GameNightRsvpEntity> Rsvps { get; set; } = [];
+
+    public List<GameNightSessionEntity> Sessions { get; set; } = [];
 }

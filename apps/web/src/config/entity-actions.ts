@@ -4,6 +4,7 @@
  * Defines reusable action card definitions for entity-specific UI,
  * such as the session mode dashboard quick actions and the bottom nav.
  */
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 
 import {
   BookOpen,

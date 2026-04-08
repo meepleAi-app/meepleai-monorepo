@@ -91,6 +91,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void Update(string title, string? description, DateTimeOffset scheduledAt, string? location, int? maxPlayers, List<Guid>? gameIds)
     {
+        ThrowIfCorrupted();
+
         if (Status == GameNightStatus.Cancelled || Status == GameNightStatus.Completed)
             throw new InvalidOperationException($"Cannot update a {Status} game night");
 
@@ -116,6 +118,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void Publish(List<Guid> invitedUserIds)
     {
+        ThrowIfCorrupted();
+
         if (Status != GameNightStatus.Draft)
             throw new InvalidOperationException("Only draft game nights can be published");
 
@@ -137,6 +141,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void Cancel()
     {
+        ThrowIfCorrupted();
+
         if (Status == GameNightStatus.Cancelled)
             return; // idempotent
 
@@ -155,6 +161,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void Complete()
     {
+        ThrowIfCorrupted();
+
         if (Status != GameNightStatus.Published)
             throw new InvalidOperationException("Only published game nights can be completed");
 
@@ -168,6 +176,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void AddInvitees(List<Guid> userIds)
     {
+        ThrowIfCorrupted();
+
         if (Status != GameNightStatus.Published)
             throw new InvalidOperationException("Can only invite to published game nights");
 
@@ -192,6 +202,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// </summary>
     public void PreInvite(List<Guid> userIds)
     {
+        ThrowIfCorrupted();
+
         if (Status != GameNightStatus.Draft)
             throw new InvalidOperationException("Can only pre-invite to draft game nights");
 
@@ -250,5 +262,105 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     {
         _rsvps.Clear();
         _rsvps.AddRange(rsvps);
+    }
+
+    // ── Sessions aggregate ──────────────────────────────────────────────
+
+    private readonly List<GameNightSession> _sessions = new();
+    public IReadOnlyList<GameNightSession> Sessions => _sessions.AsReadOnly();
+
+    /// <summary>
+    /// Returns the in-progress session, or the first pending session if none is active.
+    /// </summary>
+    public GameNightSession? CurrentSession =>
+        _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.InProgress)
+        ?? _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending);
+
+    /// <summary>
+    /// Adds a game session to this game night. Max 5 sessions per event.
+    /// </summary>
+    public GameNightSession AddSession(Guid sessionId, Guid gameId, string gameTitle)
+    {
+        ThrowIfCorrupted();
+
+        if (Status != GameNightStatus.Published)
+            throw new InvalidOperationException($"Cannot add sessions to a {Status} game night.");
+        if (_sessions.Count >= 5)
+            throw new InvalidOperationException("A game night can have at most 5 sessions.");
+
+        var playOrder = _sessions.Count + 1;
+        var session = GameNightSession.Create(Id, sessionId, gameId, gameTitle, playOrder);
+        _sessions.Add(session);
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        AddDomainEvent(new GameStartedInNightEvent(Id, sessionId, gameId, gameTitle, playOrder));
+
+        return session;
+    }
+
+    /// <summary>
+    /// Starts the first pending session.
+    /// </summary>
+    public void StartCurrentSession()
+    {
+        ThrowIfCorrupted();
+
+        var session = _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.Pending)
+            ?? throw new InvalidOperationException("No pending session to start.");
+        session.Start();
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Completes the in-progress session, optionally recording a winner.
+    /// </summary>
+    public void CompleteCurrentSession(Guid? winnerId)
+    {
+        ThrowIfCorrupted();
+
+        var session = _sessions.FirstOrDefault(s => s.Status == GameNightSessionStatus.InProgress)
+            ?? throw new InvalidOperationException("No in-progress session to complete.");
+        session.Complete(winnerId);
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        AddDomainEvent(new GameCompletedInNightEvent(Id, session.SessionId, session.GameId, session.GameTitle, winnerId));
+    }
+
+    /// <summary>
+    /// Finalizes the game night, transitioning to Completed status.
+    /// All sessions must be finished (not in-progress).
+    /// </summary>
+    public void FinalizeNight()
+    {
+        ThrowIfCorrupted();
+
+        if (Status != GameNightStatus.Published)
+            throw new InvalidOperationException($"Cannot finalize a {Status} game night.");
+        if (_sessions.Any(s => s.Status == GameNightSessionStatus.InProgress))
+            throw new InvalidOperationException("Cannot finalize: a session is still in progress.");
+        Status = GameNightStatus.Completed;
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        AddDomainEvent(new NightFinalizedEvent(Id, OrganizerId, Title, _sessions.Count));
+    }
+
+    /// <summary>
+    /// Internal method to restore sessions list from persistence.
+    /// </summary>
+    internal void RestoreSessions(IEnumerable<GameNightSession> sessions)
+    {
+        _sessions.Clear();
+        _sessions.AddRange(sessions.OrderBy(s => s.PlayOrder));
+    }
+
+    /// <summary>
+    /// Guards mutating operations from running on entities loaded with a corrupted persisted status.
+    /// Such entities require manual intervention before any mutation can be applied.
+    /// </summary>
+    private void ThrowIfCorrupted()
+    {
+        if (Status == GameNightStatus.Corrupted)
+            throw new InvalidOperationException(
+                $"GameNightEvent {Id} is in Corrupted state. Manual intervention required before any mutation.");
     }
 }

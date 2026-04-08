@@ -150,9 +150,7 @@ import { StatusCard } from '@/components/ui/data-display/status-card';
 import { Table } from '@/components/ui/data-display/table';
 import { UserRoleBadge } from '@/components/ui/data-display/user-role-badge';
 import { UserStatusIndicator } from '@/components/ui/data-display/user-status-indicator';
-
 // ─── Feedback ─────────────────────────────────────────────────────────────────
-
 import { BulkCollectionWarning } from '@/components/ui/dialogs/bulk-collection-warning';
 import { CollectionRemovalWarning } from '@/components/ui/dialogs/collection-removal-warning';
 import { Alert } from '@/components/ui/feedback/alert';
@@ -169,9 +167,7 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Toaster } from '@/components/ui/feedback/sonner';
 import { TierBadge } from '@/components/ui/feedback/tier-badge';
 import { UpgradePrompt } from '@/components/ui/feedback/upgrade-prompt';
-
 // ─── Forms ────────────────────────────────────────────────────────────────────
-
 import { Form } from '@/components/ui/forms/form';
 import { Switch } from '@/components/ui/forms/switch';
 import { FeatureGate } from '@/components/ui/gates/FeatureGate';
@@ -213,15 +209,10 @@ import { Slider } from '@/components/ui/primitives/slider';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { Toggle } from '@/components/ui/primitives/toggle';
 import { ToggleGroup } from '@/components/ui/primitives/toggle-group';
-
 // ─── Overlays ─────────────────────────────────────────────────────────────────
-
 // ─── Animations ───────────────────────────────────────────────────────────────
-
 // ModalAnimations exports animation variant objects, not a React component — skipped
-
 // ─── Tags ─────────────────────────────────────────────────────────────────────
-
 import { TagBadge } from '@/components/ui/tags/TagBadge';
 import { TagOverflow } from '@/components/ui/tags/TagOverflow';
 import { TagStrip } from '@/components/ui/tags/TagStrip';

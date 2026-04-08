@@ -26,6 +26,7 @@ public class GameToolkitEntity
     public string? CardToolsJson { get; set; }
     public string? TimerToolsJson { get; set; }
     public string? CounterToolsJson { get; set; }
+    public string? UserDicePresetsJson { get; set; }
 
     // JSONB columns for templates
     public string? ScoringTemplateJson { get; set; }

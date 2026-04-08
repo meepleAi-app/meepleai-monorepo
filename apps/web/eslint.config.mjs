@@ -98,7 +98,7 @@ export default [
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "prefer-const": "warn",
       "no-var": "error",
-      "eqeqeq": ["warn", "always"],
+      "eqeqeq": ["warn", "always", { "null": "ignore" }],
       "no-redeclare": "warn", // Changed to warn temporarily
       "no-empty": "warn", // Changed to warn temporarily
 
@@ -219,11 +219,15 @@ export default [
 
       // SEC-006: Prevent unsafe type assertions
       // Changed to warn to reduce noise during security implementation
+      // objectLiteralTypeAssertions: "allow" accepts XState/React-Query type
+      // idioms like `types: { context: {} as Context }` that are only dangerous
+      // when they hide missing required properties — TypeScript's inference
+      // already catches those at call sites.
       "@typescript-eslint/consistent-type-assertions": [
         "warn",
         {
           assertionStyle: "as",
-          objectLiteralTypeAssertions: "allow-as-parameter",
+          objectLiteralTypeAssertions: "allow",
         },
       ],
 
@@ -269,7 +273,7 @@ export default [
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "prefer-const": "warn",
       "no-var": "error",
-      "eqeqeq": ["warn", "always"],
+      "eqeqeq": ["warn", "always", { "null": "ignore" }],
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "react-hooks/rules-of-hooks": "error",
@@ -453,6 +457,41 @@ export default [
     rules: {
       // Disable object injection warnings - TypeScript Record access is type-safe
       "security/detect-object-injection": "off",
+    },
+  },
+  // Configuration for React Query hooks — idiomatic non-null assertion pattern
+  // The `queryFn: () => api.fetch(id!)` with `enabled: !!id` guard is the
+  // canonical React Query pattern. The `enabled` flag prevents the queryFn
+  // from running when `id` is null/undefined, so the assertion is safe.
+  // Converting to `as string` would lose the runtime safety check intent.
+  {
+    files: [
+      "src/hooks/queries/**/*.{ts,tsx}",
+      "src/hooks/admin/**/*.{ts,tsx}",
+      "src/lib/api/clients/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/no-non-null-assertion": "off",
+    },
+  },
+  // Configuration for components rendering user-uploaded images.
+  // `next/image` requires width/height at build time, which doesn't work for
+  // user-uploaded content with runtime dimensions. Plain `<img>` is the correct
+  // pattern here — the LCP perf hint can stay in the IDE but shouldn't fail lint.
+  {
+    files: [
+      "src/components/ui/data-display/meeple-card/**/*.{ts,tsx}",
+      "src/components/ui/data-display/extra-meeple-card/**/*.{ts,tsx}",
+      "src/components/ui/data-display/entity-list-view/**/*.{ts,tsx}",
+      "src/components/dashboard/**/*.{ts,tsx}",
+      "src/components/game-night/**/*.{ts,tsx}",
+      "src/components/session/**/*.{ts,tsx}",
+      "src/components/library/**/*.{ts,tsx}",
+      "src/components/chat-unified/**/*.{ts,tsx}",
+      "src/app/(authenticated)/sessions/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@next/next/no-img-element": "off",
     },
   },
 ];

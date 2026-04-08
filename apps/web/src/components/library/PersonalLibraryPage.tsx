@@ -22,7 +22,6 @@ import { Plus } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { useLayoutResponsive } from '@/components/layout/LayoutProvider';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { SectionBlock } from '@/components/ui/SectionBlock';
 import { ViewToggle } from '@/components/ui/ViewToggle';
@@ -39,6 +38,7 @@ import {
 import { LibraryHeroBanner } from './LibraryHeroBanner';
 import { LibraryPageHeader } from './LibraryPageHeader';
 import { LibraryToolbar } from './LibraryToolbar';
+import { MeepleLibraryGameCard } from './MeepleLibraryGameCard';
 import { UsageWidget } from './UsageWidget';
 
 // ── Filter helpers ───────────────────────────────────────────────────────────
@@ -109,32 +109,16 @@ function LibraryGameCard({
   entry: UserLibraryEntry;
   variant: 'grid' | 'list';
 }) {
+  // Delegate to the full adapter — provides navItems with KB/Agent/Chat/Sessions drawers
+  // wired to the existing drawer sheets the adapter renders internally.
   return (
-    <MeepleCard
-      id={entry.id}
-      entity="game"
+    <MeepleLibraryGameCard
+      game={entry}
       variant={variant}
-      title={entry.gameTitle}
-      subtitle={entry.gamePublisher ?? (entry.isPrivateGame ? 'Gioco personalizzato' : '')}
-      imageUrl={entry.gameImageUrl ?? undefined}
-      rating={entry.averageRating ?? undefined}
-      ratingMax={10}
-      status={
-        entry.currentState === 'Owned'
-          ? 'owned'
-          : entry.currentState === 'Wishlist'
-            ? 'wishlist'
-            : undefined
-      }
-      metadata={[
-        ...(entry.minPlayers != null && entry.maxPlayers != null
-          ? [{ label: 'Giocatori', value: `${entry.minPlayers}-${entry.maxPlayers}` }]
-          : []),
-        ...(entry.playingTimeMinutes != null
-          ? [{ label: 'Durata', value: `${entry.playingTimeMinutes} min` }]
-          : []),
-      ]}
-      data-testid={`library-card-${entry.id}`}
+      onConfigureAgent={() => {}}
+      onUploadPdf={() => {}}
+      onEditNotes={() => {}}
+      onRemove={() => {}}
     />
   );
 }

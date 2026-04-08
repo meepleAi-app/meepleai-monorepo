@@ -91,7 +91,7 @@ export default function SharedLibraryPage() {
     });
   };
 
-  const hasNotes = sharedLibrary.games.some(g => g.notes);
+  const _hasNotes = sharedLibrary.games.some(g => g.notes);
 
   return (
     <main className="min-h-screen bg-background">

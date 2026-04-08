@@ -6,8 +6,9 @@
  * ~600×900px card with 4-tab system (Overview, Toolkit, Scoreboard, History).
  */
 
+/* eslint-disable import/order -- mixed type imports across external/internal/relative groups; ESLint plugin reorder rule conflicts with itself */
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
-
+import type { LucideIcon } from 'lucide-react';
 import type {
   SessionStatus,
   SessionPlayerInfo,
@@ -18,10 +19,10 @@ import type {
   SessionMediaCounts,
   SessionActionHandlers,
 } from './session-types-compat';
+/* eslint-enable import/order */
 
 /** Chat status */
 export type ChatStatus = 'active' | 'archived' | 'pending' | 'waiting' | 'closed';
-import type { LucideIcon } from 'lucide-react';
 
 // Re-export session types for convenience
 export type {

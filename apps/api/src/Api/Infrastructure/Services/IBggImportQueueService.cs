@@ -30,10 +30,12 @@ public interface IBggImportQueueService
     /// Duplicate detection ensures only new BGG IDs are enqueued.
     /// </summary>
     /// <param name="bggIds">Collection of BGG IDs to import</param>
+    /// <param name="requestedByUserId">Optional user ID who requested the import (for audit trail)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of successfully enqueued entities</returns>
     Task<List<BggImportQueueEntity>> EnqueueBatchAsync(
         IEnumerable<int> bggIds,
+        Guid? requestedByUserId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

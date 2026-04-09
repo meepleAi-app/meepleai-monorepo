@@ -47,14 +47,13 @@ async function overrideAuthMeWithValidUuid(page: Page): Promise<void> {
   });
 }
 
-// S6a: Temporarily skipped pending a local Playwright debugging session.
-// The ViewModeToggle fails to render in CI despite two confirmed fixes:
-//   1. AuthUserSchema.id UUID validation (override helper below)
-//   2. page.route() glob pattern to cover the Next.js API proxy path
-// Suspected third root cause: React Query timing / SSR hydration race.
-// S1 unit/component coverage (33/33 green) remains the source of truth
-// until S6b reenables this suite after local debugging.
-test.describe.skip('S1 · Admin↔User view mode toggle', () => {
+// S6a re-enabled via library-to-game epic tech-debt sweep (T1):
+// The third root cause was the navigation order inside loginAsAdmin. It calls
+// page.goto('/') before our /auth/me override is registered, so the first
+// auth fetch uses the shared fixture's invalid-UUID mock and React Query
+// caches a null user. Fix: pass `skipNavigation=true`, install the override,
+// then navigate explicitly. The LIFO route order now gives our mock priority.
+test.describe('S1 · Admin↔User view mode toggle', () => {
   test.beforeEach(async ({ context }) => {
     // Ensure no stale view mode cookie from previous tests
     const existing = await context.cookies();
@@ -66,7 +65,7 @@ test.describe.skip('S1 · Admin↔User view mode toggle', () => {
   });
 
   test('toggle is visible for admin users on user home', async ({ page }) => {
-    await loginAsAdmin(page);
+    await loginAsAdmin(page, true); // skipNavigation — install override before first goto
     await overrideAuthMeWithValidUuid(page);
     await page.goto('/');
 
@@ -78,7 +77,7 @@ test.describe.skip('S1 · Admin↔User view mode toggle', () => {
   });
 
   test('toggle is visible on admin dashboard', async ({ page }) => {
-    await loginAsAdmin(page);
+    await loginAsAdmin(page, true);
     await overrideAuthMeWithValidUuid(page);
     await page.goto('/admin/overview');
 
@@ -90,7 +89,7 @@ test.describe.skip('S1 · Admin↔User view mode toggle', () => {
   });
 
   test('clicking toggle from admin redirects to user shell', async ({ page }) => {
-    await loginAsAdmin(page);
+    await loginAsAdmin(page, true);
     await overrideAuthMeWithValidUuid(page);
     await page.goto('/admin/overview');
 
@@ -103,7 +102,7 @@ test.describe.skip('S1 · Admin↔User view mode toggle', () => {
   });
 
   test('cookie is set after clicking toggle', async ({ page, context }) => {
-    await loginAsAdmin(page);
+    await loginAsAdmin(page, true);
     await overrideAuthMeWithValidUuid(page);
     await page.goto('/admin/overview');
 
@@ -141,7 +140,7 @@ test.describe.skip('S1 · Admin↔User view mode toggle', () => {
   });
 
   test('toggle returns to admin when clicked from user shell', async ({ page }) => {
-    await loginAsAdmin(page);
+    await loginAsAdmin(page, true);
     await overrideAuthMeWithValidUuid(page);
     await page.goto('/');
 

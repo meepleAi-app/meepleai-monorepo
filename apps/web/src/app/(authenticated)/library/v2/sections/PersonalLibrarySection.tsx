@@ -25,7 +25,7 @@ export function PersonalLibrarySection({
 }: PersonalLibrarySectionProps) {
   return (
     <LibraryHubCarousel
-      title="La tua libreria personale"
+      title="Libreria personale"
       count={totalCount}
       seeAllHref="/library?tab=personal"
       seeAllLabel={`Vedi tutti ${totalCount}`}

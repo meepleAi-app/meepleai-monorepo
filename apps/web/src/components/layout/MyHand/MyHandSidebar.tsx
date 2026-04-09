@@ -48,7 +48,7 @@ export function MyHandSidebar(): React.JSX.Element {
           onClick={toggleCollapsed}
           className="rounded p-1 hover:bg-muted"
         >
-          {isCollapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
       </div>
 

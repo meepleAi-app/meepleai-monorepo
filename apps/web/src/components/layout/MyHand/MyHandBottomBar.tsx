@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
+import { clearHandSlot } from '@/lib/api/my-hand';
 import { cn } from '@/lib/utils';
 import { useMyHandStore } from '@/stores/my-hand/store';
 import type { MyHandSlotType } from '@/stores/my-hand/types';
@@ -28,6 +29,11 @@ export function MyHandBottomBar(): React.JSX.Element {
     setPickerOpen(true);
   };
 
+  const handleClear = (slotType: MyHandSlotType) => {
+    clearSlot(slotType);
+    clearHandSlot(slotType).catch(() => {});
+  };
+
   return (
     <div
       className={cn(
@@ -43,20 +49,20 @@ export function MyHandBottomBar(): React.JSX.Element {
         {isMobileExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
       </button>
 
-      <div className="flex items-center justify-around px-4 py-2">
-        {SLOT_TYPES.map(slotType => (
-          <MyHandSlot
-            key={slotType}
-            slotType={slotType}
-            slot={slots[slotType]}
-            onAssign={handleAssign}
-            onClear={st => clearSlot(st)}
-            compact
-          />
-        ))}
-      </div>
-
-      {isMobileExpanded && (
+      {!isMobileExpanded ? (
+        <div className="flex items-center justify-around px-4 py-2">
+          {SLOT_TYPES.map(slotType => (
+            <MyHandSlot
+              key={slotType}
+              slotType={slotType}
+              slot={slots[slotType]}
+              onAssign={handleAssign}
+              onClear={handleClear}
+              compact
+            />
+          ))}
+        </div>
+      ) : (
         <div
           className="grid grid-cols-2 gap-2 px-4 pb-4 pt-1"
           style={{ maxHeight: '40vh', overflowY: 'auto' }}
@@ -67,7 +73,7 @@ export function MyHandBottomBar(): React.JSX.Element {
               slotType={slotType}
               slot={slots[slotType]}
               onAssign={handleAssign}
-              onClear={st => clearSlot(st)}
+              onClear={handleClear}
             />
           ))}
         </div>

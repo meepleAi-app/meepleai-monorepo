@@ -84,8 +84,9 @@ export const useMyHandStore = create<MyHandState>()(
       hydrateFromServer: serverSlots =>
         set(state => {
           for (const s of serverSlots) {
-            const slotType = s.slotType as MyHandSlotType;
-            if (!['toolkit', 'game', 'session', 'ai'].includes(slotType)) continue;
+            const rawType = s.slotType;
+            if (!['toolkit', 'game', 'session', 'ai'].includes(rawType)) continue;
+            const slotType = rawType as MyHandSlotType;
             state.slots[slotType].entityId = s.entityId;
             state.slots[slotType].entityType = s.entityType;
             state.slots[slotType].entityLabel = s.entityLabel;

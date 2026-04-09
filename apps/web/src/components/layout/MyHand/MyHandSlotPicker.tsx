@@ -13,5 +13,5 @@ interface MyHandSlotPickerProps {
 
 export function MyHandSlotPicker({ isOpen }: MyHandSlotPickerProps): React.JSX.Element | null {
   if (!isOpen) return null;
-  return <div data-testid="slot-picker">Picker (TODO)</div>;
+  return <div data-testid="slot-picker" aria-hidden="true" />;
 }

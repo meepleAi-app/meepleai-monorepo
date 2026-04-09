@@ -1634,16 +1634,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     mockProps: {}, // Exports Framer Motion variants, not a renderable component
   },
   {
-    id: 'page-transition',
-    name: 'PageTransition',
-    importPath: '@/components/ui/animations/PageTransition',
-    category: 'Animations',
-    areas: ['shared'],
-    tier: 'interactive',
-    description: 'Wraps page content in a smooth route-change transition.',
-    tags: ['page', 'transition', 'route'],
-  },
-  {
     id: 'stagger-children',
     name: 'StaggerChildren',
     importPath: '@/components/ui/animations/StaggerChildren',

@@ -24,7 +24,6 @@ import { kpiCardsStory } from './kpi-cards.story';
 import { meepleAvatarStory } from './meeple-avatar.story';
 import { meepleCardStory } from './meeple-card.story';
 import { meepleLogoStory } from './meeple-logo.story';
-import { pageTransitionStory } from './page-transition.story';
 import { popoverStory } from './popover.story';
 import { progressStory } from './progress.story';
 import { radioGroupStory } from './radio-group.story';
@@ -84,9 +83,6 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
 
   // Tags
   tagStripStory,
-
-  // Animations
-  pageTransitionStory,
 
   // Forms
   buttonStory,

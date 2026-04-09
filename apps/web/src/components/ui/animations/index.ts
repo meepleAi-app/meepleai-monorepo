@@ -3,6 +3,9 @@
  *
  * Centralized exports for all Framer Motion animations.
  * Provides reusable components and variants for common UI patterns.
+ *
+ * Note: PageTransition was removed via Path D (YAGNI) in #293 cycle.
+ * See docs/development/page-transition-decision.md and issue #293 for rationale.
  */
 
 // Components
@@ -11,9 +14,6 @@ export type { FadeInProps } from './FadeIn';
 
 export { StaggerChildren } from './StaggerChildren';
 export type { StaggerChildrenProps } from './StaggerChildren';
-
-export { PageTransition } from './PageTransition';
-export type { PageTransitionProps } from './PageTransition';
 
 // Variants
 export {

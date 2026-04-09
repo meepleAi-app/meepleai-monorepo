@@ -160,17 +160,6 @@ export const STORY_METADATA: StoryMeta[] = [
     presetCount: 4,
   },
 
-  // ─── Animations ────────────────────────────────────────────────────────────
-  {
-    id: 'page-transition',
-    title: 'PageTransition',
-    category: 'Animations',
-    description:
-      'Smooth page transitions via Framer Motion. Pilot active in (chat) layout behind NEXT_PUBLIC_ENABLE_PAGE_TRANSITIONS flag.',
-    controlCount: 1,
-    presetCount: 3,
-  },
-
   // ─── Forms ─────────────────────────────────────────────────────────────────
   {
     id: 'button',

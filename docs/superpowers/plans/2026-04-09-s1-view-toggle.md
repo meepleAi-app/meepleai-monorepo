@@ -139,9 +139,13 @@ Before starting Task 1, verify:
 
   describe('view-mode cookie helpers', () => {
     beforeEach(() => {
-      // Reset document.cookie before each test
+      // Reset document.cookie before each test.
+      // NOTE: `configurable: true` is REQUIRED — without it, the second
+      // beforeEach silently fails because the property becomes non-configurable
+      // after the first Object.defineProperty call, causing flaky tests.
       Object.defineProperty(document, 'cookie', {
         writable: true,
+        configurable: true,
         value: '',
       });
     });
@@ -548,7 +552,7 @@ Before starting Task 1, verify:
    */
   'use client';
 
-  import { useCallback, useEffect, useState } from 'react';
+  import { useCallback, useState } from 'react';
 
   import { usePathname, useRouter } from 'next/navigation';
 
@@ -571,20 +575,14 @@ Before starting Task 1, verify:
     const router = useRouter();
     const pathname = usePathname();
 
-    // Initial state reads cookie synchronously (matches SSR when cookie exists)
+    // Initial state reads cookie synchronously (matches SSR when cookie exists).
+    // Cross-tab sync intentionally NOT implemented: document.cookie has no change
+    // event, BroadcastChannel is overkill for a UX preference, and the known
+    // limitation is documented in the spec §4.1 and the plan's "Known limitations".
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
       if (typeof document === 'undefined') return defaultViewMode(pathname);
       return readViewModeCookie() ?? defaultViewMode(pathname);
     });
-
-    // Re-sync if cookie changed while component is mounted (e.g., another tab)
-    useEffect(() => {
-      const current = readViewModeCookie();
-      if (current && current !== viewMode) {
-        setViewMode(current);
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     const toggle = useCallback(() => {
       const next: ViewMode = viewMode === 'admin' ? 'user' : 'admin';
@@ -596,6 +594,8 @@ Before starting Task 1, verify:
     return { viewMode, toggle };
   }
   ```
+
+  > **Note on the `useEffect` removal:** a previous revision of this plan included a `useEffect(() => { ... }, [])` that tried to re-sync on mount. Code review I1 correctly flagged it as a no-op (runs at the same moment as the `useState` initializer, never fires again). Removed. Cross-tab sync is a deliberate non-goal for S1.
 
 - [ ] **Step 4.4: Run tests and verify they pass**
 
@@ -971,10 +971,12 @@ Before starting Task 1, verify:
 
 ---
 
-## Task 8 — Clear view mode cookie on logout
+## Task 8 — Clear view mode cookie on logout (client-side)
 
 **Files:**
 - Modify: `apps/web/src/actions/auth.ts`
+
+**Important correction from code review C1:** `apps/web/src/actions/auth.ts` has `'use client'` on line 14. It is NOT a Server Action file — it's a client-module wrapper around API calls. Therefore we CANNOT import `cookies` from `next/headers` here (that would cause a Next.js 16 build error: "next/headers is server-only"). We must clear the cookie using the client helper `clearViewModeCookie()` from the `lib/view-mode/cookie.ts` module we built in Task 2.
 
 - [ ] **Step 8.1: Locate the logoutAction function**
 
@@ -982,58 +984,62 @@ Before starting Task 1, verify:
   cd apps/web
   grep -n "export async function logoutAction" src/actions/auth.ts
   ```
-  Expected: line number of the function (should be around line 227).
+  Expected: line number of the function (approximately line 227).
 
 - [ ] **Step 8.2: Read the current implementation of logoutAction**
 
-  Read the function body starting from the identified line. It calls `api.auth.logout()` and clears auth cookies on the server side. We need to also clear `meepleai_view_mode`.
+  Read the function body. It calls `await api.auth.logout()` (which clears HttpOnly auth cookies server-side via the API endpoint) and then does a `window.location.href = '/login'` reload in the error fallback. We need to clear `meepleai_view_mode` from the client right before/after the API call, since it is a client-readable cookie.
 
-  Check if the server uses `cookies().delete()` from `next/headers`. If the logout API call deletes HttpOnly cookies server-side but `meepleai_view_mode` is client-readable, we need to clear it either via:
-  1. Adding `cookies().delete(VIEW_MODE_COOKIE)` in the server action (preferred — server is the source of truth)
-  2. Or adding `clearViewModeCookie()` call at the logout button level (fallback)
+- [ ] **Step 8.3: Add import for clearViewModeCookie**
 
-  Use approach 1: delete server-side in `logoutAction`.
-
-- [ ] **Step 8.3: Add cookie deletion to logoutAction**
-
-  Edit `apps/web/src/actions/auth.ts`. Find the `logoutAction` function and add the cookie deletion right after `await api.auth.logout();`:
-
-  Add import at top of file (near other `next/headers` imports, if any; otherwise add a new import block):
+  Edit `apps/web/src/actions/auth.ts`. Add this import in the imports section (near the existing `@/lib/*` imports, around line 16-20):
   ```typescript
-  import { cookies } from 'next/headers';
+  import { clearViewModeCookie } from '@/lib/view-mode/cookie';
+  ```
+  Do NOT add `import { cookies } from 'next/headers'` — that would break the build because the file is `'use client'`.
 
-  import { VIEW_MODE_COOKIE } from '@/lib/view-mode/constants';
+- [ ] **Step 8.4: Call clearViewModeCookie inside logoutAction**
+
+  Find the body of `logoutAction`. After the line `await api.auth.logout();` (the normal success path), add:
+  ```typescript
+  // Clear client-side view mode cookie. HttpOnly auth cookies are cleared
+  // by the server in api.auth.logout(); this handles the extra UX preference cookie.
+  clearViewModeCookie();
   ```
 
-  In the `logoutAction` function body, right after the `api.auth.logout()` call, add:
+  Also add the same call in the `catch` block, BEFORE the `window.location.href = '/login'` fallback, so a failed logout still clears the preference:
   ```typescript
-  // Clear view mode cookie so the next session starts fresh
-  const cookieStore = await cookies();
-  cookieStore.delete(VIEW_MODE_COOKIE);
+  } catch (error) {
+    // ... existing error logging ...
+    clearViewModeCookie();
+    // ... existing window.location fallback ...
+  }
   ```
 
-- [ ] **Step 8.4: Verify typecheck passes**
+  If the catch block doesn't exist in the current implementation, place `clearViewModeCookie()` right after the successful `await api.auth.logout();` call only — it's still run before the client-side reload.
+
+- [ ] **Step 8.5: Verify typecheck passes**
 
   ```bash
   cd apps/web
   pnpm typecheck
   ```
-  Expected: 0 errors.
+  Expected: 0 errors. Critically: if you see "next/headers is server-only" then you mistakenly imported it — remove the import.
 
-- [ ] **Step 8.5: Run existing auth tests**
+- [ ] **Step 8.6: Run existing auth tests**
 
   ```bash
   cd apps/web
-  pnpm vitest run src/actions/__tests__/auth.test.ts 2>/dev/null || pnpm vitest run src/actions -- --testNamePattern=logout
+  pnpm vitest run src/actions
   ```
-  Expected: existing tests still PASS. If any test mocks `cookies()`, it may need updating; if so, update the mock to include a no-op `delete` method.
+  Expected: existing tests still PASS. No existing test should touch `meepleai_view_mode`; if any test mocks `document.cookie`, ensure it uses `configurable: true` (same pattern as Task 2).
 
-- [ ] **Step 8.6: Commit**
+- [ ] **Step 8.7: Commit**
 
   ```bash
   cd D:/Repositories/meepleai-monorepo-backend
   git add apps/web/src/actions/auth.ts
-  git commit -m "feat(s1): clear view mode cookie on logout"
+  git commit -m "feat(s1): clear view mode cookie on logout (client-side)"
   ```
 
 ---
@@ -1110,21 +1116,28 @@ Before starting Task 1, verify:
     test('SSR redirects admin layout to / when cookie is user (no flash)', async ({
       page,
       context,
+      baseURL,
     }) => {
       await loginAsAdmin(page);
-      // Pre-set the cookie before navigating to /admin
+      // Navigate to establish a real document origin before adding cookies.
+      // Using baseURL from Playwright config; fall back to localhost:3000 if unset.
+      const origin = baseURL || 'http://localhost:3000';
+      await page.goto('/');
+
+      // Pre-set the cookie with an absolute URL (context.addCookies requires either
+      // url OR domain+path; avoid about:blank / page.url() since they may not yet
+      // be valid for addCookies validation).
       await context.addCookies([
         {
           name: 'meepleai_view_mode',
           value: 'user',
-          url: page.url() || 'http://localhost:3000',
-          path: '/',
+          url: origin,
           sameSite: 'Lax',
         },
       ]);
 
-      const response = await page.goto('/admin/overview');
-      // Server-side redirect returns 307 or the final / URL
+      await page.goto('/admin/overview');
+      // Server-side redirect should send user to '/' before admin shell renders
       expect(page.url()).not.toContain('/admin/overview');
     });
 
@@ -1143,13 +1156,14 @@ Before starting Task 1, verify:
   });
   ```
 
-- [ ] **Step 9.3: Check if loginAsAdmin fixture exists**
+- [ ] **Step 9.3: Verify loginAsAdmin fixture import resolves**
 
+  The fixture has been pre-verified to exist at `apps/web/e2e/fixtures/auth.ts` with a `loginAsAdmin` export at line 394. Confirm this is still true before proceeding:
   ```bash
   cd apps/web
-  ls e2e/fixtures/auth.ts 2>/dev/null && grep -l "loginAsAdmin" e2e/fixtures/auth.ts
+  grep -n "export.*loginAsAdmin" e2e/fixtures/auth.ts
   ```
-  If fixture doesn't exist or doesn't export `loginAsAdmin`, fall back to using an existing fixture (grep for `login` in `e2e/fixtures/`) or inline the admin login steps.
+  Expected: one match around line 394. If zero matches → STOP and investigate before running the test.
 
 - [ ] **Step 9.4: Run the E2E test locally**
 
@@ -1288,3 +1302,27 @@ All files added by S1 are new or cleanly additive; no existing data, migrations,
 - [x] PR targets epic branch, not main, per CLAUDE.md rule.
 
 **Plan length:** 10 tasks, ~60 steps, estimated 4-6 hours of focused work.
+
+---
+
+## Code Review Response (Revision 2)
+
+Addressed the 3 critical and 2 important issues from code review by `superpowers:code-reviewer` subagent.
+
+**Fixed:**
+- **C1** (auth.ts is `'use client'`, cannot import `next/headers`) → Task 8 rewritten: use `clearViewModeCookie()` from the client helper. Explicitly calls out in the task description that `next/headers` must NOT be imported.
+- **C3** (E2E test 4 uses `page.url() || 'localhost'` which is `about:blank` before first navigation) → Task 9 test 4 rewritten to use Playwright's `baseURL` fixture parameter + `page.goto('/')` before `context.addCookies`.
+- **I1** (useless `useEffect` for cross-tab sync in `useViewMode`) → Removed the effect from Task 4. Removed unused `useEffect` import. Added documentation that cross-tab sync is an intentional non-goal.
+- **I3** (`Object.defineProperty(document, 'cookie', ...)` without `configurable: true` causes flaky tests) → Task 2 tests now pass `configurable: true` with an explanatory comment.
+- **I5** (Task 9.3 fallback language was a placeholder) → Converted to a verification step that fails fast if the fixture is missing.
+
+**Pushed back (reviewer wrong):**
+- **C2** (reviewer claimed `UserTopNav` is only in `UserShell` and that the admin shell has a different nav component, so the toggle wouldn't be visible on admin pages and E2E test 1 would fail) → **Rejected after verification.** Reading `apps/web/src/components/layout/AdminShell/AdminShell.tsx` lines 10 and 24 shows that `AdminShell` imports `UserTopNav` from `'../UserShell/UserTopNav'` and renders it with the `isAdmin` prop: `<UserTopNav isAdmin onMenuToggle={...} isMenuOpen={drawerOpen} />`. The admin shell **reuses** the user top nav component. Mounting `<ViewModeToggle>` inside `UserTopNav` covers both shells in a single change. No Task 6b needed.
+
+**Deferred to execution (minor):**
+- I2 (test split between default-path and navigate assertions) — fine as-is
+- I4 (keyboard handler on native button is slightly over-engineered) — keep for explicitness, no harm
+- I6 (`context.clearCookies` filter requires Playwright ≥1.43) — if execution fails, drop the filter
+- M1–M6 (doc/comment nits) — applied where simple, ignored where not load-bearing
+
+**Revision 2 changes are localized to Tasks 2, 4, 8, and 9.** No task was added, no task was removed. All critical blockers are resolved or rejected with evidence. Plan is now **READY TO EXECUTE**.

@@ -113,7 +113,6 @@ import { RoleCard } from '@/components/admin/users/role-card';
 import { AdminConfirmationDialog } from '@/components/ui/admin/admin-confirmation-dialog';
 import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
 import { FadeIn } from '@/components/ui/animations/FadeIn';
-import { PageTransition } from '@/components/ui/animations/PageTransition';
 import { StaggerChildren } from '@/components/ui/animations/StaggerChildren';
 import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 import { Accordion } from '@/components/ui/data-display/accordion';
@@ -345,7 +344,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   // Animations
   'fade-in': FadeIn,
   // 'modal-animations': skipped — exports animation variant objects, not a React component
-  'page-transition': PageTransition,
   'stagger-children': StaggerChildren,
 
   // Tags

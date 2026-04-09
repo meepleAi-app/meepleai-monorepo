@@ -8,6 +8,7 @@ using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -145,6 +146,29 @@ public sealed class PdfSeederBlobTests
         doc.ProcessingState.Should().Be(nameof(PdfProcessingState.Pending));
         doc.UploadedByUserId.Should().Be(userId);
         doc.FileSizeBytes.Should().Be(4);
+
+        // Regression guard for PR #XXX: PdfSeeder must also create a ProcessingJob
+        // in Queued state so PdfProcessingQuartzJob picks the PDF up automatically.
+        // Without this, seeded PDFs stay in Pending forever.
+        var jobs = db.ProcessingJobs.Include(j => j.Steps).ToList();
+        jobs.Should().HaveCount(1);
+        var job = jobs[0];
+        job.PdfDocumentId.Should().Be(doc.Id);
+        job.UserId.Should().Be(userId);
+        job.Status.Should().Be(nameof(JobStatus.Queued));
+        job.Priority.Should().Be(0);
+        job.MaxRetries.Should().Be(3);
+        job.RetryCount.Should().Be(0);
+        job.Steps.Should().HaveCount(5);
+        job.Steps.Select(s => s.StepName).Should().BeEquivalentTo(new[]
+        {
+            nameof(ProcessingStepType.Upload),
+            nameof(ProcessingStepType.Extract),
+            nameof(ProcessingStepType.Chunk),
+            nameof(ProcessingStepType.Embed),
+            nameof(ProcessingStepType.Index),
+        });
+        job.Steps.Should().OnlyContain(s => s.Status == "Pending");
     }
 
     // ---------------------------------------------------------------

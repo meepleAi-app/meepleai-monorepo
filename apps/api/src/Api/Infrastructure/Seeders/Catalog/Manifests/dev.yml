@@ -4,6 +4,7 @@ catalog:
   - title: Catan
     bggId: 13
     language: en
+    seedAgent: true
     fallbackImageUrl: https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__original/img/IwRwEpu1I6YfkyYjFIekCh80ntc=/0x0/filters:format(jpeg)/pic2419375.jpg
     fallbackThumbnailUrl: https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__small/img/7a0LOL48K-2lC3IG0HyYT3XxJBs=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg
     bggEnhanced: true
@@ -271,6 +272,7 @@ catalog:
   - title: 'Descent: Journeys in the Dark (Second Edition)'
     bggId: 104162
     language: en
+    seedAgent: true
     fallbackImageUrl: https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__original/img/GZJIjJPJKk1a4Bx-rM-3KL6O4hk=/0x0/filters:format(jpeg)/pic1180640.jpg
     fallbackThumbnailUrl: https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__small/img/cO_2QvC_2BCb-Smd0xp4a5G2n-s=/fit-in/200x150/filters:strip_icc()/pic1180640.jpg
     bggEnhanced: true
@@ -622,6 +624,7 @@ catalog:
   - title: Ticket to Ride
     bggId: 9209
     language: en
+    seedAgent: true
     bggEnhanced: true
     description: 'With elegantly simple gameplay, Ticket to Ride can be learned in under 15 minutes. Players collect cards
       of various types of train cars they then use to claim railway routes in North America. The longer the routes, the more
@@ -698,6 +701,7 @@ catalog:
   - title: Splendor
     bggId: 148228
     language: en
+    seedAgent: true
     bggEnhanced: true
     description: 'Splendor is a game of chip-collecting and card development. Players are merchants of the Renaissance trying
       to buy gem mines, means of transportation, shops&mdash;all in order to acquire the most prestige points. If you''re
@@ -4966,6 +4970,7 @@ catalog:
   - title: Carcassonne
     bggId: 822
     language: en
+    seedAgent: true
     bggEnhanced: true
     description: 'Carcassonne is a tile placement game in which the players draw and place a tile with a piece of southern
       French landscape represented on it. The tile might feature a city, a road, a cloister, grassland or some combination
@@ -5582,6 +5587,7 @@ catalog:
   - title: Pandemic
     bggId: 30549
     language: en
+    seedAgent: true
     bggEnhanced: true
     description: 'In Pandemic, several virulent diseases have broken out simultaneously all over the world! The players are
       disease-fighting specialists whose mission is to treat disease hotspots while researching cures for each of four plagues
@@ -11804,6 +11810,361 @@ catalog:
     pdfBlobKey: rulebooks/v1/eclipse_rulebook.pdf
     pdfSha256: bd13229470079df4df34fb2c6b1126172985b89b856984f5fb9f46a160370b79
     pdfVersion: '1.0'
+  - title: 'Battlestar Galactica: Exodus Expansion'
+    bggId: 85905
+    language: en
+    yearPublished: 2010
+    minPlayers: 3
+    maxPlayers: 6
+    playingTime: 180
+    minAge: 14
+    categories:
+    - Expansion
+    - Science Fiction
+    mechanics:
+    - Cooperative Game
+    - Hand Management
+    - Traitor Game
+    designers:
+    - Corey Konieczka
+    - Tim Uren
+    publishers:
+    - Fantasy Flight Games
+    pdfBlobKey: rulebooks/v1/battlestar-galactica-exodus_rulebook.pdf
+    pdfSha256: 933ed636f95700f9dca1d47bf63eb228b86341017def10a649e54e1c18b471cd
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Battlestar%20Galactica%3A%20Exodus%20Expansion
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Battlestar%20Galactica%3A%20Exodus%20Expansion
+  - title: Blueprints
+    bggId: 140933
+    language: en
+    yearPublished: 2013
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 30
+    minAge: 14
+    categories:
+    - Dice
+    - City Building
+    mechanics:
+    - Dice Drafting
+    - Set Collection
+    - Pattern Building
+    designers:
+    - Yves Tourigny
+    publishers:
+    - Z-Man Games
+    pdfBlobKey: rulebooks/v1/blueprints_rulebook.pdf
+    pdfSha256: ca0473d279040cd8e157f736bb5aa78f2019fed68e278cfafc73f98ef0269bad
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Blueprints
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Blueprints
+  - title: 'Frostpunk: The Board Game'
+    bggId: 311988
+    language: en
+    yearPublished: 2022
+    minPlayers: 1
+    maxPlayers: 4
+    playingTime: 150
+    minAge: 16
+    categories:
+    - Science Fiction
+    - City Building
+    mechanics:
+    - Cooperative Game
+    - Worker Placement
+    - Action Queue
+    designers:
+    - Adam Kwapiński
+    publishers:
+    - Glass Cannon Unplugged
+    pdfBlobKey: rulebooks/v1/frostpunk_rulebook.pdf
+    pdfSha256: 3600047bc0167e8f550867c6da4ec75d575bf78291ddbb39a5969c3a14c4d9c6
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Frostpunk%3A%20The%20Board%20Game
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Frostpunk%3A%20The%20Board%20Game
+  - title: ISS Vanguard
+    bggId: 325494
+    language: en
+    yearPublished: 2023
+    minPlayers: 1
+    maxPlayers: 4
+    playingTime: 120
+    minAge: 14
+    categories:
+    - Adventure
+    - Exploration
+    - Science Fiction
+    mechanics:
+    - Cooperative Game
+    - Campaign / Battle Card Driven
+    - Deck Construction
+    designers:
+    - Andrzej Betkiewicz
+    - Krzysztof Piskorski
+    - Paweł Samborski
+    - Marcin Świerkot
+    publishers:
+    - Awaken Realms
+    pdfBlobKey: rulebooks/v1/iss-vanguard_rulebook.pdf
+    pdfSha256: 76f80aa5a266287e19b5c1423d7177d9ad5167d07e6c9eb402fa616008c4e6ca
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=ISS%20Vanguard
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=ISS%20Vanguard
+  - title: Marvel United
+    bggId: 298047
+    language: en
+    yearPublished: 2020
+    minPlayers: 1
+    maxPlayers: 4
+    playingTime: 40
+    minAge: 14
+    categories:
+    - Card Game
+    - Comic Book / Strip
+    - Miniatures
+    mechanics:
+    - Cooperative Game
+    - Hand Management
+    - Variable Player Powers
+    designers:
+    - Andrea Chiarvesio
+    - Eric M. Lang
+    publishers:
+    - CMON
+    - Spin Master
+    pdfBlobKey: rulebooks/v1/marvel-united_rulebook.pdf
+    pdfSha256: 4cf121cbdc9ba87c94e64eef7d9defff65860c7fb4e9850a0c611f7c2d7ccd1c
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Marvel%20United
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Marvel%20United
+  - title: Massive Darkness
+    bggId: 197070
+    language: en
+    yearPublished: 2017
+    minPlayers: 1
+    maxPlayers: 6
+    playingTime: 180
+    minAge: 14
+    categories:
+    - Adventure
+    - Exploration
+    - Fantasy
+    - Fighting
+    - Miniatures
+    mechanics:
+    - Cooperative Game
+    - Dice Rolling
+    - Grid Movement
+    - Modular Board
+    designers:
+    - Raphaël Guiton
+    - Jean-Baptiste Lullien
+    - Nicolas Raoult
+    publishers:
+    - CMON
+    pdfBlobKey: rulebooks/v1/massive-darkness_rulebook.pdf
+    pdfSha256: 0e6da43776336126872fd55c4ff0a186b598eb35f0f81c5983efe0286d19d04c
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Massive%20Darkness
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Massive%20Darkness
+  - title: 'Masters of the Universe: Fields of Eternia'
+    bggId: 317526
+    language: en
+    yearPublished: 2022
+    minPlayers: 1
+    maxPlayers: 6
+    playingTime: 90
+    minAge: 14
+    categories:
+    - Adventure
+    - Fantasy
+    - Miniatures
+    mechanics:
+    - Area Control
+    - Card Play
+    - Dice Rolling
+    - Campaign
+    publishers:
+    - Archon Studio
+    pdfBlobKey: rulebooks/v1/masters-of-the-universe-fields-of-eternia_rulebook.pdf
+    pdfSha256: 6c75514b523638e01417651123372884f6bbbc94cc81541f7b1187e6b35719f8
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Masters%20of%20the%20Universe%3A%20Fields%20of%20Eternia
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Masters%20of%20the%20Universe%3A%20Fields%20of%20Eternia
+  - title: Paleo
+    bggId: 300531
+    language: en
+    yearPublished: 2020
+    minPlayers: 1
+    maxPlayers: 4
+    playingTime: 60
+    minAge: 10
+    categories:
+    - Adventure
+    - Prehistoric
+    mechanics:
+    - Cooperative Game
+    - Hand Management
+    - Set Collection
+    designers:
+    - Peter Rustemeyer
+    publishers:
+    - Hans im Glück
+    pdfBlobKey: rulebooks/v1/paleo_rulebook.pdf
+    pdfSha256: e25557f8724650419837f690aeadaaa474b652b5610e4d39100c618b92e87e90
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Paleo
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Paleo
+  - title: Photosynthesis
+    bggId: 218603
+    language: en
+    yearPublished: 2017
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 60
+    minAge: 8
+    categories:
+    - Abstract Strategy
+    - Environmental
+    mechanics:
+    - Area Majority / Influence
+    - Grid Movement
+    - Point to Point Movement
+    designers:
+    - Hjalmar Hach
+    publishers:
+    - Blue Orange (EU)
+    pdfBlobKey: rulebooks/v1/photosynthesis_rulebook.pdf
+    pdfSha256: adfe6e3e69ab40ab8c51482a9d3f9f930d1b0a22d49c55fa3faf8c0cd1e07e26
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Photosynthesis
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Photosynthesis
+  - title: 'RONE: Invasion'
+    bggId: 368944
+    language: en
+    yearPublished: 2024
+    minPlayers: 1
+    maxPlayers: 4
+    playingTime: 90
+    minAge: 14
+    categories:
+    - Card Game
+    - Science Fiction
+    mechanics:
+    - Cooperative Game
+    - Deck Building
+    - Dice Building
+    designers:
+    - Štěpán Štefaník
+    publishers:
+    - Bonjour Games
+    pdfBlobKey: rulebooks/v1/rone-invasion_rulebook.pdf
+    pdfSha256: 0351e250da3d127e0835dce3444ae6151f5328c4b613144d02f74659cc5324dc
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=RONE%3A%20Invasion
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=RONE%3A%20Invasion
+  - title: Sagrada
+    bggId: 199561
+    language: en
+    yearPublished: 2017
+    minPlayers: 1
+    maxPlayers: 4
+    playingTime: 45
+    minAge: 14
+    categories:
+    - Abstract Strategy
+    - Puzzle
+    mechanics:
+    - Dice Drafting
+    - Pattern Building
+    - Set Collection
+    designers:
+    - Adrian Adamescu
+    - Daryl Andrews
+    publishers:
+    - Floodgate Games
+    pdfBlobKey: rulebooks/v1/sagrada_rulebook.pdf
+    pdfSha256: c7c8d54e36bd83aa4b92b0a44184c140cce87c57253b93c5d744aa76f174408f
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Sagrada
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Sagrada
+  - title: Santorini
+    bggId: 194655
+    language: en
+    yearPublished: 2016
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 20
+    minAge: 8
+    categories:
+    - Abstract Strategy
+    - Mythology
+    mechanics:
+    - Grid Movement
+    - Pattern Building
+    - Variable Player Powers
+    designers:
+    - Gordon Hamilton
+    publishers:
+    - Spin Master Ltd.
+    pdfBlobKey: rulebooks/v1/santorini_rulebook.pdf
+    pdfSha256: 0d1a056e6753d031c8c067f706cbfa064018bfb4279ac9e3c0ed95b4a3d7f19d
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Santorini
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Santorini
+  - title: Townsfolk Tussle
+    bggId: 312859
+    language: en
+    yearPublished: 2022
+    minPlayers: 2
+    maxPlayers: 5
+    playingTime: 200
+    minAge: 14
+    categories:
+    - Adventure
+    - Fighting
+    - Fantasy
+    mechanics:
+    - Cooperative Game
+    - Dice Rolling
+    - Hand Management
+    designers:
+    - Stephen Louis
+    - Tony Mayer
+    - Rachel Rusk
+    publishers:
+    - Panic Roll Games
+    pdfBlobKey: rulebooks/v1/townsfolk-tussle_rulebook.pdf
+    pdfSha256: 9ba02fb2121e962214f5933c021ec66caec242af693d216fdad956a94381bdce
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Townsfolk%20Tussle
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Townsfolk%20Tussle
+  - title: Disney Villainous
+    bggId: 256382
+    language: en
+    yearPublished: 2018
+    minPlayers: 2
+    maxPlayers: 6
+    playingTime: 60
+    minAge: 10
+    categories:
+    - Card Game
+    - Fantasy
+    - Movies / TV / Radio theme
+    mechanics:
+    - Action Points
+    - Hand Management
+    - Variable Player Powers
+    designers:
+    - Prospero Hall
+    publishers:
+    - Ravensburger
+    pdfBlobKey: rulebooks/v1/villainous_rulebook.pdf
+    pdfSha256: ab41201c70aecc048dc8fd03e20e8b6ba9561dc5e444793ca8d977aba2d9c907
+    pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Disney%20Villainous
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Disney%20Villainous
   defaultAgent:
     name: MeepleAssistant POC
     model: anthropic/claude-3-haiku

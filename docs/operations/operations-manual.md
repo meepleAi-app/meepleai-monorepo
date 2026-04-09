@@ -2689,6 +2689,7 @@ Existing runbooks in `docs/operations/runbooks/`:
 | `error-spike.md` | Sudden increase in error rate |
 | `high-error-rate.md` | Sustained high error rate (> 5%) |
 | `infrastructure-monitoring.md` | Monitoring infrastructure issues |
+| `session-autosave-stale.md` | `AutoSaveSessionJob` has not run in over 120s (2 missed ticks) |
 | `slow-performance.md` | API latency exceeding thresholds |
 
 ---
@@ -2697,6 +2698,7 @@ Existing runbooks in `docs/operations/runbooks/`:
 
 | File | Purpose |
 |------|---------|
+| `docs/operations/ci-cd-pipeline.md` | 3-stage CI/CD pipeline reference (Spec R1+R2) |
 | `infra/docker-compose.yml` | Base compose (environment-neutral) |
 | `infra/compose.dev.yml` | Development overrides |
 | `infra/compose.prod.yml` | Production overrides |

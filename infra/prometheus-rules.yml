@@ -417,6 +417,35 @@ groups:
           runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
           dashboard_url: "http://localhost:3001/d/infrastructure"
 
+      # WARNING: Session AutoSave job is stale
+      # Source gauge: Api.Observability.MeepleAiMetrics.RegisterAutoSaveHealthGauge
+      # Metric (OTel → Prometheus): meepleai.session.autosave.last_run_age_seconds
+      #   - Reports seconds since the last AutoSaveSessionJob execution
+      #   - Returns -1 when no run has happened yet (startup / no active sessions),
+      #     so we explicitly exclude that sentinel from the alert expression.
+      #   - Expected cadence: every 60s (Quartz trigger). Threshold 120s = 2 missed ticks.
+      - alert: SessionAutoSaveJobStale
+        expr: |
+          meepleai_session_autosave_last_run_age_seconds > 120
+          and
+          meepleai_session_autosave_last_run_age_seconds >= 0
+        for: 2m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: background_jobs
+          component: session_tracking
+        annotations:
+          summary: "Session AutoSave job has not run in over 2 minutes"
+          description: |
+            AutoSaveSessionJob last ran {{ $value | humanize }}s ago
+            (threshold: 120s, expected cadence: 60s).
+            Active game-night sessions risk losing unsaved progress.
+            Check Quartz scheduler health, API logs for AutoSaveHealthLoggerService warnings,
+            and verify the IAutoSaveSchedulerService registration is active.
+          runbook_url: "https://docs.meepleai.dev/runbooks/session-autosave-stale"
+          dashboard_url: "http://localhost:3001/d/api-performance"
+
   - name: meepleai_info_alerts
     interval: 5m
     rules:

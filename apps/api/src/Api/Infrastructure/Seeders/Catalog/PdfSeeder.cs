@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Infrastructure.Seeders.Catalog.SeedBlob;
 using Api.Services.Pdf;
 using Microsoft.EntityFrameworkCore;
@@ -9,9 +10,16 @@ namespace Api.Infrastructure.Seeders.Catalog;
 
 /// <summary>
 /// Seeds PDF rulebook documents from the seed blob bucket (meepleai-seeds) using the YAML manifest.
-/// Creates PdfDocumentEntity records in <see cref="PdfProcessingState.Pending"/> state.
-/// The existing PdfProcessingQuartzJob (runs every 10s) will automatically pick up
-/// and process them through the full RAG pipeline (extract → chunk → embed → index).
+/// Creates PdfDocumentEntity records in <see cref="PdfProcessingState.Pending"/> state AND
+/// enqueues a corresponding ProcessingJob so PdfProcessingQuartzJob (runs every 10s) picks them
+/// up through the full RAG pipeline (extract → chunk → embed → index).
+///
+/// IMPORTANT: PdfProcessingQuartzJob reads from <c>processing_jobs WHERE Status='Queued'</c>,
+/// not from <c>pdf_documents WHERE ProcessingState='Pending'</c>. Without an explicit
+/// ProcessingJob row the seeded PDFs would stay in Pending forever (StalePdfRecoveryService
+/// only picks them up after 2 minutes of staleness and runs only once at boot, so they slip
+/// through the crack).
+///
 /// Idempotent: skips PDFs where GameId + FileName already exists with matching hash.
 /// Hash drift: deletes old document cascade and reinserts when hash changes.
 /// </summary>
@@ -171,13 +179,42 @@ internal static class PdfSeeder
                 db.PdfDocuments.Add(pdfEntity);
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
+                // Enqueue a ProcessingJob so PdfProcessingQuartzJob picks this PDF up.
+                // We write the EF entity directly (not the ProcessingJob.Create aggregate
+                // factory) to bypass the MaxQueueSize=100 guard — a seed run can push
+                // more than 100 PDFs and those limits are meant for user-driven enqueue,
+                // not batch seeding. We also initialise the five standard pipeline steps
+                // so the job row matches what EnqueuePdfCommandHandler would have produced.
+                var now = DateTimeOffset.UtcNow;
+                var jobEntity = new ProcessingJobEntity
+                {
+                    Id = Guid.NewGuid(),
+                    PdfDocumentId = pdfEntity.Id,
+                    UserId = systemUserId,
+                    Status = nameof(JobStatus.Queued),
+                    Priority = 0,
+                    CreatedAt = now,
+                    MaxRetries = 3,
+                    RetryCount = 0,
+                };
+                jobEntity.Steps = new List<ProcessingStepEntity>
+                {
+                    new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Upload),  Status = "Pending" },
+                    new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Extract), Status = "Pending" },
+                    new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Chunk),   Status = "Pending" },
+                    new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Embed),   Status = "Pending" },
+                    new() { Id = Guid.NewGuid(), ProcessingJobId = jobEntity.Id, StepName = nameof(ProcessingStepType.Index),   Status = "Pending" },
+                };
+                db.Set<ProcessingJobEntity>().Add(jobEntity);
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
                 // Track for subsequent iterations
                 existingMap[idempotencyKey] = new { pdfEntity.Id, pdfEntity.ContentHash, pdfEntity.FilePath };
 
                 seeded++;
                 logger.LogInformation(
-                    "PdfSeeder: stored blob '{FileName}' for game '{Title}' (GameId={GameId}, PdfId={PdfId}, {Size} bytes) in Pending state",
-                    fileName, entry.Title, gameId, pdfEntity.Id, result.FileSizeBytes);
+                    "PdfSeeder: stored blob '{FileName}' for game '{Title}' (GameId={GameId}, PdfId={PdfId}, JobId={JobId}, {Size} bytes) queued for processing",
+                    fileName, entry.Title, gameId, pdfEntity.Id, jobEntity.Id, result.FileSizeBytes);
             }
             catch (Exception ex)
             {

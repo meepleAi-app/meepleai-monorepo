@@ -148,6 +148,13 @@ export default defineConfig({
       use: {
         ...devices['Desktop Safari'],
         viewport: { width: 1920, height: 1080 },
+        // Override top-level chromium launchOptions — webkit does not accept
+        // `--no-sandbox` etc. Without this, ubuntu CI runners fail with
+        // "Unknown option --no-sandbox". Consistency with mobile-safari below.
+        // Epic library-to-game post-review M2.
+        launchOptions: {
+          args: [],
+        },
       },
     },
 
@@ -165,6 +172,12 @@ export default defineConfig({
       use: {
         ...devices['iPhone 13'],
         viewport: { width: 390, height: 844 },
+        // Override top-level chromium launchOptions — webkit does not accept
+        // `--no-sandbox` etc. Without this, ubuntu runners fail with
+        // "Unknown option --no-sandbox". Epic library-to-game T2.
+        launchOptions: {
+          args: [],
+        },
       },
     },
 

@@ -8,8 +8,8 @@
 
 import { RequireRole } from '@/components/auth/RequireRole';
 
-import { DashboardClient } from './dashboard-client';
 import { DashboardMobile } from './dashboard-mobile';
+import { DashboardClient } from './DashboardClient';
 
 import type { Metadata } from 'next';
 

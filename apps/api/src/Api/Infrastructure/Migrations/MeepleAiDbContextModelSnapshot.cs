@@ -10004,6 +10004,12 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int>("GameDataStatus")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("HasKnowledgeBase")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("has_knowledge_base");
+
                     b.Property<bool>("HasUploadedPdf")
                         .HasColumnType("boolean");
 
@@ -10097,6 +10103,10 @@ namespace Api.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_shared_games_bgg_id")
                         .HasFilter("bgg_id IS NOT NULL");
+
+                    b.HasIndex("HasKnowledgeBase")
+                        .HasDatabaseName("ix_shared_games_has_knowledge_base")
+                        .HasFilter("has_knowledge_base = true");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_shared_games_status")

@@ -6,6 +6,19 @@ import type { ComponentType } from 'react';
 
 // ─── Data Display ─────────────────────────────────────────────────────────────
 
+import { ChatRecentCards } from '@/app/(authenticated)/dashboard/sections/ChatRecentCards';
+import { ContinueCarousel } from '@/app/(authenticated)/dashboard/sections/ContinueCarousel';
+import { FriendsRow } from '@/app/(authenticated)/dashboard/sections/FriendsRow';
+import { GreetingRow } from '@/app/(authenticated)/dashboard/sections/GreetingRow';
+import { HeroLiveSession } from '@/app/(authenticated)/dashboard/sections/HeroLiveSession';
+import { KpiStrip } from '@/app/(authenticated)/dashboard/sections/KpiStrip';
+import { CatalogCarouselSection } from '@/app/(authenticated)/library/sections/CatalogCarouselSection';
+import { ContinuePlayingSection } from '@/app/(authenticated)/library/sections/ContinuePlayingSection';
+import { LibraryFilterBar } from '@/app/(authenticated)/library/sections/LibraryFilterBar';
+import { LibraryHeader } from '@/app/(authenticated)/library/sections/LibraryHeader';
+import { LibraryHubCarousel } from '@/app/(authenticated)/library/sections/LibraryHubCarousel';
+import { PersonalLibrarySection } from '@/app/(authenticated)/library/sections/PersonalLibrarySection';
+import { WishlistCarouselSection } from '@/app/(authenticated)/library/sections/WishlistCarouselSection';
 import { ActivityFeed } from '@/components/admin/ActivityFeed';
 import { ActivityFeed as ActivityTimeline } from '@/components/admin/ActivityFeed';
 import { AgentBuilderHeader } from '@/components/admin/agent-builder/AgentBuilderHeader';
@@ -110,11 +123,21 @@ import { ActivityTable } from '@/components/admin/users/activity-table';
 import { InlineRoleSelect } from '@/components/admin/users/InlineRoleSelect';
 import { PermissionsMatrix } from '@/components/admin/users/permissions-matrix';
 import { RoleCard } from '@/components/admin/users/role-card';
+import { ChatCitationCard } from '@/components/chat/panel/ChatCitationCard';
+import { ChatContextSwitcher } from '@/components/chat/panel/ChatContextSwitcher';
+import { ChatInputBar } from '@/components/chat/panel/ChatInputBar';
+import { ChatMainArea } from '@/components/chat/panel/ChatMainArea';
+import { ChatMessageBubble } from '@/components/chat/panel/ChatMessageBubble';
+import { ChatPanelHeader } from '@/components/chat/panel/ChatPanelHeader';
+import { ChatSidebar } from '@/components/chat/panel/ChatSidebar';
+import { HandRailItem } from '@/components/layout/UserShell/HandRailItem';
+import { HandRailToolbar } from '@/components/layout/UserShell/HandRailToolbar';
+import { TopBarChatButton } from '@/components/layout/UserShell/TopBarChatButton';
+import { TopBarLogo } from '@/components/layout/UserShell/TopBarLogo';
+import { TopBarSearchPill } from '@/components/layout/UserShell/TopBarSearchPill';
 import { AdminConfirmationDialog } from '@/components/ui/admin/admin-confirmation-dialog';
-import { AgentStatsDisplay } from '@/components/ui/agent/AgentStatsDisplay';
 import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
 import { FadeIn } from '@/components/ui/animations/FadeIn';
-import { PageTransition } from '@/components/ui/animations/PageTransition';
 import { StaggerChildren } from '@/components/ui/animations/StaggerChildren';
 import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 import { Accordion } from '@/components/ui/data-display/accordion';
@@ -346,7 +369,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   // Animations
   'fade-in': FadeIn,
   // 'modal-animations': skipped — exports animation variant objects, not a React component
-  'page-transition': PageTransition,
   'stagger-children': StaggerChildren,
 
   // Tags
@@ -368,7 +390,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'motion-button': MotionButton,
 
   // Agent
-  'agent-stats-display': AgentStatsDisplay,
   'agent-status-badge': AgentStatusBadge,
 
   // Icons & Background
@@ -511,4 +532,37 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'bulk-actions-toolbar': BulkActionsToolbar,
   'service-health-matrix': ServiceHealthMatrix,
   'ai-models-table': AiModelsTable,
+
+  // Desktop UX Redesign — Shell atomics
+  'top-bar-logo': TopBarLogo,
+  'top-bar-search-pill': TopBarSearchPill,
+  'top-bar-chat-button': TopBarChatButton,
+  'hand-rail-item': HandRailItem,
+  'hand-rail-toolbar': HandRailToolbar,
+
+  // Desktop UX Redesign — Dashboard sections
+  'greeting-row': GreetingRow,
+  'hero-live-session': HeroLiveSession,
+  'kpi-strip': KpiStrip,
+  'continue-carousel': ContinueCarousel,
+  'chat-recent-cards': ChatRecentCards,
+  'friends-row': FriendsRow,
+
+  // Desktop UX Redesign — Library Hub sections
+  'library-header': LibraryHeader,
+  'library-filter-bar': LibraryFilterBar,
+  'library-hub-carousel': LibraryHubCarousel,
+  'personal-library-section': PersonalLibrarySection,
+  'catalog-carousel-section': CatalogCarouselSection,
+  'wishlist-carousel-section': WishlistCarouselSection,
+  'continue-playing-section': ContinuePlayingSection,
+
+  // Desktop UX Redesign — Chat slide-over panel
+  'chat-panel-header': ChatPanelHeader,
+  'chat-context-switcher': ChatContextSwitcher,
+  'chat-message-bubble': ChatMessageBubble,
+  'chat-citation-card-panel': ChatCitationCard,
+  'chat-input-bar': ChatInputBar,
+  'chat-sidebar': ChatSidebar,
+  'chat-main-area': ChatMainArea,
 };

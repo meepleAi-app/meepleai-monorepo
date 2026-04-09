@@ -1,7 +1,6 @@
 /**
  * Tests for Private Games Page
  * Issue #4052: Verify RequireRole protection
- * Issue #4055: Updated for LibraryNavTabs integration
  */
 
 import { render, screen } from '@testing-library/react';
@@ -29,12 +28,6 @@ vi.mock('@/actions/auth', () => ({
 // Mock PrivateGamesClient to isolate page-level testing
 vi.mock('../PrivateGamesClient', () => ({
   default: () => <div data-testid="private-games-client">Private Games</div>,
-}));
-
-// Mock LibraryNavTabs to isolate page-level testing (Issue #4055)
-// Must use direct file path since page.tsx imports from @/components/library/LibraryNavTabs directly
-vi.mock('@/components/library/LibraryNavTabs', () => ({
-  LibraryNavTabs: () => <div data-testid="library-nav-tabs">Nav Tabs</div>,
 }));
 
 const mockGetCurrentUser = getCurrentUser as Mock;

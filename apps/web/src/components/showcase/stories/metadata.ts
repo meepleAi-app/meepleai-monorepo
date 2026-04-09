@@ -160,17 +160,6 @@ export const STORY_METADATA: StoryMeta[] = [
     presetCount: 4,
   },
 
-  // ─── Animations ────────────────────────────────────────────────────────────
-  {
-    id: 'page-transition',
-    title: 'PageTransition',
-    category: 'Animations',
-    description:
-      'Smooth page transitions via Framer Motion. Pilot active in (chat) layout behind NEXT_PUBLIC_ENABLE_PAGE_TRANSITIONS flag.',
-    controlCount: 1,
-    presetCount: 3,
-  },
-
   // ─── Forms ─────────────────────────────────────────────────────────────────
   {
     id: 'button',
@@ -288,7 +277,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'MeepleAvatar',
     category: 'Meeple',
     description:
-      '[ORPHAN] Animated meeple AI assistant with 5 states. Transitively orphan via ChatMessage.',
+      'Animated meeple AI assistant with 5 states. Used by ChatMessage via ChatMessageList.',
     controlCount: 2,
     presetCount: 5,
   },
@@ -305,7 +294,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'ChatMessage',
     category: 'Meeple',
     description:
-      '[ORPHAN] Message bubble with role/confidence/feedback. ChatMessageList renders inline instead — refactor pending.',
+      'Message bubble with role-based layout, confidence badge, and feedback buttons. Composed by ChatMessageList via toChatMessageProps adapter.',
     controlCount: 5,
     presetCount: 4,
   },
@@ -317,15 +306,6 @@ export const STORY_METADATA: StoryMeta[] = [
     category: 'Agent',
     description: 'Color-coded badge indicating agent operational status with optional label.',
     controlCount: 2,
-    presetCount: 4,
-  },
-  {
-    id: 'agent-stats-display',
-    title: 'AgentStatsDisplay',
-    category: 'Agent',
-    description:
-      '[ORPHAN] Compact horizontal agent metadata. AgentCharacterSheet uses a custom RPG layout instead — not interchangeable.',
-    controlCount: 4,
     presetCount: 4,
   },
   {

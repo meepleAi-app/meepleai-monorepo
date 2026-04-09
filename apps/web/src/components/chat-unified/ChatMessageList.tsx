@@ -173,7 +173,11 @@ export function ChatMessageList({
             const showFeedback = msg.role === 'assistant' && !!gameId && !!threadId;
 
             return (
-              <div key={msg.id} data-testid={`message-${msg.role}`}>
+              <div
+                key={msg.id}
+                data-testid={`message-${msg.role}`}
+                className={msg.role === 'user' ? 'ml-auto' : 'mr-auto'}
+              >
                 {/* Core message bubble (role/content/timestamp/avatar/feedback) */}
                 <ChatMessage
                   {...toChatMessageProps(msg, {

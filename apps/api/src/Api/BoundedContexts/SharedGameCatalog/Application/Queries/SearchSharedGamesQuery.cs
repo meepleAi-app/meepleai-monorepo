@@ -22,5 +22,6 @@ internal record SearchSharedGamesQuery(
     int PageNumber = 1,
     int PageSize = 20,
     string SortBy = "Title",
-    bool SortDescending = false
+    bool SortDescending = false,
+    bool? HasKnowledgeBase = null // S2 (library-to-game epic) — filter for AI-ready games
 ) : IQuery<PagedResult<SharedGameDto>>;

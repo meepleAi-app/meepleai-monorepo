@@ -17,6 +17,7 @@ import { api, ApiError } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { getLocalizedError, type LocalizedError, successMessages } from '@/lib/i18n/errors';
 import { logger } from '@/lib/logger';
+import { clearViewModeCookie } from '@/lib/view-mode/cookie';
 import type { AuthUser } from '@/types';
 
 // ============================================================================
@@ -228,6 +229,10 @@ export async function logoutAction(): Promise<AuthActionState> {
   try {
     await api.auth.logout();
 
+    // Clear client-side view mode cookie. HttpOnly auth cookies are cleared
+    // by the server in api.auth.logout(); this handles the extra UX preference cookie.
+    clearViewModeCookie();
+
     // Force complete reload to clear middleware session cache and all client state
     // This bypasses the middleware's 2-minute session validation cache
     if (typeof window !== 'undefined') {
@@ -244,6 +249,9 @@ export async function logoutAction(): Promise<AuthActionState> {
       error instanceof Error ? error : new Error(String(error)),
       createErrorContext('AuthActions', 'logoutAction', { operation: 'logout' })
     );
+
+    // Even on error, clear the view mode cookie before reload.
+    clearViewModeCookie();
 
     // Even if API call fails, force reload to clear client state
     // User can't remain logged in if server rejected logout

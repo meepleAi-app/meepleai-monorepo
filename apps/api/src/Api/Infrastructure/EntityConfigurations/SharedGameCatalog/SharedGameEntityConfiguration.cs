@@ -114,6 +114,12 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .IsRequired()
             .HasDefaultValue(false);
 
+        // S2 (library-to-game epic) — denormalized KB flag for catalog filter
+        builder.Property(e => e.HasKnowledgeBase)
+            .HasColumnName("has_knowledge_base")
+            .IsRequired()
+            .HasDefaultValue(false);
+
         // Optimistic concurrency (spec-panel C-3)
         builder.Property(e => e.RowVersion)
             .HasColumnName("row_version")
@@ -141,6 +147,11 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
         builder.HasIndex(e => e.Title)
             .HasDatabaseName("ix_shared_games_title")
             .HasFilter("is_deleted = false");
+
+        // S2 — partial index on the small "AI-ready" subset for the catalog filter
+        builder.HasIndex(e => e.HasKnowledgeBase)
+            .HasDatabaseName("ix_shared_games_has_knowledge_base")
+            .HasFilter("has_knowledge_base = true");
 
         // Note: SearchVector index will be added manually in migration with tsvector type
 

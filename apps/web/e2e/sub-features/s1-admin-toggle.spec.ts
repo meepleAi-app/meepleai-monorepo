@@ -6,9 +6,42 @@
  *
  * Related spec: docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.1
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 import { loginAsAdmin } from '../fixtures/auth';
+
+// Real UUID for the admin user — AuthUserSchema.id requires z.string().uuid()
+// The shared setupMockAuth fixture uses "admin-test-id" which fails Zod validation,
+// causing useCurrentUser() to return null and ViewModeToggle to not render.
+// S1 needs a real UUID because isAdminRole(currentUser?.role) gates the toggle.
+const ADMIN_UUID = '00000000-0000-4000-8000-000000000001';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+
+/**
+ * Override /api/v1/auth/me to return a schema-valid admin user with a real UUID.
+ * Must be called AFTER loginAsAdmin (which sets up the base mocks) so this route
+ * handler takes precedence.
+ */
+async function overrideAuthMeWithValidUuid(page: Page): Promise<void> {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user: {
+          id: ADMIN_UUID,
+          email: 'admin@meepleai.dev',
+          displayName: 'Test Admin',
+          role: 'Admin',
+          onboardingCompleted: true,
+          onboardingSkipped: false,
+        },
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }),
+    });
+  });
+}
 
 test.describe('S1 · Admin↔User view mode toggle', () => {
   test.beforeEach(async ({ context }) => {
@@ -23,6 +56,7 @@ test.describe('S1 · Admin↔User view mode toggle', () => {
 
   test('toggle is visible for admin users on user home', async ({ page }) => {
     await loginAsAdmin(page);
+    await overrideAuthMeWithValidUuid(page);
     await page.goto('/');
 
     const toggle = page.getByTestId('view-mode-toggle');
@@ -34,6 +68,7 @@ test.describe('S1 · Admin↔User view mode toggle', () => {
 
   test('toggle is visible on admin dashboard', async ({ page }) => {
     await loginAsAdmin(page);
+    await overrideAuthMeWithValidUuid(page);
     await page.goto('/admin/overview');
 
     const toggle = page.getByTestId('view-mode-toggle');
@@ -45,6 +80,7 @@ test.describe('S1 · Admin↔User view mode toggle', () => {
 
   test('clicking toggle from admin redirects to user shell', async ({ page }) => {
     await loginAsAdmin(page);
+    await overrideAuthMeWithValidUuid(page);
     await page.goto('/admin/overview');
 
     const toggle = page.getByTestId('view-mode-toggle');
@@ -57,6 +93,7 @@ test.describe('S1 · Admin↔User view mode toggle', () => {
 
   test('cookie is set after clicking toggle', async ({ page, context }) => {
     await loginAsAdmin(page);
+    await overrideAuthMeWithValidUuid(page);
     await page.goto('/admin/overview');
 
     await page.getByTestId('view-mode-toggle').click();
@@ -94,6 +131,7 @@ test.describe('S1 · Admin↔User view mode toggle', () => {
 
   test('toggle returns to admin when clicked from user shell', async ({ page }) => {
     await loginAsAdmin(page);
+    await overrideAuthMeWithValidUuid(page);
     await page.goto('/');
 
     const toggle = page.getByTestId('view-mode-toggle');

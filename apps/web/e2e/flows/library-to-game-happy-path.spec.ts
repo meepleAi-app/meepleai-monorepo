@@ -12,12 +12,38 @@
  *
  * Reference: docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.6
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 import { loginAsAdmin } from '../fixtures/auth';
 
 // Screenshot base directory — uploaded as CI artifact
 const SCREENSHOT_DIR = 'test-results/library-to-game-happy-path';
+
+// Real UUID required by AuthUserSchema.id (shared setupMockAuth uses a non-UUID
+// placeholder that fails Zod validation, causing useCurrentUser → null and
+// ViewModeToggle to not render). Override /api/v1/auth/me in these tests.
+const ADMIN_UUID = '00000000-0000-4000-8000-000000000001';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+
+async function overrideAuthMeWithValidUuid(page: Page): Promise<void> {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user: {
+          id: ADMIN_UUID,
+          email: 'admin@meepleai.dev',
+          displayName: 'Test Admin',
+          role: 'Admin',
+          onboardingCompleted: true,
+          onboardingSkipped: false,
+        },
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }),
+    });
+  });
+}
 
 test.describe('Library-to-Game happy path', () => {
   test('admin → user → library → filter → add → game page', async ({ page, context }, testInfo) => {
@@ -92,6 +118,7 @@ test.describe('Library-to-Game happy path', () => {
     if (keep.length > 0) await context.addCookies(keep);
 
     await loginAsAdmin(page);
+    await overrideAuthMeWithValidUuid(page);
     await page.goto('/admin/overview');
 
     const toggle = page.getByTestId('view-mode-toggle');

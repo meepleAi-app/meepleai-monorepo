@@ -6,6 +6,7 @@
  * - Sessions page with paused sessions
  * - Scoreboard page
  * - Happy path wizard → session creation → live page (Issue #301)
+ * - Lifecycle pause → resume → final save on the live page (Issue #323)
  *
  * Uses mock API routes via page.context().route() (CRITICAL for Next.js SSR).
  * SSR pages may bypass browser-side mocks — assertions use .first() and
@@ -195,6 +196,284 @@ test.describe('Game Night Journey', () => {
     });
     await expect(page.getByText('Alice').first()).toBeVisible();
     await expect(page.getByText('Bob').first()).toBeVisible();
+  });
+
+  // ==========================================================================
+  // Issue #323: Session lifecycle — pause → resume → final save
+  //
+  // Extends the journey by exercising the save-complete dialog + resume toggle
+  // after the user lands on /sessions/{id}/play.
+  //
+  // Flow under test:
+  //   1. Open live session page with a running session
+  //   2. Click the "Pausa" quick-action → save-complete dialog opens
+  //   3. Confirm → POST /save-complete → success panel → close → status=Paused
+  //   4. Click the "Riprendi" quick-action → POST /resume → status=InProgress
+  //   5. Click "Pausa" again + save again → final save confirmed
+  //
+  // Mock boundary: REST endpoints only. Zustand store transitions, the
+  // SaveCompleteDialog state machine, and the Pause/Resume toggle in
+  // QuickActions all run for real.
+  //
+  // Out of scope:
+  //   - SSE diary assertions (see #324)
+  //   - Autosave indicator + score persistence (see #325)
+  //   - The `/complete` endpoint: LiveSessionView (rendered by /play) exposes
+  //     no finalize button. The sibling /sessions/{id}/page.tsx and
+  //     play-mode-mobile.tsx DO wire completeSession(), but they are out of
+  //     the /play + desktop-chrome test surface covered here.
+  // ==========================================================================
+
+  test('lifecycle: pause → resume → final save on live session page', async ({ page }) => {
+    const LIFECYCLE_CONSTANTS = {
+      INDEXED_GAME_ID: '22222222-2222-4222-8222-222222222222',
+      SESSION_ID: '66666666-6666-4666-8666-666666666666',
+      PLAYER_ID_1: '77777777-7777-4777-8777-777777777771',
+      PLAYER_ID_2: '77777777-7777-4777-8777-777777777772',
+      USER_ID: '88888888-8888-4888-8888-888888888888',
+    } as const;
+
+    const saveCompleteCalls: number[] = [];
+    const resumeCalls: number[] = [];
+
+    // ─── Hydration mock: mutable status, flips Paused ⇄ InProgress ─────────
+    // Defensive only. In the current codebase, loadSession() in
+    // sessions/[id]/layout.tsx runs exactly once on mount, and subsequent
+    // status transitions are driven by optimistic Zustand updates
+    // (resumeSession/success in session-store.ts, handleSaveComplete in
+    // LiveSessionView.tsx). There is NO subsequent GET /{id} refetch, so
+    // this mutable mirror never load-bears on the assertion flow.
+    //
+    // We keep it in case a future re-focus/refetch hook is added — if that
+    // happens and this mirror is not updated, the hydration GET would return
+    // stale 'InProgress' after pause and break the label-flip assertions.
+    let currentStatus: 'InProgress' | 'Paused' = 'InProgress';
+    const nowIso = new Date().toISOString();
+
+    const buildSessionDto = (status: 'InProgress' | 'Paused') => ({
+      id: LIFECYCLE_CONSTANTS.SESSION_ID,
+      sessionCode: 'LIFE01',
+      gameId: LIFECYCLE_CONSTANTS.INDEXED_GAME_ID,
+      gameName: 'Catan',
+      createdByUserId: LIFECYCLE_CONSTANTS.USER_ID,
+      status,
+      visibility: 'Private',
+      groupId: null,
+      createdAt: nowIso,
+      startedAt: nowIso,
+      pausedAt: status === 'Paused' ? nowIso : null,
+      completedAt: null,
+      updatedAt: nowIso,
+      lastSavedAt: status === 'Paused' ? nowIso : null,
+      currentTurnIndex: 0,
+      currentTurnPlayerId: LIFECYCLE_CONSTANTS.PLAYER_ID_1,
+      agentMode: 'None',
+      chatSessionId: null,
+      notes: null,
+      players: [
+        {
+          id: LIFECYCLE_CONSTANTS.PLAYER_ID_1,
+          userId: LIFECYCLE_CONSTANTS.USER_ID,
+          displayName: 'Alice',
+          avatarUrl: null,
+          color: 'Red',
+          role: 'Host',
+          teamId: null,
+          totalScore: 0,
+          currentRank: 1,
+          joinedAt: nowIso,
+          isActive: true,
+        },
+        {
+          id: LIFECYCLE_CONSTANTS.PLAYER_ID_2,
+          userId: null,
+          displayName: 'Bob',
+          avatarUrl: null,
+          color: 'Blue',
+          role: 'Player',
+          teamId: null,
+          totalScore: 0,
+          currentRank: 2,
+          joinedAt: nowIso,
+          isActive: true,
+        },
+      ],
+      teams: [],
+      roundScores: [],
+      scoringConfig: {
+        enabledDimensions: [],
+        dimensionUnits: {},
+      },
+    });
+
+    // ─── Route registration order matters ─────────────────────────────────
+    // Playwright's route matcher evaluates handlers in LIFO order (the most
+    // recently registered wins). Register the broad catch-all FIRST and the
+    // specific endpoints LAST so specific routes take priority.
+
+    // Catch-all sub-routes (scores, activity, etc.) — registered first so it
+    // loses against the specific routes below. Only fulfills GETs.
+    await page
+      .context()
+      .route(`**/api/v1/live-sessions/${LIFECYCLE_CONSTANTS.SESSION_ID}/**`, route => {
+        if (route.request().method() === 'GET') {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: '[]',
+          });
+        }
+        return route.continue();
+      });
+
+    // Session hydration GET /{id} — mutable status reflects pause/resume state
+    await page
+      .context()
+      .route(`**/api/v1/live-sessions/${LIFECYCLE_CONSTANTS.SESSION_ID}`, route => {
+        if (route.request().method() === 'GET') {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(buildSessionDto(currentStatus)),
+          });
+        }
+        return route.continue();
+      });
+
+    // resume-context (GET): LiveSessionView queries it eagerly; return empty recap
+    await page
+      .context()
+      .route(`**/api/v1/live-sessions/${LIFECYCLE_CONSTANTS.SESSION_ID}/resume-context`, route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            sessionId: LIFECYCLE_CONSTANTS.SESSION_ID,
+            gameTitle: 'Catan',
+            lastSnapshotIndex: 0,
+            currentTurn: 0,
+            currentPhase: null,
+            pausedAt: nowIso,
+            recap: '',
+            playerScores: [],
+            photos: [],
+          }),
+        })
+      );
+
+    // POST /resume → 200 void + flip mutable status
+    await page
+      .context()
+      .route(`**/api/v1/live-sessions/${LIFECYCLE_CONSTANTS.SESSION_ID}/resume`, route => {
+        if (route.request().method() === 'POST') {
+          resumeCalls.push(Date.now());
+          currentStatus = 'InProgress';
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: '{}',
+          });
+        }
+        return route.continue();
+      });
+
+    // save-complete → returns SessionSaveResult (schema in save-resume.schemas.ts).
+    // snapshotIndex increments per call to validate "final save" is a second call.
+    // REGISTERED LAST so it wins against the catch-all handler above.
+    await page
+      .context()
+      .route(`**/api/v1/live-sessions/${LIFECYCLE_CONSTANTS.SESSION_ID}/save-complete`, route => {
+        if (route.request().method() === 'POST') {
+          const snapshotIndex = saveCompleteCalls.length + 1;
+          saveCompleteCalls.push(Date.now());
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              sessionId: LIFECYCLE_CONSTANTS.SESSION_ID,
+              snapshotIndex,
+              recap: `Riepilogo partita, snapshot #${snapshotIndex}`,
+              photoCount: 0,
+              savedAt: new Date().toISOString(),
+            }),
+          });
+        }
+        return route.continue();
+      });
+
+    // Block SignalR negotiate to prevent retry storms
+    await page.context().route('**/hubs/game-state/**', route => route.abort('failed'));
+
+    // ─── Navigate directly to the live play page ──────────────────────────
+    await page.goto(`/sessions/${LIFECYCLE_CONSTANTS.SESSION_ID}/play`);
+    await page.waitForLoadState('domcontentloaded');
+
+    // Wait for the play page to hydrate with Catan + Alice visible
+    await expect(page.getByRole('heading', { name: 'Catan', level: 1 }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByText('Alice').first()).toBeVisible();
+
+    // ─── Step 1: Pause via save-complete flow ──────────────────────────────
+    const pauseBtn = page.getByTestId('quick-action-pause');
+    await expect(pauseBtn).toBeVisible();
+    // Initial label is "Pausa" (isPaused=false)
+    await expect(pauseBtn).toContainText(/pausa/i);
+    await pauseBtn.click();
+
+    // Dialog opens in "confirm" phase
+    await expect(page.getByTestId('save-complete-dialog')).toBeVisible();
+    const confirmSaveBtn = page.getByTestId('save-complete-confirm');
+    await expect(confirmSaveBtn).toBeVisible();
+    await confirmSaveBtn.click();
+
+    // Success panel appears after POST /save-complete resolves
+    await expect(page.getByTestId('save-complete-success')).toBeVisible({ timeout: 5_000 });
+    // (Defensive) Mirror the status flip that handleSaveComplete in
+    // LiveSessionView.tsx will apply AFTER the user clicks "Chiudi" on the
+    // success panel. The actual store transition happens a few lines below
+    // when save-complete-close is clicked — we set it here so any future
+    // hydration refetch (see note on currentStatus declaration) sees 'Paused'.
+    currentStatus = 'Paused';
+
+    // Close dialog → returns to live view with status=Paused
+    await page.getByTestId('save-complete-close').click();
+    await expect(page.getByTestId('save-complete-dialog')).not.toBeVisible();
+
+    // Assert first save happened
+    expect(saveCompleteCalls.length).toBe(1);
+
+    // ─── Step 2: Resume via the same button (now labeled "Riprendi") ──────
+    // isPaused flipped in the store → the pause button re-renders with label "Riprendi"
+    const resumeBtn = page.getByTestId('quick-action-pause');
+    await expect(resumeBtn).toContainText(/riprendi/i, { timeout: 5_000 });
+    await resumeBtn.click();
+
+    // POST /resume should be called exactly once
+    await expect
+      .poll(() => resumeCalls.length, { timeout: 5_000, message: 'resume endpoint not called' })
+      .toBe(1);
+
+    // After resume, the button label flips back to "Pausa"
+    await expect(page.getByTestId('quick-action-pause')).toContainText(/pausa/i, {
+      timeout: 5_000,
+    });
+
+    // ─── Step 3: Final save — second pause/save cycle ─────────────────────
+    await page.getByTestId('quick-action-pause').click();
+    await expect(page.getByTestId('save-complete-dialog')).toBeVisible();
+    await page.getByTestId('save-complete-confirm').click();
+
+    // Second save result: snapshotIndex should now be 2
+    await expect(page.getByTestId('save-complete-success')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId('save-complete-success')).toContainText(/snapshot/i);
+
+    // Validate the second POST hit the server
+    expect(saveCompleteCalls.length).toBe(2);
+
+    // Close the final dialog
+    await page.getByTestId('save-complete-close').click();
+    await expect(page.getByTestId('save-complete-dialog')).not.toBeVisible();
   });
 
   test('scoreboard page renders with player data', async ({ page }) => {

@@ -59,11 +59,12 @@ fi
 
 # 6. Backend (dotnet watch) if requested
 if [ "${DEV_BACKEND:-false}" = "true" ]; then
-  log "Starting backend (dotnet watch)..."
+  log "Starting backend (dotnet watch) on http://localhost:8080..."
   (
     cd "$REPO_ROOT/apps/api/src/Api"
     DOTNET_USE_POLLING_FILE_WATCHER=true \
     ASPNETCORE_ENVIRONMENT=Development \
+    ASPNETCORE_URLS="http://localhost:8080" \
       dotnet watch run --no-launch-profile \
       >> "$INFRA_DIR/dotnet-watch.log" 2>&1 &
     echo "dotnet:$!" >> "$PIDS_FILE"

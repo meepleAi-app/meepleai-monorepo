@@ -103,3 +103,64 @@ Actions:
 1. Close GitHub issue #293 with rationale comment linking to this doc
 2. Mark `PageTransition.tsx` for deletion in a follow-up cleanup ticket
 3. Update `orphan-components-integration-plan.md` to remove #293 from backlog
+
+---
+
+## Implementation Status (2026-04-09)
+
+### ✅ Integration shipped (flag OFF by default)
+
+- **PR #304** merged Wave 8. `PageTransition` imported into `(chat)/layout.tsx`, gated by `NEXT_PUBLIC_ENABLE_PAGE_TRANSITIONS=true` feature flag.
+- Flag defaults to **false** in production. Zero user-visible impact until explicitly enabled.
+- Component promoted from `@status ORPHAN` — has real consumer now (the gated layout).
+
+### 🚧 Rollout gates — blocked (Track C of follow-up plan v2.1)
+
+Follow-up plan v2.1 defined **5 gates** required before production rollout:
+
+| Gate | Required | Status | Blocker |
+|---|---|---|---|
+| **Manual QA** (5 test cases) | Human tester on staging | ⏸ Not started | Requires staging SSH + UX owner |
+| **Lighthouse delta** (perf ≤ -5pt, LCP ≤ +100ms, FCP ≤ +50ms, CLS ≤ +0.05) | Local A/B build + `npx lighthouse` | ⏸ Not attempted | Requires local Chrome headless + full build cycle; skipped in autonomous mode to avoid noisy/partial data |
+| **Hydration check** (20 navigations, zero console warnings) | Human in browser DevTools | ⏸ Not started | Requires human interaction |
+| **Error budget** (Sentry `/chat` ≤ baseline + 5% over 24h) | Clock-time gate (24h observation) | ⏸ Not started | Requires staging deploy + 24h wall-clock |
+| **UX sign-off** (named UX motion owner approves visual feel) | Human decision | ⏸ **BLOCKED** | No UX motion owner documented — see meta-ticket **#318** |
+
+### 📋 Meta-ticket filed
+
+**GitHub issue #318** — "meta: establish UX motion owner for PageTransition rollout (#293)"
+
+Filed during autonomous execution. Requests assignment of a named UX designer / product owner / frontend lead who can:
+1. Review this decision doc
+2. Sign off on the 5 manual QA test cases + Lighthouse thresholds
+3. Approve production rollout or request changes
+
+### 🔀 Alternative: Path D (decline + delete)
+
+If no owner can be assigned within a reasonable timeframe, the plan's fallback is to **remove PageTransition entirely** (YAGNI — same principle applied to AgentStatsDisplay in #317):
+
+1. Delete `apps/web/src/components/ui/animations/PageTransition.tsx`
+2. Revert the `(chat)/layout.tsx` wrapping from #304
+3. Close #293 as `wontfix`
+4. Update #318 with "declined" comment
+
+This is the **default action** if #318 is not resolved.
+
+### 📊 Current state summary
+
+| Aspect | State |
+|---|---|
+| Component | ✅ Shipped (orphan status removed in Track A completion #320) |
+| Feature flag | ⚠️ Defaults OFF in production |
+| Used in layout | ✅ `(chat)/layout.tsx` (conditional) |
+| User-visible | ❌ Not yet (flag OFF) |
+| Rollout unblocked? | ❌ Blocked on #318 |
+
+### Next action
+
+**Resolve meta-ticket #318 or apply Path D.** No further autonomous work possible on Track C.
+
+**Signed (Track C status):** autonomous execution agent
+**Date:** 2026-04-09
+**Related PRs:** #304 (integration), #314 (Track A partial), #320 (Track A completion)
+**Related issues:** #293, #318

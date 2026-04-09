@@ -1,7 +1,10 @@
 import Ajv2020, { type ErrorObject } from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 
-import scenarioSchema from '../../../../docs/superpowers/fixtures/schema/scenario.schema.json';
+// Schema lives both in docs/superpowers/fixtures/schema/ (canonical) and here
+// (apps/web/src/dev-tools/schema/) because Turbopack does not reliably resolve
+// deep relative imports crossing package boundaries at runtime.
+import scenarioSchema from './schema/scenario.schema.json';
 
 import type { Scenario } from './types';
 

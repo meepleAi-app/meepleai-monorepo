@@ -7,11 +7,13 @@ import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useGames } from '@/hooks/queries/useGames';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useChatPanel } from '@/hooks/useChatPanel';
+import { useEmbeddingStatus } from '@/hooks/useEmbeddingStatus';
+import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
 import type { Game } from '@/lib/api/schemas/games.schemas';
 
-import { ChatContextSwitcher } from './ChatContextSwitcher';
+import { ChatContextSwitcher, type AvailableGame } from './ChatContextSwitcher';
 import { ChatMainArea, type ChatMessage } from './ChatMainArea';
 import { ChatPanelHeader } from './ChatPanelHeader';
 import { ChatSidebar, type ChatRecentItem, type ChatKbGame } from './ChatSidebar';
@@ -72,6 +74,7 @@ function gameToKbGame(game: Game): ChatKbGame {
 
 export function ChatSlideOverPanel() {
   const { isOpen, gameContext, close, setGameContext } = useChatPanel();
+  const { toast } = useToast();
 
   // Local chat state — lives on the component so the store stays pure UI
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -89,6 +92,14 @@ export function ChatSlideOverPanel() {
     enabled: !!gameContext?.id,
   });
   const agentId = gameAgents?.[0]?.id ?? null;
+
+  // Live KB status for the selected game
+  const { isReady: kbIsReady, data: kbStatusData } = useEmbeddingStatus(gameContext?.id ?? null, {
+    enabled: !!gameContext?.id,
+  });
+  const liveKbStatus: 'ready' | 'indexing' =
+    kbStatusData?.status === 'Completed' || kbIsReady ? 'ready' : 'indexing';
+  const enrichedGameContext = gameContext ? { ...gameContext, kbStatus: liveKbStatus } : null;
 
   // SSE streaming
   const stream = useAgentChatStream({
@@ -213,7 +224,11 @@ export function ChatSlideOverPanel() {
         setMessages(mapped);
         stream.reset();
       } catch {
-        // Failure is surfaced via the stream error UI on next send
+        toast({
+          title: 'Errore caricamento chat',
+          description: 'Non è stato possibile caricare la conversazione.',
+          variant: 'destructive',
+        });
       }
     },
     [stream]
@@ -238,17 +253,19 @@ export function ChatSlideOverPanel() {
     [gamesResponse, setGameContext, stream]
   );
 
-  // Game picker reuses the KB games list; ChatContextSwitcher calls this on click.
-  // For now it simply cycles to the next available game — a real dropdown is a
-  // polish item separate from the wiring work in this PR.
-  const handlePickGame = useCallback(() => {
-    if (!gamesResponse || gamesResponse.games.length === 0) return;
-    const currentIndex = gameContext
-      ? gamesResponse.games.findIndex(g => g.id === gameContext.id)
-      : -1;
-    const nextIndex = (currentIndex + 1) % gamesResponse.games.length;
-    handleSelectGame(gamesResponse.games[nextIndex].id);
-  }, [gamesResponse, gameContext, handleSelectGame]);
+  // Game picker: called by ChatContextSwitcher dropdown with the selected gameId.
+  const handlePickGame = useCallback(
+    (gameId: string) => {
+      if (gameId) handleSelectGame(gameId);
+    },
+    [handleSelectGame]
+  );
+
+  // Games list passed to ChatContextSwitcher dropdown.
+  const availableGames: AvailableGame[] = useMemo(
+    () => (gamesResponse?.games ?? []).map(g => ({ id: g.id, name: g.title })),
+    [gamesResponse]
+  );
 
   if (!isOpen) return null;
 
@@ -277,13 +294,17 @@ export function ChatSlideOverPanel() {
       >
         <ChatPanelHeader
           subtitle={
-            gameContext?.kbStatus === 'ready'
+            enrichedGameContext?.kbStatus === 'ready'
               ? 'KB pronta · Powered by MeepleAI'
               : 'Powered by MeepleAI'
           }
           onClose={close}
         />
-        <ChatContextSwitcher gameContext={gameContext} onPickGame={handlePickGame} />
+        <ChatContextSwitcher
+          gameContext={enrichedGameContext}
+          onPickGame={handlePickGame}
+          availableGames={availableGames}
+        />
         <div className="flex min-h-0 flex-1">
           <ChatSidebar
             chats={recentChats}
@@ -297,6 +318,7 @@ export function ChatSlideOverPanel() {
             gameName={gameContext?.name}
             suggestedQuestions={suggestedQuestions}
             onSend={handleSend}
+            error={stream.state.error}
           />
         </div>
       </aside>

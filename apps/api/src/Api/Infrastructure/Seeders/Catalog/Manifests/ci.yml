@@ -1,0 +1,50 @@
+version: 1
+profile: dev
+catalog:
+  games:
+  - title: Love Letter
+    bggId: 129622
+    language: en
+    bggEnhanced: false
+    yearPublished: 2012
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 20
+    minAge: 10
+    averageRating: 7.23
+    averageWeight: 1.18
+    publishers:
+    - Z-Man Games
+    pdfBlobKey: rulebooks/v1/love-letter_rulebook.pdf
+    pdfSha256: e6b14614ffa5da73d995eaceefd7ca99e20ea8687b873da9b67ce6f3a5e69655
+    pdfVersion: '1.0'
+  - title: Patchwork
+    bggId: 163412
+    language: en
+    bggEnhanced: false
+    yearPublished: 2014
+    minPlayers: 2
+    maxPlayers: 2
+    playingTime: 30
+    minAge: 8
+    averageRating: 7.58
+    averageWeight: 1.63
+    publishers:
+    - Lookout Games
+    pdfBlobKey: rulebooks/v1/patchwork_rulebook.pdf
+    pdfVersion: '1.0'
+  - title: Jaipur
+    bggId: 54043
+    language: en
+    bggEnhanced: false
+    yearPublished: 2009
+    minPlayers: 2
+    maxPlayers: 2
+    playingTime: 30
+    minAge: 12
+    averageRating: 7.54
+    averageWeight: 1.48
+    publishers:
+    - GameWorks SàRL
+    pdfBlobKey: rulebooks/v1/jaipur_rulebook.pdf
+    pdfVersion: '1.0'

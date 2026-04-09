@@ -21,18 +21,32 @@ internal static class CatalogSeeder
         .Build();
 
     /// <summary>
-    /// Loads and validates the embedded YAML manifest for the given profile.
+    /// Loads and validates the embedded YAML manifest for the given profile,
+    /// or a specific named manifest (e.g. <c>ci</c>) when <paramref name="manifestName"/>
+    /// is provided.
     /// </summary>
     /// <param name="profile">The seed profile to load (Dev, Staging, Prod).</param>
+    /// <param name="manifestName">
+    /// Optional explicit manifest file name (without extension). When set, takes
+    /// precedence over the profile-derived name and skips the profile-field
+    /// validation of the manifest body.
+    /// </param>
     /// <returns>A validated <see cref="SeedManifest"/>.</returns>
-    /// <exception cref="FileNotFoundException">When profile is None or manifest resource is missing.</exception>
+    /// <exception cref="FileNotFoundException">When profile is None without a name override or the manifest resource is missing.</exception>
     /// <exception cref="InvalidOperationException">When manifest validation fails.</exception>
-    public static SeedManifest LoadManifest(SeedProfile profile)
+    public static SeedManifest LoadManifest(SeedProfile profile, string? manifestName = null)
     {
-        if (profile == SeedProfile.None)
+        // Defense in depth: treat blank/whitespace override as "no override".
+        // Callers in CatalogSeedLayer already normalize, but this keeps the
+        // public static API robust against direct misuse.
+        if (string.IsNullOrWhiteSpace(manifestName))
+            manifestName = null;
+
+        if (profile == SeedProfile.None && manifestName is null)
             throw new FileNotFoundException($"No manifest for profile '{profile}'");
 
-        var resourceName = $"Api.Infrastructure.Seeders.Catalog.Manifests.{profile.ToString().ToLowerInvariant()}.yml";
+        var effectiveName = manifestName ?? profile.ToString().ToLowerInvariant();
+        var resourceName = $"Api.Infrastructure.Seeders.Catalog.Manifests.{effectiveName}.yml";
         var assembly = Assembly.GetExecutingAssembly();
 
         using var stream = assembly.GetManifestResourceStream(resourceName)
@@ -40,7 +54,12 @@ internal static class CatalogSeeder
         using var reader = new StreamReader(stream);
 
         var manifest = YamlDeserializer.Deserialize<SeedManifest>(reader);
-        var errors = manifest.Validate(expectedProfile: profile);
+
+        // When loading via an explicit name override, skip profile-field validation
+        // (the ci.yml manifest may legitimately declare profile: dev while being
+        // a different logical resource).
+        var expectedForValidation = manifestName is null ? (SeedProfile?)profile : null;
+        var errors = manifest.Validate(expectedProfile: expectedForValidation);
         if (errors.Count > 0)
             throw new InvalidOperationException(
                 $"Manifest validation failed:\n{string.Join("\n", errors)}");
@@ -62,9 +81,10 @@ internal static class CatalogSeeder
         ILogger logger,
         CancellationToken ct,
         IEmbeddingService? embeddingService = null,
-        IConfiguration? configuration = null)
+        IConfiguration? configuration = null,
+        string? manifestNameOverride = null)
     {
-        var manifest = LoadManifest(profile);
+        var manifest = LoadManifest(profile, manifestNameOverride);
         logger.LogInformation("Catalog: {Count} games from {Profile}.yml",
             manifest.Catalog.Games.Count, profile);
 

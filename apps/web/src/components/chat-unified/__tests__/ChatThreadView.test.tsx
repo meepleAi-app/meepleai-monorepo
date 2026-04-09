@@ -270,8 +270,13 @@ describe('ChatThreadView', () => {
     await waitFor(() => {
       const userMsg = screen.getByTestId('message-user');
       const assistantMsg = screen.getByTestId('message-assistant');
-      expect(userMsg).toHaveClass('ml-auto');
-      expect(assistantMsg).toHaveClass('mr-auto');
+      // After commit 67f7192b3 (refactor(chat): compose ChatMessageList with ChatMessage atom),
+      // message styling lives inside the ChatMessage atom:
+      // - User: outer wrapper has `flex-row-reverse` + inner bubble has `ml-auto`
+      // - Assistant: outer wrapper has `flex-row` (not reversed)
+      expect(userMsg.querySelector('.flex-row-reverse')).toBeInTheDocument();
+      expect(userMsg.querySelector('.ml-auto')).toBeInTheDocument();
+      expect(assistantMsg.querySelector('.flex-row-reverse')).not.toBeInTheDocument();
     });
   });
 

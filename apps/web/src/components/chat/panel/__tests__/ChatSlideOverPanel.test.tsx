@@ -1,8 +1,61 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { useChatPanelStore } from '@/lib/stores/chat-panel-store';
+
+// Mock the data hooks so the panel renders synchronously with empty lists
+vi.mock('@/hooks/queries/useChatSessions', () => ({
+  useRecentChatSessions: () => ({
+    data: { sessions: [], totalCount: 0 },
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+vi.mock('@/hooks/queries/useGames', () => ({
+  useGames: () => ({
+    data: { games: [], total: 0, page: 1, pageSize: 50, totalPages: 0 },
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+// Mock the streaming hook to surface a stable, inert state
+const streamResetMock = vi.fn();
+const streamSendMock = vi.fn();
+vi.mock('@/hooks/useAgentChatStream', () => ({
+  useAgentChatStream: () => ({
+    state: {
+      statusMessage: null,
+      currentAnswer: '',
+      followUpQuestions: [],
+      isStreaming: false,
+      error: null,
+      chatThreadId: null,
+      totalTokens: 0,
+      debugSteps: [],
+      modelDowngrade: null,
+      strategyTier: null,
+      executionId: null,
+      connectionStatus: 'idle',
+      retryCount: 0,
+    },
+    sendMessage: streamSendMock,
+    reset: streamResetMock,
+    stopStreaming: vi.fn(),
+  }),
+}));
+
+// Stub the chat client — the panel only calls getThreadById directly from
+// inside handleSelectChat, which none of these tests exercise.
+vi.mock('@/lib/api', () => ({
+  api: {
+    chat: {
+      getThreadById: vi.fn().mockResolvedValue(null),
+    },
+  },
+}));
 
 import { ChatSlideOverPanel } from '../ChatSlideOverPanel';
 
@@ -10,6 +63,8 @@ describe('ChatSlideOverPanel', () => {
   beforeEach(() => {
     useChatPanelStore.getState().close();
     useChatPanelStore.getState().clearGameContext();
+    streamResetMock.mockClear();
+    streamSendMock.mockClear();
   });
 
   it('renders nothing when panel is closed', () => {

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+import { clearHandSlot, updateHandSlot } from '@/lib/api/my-hand';
 import { cn } from '@/lib/utils';
 import { selectIsSidebarCollapsed, useMyHandStore } from '@/stores/my-hand/store';
 import type { MyHandSlotType } from '@/stores/my-hand/types';
@@ -30,6 +31,7 @@ export function MyHandSidebar(): React.JSX.Element {
 
   const handleClear = (slotType: MyHandSlotType) => {
     clearSlot(slotType);
+    clearHandSlot(slotType).catch(() => {});
   };
 
   return (
@@ -70,6 +72,7 @@ export function MyHandSidebar(): React.JSX.Element {
         onConfirm={(slotType, payload) => {
           assignSlot(slotType, payload);
           setPickerOpen(false);
+          updateHandSlot(slotType, payload).catch(() => {});
         }}
       />
     </aside>

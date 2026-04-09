@@ -7,6 +7,16 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/',
 }));
 
+vi.mock('@/hooks/useChatPanel', () => ({
+  useChatPanel: () => ({
+    isOpen: false,
+    gameContext: null,
+    open: vi.fn(),
+    close: vi.fn(),
+    setGameContext: vi.fn(),
+  }),
+}));
+
 // Mock the notification bell (existing component with runtime deps)
 vi.mock('@/components/notifications', () => ({
   NotificationBell: () => <button aria-label="Notifications">🔔</button>,

@@ -1,0 +1,224 @@
+name: CI Minutes Weekly Digest
+
+# Spec R3 — Observability (Sprint 3, A6):
+# Posts a weekly summary of CI runner-minute consumption to GitHub Actions
+# step summary and (optionally) Slack. Helps the team track CI cost trends
+# and identify expensive workflows.
+#
+# Triggers:
+#   - schedule: every Monday at 09:00 UTC (start of week summary)
+#   - workflow_dispatch: manual trigger for ad-hoc digest
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      lookback_days:
+        description: 'Number of days to look back'
+        required: false
+        default: '7'
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  digest:
+    name: Compute CI Minutes Digest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Compute digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          LOOKBACK_DAYS: ${{ inputs.lookback_days || '7' }}
+        run: |
+          set -euo pipefail
+
+          CUTOFF=$(date -u -d "${LOOKBACK_DAYS} days ago" +%Y-%m-%dT%H:%M:%SZ)
+          PERIOD_LABEL="last ${LOOKBACK_DAYS} day(s) (since ${CUTOFF})"
+
+          echo "Fetching workflow runs from $REPO since $CUTOFF..."
+
+          # Fetch workflow runs created after cutoff. We use --paginate but cap
+          # at 10 pages (1000 runs) to avoid runaway API consumption on busy
+          # weeks. The default branch is main; the same query covers all
+          # branches/events.
+          gh api \
+            "repos/$REPO/actions/runs?per_page=100&created=>$CUTOFF" \
+            --paginate \
+            --slurp \
+            --jq '[.[].workflow_runs[] | select(.run_started_at != null and .updated_at != null) | {
+              name: .name,
+              workflow_id: .workflow_id,
+              conclusion: (.conclusion // "in_progress"),
+              status: .status,
+              event: .event,
+              head_branch: (.head_branch // "?"),
+              actor: (.actor.login // "?"),
+              run_started_at: .run_started_at,
+              updated_at: .updated_at,
+              html_url: .html_url
+            }]' > runs.json
+
+          TOTAL_RUNS=$(jq 'length' runs.json)
+          echo "Fetched $TOTAL_RUNS runs"
+
+          if [ "$TOTAL_RUNS" -eq 0 ]; then
+            {
+              echo "# CI Minutes Digest — No data"
+              echo ""
+              echo "**Period**: ${PERIOD_LABEL}"
+              echo ""
+              echo "No workflow runs found in this window."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Compute per-run wall-clock duration in minutes (updated_at - run_started_at)
+          jq '[.[] | . + {
+            duration_minutes: (((.updated_at | fromdateiso8601) - (.run_started_at | fromdateiso8601)) / 60)
+          }] | map(select(.duration_minutes >= 0))' runs.json > runs_with_dur.json
+
+          TOTAL_MINUTES=$(jq '[.[] | .duration_minutes] | add | round' runs_with_dur.json)
+          AVG_MINUTES=$(jq '([.[] | .duration_minutes] | add / length) | (. * 10 | round) / 10' runs_with_dur.json)
+          MEDIAN_MINUTES=$(jq '[.[] | .duration_minutes] | sort | .[length / 2 | floor] | (. * 10 | round) / 10' runs_with_dur.json)
+
+          # Per-workflow aggregation: total minutes + run count, sorted desc
+          TOP_WORKFLOWS=$(jq -r '
+            group_by(.name)
+            | map({
+                name: .[0].name,
+                total_minutes: ([.[].duration_minutes] | add | round),
+                run_count: length,
+                avg_minutes: (([.[].duration_minutes] | add / length) | (. * 10 | round) / 10),
+                failure_count: ([.[] | select(.conclusion == "failure")] | length)
+              })
+            | sort_by(-.total_minutes)
+            | .[0:10]
+            | .[]
+            | "| `\(.name)` | \(.total_minutes) | \(.run_count) | \(.avg_minutes) | \(.failure_count) |"
+          ' runs_with_dur.json)
+
+          # Per-branch aggregation
+          TOP_BRANCHES=$(jq -r '
+            group_by(.head_branch)
+            | map({
+                branch: .[0].head_branch,
+                total_minutes: ([.[].duration_minutes] | add | round),
+                run_count: length
+              })
+            | sort_by(-.total_minutes)
+            | .[0:5]
+            | .[]
+            | "| `\(.branch)` | \(.total_minutes) | \(.run_count) |"
+          ' runs_with_dur.json)
+
+          # Outcome split
+          SUCCESS_COUNT=$(jq '[.[] | select(.conclusion == "success")] | length' runs_with_dur.json)
+          FAILURE_COUNT=$(jq '[.[] | select(.conclusion == "failure")] | length' runs_with_dur.json)
+          CANCELLED_COUNT=$(jq '[.[] | select(.conclusion == "cancelled")] | length' runs_with_dur.json)
+          SKIPPED_COUNT=$(jq '[.[] | select(.conclusion == "skipped")] | length' runs_with_dur.json)
+
+          # Build markdown summary
+          {
+            echo "# CI Minutes Digest"
+            echo ""
+            echo "**Period**: ${PERIOD_LABEL}"
+            echo "**Total runs**: ${TOTAL_RUNS}"
+            echo "**Total wall-clock minutes**: ${TOTAL_MINUTES}"
+            echo "**Average minutes per run**: ${AVG_MINUTES}"
+            echo "**Median minutes per run**: ${MEDIAN_MINUTES}"
+            echo ""
+            echo "## Outcome breakdown"
+            echo ""
+            echo "| Outcome | Count |"
+            echo "|---------|------:|"
+            echo "| Success | ${SUCCESS_COUNT} |"
+            echo "| Failure | ${FAILURE_COUNT} |"
+            echo "| Cancelled | ${CANCELLED_COUNT} |"
+            echo "| Skipped | ${SKIPPED_COUNT} |"
+            echo ""
+            echo "## Top 10 workflows by total wall-clock"
+            echo ""
+            echo "| Workflow | Total min | Runs | Avg min | Failures |"
+            echo "|----------|----------:|-----:|--------:|---------:|"
+            echo "${TOP_WORKFLOWS}"
+            echo ""
+            echo "## Top 5 branches by total wall-clock"
+            echo ""
+            echo "| Branch | Total min | Runs |"
+            echo "|--------|----------:|-----:|"
+            echo "${TOP_BRANCHES}"
+            echo ""
+            echo "---"
+            echo ""
+            echo "_Wall-clock minutes are an upper bound on billable runner minutes — for parallel job runs the billable count is higher (one runner-minute per concurrent job-minute). For exact billing, see GitHub Settings → Billing → Actions._"
+            echo ""
+            echo "_Generated by \`.github/workflows/ci-minutes-digest.yml\`. Spec R3 — Observability (Sprint 3, A6)._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Save markdown for the Slack step
+          {
+            echo "*CI Minutes Digest* — ${PERIOD_LABEL}"
+            echo ""
+            echo "Total runs: *${TOTAL_RUNS}*  •  Wall-clock min: *${TOTAL_MINUTES}*  •  Avg: *${AVG_MINUTES}*  •  Median: *${MEDIAN_MINUTES}*"
+            echo ""
+            echo "Outcomes: ✅ ${SUCCESS_COUNT}  •  ❌ ${FAILURE_COUNT}  •  ⏭ ${SKIPPED_COUNT}  •  ✋ ${CANCELLED_COUNT}"
+            echo ""
+            echo "Top 5 workflows:"
+            jq -r '
+              group_by(.name)
+              | map({name: .[0].name, total_minutes: ([.[].duration_minutes] | add | round)})
+              | sort_by(-.total_minutes)
+              | .[0:5]
+              | .[]
+              | "  • `\(.name)` — \(.total_minutes)m"
+            ' runs_with_dur.json
+            echo ""
+            echo "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Full digest →>"
+          } > slack-payload.txt
+
+          echo "DIGEST_TEXT_FILE=slack-payload.txt" >> "$GITHUB_ENV"
+
+      - name: Post to Slack
+        if: env.SLACK_GITNOTIFY_WEBHOOK_URL != ''
+        env:
+          SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "${DIGEST_TEXT_FILE:-slack-payload.txt}" ]; then
+            echo "No digest payload to send"
+            exit 0
+          fi
+          # Build Slack Block Kit payload (simple section block with markdown)
+          DIGEST_BODY=$(jq -Rsa . < "${DIGEST_TEXT_FILE:-slack-payload.txt}")
+          PAYLOAD=$(cat <<EOF
+          {
+            "text": "CI Minutes Digest",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ${DIGEST_BODY}
+                }
+              }
+            ]
+          }
+          EOF
+          )
+          HTTP_STATUS=$(curl -sS -o /tmp/slack-resp.txt -w "%{http_code}" \
+            -X POST -H 'Content-Type: application/json' \
+            --data "$PAYLOAD" \
+            "$SLACK_GITNOTIFY_WEBHOOK_URL" || echo "000")
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Slack webhook returned HTTP $HTTP_STATUS"
+            cat /tmp/slack-resp.txt || true
+            # Non-fatal: digest is also in step summary
+            exit 0
+          fi
+          echo "Posted digest to Slack (HTTP $HTTP_STATUS)"

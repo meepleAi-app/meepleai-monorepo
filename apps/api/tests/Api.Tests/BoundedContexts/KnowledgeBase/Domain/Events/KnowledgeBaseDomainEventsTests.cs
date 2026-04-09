@@ -811,6 +811,38 @@ public sealed class KnowledgeBaseDomainEventsTests
         evt.ChunkCount.Should().Be(500);
     }
 
+    [Fact]
+    public void VectorDocumentIndexedEvent_WithSharedGameId_ExposesValueOnProperty()
+    {
+        // Arrange — library-to-game epic CR-M4 regression coverage
+        var documentId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var sharedGameId = Guid.NewGuid();
+
+        // Act
+        var evt = new VectorDocumentIndexedEvent(documentId, gameId, 42, sharedGameId);
+
+        // Assert
+        evt.DocumentId.Should().Be(documentId);
+        evt.GameId.Should().Be(gameId);
+        evt.ChunkCount.Should().Be(42);
+        evt.SharedGameId.Should().Be(sharedGameId);
+    }
+
+    [Fact]
+    public void VectorDocumentIndexedEvent_WithoutSharedGameId_DefaultsToNull()
+    {
+        // Arrange
+        var documentId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        // Act — omit the optional sharedGameId parameter
+        var evt = new VectorDocumentIndexedEvent(documentId, gameId, 42);
+
+        // Assert
+        evt.SharedGameId.Should().BeNull();
+    }
+
     #endregion
 
     #region VectorDocumentMetadataUpdatedEvent Tests

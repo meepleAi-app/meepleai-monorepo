@@ -1,0 +1,122 @@
+name: E2E — Library to Game Epic
+
+# Dedicated E2E workflow for the library-to-game epic.
+# Runs the happy-path scaffold spec + per-sub-feature specs against mocked
+# auth (no backend services required — tests use setupMockAuth fixture).
+#
+# Reference: docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.6
+
+on:
+  pull_request:
+    branches:
+      - epic/library-to-game
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/e2e-library-to-game.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-library-to-game-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  e2e:
+    name: Playwright (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - desktop-chrome
+          - mobile-chrome
+          - mobile-safari
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: |
+          if [ "${{ matrix.project }}" = "mobile-safari" ]; then
+            pnpm exec playwright install --with-deps webkit
+          else
+            pnpm exec playwright install --with-deps chromium
+          fi
+
+      # Playwright's webServer uses `next start` in CI (see playwright.config.ts),
+      # which requires a prior production build. Mirrors test-e2e.yml pattern.
+      - name: Build Frontend (Production Mode)
+        working-directory: apps/web
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8080
+
+      - name: Run library-to-game E2E spec (happy path + S1 smoke)
+        working-directory: apps/web
+        env:
+          CI: 'true'
+          FORCE_PRODUCTION_SERVER: 'true'
+        run: |
+          pnpm exec playwright test \
+            e2e/flows/library-to-game-happy-path.spec.ts \
+            e2e/sub-features/s1-admin-toggle.spec.ts \
+            --project=${{ matrix.project }}
+
+      - name: Upload library-to-game screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: library-to-game-screenshots-${{ matrix.project }}
+          path: apps/web/test-results/library-to-game-happy-path/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-library-to-game-${{ matrix.project }}
+          path: apps/web/playwright-report/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload test-results (failures + traces)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-library-to-game-${{ matrix.project }}
+          path: apps/web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore

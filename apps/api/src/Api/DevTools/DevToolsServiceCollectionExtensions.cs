@@ -45,6 +45,18 @@ internal static class DevToolsServiceCollectionExtensions
         // Lifetime MUST match the existing real service registration (Scoped per bounded contexts).
         services.AddMockAwareService<ILlmService, HybridLlmService, MockLlmService>(
             "llm", ServiceLifetime.Scoped);
+
+        // KnowledgeBaseServiceExtensions registers an alias `services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>())`.
+        // After we replace the ILlmService binding with a MockAwareProxy, that cast fails at
+        // runtime with InvalidCastException. Remove the broken alias and re-register
+        // HybridLlmService as its own concrete type so direct resolves still work.
+        var brokenHybridAlias = services.FirstOrDefault(d => d.ServiceType == typeof(HybridLlmService));
+        if (brokenHybridAlias is not null)
+        {
+            services.Remove(brokenHybridAlias);
+        }
+        services.AddScoped<HybridLlmService>();
+
         services.AddMockAwareService<IEmbeddingService, EmbeddingService, MockEmbeddingService>(
             "embedding", ServiceLifetime.Scoped);
         services.AddMockAwareService<IBggApiService, BggApiService, MockBggApiService>(

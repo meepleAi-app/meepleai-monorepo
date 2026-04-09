@@ -40,7 +40,8 @@ fi
 : > "$LOG_FILE"
 
 cleanup_on_exit() {
-  warn "Caught signal — use 'make dev:fast-down' to clean up if needed"
+  warn "Caught signal — stopping all child processes..."
+  bash "$SCRIPT_DIR/dev-fast-down.sh" || true
 }
 trap cleanup_on_exit INT TERM
 
@@ -87,7 +88,7 @@ log "${GREEN}All services started.${NC}"
 log "Frontend: http://localhost:3000"
 [ "${DEV_BACKEND:-false}" = "true" ] && log "Backend:  http://localhost:8080"
 log "Logs: $LOG_FILE  |  Backend logs: $INFRA_DIR/dotnet-watch.log"
-log "Stop: make dev:fast-down"
+log "Stop: Ctrl+C (auto-cleanup) or 'make dev-fast-down'"
 
 # Keep script alive so Ctrl+C reaches children
 wait

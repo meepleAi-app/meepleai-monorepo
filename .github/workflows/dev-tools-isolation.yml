@@ -9,8 +9,8 @@ on:
       - '.github/workflows/dev-tools-isolation.yml'
 
 jobs:
-  stash-and-build:
-    name: Build without dev-tools
+  isolation-check:
+    name: Verify dev-tools isolation from production builds
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -32,7 +32,7 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Backup dev-tools
+      - name: Backup dev-tools (for restore at end)
         run: |
           mkdir -p /tmp/dev-tools-backup
           if [ -d apps/web/src/dev-tools ]; then
@@ -45,7 +45,7 @@ jobs:
             tar -czf /tmp/dev-tools-backup/fixtures.tgz docs/superpowers/fixtures
           fi
 
-      - name: Remove dev-tools
+      - name: Remove dev-tools (force production build path)
         run: |
           rm -rf apps/web/src/dev-tools
           rm -rf apps/api/src/Api/DevTools
@@ -55,49 +55,25 @@ jobs:
         working-directory: apps/web
         run: pnpm install --frozen-lockfile
 
-      - name: Build frontend (prod config)
+      - name: Build frontend (prod config, no dev-tools)
         working-directory: apps/web
         env:
           NODE_ENV: production
           NEXT_PUBLIC_MOCK_MODE: 'false'
         run: pnpm build
 
-      - name: Build backend (Release)
+      - name: Build backend (Release, no dev-tools)
         working-directory: apps/api/src/Api
         run: dotnet build -c Release
 
-      - name: Restore dev-tools
-        if: always()
-        run: |
-          [ -f /tmp/dev-tools-backup/web.tgz ] && tar -xzf /tmp/dev-tools-backup/web.tgz
-          [ -f /tmp/dev-tools-backup/api.tgz ] && tar -xzf /tmp/dev-tools-backup/api.tgz -C apps/api/src/Api
-          [ -f /tmp/dev-tools-backup/fixtures.tgz ] && tar -xzf /tmp/dev-tools-backup/fixtures.tgz
-          true
-
-  no-mock-in-release-dll:
-    name: No DevTools types in Release DLL
-    runs-on: ubuntu-latest
-    needs: stash-and-build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Build Release
-        working-directory: apps/api/src/Api
-        run: dotnet build -c Release
-
-      - name: Verify no DevTools types (reflection-based)
+      - name: Reflection check — Release DLL contains zero Api.DevTools.* types
         run: |
           DLL=$(find apps/api/src/Api/bin/Release -name "Api.dll" | head -1)
           if [ -z "$DLL" ]; then
-            echo "Api.dll not found"
+            echo "ERROR: Api.dll not found after Release build"
             exit 1
           fi
+          echo "Inspecting: $DLL"
 
           dotnet tool install -g dotnet-script || true
           export PATH="$PATH:$HOME/.dotnet/tools"
@@ -125,3 +101,11 @@ jobs:
           EOF
 
           dotnet script /tmp/check-devtools.csx -- "$DLL"
+
+      - name: Restore dev-tools
+        if: always()
+        run: |
+          [ -f /tmp/dev-tools-backup/web.tgz ] && tar -xzf /tmp/dev-tools-backup/web.tgz
+          [ -f /tmp/dev-tools-backup/api.tgz ] && tar -xzf /tmp/dev-tools-backup/api.tgz -C apps/api/src/Api
+          [ -f /tmp/dev-tools-backup/fixtures.tgz ] && tar -xzf /tmp/dev-tools-backup/fixtures.tgz
+          true

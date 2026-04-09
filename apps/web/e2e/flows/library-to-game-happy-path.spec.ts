@@ -107,19 +107,12 @@ test.describe('Library-to-Game happy path', () => {
   });
 
   test('cross-viewport S1 smoke (always runs)', async ({ page, context }, testInfo) => {
-    // S6a scaffold: this S1-only variant is temporarily skipped pending a local
-    // debugging session. The ViewModeToggle does not appear in CI runs even
-    // after:
-    //   - fixing the AuthUserSchema.id UUID validation (beae21b63)
-    //   - switching page.route() to a glob pattern to cover the Next.js API
-    //     proxy path (f0f714a88)
-    //
-    // Both fixes are real and fix narrower root causes, but a third issue
-    // remains — likely a React Query timing / SSR hydration race that needs
-    // Playwright trace viewer to diagnose. Reenable after S6b debugging.
-    //
-    // Epic CI still covers S1 via unit/component tests (33/33 green).
-    test.skip(true, 'S6a: S1 smoke pending local debug — see comment above');
+    // Still skipped — see s1-admin-toggle.spec.ts for the full rationale.
+    // In short: shared setupMockAuth targets http://localhost:8080 but prod
+    // `next start` uses relative URLs via the Next.js API proxy, so no mock
+    // fires → RequireRole redirects to /login → toggle never exists. Local
+    // debug with Playwright trace viewer required to confirm the fix.
+    test.skip(true, 'S6a S1 smoke pending local Playwright trace debug');
 
     const viewport = testInfo.project.name;
 
@@ -129,7 +122,7 @@ test.describe('Library-to-Game happy path', () => {
     await context.clearCookies();
     if (keep.length > 0) await context.addCookies(keep);
 
-    await loginAsAdmin(page);
+    await loginAsAdmin(page, true); // skipNavigation — install override before first goto
     await overrideAuthMeWithValidUuid(page);
     await page.goto('/admin/overview');
 

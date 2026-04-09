@@ -35,11 +35,7 @@ jobs:
         project:
           - desktop-chrome
           - mobile-chrome
-          # mobile-safari temporarily disabled: webkit on ubuntu-latest fails
-          # to launch with `Unknown option --no-sandbox`. Tracked as a platform
-          # issue separate from the library-to-game epic. Reenable in S6b
-          # after upgrading the Playwright action stack.
-          # - mobile-safari
+          - mobile-safari
 
     steps:
       - uses: actions/checkout@v4

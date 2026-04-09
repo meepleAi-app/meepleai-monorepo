@@ -75,10 +75,19 @@ jobs:
             pnpm exec playwright install --with-deps chromium
           fi
 
+      # Playwright's webServer uses `next start` in CI (see playwright.config.ts),
+      # which requires a prior production build. Mirrors test-e2e.yml pattern.
+      - name: Build Frontend (Production Mode)
+        working-directory: apps/web
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8080
+
       - name: Run library-to-game E2E spec (happy path + S1 smoke)
         working-directory: apps/web
         env:
           CI: 'true'
+          FORCE_PRODUCTION_SERVER: 'true'
         run: |
           pnpm exec playwright test \
             e2e/flows/library-to-game-happy-path.spec.ts \

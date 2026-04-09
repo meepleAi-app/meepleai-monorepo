@@ -20,6 +20,13 @@ internal sealed class CatalogSeedLayer : ISeedLayer
     public async Task SeedAsync(SeedContext context, CancellationToken cancellationToken = default)
     {
         var config = context.Services.GetService<IConfiguration>();
+
+        if (config?.GetValue<bool>("SKIP_CATALOG_SEED") == true)
+        {
+            context.Logger.LogInformation("CatalogSeedLayer: SKIP_CATALOG_SEED=true, skipping");
+            return;
+        }
+
         var bggService = context.Services.GetRequiredService<IBggApiService>();
         var embeddingService = context.Services.GetService<IEmbeddingService>();
         var primaryBlob = context.Services.GetRequiredService<IBlobStorageService>();

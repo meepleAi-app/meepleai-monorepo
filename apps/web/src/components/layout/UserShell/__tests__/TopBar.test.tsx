@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
-import { TopBar64 } from '../TopBar64';
+import { TopBar } from '../TopBar';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/',
@@ -26,9 +26,9 @@ vi.mock('@/components/layout/UserMenuDropdown', () => ({
   UserMenuDropdown: () => <button aria-label="User menu">MR</button>,
 }));
 
-describe('TopBar64', () => {
+describe('TopBar', () => {
   it('renders logo, nav links, search, chat button, and user menu', () => {
-    render(<TopBar64 />);
+    render(<TopBar />);
     expect(screen.getByRole('link', { name: /meepleai home/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
@@ -38,7 +38,7 @@ describe('TopBar64', () => {
   });
 
   it('is 64px tall and sticky', () => {
-    const { container } = render(<TopBar64 />);
+    const { container } = render(<TopBar />);
     const header = container.querySelector('header');
     expect(header).toHaveClass('h-16');
     expect(header).toHaveClass('sticky');

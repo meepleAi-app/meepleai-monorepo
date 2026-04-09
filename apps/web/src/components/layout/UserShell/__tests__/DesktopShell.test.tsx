@@ -34,7 +34,7 @@ describe('DesktopShell', () => {
         <div data-testid="content">hello</div>
       </DesktopShell>
     );
-    expect(screen.getByTestId('top-bar-64')).toBeInTheDocument();
+    expect(screen.getByTestId('top-bar')).toBeInTheDocument();
     expect(screen.getByTestId('desktop-hand-rail')).toBeInTheDocument();
     expect(screen.getByTestId('content')).toBeInTheDocument();
   });

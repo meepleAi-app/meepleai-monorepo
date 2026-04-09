@@ -28,7 +28,7 @@ import { WishlistCarouselSection, type WishlistGame } from './sections/WishlistC
  * Phase 3 Library Hub client — new carousel-landing layout.
  * Reads data from TODO(Phase 4) — useLibraryStore — for now, empty defaults.
  */
-export function LibraryHubV2() {
+export function LibraryHub() {
   const router = useRouter();
   const drawCard = useCardHand(s => s.drawCard);
 

@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
-// Mock the V2 hub so we don't pull in its downstream deps
-vi.mock('../v2', () => ({
-  LibraryHubV2: () => <div data-testid="library-hub-v2">V2 Library Hub</div>,
+// Mock the LibraryHub so we don't pull in its downstream deps
+vi.mock('../LibraryHub', () => ({
+  LibraryHub: () => <div data-testid="library-hub">Library Hub</div>,
 }));
 
 // Mock legacy dynamic-imported tab components
@@ -45,12 +45,12 @@ describe('LibraryContent tab routing', () => {
     vi.resetModules();
   });
 
-  it('renders V2 LibraryHub when no tab query param is set', async () => {
+  it('renders LibraryHub when no tab query param is set', async () => {
     mockSearchParams.get.mockReturnValue(null);
     vi.resetModules();
     const mod = await import('../_content');
     render(<mod.LibraryContent />);
-    expect(screen.getByTestId('library-hub-v2')).toBeInTheDocument();
+    expect(screen.getByTestId('library-hub')).toBeInTheDocument();
     expect(screen.queryByTestId('legacy-personal')).not.toBeInTheDocument();
   });
 
@@ -59,7 +59,7 @@ describe('LibraryContent tab routing', () => {
     vi.resetModules();
     const mod = await import('../_content');
     render(<mod.LibraryContent />);
-    expect(screen.queryByTestId('library-hub-v2')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('library-hub')).not.toBeInTheDocument();
     expect(await screen.findByTestId('legacy-catalog')).toBeInTheDocument();
   });
 
@@ -68,7 +68,7 @@ describe('LibraryContent tab routing', () => {
     vi.resetModules();
     const mod = await import('../_content');
     render(<mod.LibraryContent />);
-    expect(screen.queryByTestId('library-hub-v2')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('library-hub')).not.toBeInTheDocument();
     expect(await screen.findByTestId('legacy-wishlist')).toBeInTheDocument();
   });
 
@@ -77,7 +77,7 @@ describe('LibraryContent tab routing', () => {
     vi.resetModules();
     const mod = await import('../_content');
     render(<mod.LibraryContent />);
-    expect(screen.queryByTestId('library-hub-v2')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('library-hub')).not.toBeInTheDocument();
     expect(await screen.findByTestId('legacy-personal')).toBeInTheDocument();
   });
 });

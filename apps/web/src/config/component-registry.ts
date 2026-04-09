@@ -3771,6 +3771,57 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     },
   },
 
+  // ─── Desktop UX Redesign — Shell Containers ───────────────────────────────
+
+  {
+    id: 'top-bar',
+    name: 'TopBar',
+    importPath: '@/components/layout/UserShell/TopBar',
+    category: 'Layout',
+    areas: ['shared'],
+    tier: 'static',
+    description:
+      '64px sticky top navigation bar. Composes Logo + NavLinks + SearchPill + ChatButton + Notifications + UserMenu.',
+    tags: ['redesign', 'shell', 'top-bar', 'container'],
+    mockProps: { onOpenChat: () => {}, onOpenSearch: () => {} },
+  },
+  {
+    id: 'mini-nav-slot',
+    name: 'MiniNavSlot',
+    importPath: '@/components/layout/UserShell/MiniNavSlot',
+    category: 'Layout',
+    areas: ['shared'],
+    tier: 'static',
+    description:
+      '48px secondary nav bar rendered below TopBar. Displays tabs registered by the current page via useMiniNavConfigStore. Returns null when no config is active.',
+    tags: ['redesign', 'shell', 'mini-nav', 'container'],
+    mockProps: {},
+  },
+  {
+    id: 'desktop-hand-rail',
+    name: 'DesktopHandRail',
+    importPath: '@/components/layout/UserShell/DesktopHandRail',
+    category: 'Layout',
+    areas: ['shared'],
+    tier: 'static',
+    description:
+      'Persistent left-edge card rail. Reads from useCardHand store — shows active game/session cards with pin/expand controls. Hidden on mobile.',
+    tags: ['redesign', 'shell', 'hand-rail', 'container'],
+    mockProps: {},
+  },
+  {
+    id: 'desktop-shell',
+    name: 'DesktopShell',
+    importPath: '@/components/layout/UserShell/DesktopShell',
+    category: 'Layout',
+    areas: ['shared'],
+    tier: 'static',
+    description:
+      'Full desktop layout wrapper: TopBar (64px) + MiniNavSlot (48px, optional) + DesktopHandRail + main content area + ChatSlideOverPanel.',
+    tags: ['redesign', 'shell', 'layout', 'container'],
+    mockProps: {},
+  },
+
   // ─── Desktop UX Redesign — Dashboard Sections ─────────────────────────────
 
   {
@@ -3943,6 +3994,33 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     mockProps: { games: [] },
   },
 
+  // ─── Desktop UX Redesign — Page Containers ────────────────────────────────
+
+  {
+    id: 'library-hub',
+    name: 'LibraryHub',
+    importPath: '@/app/(authenticated)/library/LibraryHub',
+    category: 'Layout',
+    areas: ['library'],
+    tier: 'static',
+    description:
+      'Library page container. Composes LibraryHeader + LibraryFilterBar + ContinuePlaying + PersonalLibrary + Catalog + Wishlist sections. Reads from useLibrary and useLibraryStats.',
+    tags: ['redesign', 'library', 'container', 'page'],
+    mockProps: {},
+  },
+  {
+    id: 'dashboard-client',
+    name: 'DashboardClient',
+    importPath: '@/app/(authenticated)/dashboard/DashboardClient',
+    category: 'Layout',
+    areas: ['shared'],
+    tier: 'static',
+    description:
+      'Gaming Hub dashboard container. Composes GreetingRow + HeroLiveSession + KpiStrip + ContinueCarousel + ChatRecentCards + FriendsRow.',
+    tags: ['redesign', 'dashboard', 'container', 'page'],
+    mockProps: {},
+  },
+
   // ─── Desktop UX Redesign — Chat Slide-Over Panel Atomics ──────────────────
 
   {
@@ -4108,6 +4186,18 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
       ],
       onSend: () => {},
     },
+  },
+  {
+    id: 'chat-slide-over-panel',
+    name: 'ChatSlideOverPanel',
+    importPath: '@/components/chat/panel/ChatSlideOverPanel',
+    category: 'Overlays',
+    areas: ['shared'],
+    tier: 'static',
+    description:
+      'Global chat slide-over panel. Opens from TopBar chat button. Composes ChatPanelHeader + ChatContextSwitcher + ChatSidebar + ChatMainArea. Reads from useChatPanel store.',
+    tags: ['redesign', 'chat-panel', 'container', 'overlay'],
+    mockProps: {},
   },
 ];
 

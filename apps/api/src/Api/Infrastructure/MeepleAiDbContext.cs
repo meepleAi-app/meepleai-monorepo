@@ -138,6 +138,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management
+    public DbSet<UserHandSlotEntity> UserHandSlots => Set<UserHandSlotEntity>(); // La Mia Mano: user hand slots
     public DbSet<UserCollectionEntryEntity> UserCollectionEntries => Set<UserCollectionEntryEntity>(); // ISSUE-4263: Generic user collections
     public DbSet<LibraryShareLinkEntity> LibraryShareLinks => Set<LibraryShareLinkEntity>(); // ISSUE-2614: Library sharing
     public DbSet<GameLabelEntity> GameLabels => Set<GameLabelEntity>(); // ISSUE-3512: Game labels for library

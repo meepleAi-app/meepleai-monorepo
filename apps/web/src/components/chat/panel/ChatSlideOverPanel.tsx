@@ -93,18 +93,6 @@ export function ChatSlideOverPanel() {
           animation: 'chatPanelSlideIn 350ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
-        <style>{`
-          @keyframes chatPanelSlideIn {
-            from {
-              transform: translateX(30px);
-              opacity: 0;
-            }
-            to {
-              transform: translateX(0);
-              opacity: 1;
-            }
-          }
-        `}</style>
         <ChatPanelHeader
           subtitle={
             gameContext?.kbStatus === 'ready'

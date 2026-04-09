@@ -34,9 +34,6 @@ export { ShareLibraryModal } from './ShareLibraryModal';
 // View Mode Toggle (Issue #2866)
 export { ViewModeToggle, type ViewModeToggleProps, type ViewMode } from './ViewModeToggle';
 
-// Library Navigation Tabs (Issue #4055)
-export { LibraryNavTabs } from './LibraryNavTabs';
-
 // Game Table Components (replaces legacy game-detail — Issue #3513)
 export {
   GameTableLayout,

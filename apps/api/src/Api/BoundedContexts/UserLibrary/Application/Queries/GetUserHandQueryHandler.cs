@@ -24,7 +24,7 @@ internal class GetUserHandQueryHandler : IQueryHandler<GetUserHandQuery, IReadOn
         ArgumentNullException.ThrowIfNull(query);
 
         var slots = await _repo.GetAllSlotsAsync(query.UserId, cancellationToken).ConfigureAwait(false);
-        var slotMap = slots.ToDictionary(s => s.SlotType);
+        var slotMap = slots.ToDictionary(s => s.SlotType, StringComparer.OrdinalIgnoreCase);
 
         // Always return all 4 slot types — empty if not assigned
         return AllSlotTypes.Select(slotType =>

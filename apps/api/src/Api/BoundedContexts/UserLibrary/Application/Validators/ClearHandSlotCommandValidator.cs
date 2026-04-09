@@ -5,7 +5,8 @@ namespace Api.BoundedContexts.UserLibrary.Application.Validators;
 
 internal class ClearHandSlotCommandValidator : AbstractValidator<ClearHandSlotCommand>
 {
-    private static readonly string[] ValidSlotTypes = ["toolkit", "game", "session", "ai"];
+    private static readonly HashSet<string> ValidSlotTypes = new(StringComparer.OrdinalIgnoreCase)
+        { "toolkit", "game", "session", "ai" };
 
     public ClearHandSlotCommandValidator()
     {

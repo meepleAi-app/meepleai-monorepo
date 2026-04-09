@@ -5,15 +5,18 @@ namespace Api.BoundedContexts.UserLibrary.Application.Validators;
 
 internal class UpdateHandSlotCommandValidator : AbstractValidator<UpdateHandSlotCommand>
 {
-    private static readonly string[] ValidSlotTypes = ["toolkit", "game", "session", "ai"];
-    private static readonly string[] ValidEntityTypes = ["toolkit", "game", "session", "agent"];
+    private static readonly HashSet<string> ValidSlotTypes = new(StringComparer.OrdinalIgnoreCase)
+        { "toolkit", "game", "session", "ai" };
 
-    private static readonly Dictionary<string, string[]> SlotEntityMap = new()
+    private static readonly HashSet<string> ValidEntityTypes = new(StringComparer.OrdinalIgnoreCase)
+        { "toolkit", "game", "session", "agent" };
+
+    private static readonly Dictionary<string, HashSet<string>> SlotEntityMap = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["toolkit"] = ["toolkit"],
-        ["game"]    = ["game"],
-        ["session"] = ["session"],
-        ["ai"]      = ["agent"]
+        ["toolkit"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "toolkit" },
+        ["game"]    = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "game" },
+        ["session"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "session" },
+        ["ai"]      = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "agent" }
     };
 
     public UpdateHandSlotCommandValidator()

@@ -113,16 +113,23 @@ function AgentChatArea({
   agentName,
   selectedThreadId,
   onThreadCreated,
+  readiness,
+  readinessLoading,
 }: {
   agentId: string;
   agentName: string;
   selectedThreadId: string | null;
   onThreadCreated: (id: string) => void;
+  readiness: ReturnType<typeof useAgentStatus>['status'];
+  readinessLoading: boolean;
 }) {
-  const { status: readiness, isLoading: readinessLoading } = useAgentStatus(agentId);
-
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  const onThreadCreatedRef = React.useRef(onThreadCreated);
+  useEffect(() => {
+    onThreadCreatedRef.current = onThreadCreated;
+  });
 
   useEffect(() => {
     if (selectedThreadId !== 'new') return;
@@ -134,11 +141,12 @@ function AgentChatArea({
     api.chat
       .createThread({ agentId, title: `Chat con ${agentName}` })
       .then((thread) => {
-        if (!cancelled) onThreadCreated(thread.id);
+        if (!cancelled && thread?.id) onThreadCreatedRef.current(thread.id);
       })
       .catch((err: unknown) => {
         if (!cancelled)
           setCreateError(err instanceof Error ? err.message : 'Errore nella creazione della chat');
+        if (!cancelled) setCreating(false);
       })
       .finally(() => {
         if (!cancelled) setCreating(false);
@@ -147,8 +155,7 @@ function AgentChatArea({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedThreadId]);
+  }, [selectedThreadId, agentId, agentName]); // onThreadCreated via ref, stabile
 
   // 1. Loading readiness
   if (readinessLoading) {
@@ -251,7 +258,13 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
         <button
           data-testid="new-chat-button"
           disabled={buttonDisabled}
-          title={buttonDisabled ? (readiness?.blockingReason ?? 'Configura la KB per abilitare la chat') : undefined}
+          title={
+            buttonDisabled
+              ? readinessLoading
+                ? 'Verifica disponibilità agente…'
+                : (readiness?.blockingReason ?? 'Configura la KB per abilitare la chat')
+              : undefined
+          }
           onClick={() => setSelectedThreadId('new')}
           className={cn(
             'flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold font-nunito',
@@ -303,6 +316,8 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
           agentName={data.name}
           selectedThreadId={selectedThreadId}
           onThreadCreated={(id) => setSelectedThreadId(id)}
+          readiness={readiness}
+          readinessLoading={readinessLoading}
         />
       </div>
     </div>

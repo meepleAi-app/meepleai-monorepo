@@ -232,3 +232,9 @@ docs/pages/manifest.json
 # These are seed data for RAG embedding pipeline only
 data/rulebook/
 data/pdfDocs/
+
+# MeepleDev fast dev loop
+infra/.env.dev.local
+infra/.dev-fast.pids
+infra/dev-fast.log
+infra/dotnet-watch.log

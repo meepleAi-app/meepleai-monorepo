@@ -11,7 +11,29 @@
  * Generarlo con: cd apps/web && npx msw init public/ --save
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
+
+const IS_DEV_MOCK =
+  process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
+
+/**
+ * Local opaque type for dev-tools state. The real `InstalledDevTools` interface
+ * lives under @/dev-tools, which is dynamically imported (and absent in
+ * production builds). We avoid a static `import type` so that the dev-tools
+ * module path can be removed entirely without breaking the prod typecheck —
+ * see .github/workflows/dev-tools-isolation.yml.
+ */
+type DevToolsBundle = {
+  controlStore: unknown;
+  scenarioStore: unknown;
+  authStore: unknown;
+};
+
+type DevBadgeComponent = ComponentType<{
+  controlStore: unknown;
+  scenarioStore: unknown;
+  authStore: unknown;
+}>;
 
 interface MockProviderProps {
   children: React.ReactNode;
@@ -61,6 +83,29 @@ async function initMocks(skipControllerCheck = false) {
 
 export function MockProvider({ children }: MockProviderProps) {
   const [ready, setReady] = useState(false);
+  const [tools, setTools] = useState<DevToolsBundle | null>(null);
+  const [DevBadge, setDevBadge] = useState<DevBadgeComponent | null>(null);
+
+  useEffect(() => {
+    if (!IS_DEV_MOCK) return;
+    // Dynamic imports — the @/dev-tools module is intentionally absent from
+    // production builds, so we never reference it via static import.
+    Promise.all([
+      // Use string template + variable to defeat Next.js's static analysis,
+      // ensuring the bundler does not try to resolve the path at build time.
+      import(/* webpackIgnore: true */ `${'@'}/dev-tools/index.ts` as string).catch(
+        () => import(`${'@'}/dev-tools` as string)
+      ),
+      import(`${'@'}/dev-tools/devBadge` as string),
+    ])
+      .then(([devTools, badgeModule]) => {
+        setTools((devTools as { installDevTools: () => DevToolsBundle }).installDevTools());
+        setDevBadge(() => (badgeModule as { DevBadge: DevBadgeComponent }).DevBadge);
+      })
+      .catch(() => {
+        // dev-tools module not present (e.g. tree-shaken in prod) — silently skip
+      });
+  }, []);
 
   useEffect(() => {
     initMocks().then(() => setReady(true));
@@ -86,5 +131,16 @@ export function MockProvider({ children }: MockProviderProps) {
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {IS_DEV_MOCK && tools && DevBadge && (
+        <DevBadge
+          controlStore={tools.controlStore}
+          scenarioStore={tools.scenarioStore}
+          authStore={tools.authStore}
+        />
+      )}
+    </>
+  );
 }

@@ -1,0 +1,49 @@
+{
+  "$schema": "../schema/scenario.schema.json",
+  "name": "small-library",
+  "description": "Utente User con 3 giochi, 5 sessioni e una chat storica.",
+  "auth": {
+    "currentUser": {
+      "id": "MOCK-00000000-0000-0000-0000-000000000001",
+      "email": "dev@meeple.local",
+      "displayName": "Dev User",
+      "role": "User"
+    },
+    "availableUsers": [
+      { "id": "MOCK-00000000-0000-0000-0000-000000000001", "email": "dev@meeple.local", "displayName": "Dev User", "role": "User" },
+      { "id": "MOCK-00000000-0000-0000-0000-000000000002", "email": "admin@meeple.local", "displayName": "Admin", "role": "Admin" },
+      { "id": "MOCK-00000000-0000-0000-0000-000000000003", "email": "editor@meeple.local", "displayName": "Editor", "role": "Editor" },
+      { "id": "MOCK-00000000-0000-0000-0000-000000000000", "email": "guest@meeple.local", "displayName": "Guest", "role": "Guest" }
+    ]
+  },
+  "games": [
+    { "id": "MOCK-11111111-0000-0000-0000-000000000001", "title": "Wingspan", "publisher": "Stonemaier Games", "averageRating": 8.1, "bggId": 266192 },
+    { "id": "MOCK-11111111-0000-0000-0000-000000000002", "title": "Scythe", "publisher": "Stonemaier Games", "averageRating": 8.3, "bggId": 169786 },
+    { "id": "MOCK-11111111-0000-0000-0000-000000000003", "title": "Terraforming Mars", "publisher": "FryxGames", "averageRating": 8.4, "bggId": 167791 }
+  ],
+  "sessions": [
+    { "id": "MOCK-22222222-0000-0000-0000-000000000001", "gameId": "MOCK-11111111-0000-0000-0000-000000000001", "startedAt": "2026-04-01T18:00:00.000Z" },
+    { "id": "MOCK-22222222-0000-0000-0000-000000000002", "gameId": "MOCK-11111111-0000-0000-0000-000000000001", "startedAt": "2026-04-02T20:00:00.000Z" },
+    { "id": "MOCK-22222222-0000-0000-0000-000000000003", "gameId": "MOCK-11111111-0000-0000-0000-000000000002", "startedAt": "2026-04-03T19:30:00.000Z" },
+    { "id": "MOCK-22222222-0000-0000-0000-000000000004", "gameId": "MOCK-11111111-0000-0000-0000-000000000003", "startedAt": "2026-04-05T15:00:00.000Z" },
+    { "id": "MOCK-22222222-0000-0000-0000-000000000005", "gameId": "MOCK-11111111-0000-0000-0000-000000000002", "startedAt": "2026-04-07T21:00:00.000Z" }
+  ],
+  "library": {
+    "ownedGameIds": ["MOCK-11111111-0000-0000-0000-000000000001", "MOCK-11111111-0000-0000-0000-000000000002"],
+    "wishlistGameIds": ["MOCK-11111111-0000-0000-0000-000000000003"]
+  },
+  "chatHistory": [
+    {
+      "chatId": "MOCK-33333333-0000-0000-0000-000000000001",
+      "messages": [
+        { "role": "user", "content": "Come si gioca a Wingspan?" },
+        { "role": "assistant", "content": "Wingspan è un gioco da tavolo di strategia in cui colleziona uccelli e costruisce habitat. Nel turno hai 4 azioni: giocare un uccello, guadagnare cibo, deporre uova o pescare carte." }
+      ]
+    }
+  ],
+  "bggGames": [
+    { "bggId": 266192, "name": "Wingspan" },
+    { "bggId": 169786, "name": "Scythe" },
+    { "bggId": 167791, "name": "Terraforming Mars" }
+  ]
+}

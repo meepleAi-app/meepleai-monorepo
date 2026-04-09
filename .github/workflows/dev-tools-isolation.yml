@@ -1,0 +1,130 @@
+name: Dev Tools Isolation Check
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/src/**'
+      - 'apps/api/src/**'
+      - 'docs/superpowers/fixtures/**'
+      - '.github/workflows/dev-tools-isolation.yml'
+
+jobs:
+  isolation-check:
+    name: Verify dev-tools isolation from production builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Backup dev-tools (for restore at end)
+        run: |
+          mkdir -p /tmp/dev-tools-backup
+          if [ -d apps/web/src/dev-tools ]; then
+            tar -czf /tmp/dev-tools-backup/web.tgz apps/web/src/dev-tools
+          fi
+          if [ -d apps/api/src/Api/DevTools ]; then
+            tar -czf /tmp/dev-tools-backup/api.tgz -C apps/api/src/Api DevTools
+          fi
+          if [ -d docs/superpowers/fixtures ]; then
+            tar -czf /tmp/dev-tools-backup/fixtures.tgz docs/superpowers/fixtures
+          fi
+
+      - name: Remove dev-tools (force production build path)
+        run: |
+          rm -rf apps/web/src/dev-tools
+          rm -rf apps/api/src/Api/DevTools
+          rm -rf docs/superpowers/fixtures
+
+      - name: Install frontend deps
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend (prod config, no dev-tools)
+        working-directory: apps/web
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_MOCK_MODE: 'false'
+        run: pnpm build
+
+      - name: Build backend (Release, no dev-tools)
+        working-directory: apps/api/src/Api
+        run: dotnet build -c Release
+
+      - name: Reflection check — Release DLL contains zero Api.DevTools.* types
+        run: |
+          DLL=$(find apps/api/src/Api/bin/Release -name "Api.dll" | head -1)
+          if [ -z "$DLL" ]; then
+            echo "ERROR: Api.dll not found after Release build"
+            exit 1
+          fi
+          echo "Inspecting: $DLL"
+
+          dotnet tool install -g dotnet-script || true
+          export PATH="$PATH:$HOME/.dotnet/tools"
+
+          cat > /tmp/check-devtools.csx <<'EOF'
+          using System;
+          using System.IO;
+          using System.Linq;
+          using System.Reflection;
+
+          var dllPath = Args[0];
+          var asm = Assembly.LoadFrom(dllPath);
+
+          // Api.dll references many ASP.NET assemblies that are not present in the
+          // dotnet-script runtime. Calling GetTypes() throws ReflectionTypeLoadException
+          // when those dependencies cannot be loaded. We only care about which types
+          // exist, not whether they can be fully resolved — so catch the exception
+          // and inspect the partial type list it provides.
+          Type[] types;
+          try
+          {
+              types = asm.GetTypes();
+          }
+          catch (ReflectionTypeLoadException ex)
+          {
+              types = (ex.Types ?? Array.Empty<Type>())
+                  .Where(t => t is not null)
+                  .Cast<Type>()
+                  .ToArray();
+          }
+
+          var devToolsTypes = types
+              .Where(t => t.Namespace != null && t.Namespace.StartsWith("Api.DevTools", StringComparison.Ordinal))
+              .Select(t => t.FullName)
+              .ToList();
+
+          if (devToolsTypes.Any())
+          {
+              Console.Error.WriteLine($"ERROR: Found {devToolsTypes.Count} DevTools types in Release DLL:");
+              foreach (var t in devToolsTypes) Console.Error.WriteLine($"  - {t}");
+              Environment.Exit(1);
+          }
+          Console.WriteLine($"OK: no Api.DevTools.* types in Release DLL (inspected {types.Length} types)");
+          EOF
+
+          dotnet script /tmp/check-devtools.csx -- "$DLL"
+
+      - name: Restore dev-tools
+        if: always()
+        run: |
+          [ -f /tmp/dev-tools-backup/web.tgz ] && tar -xzf /tmp/dev-tools-backup/web.tgz
+          [ -f /tmp/dev-tools-backup/api.tgz ] && tar -xzf /tmp/dev-tools-backup/api.tgz -C apps/api/src/Api
+          [ -f /tmp/dev-tools-backup/fixtures.tgz ] && tar -xzf /tmp/dev-tools-backup/fixtures.tgz
+          true

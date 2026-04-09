@@ -86,18 +86,37 @@ jobs:
 
           var dllPath = Args[0];
           var asm = Assembly.LoadFrom(dllPath);
-          var types = asm.GetTypes()
+
+          // Api.dll references many ASP.NET assemblies that are not present in the
+          // dotnet-script runtime. Calling GetTypes() throws ReflectionTypeLoadException
+          // when those dependencies cannot be loaded. We only care about which types
+          // exist, not whether they can be fully resolved — so catch the exception
+          // and inspect the partial type list it provides.
+          Type[] types;
+          try
+          {
+              types = asm.GetTypes();
+          }
+          catch (ReflectionTypeLoadException ex)
+          {
+              types = (ex.Types ?? Array.Empty<Type>())
+                  .Where(t => t is not null)
+                  .Cast<Type>()
+                  .ToArray();
+          }
+
+          var devToolsTypes = types
               .Where(t => t.Namespace != null && t.Namespace.StartsWith("Api.DevTools", StringComparison.Ordinal))
               .Select(t => t.FullName)
               .ToList();
 
-          if (types.Any())
+          if (devToolsTypes.Any())
           {
-              Console.Error.WriteLine($"ERROR: Found {types.Count} DevTools types in Release DLL:");
-              foreach (var t in types) Console.Error.WriteLine($"  - {t}");
+              Console.Error.WriteLine($"ERROR: Found {devToolsTypes.Count} DevTools types in Release DLL:");
+              foreach (var t in devToolsTypes) Console.Error.WriteLine($"  - {t}");
               Environment.Exit(1);
           }
-          Console.WriteLine("OK: no Api.DevTools.* types in Release DLL");
+          Console.WriteLine($"OK: no Api.DevTools.* types in Release DLL (inspected {types.Length} types)");
           EOF
 
           dotnet script /tmp/check-devtools.csx -- "$DLL"

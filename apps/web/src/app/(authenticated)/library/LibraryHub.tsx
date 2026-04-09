@@ -49,9 +49,7 @@ export function LibraryHub() {
       breadcrumb: 'Libreria · Hub',
       tabs: [
         { id: 'hub', label: 'Hub', href: '/library' },
-        { id: 'personal', label: 'Personal', href: '/library?tab=personal', count: stats.owned },
-        { id: 'catalogo', label: 'Catalogo', href: '/library?tab=catalogo', count: stats.catalog },
-        { id: 'wishlist', label: 'Wishlist', href: '/library?tab=wishlist', count: stats.wishlist },
+        { id: 'wishlist', label: 'Wishlist', href: '/library/wishlist', count: stats.wishlist },
       ],
       activeTabId: 'hub',
       primaryAction: {
@@ -60,7 +58,7 @@ export function LibraryHub() {
         onClick: () => router.push('/library?action=add'),
       },
     }),
-    [router, stats.owned, stats.catalog, stats.wishlist]
+    [router, stats.wishlist]
   );
   useMiniNavConfig(miniNavConfig);
 

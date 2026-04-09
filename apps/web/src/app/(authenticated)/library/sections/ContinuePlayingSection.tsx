@@ -21,12 +21,7 @@ export function ContinuePlayingSection({ games }: ContinuePlayingSectionProps) {
   if (games.length === 0) return null;
 
   return (
-    <LibraryHubCarousel
-      title="Continua a giocare"
-      count={games.length}
-      seeAllHref="/library?tab=personal"
-      entity="session"
-    >
+    <LibraryHubCarousel title="Continua a giocare" count={games.length} entity="session">
       {games.map(game => (
         <div
           key={game.id}

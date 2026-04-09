@@ -24,13 +24,7 @@ export function PersonalLibrarySection({
   onAddGame,
 }: PersonalLibrarySectionProps) {
   return (
-    <LibraryHubCarousel
-      title="Libreria personale"
-      count={totalCount}
-      seeAllHref="/library?tab=personal"
-      seeAllLabel={`Vedi tutti ${totalCount}`}
-      entity="game"
-    >
+    <LibraryHubCarousel title="Libreria personale" count={totalCount} entity="game">
       {games.map(game => (
         <div key={game.id} className="min-w-[200px] max-w-[200px] shrink-0 snap-start">
           <MeepleCard

@@ -42,7 +42,6 @@ import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
 import {
   GameExtraMeepleCard,
-  AgentExtraMeepleCard,
   ChatExtraMeepleCard,
   KbExtraMeepleCard,
 } from './EntityExtraMeepleCard';

@@ -438,7 +438,7 @@ groups:
         annotations:
           summary: "Session AutoSave job has not run in over 2 minutes"
           description: |
-            AutoSaveSessionJob last ran {{ $value | humanizeDuration }} ago
+            AutoSaveSessionJob last ran {{ $value | humanize }}s ago
             (threshold: 120s, expected cadence: 60s).
             Active game-night sessions risk losing unsaved progress.
             Check Quartz scheduler health, API logs for AutoSaveHealthLoggerService warnings,

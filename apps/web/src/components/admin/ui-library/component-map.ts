@@ -111,7 +111,6 @@ import { InlineRoleSelect } from '@/components/admin/users/InlineRoleSelect';
 import { PermissionsMatrix } from '@/components/admin/users/permissions-matrix';
 import { RoleCard } from '@/components/admin/users/role-card';
 import { AdminConfirmationDialog } from '@/components/ui/admin/admin-confirmation-dialog';
-import { AgentStatsDisplay } from '@/components/ui/agent/AgentStatsDisplay';
 import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
 import { FadeIn } from '@/components/ui/animations/FadeIn';
 import { PageTransition } from '@/components/ui/animations/PageTransition';
@@ -368,7 +367,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'motion-button': MotionButton,
 
   // Agent
-  'agent-stats-display': AgentStatsDisplay,
   'agent-status-badge': AgentStatusBadge,
 
   // Icons & Background

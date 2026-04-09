@@ -320,15 +320,6 @@ export const STORY_METADATA: StoryMeta[] = [
     presetCount: 4,
   },
   {
-    id: 'agent-stats-display',
-    title: 'AgentStatsDisplay',
-    category: 'Agent',
-    description:
-      '[ORPHAN] Compact horizontal agent metadata. AgentCharacterSheet uses a custom RPG layout instead — not interchangeable.',
-    controlCount: 4,
-    presetCount: 4,
-  },
-  {
     id: 'strategy-badge',
     title: 'StrategyBadge',
     category: 'Agent',

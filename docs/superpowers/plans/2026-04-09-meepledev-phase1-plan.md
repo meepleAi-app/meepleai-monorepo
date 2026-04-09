@@ -1,6 +1,23 @@
 # MeepleDev Phase 0 + 1 Implementation Plan
 
+> **Status**: v2 (post code-review fixes)
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+## Changelog
+
+- **v1 (initial)**: 34 tasks, 6 PRs, TDD discipline throughout
+- **v2 (post-review)**: Applied fixes from code-reviewer feedback:
+  - **P0-1** (Task 19, 22): `AddMockAwareService` now requires explicit `ServiceLifetime` parameter; real `ILlmService`/`IEmbeddingService` are `Scoped` — proxy must match to avoid captive dependencies
+  - **P0-2** (Task 27): PDF extractors use `AddKeyedScoped` — added `AddKeyedMockAwareService<T>` helper with the correct keyed-DI registration pattern
+  - **P0-3** (Task 11): Dynamic `import()` across package boundary replaced with **static scenario manifest** — JSON files copied into `apps/web/src/dev-tools/fixtures/` for Turbopack-safe bundling; `installDevTools()` is now sync
+  - **P1-1** (Task 22): `MockEmbeddingService` uses `List<float[]>` (not `float[][]`) to match `EmbeddingResult.CreateSuccess` signature
+  - **P1-2** (Task 22): Placeholder type names replaced with real concrete types: `HybridLlmService`, `EmbeddingService`, `S3BlobStorageService`
+  - **P1-4** (Task 25): `MockN8nTemplateService` test now mandates one `[Fact]` per interface method, not `Assert.NotNull(svc)` smoke
+  - **P1-5** (Task 30): Added explicit Makefile tab-vs-space warning + editor config hint
+  - **P1-6** (Task 31): CI DevTools-in-Release check now uses `dotnet-script` reflection (not `strings | grep`, which misses UTF-16 metadata)
+  - **P2-2** (Task 14): `admin-busy.json` description now honestly reflects the empty Phase 1 state
+  - **P2-3** (Task 12): MockProvider integration is now **additive merge**, not full replace — preserves existing HMR/cleanup logic
 
 **Goal:** Implementare un fast dev loop con MSW granulare (FE) + 8 mock services BE via `MockAwareProxy<T>`, controllati da `.env.dev.local`, con `make dev:fast` come entry point. Zero runtime toggles in questa fase (è la fase statica — la fase 2 aggiungerà Dev Panel runtime).
 
@@ -1696,10 +1713,56 @@ git commit -m "feat(dev): add DevBadge component (static phase 1)"
 ### Task 11: Bootstrap installDevTools
 
 **Files:**
+- Create: `apps/web/src/dev-tools/fixtures/empty.json` (copy from docs)
+- Create: `apps/web/src/dev-tools/fixtures/small-library.json` (copy from docs)
+- Create: `apps/web/src/dev-tools/fixtures/admin-busy.json` (copy from docs)
+- Create: `apps/web/src/dev-tools/scenarioManifest.ts`
 - Create: `apps/web/src/dev-tools/install.ts`
 - Create: `apps/web/src/dev-tools/index.ts`
 
-- [ ] **Step 1: Creare `install.ts`**
+**Context — Turbopack constraint**: dynamic `import()` with a template literal across package boundaries (`../../../../docs/`) is NOT reliable in Next.js 16 + Turbopack. Instead, we copy the scenario JSONs into `apps/web/src/dev-tools/fixtures/` and create a **static manifest** that imports each by name. The copy is a simple sync step; the canonical source remains `docs/superpowers/fixtures/scenarios/` and a CI check (added later) verifies the copies match.
+
+- [ ] **Step 1: Copiare i JSON scenari dentro apps/web**
+
+Run:
+```bash
+mkdir -p apps/web/src/dev-tools/fixtures
+cp docs/superpowers/fixtures/scenarios/empty.json apps/web/src/dev-tools/fixtures/empty.json
+cp docs/superpowers/fixtures/scenarios/small-library.json apps/web/src/dev-tools/fixtures/small-library.json
+cp docs/superpowers/fixtures/scenarios/admin-busy.json apps/web/src/dev-tools/fixtures/admin-busy.json
+```
+
+- [ ] **Step 2: Creare `scenarioManifest.ts` (static imports)**
+
+Create `apps/web/src/dev-tools/scenarioManifest.ts`:
+
+```typescript
+import emptyScenario from './fixtures/empty.json';
+import smallLibraryScenario from './fixtures/small-library.json';
+import adminBusyScenario from './fixtures/admin-busy.json';
+
+/**
+ * Static manifest of all available scenarios.
+ * Keeping this static (no dynamic imports) ensures Turbopack can bundle
+ * scenarios into the dev chunk without path resolution issues.
+ *
+ * To add a new scenario:
+ * 1. Add JSON to docs/superpowers/fixtures/scenarios/
+ * 2. Copy to apps/web/src/dev-tools/fixtures/
+ * 3. Add import + entry here
+ */
+export const SCENARIO_MANIFEST: Record<string, unknown> = {
+  empty: emptyScenario,
+  'small-library': smallLibraryScenario,
+  'admin-busy': adminBusyScenario,
+};
+
+export function listScenarioNames(): string[] {
+  return Object.keys(SCENARIO_MANIFEST);
+}
+```
+
+- [ ] **Step 3: Creare `install.ts`**
 
 Create `apps/web/src/dev-tools/install.ts`:
 
@@ -1715,33 +1778,26 @@ import {
   validateScenario,
   SCENARIO_FALLBACK,
 } from './scenarioValidator';
+import { SCENARIO_MANIFEST } from './scenarioManifest';
 import type { Scenario } from './types';
 
 const KNOWN_GROUPS = ['auth', 'games', 'chat', 'library', 'admin'] as const;
 
-async function loadScenarioByName(name: string): Promise<Scenario> {
-  try {
-    // Webpack/Turbopack resolves glob imports at build time.
-    // These JSON files come from docs/superpowers/fixtures/scenarios.
-    // We rely on a static map generated in a later step (task 12 uses a build-time require context).
-    const mod = await import(
-      /* webpackInclude: /\.json$/ */
-      `../../../../docs/superpowers/fixtures/scenarios/${name}.json`
-    );
-    const data = (mod.default ?? mod) as unknown;
-    const result = validateScenario(data);
-    if (!result.valid) {
-      console.warn(
-        `[MeepleDev] Scenario "${name}" failed validation:`,
-        result.errors
-      );
-      return SCENARIO_FALLBACK;
-    }
-    return data as Scenario;
-  } catch (err) {
-    console.warn(`[MeepleDev] Failed to load scenario "${name}":`, err);
+function loadScenarioByName(name: string): Scenario {
+  const raw = SCENARIO_MANIFEST[name];
+  if (!raw) {
+    console.warn(`[MeepleDev] Scenario "${name}" not found in manifest; using fallback`);
     return SCENARIO_FALLBACK;
   }
+  const result = validateScenario(raw);
+  if (!result.valid) {
+    console.warn(
+      `[MeepleDev] Scenario "${name}" failed validation:`,
+      result.errors
+    );
+    return SCENARIO_FALLBACK;
+  }
+  return raw as Scenario;
 }
 
 export interface InstalledDevTools {
@@ -1750,12 +1806,12 @@ export interface InstalledDevTools {
   authStore: ReturnType<typeof createMockAuthStore>;
 }
 
-export async function installDevTools(): Promise<InstalledDevTools> {
+export function installDevTools(): InstalledDevTools {
   const enableList = parseGroupList(process.env.NEXT_PUBLIC_MSW_ENABLE);
   const disableList = parseGroupList(process.env.NEXT_PUBLIC_MSW_DISABLE);
   const scenarioName = process.env.NEXT_PUBLIC_DEV_SCENARIO ?? 'empty';
 
-  const scenario = await loadScenarioByName(scenarioName);
+  const scenario = loadScenarioByName(scenarioName);
 
   const controlStore = createMockControlStore({
     allGroups: [...KNOWN_GROUPS],
@@ -1820,57 +1876,61 @@ git commit -m "feat(dev): add installDevTools bootstrap with scenario loading"
 Read: `apps/web/src/mocks/mock-provider.tsx`
 Identificare il punto in cui MSW viene avviato (probabilmente un `useEffect` + `worker.start()`).
 
-- [ ] **Step 2: Modificare per montare installDevTools + DevBadge**
+- [ ] **Step 2: Modificare `mock-provider.tsx` con strategia ADDITIVE MERGE (non replace)**
 
-Modificare la funzione principale del provider. Il pattern esatto dipende dal file corrente, ma l'idea è:
+**CRITICAL**: non sovrascrivere il file. L'attuale `mock-provider.tsx` contiene logica HMR, unregister service workers, event listeners. Devi fare una fusione additiva:
 
-```typescript
-'use client';
+1. **Aggiungi costante in alto al file**, dopo gli import esistenti:
+   ```typescript
+   const IS_DEV_MOCK =
+     process.env.NODE_ENV === 'development' &&
+     process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
+   ```
 
-import { useEffect, useState, type ReactNode } from 'react';
-import type { InstalledDevTools } from '@/dev-tools';
-import { DevBadge } from '@/dev-tools/devBadge';
+2. **Aggiungi uno `useState` per tools** dentro il componente, accanto a qualunque `useState` esistente:
+   ```typescript
+   const [tools, setTools] = useState<InstalledDevTools | null>(null);
+   ```
+   Aggiungi import: `import type { InstalledDevTools } from '@/dev-tools';`
 
-const IS_DEV_MOCK =
-  process.env.NODE_ENV === 'development' &&
-  process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
+3. **Trova l'`useEffect` esistente che chiama `worker.start()`**. Subito prima di quel `worker.start()` aggiungi:
+   ```typescript
+   // MeepleDev: install stores and dev tools before worker starts
+   if (IS_DEV_MOCK) {
+     const { installDevTools } = await import('@/dev-tools');
+     const installed = installDevTools();
+     setTools(installed);
+   }
+   ```
 
-export function MockProvider({ children }: { children: ReactNode }) {
-  const [tools, setTools] = useState<InstalledDevTools | null>(null);
+4. **Nel return JSX**, aggiungi il `DevBadge` DOPO `{children}` (non sostituirlo), condizionale:
+   ```tsx
+   import { DevBadge } from '@/dev-tools/devBadge';
+   // ...
+   return (
+     <>
+       {/* existing children rendering, unchanged */}
+       {children}
+       {/* MeepleDev addition */}
+       {IS_DEV_MOCK && tools && (
+         <DevBadge
+           controlStore={tools.controlStore}
+           scenarioStore={tools.scenarioStore}
+           authStore={tools.authStore}
+         />
+       )}
+     </>
+   );
+   ```
 
-  useEffect(() => {
-    if (!IS_DEV_MOCK) return;
-    let cancelled = false;
-    (async () => {
-      const { installDevTools } = await import('@/dev-tools');
-      const installed = await installDevTools();
-      if (cancelled) return;
-      // Start MSW worker with active handlers (existing logic kept below)
-      const { worker } = await import('./browser');
-      await worker.start({ onUnhandledRequest: 'bypass' });
-      setTools(installed);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+5. **Non toccare**: HMR listeners, unregister logic, SSR guard, cleanup function del `useEffect` esistente. Sono preservate automaticamente se segui l'approccio additive.
 
-  return (
-    <>
-      {children}
-      {IS_DEV_MOCK && tools && (
-        <DevBadge
-          controlStore={tools.controlStore}
-          scenarioStore={tools.scenarioStore}
-          authStore={tools.authStore}
-        />
-      )}
-    </>
-  );
-}
+**Verifica post-modifica**:
+```bash
+cd apps/web && pnpm typecheck
+git diff apps/web/src/mocks/mock-provider.tsx
 ```
-
-**Nota importante**: se `mock-provider.tsx` esistente ha logica aggiuntiva (es. unregister service workers), preservarla. Questa modifica è **additive** alla logica esistente.
+Il diff deve mostrare SOLO aggiunte (linee `+`), nessuna rimozione non banale (`-` solo se necessario per wrapping JSX).
 
 - [ ] **Step 3: Typecheck e lint**
 
@@ -2112,7 +2172,7 @@ Create `docs/superpowers/fixtures/scenarios/admin-busy.json`:
 {
   "$schema": "../schema/scenario.schema.json",
   "name": "admin-busy",
-  "description": "Admin con 20 giochi e 50 sessioni — per testare liste lunghe e performance UI.",
+  "description": "Admin scenario — baseline in Phase 1 (empty lists). To be populated with 20 games + 50 sessions in Phase 3 polish.",
   "auth": {
     "currentUser": {
       "id": "MOCK-00000000-0000-0000-0000-000000000002",
@@ -2144,7 +2204,7 @@ Create `docs/superpowers/fixtures/scenarios/admin-busy.json`:
 }
 ```
 
-**Nota**: l'`admin-busy` ha arrays vuoti di partenza. In un task di polish futuro (fase 3), aggiungeremo 20 games + 50 sessions programmaticamente.
+**Nota**: l'`admin-busy` ha arrays vuoti in Phase 1 — la description riflette onestamente il suo stato. Il riempimento con 20 games + 50 sessions programmaticamente è un task di Phase 3 polish.
 
 - [ ] **Step 3: Validare i JSON a mano**
 
@@ -2788,6 +2848,7 @@ internal static class KnownMockServices
 Create `apps/api/src/Api/DevTools/MockAwareServiceCollectionExtensions.cs`:
 
 ```csharp
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.DevTools;
@@ -2799,21 +2860,39 @@ internal static class MockAwareServiceCollectionExtensions
     /// between TReal and TMock based on IMockToggleReader state.
     /// Both TReal and TMock are registered as concrete types and the TService
     /// resolves to the proxy.
+    ///
+    /// CRITICAL: lifetime MUST match the real service's existing registration.
+    /// If the real ILlmService is registered as Scoped, pass ServiceLifetime.Scoped here.
+    /// Mismatched lifetimes cause captive-dependency bugs (Singleton wrapping Scoped
+    /// leaks state across requests and throws in Development scope validation).
     /// </summary>
     public static IServiceCollection AddMockAwareService<TService, TReal, TMock>(
         this IServiceCollection services,
-        string serviceName)
+        string serviceName,
+        ServiceLifetime lifetime = ServiceLifetime.Scoped)
         where TService : class
         where TReal : class, TService
         where TMock : class, TService
     {
-        services.AddSingleton<TReal>();
-        services.AddSingleton<TMock>();
-        services.AddSingleton<TService>(sp => MockAwareProxy<TService>.Create(
-            sp.GetRequiredService<TReal>(),
-            sp.GetRequiredService<TMock>(),
-            sp.GetRequiredService<IMockToggleReader>(),
-            serviceName));
+        services.Add(new ServiceDescriptor(typeof(TReal), typeof(TReal), lifetime));
+        services.Add(new ServiceDescriptor(typeof(TMock), typeof(TMock), lifetime));
+
+        // Remove any existing TService registration first (the real registration we are wrapping)
+        var existing = services.FirstOrDefault(d => d.ServiceType == typeof(TService));
+        if (existing is not null)
+        {
+            services.Remove(existing);
+        }
+
+        services.Add(new ServiceDescriptor(
+            typeof(TService),
+            sp => MockAwareProxy<TService>.Create(
+                sp.GetRequiredService<TReal>(),
+                sp.GetRequiredService<TMock>(),
+                sp.GetRequiredService<IMockToggleReader>(),
+                serviceName),
+            lifetime));
+
         return services;
     }
 }
@@ -3284,7 +3363,8 @@ internal sealed class MockEmbeddingService : IEmbeddingService
     public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, string language, CancellationToken ct = default)
     {
         var vec = HashToVector(language + ":" + text);
-        return Task.FromResult(EmbeddingResult.CreateSuccess(new[] { vec }));
+        // EmbeddingResult.CreateSuccess signature takes List<float[]>, not float[][]
+        return Task.FromResult(EmbeddingResult.CreateSuccess(new List<float[]> { vec }));
     }
 
     public Task<EmbeddingResult> GenerateEmbeddingsAsync(List<string> texts, CancellationToken ct = default)
@@ -3292,7 +3372,7 @@ internal sealed class MockEmbeddingService : IEmbeddingService
 
     public Task<EmbeddingResult> GenerateEmbeddingsAsync(List<string> texts, string language, CancellationToken ct = default)
     {
-        var vectors = texts.Select(t => HashToVector(language + ":" + t)).ToArray();
+        var vectors = texts.Select(t => HashToVector(language + ":" + t)).ToList();
         return Task.FromResult(EmbeddingResult.CreateSuccess(vectors));
     }
 
@@ -3537,31 +3617,42 @@ Edit the TODO block:
 
 Replace with:
 ```csharp
-        // Wire mock-aware proxies. Real types are discovered from existing DI;
-        // here we rely on the real types being registered elsewhere as concrete.
-        // For each service, we register the proxy as the TService resolver, overriding prior registration.
-
-        // NOTE: This MUST run AFTER real services are registered.
-        // See Program.cs for ordering.
-        services.AddMockAwareService<ILlmService, RealLlmService_PLACEHOLDER, MockLlmService>("llm");
-        services.AddMockAwareService<IEmbeddingService, RealEmbeddingService_PLACEHOLDER, MockEmbeddingService>("embedding");
-        services.AddMockAwareService<IBlobStorageService, S3BlobStorageService, MockBlobStorageService>("s3");
+        // Wire mock-aware proxies. MUST be called AFTER real services are registered
+        // (Program.cs orders AddMeepleDevTools() after all bounded-context AddXxxServices()).
+        //
+        // Real concrete types (verified against codebase):
+        //   ILlmService         → HybridLlmService (Api.BoundedContexts.KnowledgeBase.Application.Services, Scoped)
+        //   IEmbeddingService   → EmbeddingService (Api.Services, Scoped)
+        //   IBlobStorageService → registered via BlobStorageServiceFactory, selects S3BlobStorageService or BlobStorageService
+        //
+        // Lifetime MUST match the existing real registration — see MockAwareServiceCollectionExtensions.
+        services.AddMockAwareService<ILlmService, HybridLlmService, MockLlmService>(
+            "llm", ServiceLifetime.Scoped);
+        services.AddMockAwareService<IEmbeddingService, EmbeddingService, MockEmbeddingService>(
+            "embedding", ServiceLifetime.Scoped);
+        // S3: verify existing lifetime; if the factory registers IBlobStorageService as Scoped, use Scoped.
+        // BlobStorageServiceFactory is instantiated once but may register the underlying service scoped.
+        // The worker must read `BlobStorageServiceFactory` and match lifetime exactly.
+        services.AddMockAwareService<IBlobStorageService, S3BlobStorageService, MockBlobStorageService>(
+            "s3", ServiceLifetime.Scoped);
 ```
 
-**IMPORTANT — read before proceeding**: Le "RealXxxService_PLACEHOLDER" sono nomi segnaposto. **Non esistono tipi così**. Il worker deve:
+Add required `using` statements at top of `DevToolsServiceCollectionExtensions.cs`:
 
-1. Aprire `apps/api/src/Api/Services/` e trovare la classe concreta che implementa `ILlmService` (probabilmente `LlmService` o `OpenRouterLlmService`)
-2. Sostituire `RealLlmService_PLACEHOLDER` con il nome reale
-3. Idem per `IEmbeddingService` (probabilmente `OllamaEmbeddingService` o `ExternalEmbeddingService`)
-4. `IBlobStorageService` ha già `S3BlobStorageService` e `BlobStorageService` (local); usare quello registrato in prod
+```csharp
+using Api.BoundedContexts.KnowledgeBase.Application.Services;  // HybridLlmService
+using Api.Services;                                             // ILlmService, IEmbeddingService, EmbeddingService
+using Api.Services.Pdf;                                         // IBlobStorageService, S3BlobStorageService
+```
 
-Cerca con:
+**Verification step before committing**:
 ```bash
-grep -rn "class.*: ILlmService\|class.*ILlmService,\|class.*ILlmService$" apps/api/src/Api/Services/
-grep -rn "class.*: IEmbeddingService\|class.*IEmbeddingService" apps/api/src/Api/
+grep -rn "class HybridLlmService" apps/api/src/Api/BoundedContexts/KnowledgeBase/
+grep -rn "class EmbeddingService" apps/api/src/Api/Services/
+grep -rn "AddScoped<ILlmService\|AddSingleton<ILlmService" apps/api/src/Api/
 ```
 
-Aggiornare il codice di conseguenza.
+If any of these greps return zero matches, the worker must find the actual concrete type before proceeding. The names above are correct as of the plan authoring date but could drift.
 
 - [ ] **Step 7: Modificare Program.cs per chiamare `AddMeepleDevTools()`**
 
@@ -4009,9 +4100,16 @@ git commit -m "docs(dev): defer Reranker mock — interface extraction needed"
 
 Read: `apps/api/src/Api/Services/IN8NTemplateService.cs` — annotare tutti i metodi dell'interfaccia.
 
-- [ ] **Step 2: Scrivere test che copre tutti i metodi esposti**
+- [ ] **Step 2: Scrivere test che ESERCITA ogni metodo dell'interfaccia**
 
-Create `tests/Api.Tests/DevTools/MockN8nTemplateServiceTests.cs`:
+Create `tests/Api.Tests/DevTools/MockN8nTemplateServiceTests.cs`.
+
+**DO NOT commit** un test che asserisce solo `Assert.NotNull(svc)` — viola la disciplina TDD (un test inutile non rileva bug). Il test DEVE:
+1. Invocare **almeno una volta ogni metodo pubblico** di `IN8NTemplateService`
+2. Verificare il return value non-null/non-default quando il metodo dovrebbe tornare qualcosa
+3. Verificare che nessuna chiamata lanci eccezione
+
+Template iniziale da ESPANDERE dopo aver letto `IN8NTemplateService.cs` allo Step 1:
 
 ```csharp
 using System.Threading;
@@ -4023,19 +4121,28 @@ namespace Api.Tests.DevTools;
 
 public class MockN8nTemplateServiceTests
 {
-    [Fact]
-    public async Task SmokeTest_AllMethodsReturnSafeDefaults()
-    {
-        var svc = new MockN8nTemplateService();
-        // Add one assertion per method on IN8NTemplateService.
-        // This task REQUIRES reading the interface first (step 1).
-        await Task.CompletedTask;
-        Assert.NotNull(svc);
-    }
+    private static MockN8nTemplateService Make() => new();
+
+    // PLACEHOLDER — replace with one [Fact] per interface method found in Step 1.
+    // Example (if interface has TriggerWebhookAsync):
+    //
+    // [Fact]
+    // public async Task TriggerWebhookAsync_ReturnsSuccess()
+    // {
+    //     var svc = Make();
+    //     var result = await svc.TriggerWebhookAsync(
+    //         webhookUrl: "http://mock/hook",
+    //         payload: new { test = true },
+    //         CancellationToken.None);
+    //     Assert.True(result.Success);
+    //     Assert.StartsWith("MOCK-", result.ExecutionId);
+    // }
+    //
+    // Repeat for each method on IN8NTemplateService.
 }
 ```
 
-**Nota**: il test dettagliato dipende dai metodi reali — aggiornare DOPO lo step 1.
+**Definition of done** for this step: the test file has at least N `[Fact]` methods, where N = number of public methods on `IN8NTemplateService`. No method should be untested.
 
 - [ ] **Step 3: Implementare mock che no-op tutti i metodi**
 
@@ -4322,14 +4429,86 @@ cd tests/Api.Tests && dotnet test --filter "FullyQualifiedName~MockPdfExtractorT
 ```
 Expected: PASS.
 
-- [ ] **Step 6: Registrare in DevToolsServiceCollectionExtensions**
+- [ ] **Step 6: Registrare in DevToolsServiceCollectionExtensions (KEYED DI pattern)**
+
+**CRITICAL — read this block before writing code**. The real `IPdfTextExtractor` is registered via **keyed DI**, NOT as a plain `IService`. From `DocumentProcessingServiceExtensions.cs`:
 
 ```csharp
-services.AddMockAwareService<IPdfTextExtractor, SmolDoclingPdfTextExtractor, MockSmolDoclingPdfTextExtractor>("smoldocling");
-services.AddMockAwareService<IPdfTextExtractor, UnstructuredPdfTextExtractor, MockUnstructuredPdfTextExtractor>("unstructured");
+services.AddKeyedScoped<IPdfTextExtractor, SmolDoclingPdfTextExtractor>(PdfExtractorKeys.SmolDocling);
+services.AddKeyedScoped<IPdfTextExtractor, UnstructuredPdfTextExtractor>(PdfExtractorKeys.Unstructured);
+services.AddKeyedScoped<IPdfTextExtractor, DocnetPdfTextExtractor>(PdfExtractorKeys.Docnet);
 ```
 
-**WARNING**: due registrazioni della stessa interfaccia sovrascrivono l'ultima. Se il DI pattern esistente usa "named" services o factory per distinguere smoldocling vs unstructured, adattare: probabilmente sono registrati con `AddKeyedSingleton` o come `IEnumerable<IPdfTextExtractor>`. Leggere come sono registrati ora nel bounded context `DocumentProcessingServiceExtensions.cs` e replicare lo stesso pattern con mock.
+Consumers receive them via `[FromKeyedServices(PdfExtractorKeys.SmolDocling)] IPdfTextExtractor extractor` constructor attribute.
+
+`AddMockAwareService<IPdfTextExtractor, ...>` **does NOT work** for keyed services — `MockAwareProxy<T>` can proxy instance method calls but the keyed-DI resolution happens before the proxy is ever invoked, so wrapping at the top-level TService binding does not intercept keyed consumers.
+
+**Correct pattern**: add a helper method `AddKeyedMockAwareService<TService, TReal, TMock>` to `MockAwareServiceCollectionExtensions.cs`:
+
+```csharp
+public static IServiceCollection AddKeyedMockAwareService<TService, TReal, TMock>(
+    this IServiceCollection services,
+    object serviceKey,
+    string serviceName,
+    ServiceLifetime lifetime = ServiceLifetime.Scoped)
+    where TService : class
+    where TReal : class, TService
+    where TMock : class, TService
+{
+    // Remove existing keyed registration for this (type, key) pair
+    var existing = services.FirstOrDefault(d =>
+        d.ServiceType == typeof(TService) &&
+        d.IsKeyedService &&
+        Equals(d.ServiceKey, serviceKey));
+    if (existing is not null)
+    {
+        services.Remove(existing);
+    }
+
+    // Register concrete types as keyed so they can be resolved inside the factory
+    services.Add(new ServiceDescriptor(
+        typeof(TReal), serviceKey, typeof(TReal), lifetime));
+    services.Add(new ServiceDescriptor(
+        typeof(TMock), serviceKey, typeof(TMock), lifetime));
+
+    // Register the keyed TService as a factory that builds the proxy
+    services.Add(new ServiceDescriptor(
+        typeof(TService),
+        serviceKey,
+        (sp, key) => MockAwareProxy<TService>.Create(
+            sp.GetRequiredKeyedService<TReal>(key!),
+            sp.GetRequiredKeyedService<TMock>(key!),
+            sp.GetRequiredService<IMockToggleReader>(),
+            serviceName),
+        lifetime));
+
+    return services;
+}
+```
+
+Then in `DevToolsServiceCollectionExtensions.cs`:
+
+```csharp
+// PDF extractors use keyed DI — use the keyed variant
+services.AddKeyedMockAwareService<IPdfTextExtractor, SmolDoclingPdfTextExtractor, MockSmolDoclingPdfTextExtractor>(
+    PdfExtractorKeys.SmolDocling, "smoldocling");
+services.AddKeyedMockAwareService<IPdfTextExtractor, UnstructuredPdfTextExtractor, MockUnstructuredPdfTextExtractor>(
+    PdfExtractorKeys.Unstructured, "unstructured");
+```
+
+Required `using`:
+```csharp
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;  // IPdfTextExtractor, PdfExtractorKeys
+```
+
+**Verification before commit**:
+```bash
+grep -rn "AddKeyedScoped<IPdfTextExtractor\|AddKeyed.*PdfExtractor" apps/api/src/Api/BoundedContexts/DocumentProcessing/
+grep -rn "PdfExtractorKeys\." apps/api/src/Api/
+```
+Confirm: (1) `AddKeyedScoped` is the real registration pattern, (2) `PdfExtractorKeys` class exists with the expected constants.
+
+If the real code uses a different key type (string literals instead of a static class), adapt the calls accordingly.
 
 - [ ] **Step 7: Commit**
 
@@ -4738,6 +4917,16 @@ dev\:fast-check: ## Verify .env.dev.local against template
 
 **Nota**: lo `:` nei target Makefile va escapato con `\:` perché fa parte del token. Verificare con `make help`.
 
+**⚠ CRITICAL Makefile hygiene** — leggere prima di salvare:
+1. **Recipe lines (quelle dopo `:`) DEVONO iniziare con TAB, non spazi**. Questo è un requisito rigido di Make — spazi causano `*** missing separator. Stop.`
+2. Quando copi dal markdown, gli editor spesso convertono tab in spazi. Verifica con:
+   ```bash
+   cat -A infra/Makefile | grep -A1 "dev:fast" | head
+   ```
+   Le linee recipe devono mostrare `^I` (carattere tab) all'inizio, NON spazi.
+3. In VS Code, per il file Makefile disattivare "Insert Spaces" o usare `.editorconfig` con `indent_style = tab` per `Makefile`.
+4. Controllare lo stile escaping del Makefile esistente (step 1). Se il progetto già usa `\:` per altri target, coerenza. Se invece usa `.PHONY: dev-fast` con nomi senza `:`, considera di usare lo stesso stile (es. `dev-fast` invece di `dev:fast`) per evitare l'escape complication.
+
 - [ ] **Step 3: Verificare**
 
 Run:
@@ -4864,19 +5053,43 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet build -c Release
 
-      - name: Verify no DevTools types
+      - name: Verify no DevTools types (reflection-based)
         run: |
           DLL=$(find apps/api/src/Api/bin/Release -name "Api.dll" | head -1)
           if [ -z "$DLL" ]; then
             echo "Api.dll not found"
             exit 1
           fi
-          # Use ildasm or reflection tool via dotnet CLI
-          if strings "$DLL" | grep -q "Api.DevTools\."; then
-            echo "ERROR: Api.DevTools.* symbols found in Release DLL"
-            exit 1
-          fi
-          echo "OK: no DevTools symbols in Release DLL"
+
+          # Use a small C# script via dotnet-script (installed on the fly)
+          # This is reliable for .NET assemblies because it walks actual metadata,
+          # unlike 'strings' which misses UTF-16 encoded type names.
+          dotnet tool install -g dotnet-script || true
+          export PATH="$PATH:$HOME/.dotnet/tools"
+
+          cat > /tmp/check-devtools.csx <<'EOF'
+          using System;
+          using System.IO;
+          using System.Linq;
+          using System.Reflection;
+
+          var dllPath = Args[0];
+          var asm = Assembly.LoadFrom(dllPath);
+          var types = asm.GetTypes()
+              .Where(t => t.Namespace != null && t.Namespace.StartsWith("Api.DevTools", StringComparison.Ordinal))
+              .Select(t => t.FullName)
+              .ToList();
+
+          if (types.Any())
+          {
+              Console.Error.WriteLine($"ERROR: Found {types.Count} DevTools types in Release DLL:");
+              foreach (var t in types) Console.Error.WriteLine($"  - {t}");
+              Environment.Exit(1);
+          }
+          Console.WriteLine("OK: no Api.DevTools.* types in Release DLL");
+          EOF
+
+          dotnet script /tmp/check-devtools.csx -- "$DLL"
 ```
 
 - [ ] **Step 2: Commit**

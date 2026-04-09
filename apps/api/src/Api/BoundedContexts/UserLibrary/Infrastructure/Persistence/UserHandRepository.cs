@@ -34,7 +34,7 @@ internal class UserHandRepository : IUserHandRepository
         )).ToList();
     }
 
-    public async Task UpsertSlotAsync(Guid userId, string slotType, Guid entityId, string entityType,
+    public async Task<DateTime> UpsertSlotAsync(Guid userId, string slotType, Guid entityId, string entityType,
         string? entityLabel, string? entityImageUrl, CancellationToken ct = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -64,6 +64,8 @@ internal class UserHandRepository : IUserHandRepository
             existing.EntityImageUrl = entityImageUrl;
             existing.PinnedAt = now;
         }
+
+        return now;
     }
 
     public async Task ClearSlotAsync(Guid userId, string slotType, CancellationToken ct = default)

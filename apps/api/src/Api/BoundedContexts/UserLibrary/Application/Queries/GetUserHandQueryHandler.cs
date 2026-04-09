@@ -10,8 +10,6 @@ namespace Api.BoundedContexts.UserLibrary.Application.Queries;
 /// </summary>
 internal class GetUserHandQueryHandler : IQueryHandler<GetUserHandQuery, IReadOnlyList<UserHandSlotDto>>
 {
-    private static readonly string[] AllSlotTypes = ["toolkit", "game", "session", "ai"];
-
     private readonly IUserHandRepository _repo;
 
     public GetUserHandQueryHandler(IUserHandRepository repo)
@@ -27,7 +25,7 @@ internal class GetUserHandQueryHandler : IQueryHandler<GetUserHandQuery, IReadOn
         var slotMap = slots.ToDictionary(s => s.SlotType, StringComparer.OrdinalIgnoreCase);
 
         // Always return all 4 slot types — empty if not assigned
-        return AllSlotTypes.Select(slotType =>
+        return HandSlotConstants.AllSlotTypes.Select(slotType =>
         {
             if (slotMap.TryGetValue(slotType, out var slot))
             {

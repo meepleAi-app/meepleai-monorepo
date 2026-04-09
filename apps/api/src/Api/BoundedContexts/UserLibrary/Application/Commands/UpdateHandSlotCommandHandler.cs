@@ -24,7 +24,7 @@ internal class UpdateHandSlotCommandHandler : ICommandHandler<UpdateHandSlotComm
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        await _repo.UpsertSlotAsync(
+        var pinnedAt = await _repo.UpsertSlotAsync(
             command.UserId,
             command.SlotType,
             command.EntityId,
@@ -42,7 +42,7 @@ internal class UpdateHandSlotCommandHandler : ICommandHandler<UpdateHandSlotComm
             command.EntityType,
             command.EntityLabel,
             command.EntityImageUrl,
-            DateTimeOffset.UtcNow.ToString("o")
+            pinnedAt.ToString("o")
         );
     }
 }

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
@@ -9,6 +11,7 @@ using Api.DevTools.Scenarios;
 using Api.Services;
 using Api.Services.Pdf;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -90,6 +93,56 @@ internal static class DevToolsServiceCollectionExtensions
             var toggles = sp.GetRequiredService<IMockToggleReader>();
             return MockAwareProxy<ICrossEncoderReranker>.Create(realReranker, mockReranker, toggles, "reranker");
         });
+
+        // IPdfTextExtractor (SmolDocling + Unstructured) use keyed DI (AddKeyedScoped).
+        // Both real extractors require IHttpClientFactory, so they cannot be wrapped by the
+        // generic AddMockAwareService<> helper. We use the inline keyed factory pattern instead:
+        // remove the existing keyed registration and re-add it with a proxy factory.
+
+        services.AddScoped<MockSmolDoclingPdfTextExtractor>();
+        var existingSmolDocling = services.FirstOrDefault(d =>
+            d.ServiceType == typeof(IPdfTextExtractor) &&
+            d.IsKeyedService &&
+            Equals(d.ServiceKey, DocumentProcessingServiceExtensions.PdfExtractorKeys.SmolDocling));
+        if (existingSmolDocling is not null)
+        {
+            services.Remove(existingSmolDocling);
+        }
+
+        services.AddKeyedScoped<IPdfTextExtractor>(
+            DocumentProcessingServiceExtensions.PdfExtractorKeys.SmolDocling,
+            (sp, _) =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var logger = sp.GetRequiredService<ILogger<SmolDoclingPdfTextExtractor>>();
+                var configuration = sp.GetRequiredService<IConfiguration>();
+                var realExtractor = new SmolDoclingPdfTextExtractor(httpClientFactory, logger, configuration);
+                var mockExtractor = sp.GetRequiredService<MockSmolDoclingPdfTextExtractor>();
+                var toggles = sp.GetRequiredService<IMockToggleReader>();
+                return MockAwareProxy<IPdfTextExtractor>.Create(realExtractor, mockExtractor, toggles, "smoldocling");
+            });
+
+        services.AddScoped<MockUnstructuredPdfTextExtractor>();
+        var existingUnstructured = services.FirstOrDefault(d =>
+            d.ServiceType == typeof(IPdfTextExtractor) &&
+            d.IsKeyedService &&
+            Equals(d.ServiceKey, DocumentProcessingServiceExtensions.PdfExtractorKeys.Unstructured));
+        if (existingUnstructured is not null)
+        {
+            services.Remove(existingUnstructured);
+        }
+
+        services.AddKeyedScoped<IPdfTextExtractor>(
+            DocumentProcessingServiceExtensions.PdfExtractorKeys.Unstructured,
+            (sp, _) =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var logger = sp.GetRequiredService<ILogger<UnstructuredPdfTextExtractor>>();
+                var realExtractor = new UnstructuredPdfTextExtractor(httpClientFactory, logger);
+                var mockExtractor = sp.GetRequiredService<MockUnstructuredPdfTextExtractor>();
+                var toggles = sp.GetRequiredService<IMockToggleReader>();
+                return MockAwareProxy<IPdfTextExtractor>.Create(realExtractor, mockExtractor, toggles, "unstructured");
+            });
 
         return services;
     }

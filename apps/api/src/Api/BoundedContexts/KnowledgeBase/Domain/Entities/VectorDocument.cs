@@ -59,7 +59,7 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         SearchCount = 0;
         SharedGameId = sharedGameId;
 
-        AddDomainEvent(new VectorDocumentIndexedEvent(id, gameId, totalChunks));
+        AddDomainEvent(new VectorDocumentIndexedEvent(id, gameId, totalChunks, sharedGameId));
     }
 
     /// <summary>

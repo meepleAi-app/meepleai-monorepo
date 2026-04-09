@@ -1,10 +1,13 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
-using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -16,12 +19,26 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
 /// S2 of library-to-game epic — maintains the denormalized
 /// <c>has_knowledge_base</c> column on <c>shared_games</c> in response to
 /// VectorDocumentIndexedEvent notifications from the KnowledgeBase BC.
+///
+/// Tech debt revision (CR-I1, CR-M4):
+///   - Event carries SharedGameId directly (no cross-BC DB read).
+///   - Handler invalidates the HybridCache tag "search-games" after updates.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class VectorDocumentIndexedForKbFlagHandlerTests
 {
     private readonly Mock<ILogger<VectorDocumentIndexedForKbFlagHandler>> _logger = new();
+
+    private static HybridCache CreateHybridCache()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IMemoryCache, MemoryCache>();
+        services.AddSingleton<IDistributedCache>(new MemoryDistributedCache(
+            Microsoft.Extensions.Options.Options.Create(new MemoryDistributedCacheOptions())));
+        services.AddHybridCache();
+        return services.BuildServiceProvider().GetRequiredService<HybridCache>();
+    }
 
     private static SharedGameEntity CreateSharedGame(Guid id, bool hasKb = false) =>
         new()
@@ -42,34 +59,20 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
             HasKnowledgeBase = hasKb,
         };
 
-    private static VectorDocumentEntity CreateVectorDocument(Guid id, Guid? sharedGameId, Guid? gameId = null) =>
-        new()
-        {
-            Id = id,
-            GameId = gameId,
-            SharedGameId = sharedGameId,
-            PdfDocumentId = Guid.NewGuid(),
-            ChunkCount = 42,
-            TotalCharacters = 10000,
-            IndexingStatus = "completed",
-            EmbeddingModel = "nomic-embed-text",
-            EmbeddingDimensions = 768,
-        };
-
     [Fact]
-    public async Task Handle_VectorDocumentWithSharedGameId_FlipsHasKnowledgeBaseToTrue()
+    public async Task Handle_EventWithSharedGameId_FlipsHasKnowledgeBaseToTrue()
     {
         // Arrange
         var sharedGameId = Guid.NewGuid();
         var documentId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
 
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
-        db.VectorDocuments.Add(CreateVectorDocument(documentId, sharedGameId));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, _logger.Object);
-        var evt = new VectorDocumentIndexedEvent(documentId, sharedGameId, 42);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var evt = new VectorDocumentIndexedEvent(documentId, gameId, chunkCount: 42, sharedGameId: sharedGameId);
 
         // Act
         await handler.Handle(evt, CancellationToken.None);
@@ -81,20 +84,19 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
     }
 
     [Fact]
-    public async Task Handle_VectorDocumentWithNullSharedGameId_DoesNotUpdateAnyGame()
+    public async Task Handle_EventWithNullSharedGameId_DoesNotUpdateAnything()
     {
         // Arrange
         var sharedGameId = Guid.NewGuid();
         var documentId = Guid.NewGuid();
-        var unrelatedGameId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
 
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
-        db.VectorDocuments.Add(CreateVectorDocument(documentId, sharedGameId: null, gameId: unrelatedGameId));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, _logger.Object);
-        var evt = new VectorDocumentIndexedEvent(documentId, unrelatedGameId, 42);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var evt = new VectorDocumentIndexedEvent(documentId, gameId, chunkCount: 42, sharedGameId: null);
 
         // Act
         await handler.Handle(evt, CancellationToken.None);
@@ -105,12 +107,16 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
     }
 
     [Fact]
-    public async Task Handle_VectorDocumentNotFound_DoesNotThrow()
+    public async Task Handle_EventWithUnknownSharedGameId_DoesNotThrow()
     {
         // Arrange
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, _logger.Object);
-        var evt = new VectorDocumentIndexedEvent(Guid.NewGuid(), Guid.NewGuid(), 42);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var evt = new VectorDocumentIndexedEvent(
+            documentId: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            chunkCount: 42,
+            sharedGameId: Guid.NewGuid()); // exists in event but not in DB
 
         // Act
         var act = async () => await handler.Handle(evt, CancellationToken.None);
@@ -125,14 +131,14 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
         // Arrange
         var sharedGameId = Guid.NewGuid();
         var documentId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
 
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: true));
-        db.VectorDocuments.Add(CreateVectorDocument(documentId, sharedGameId));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, _logger.Object);
-        var evt = new VectorDocumentIndexedEvent(documentId, sharedGameId, 42);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var evt = new VectorDocumentIndexedEvent(documentId, gameId, chunkCount: 42, sharedGameId: sharedGameId);
 
         // Act
         await handler.Handle(evt, CancellationToken.None);
@@ -147,12 +153,54 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
     {
         // Arrange
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
 
         // Act
         var act = async () => await handler.Handle(null!, CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task Handle_WithValidUpdate_InvalidatesSearchGamesCache()
+    {
+        // Arrange — prime the cache with a dummy entry under the "search-games" tag
+        var cache = CreateHybridCache();
+        var sentinelKey = $"search-games:{Guid.NewGuid()}";
+        var tags = new[] { "search-games" };
+        await cache.SetAsync(sentinelKey, "cached-value", tags: tags);
+
+        var sharedGameId = Guid.NewGuid();
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
+        await db.SaveChangesAsync();
+
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, cache, _logger.Object);
+        var evt = new VectorDocumentIndexedEvent(
+            documentId: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            chunkCount: 42,
+            sharedGameId: sharedGameId);
+
+        // Act
+        await handler.Handle(evt, CancellationToken.None);
+
+        // Assert — SharedGame flag flipped and cache entry evicted
+        (await db.SharedGames.FindAsync(sharedGameId))!.HasKnowledgeBase.Should().BeTrue();
+        // The cached value should be gone now; GetOrCreateAsync would repopulate.
+        // We cannot read the internal HybridCache state directly, but a subsequent
+        // write with the same key should succeed and the factory should be invoked
+        // (indicating the prior entry was evicted).
+        var factoryInvoked = false;
+        await cache.GetOrCreateAsync(
+            sentinelKey,
+            _ =>
+            {
+                factoryInvoked = true;
+                return ValueTask.FromResult("fresh-value");
+            },
+            tags: tags);
+        factoryInvoked.Should().BeTrue("RemoveByTagAsync should have evicted the sentinel");
     }
 }

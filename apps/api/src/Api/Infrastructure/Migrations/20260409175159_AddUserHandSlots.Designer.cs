@@ -14,7 +14,7 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260409174122_AddUserHandSlots")]
+    [Migration("20260409175159_AddUserHandSlots")]
     partial class AddUserHandSlots
     {
         /// <inheritdoc />
@@ -11381,29 +11381,35 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("EntityImageUrl")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("EntityLabel")
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("EntityType")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("PinnedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SlotType")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "SlotType")
+                        .IsUnique()
+                        .HasDatabaseName("IX_user_hand_slots_user_id_slot_type");
 
-                    b.ToTable("UserHandSlots");
+                    b.ToTable("user_hand_slots", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity", b =>

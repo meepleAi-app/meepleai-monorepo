@@ -1,0 +1,13 @@
+{
+  "schema_version": "20260401_AddSearchVector",
+  "ef_migration_head": "20260401_AddSearchVector",
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "embedding_dim": 384,
+  "app_commit": "test0000",
+  "created_at": "2026-04-10T12:00:00Z",
+  "dev_yml_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "pdf_count": 130,
+  "chunk_count": 18000,
+  "embedding_count": 18000,
+  "failed_pdf_ids": []
+}

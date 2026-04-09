@@ -1,7 +1,8 @@
-import { Star, Users, Clock } from 'lucide-react';
+import { Users, Clock } from 'lucide-react';
 import Image from 'next/image';
 
 import { Badge } from '@/components/ui/data-display/badge';
+import { RatingStars } from '@/components/ui/data-display/rating-stars';
 
 interface GameHeaderProps {
   title: string;
@@ -60,16 +61,9 @@ export function GameHeader({
           </p>
         )}
 
+        {rating != null && <RatingStars rating={rating} maxRating={10} size="sm" showValue />}
+
         <div className="flex items-center flex-wrap gap-2">
-          {rating != null && (
-            <Badge
-              variant="secondary"
-              className="gap-1 bg-[hsl(var(--e-game))]/15 text-[hsl(var(--e-game))] border-[hsl(var(--e-game))]/30"
-            >
-              <Star className="w-3 h-3 fill-current" />
-              {rating.toFixed(1)}
-            </Badge>
-          )}
           {playerLabel && (
             <Badge variant="secondary" className="gap-1">
               <Users className="w-3 h-3" />

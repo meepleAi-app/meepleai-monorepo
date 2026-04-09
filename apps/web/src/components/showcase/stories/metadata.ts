@@ -24,9 +24,10 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'meeple-card',
     title: 'MeepleCard',
     category: 'Data Display',
-    description: 'Universal card component for games, players, agents, sessions, and more.',
-    controlCount: 9,
-    presetCount: 6,
+    description:
+      'Universal card component for games, players, agents, sessions, and more. NavFooter states included.',
+    controlCount: 12,
+    presetCount: 11,
   },
   {
     id: 'entity-list-view',
@@ -56,7 +57,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'rating-stars',
     title: 'RatingStars',
     category: 'Data Display',
-    description: 'Star rating display with BGG 10-point scale conversion. Supports half-stars.',
+    description:
+      'Star rating display with BGG 10-point scale conversion. Supports half-stars. Used by GameHeader.',
     controlCount: 5,
     presetCount: 4,
   },
@@ -116,7 +118,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'rule-source-card',
     title: 'RuleSourceCard',
     category: 'Feedback',
-    description: 'Citation card per risposte RAG con fonti dal regolamento.',
+    description:
+      'Citation card per risposte RAG con fonti dal regolamento. Used by chat-unified/ChatMessageList.',
     controlCount: 4,
     presetCount: 4,
   },
@@ -151,7 +154,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'tag-strip',
     title: 'TagStrip',
     category: 'Tags',
-    description: 'Horizontal strip of colored tag badges with overflow indicator.',
+    description:
+      '[ORPHAN] Vertical strip of tag badges. Standalone API — MeepleCard uses an internal entity-color variant.',
     controlCount: 3,
     presetCount: 4,
   },
@@ -161,7 +165,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'page-transition',
     title: 'PageTransition',
     category: 'Animations',
-    description: 'Smooth page transition animations using Framer Motion.',
+    description:
+      'Smooth page transitions via Framer Motion. Pilot active in (chat) layout behind NEXT_PUBLIC_ENABLE_PAGE_TRANSITIONS flag.',
     controlCount: 1,
     presetCount: 3,
   },
@@ -282,7 +287,8 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'meeple-avatar',
     title: 'MeepleAvatar',
     category: 'Meeple',
-    description: 'Animated meeple character representing the AI assistant with 5 activity states.',
+    description:
+      '[ORPHAN] Animated meeple AI assistant with 5 states. Transitively orphan via ChatMessage.',
     controlCount: 2,
     presetCount: 5,
   },
@@ -299,7 +305,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'ChatMessage',
     category: 'Meeple',
     description:
-      'Chat message bubble with role-based layout, AI confidence badge, and feedback buttons.',
+      '[ORPHAN] Message bubble with role/confidence/feedback. ChatMessageList renders inline instead — refactor pending.',
     controlCount: 5,
     presetCount: 4,
   },
@@ -318,7 +324,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'AgentStatsDisplay',
     category: 'Agent',
     description:
-      'Agent metadata panel with status badge, invocation count, response time, and capabilities.',
+      '[ORPHAN] Compact horizontal agent metadata. AgentCharacterSheet uses a custom RPG layout instead — not interchangeable.',
     controlCount: 4,
     presetCount: 4,
   },
@@ -354,17 +360,9 @@ export const STORY_METADATA: StoryMeta[] = [
     id: 'upgrade-prompt',
     title: 'UpgradePrompt',
     category: 'Gates',
-    description: 'Upgrade CTA shown when a user tries to access a tier-locked feature.',
+    description:
+      'Tier-locked feature CTA. Consumed by FeatureGate, PermissionGate, and TierGate in the gate system.',
     controlCount: 3,
     presetCount: 3,
-  },
-  {
-    id: 'collection-progress',
-    title: 'CollectionProgress',
-    category: 'Gates',
-    description:
-      'Quota progress bar with color-coded warnings: green (<75%), amber (75-90%), red (>90%).',
-    controlCount: 4,
-    presetCount: 4,
   },
 ];

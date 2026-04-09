@@ -125,7 +125,6 @@ import { Card } from '@/components/ui/data-display/card';
 import { CardGridSkeletons } from '@/components/ui/data-display/CardGridSkeletons';
 import { CitationLink } from '@/components/ui/data-display/citation-link';
 import { Collapsible } from '@/components/ui/data-display/collapsible';
-import { CollectionLimitIndicator as CollectionLimitIndicatorDataDisplay } from '@/components/ui/data-display/CollectionLimitIndicator';
 import { ConfidenceBadge } from '@/components/ui/data-display/confidence-badge';
 import { DataTable } from '@/components/ui/data-display/data-table';
 import { AddEntityLinkModal } from '@/components/ui/data-display/entity-link/add-entity-link-modal';
@@ -155,8 +154,6 @@ import { BulkCollectionWarning } from '@/components/ui/dialogs/bulk-collection-w
 import { CollectionRemovalWarning } from '@/components/ui/dialogs/collection-removal-warning';
 import { Alert } from '@/components/ui/feedback/alert';
 import { AlertDialog } from '@/components/ui/feedback/alert-dialog';
-import { CollectionLimitIndicator } from '@/components/ui/feedback/collection-limit-indicator';
-import { CollectionProgressBar } from '@/components/ui/feedback/collection-progress-bar';
 import { ConfidenceBadge as FeedbackConfidenceBadge } from '@/components/ui/feedback/ConfidenceBadge';
 import { ConfirmDialog } from '@/components/ui/feedback/confirm-dialog';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
@@ -271,7 +268,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'card-grid-skeletons': CardGridSkeletons,
   'citation-link': CitationLink,
   collapsible: Collapsible,
-  'collection-limit-indicator': CollectionLimitIndicatorDataDisplay,
   'confidence-badge': ConfidenceBadge,
   'entity-link-badge': EntityLinkBadge,
   'entity-link-card': EntityLinkCard,
@@ -296,8 +292,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   // Feedback
   alert: Alert,
   'alert-dialog': AlertDialog,
-  'collection-limit-indicator-feedback': CollectionLimitIndicator,
-  'collection-progress-bar': CollectionProgressBar,
   'feedback-confidence-badge': FeedbackConfidenceBadge,
   'confirm-dialog': ConfirmDialog,
   'impersonation-banner': ImpersonationBanner,

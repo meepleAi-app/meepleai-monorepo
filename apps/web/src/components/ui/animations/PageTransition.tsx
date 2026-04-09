@@ -3,8 +3,11 @@
 /**
  * PageTransition Component (Issue #2965 Wave 8)
  *
- * Provides smooth page transition animations for route changes.
- * Use in layout.tsx or page-specific layouts.
+ * Provides smooth page transition animations for route changes (fade / slide /
+ * scale) via Framer Motion. Use in layout.tsx or page-specific layouts.
+ *
+ * **Active consumers:**
+ * - `(chat)/layout.tsx` — pilot behind `NEXT_PUBLIC_ENABLE_PAGE_TRANSITIONS` flag (#293)
  *
  * Usage:
  * <PageTransition>

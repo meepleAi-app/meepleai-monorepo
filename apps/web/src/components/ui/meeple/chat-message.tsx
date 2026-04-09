@@ -4,6 +4,20 @@
  * Displays chat messages with role-based layout, confidence badges,
  * citations, typing indicators, and feedback buttons following Playful Boardroom design.
  *
+ * @status ORPHAN — refactor pending.
+ *
+ * This component was designed to replace the inline message rendering in
+ * `chat-unified/ChatMessageList.tsx` (311 lines, renders messages directly
+ * without using this atom). The refactor never landed; ChatMessageList still
+ * imports `FeedbackButtons` and manages citations/confidence inline.
+ *
+ * **Linked fate:** `MeepleAvatar` is imported only by this file — it is
+ * transitively orphan until ChatMessage is adopted by ChatMessageList.
+ *
+ * **When to revive:** during the next ChatMessageList refactor, replace the
+ * inline `<div>`-based message shells with `<ChatMessage>`. Expect API delta:
+ * ChatMessageList uses `ChatMessageItem` type, ChatMessage uses `Citation`.
+ *
  * @see docs/04-frontend/wireframes-playful-boardroom.md (Page 4 - Chat AI)
  * @issue #1831 (UI-004)
  * @issue #3352 (AI Response Feedback System)

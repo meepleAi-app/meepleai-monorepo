@@ -65,7 +65,7 @@ export function installDevTools(): InstalledDevTools {
   });
 
   if (typeof console !== 'undefined') {
-    console.info(
+    console.warn(
       `[MeepleDev] installed · scenario=${scenario.name} · groups=`,
       controlStore.getState().toggles.groups
     );

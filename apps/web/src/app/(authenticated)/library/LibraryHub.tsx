@@ -85,10 +85,9 @@ export function LibraryHub() {
   });
 
   // Section data derived from library entries
-  const allEntries = useMemo<UserLibraryEntry[]>(
-    () => libraryData?.items ?? [],
-    [libraryData?.items]
-  );
+  // Wrapped in useMemo so the array reference is stable across renders;
+  // otherwise it would invalidate every downstream useMemo dependency.
+  const allEntries: UserLibraryEntry[] = useMemo(() => libraryData?.items ?? [], [libraryData]);
 
   const personalGames = useMemo<PersonalLibraryGame[]>(
     () => allEntries.filter(e => e.currentState !== 'Wishlist').map(entryToPersonalGame),

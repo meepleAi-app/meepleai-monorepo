@@ -245,6 +245,9 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       if (params.sortBy) queryParams.set('sortBy', params.sortBy);
       if (params.sortDescending !== undefined)
         queryParams.set('sortDescending', params.sortDescending.toString());
+      // S2 — filter for AI-ready games (matches backend hasKb query parameter)
+      if (params.hasKnowledgeBase !== undefined)
+        queryParams.set('hasKb', params.hasKnowledgeBase.toString());
 
       const queryString = queryParams.toString();
       const path = `/api/v1/shared-games${queryString ? `?${queryString}` : ''}`;

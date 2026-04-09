@@ -87,7 +87,14 @@ public class StartGameNightSessionCommandHandlerTests
             .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
 
         _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CreateSessionResult(newSessionId, "ABC123", []));
+            .ReturnsAsync(new CreateSessionResult(
+                newSessionId,
+                "ABC123",
+                [],
+                GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false,
+                AgentDefinitionId: null,
+                ToolkitId: null));
 
         var command = new StartGameNightSessionCommand(
             gameNight.Id, gameId, "Catan", gameNight.OrganizerId);
@@ -158,7 +165,14 @@ public class StartGameNightSessionCommandHandlerTests
             .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId, displayName: "Alice Organizer"));
 
         _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CreateSessionResult(Guid.NewGuid(), "XYZ789", []));
+            .ReturnsAsync(new CreateSessionResult(
+                Guid.NewGuid(),
+                "XYZ789",
+                [],
+                GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false,
+                AgentDefinitionId: null,
+                ToolkitId: null));
 
         var command = new StartGameNightSessionCommand(
             gameNight.Id, gameId, "Catan", gameNight.OrganizerId);
@@ -205,7 +219,14 @@ public class StartGameNightSessionCommandHandlerTests
             .ReturnsAsync(gameNight);
 
         _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CreateSessionResult(Guid.NewGuid(), "ABC123", []));
+            .ReturnsAsync(new CreateSessionResult(
+                Guid.NewGuid(),
+                "ABC123",
+                [],
+                GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false,
+                AgentDefinitionId: null,
+                ToolkitId: null));
 
         var command = new StartGameNightSessionCommand(
             gameNight.Id, gameNight.GameIds[0], "Catan",
@@ -287,7 +308,14 @@ public class StartGameNightSessionCommandHandlerTests
             .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
 
         _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CreateSessionResult(sessionId, "DEF456", []));
+            .ReturnsAsync(new CreateSessionResult(
+                sessionId,
+                "DEF456",
+                [],
+                GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false,
+                AgentDefinitionId: null,
+                ToolkitId: null));
 
         var command = new StartGameNightSessionCommand(
             gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId);

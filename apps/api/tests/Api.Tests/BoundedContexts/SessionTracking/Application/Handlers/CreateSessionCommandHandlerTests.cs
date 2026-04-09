@@ -23,6 +23,7 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<ISessionQuotaService> _quotaServiceMock = new();
     private readonly MeepleAiDbContext _db;
+    private readonly Mock<IMediator> _mediatorMock = new();
     private readonly Mock<ILogger<CreateSessionCommandHandler>> _loggerMock = new();
     private readonly CreateSessionCommandHandler _handler;
 
@@ -37,11 +38,25 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             new Mock<IMediator>().Object,
             new Mock<IDomainEventCollector>().Object);
 
+        // Default: KB is Ready so quota/domain negative tests can reach their specific assertion
+        // without being short-circuited by the KB readiness gate (Session Flow v2.1 — T4).
+        _mediatorMock
+            .Setup(m => m.Send(
+                It.IsAny<Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbReadinessQuery>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Api.BoundedContexts.KnowledgeBase.Application.DTOs.KbReadinessDto(
+                IsReady: true,
+                State: "Ready",
+                ReadyPdfCount: 1,
+                FailedPdfCount: 0,
+                Warnings: Array.Empty<string>()));
+
         _handler = new CreateSessionCommandHandler(
             _sessionRepoMock.Object,
             _unitOfWorkMock.Object,
             _quotaServiceMock.Object,
             _db,
+            _mediatorMock.Object,
             _loggerMock.Object);
     }
 
@@ -59,6 +74,7 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _unitOfWorkMock.Object,
             _quotaServiceMock.Object,
             _db,
+            _mediatorMock.Object,
             _loggerMock.Object);
 
         Assert.Throws<ArgumentNullException>(act);
@@ -72,6 +88,7 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             null!,
             _quotaServiceMock.Object,
             _db,
+            _mediatorMock.Object,
             _loggerMock.Object);
 
         Assert.Throws<ArgumentNullException>(act);
@@ -85,6 +102,7 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _unitOfWorkMock.Object,
             null!,
             _db,
+            _mediatorMock.Object,
             _loggerMock.Object);
 
         Assert.Throws<ArgumentNullException>(act);
@@ -97,6 +115,21 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _sessionRepoMock.Object,
             _unitOfWorkMock.Object,
             _quotaServiceMock.Object,
+            null!,
+            _mediatorMock.Object,
+            _loggerMock.Object);
+
+        Assert.Throws<ArgumentNullException>(act);
+    }
+
+    [Fact]
+    public void Constructor_NullMediator_ThrowsArgumentNullException()
+    {
+        var act = () => new CreateSessionCommandHandler(
+            _sessionRepoMock.Object,
+            _unitOfWorkMock.Object,
+            _quotaServiceMock.Object,
+            _db,
             null!,
             _loggerMock.Object);
 
@@ -111,6 +144,7 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _unitOfWorkMock.Object,
             _quotaServiceMock.Object,
             _db,
+            _mediatorMock.Object,
             null!);
 
         Assert.Throws<ArgumentNullException>(act);

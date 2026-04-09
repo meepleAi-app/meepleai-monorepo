@@ -4,6 +4,7 @@ catalog:
   - title: Catan
     bggId: 13
     language: en
+    seedAgent: true
     fallbackImageUrl: https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__original/img/IwRwEpu1I6YfkyYjFIekCh80ntc=/0x0/filters:format(jpeg)/pic2419375.jpg
     fallbackThumbnailUrl: https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__small/img/7a0LOL48K-2lC3IG0HyYT3XxJBs=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg
     bggEnhanced: true
@@ -271,6 +272,7 @@ catalog:
   - title: 'Descent: Journeys in the Dark (Second Edition)'
     bggId: 104162
     language: en
+    seedAgent: true
     fallbackImageUrl: https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__original/img/GZJIjJPJKk1a4Bx-rM-3KL6O4hk=/0x0/filters:format(jpeg)/pic1180640.jpg
     fallbackThumbnailUrl: https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__small/img/cO_2QvC_2BCb-Smd0xp4a5G2n-s=/fit-in/200x150/filters:strip_icc()/pic1180640.jpg
     bggEnhanced: true
@@ -622,6 +624,7 @@ catalog:
   - title: Ticket to Ride
     bggId: 9209
     language: en
+    seedAgent: true
     bggEnhanced: true
     description: 'With elegantly simple gameplay, Ticket to Ride can be learned in under 15 minutes. Players collect cards
       of various types of train cars they then use to claim railway routes in North America. The longer the routes, the more
@@ -698,6 +701,7 @@ catalog:
   - title: Splendor
     bggId: 148228
     language: en
+    seedAgent: true
     bggEnhanced: true
     description: 'Splendor is a game of chip-collecting and card development. Players are merchants of the Renaissance trying
       to buy gem mines, means of transportation, shops&mdash;all in order to acquire the most prestige points. If you''re
@@ -4966,6 +4970,7 @@ catalog:
   - title: Carcassonne
     bggId: 822
     language: en
+    seedAgent: true
     bggEnhanced: true
     description: 'Carcassonne is a tile placement game in which the players draw and place a tile with a piece of southern
       French landscape represented on it. The tile might feature a city, a road, a cloister, grassland or some combination
@@ -5582,6 +5587,7 @@ catalog:
   - title: Pandemic
     bggId: 30549
     language: en
+    seedAgent: true
     bggEnhanced: true
     description: 'In Pandemic, several virulent diseases have broken out simultaneously all over the world! The players are
       disease-fighting specialists whose mission is to treat disease hotspots while researching cures for each of four plagues

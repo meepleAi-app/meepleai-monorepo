@@ -90,13 +90,6 @@ export interface MeepleCardProps {
   'data-testid'?: string;
 }
 
-export interface MobileCardLayoutProps {
-  cards: MeepleCardProps[];
-  activeId?: string;
-  onCardSelect?: (id: string) => void;
-  className?: string;
-}
-
 export interface Carousel3DProps {
   cards: MeepleCardProps[];
   activeIndex?: number;

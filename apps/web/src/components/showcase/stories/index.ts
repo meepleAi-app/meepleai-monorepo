@@ -25,7 +25,6 @@ import { kpiCardsStory } from './kpi-cards.story';
 import { meepleAvatarStory } from './meeple-avatar.story';
 import { meepleCardStory } from './meeple-card.story';
 import { meepleLogoStory } from './meeple-logo.story';
-import { mobileCardLayoutStory } from './mobile-card-layout.story';
 import { pageTransitionStory } from './page-transition.story';
 import { popoverStory } from './popover.story';
 import { progressStory } from './progress.story';
@@ -65,7 +64,6 @@ import type { ShowcaseStory } from '../types';
 export const ALL_STORIES: ShowcaseStory<any>[] = [
   // Data Display
   meepleCardStory,
-  mobileCardLayoutStory,
   entityListViewStory,
   gameCarouselStory,
   badgeStory,

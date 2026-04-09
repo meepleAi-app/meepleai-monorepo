@@ -195,6 +195,36 @@ logs-ui: ## Open Grafana log explorer in browser (staging)
 	@echo "Grafana Logs: https://meepleai.app/grafana"
 	@echo "  Explore → Loki → {container_name=~\"meepleai-.*\"}"
 
+# ================================================================
+# Seed snapshot lifecycle (bake + consume)
+# See docs/development/snapshot-seed-workflow.md
+# ================================================================
+
+seed-index: ## Bake: indicizza tutti i PDF e produce snapshot locale
+	@bash scripts/seed-index-preflight.sh
+	$(COMPOSE) -f compose.dev.yml --profile ai up -d postgres redis api embedding-service smoldocling-service
+	@bash scripts/wait-for-healthy.sh api 180
+	@bash scripts/seed-index-wait.sh
+	@bash scripts/seed-index-dump.sh
+	@echo "::notice:: snapshot pronto in data/snapshots/ — lancia 'make seed-index-publish' per caricarlo"
+
+seed-index-publish: ## Upload snapshot più recente a seed blob bucket
+	@bash scripts/seed-index-publish.sh
+
+dev-from-snapshot: ## Dev env con seed pre-indicizzato (veloce, consume flow)
+	@bash scripts/snapshot-fetch.sh
+	@bash scripts/snapshot-verify.sh
+	$(COMPOSE) -f compose.dev.yml up -d postgres
+	@bash scripts/wait-for-healthy.sh postgres 60
+	@bash scripts/snapshot-restore.sh
+	@SKIP_CATALOG_SEED=true $(COMPOSE) -f compose.dev.yml --profile ai up -d
+	@echo "::notice:: dev env pronto (snapshot $$(cat data/snapshots/.latest))"
+
+dev-from-snapshot-force: ## Come dev-from-snapshot ma azzera il volume postgres
+	$(COMPOSE) -f compose.dev.yml rm -svf postgres || true
+	$(COMPOSE) -f compose.dev.yml down postgres -v || true
+	@$(MAKE) dev-from-snapshot
+
 ps: ## Show running containers
 	$(COMPOSE) ps
 

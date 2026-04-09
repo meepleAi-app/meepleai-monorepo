@@ -16,6 +16,8 @@ interface ChatMainAreaProps {
   gameName?: string;
   suggestedQuestions: string[];
   onSend: (message: string) => void;
+  /** Stream error message to show above the input bar. */
+  error?: string | null;
 }
 
 export function ChatMainArea({
@@ -23,6 +25,7 @@ export function ChatMainArea({
   gameName,
   suggestedQuestions,
   onSend,
+  error,
 }: ChatMainAreaProps) {
   const isEmpty = messages.length === 0;
 
@@ -77,6 +80,11 @@ export function ChatMainArea({
           </div>
         )}
       </div>
+      {error && (
+        <div className="mx-6 mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 font-nunito text-sm text-red-700">
+          {error}
+        </div>
+      )}
       <ChatInputBar
         placeholder={gameName ? `Chiedi una regola su ${gameName}…` : 'Chiedi una regola…'}
         onSend={onSend}

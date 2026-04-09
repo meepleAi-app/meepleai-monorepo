@@ -1,0 +1,18 @@
+{
+  "$schema": "../schema/scenario.schema.json",
+  "name": "admin-busy",
+  "description": "Admin scenario — baseline in Phase 1 (empty lists). To be populated with 20 games + 50 sessions in Phase 3 polish.",
+  "auth": {
+    "currentUser": { "id": "MOCK-00000000-0000-0000-0000-000000000002", "email": "admin@meeple.local", "displayName": "Admin", "role": "Admin" },
+    "availableUsers": [
+      { "id": "MOCK-00000000-0000-0000-0000-000000000002", "email": "admin@meeple.local", "displayName": "Admin", "role": "Admin" },
+      { "id": "MOCK-00000000-0000-0000-0000-000000000001", "email": "dev@meeple.local", "displayName": "Dev User", "role": "User" }
+    ]
+  },
+  "games": [],
+  "sessions": [],
+  "library": { "ownedGameIds": [], "wishlistGameIds": [] },
+  "chatHistory": [],
+  "bggGames": [],
+  "documents": []
+}

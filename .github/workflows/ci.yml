@@ -3,6 +3,13 @@ name: CI
 on:
   pull_request:
     branches: [main, main-dev, main-staging, frontend-dev, backend-dev]
+  push:
+    # Spec R2 — CI optimization (2026-04-09): ci.yml must run on push to
+    # main-staging so deploy-staging.yml can gate on its conclusion via
+    # workflow_run. Only main-staging is listed here to avoid duplicate
+    # CI runs on every push to other branches (the pull_request trigger
+    # already covers feature branches via the PR flow).
+    branches: [main-staging]
   workflow_dispatch:
   workflow_call:  # Allow reuse by deploy-staging.yml
 

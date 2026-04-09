@@ -137,6 +137,12 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             dbQuery = dbQuery.Where(g => g.ComplexityRating <= query.MaxComplexity.Value);
         }
 
+        // S2 — Knowledge Base filter: only games with indexed KB
+        if (query.HasKnowledgeBase.HasValue)
+        {
+            dbQuery = dbQuery.Where(g => g.HasKnowledgeBase == query.HasKnowledgeBase.Value);
+        }
+
         // Apply sorting
         dbQuery = query.SortBy switch
         {
@@ -183,7 +189,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 (GameStatus)g.Status,
                 g.CreatedAt,
                 g.ModifiedAt,
-                g.IsRagPublic))
+                g.IsRagPublic,
+                g.HasKnowledgeBase))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -215,7 +222,7 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var statusStr = query.Status?.ToString() ?? "null";
 
         // Create compact hash for long parameter combinations
-        var keyComponents = $"{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}";
+        var keyComponents = $"{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}|{query.HasKnowledgeBase?.ToString() ?? "null"}";
 
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(keyComponents)));
 

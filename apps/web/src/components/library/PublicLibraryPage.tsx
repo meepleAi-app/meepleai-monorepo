@@ -17,8 +17,8 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 
-import { ChevronDown, Filter, Loader2, Search, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { ChevronDown, Filter, Loader2, Search, Sparkles, X } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { MeepleGameCatalogCard } from '@/components/catalog/MeepleGameCatalogCard';
 import { EmptyState } from '@/components/empty-state/EmptyState';
@@ -76,6 +76,7 @@ export interface PublicLibraryPageProps {
  */
 export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // ------------------------------------------------------------------
   // Local state
@@ -83,8 +84,24 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
   const [search, setSearch] = useState('');
   const [selectedMechanics, setSelectedMechanics] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  // S2 (library-to-game epic) — "AI-ready only" filter, persisted in URL `?hasKb=true`
+  const [aiReadyOnly, setAiReadyOnly] = useState(() => searchParams?.get('hasKb') === 'true');
 
   const debouncedSearch = useDebounce(search, 300);
+
+  // Sync filter state → URL
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (aiReadyOnly) {
+      params.set('hasKb', 'true');
+    } else {
+      params.delete('hasKb');
+    }
+    const qs = params.toString();
+    const newUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}`;
+    window.history.replaceState(null, '', newUrl);
+  }, [aiReadyOnly]);
 
   // ------------------------------------------------------------------
   // Data fetching
@@ -119,6 +136,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
     {
       searchTerm: debouncedSearch || undefined,
       mechanicIds,
+      hasKnowledgeBase: aiReadyOnly || undefined,
       page,
       pageSize: PAGE_SIZE,
       sortBy: 'title',
@@ -283,6 +301,33 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
       {/* ---------------------------------------------------------------- */}
       {availableMechanicSlugs.length > 0 && (
         <div className="flex flex-wrap items-center gap-2" data-testid="mechanic-filter-row">
+          {/* S2 — AI-ready only toggle chip */}
+          <button
+            type="button"
+            onClick={() => {
+              setAiReadyOnly(v => !v);
+              setPage(1);
+            }}
+            data-testid="catalog-kb-filter"
+            aria-pressed={aiReadyOnly}
+            aria-label="Mostra solo giochi AI-ready"
+            className={cn(
+              'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              'bg-[#21262d] border text-[#e6edf3]',
+              aiReadyOnly
+                ? 'border-[#f0a030] text-[#f0a030]'
+                : 'border-[#30363d] hover:bg-[#30363d] hover:border-[#58a6ff]'
+            )}
+          >
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            Solo giochi AI-ready
+            {aiReadyOnly && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#f0a030] text-[10px] font-bold text-[#0d1117]">
+                ✓
+              </span>
+            )}
+          </button>
+
           <Popover>
             <PopoverTrigger asChild>
               <button

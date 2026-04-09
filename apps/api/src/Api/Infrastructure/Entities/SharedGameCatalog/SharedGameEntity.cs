@@ -36,6 +36,14 @@ public class SharedGameEntity
     public bool IsRagPublic { get; set; }
 
     /// <summary>
+    /// Denormalized flag set to true when at least one VectorDocument with this
+    /// SharedGameId has been indexed. Maintained by
+    /// VectorDocumentIndexedForKbFlagHandler (async event projection).
+    /// Used by the public catalog filter "Solo giochi AI-ready" (S2 of library-to-game epic).
+    /// </summary>
+    public bool HasKnowledgeBase { get; set; }
+
+    /// <summary>
     /// Optimistic concurrency token. Managed by the database.
     /// Spec-panel recommendation C-3.
     /// </summary>

@@ -26,7 +26,6 @@ import { useSearchParams } from 'next/navigation';
 
 import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { isUxRedesignEnabled } from '@/lib/feature-flags';
 import { useCardHand } from '@/stores/use-card-hand';
 
 import { AddGameDrawerController } from './AddGameDrawer';
@@ -93,18 +92,16 @@ export function LibraryContent() {
     });
   }, [drawCard]);
 
-  const useNewHub = isUxRedesignEnabled() && tab === null;
-
   return (
     <>
-      {useNewHub ? (
-        <LibraryHubV2 />
-      ) : tab === 'wishlist' ? (
+      {tab === 'wishlist' ? (
         <WishlistPageClient />
       ) : tab === 'catalogo' ? (
         <PublicLibraryPageClient />
-      ) : (
+      ) : tab === 'personal' ? (
         <PersonalLibraryPageClient />
+      ) : (
+        <LibraryHubV2 />
       )}
 
       {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}

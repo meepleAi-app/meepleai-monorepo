@@ -7,7 +7,6 @@
 
 // ─── Existing Stories ─────────────────────────────────────────────────────────
 import { actionGridStory } from './action-grid.story';
-import { agentStatsDisplayStory } from './agent-stats-display.story';
 import { agentStatusBadgeStory } from './agent-status-badge.story';
 import { alertStory } from './alert.story';
 import { badgeStory } from './badge.story';
@@ -115,7 +114,6 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
 
   // Agent
   agentStatusBadgeStory,
-  agentStatsDisplayStory,
   strategyBadgeStory,
 
   // Charts

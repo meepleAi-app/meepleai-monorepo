@@ -1790,16 +1790,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   // ─── Agent ────────────────────────────────────────────────────────────────
 
   {
-    id: 'agent-stats-display',
-    name: 'AgentStatsDisplay',
-    importPath: '@/components/ui/agent/AgentStatsDisplay',
-    category: 'Agent',
-    areas: ['shared', 'admin'],
-    tier: 'interactive',
-    description: 'Displays agent performance metrics (latency, token usage, accuracy).',
-    tags: ['agent', 'stats', 'metrics'],
-  },
-  {
     id: 'agent-status-badge',
     name: 'AgentStatusBadge',
     importPath: '@/components/ui/agent/AgentStatusBadge',

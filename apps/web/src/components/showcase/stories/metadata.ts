@@ -288,7 +288,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'MeepleAvatar',
     category: 'Meeple',
     description:
-      '[ORPHAN] Animated meeple AI assistant with 5 states. Transitively orphan via ChatMessage.',
+      'Animated meeple AI assistant with 5 states. Used by ChatMessage via ChatMessageList.',
     controlCount: 2,
     presetCount: 5,
   },
@@ -305,7 +305,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'ChatMessage',
     category: 'Meeple',
     description:
-      '[ORPHAN] Message bubble with role/confidence/feedback. ChatMessageList renders inline instead — refactor pending.',
+      'Message bubble with role-based layout, confidence badge, and feedback buttons. Composed by ChatMessageList via toChatMessageProps adapter.',
     controlCount: 5,
     presetCount: 4,
   },

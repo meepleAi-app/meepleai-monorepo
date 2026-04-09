@@ -13,6 +13,12 @@
 
 import { useEffect, useState } from 'react';
 
+import type { InstalledDevTools } from '@/dev-tools';
+import { DevBadge } from '@/dev-tools/devBadge';
+
+const IS_DEV_MOCK =
+  process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
+
 interface MockProviderProps {
   children: React.ReactNode;
 }
@@ -61,6 +67,15 @@ async function initMocks(skipControllerCheck = false) {
 
 export function MockProvider({ children }: MockProviderProps) {
   const [ready, setReady] = useState(false);
+  const [tools, setTools] = useState<InstalledDevTools | null>(null);
+
+  useEffect(() => {
+    if (IS_DEV_MOCK) {
+      import('@/dev-tools').then(({ installDevTools }) => {
+        setTools(installDevTools());
+      });
+    }
+  }, []);
 
   useEffect(() => {
     initMocks().then(() => setReady(true));
@@ -86,5 +101,16 @@ export function MockProvider({ children }: MockProviderProps) {
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {IS_DEV_MOCK && tools && (
+        <DevBadge
+          controlStore={tools.controlStore}
+          scenarioStore={tools.scenarioStore}
+          authStore={tools.authStore}
+        />
+      )}
+    </>
+  );
 }

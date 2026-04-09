@@ -16,15 +16,19 @@ import { loginAsAdmin } from '../fixtures/auth';
 // S1 needs a real UUID because isAdminRole(currentUser?.role) gates the toggle.
 const ADMIN_UUID = '00000000-0000-4000-8000-000000000001';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-
 /**
  * Override /api/v1/auth/me to return a schema-valid admin user with a real UUID.
  * Must be called AFTER loginAsAdmin (which sets up the base mocks) so this route
- * handler takes precedence.
+ * handler takes precedence (Playwright uses LIFO order for matching routes).
+ *
+ * The glob pattern `**\/api/v1/auth/me` matches both the direct backend URL
+ * (`http://localhost:8080/...`) and the Next.js API proxy path (`/api/v1/...`
+ * relative to localhost:3000). The shared setupMockAuth only mocks the absolute
+ * backend URL, so when httpClient returns an empty base (browser production
+ * mode), the proxy-routed call escapes the mock — the glob pattern fixes that.
  */
 async function overrideAuthMeWithValidUuid(page: Page): Promise<void> {
-  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
+  await page.route('**/api/v1/auth/me', async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

@@ -22,11 +22,12 @@ const SCREENSHOT_DIR = 'test-results/library-to-game-happy-path';
 // Real UUID required by AuthUserSchema.id (shared setupMockAuth uses a non-UUID
 // placeholder that fails Zod validation, causing useCurrentUser → null and
 // ViewModeToggle to not render). Override /api/v1/auth/me in these tests.
+// The glob pattern `**\/api/v1/auth/me` matches both the absolute backend URL
+// and the Next.js API proxy relative path.
 const ADMIN_UUID = '00000000-0000-4000-8000-000000000001';
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function overrideAuthMeWithValidUuid(page: Page): Promise<void> {
-  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
+  await page.route('**/api/v1/auth/me', async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

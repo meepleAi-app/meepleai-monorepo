@@ -179,6 +179,7 @@ export const SharedGameSchema = z.object({
   thumbnailUrl: z.string().catch(''), // coerce null/missing to empty string
   status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
   isRagPublic: z.boolean().default(false), // whether RAG access is public for all owners
+  hasKnowledgeBase: z.boolean().default(false), // S2 — true when game has indexed KB (AI-ready)
   createdAt: z.string(), // Accept any datetime format from .NET serialization
   modifiedAt: z.string().nullable(),
 });
@@ -437,6 +438,8 @@ export const SearchSharedGamesParamsSchema = z.object({
   pageSize: z.number().int().positive().optional(),
   sortBy: z.string().optional(),
   sortDescending: z.boolean().optional(),
+  // S2 (library-to-game epic) — filter for AI-ready games
+  hasKnowledgeBase: z.boolean().optional(),
 });
 
 export type SearchSharedGamesParams = z.infer<typeof SearchSharedGamesParamsSchema>;

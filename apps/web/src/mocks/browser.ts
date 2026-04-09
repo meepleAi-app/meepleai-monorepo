@@ -7,12 +7,28 @@
  * Prerequisites:
  * - Run `npx msw init public/ --save` to generate /public/mockServiceWorker.js
  * - Set NEXT_PUBLIC_MOCK_MODE=true (or use `pnpm dev:mock`)
+ *
+ * Group toggles (build-time env vars):
+ * - NEXT_PUBLIC_MSW_ENABLE=auth,games  — activate only listed groups
+ * - NEXT_PUBLIC_MSW_DISABLE=admin      — activate all except listed groups
+ *   (DISABLE takes precedence over ENABLE for any given group name)
  */
 import { setupWorker } from 'msw/browser';
 
-import { handlers } from './handlers';
+import { parseGroupList, computeGroupToggles } from '@/dev-tools/mockControlCore';
+import { buildActiveHandlers } from '@/dev-tools/mswHandlerRegistry';
 
-export const worker = setupWorker(...handlers);
+import { HANDLER_GROUPS } from './handlers/registry';
+
+function getInitialHandlers() {
+  const enable = parseGroupList(process.env.NEXT_PUBLIC_MSW_ENABLE);
+  const disable = parseGroupList(process.env.NEXT_PUBLIC_MSW_DISABLE);
+  const allNames = HANDLER_GROUPS.map(g => g.name);
+  const groupToggles = computeGroupToggles(allNames, enable, disable);
+  return buildActiveHandlers(HANDLER_GROUPS, { groups: groupToggles, overrides: {} });
+}
+
+export const worker = setupWorker(...getInitialHandlers());
 
 // HMR support for Turbopack/Webpack Fast Refresh.
 // When this module (or its handler dependencies) is hot-replaced, stop the

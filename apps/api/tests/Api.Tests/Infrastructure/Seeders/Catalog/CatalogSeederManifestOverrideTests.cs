@@ -48,4 +48,18 @@ public sealed class CatalogSeederManifestOverrideTests
         manifest.Should().NotBeNull();
         manifest.Profile.Should().Be("dev");
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t")]
+    public void LoadManifest_WithBlankOverride_FallsBackToProfile(string blank)
+    {
+        // Regression for PR #363 review: SEED_CATALOG_MANIFEST_OVERRIDE="" must
+        // not build "Manifests..yml" — treat blank/whitespace as no override.
+        var manifest = CatalogSeeder.LoadManifest(SeedProfile.Dev, manifestName: blank);
+
+        manifest.Should().NotBeNull();
+        manifest.Profile.Should().Be("dev");
+    }
 }

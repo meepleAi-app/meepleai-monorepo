@@ -23,20 +23,30 @@ DUMP_FILE="$OUT_DIR/$BASENAME.dump"
 META_FILE="$OUT_DIR/$BASENAME.meta.json"
 SHA_FILE="$OUT_DIR/$BASENAME.dump.sha256"
 
+# Resolve target DB credentials from infra/secrets/database.secret
+# (so the script works across all envs: dev=meepleai_staging, prod=meepleai, etc.)
+if [ -f infra/secrets/database.secret ]; then
+    # shellcheck disable=SC1091
+    set -a; source infra/secrets/database.secret; set +a
+fi
+PG_USER="${POSTGRES_USER:-meepleai}"
+PG_DB="${POSTGRES_DB:-meepleai_staging}"
+log "source: user=$PG_USER db=$PG_DB"
+
 log "dumping DB → $DUMP_FILE"
-docker exec meepleai-postgres pg_dump -U postgres -d meepleai \
+docker exec meepleai-postgres pg_dump -U "$PG_USER" -d "$PG_DB" \
     -Fc --no-owner --no-privileges \
     --exclude-table-data='__EFMigrationsHistory' \
     > "$DUMP_FILE"
 
 log "raccolgo stats per sidecar"
-STATS_JSON=$(docker exec meepleai-postgres psql -U postgres -d meepleai -At -c "
+STATS_JSON=$(docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -At -c "
 SELECT json_build_object(
   'ef_migration_head', (SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY \"MigrationId\" DESC LIMIT 1),
-  'pdf_count',         (SELECT COUNT(*) FROM pdf_documents WHERE processing_state='Completed'),
+  'pdf_count',         (SELECT COUNT(*) FROM pdf_documents WHERE processing_state IN ('Ready','Completed')),
   'chunk_count',       (SELECT COUNT(*) FROM text_chunks),
   'embedding_count',   (SELECT COUNT(*) FROM pgvector_embeddings),
-  'failed_pdf_ids',    COALESCE((SELECT json_agg(pdf_document_id) FROM processing_jobs WHERE status IN ('Failed','DeadLettered')), '[]'::json)
+  'failed_pdf_ids',    COALESCE((SELECT json_agg(\"Id\") FROM pdf_documents WHERE processing_state='Failed'), '[]'::json)
 );")
 
 MANIFEST_SHA=$(sha256sum apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/dev.yml | awk '{print $1}')

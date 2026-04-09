@@ -36,6 +36,12 @@ internal static class CatalogSeeder
     /// <exception cref="InvalidOperationException">When manifest validation fails.</exception>
     public static SeedManifest LoadManifest(SeedProfile profile, string? manifestName = null)
     {
+        // Defense in depth: treat blank/whitespace override as "no override".
+        // Callers in CatalogSeedLayer already normalize, but this keeps the
+        // public static API robust against direct misuse.
+        if (string.IsNullOrWhiteSpace(manifestName))
+            manifestName = null;
+
         if (profile == SeedProfile.None && manifestName is null)
             throw new FileNotFoundException($"No manifest for profile '{profile}'");
 

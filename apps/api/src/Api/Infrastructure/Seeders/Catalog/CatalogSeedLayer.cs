@@ -32,8 +32,15 @@ internal sealed class CatalogSeedLayer : ISeedLayer
         var primaryBlob = context.Services.GetRequiredService<IBlobStorageService>();
         var seedBlob = context.Services.GetRequiredService<ISeedBlobReader>();
 
+        // Normalize blank/whitespace to null so an env var set to "" in docker-compose
+        // or .env doesn't propagate as an empty manifest name into LoadManifest
+        // (which would build "Manifests..yml" and throw FileNotFoundException).
         var manifestOverride = config?.GetValue<string>("SEED_CATALOG_MANIFEST_OVERRIDE");
-        if (!string.IsNullOrWhiteSpace(manifestOverride))
+        if (string.IsNullOrWhiteSpace(manifestOverride))
+        {
+            manifestOverride = null;
+        }
+        else
         {
             context.Logger.LogInformation(
                 "CatalogSeedLayer: using manifest override '{Manifest}'", manifestOverride);

@@ -17,11 +17,13 @@ META="$OUT_DIR/$BASENAME.meta.json"
 expected_head=$(jq -r '.ef_migration_head' "$META")
 working_head=${EXPECTED_EF_HEAD:-}
 if [ -z "$working_head" ]; then
-    # Resolvi dal working tree — cerca file migration più recente
-    # Le migration EF sono nominate YYYYMMDDHHMMSS_Name.cs
-    working_head=$(find apps/api/src/Api -name '[0-9]*_*.cs' -path '*/Migrations/*' 2>/dev/null \
+    # Resolvi dal working tree — cerca file migration più recente.
+    # Le migration EF sono nominate YYYYMMDDHHMMSS_Name.cs ed EF genera una
+    # coppia <Name>.cs + <Name>.Designer.cs per ogni migration — escludi
+    # i Designer, altrimenti sort -r li ordina prima del file canonico.
+    working_head=$(find apps/api/src/Api -name '[0-9]*_*.cs' -not -name '*.Designer.cs' -path '*/Migrations/*' 2>/dev/null \
         | xargs -I{} basename {} .cs \
-        | grep -E '^[0-9]{14}_[A-Za-z0-9_]+' \
+        | grep -E '^[0-9]{14}_[A-Za-z0-9_]+$' \
         | sort -r | head -1 || echo "")
 fi
 

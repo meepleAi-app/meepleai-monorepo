@@ -85,7 +85,10 @@ export function LibraryHub() {
   });
 
   // Section data derived from library entries
-  const allEntries: UserLibraryEntry[] = libraryData?.items ?? [];
+  const allEntries = useMemo<UserLibraryEntry[]>(
+    () => libraryData?.items ?? [],
+    [libraryData?.items]
+  );
 
   const personalGames = useMemo<PersonalLibraryGame[]>(
     () => allEntries.filter(e => e.currentState !== 'Wishlist').map(entryToPersonalGame),

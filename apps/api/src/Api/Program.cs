@@ -767,6 +767,7 @@ if (!isAlphaMode)
     v1Api.MapEntityLinkUserEndpoints();    // Entity link user endpoints (Issue #5137)
     v1Api.MapEntityLinkAdminEndpoints();   // Entity link admin endpoints (Issue #5138)
     v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
+    v1Api.MapUserHandEndpoints();          // My Hand quick-access slots (La Mia Mano)
     v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
 
     // Audit & Analytics

@@ -231,7 +231,7 @@ export function ChatSlideOverPanel() {
         });
       }
     },
-    [stream]
+    [stream, toast]
   );
 
   const handleSelectGame = useCallback(

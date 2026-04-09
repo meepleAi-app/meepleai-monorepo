@@ -2,9 +2,14 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/library',
+  usePathname: () => '/dashboard',
   useRouter: () => ({ push: vi.fn() }),
-  useSearchParams: () => ({ get: () => null }),
+}));
+
+vi.mock('@/components/auth/AuthProvider', () => ({
+  useAuth: () => ({
+    user: { id: 'u1', displayName: 'Marco' },
+  }),
 }));
 
 vi.mock('@/stores/use-card-hand', () => {
@@ -14,8 +19,6 @@ vi.mock('@/stores/use-card-hand', () => {
     drawCard: vi.fn(),
     pinCard: vi.fn(),
     unpinCard: vi.fn(),
-    expandedStack: false,
-    toggleExpandStack: vi.fn(),
   };
   return {
     useCardHand: (selector?: (s: typeof state) => unknown) => (selector ? selector(state) : state),
@@ -34,26 +37,26 @@ vi.mock('@/lib/stores/mini-nav-config-store', () => {
   };
 });
 
-import { LibraryHubV2 } from '../LibraryHubV2';
+import { DashboardClient } from '../DashboardClient';
 
-describe('LibraryHubV2', () => {
+describe('DashboardClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders the library header', () => {
-    render(<LibraryHubV2 />);
-    expect(screen.getByText(/La tua libreria/i)).toBeInTheDocument();
+  it('renders the greeting with the user name', () => {
+    render(<DashboardClient />);
+    expect(screen.getByText('Marco')).toBeInTheDocument();
   });
 
-  it('renders the filter bar', () => {
-    render(<LibraryHubV2 />);
-    expect(screen.getByText('Tutti')).toBeInTheDocument();
-    expect(screen.getByText('Strategici')).toBeInTheDocument();
+  it('renders the KPI strip', () => {
+    render(<DashboardClient />);
+    expect(screen.getByText(/libreria/i)).toBeInTheDocument();
+    expect(screen.getByText(/sessioni/i)).toBeInTheDocument();
   });
 
-  it('renders the personal library section with add card (always present)', () => {
-    render(<LibraryHubV2 />);
-    expect(screen.getByRole('button', { name: /aggiungi gioco/i })).toBeInTheDocument();
+  it('renders the empty-state hero when no live session', () => {
+    render(<DashboardClient />);
+    expect(screen.getByText(/Nessuna partita in corso/i)).toBeInTheDocument();
   });
 });

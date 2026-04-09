@@ -6,7 +6,7 @@ import { ChatSlideOverPanel } from '@/components/chat/panel/ChatSlideOverPanel';
 
 import { DesktopHandRail } from './DesktopHandRail';
 import { MiniNavSlot } from './MiniNavSlot';
-import { TopBar64 } from './TopBar64';
+import { TopBar } from './TopBar';
 
 interface DesktopShellProps {
   children: ReactNode;
@@ -17,7 +17,7 @@ interface DesktopShellProps {
  *
  * Layout:
  *   ┌───────────────────────────────┐
- *   │ TopBar64 (64px sticky)        │
+ *   │ TopBar (64px sticky)        │
  *   ├───────────────────────────────┤
  *   │ MiniNavSlot (48px, optional)  │
  *   ├────┬──────────────────────────┤
@@ -28,7 +28,7 @@ interface DesktopShellProps {
 export function DesktopShell({ children }: DesktopShellProps) {
   return (
     <div className="min-h-dvh flex flex-col bg-[var(--nh-bg-base)]">
-      <TopBar64 />
+      <TopBar />
       <MiniNavSlot />
       <div className="flex-1 flex min-h-0">
         <DesktopHandRail />

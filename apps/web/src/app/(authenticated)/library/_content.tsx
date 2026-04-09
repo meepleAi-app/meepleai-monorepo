@@ -29,7 +29,7 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useCardHand } from '@/stores/use-card-hand';
 
 import { AddGameDrawerController } from './AddGameDrawer';
-import { LibraryHubV2 } from './v2';
+import { LibraryHub } from './LibraryHub';
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 
@@ -101,7 +101,7 @@ export function LibraryContent() {
       ) : tab === 'personal' ? (
         <PersonalLibraryPageClient />
       ) : (
-        <LibraryHubV2 />
+        <LibraryHub />
       )}
 
       {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}

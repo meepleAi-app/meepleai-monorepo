@@ -2,14 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/dashboard',
+  usePathname: () => '/library',
   useRouter: () => ({ push: vi.fn() }),
-}));
-
-vi.mock('@/components/auth/AuthProvider', () => ({
-  useAuth: () => ({
-    user: { id: 'u1', displayName: 'Marco' },
-  }),
+  useSearchParams: () => ({ get: () => null }),
 }));
 
 vi.mock('@/stores/use-card-hand', () => {
@@ -19,6 +14,8 @@ vi.mock('@/stores/use-card-hand', () => {
     drawCard: vi.fn(),
     pinCard: vi.fn(),
     unpinCard: vi.fn(),
+    expandedStack: false,
+    toggleExpandStack: vi.fn(),
   };
   return {
     useCardHand: (selector?: (s: typeof state) => unknown) => (selector ? selector(state) : state),
@@ -37,26 +34,26 @@ vi.mock('@/lib/stores/mini-nav-config-store', () => {
   };
 });
 
-import { DashboardClientV2 } from '../DashboardClientV2';
+import { LibraryHub } from '../LibraryHub';
 
-describe('DashboardClientV2', () => {
+describe('LibraryHub', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders the greeting with the user name', () => {
-    render(<DashboardClientV2 />);
-    expect(screen.getByText('Marco')).toBeInTheDocument();
+  it('renders the library header', () => {
+    render(<LibraryHub />);
+    expect(screen.getByText(/La tua libreria/i)).toBeInTheDocument();
   });
 
-  it('renders the KPI strip', () => {
-    render(<DashboardClientV2 />);
-    expect(screen.getByText(/libreria/i)).toBeInTheDocument();
-    expect(screen.getByText(/sessioni/i)).toBeInTheDocument();
+  it('renders the filter bar', () => {
+    render(<LibraryHub />);
+    expect(screen.getByText('Tutti')).toBeInTheDocument();
+    expect(screen.getByText('Strategici')).toBeInTheDocument();
   });
 
-  it('renders the empty-state hero when no live session', () => {
-    render(<DashboardClientV2 />);
-    expect(screen.getByText(/Nessuna partita in corso/i)).toBeInTheDocument();
+  it('renders the personal library section with add card (always present)', () => {
+    render(<LibraryHub />);
+    expect(screen.getByRole('button', { name: /aggiungi gioco/i })).toBeInTheDocument();
   });
 });

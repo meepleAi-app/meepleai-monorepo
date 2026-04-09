@@ -9,14 +9,14 @@ import { TopBarLogo } from './TopBarLogo';
 import { TopBarNavLinks } from './TopBarNavLinks';
 import { TopBarSearchPill } from './TopBarSearchPill';
 
-interface TopBar64Props {
+interface TopBarProps {
   onOpenChat?: () => void;
   onOpenSearch?: () => void;
 }
 
 /**
  * Small wrapper that subscribes to the chat panel store.
- * Extracted so the subscription doesn't cause TopBar64 itself to re-render
+ * Extracted so the subscription doesn't cause TopBar itself to re-render
  * on every chat open/close.
  */
 function TopBarChatButtonConnected() {
@@ -29,10 +29,10 @@ function TopBarChatButtonConnected() {
  * Composes: Logo + NavLinks + SearchPill + ChatButton + Notifications + UserMenu
  * Sticky positioning, backdrop-blur, border-bottom.
  */
-export function TopBar64({ onOpenChat, onOpenSearch }: TopBar64Props) {
+export function TopBar({ onOpenChat, onOpenSearch }: TopBarProps) {
   return (
     <header
-      data-testid="top-bar-64"
+      data-testid="top-bar"
       className="sticky top-0 z-40 h-16 flex items-center gap-4 px-6 border-b border-[var(--nh-border-default)] backdrop-blur-md"
       style={{ background: 'rgba(255, 252, 248, 0.85)' }}
     >

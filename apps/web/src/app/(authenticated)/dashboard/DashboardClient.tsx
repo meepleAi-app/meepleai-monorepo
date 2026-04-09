@@ -20,7 +20,7 @@ import { KpiStrip } from './sections/KpiStrip';
  * chat cards, and friends row. Reads data from the existing useDashboardStore
  * (fields not yet present in the store default to empty arrays / zeros).
  */
-export function DashboardClientV2() {
+export function DashboardClient() {
   const { user } = useAuth();
   const router = useRouter();
   const drawCard = useCardHand(s => s.drawCard);

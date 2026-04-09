@@ -38,6 +38,7 @@ import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/nav
 import { cn } from '@/lib/utils';
 
 import { DrawerLoadingSkeleton, DrawerErrorState, DrawerComingSoon } from './drawer-states';
+import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
 import {
   GameExtraMeepleCard,
@@ -102,7 +103,7 @@ const ENTITY_CONFIG: Record<
 > = {
   // Implemented entity types
   game: { label: 'Dettaglio Gioco', color: '25 95% 45%', Icon: Gamepad2 },
-  agent: { label: 'Dettaglio Agente', color: '38 92% 50%', Icon: Bot },
+  agent: { label: "Chat con l'agente", color: '38 92% 50%', Icon: Bot },
   chat: { label: 'Dettaglio Chat', color: '220 80% 55%', Icon: MessageCircle },
   kb: { label: 'Documento KB', color: '174 60% 40%', Icon: FileText },
   links: { label: 'Connections', color: '210 40% 55%', Icon: LinkIcon },
@@ -148,7 +149,9 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
           // Layout overrides: remove default padding, set full-height flex column
           'flex flex-col p-0',
           // Width override for wide drawer
-          'w-full sm:w-[600px] sm:max-w-[600px]',
+          entityType === 'agent'
+            ? 'w-full sm:w-[800px] sm:max-w-[800px]'
+            : 'w-full sm:w-[600px] sm:max-w-[600px]',
           // Hide the built-in close button (we render our own in the colored header)
           '[&>button:first-child]:hidden',
           // Session context: subtle indigo ring glow
@@ -305,12 +308,7 @@ function AgentDrawerContent({ entityId }: { entityId: string }) {
   if (error) return <DrawerErrorState error={error} onRetry={retry} />;
   if (!data) return <DrawerLoadingSkeleton />;
 
-  return (
-    <AgentExtraMeepleCard
-      data={data}
-      className="w-full rounded-none border-0 shadow-none bg-transparent"
-    />
-  );
+  return <AgentChatDrawerLayout data={data} className="h-full" />;
 }
 
 function ChatDrawerContent({ entityId }: { entityId: string }) {

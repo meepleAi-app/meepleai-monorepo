@@ -6,6 +6,7 @@
  * - Sessions page with paused sessions
  * - Scoreboard page
  * - Happy path wizard → session creation → live page (Issue #301)
+ * - Lifecycle pause → resume → final save on the live page (Issue #323)
  *
  * Uses mock API routes via page.context().route() (CRITICAL for Next.js SSR).
  * SSR pages may bypass browser-side mocks — assertions use .first() and
@@ -217,9 +218,10 @@ test.describe('Game Night Journey', () => {
   // Out of scope:
   //   - SSE diary assertions (see #324)
   //   - Autosave indicator + score persistence (see #325)
-  //   - The `/complete` endpoint — currently no UI button wires to
-  //     completeSession(); the product treats save-complete as the
-  //     effective "end of session" path.
+  //   - The `/complete` endpoint: LiveSessionView (rendered by /play) exposes
+  //     no finalize button. The sibling /sessions/{id}/page.tsx and
+  //     play-mode-mobile.tsx DO wire completeSession(), but they are out of
+  //     the /play + desktop-chrome test surface covered here.
   // ==========================================================================
 
   test('lifecycle: pause → resume → final save on live session page', async ({ page }) => {
@@ -235,9 +237,16 @@ test.describe('Game Night Journey', () => {
     const resumeCalls: number[] = [];
 
     // ─── Hydration mock: mutable status, flips Paused ⇄ InProgress ─────────
-    // The dialog's onSaveComplete sets status to 'Paused' locally via the
-    // Zustand store, and the /resume call flips it back. We mirror this on
-    // the mock so subsequent GET /{id} reflects the live view correctly.
+    // Defensive only. In the current codebase, loadSession() in
+    // sessions/[id]/layout.tsx runs exactly once on mount, and subsequent
+    // status transitions are driven by optimistic Zustand updates
+    // (resumeSession/success in session-store.ts, handleSaveComplete in
+    // LiveSessionView.tsx). There is NO subsequent GET /{id} refetch, so
+    // this mutable mirror never load-bears on the assertion flow.
+    //
+    // We keep it in case a future re-focus/refetch hook is added — if that
+    // happens and this mirror is not updated, the hydration GET would return
+    // stale 'InProgress' after pause and break the label-flip assertions.
     let currentStatus: 'InProgress' | 'Paused' = 'InProgress';
     const nowIso = new Date().toISOString();
 
@@ -420,7 +429,11 @@ test.describe('Game Night Journey', () => {
 
     // Success panel appears after POST /save-complete resolves
     await expect(page.getByTestId('save-complete-success')).toBeVisible({ timeout: 5_000 });
-    // Post-save mutable status: the store's handleSaveComplete set it to Paused
+    // (Defensive) Mirror the status flip that handleSaveComplete in
+    // LiveSessionView.tsx will apply AFTER the user clicks "Chiudi" on the
+    // success panel. The actual store transition happens a few lines below
+    // when save-complete-close is clicked — we set it here so any future
+    // hydration refetch (see note on currentStatus declaration) sees 'Paused'.
     currentStatus = 'Paused';
 
     // Close dialog → returns to live view with status=Paused

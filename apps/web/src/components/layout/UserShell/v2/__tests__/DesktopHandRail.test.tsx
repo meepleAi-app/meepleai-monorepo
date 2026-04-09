@@ -13,9 +13,12 @@ vi.mock('@/stores/use-card-hand', () => {
     pinnedIds: new Set<string>(),
     pinCard: vi.fn(),
     unpinCard: vi.fn(),
+    expandedStack: false,
+    toggleExpandStack: vi.fn(),
   };
   return {
     useCardHand: (selector?: (s: typeof state) => unknown) => (selector ? selector(state) : state),
+    __mockCardHandState: state,
   };
 });
 
@@ -25,9 +28,13 @@ vi.mock('next/navigation', () => ({
 
 import { DesktopHandRail } from '../DesktopHandRail';
 
+// @ts-expect-error mock accessor not in real module types
+import { __mockCardHandState } from '@/stores/use-card-hand';
+
 describe('DesktopHandRail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __mockCardHandState.expandedStack = false;
   });
 
   it('renders hand label', () => {
@@ -54,19 +61,25 @@ describe('DesktopHandRail', () => {
     expect(screen.getByRole('button', { name: /expand/i })).toBeInTheDocument();
   });
 
-  it('is 76px wide when collapsed (default)', () => {
+  it('is collapsed when expandedStack is false', () => {
     const { container } = render(<DesktopHandRail />);
     const rail = container.querySelector('[data-testid="desktop-hand-rail"]');
-    expect(rail).toHaveClass('w-[76px]');
+    expect(rail).toHaveClass('w-[var(--card-rack-width,76px)]');
     expect(rail).toHaveAttribute('data-expanded', 'false');
   });
 
-  it('expands to 220px when toggle is clicked', async () => {
+  it('is expanded to 240px when expandedStack is true', () => {
+    __mockCardHandState.expandedStack = true;
     const { container } = render(<DesktopHandRail />);
-    const expandBtn = screen.getByRole('button', { name: /expand/i });
-    await userEvent.click(expandBtn);
     const rail = container.querySelector('[data-testid="desktop-hand-rail"]');
-    expect(rail).toHaveClass('w-[220px]');
+    expect(rail).toHaveClass('w-[var(--card-rack-hover-width,240px)]');
     expect(rail).toHaveAttribute('data-expanded', 'true');
+  });
+
+  it('calls toggleExpandStack when toggle is clicked', async () => {
+    const user = userEvent.setup();
+    render(<DesktopHandRail />);
+    await user.click(screen.getByRole('button', { name: /expand/i }));
+    expect(__mockCardHandState.toggleExpandStack).toHaveBeenCalled();
   });
 });

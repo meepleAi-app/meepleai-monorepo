@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-
 import { usePathname } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
@@ -22,8 +20,9 @@ export function DesktopHandRail() {
   const pinnedIds = useCardHand(s => s.pinnedIds);
   const pinCard = useCardHand(s => s.pinCard);
   const unpinCard = useCardHand(s => s.unpinCard);
+  const isExpanded = useCardHand(s => s.expandedStack);
+  const toggleExpand = useCardHand(s => s.toggleExpandStack);
   const pathname = usePathname() ?? '';
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const isCardActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -46,7 +45,7 @@ export function DesktopHandRail() {
       data-expanded={isExpanded}
       className={cn(
         'hidden md:flex flex-col shrink-0 border-r border-[var(--nh-border-default)] py-3.5 pb-3 gap-2 transition-[width] duration-200 ease-out',
-        isExpanded ? 'w-[220px]' : 'w-[76px]'
+        isExpanded ? 'w-[var(--card-rack-hover-width,240px)]' : 'w-[var(--card-rack-width,76px)]'
       )}
       style={{
         background: 'linear-gradient(180deg, rgba(255,252,248,0.6), rgba(255,252,248,0.2))',
@@ -65,7 +64,7 @@ export function DesktopHandRail() {
       </div>
       <HandRailToolbar
         onTogglePin={handleTogglePin}
-        onToggleExpand={() => setIsExpanded(!isExpanded)}
+        onToggleExpand={toggleExpand}
         isPinned={isActivePinned}
         isExpanded={isExpanded}
       />

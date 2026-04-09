@@ -2,6 +2,7 @@
 
 import { UserMenuDropdown } from '@/components/layout/UserMenuDropdown';
 import { NotificationBell } from '@/components/notifications';
+import { useChatPanel } from '@/hooks/useChatPanel';
 
 import { TopBarChatButton } from './TopBarChatButton';
 import { TopBarLogo } from './TopBarLogo';
@@ -19,6 +20,8 @@ interface TopBar64Props {
  * Sticky positioning, backdrop-blur, border-bottom.
  */
 export function TopBar64({ onOpenChat, onOpenSearch }: TopBar64Props) {
+  const { open: openChat } = useChatPanel();
+
   return (
     <header
       data-testid="top-bar-64"
@@ -31,7 +34,7 @@ export function TopBar64({ onOpenChat, onOpenSearch }: TopBar64Props) {
       <TopBarNavLinks />
       <TopBarSearchPill onOpen={onOpenSearch} />
       <div className="flex items-center gap-2.5 shrink-0">
-        <TopBarChatButton onOpen={onOpenChat} />
+        <TopBarChatButton onOpen={onOpenChat ?? openChat} />
         <NotificationBell />
         <UserMenuDropdown />
       </div>

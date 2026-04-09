@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react';
 
+import { ChatSlideOverPanel } from '@/components/chat/panel/ChatSlideOverPanel';
+
 import { DesktopHandRail } from './DesktopHandRail';
 import { MiniNavSlot } from './MiniNavSlot';
 import { TopBar64 } from './TopBar64';
@@ -32,6 +34,7 @@ export function DesktopShell({ children }: DesktopShellProps) {
         <DesktopHandRail />
         <main className="flex-1 min-w-0 overflow-y-auto">{children}</main>
       </div>
+      <ChatSlideOverPanel />
     </div>
   );
 }

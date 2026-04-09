@@ -75,7 +75,7 @@ La v2.0 proponeva un nuovo BC `GamePlay`. La ricognizione del codebase ha rivela
 | D7 | Agent = quello già auto-creato al PDF ready | Nessuna clonazione aggiuntiva |
 | D8 | Lifecycle `Active↔Paused`, `Finalized` terminale | Già implementato su Session |
 | D8bis | Invariante: per `(userId, gameNightEventId)` max 1 Session Active | Nuova business rule, enforced lato command |
-| D9 | KB ready = `Indexed ∧ vectorCount > 0`, `Failed` non blocca ma warn | Nuova query |
+| D9 | KB ready = `∃ PdfDocument.ProcessingState=Ready ∧ ∃ VectorDocument (IndexingStatus="completed")`, `Failed` non blocca ma warn. ⚠️ **Corretto in sede implementativa**: `VectorDocument` è 1 per PDF, non per chunk | Nuova query |
 | D10 | RNG server-side crittografico (già implementato), seed per turn_order random | Esiste per dadi; da aggiungere per shuffle turn order |
 
 ---
@@ -226,14 +226,14 @@ public record GetKbReadinessQuery(Guid GameId) : IRequest<KbReadinessResult>;
 
 public record KbReadinessResult(
     bool IsReady,
-    string State,              // "None" | "Extracting" | "Indexing" | "Indexed" | "PartiallyIndexed" | "Failed"
+    string State,              // PdfProcessingState enum values (Uploaded, Extracting, ..., Ready, Failed) + "None" / "PartiallyReady" / "VectorPending" aggregates
     int VectorDocumentCount,
     int FailedPdfCount,
     string[] Warnings
 );
 ```
 
-Logica: `IsReady = VectorDocumentCount > 0 ∧ (qualsiasi PdfDocument.ProcessingState == Indexed)`. `FailedPdfCount > 0` produce warning ma non blocca.
+Logica: `IsReady = ∃ PdfDocument.ProcessingState == PdfProcessingState.Ready ∧ ∃ VectorDocument(pdfId) con IndexingStatus=="completed"`. `FailedPdfCount > 0` produce warning ma non blocca. Nota: `VectorDocumentEntity` ha UNIQUE su `PdfDocumentId` (1 row per PDF, campo `ChunkCount`/`IndexingStatus`), quindi si usa `.Any(...)` non `.Count(...)`.
 
 ---
 
@@ -377,7 +377,7 @@ Feature: Session flow con KB ready, diary e multi-game ad-hoc
     And response: { sessionId, gameNightEventId, gameNightWasCreated: true, agentId, toolkitId }
 
   Scenario: KB non pronta blocca avvio
-    Given "Root" ha PdfDocument.ProcessingState=Extracting e 0 VectorDocument
+    Given "Root" ha PdfDocument.ProcessingState=Extracting e nessun VectorDocument (IndexingStatus="completed")
     When POST /api/v1/sessions { gameId: Root }
     Then response 422 con body { code: "KB_NOT_READY", state: "Extracting" }
     And nessuna Session viene creata

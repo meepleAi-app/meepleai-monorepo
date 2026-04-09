@@ -12,6 +12,27 @@
 
 **Scope:** Questo plan copre SOLO i gap backend G1–G10 della spec. Frontend (G11–G15) e E2E Playwright (G16 parziale) in plan separato.
 
+## ⚠️ Corrections from T0 discoveries (must be respected by all following tasks)
+
+Durante l'esecuzione di Task 0 il worker ha scoperto divergenze reali dal codebase rispetto alle assunzioni iniziali del plan. **Tutti i task successivi devono rispettare queste correzioni**:
+
+1. **PDF processing state "ready" not "indexed"**: l'enum `PdfProcessingState` ha `Ready = 6` come stato terminale di successo. Ovunque il plan dica "Indexed" in riferimento allo stato PDF, leggere "Ready". La spec v2.1 §2 è stata aggiornata di conseguenza.
+
+2. **`VectorDocument` è 1 per PDF, non per chunk**: `VectorDocumentEntity` ha UNIQUE constraint su `PdfDocumentId`. Il "readiness" si calcola come **esistenza** di una vector doc (opzionalmente con `IndexingStatus == "completed"`), non come `count > 0` di righe multiple. T3 handler deve usare `.Any(v => ...)` non `.CountAsync(...)`.
+
+3. **Dual Games tables**: `PdfDocumentEntity.GameId` ha FK verso la **legacy `games` table** (`GameEntity`), non `SharedGames`. Il seeder T0 crea entrambi con lo stesso Guid e `GameEntity.SharedGameId = gameId`. Nei query: `_db.SharedGames` per metadata utente-facing, `_db.Games` (o `GameEntity` DbSet) per join con PdfDocument.
+
+4. **Fixture class name**: si chiama **`SharedTestcontainersFixture`** (namespace `Api.Tests.Infrastructure`), non `PostgresFixture`. Tutti i test integration devono usare `IClassFixture<SharedTestcontainersFixture>`.
+
+5. **Entities sono POCO con setter pubblici, no factory methods**. Semplifica le write operations nei seeder/handler che costruiscono entità di persistence.
+
+6. **Campi obbligatori tipici**:
+   - `UserEntity.Email` required (usare `sf21-{guid:N}@meepleai.test`)
+   - `PdfDocumentEntity.FileName`, `FilePath`, `FileSizeBytes`, `UploadedByUserId` required
+   - `SharedGameEntity.Title`, `CreatedBy` required
+
+7. **Fixture API**: `SharedDatabaseTestBase` espone `DbContext` direttamente; `SharedTestcontainersFixture.CreateScope()` è disponibile per scoped retrieval. I seeder aggiunti in T0 supportano entrambe le forme (overload con `IServiceScope` che delega a overload con `MeepleAiDbContext`).
+
 ---
 
 ## Pre-flight: verifiche da fare prima di iniziare
@@ -928,8 +949,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 /// </summary>
 public record KbReadinessDto(
     bool IsReady,
-    string State,                  // "None" | "Extracting" | "Indexing" | "Indexed" | "PartiallyIndexed" | "Failed"
-    int VectorDocumentCount,
+    string State,                  // see PdfProcessingState enum values, plus "None" / "PartiallyReady" aggregates
+    int ReadyPdfCount,             // pdf docs in state Ready
     int FailedPdfCount,
     IReadOnlyList<string> Warnings
 );
@@ -952,6 +973,29 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 public record GetKbReadinessQuery(Guid GameId) : IRequest<KbReadinessDto>;
 ```
 
+- [ ] **Step 2bis: Pre-flight discovery del codebase**
+
+Prima di scrivere handler o test, **scoprire i nomi reali**:
+
+```bash
+# PdfProcessingState enum values
+grep -n "public enum PdfProcessingState\|Ready\|Extracting\|Indexing" apps/api/src/Api/Infrastructure/Entities/DocumentProcessing/PdfDocumentEntity.cs
+
+# VectorDocument schema (attention: UNIQUE su PdfDocumentId!)
+cat apps/api/src/Api/Infrastructure/Entities/KnowledgeBase/VectorDocumentEntity.cs 2>/dev/null || find apps/api/src/Api -name "VectorDocumentEntity.cs" -exec cat {} \;
+
+# DbSet names in MeepleAiDbContext
+grep -n "DbSet<PdfDocument\|DbSet<VectorDocument\|DbSet<Game\|DbSet<SharedGame" apps/api/src/Api/Infrastructure/MeepleAiDbContext.cs
+```
+
+**Scoperte attese** (già note da T0 ma conferma):
+- `PdfProcessingState.Ready` = stato terminale success (non "Indexed")
+- `VectorDocumentEntity` ha UNIQUE su `PdfDocumentId` e un campo `IndexingStatus` (stringa tipo "completed"/"failed")
+- `PdfDocumentEntity.GameId` → FK legacy `GameEntity` (non `SharedGameEntity`)
+- DbSet names probabili: `_db.PdfDocuments`, `_db.VectorDocuments`, `_db.Games`
+
+Annota i nomi esatti prima di procedere allo Step 3.
+
 - [ ] **Step 3: Scrivere i test failing dell'handler**
 
 Creare `apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Application/Queries/GetKbReadinessQueryHandlerTests.cs`:
@@ -959,17 +1003,17 @@ Creare `apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Application/Queri
 ```csharp
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Infrastructure;
-using Api.Tests.Shared.Fixtures;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 
-public class GetKbReadinessQueryHandlerTests : IClassFixture<PostgresFixture>
+public class GetKbReadinessQueryHandlerTests : IClassFixture<SharedTestcontainersFixture>
 {
-    private readonly PostgresFixture _fixture;
+    private readonly SharedTestcontainersFixture _fixture;
 
-    public GetKbReadinessQueryHandlerTests(PostgresFixture fixture)
+    public GetKbReadinessQueryHandlerTests(SharedTestcontainersFixture fixture)
     {
         _fixture = fixture;
     }
@@ -1081,62 +1125,104 @@ public class GetKbReadinessQueryHandler : IRequestHandler<GetKbReadinessQuery, K
         // PdfDocumentEntity dovrebbe avere GameId (o SharedGameId) e ProcessingState.
         // VectorDocumentEntity dovrebbe avere PdfDocumentId (o GameId).
 
+        // NOTE: PdfDocument.GameId punta alla legacy GameEntity table.
+        // Il caller passa il SharedGameId; va risolto tramite GameEntity.SharedGameId link.
+        // Adatta se lo schema reale usa direttamente SharedGameId su PdfDocument.
+
+        var legacyGameId = await _db.Games
+            .AsNoTracking()
+            .Where(g => g.SharedGameId == request.GameId || g.Id == request.GameId)
+            .Select(g => (Guid?)g.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (legacyGameId is null)
+        {
+            return new KbReadinessDto(false, "None", 0, 0, Array.Empty<string>());
+        }
+
         var pdfs = await _db.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.GameId == request.GameId)
+            .Where(p => p.GameId == legacyGameId.Value)
             .Select(p => new { p.Id, p.ProcessingState })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         if (pdfs.Count == 0)
         {
-            return new KbReadinessDto(
-                IsReady: false,
-                State: "None",
-                VectorDocumentCount: 0,
-                FailedPdfCount: 0,
-                Warnings: Array.Empty<string>());
+            return new KbReadinessDto(false, "None", 0, 0, Array.Empty<string>());
         }
 
-        var indexedPdfIds = pdfs
-            .Where(p => string.Equals(p.ProcessingState, "Indexed", StringComparison.Ordinal))
+        // ⚠️ ProcessingState può essere enum o string — adattare il confronto.
+        // Assumo enum PdfProcessingState con Ready e Failed come valori.
+        var readyPdfIds = pdfs
+            .Where(p => p.ProcessingState == Api.Infrastructure.Entities.DocumentProcessing.PdfProcessingState.Ready)
             .Select(p => p.Id)
             .ToList();
 
-        var failedCount = pdfs.Count(p => string.Equals(p.ProcessingState, "Failed", StringComparison.Ordinal));
+        var failedCount = pdfs.Count(p =>
+            p.ProcessingState == Api.Infrastructure.Entities.DocumentProcessing.PdfProcessingState.Failed);
 
-        var vectorCount = indexedPdfIds.Count == 0
+        // VectorDocument: UNIQUE su PdfDocumentId, 1 row per PDF.
+        // Readiness = almeno 1 vector doc con IndexingStatus completato per un PDF Ready.
+        // ⚠️ Il nome del campo IndexingStatus può essere diverso — verificare nello Step 2bis.
+        var hasReadyVector = readyPdfIds.Count > 0
+            && await _db.VectorDocuments
+                .AsNoTracking()
+                .AnyAsync(v =>
+                    readyPdfIds.Contains(v.PdfDocumentId)
+                    && v.IndexingStatus == "completed",
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var readyVectorCount = readyPdfIds.Count == 0
             ? 0
             : await _db.VectorDocuments
                 .AsNoTracking()
-                .CountAsync(v => indexedPdfIds.Contains(v.PdfDocumentId), cancellationToken)
+                .CountAsync(v =>
+                    readyPdfIds.Contains(v.PdfDocumentId)
+                    && v.IndexingStatus == "completed",
+                    cancellationToken)
                 .ConfigureAwait(false);
 
-        var isReady = vectorCount > 0 && indexedPdfIds.Count > 0;
+        var isReady = hasReadyVector;
 
         string state;
         var warnings = new List<string>();
 
-        if (!isReady && pdfs.Any(p => string.Equals(p.ProcessingState, "Extracting", StringComparison.Ordinal)))
-            state = "Extracting";
-        else if (!isReady && pdfs.Any(p => string.Equals(p.ProcessingState, "Indexing", StringComparison.Ordinal)))
-            state = "Indexing";
-        else if (isReady && failedCount > 0)
+        if (isReady && failedCount > 0)
         {
-            state = "PartiallyIndexed";
+            state = "PartiallyReady";
             warnings.Add($"{failedCount} PDF document(s) failed to index — agent answers may be incomplete.");
         }
         else if (isReady)
-            state = "Indexed";
+        {
+            state = "Ready";
+        }
         else if (failedCount == pdfs.Count)
+        {
             state = "Failed";
+        }
+        else if (readyPdfIds.Count > 0 && !hasReadyVector)
+        {
+            // PDF Ready ma vector non ancora caricato
+            state = "VectorPending";
+        }
         else
-            state = "None";
+        {
+            // Stato intermedio: prendi il più avanzato tra i non-ready
+            var latestState = pdfs
+                .Select(p => p.ProcessingState)
+                .Distinct()
+                .OrderByDescending(s => (int)s)
+                .FirstOrDefault();
+            state = latestState.ToString();
+        }
 
         return new KbReadinessDto(
             IsReady: isReady,
             State: state,
-            VectorDocumentCount: vectorCount,
+            ReadyPdfCount: readyPdfIds.Count,
             FailedPdfCount: failedCount,
             Warnings: warnings);
     }
@@ -1229,18 +1315,18 @@ using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
-using Api.Tests.Shared.Fixtures;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 
-public class CreateSessionCommandAdHocTests : IClassFixture<PostgresFixture>
+public class CreateSessionCommandAdHocTests : IClassFixture<SharedTestcontainersFixture>
 {
-    private readonly PostgresFixture _fixture;
+    private readonly SharedTestcontainersFixture _fixture;
 
-    public CreateSessionCommandAdHocTests(PostgresFixture fixture)
+    public CreateSessionCommandAdHocTests(SharedTestcontainersFixture fixture)
     {
         _fixture = fixture;
     }
@@ -1843,7 +1929,7 @@ using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
-using Api.Tests.Shared.Fixtures;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -1851,11 +1937,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 
-public class PauseResumeSessionTests : IClassFixture<PostgresFixture>
+public class PauseResumeSessionTests : IClassFixture<SharedTestcontainersFixture>
 {
-    private readonly PostgresFixture _fixture;
+    private readonly SharedTestcontainersFixture _fixture;
 
-    public PauseResumeSessionTests(PostgresFixture fixture) { _fixture = fixture; }
+    public PauseResumeSessionTests(SharedTestcontainersFixture fixture) { _fixture = fixture; }
 
     [Fact]
     public async Task Pause_ActiveSession_ChangesStatusAndEmitsDiaryEvent()
@@ -2119,7 +2205,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Infrastructure;
-using Api.Tests.Shared.Fixtures;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -2127,11 +2213,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 
-public class SetTurnOrderCommandTests : IClassFixture<PostgresFixture>
+public class SetTurnOrderCommandTests : IClassFixture<SharedTestcontainersFixture>
 {
-    private readonly PostgresFixture _fixture;
+    private readonly SharedTestcontainersFixture _fixture;
 
-    public SetTurnOrderCommandTests(PostgresFixture fixture) { _fixture = fixture; }
+    public SetTurnOrderCommandTests(SharedTestcontainersFixture fixture) { _fixture = fixture; }
 
     [Fact]
     public async Task Manual_PersistsExplicitOrder()
@@ -2243,7 +2329,7 @@ Creare `RollSessionDiceDiaryEmissionTests.cs`:
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.Infrastructure;
-using Api.Tests.Shared.Fixtures;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -2251,11 +2337,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 
-public class RollSessionDiceDiaryEmissionTests : IClassFixture<PostgresFixture>
+public class RollSessionDiceDiaryEmissionTests : IClassFixture<SharedTestcontainersFixture>
 {
-    private readonly PostgresFixture _fixture;
+    private readonly SharedTestcontainersFixture _fixture;
 
-    public RollSessionDiceDiaryEmissionTests(PostgresFixture fixture) { _fixture = fixture; }
+    public RollSessionDiceDiaryEmissionTests(SharedTestcontainersFixture fixture) { _fixture = fixture; }
 
     [Fact]
     public async Task RollDice_EmitsDiceRolledDiaryEvent()
@@ -2603,7 +2689,7 @@ Creare `UpdateScoreCommandTests.cs`:
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.Infrastructure;
-using Api.Tests.Shared.Fixtures;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -2611,11 +2697,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 
-public class UpdateScoreCommandTests : IClassFixture<PostgresFixture>
+public class UpdateScoreCommandTests : IClassFixture<SharedTestcontainersFixture>
 {
-    private readonly PostgresFixture _fixture;
+    private readonly SharedTestcontainersFixture _fixture;
 
-    public UpdateScoreCommandTests(PostgresFixture fixture) { _fixture = fixture; }
+    public UpdateScoreCommandTests(SharedTestcontainersFixture fixture) { _fixture = fixture; }
 
     [Fact]
     public async Task FirstUpdate_CreatesEntry_WithOldValueZero()
@@ -2879,7 +2965,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.Infrastructure;
-using Api.Tests.Shared.Fixtures;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -2887,11 +2973,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Queries;
 
-public class DiaryQueryTests : IClassFixture<PostgresFixture>
+public class DiaryQueryTests : IClassFixture<SharedTestcontainersFixture>
 {
-    private readonly PostgresFixture _fixture;
+    private readonly SharedTestcontainersFixture _fixture;
 
-    public DiaryQueryTests(PostgresFixture fixture) { _fixture = fixture; }
+    public DiaryQueryTests(SharedTestcontainersFixture fixture) { _fixture = fixture; }
 
     [Fact]
     public async Task GetSessionDiary_ReturnsEventsInChronologicalOrder()
@@ -3137,7 +3223,7 @@ using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Infrastructure;
-using Api.Tests.Shared.Fixtures;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -3145,11 +3231,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Integration;
 
-public class SessionFlowE2ETests : IClassFixture<PostgresFixture>
+public class SessionFlowE2ETests : IClassFixture<SharedTestcontainersFixture>
 {
-    private readonly PostgresFixture _fixture;
+    private readonly SharedTestcontainersFixture _fixture;
 
-    public SessionFlowE2ETests(PostgresFixture fixture) { _fixture = fixture; }
+    public SessionFlowE2ETests(SharedTestcontainersFixture fixture) { _fixture = fixture; }
 
     [Fact]
     public async Task HappyPath_StartSession_Rolls_Scores_Diary()

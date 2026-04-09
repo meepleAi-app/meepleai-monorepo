@@ -461,7 +461,21 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, Api.Hubs.SessionParticipantIdProvider>();
 builder.Services.AddSignalR();
 
+#if DEBUG
+if (builder.Environment.IsDevelopment())
+{
+    Api.DevTools.DevToolsServiceCollectionExtensions.AddMeepleDevTools(builder.Services);
+}
+#endif
+
 var app = builder.Build();
+
+#if DEBUG
+if (app.Environment.IsDevelopment())
+{
+    Api.DevTools.DevToolsServiceCollectionExtensions.UseMeepleDevTools(app);
+}
+#endif
 
 using (var scope = app.Services.CreateScope())
 {

@@ -1,6 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.DevTools.MockImpls;
 using Api.DevTools.Scenarios;
+using Api.Services;
+using Api.Services.Pdf;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,8 +14,8 @@ internal static class DevToolsServiceCollectionExtensions
 {
     /// <summary>
     /// Registers MeepleDev mock-aware services. Call only when env.IsDevelopment().
-    /// Concrete mock-aware proxy registrations for ILlmService, IEmbeddingService,
-    /// and IBlobStorageService are added in Task 22.
+    /// Replaces real ILlmService, IEmbeddingService, and IBlobStorageService registrations
+    /// with mock-aware proxies that dispatch at runtime based on MOCK_* env-var toggles.
     /// </summary>
     public static IServiceCollection AddMeepleDevTools(this IServiceCollection services)
     {
@@ -29,7 +33,31 @@ internal static class DevToolsServiceCollectionExtensions
         services.AddSingleton<IMockToggleEvents>(_ => provider);
         services.AddSingleton<ScenarioLoader>();
 
-        // Mock service wiring (proxies) is added in Task 22.
+        // Mock-aware proxies for the 3 services covered in PR #3.
+        // Lifetime MUST match the existing real service registration (Scoped per bounded contexts).
+        services.AddMockAwareService<ILlmService, HybridLlmService, MockLlmService>(
+            "llm", ServiceLifetime.Scoped);
+        services.AddMockAwareService<IEmbeddingService, EmbeddingService, MockEmbeddingService>(
+            "embedding", ServiceLifetime.Scoped);
+
+        // IBlobStorageService is registered via BlobStorageServiceFactory (not a constructible
+        // concrete type), so we handle the proxy registration inline rather than using
+        // AddMockAwareService<>, which requires TReal to be directly constructible by the DI container.
+        services.AddScoped<MockBlobStorageService>();
+        var existingBlob = services.FirstOrDefault(d => d.ServiceType == typeof(IBlobStorageService));
+        if (existingBlob is not null)
+        {
+            services.Remove(existingBlob);
+        }
+
+        services.AddScoped<IBlobStorageService>(sp =>
+        {
+            var realBlob = BlobStorageServiceFactory.Create(sp);
+            var mockBlob = sp.GetRequiredService<MockBlobStorageService>();
+            var toggles = sp.GetRequiredService<IMockToggleReader>();
+            return MockAwareProxy<IBlobStorageService>.Create(realBlob, mockBlob, toggles, "s3");
+        });
+
         return services;
     }
 

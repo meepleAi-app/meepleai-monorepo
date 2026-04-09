@@ -123,7 +123,7 @@ import { ActivityTable } from '@/components/admin/users/activity-table';
 import { InlineRoleSelect } from '@/components/admin/users/InlineRoleSelect';
 import { PermissionsMatrix } from '@/components/admin/users/permissions-matrix';
 import { RoleCard } from '@/components/admin/users/role-card';
-import { ChatCitationCard as ChatCitationCardPanel } from '@/components/chat/panel/ChatCitationCard';
+import { ChatCitationCard } from '@/components/chat/panel/ChatCitationCard';
 import { ChatContextSwitcher } from '@/components/chat/panel/ChatContextSwitcher';
 import { ChatInputBar } from '@/components/chat/panel/ChatInputBar';
 import { ChatMainArea } from '@/components/chat/panel/ChatMainArea';
@@ -268,14 +268,6 @@ import { TagStrip } from '@/components/ui/tags/TagStrip';
 // ─── Admin — Playground ───────────────────────────────────────────────────────
 
 // ─── Admin — Misc ─────────────────────────────────────────────────────────────
-
-// ─── Desktop UX Redesign — Shell Atomics ─────────────────────────────────────
-
-// ─── Desktop UX Redesign — Dashboard Sections ────────────────────────────────
-
-// ─── Desktop UX Redesign — Library Hub Sections ──────────────────────────────
-
-// ─── Desktop UX Redesign — Chat Slide-Over Panel ─────────────────────────────
 
 // ─── Component Map ────────────────────────────────────────────────────────────
 
@@ -569,7 +561,7 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'chat-panel-header': ChatPanelHeader,
   'chat-context-switcher': ChatContextSwitcher,
   'chat-message-bubble': ChatMessageBubble,
-  'chat-citation-card-panel': ChatCitationCardPanel,
+  'chat-citation-card-panel': ChatCitationCard,
   'chat-input-bar': ChatInputBar,
   'chat-sidebar': ChatSidebar,
   'chat-main-area': ChatMainArea,

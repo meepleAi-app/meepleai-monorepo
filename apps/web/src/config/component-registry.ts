@@ -3763,7 +3763,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Pin / expand toolbar at the bottom of the DesktopHandRail.',
     tags: ['redesign', 'hand-rail', 'toolbar'],
-    mockProps: { isPinned: false, isExpanded: false },
+    mockProps: {
+      isPinned: false,
+      isExpanded: false,
+      onTogglePin: () => {},
+      onToggleExpand: () => {},
+    },
   },
 
   // ─── Desktop UX Redesign — Dashboard Sections ─────────────────────────────
@@ -3796,7 +3801,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     description:
       'Hero band for the currently live session — shows empty state when no session is in progress.',
     tags: ['redesign', 'dashboard-section', 'hero'],
-    mockProps: { session: null },
+    mockProps: { session: null, onContinue: () => {} },
   },
   {
     id: 'kpi-strip',
@@ -3870,8 +3875,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tags: ['redesign', 'library-section', 'filter'],
     mockProps: {
       activeFilter: 'all',
+      onFilterChange: () => {},
       activeView: 'carousels',
+      onViewChange: () => {},
       sortLabel: 'Alfabetico',
+      onSortClick: () => {},
     },
   },
   {
@@ -3899,7 +3907,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Library Hub personal library section — always shows the add-game ghost card.',
     tags: ['redesign', 'library-section'],
-    mockProps: { games: [], totalCount: 0 },
+    mockProps: { games: [], totalCount: 0, onAddGame: () => {} },
   },
   {
     id: 'catalog-carousel-section',
@@ -3946,7 +3954,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Header of the chat slide-over panel — title, subtitle, close button.',
     tags: ['redesign', 'chat-panel', 'header'],
-    mockProps: { subtitle: 'KB pronta · Powered by MeepleAI' },
+    mockProps: { subtitle: 'KB pronta · Powered by MeepleAI', onClose: () => {} },
   },
   {
     id: 'chat-context-switcher',
@@ -3965,6 +3973,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
         pdfCount: 3,
         kbStatus: 'ready',
       },
+      onPickGame: () => {},
     },
     mockVariants: [
       {
@@ -3977,9 +3986,10 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
             pdfCount: 5,
             kbStatus: 'indexing',
           },
+          onPickGame: () => {},
         },
       },
-      { name: 'No game selected', props: { gameContext: null } },
+      { name: 'No game selected', props: { gameContext: null, onPickGame: () => {} } },
     ],
   },
   {
@@ -4022,7 +4032,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   },
   {
     id: 'chat-citation-card-panel',
-    name: 'ChatCitationCardPanel',
+    name: 'ChatCitationCard',
     importPath: '@/components/chat/panel/ChatCitationCard',
     category: 'Overlays',
     areas: ['shared'],
@@ -4048,7 +4058,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Auto-growing textarea with send button at the bottom of the chat panel.',
     tags: ['redesign', 'chat-panel', 'input'],
-    mockProps: { placeholder: 'Chiedi una regola…' },
+    mockProps: { placeholder: 'Chiedi una regola…', onSend: () => {} },
   },
   {
     id: 'chat-sidebar',
@@ -4074,6 +4084,9 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
         { id: 'wings', name: 'Wingspan', status: 'ready' },
         { id: 'everd', name: 'Everdell', status: 'indexing' },
       ],
+      onNewChat: () => {},
+      onSelectChat: () => {},
+      onSelectGame: () => {},
     },
   },
   {
@@ -4093,6 +4106,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
         'Qual è la regola del turno finale?',
         'Spiega i bonus di fine partita',
       ],
+      onSend: () => {},
     },
   },
 ];

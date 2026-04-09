@@ -2698,6 +2698,7 @@ Existing runbooks in `docs/operations/runbooks/`:
 
 | File | Purpose |
 |------|---------|
+| `docs/operations/ci-cd-pipeline.md` | 3-stage CI/CD pipeline reference (Spec R1+R2) |
 | `infra/docker-compose.yml` | Base compose (environment-neutral) |
 | `infra/compose.dev.yml` | Development overrides |
 | `infra/compose.prod.yml` | Production overrides |

@@ -10,6 +10,7 @@ using Pgvector.EntityFrameworkCore; // Issue #3547: Enable pgvector type mapping
 using StackExchange.Redis;
 using Xunit;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
 
 namespace Api.Tests.Infrastructure;
@@ -927,6 +928,273 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
             .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
 
         return new MeepleAiDbContext(optionsBuilder.Options, contextMediator, mockEventCollector.Object);
+    }
+
+    // ============================================================================
+    // Session Flow v2.1 seeders (Task 0 of 2026-04-09 Session Flow backend plan)
+    //
+    // These helpers create the data graph required by T1-T10 integration tests.
+    // Semantics (more important than exact field names):
+    //   - "Indexed KB ready" = PdfDocument in PdfProcessingState.Ready terminal state
+    //                         AND a VectorDocumentEntity row exists with IndexingStatus="completed".
+    //   - "No KB"             = PdfDocument in non-Ready state (Extracting) and zero VectorDocuments.
+    //   - "Library game"      = UserLibraryEntry linking the user to the SharedGame.
+    //
+    // Notes on entity model:
+    //   - PdfDocumentEntity.GameId is FK to legacy `games` table (GameEntity), not SharedGame.
+    //     We seed BOTH a GameEntity and a SharedGameEntity with the SAME Id so PDF FK is satisfied
+    //     while UserLibraryEntry can reference SharedGameId.
+    //   - VectorDocumentEntity has a UNIQUE constraint on PdfDocumentId — at most one row per PDF.
+    //     The `vectorCount` parameter is interpreted as the ChunkCount on that single row;
+    //     `vectorCount == 0` means "no VectorDocument row at all" (KB not ready).
+    // ============================================================================
+
+    private static GameEntity CreateGameRow(Guid gameId, string title)
+    {
+        return new GameEntity
+        {
+            Id = gameId,
+            Name = title,
+            CreatedAt = DateTime.UtcNow,
+            SharedGameId = gameId
+        };
+    }
+
+    private static Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity CreateSharedGameRow(
+        Guid gameId, string title, Guid createdBy)
+    {
+        return new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+        {
+            Id = gameId,
+            Title = title,
+            YearPublished = 2024,
+            Description = "Seeded test game",
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            CreatedBy = createdBy,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    private static UserEntity CreateUserRow(Guid userId)
+    {
+        return new UserEntity
+        {
+            Id = userId,
+            Email = $"sf21-{userId:N}@meepleai.test",
+            DisplayName = "Session Flow Test User",
+            PasswordHash = "test-hash",
+            Role = "user",
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    private static PdfDocumentEntity CreatePdfRow(
+        Guid pdfId, Guid gameId, Guid uploadedBy, string fileName, string processingState)
+    {
+        return new PdfDocumentEntity
+        {
+            Id = pdfId,
+            GameId = gameId,
+            SharedGameId = gameId,
+            UploadedByUserId = uploadedBy,
+            FileName = fileName,
+            FilePath = $"/test/{fileName}",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedAt = DateTime.UtcNow,
+            ProcessingState = processingState,
+            ProcessedAt = processingState == "Ready" ? DateTime.UtcNow : null
+        };
+    }
+
+    private static VectorDocumentEntity CreateVectorDocRow(Guid pdfId, Guid gameId, int chunkCount)
+    {
+        return new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            PdfDocumentId = pdfId,
+            GameId = gameId,
+            SharedGameId = gameId,
+            ChunkCount = chunkCount,
+            TotalCharacters = chunkCount * 500,
+            IndexingStatus = "completed",
+            IndexedAt = DateTime.UtcNow,
+            EmbeddingModel = "test-embed",
+            EmbeddingDimensions = 768
+        };
+    }
+
+    /// <summary>
+    /// Seeds a user + a shared game (with parallel GameEntity row) + a UserLibraryEntry +
+    /// 1 indexed PDF + 1 VectorDocument with ChunkCount=<paramref name="vectorCount"/>.
+    /// Used for Session Flow v2.1 tests where KB must be ready.
+    /// </summary>
+    public async Task<(Guid userId, Guid gameId)> SeedUserWithLibraryGameAndIndexedKbAsync(
+        MeepleAiDbContext db,
+        int vectorCount = 3)
+    {
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+
+        db.Users.Add(CreateUserRow(userId));
+        db.Games.Add(CreateGameRow(gameId, "SF21 Test Game"));
+        db.SharedGames.Add(CreateSharedGameRow(gameId, "SF21 Test Game", userId));
+        db.UserLibraryEntries.Add(new Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            SharedGameId = gameId,
+            AddedAt = DateTime.UtcNow
+        });
+        db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, userId, "rules.pdf", "Ready"));
+
+        if (vectorCount > 0)
+        {
+            db.VectorDocuments.Add(CreateVectorDocRow(pdfId, gameId, vectorCount));
+        }
+
+        await db.SaveChangesAsync();
+        return (userId, gameId);
+    }
+
+    /// <summary>
+    /// IServiceScope overload — resolves MeepleAiDbContext from the scope. Convenience for
+    /// tests that build their own service provider.
+    /// </summary>
+    public Task<(Guid userId, Guid gameId)> SeedUserWithLibraryGameAndIndexedKbAsync(
+        IServiceScope scope, int vectorCount = 3)
+        => SeedUserWithLibraryGameAndIndexedKbAsync(
+            scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>(), vectorCount);
+
+    /// <summary>
+    /// Seeds an additional game in the same user's library with indexed KB.
+    /// </summary>
+    public async Task<Guid> SeedAnotherLibraryGameAsync(MeepleAiDbContext db, Guid userId)
+    {
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+
+        db.Games.Add(CreateGameRow(gameId, "SF21 Second Game"));
+        db.SharedGames.Add(CreateSharedGameRow(gameId, "SF21 Second Game", userId));
+        db.UserLibraryEntries.Add(new Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            SharedGameId = gameId,
+            AddedAt = DateTime.UtcNow
+        });
+        db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, userId, "rules2.pdf", "Ready"));
+        db.VectorDocuments.Add(CreateVectorDocRow(pdfId, gameId, chunkCount: 1));
+
+        await db.SaveChangesAsync();
+        return gameId;
+    }
+
+    /// <summary>
+    /// IServiceScope overload for SeedAnotherLibraryGameAsync.
+    /// </summary>
+    public Task<Guid> SeedAnotherLibraryGameAsync(IServiceScope scope, Guid userId)
+        => SeedAnotherLibraryGameAsync(
+            scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>(), userId);
+
+    /// <summary>
+    /// Seeds user + game in library but WITHOUT indexed KB (PDF in Extracting state, 0 VectorDocuments).
+    /// Used for KB_NOT_READY negative tests.
+    /// </summary>
+    public async Task<(Guid userId, Guid gameId)> SeedUserWithLibraryGameButNoKbAsync(MeepleAiDbContext db)
+    {
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+
+        db.Users.Add(CreateUserRow(userId));
+        db.Games.Add(CreateGameRow(gameId, "SF21 NoKB Game"));
+        db.SharedGames.Add(CreateSharedGameRow(gameId, "SF21 NoKB Game", userId));
+        db.UserLibraryEntries.Add(new Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            SharedGameId = gameId,
+            AddedAt = DateTime.UtcNow
+        });
+        db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, userId, "rules.pdf", "Extracting"));
+        // NO VectorDocument row.
+
+        await db.SaveChangesAsync();
+        return (userId, gameId);
+    }
+
+    /// <summary>
+    /// IServiceScope overload for SeedUserWithLibraryGameButNoKbAsync.
+    /// </summary>
+    public Task<(Guid userId, Guid gameId)> SeedUserWithLibraryGameButNoKbAsync(IServiceScope scope)
+        => SeedUserWithLibraryGameButNoKbAsync(
+            scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>());
+
+    /// <summary>
+    /// Lightweight seeder: just a game (legacy + shared) + indexed PDF + 1 VectorDocument
+    /// with ChunkCount=<paramref name="vectorCount"/>. No user, no library.
+    /// Used by handler-level tests that don't need the full user stack.
+    /// When <paramref name="vectorCount"/> == 0, no VectorDocument row is created (KB-not-ready case).
+    /// </summary>
+    public async Task<Guid> SeedGameWithIndexedPdfAsync(MeepleAiDbContext db, int vectorCount)
+    {
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var dummyUserId = Guid.NewGuid();
+
+        db.Users.Add(CreateUserRow(dummyUserId));
+        db.Games.Add(CreateGameRow(gameId, "SF21 Seeded Game"));
+        db.SharedGames.Add(CreateSharedGameRow(gameId, "SF21 Seeded Game", dummyUserId));
+        db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, dummyUserId, "rules.pdf", "Ready"));
+
+        if (vectorCount > 0)
+        {
+            db.VectorDocuments.Add(CreateVectorDocRow(pdfId, gameId, vectorCount));
+        }
+
+        await db.SaveChangesAsync();
+        return gameId;
+    }
+
+    /// <summary>
+    /// Seeds a game with mixed PDF states: <paramref name="indexedCount"/> Ready PDFs (each with a
+    /// VectorDocument of ChunkCount=<paramref name="vectorsPerIndexed"/>) plus
+    /// <paramref name="failedCount"/> Failed PDFs (no VectorDocument).
+    /// </summary>
+    public async Task<Guid> SeedGameWithMixedPdfsAsync(
+        MeepleAiDbContext db, int indexedCount, int failedCount, int vectorsPerIndexed)
+    {
+        var gameId = Guid.NewGuid();
+        var dummyUserId = Guid.NewGuid();
+
+        db.Users.Add(CreateUserRow(dummyUserId));
+        db.Games.Add(CreateGameRow(gameId, "SF21 Mixed Game"));
+        db.SharedGames.Add(CreateSharedGameRow(gameId, "SF21 Mixed Game", dummyUserId));
+
+        for (int i = 0; i < indexedCount; i++)
+        {
+            var pdfId = Guid.NewGuid();
+            db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, dummyUserId, $"ok-{i}.pdf", "Ready"));
+            if (vectorsPerIndexed > 0)
+            {
+                db.VectorDocuments.Add(CreateVectorDocRow(pdfId, gameId, vectorsPerIndexed));
+            }
+        }
+
+        for (int i = 0; i < failedCount; i++)
+        {
+            var pdfId = Guid.NewGuid();
+            db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, dummyUserId, $"fail-{i}.pdf", "Failed"));
+        }
+
+        await db.SaveChangesAsync();
+        return gameId;
     }
 }
 

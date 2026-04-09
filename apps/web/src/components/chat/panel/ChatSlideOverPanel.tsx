@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
+import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useGames } from '@/hooks/queries/useGames';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useChatPanel } from '@/hooks/useChatPanel';
@@ -80,6 +81,15 @@ export function ChatSlideOverPanel() {
   const { data: recentSessions } = useRecentChatSessions(50);
   const { data: gamesResponse } = useGames(undefined, undefined, 1, 50);
 
+  // Resolve the default agent for the selected game — sendMessage needs a real
+  // agent UUID (the SSE endpoint is /api/v1/agents/{agentId}/chat). Without
+  // this, sending would 404.
+  const { data: gameAgents } = useGameAgents({
+    gameId: gameContext?.id ?? null,
+    enabled: !!gameContext?.id,
+  });
+  const agentId = gameAgents?.[0]?.id ?? null;
+
   // SSE streaming
   const stream = useAgentChatStream({
     onComplete: (answer, metadata) => {
@@ -111,6 +121,17 @@ export function ChatSlideOverPanel() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [isOpen, close]);
+
+  // Abort any in-flight SSE when the panel is closed or the component unmounts,
+  // so we don't leak the fetch or fire state updates after the user navigated away.
+  useEffect(() => {
+    if (!isOpen) {
+      stream.stopStreaming();
+    }
+    return () => {
+      stream.stopStreaming();
+    };
+  }, [isOpen, stream]);
 
   // Adapt recent sessions to sidebar shape
   const recentChats: ChatRecentItem[] = useMemo(() => {
@@ -148,7 +169,8 @@ export function ChatSlideOverPanel() {
 
   const handleSend = useCallback(
     (message: string) => {
-      if (!message.trim() || !gameContext) return;
+      // Need a game + a resolved agent + no in-flight stream to send safely.
+      if (!message.trim() || !gameContext || !agentId || stream.state.isStreaming) return;
 
       const userMessage: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -159,15 +181,12 @@ export function ChatSlideOverPanel() {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // Agent id comes from the panel state; fall back to the game id so the
-      // backend can resolve the default agent for that game.
-      const agentId = gameContext.id;
       stream.sendMessage(agentId, message, threadId ?? undefined, {
         gameName: gameContext.name,
         agentTypology: 'default',
       });
     },
-    [gameContext, stream, threadId]
+    [gameContext, agentId, stream, threadId]
   );
 
   const handleNewChat = useCallback(() => {

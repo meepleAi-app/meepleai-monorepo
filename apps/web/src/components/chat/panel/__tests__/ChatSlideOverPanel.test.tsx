@@ -21,6 +21,14 @@ vi.mock('@/hooks/queries/useGames', () => ({
   }),
 }));
 
+vi.mock('@/hooks/queries/useGameAgents', () => ({
+  useGameAgents: () => ({
+    data: [],
+    isLoading: false,
+    error: null,
+  }),
+}));
+
 // Mock the streaming hook to surface a stable, inert state
 const streamResetMock = vi.fn();
 const streamSendMock = vi.fn();

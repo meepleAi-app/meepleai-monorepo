@@ -36,6 +36,12 @@ vi.mock('../../UserMenuDropdown', () => ({
 vi.mock('@/config/navigation-emoji', () => ({
   getSectionEmoji: vi.fn(() => '🏠'),
 }));
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: vi.fn(() => ({ data: null, isLoading: false, isError: false })),
+}));
+vi.mock('../../ViewModeToggle', () => ({
+  ViewModeToggle: () => <div data-testid="view-mode-toggle" />,
+}));
 
 import { usePathname } from 'next/navigation';
 import { UserTopNav } from '../UserTopNav';

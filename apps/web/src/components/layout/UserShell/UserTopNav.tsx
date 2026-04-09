@@ -9,13 +9,16 @@ import { SessionNavBar } from '@/components/dashboard/session-nav/SessionNavBar'
 import { useDashboardMode } from '@/components/dashboard/useDashboardMode';
 import { NotificationBell } from '@/components/notifications';
 import { getSectionEmoji } from '@/config/navigation-emoji';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useNavbarHeightStore } from '@/lib/stores/navbar-height-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { cn } from '@/lib/utils';
+import { isAdminRole } from '@/lib/utils/roles';
 
 import { ContextualCTA } from './ContextualCTA';
 import { UserMenuDropdown } from '../UserMenuDropdown';
+import { ViewModeToggle } from '../ViewModeToggle';
 
 interface UserTopNavProps {
   isAdmin?: boolean;
@@ -30,6 +33,8 @@ export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProp
   const pathname = usePathname();
   const sectionEmoji = getSectionEmoji(pathname);
   const setNavbarHeight = useNavbarHeightStore(s => s.setHeight);
+  const { data: currentUser } = useCurrentUser();
+  const canToggleView = isAdminRole(currentUser?.role);
 
   // NavContextTabs removed — height is always 52px
   useEffect(() => {
@@ -132,6 +137,7 @@ export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProp
 
       {/* Right: utility actions */}
       <div className="flex items-center gap-2 shrink-0">
+        {canToggleView && <ViewModeToggle />}
         <NotificationBell />
         <UserMenuDropdown />
       </div>

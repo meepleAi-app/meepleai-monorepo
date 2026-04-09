@@ -49,6 +49,7 @@ export function ContinueCarousel({ games }: ContinueCarouselProps) {
             subtitle={game.subtitle}
             imageUrl={game.imageUrl}
             rating={game.rating}
+            ratingMax={10}
             metadata={[
               ...(game.players ? [{ icon: '👥', label: game.players }] : []),
               ...(game.duration ? [{ icon: '⏱', label: game.duration }] : []),

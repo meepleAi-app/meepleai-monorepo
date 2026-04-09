@@ -26,7 +26,7 @@ export function CatalogCarouselSection({ games, totalCount }: CatalogCarouselSec
       count={totalCount}
       seeAllHref="/library?tab=catalogo"
       seeAllLabel="Esplora catalogo"
-      entity="session"
+      entity="game"
     >
       {games.map(game => (
         <div key={game.id} className="min-w-[200px] max-w-[200px] shrink-0 snap-start">

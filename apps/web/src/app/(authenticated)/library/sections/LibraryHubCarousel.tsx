@@ -9,7 +9,7 @@ type CarouselEntity = 'game' | 'session' | 'player' | 'chat' | 'wishlist';
 interface LibraryHubCarouselProps {
   title: string;
   count?: number;
-  seeAllHref: string;
+  seeAllHref?: string;
   seeAllLabel?: string;
   entity: CarouselEntity;
   children: ReactNode;
@@ -69,12 +69,14 @@ export function LibraryHubCarousel({
           >
             ›
           </button>
-          <Link
-            href={seeAllHref}
-            className="rounded-lg px-3 py-1.5 font-nunito text-[0.82rem] font-extrabold text-[hsl(25_95%_40%)] transition-colors hover:bg-[hsla(25,95%,45%,0.08)]"
-          >
-            {seeAllLabel} →
-          </Link>
+          {seeAllHref ? (
+            <Link
+              href={seeAllHref}
+              className="rounded-lg px-3 py-1.5 font-nunito text-[0.82rem] font-extrabold text-[hsl(25_95%_40%)] transition-colors hover:bg-[hsla(25,95%,45%,0.08)]"
+            >
+              {seeAllLabel} →
+            </Link>
+          ) : null}
         </div>
       </div>
       <div className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pt-1 [scrollbar-color:rgba(160,120,60,0.25)_transparent] [scrollbar-width:thin]">

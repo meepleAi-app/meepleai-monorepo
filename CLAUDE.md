@@ -8,6 +8,8 @@
 |------|---------|----------|
 | Start Dev (full) | `make dev` | `infra/` |
 | Start Dev (core) | `make dev-core` | `infra/` |
+| Dev from Snapshot | `make dev-from-snapshot` | `infra/` — dev veloce con RAG pre-indicizzato ([guide](./docs/development/snapshot-seed-workflow.md)) |
+| Bake Snapshot | `make seed-index` | `infra/` — indicizza tutti i PDF e produce dump (raro) |
 | Start Integration | `make tunnel && make integration` | `infra/` — **Windows: usa Git Bash, non PowerShell** |
 | Deploy Staging | `make staging` | `infra/` (on server) |
 | Setup Secrets | `make secrets-setup` | `infra/` |
@@ -319,6 +321,7 @@ tests/Api.Tests/          # Backend test suite
 | Testhost blocking | `tasklist \| grep testhost` → `taskkill //PID <PID> //F` |
 | Port conflict | `netstat -ano \| findstr :8080` → `taskkill /PID <PID> /F` |
 | Operations Manual | `docs/operations/operations-manual.md` — full service management reference |
+| Snapshot drift | `cd infra && make seed-index` (rigenera) oppure `make dev` (fallback) — vedi [workflow](./docs/development/snapshot-seed-workflow.md#compat-gate--exit-codes) |
 
 ## AI Assistant Context
 

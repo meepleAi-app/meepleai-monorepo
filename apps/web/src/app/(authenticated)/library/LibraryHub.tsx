@@ -51,7 +51,7 @@ export function LibraryHub() {
         { id: 'hub', label: 'Hub', href: '/library' },
         { id: 'personal', label: 'Personal', href: '/library?tab=personal', count: stats.owned },
         { id: 'catalogo', label: 'Catalogo', href: '/library?tab=catalogo', count: stats.catalog },
-        { id: 'wishlist', label: 'Wishlist', href: '/library?tab=wishlist', count: stats.wishlist },
+        { id: 'wishlist', label: 'Wishlist', href: '/library/wishlist', count: stats.wishlist },
       ],
       activeTabId: 'hub',
       primaryAction: {

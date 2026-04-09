@@ -98,9 +98,9 @@ export function getNavigationLinks(): NavigationLinks {
 
     // ── Library ─────────────────────────────────────────────────────────────
     library: '/library',
-    libraryGames: '/library', // personal games (default, Issue #5167)
-    libraryCollection: '/library?tab=catalogo', // shared catalog games (Issue #5167)
-    libraryWishlist: '/library?tab=wishlist',
+    libraryGames: '/library', // @deprecated → use library (all games live on the Hub)
+    libraryCollection: '/library', // @deprecated → use library (shared catalog merged into Hub)
+    libraryWishlist: '/library/wishlist',
     libraryPrivate: '/library', // @deprecated → use libraryGames
     libraryPrivateAdd: '/library?action=add', // @deprecated → use ?action=add drawer
     libraryProposals: '/discover?tab=proposals',

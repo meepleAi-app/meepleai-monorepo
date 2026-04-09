@@ -24,7 +24,7 @@ export function WishlistCarouselSection({ games, totalCount }: WishlistCarouselS
     <LibraryHubCarousel
       title="La tua wishlist"
       count={totalCount}
-      seeAllHref="/library?tab=wishlist"
+      seeAllHref="/library/wishlist"
       seeAllLabel="Gestisci wishlist"
       entity="wishlist"
     >

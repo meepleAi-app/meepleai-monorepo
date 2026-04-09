@@ -26,9 +26,11 @@ import { useSearchParams } from 'next/navigation';
 
 import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { isUxRedesignEnabled } from '@/lib/feature-flags';
 import { useCardHand } from '@/stores/use-card-hand';
 
 import { AddGameDrawerController } from './AddGameDrawer';
+import { LibraryHubV2 } from './v2';
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 
@@ -91,10 +93,13 @@ export function LibraryContent() {
     });
   }, [drawCard]);
 
+  const useNewHub = isUxRedesignEnabled() && tab === null;
+
   return (
     <>
-      {/* Tab content — PersonalLibraryPage now includes its own sidebar */}
-      {tab === 'wishlist' ? (
+      {useNewHub ? (
+        <LibraryHubV2 />
+      ) : tab === 'wishlist' ? (
         <WishlistPageClient />
       ) : tab === 'catalogo' ? (
         <PublicLibraryPageClient />

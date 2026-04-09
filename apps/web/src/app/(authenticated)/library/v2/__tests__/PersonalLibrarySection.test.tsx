@@ -23,7 +23,7 @@ describe('PersonalLibrarySection', () => {
 
   it('renders title with total count', () => {
     render(<PersonalLibrarySection games={games} totalCount={47} onAddGame={() => {}} />);
-    expect(screen.getByText(/La tua libreria personale/i)).toBeInTheDocument();
+    expect(screen.getByText(/Libreria personale/i)).toBeInTheDocument();
     expect(screen.getByText('47')).toBeInTheDocument();
   });
 

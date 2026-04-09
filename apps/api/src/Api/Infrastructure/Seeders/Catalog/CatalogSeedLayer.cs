@@ -32,6 +32,13 @@ internal sealed class CatalogSeedLayer : ISeedLayer
         var primaryBlob = context.Services.GetRequiredService<IBlobStorageService>();
         var seedBlob = context.Services.GetRequiredService<ISeedBlobReader>();
 
+        var manifestOverride = config?.GetValue<string>("SEED_CATALOG_MANIFEST_OVERRIDE");
+        if (!string.IsNullOrWhiteSpace(manifestOverride))
+        {
+            context.Logger.LogInformation(
+                "CatalogSeedLayer: using manifest override '{Manifest}'", manifestOverride);
+        }
+
         await CatalogSeeder.SeedAsync(
             context.Profile,
             context.DbContext,
@@ -41,6 +48,7 @@ internal sealed class CatalogSeedLayer : ISeedLayer
             seedBlob,
             context.Logger, cancellationToken,
             embeddingService,
-            config).ConfigureAwait(false);
+            config,
+            manifestNameOverride: manifestOverride).ConfigureAwait(false);
     }
 }

@@ -25,6 +25,11 @@ export interface MiniNavTab {
 export interface MiniNavPrimaryAction {
   label: string;
   onClick: () => void;
+  /**
+   * Optional emoji or icon character prepended to the label.
+   * Keep it short — single emoji or ASCII symbol (e.g. '＋', '🎲', '▶').
+   * For complex icons, render them in the label text itself.
+   */
   icon?: string;
 }
 

@@ -62,6 +62,7 @@ export function MiniNavSlot() {
             boxShadow: '0 2px 6px hsla(25, 95%, 45%, 0.3)',
           }}
         >
+          {config.primaryAction.icon && <span aria-hidden>{config.primaryAction.icon}</span>}
           {config.primaryAction.label}
         </button>
       )}

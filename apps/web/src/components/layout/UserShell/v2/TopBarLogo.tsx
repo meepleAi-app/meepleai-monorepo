@@ -7,7 +7,7 @@ export function TopBarLogo() {
     <Link
       href="/"
       aria-label="MeepleAi home"
-      className="flex items-center gap-2.5 font-[var(--font-quicksand)] font-extrabold text-[1.05rem] shrink-0"
+      className="flex items-center gap-2.5 font-quicksand font-extrabold text-[1.05rem] shrink-0"
     >
       <span
         aria-hidden

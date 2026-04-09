@@ -23,8 +23,11 @@ import { StatsRow } from '@/components/dashboard/StatsRow';
 import { WelcomeHero } from '@/components/dashboard/WelcomeHero';
 import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import type { SessionSummaryDto, TrendingGameDto, UserGameDto } from '@/lib/api/dashboard-client';
+import { isUxRedesignEnabled } from '@/lib/feature-flags';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 import { cn } from '@/lib/utils';
+
+import { DashboardClientV2 } from './v2';
 
 // ─── Entity color tokens (CSS custom properties) ──────────────────────────────
 
@@ -626,6 +629,10 @@ export function DashboardClient() {
     fetchGames();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- store actions are stable Zustand references
   }, []);
+
+  if (isUxRedesignEnabled()) {
+    return <DashboardClientV2 />;
+  }
 
   const firstName = user?.displayName?.split(' ')[0] ?? user?.displayName ?? 'Giocatore';
 

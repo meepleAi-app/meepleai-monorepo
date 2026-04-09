@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { usePathname } from 'next/navigation';
 
+import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';
 
 import { HandRailItem } from './HandRailItem';
@@ -42,13 +43,17 @@ export function DesktopHandRail() {
     <aside
       data-testid="desktop-hand-rail"
       aria-label="Cards in hand"
-      className="hidden md:flex flex-col w-[76px] shrink-0 border-r border-[var(--nh-border-default)] py-3.5 pb-3 gap-2"
+      data-expanded={isExpanded}
+      className={cn(
+        'hidden md:flex flex-col shrink-0 border-r border-[var(--nh-border-default)] py-3.5 pb-3 gap-2 transition-[width] duration-200 ease-out',
+        isExpanded ? 'w-[220px]' : 'w-[76px]'
+      )}
       style={{
         background: 'linear-gradient(180deg, rgba(255,252,248,0.6), rgba(255,252,248,0.2))',
       }}
     >
       <span
-        className="text-[9px] font-extrabold font-[var(--font-quicksand)] uppercase tracking-[0.12em] text-[var(--nh-text-muted)] pb-2 self-center"
+        className="text-[9px] font-extrabold font-quicksand uppercase tracking-[0.12em] text-[var(--nh-text-muted)] pb-2 self-center"
         style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
       >
         La tua mano

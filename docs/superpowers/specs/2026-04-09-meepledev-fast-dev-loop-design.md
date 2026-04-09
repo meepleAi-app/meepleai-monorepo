@@ -1,9 +1,15 @@
 # MeepleDev — Fast Dev Loop con Mock/Real Toggle
 
 **Date**: 2026-04-09
-**Status**: Design
+**Status**: Design (v2, post spec-panel review)
 **Author**: Brainstorming session
+**Reviewed by**: Expert panel (Wiegers, Adzic, Fowler, Nygard, Crispin, Hightower) via `/sc:spec-panel`
 **Related**: `docs/superpowers/specs/2026-03-18-integration-hardening-e5base-design.md`
+
+## Changelog
+
+- **v1 (initial)**: Vision, 2-layer architecture, 3 fasi
+- **v2 (post-review)**: Fix P0 (success criteria testabili, ISP split, RequestInspector limits, X-Dev-Token security tests); Fix P1 (NFR espliciti, fidelity contract, DispatchProxy generico, scenario switch protocol, GWT scenarios, matrice integration, operational hardening)
 
 ---
 
@@ -23,16 +29,91 @@ Quando il backend è vivo, decorator wrapper attorno ai servizi esterni possono 
 
 Le due leve sono **indipendenti**: un dev può usare solo MSW (frontend-only, zero backend), solo mock BE (backend vivo con dipendenze finte), o entrambi.
 
-### Goal quantitativi (success criteria)
+### 1.3 Success Criteria (funzionali, misurabili)
 
-| Metrica | Target |
+Ogni success criterion specifica: **baseline ambiente**, **procedura di misurazione**, **tolleranza statistica**.
+
+**SC-1 — Fast start ≤ 5s (FE-only mode)**
+- **Ambiente**: GitHub Actions `ubuntu-latest` (runner standard 4 vCPU / 16GB), Node 20 LTS, pnpm 10, cache `node_modules/` primata (`pnpm install` già completato)
+- **Procedura**: da cartella `infra/`, eseguire:
+  ```bash
+  make dev:fast &
+  PID=$!
+  while ! curl -s -o /dev/null http://localhost:3000/; do sleep 0.1; done
+  END=$(date +%s.%N)
+  # misura END - start_of_make
+  ```
+- **Criterio**: `time_to_first_200 ≤ 5.0s` nel **p95 di 10 run consecutivi**
+- **Test**: `.github/workflows/dev-tools-perf.yml` (nuovo)
+
+**SC-2 — HMR frontend ≤ 1s**
+- **Ambiente**: stesso di SC-1, con `make dev:fast` già avviato
+- **Procedura**: `touch apps/web/src/app/page.tsx` seguito da WebSocket listen su `/_next/webpack-hmr` fino a ricezione evento `built`
+- **Criterio**: `time_to_built ≤ 1.0s` nel p95 di 10 run
+
+**SC-3 — Hot reload backend ≤ 5s (con `dotnet watch`)**
+- **Ambiente**: GitHub Actions `ubuntu-latest`, .NET 9 SDK, `make dev:fast-api` avviato e stabile (watch in stato "Waiting for changes")
+- **Procedura**: `touch` a un file `.cs` triviale (es. aggiunta commento); poll `GET http://localhost:8080/health` fino a ricezione 200 con header `X-Build-Id` cambiato
+- **Criterio**: `time_to_new_build_id ≤ 5.0s` nel p95 di 10 run
+- **Nota**: non copre rebuild strutturali (nuove classi); solo "hot reload" nativo .NET
+
+**SC-4 — Toggle runtime change (fase 2)**
+- **Ambiente**: `make dev:fast-api` avviato + Dev Panel aperto
+- **Procedura**: `PATCH /dev/toggles { "llm": false }` seguito da una request chat; verificare header response
+- **Criterio**: zero restart (PID invariato); header `X-Meeple-Mock` della prima request post-PATCH riflette il nuovo stato; latenza PATCH → next effective request ≤ 50ms
+
+**SC-5 — Onboarding dev ≤ 10 min**
+- **Ambiente**: VM ubuntu fresca, zero cache, solo git + Node 20 + pnpm installati
+- **Procedura**:
+  ```bash
+  git clone <repo> && cd meepleai-monorepo-frontend
+  pnpm install
+  cp infra/.env.dev.local.example infra/.env.dev.local
+  cd infra && make dev:fast
+  # attendere 200 su localhost:3000
+  ```
+- **Criterio**: tempo totale ≤ 10 minuti p50 (network-dependent → no p95)
+
+### 1.4 Non-Functional Requirements
+
+**NFR-PERF-1 — MSW overhead**
+Overhead di MSW intercept su una request intercettata ≤ 5ms p95 rispetto a una passthrough. Misurato via `performance.now()` pre/post-fetch nel browser, 100 samples.
+
+**NFR-PERF-2 — Switchable wrapper overhead**
+Overhead di `MockAwareProxy<T>` ≤ 1µs p95 per invocation rispetto a call diretta. Misurato via BenchmarkDotNet.
+
+**NFR-SEC-1 — No mock types in Release DLL**
+Reflection su `Api.dll` built in Release: zero tipi nel namespace `Api.DevTools.*`. Verificato da `NoMockInRelease.cs`.
+
+**NFR-SEC-2 — No dev token in logs**
+Ricerca regex `MEEPLE_DEV_TOKEN|X-Dev-Token` in tutti i log writer (Serilog sinks, Console, OpenTelemetry) → zero match. Verificato da `DevTokenNotLoggedTests.cs`.
+
+**NFR-SEC-3 — Timing-safe token comparison**
+Il confronto di `X-Dev-Token` usa `CryptographicOperations.FixedTimeEquals`. Verificato da code review + grep CI.
+
+**NFR-SIZE-1 — Bundle size invariant**
+`pnpm build` in config prod produce JS bundle ≤ baseline + 2KB. Baseline aggiornata in PR dedicate. Verificato da `bundle-size.test.ts`.
+
+**NFR-DX-1 — Env file schema migration**
+Ogni `make dev:fast` run esegue `scripts/dev-env-check.sh` che confronta chiavi di `.env.dev.local.example` vs `.env.dev.local`; missing keys → warning rosso + diff + istruzioni fix. Non bloccante.
+
+**NFR-OBS-1 — Backend crash detection**
+`scripts/dev-fast.sh` monitora `dotnet watch`; 3 restart in 60s → kill + banner rosso. Frontend: polling `/health` ogni 10s; 5 fail consecutivi → DevBadge "Backend unreachable".
+
+### 1.5 Mock Fidelity Contract
+
+Ogni mock deve garantire fedeltà minima al servizio reale:
+
+| Servizio | Fedeltà minima richiesta |
 |---|---|
-| `make dev:fast` → primo paint browser | ≤ 5 secondi |
-| Cambio riga TSX → HMR visibile | ≤ 1 secondo |
-| Cambio riga C# (con `dotnet watch`) → endpoint ricompilato | ≤ 5 secondi |
-| Cambio toggle mock/real runtime (fase 2) | 0 restart, next request usa nuovo stato |
-| Codice mock nel bundle di produzione | 0 bytes (verificato in CI) |
-| Codice mock eseguibile in runtime di produzione | 0 paths (verificato in CI) |
+| **LLM** | Contratto SSE identico (event types, `data:` delimiter, `[DONE]` terminator). Contenuto deterministico da `scenario.chatHistory` o generato proceduralmente da `prompt.length` |
+| **Embedding** | `float[768]` normalizzato, stabile per `hash(model + text)` |
+| **Reranker** | Contratto score array identico; scoring basato su `Jaccard(query_tokens, doc_tokens)` |
+| **SmolDocling** | JSON identico al reale; contenuto da `scenario.documents[id]` o 5 pagine default generate |
+| **Unstructured** | JSON identico; stesso contenuto di SmolDocling, formato differente |
+| **BGG** | XML+JSON identico per 10 giochi seed (`scenario.bggGames`); `404` deterministico per ID fuori seed |
+| **S3** | Upload: ritorna `blobKey` deterministico (`MOCK-<hash>`); Download: legge da `Dictionary<string, byte[]>` in-memory; pre-signed URL: ritorna `http://localhost/mock-s3/<key>` |
+| **n8n** | Webhook POST ritorna `202 { "executionId": "MOCK-<uuid>" }`, no-op lato server |
 
 ### Non-goal
 
@@ -239,6 +320,32 @@ Page → React Query → httpClient.get('/api/v1/games')
  └─ ritorna
 ```
 
+### Flow D.prime — Scenario switch protocol (per evitare stato inconsistente)
+
+Switch tra scenari deve essere atomico rispetto alle richieste in volo. Protocollo:
+
+```
+1. UI click "switch to admin-busy"
+2. ScenarioStore.beginSwitch('admin-busy')
+   └─ flag isSwitching = true
+3. Tutti gli handler MSW che leggono lo store:
+   └─ if (isSwitching) return 503 { "error": "scenario-switching" }
+4. queryClient.cancelQueries({ type: 'active' })
+   └─ aborta tutte le in-flight
+5. EventSource registry → close() su tutte le SSE aperte
+   └─ reconnect automatico dei componenti dopo switch
+6. ScenarioStore.load('admin-busy')
+   └─ fetch JSON + Ajv validation + commit store
+7. ScenarioStore.endSwitch()
+   └─ isSwitching = false
+8. queryClient.invalidateQueries()
+   └─ refetch automatico post-switch
+9. UI overlay "Loading scenario..." rimosso
+```
+
+**Durata totale**: target ≤ 200ms end-to-end. Misurato via E2E test.
+**Fallback**: se `endSwitch()` non viene chiamato entro 2s (es. crash in mezzo), timeout → rollback a scenario precedente + toast rosso.
+
 ### Flow D — Stateful CRUD
 
 ```
@@ -282,6 +389,92 @@ Dev clicca in Dev Panel: "LLM: ON → OFF"
   └─ Next chat request → SwitchableLlmService legge
      toggle → dispatcha a RealLlmService → chiamata OpenRouter
      reale. Nessun restart.
+```
+
+### 3.Z — Executable scenarios (Given/When/Then)
+
+I seguenti scenari diventano direttamente E2E test Playwright (`apps/web/e2e/dev-loop/`). Sono il criterio di accettazione formale per le feature della fase 1.
+
+```gherkin
+Feature: Fast start minimale
+  Scenario: Nuovo contributor primo run
+    Given git clone fresco
+    And pnpm install completato
+    And infra/.env.dev.local copiato dal template senza modifiche
+    When il dev esegue `make dev:fast` nella cartella infra
+    Then entro 5 secondi curl localhost:3000 ritorna 200
+    And il DOM contiene l'elemento [data-testid="dev-badge"]
+    And il DevBadge mostra "MOCK · scenario: small-library"
+
+Feature: MSW group toggle via env var
+  Scenario: Disabilitare il gruppo 'games' via .env
+    Given .env.dev.local contiene "NEXT_PUBLIC_MSW_DISABLE=games"
+    And `make dev:fast` è in esecuzione
+    When il browser esegue fetch("/api/v1/games")
+    Then la response non ha header "X-Meeple-Mock: msw:games"
+    And (se backend down) la response ha status 502 o network error
+    And (se backend up) la response ha status 200 da backend reale
+
+  Scenario: Abilitare solo 'auth' e 'games'
+    Given .env.dev.local contiene "NEXT_PUBLIC_MSW_ENABLE=auth,games"
+    When il browser esegue fetch("/api/v1/chat")
+    Then la response non ha header "X-Meeple-Mock"
+    When il browser esegue fetch("/api/v1/games")
+    Then la response ha header "X-Meeple-Mock: msw:games"
+
+Feature: Role switch via query string
+  Scenario: Visitare admin page come User
+    Given `make dev:fast` avviato con DEV_AS_ROLE=Admin
+    When il browser visita /admin?dev-role=User
+    Then la pagina risponde con redirect a / o status 403
+    When il browser visita /admin?dev-role=Admin
+    Then la pagina risponde con status 200
+    And il DOM contiene navigation elements admin
+
+Feature: Stateful CRUD in mock mode
+  Scenario: Crea game persiste finché non si fa refresh
+    Given mock mode attivo con scenario 'small-library'
+    And la lista giochi mostra 3 giochi
+    When il dev crea un nuovo game "Test Game" via UI
+    Then POST /api/v1/games ritorna 201 con id prefixato "MOCK-"
+    When il dev naviga a /games
+    Then la lista contiene "Test Game" (totale 4)
+    When il dev fa F5 del browser
+    Then la lista mostra di nuovo 3 giochi (scenario reset)
+
+Feature: Backend mock toggle — chat
+  Scenario: Chat con LLM mockato
+    Given `make dev:fast-api` avviato
+    And .env.dev.local contiene "MOCK_LLM=true"
+    When il dev apre /chat e invia "Hello"
+    Then la response SSE contiene dati deterministici da scenario.chatHistory
+    And la response ha header "X-Meeple-Mock: backend-di:llm"
+    And la chiamata a OpenRouter non viene mai effettuata (zero outbound)
+
+Feature: Runtime toggle switch (fase 2)
+  Scenario: Disattivare LLM mock runtime
+    Given `make dev:fast-api` avviato
+    And MOCK_LLM=true e `OPENROUTER_API_KEY` valida
+    And Dev Panel aperto
+    When il dev clicca toggle "LLM" da ON a OFF nel panel
+    Then PATCH /dev/toggles ritorna 204
+    And il prossimo POST /api/v1/chat colpisce OpenRouter reale
+    And la response ha header "X-Meeple-Mock: backend-di:" (senza llm)
+
+Feature: Isolation guarantee (prod safety)
+  Scenario: Release build non include mock code
+    Given repo al commit corrente
+    When si esegue `dotnet build -c Release`
+    Then il DLL Api.dll non contiene tipi con namespace "Api.DevTools"
+    And la tabella symbol non contiene "MockLlmService"
+    And GET /dev/toggles ritorna 404 in Release config
+
+  Scenario: Stash-and-build passa
+    Given repo al commit corrente
+    When si rimuove apps/web/src/dev-tools e apps/api/src/Api/DevTools
+    And si esegue pnpm build e dotnet build -c Release
+    Then entrambi i build ritornano exit code 0
+    And smoke test GET / ritorna 200
 ```
 
 ---
@@ -367,34 +560,118 @@ MEEPLE_DEV_TOKEN=change-me-local-only
 - Forma allineata agli schemi OpenAPI generati da `pnpm generate:api`. Il cross-check gira (a) al boot del ScenarioStore in dev (log di warning su mismatch) e (b) nel workflow CI `dev-tools-isolation.yml` come step aggiuntivo (errore bloccante)
 - ID convenzione: prefix `MOCK-` per essere riconoscibili nei log
 
-### `IMockToggleState` (C#)
+### Toggle state — 3 interfacce segregate (ISP)
+
+Separazione in tre interfacce piccole per rispettare il Single Responsibility Principle. I consumers dipendono solo da ciò che serve:
 
 ```csharp
-// apps/api/src/Api/DevTools/IMockToggleState.cs
+// apps/api/src/Api/DevTools/IMockToggle*.cs
 namespace Api.DevTools;
 
-public interface IMockToggleState
+// Read-only — iniettata nei MockAwareProxy
+public interface IMockToggleReader
 {
     bool IsMocked(string serviceName);
     IReadOnlyDictionary<string, bool> GetAll();
+}
+
+// Write-only — iniettata negli endpoint /dev/toggles
+public interface IMockToggleWriter
+{
     void Set(string serviceName, bool mocked);
-    event EventHandler<MockToggleChangedEventArgs>? ToggleChanged;
+}
+
+// Event-only — iniettata nei listener (future)
+public interface IMockToggleEvents
+{
+    event EventHandler<MockToggleChangedEventArgs> ToggleChanged;
+}
+
+// Singola classe implementa tutte e tre
+public sealed class MockToggleStateProvider
+    : IMockToggleReader, IMockToggleWriter, IMockToggleEvents
+{
+    private readonly ConcurrentDictionary<string, bool> _state;
+    public event EventHandler<MockToggleChangedEventArgs>? ToggleChanged;
+    // ... bootstrap da env, thread-safe read/write
 }
 ```
 
-Registration (in `Program.cs`, gated):
+### Dispatch wrapper generico
+
+Invece di 8 wrapper duplicati (`SwitchableLlmService`, `SwitchableEmbeddingService`, ...), un singolo proxy generico basato su `System.Reflection.DispatchProxy`:
+
+```csharp
+public sealed class MockAwareProxy<TService> : DispatchProxy where TService : class
+{
+    private TService _real = default!;
+    private TService _mock = default!;
+    private IMockToggleReader _toggles = default!;
+    private string _serviceName = default!;
+
+    public static TService Create(TService real, TService mock, IMockToggleReader toggles, string serviceName)
+    {
+        var proxy = Create<TService, MockAwareProxy<TService>>();
+        var impl = (MockAwareProxy<TService>)(object)proxy!;
+        impl._real = real;
+        impl._mock = mock;
+        impl._toggles = toggles;
+        impl._serviceName = serviceName;
+        return proxy!;
+    }
+
+    protected override object? Invoke(MethodInfo? method, object?[]? args)
+    {
+        var target = _toggles.IsMocked(_serviceName) ? _mock : _real;
+        return method?.Invoke(target, args);
+    }
+}
+```
+
+Registrazione uniforme via extension method:
+
+```csharp
+public static IServiceCollection AddMockAwareService<TService, TReal, TMock>(
+    this IServiceCollection services, string serviceName)
+    where TService : class
+    where TReal : class, TService
+    where TMock : class, TService
+{
+    services.AddSingleton<TReal>();
+    services.AddSingleton<TMock>();
+    services.AddSingleton<TService>(sp => MockAwareProxy<TService>.Create(
+        sp.GetRequiredService<TReal>(),
+        sp.GetRequiredService<TMock>(),
+        sp.GetRequiredService<IMockToggleReader>(),
+        serviceName));
+    return services;
+}
+```
+
+Uso in `AddMeepleDevTools()`:
+
 ```csharp
 if (env.IsDevelopment())
 {
-    services.AddMeepleDevTools();
-    // Internamente:
-    // services.AddSingleton<IMockToggleState, MockToggleStateProvider>();
-    // services.Decorate<ILlmService, SwitchableLlmService>();
-    // ... 8 wrapper
+    services.AddSingleton<MockToggleStateProvider>();
+    services.AddSingleton<IMockToggleReader>(sp => sp.GetRequiredService<MockToggleStateProvider>());
+    services.AddSingleton<IMockToggleWriter>(sp => sp.GetRequiredService<MockToggleStateProvider>());
+    services.AddSingleton<IMockToggleEvents>(sp => sp.GetRequiredService<MockToggleStateProvider>());
+
+    services.AddMockAwareService<ILlmService, RealLlmService, MockLlmService>("llm");
+    services.AddMockAwareService<IEmbeddingService, RealEmbeddingService, MockEmbeddingService>("embedding");
+    services.AddMockAwareService<IRerankerService, RealRerankerService, MockRerankerService>("reranker");
+    services.AddMockAwareService<ISmolDoclingService, RealSmolDoclingService, MockSmolDoclingService>("smoldocling");
+    services.AddMockAwareService<IUnstructuredService, RealUnstructuredService, MockUnstructuredService>("unstructured");
+    services.AddMockAwareService<IBggApiService, RealBggApiService, MockBggApiService>("bgg");
+    services.AddMockAwareService<IBlobStorageService, S3BlobStorageService, MockBlobStorageService>("s3");
+    services.AddMockAwareService<IN8nWebhookService, RealN8nWebhookService, MockN8nWebhookService>("n8n");
 }
 ```
 
-Il pattern `Decorate<>` usa `Scrutor` se già presente in repo; altrimenti factory manuale. La scelta è tactical e va verificata in fase plan (non blocca il design).
+**Trade-off**: `DispatchProxy` usa reflection → ~100ns overhead per invocation. Per servizi non hot-path (chiamati N volte per request, dove N < 10) è accettabile rispetto al valore di zero duplicazione. Se in futuro un servizio diventa hot-path, si può introdurre un wrapper specializzato per quello senza cambiare il pattern generale.
+
+**NFR-PERF-2** copre la misurazione di questo overhead.
 
 ### Dev Panel API (fase 2)
 
@@ -518,7 +795,14 @@ Enforcement multi-livello:
 - Un test per ogni `Switchable{Service}` (8 totali, `[Theory]` dove possibile)
 - `MockLlmServiceTests.cs` — determinismo, SSE stream format, contratto `ILlmService`
 - Analoghi per gli altri 7 mock services
-- `DevToolsEndpointsTests.cs` — 404 senza token, 200 con token, 404 assoluto in Production
+- `DevToolsEndpointsTests.cs` — security test exhaustive:
+  - `PATCH /dev/toggles` senza header `X-Dev-Token` → **404** (non 401)
+  - Con token errato → **404**
+  - Con token corretto ma env `Production` → **404** (endpoint non registrato)
+  - Con token corretto ma env `Staging` → **404**
+  - Con token corretto in env `Development` → **204**
+  - **Timing attack test**: 1000 confronti con token differente di 1 byte devono avere deviation ≤ 10% rispetto a confronto con token uguale (conferma `CryptographicOperations.FixedTimeEquals` in uso — NFR-SEC-3)
+  - **Log leak test**: dopo 100 request con token valido, grep dei log writer (`TestLoggerProvider`) per pattern `X-Dev-Token` → zero match (NFR-SEC-2)
 
 ### Integration tests
 
@@ -538,6 +822,20 @@ Enforcement multi-livello:
 - `role-switch.spec.ts` — `?dev-role=Admin` → /admin OK; `?dev-role=User` → 403/redirect
 - `stateful-crud.spec.ts` — crea, lista, F5, reset
 - `dev-panel-runtime.spec.ts` (fase 2) — apre panel, toggle off chat, verifica passthrough
+- `scenario-switch.spec.ts` — cambio scenario durante request in-flight, verifica cancel + refetch
+- `degradation.spec.ts` — simula MSW worker fail (inject reject), verifica passthrough + app alive
+
+### Matrice integrazione FE × BE
+
+Oltre ai test isolati, copertura della matrice di configurazione attraverso test integration in `tests/Api.Tests/Integration/DevTools/DevLoopMatrixTests.cs` (backend-side) e `apps/web/__tests__/integration/dev-tools/matrixTest.ts` (frontend-side, con MSW + mock fetch):
+
+| MSW state | BE Mock state | Scenario | Atteso |
+|---|---|---|---|
+| all-on | n/a (BE down) | `small-library` | Tutti gli endpoint intercettati da MSW; network log zero chiamate uscenti |
+| all-off | LLM=mock | `small-library` | Chat passa al backend → `MockLlmService`; response ha `X-Meeple-Mock: backend-di:llm` |
+| partial (only `games` on) | S3=mock | `small-library` | `GET /games` ha `X-Meeple-Mock: msw:games`; `POST /pdf/upload` ha `X-Meeple-Mock: backend-di:s3` |
+| all-off | all-off | n/a | Full real stack (con Testcontainers per Ollama/S3 mock) — questo è lo standard integration test già esistente |
+| all-on | irrelevant | `empty` | Lista giochi vuota, crea game, verifica comparsa, F5, verifica reset |
 
 ### Meta-test: Dev Tools Isolation (CI guard critico)
 
@@ -646,12 +944,16 @@ Se fallisce → un import di prod dipende da `dev-tools/` → errore bloccante P
 
 **Deliverable**: PR #5 — 8 servizi mockabili completi (PDF flow funzionante)
 
-#### Milestone 1.4 — Make targets + CI guard (~0.5 giorni)
-- [ ] `scripts/dev-fast.sh`, `scripts/dev-fast-down.sh`
+#### Milestone 1.4 — Make targets + CI guard + operational hardening (~1 giorno)
+- [ ] `scripts/dev-fast.sh` (orchestratore), `scripts/dev-fast-down.sh` (cleanup)
+- [ ] `scripts/dev-env-check.sh` — diff `.env.dev.local.example` vs `.env.dev.local` → warning su chiavi mancanti (NFR-DX-1)
+- [ ] `scripts/dev-backend-watchdog.sh` — monitora output `dotnet watch`; se ≥ 3 restart in 60s → kill + banner rosso + log (NFR-OBS-1)
+- [ ] Health check polling in `DevBadge`: fetch `/health` ogni 10s (solo se DEV_BACKEND=true); 5 fail consecutivi → badge rosso "Backend unreachable"
 - [ ] Makefile targets `dev:fast`, `dev:fast-api`, `dev:fast-full`, `dev:fast-down`
 - [ ] Workflow `.github/workflows/dev-tools-isolation.yml`
-- [ ] Smoke test end-to-end
-- [ ] Bundle size snapshot test
+- [ ] Workflow `.github/workflows/dev-tools-perf.yml` — misura SC-1, SC-2, SC-3 (p95 di 10 run)
+- [ ] Smoke test end-to-end: `make dev:fast && curl / && make dev:fast-down`
+- [ ] Bundle size snapshot test (NFR-SIZE-1)
 
 **Deliverable**: PR #6 — CLI completa + CI guard
 
@@ -680,7 +982,12 @@ Se fallisce → un import di prod dipende da `dev-tools/` → errore bloccante P
 
 #### Milestone 2.3 — Badge interattivo + request inspector (~1 giorno)
 - [ ] `DevBadge` upgrade con counter e click→panel
-- [ ] `RequestInspector` nel panel (ultimi 50, filtrabile)
+- [ ] `RequestInspector` nel panel con vincoli espliciti:
+  - **Ring buffer fisso a 50 entry** (`const REQUEST_LOG_CAPACITY = 50`)
+  - **Solo metadata**: `{ url, method, status, durationMs, isMock, timestamp, mockSource }`
+  - **Mai il body** (né request né response) — privacy e memory cap
+  - **Reset** on page load (no persistence)
+  - **StrictMode-safe**: hook con `useRef` per evitare doppio-mount registration
 - [ ] Hook globale su `fetch` per metriche (solo dev)
 
 **Deliverable**: PR #9 — badge interattivo + inspector
@@ -704,13 +1011,15 @@ Se fallisce → un import di prod dipende da `dev-tools/` → errore bloccante P
 
 ### Stima totale
 
-| Fase | Giorni |
-|---|---|
-| Fase 0 — Preparazione | 0.5 |
-| Fase 1 — Infrastruttura statica | 4.5 |
-| Fase 2 — Dev Panel runtime | 5 |
-| Fase 3 — Polish | 1.5 |
-| **Totale** | **~11.5 giorni** |
+| Fase | Giorni | Note |
+|---|---|---|
+| Fase 0 — Preparazione | 0.5 | |
+| Fase 1 — Infrastruttura statica | 5.5 | +1g per operational hardening (N-2, H-1) |
+| Fase 2 — Dev Panel runtime | 5 | |
+| Fase 3 — Polish | 1.5 | |
+| **Totale** | **~12.5 giorni** | |
+
+**Stime riviste post spec-panel review**: l'aggiunta di NFR (sezione 1.4), scenari GWT (sezione 3.Z), operational hardening (milestone 1.4), e test di sicurezza (sezione 6) ha aggiunto ~1 giornata al totale. Il trade-off è: scope più grande ma qualità e safety garantite.
 
 ### Valore incrementale
 

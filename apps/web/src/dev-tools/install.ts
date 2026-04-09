@@ -6,7 +6,21 @@ import { validateScenario, SCENARIO_FALLBACK } from './scenarioValidator';
 
 import type { Scenario } from './types';
 
-const KNOWN_GROUPS = ['auth', 'games', 'chat', 'library', 'admin'] as const;
+const KNOWN_GROUPS = [
+  'auth',
+  'games',
+  'chat',
+  'documents',
+  'library',
+  'shared-games',
+  'catalog',
+  'admin',
+  'sessions',
+  'game-nights',
+  'players',
+  'notifications',
+  'badges',
+] as const;
 
 function loadScenarioByName(name: string): Scenario {
   const raw = SCENARIO_MANIFEST[name];

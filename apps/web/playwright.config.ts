@@ -148,17 +148,15 @@ export default defineConfig({
       use: {
         ...devices['Desktop Safari'],
         viewport: { width: 1920, height: 1080 },
+        // Override top-level chromium launchOptions — webkit does not accept
+        // `--no-sandbox` etc. Without this, ubuntu CI runners fail with
+        // "Unknown option --no-sandbox". Consistency with mobile-safari below.
+        // Epic library-to-game post-review M2.
+        launchOptions: {
+          args: [],
+        },
       },
     },
-
-    // Safari projects override launchOptions because webkit does not accept
-    // the chromium-only flags (`--no-sandbox`, `--disable-gpu`, etc.) set at
-    // the top level. Without this override, `browserType.launch` fails with
-    // "Unknown option --no-sandbox" on ubuntu runners. Epic library-to-game T2.
-    // NOTE: the desktop-safari project above also inherits the bad args; we
-    // keep it unchanged for backward compatibility with test-e2e.yml which
-    // was already passing locally (macOS). The targeted override below only
-    // affects mobile-safari, which is what the library-to-game epic runs.
 
     // Mobile - Chrome + Safari (iOS simulation critical for market coverage)
     // Issue #1497: Added Safari for iOS browser testing

@@ -77,6 +77,16 @@ internal sealed class VectorDocumentIndexedForKbFlagHandler
         // appears immediately instead of waiting for the L1/L2 TTL to expire.
         // RemoveByTagAsync with the "search-games" tag evicts every entry in the
         // SearchSharedGamesQueryHandler cache namespace.
+        //
+        // Multi-instance deployment caveat (epic library-to-game CR-I2):
+        // HybridCache tag invalidation evicts the L2 distributed entry
+        // (shared across nodes) but only the L1 MemoryCache of THIS instance.
+        // Other API replicas still serve their own L1 cached values until
+        // `LocalCacheExpiration` (15 min) expires. Worst case: a sticky-session
+        // user on another replica sees a stale AI-ready flag for up to 15 min.
+        // Acceptable for staging (single node); for multi-replica prod consider
+        // either shortening LocalCacheExpiration or publishing an integration
+        // event that each instance subscribes to for L1 cleanup.
         await _cache.RemoveByTagAsync("search-games", cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(

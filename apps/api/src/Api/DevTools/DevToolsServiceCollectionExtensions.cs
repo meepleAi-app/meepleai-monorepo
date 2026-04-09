@@ -46,6 +46,8 @@ internal static class DevToolsServiceCollectionExtensions
             "embedding", ServiceLifetime.Scoped);
         services.AddMockAwareService<IBggApiService, BggApiService, MockBggApiService>(
             "bgg", ServiceLifetime.Scoped);
+        services.AddMockAwareService<IN8NTemplateService, N8NTemplateService, MockN8nTemplateService>(
+            "n8n", ServiceLifetime.Scoped);
 
         // IBlobStorageService is registered via BlobStorageServiceFactory (not a constructible
         // concrete type), so we handle the proxy registration inline rather than using

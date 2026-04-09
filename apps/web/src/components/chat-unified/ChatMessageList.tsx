@@ -15,16 +15,17 @@
 
 import React, { useCallback, useState } from 'react';
 
-import { FeedbackButtons, type FeedbackValue } from '@/components/ui/meeple/feedback-buttons';
+import { ChatMessage } from '@/components/ui/meeple/chat-message';
+import type { FeedbackValue } from '@/components/ui/meeple/feedback-buttons';
 import type { AgentChatStreamState } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
 
 import { ResponseMetaBadge } from './ResponseMetaBadge';
 import { RuleSourceCard } from './RuleSourceCard';
 import { TechnicalDetailsPanel } from './TechnicalDetailsPanel';
 import { TtsSpeakerButton } from './TtsSpeakerButton';
 import { isLastAssistantMessage } from './utils/isLastAssistantMessage';
+import { toChatMessageProps } from './utils/toChatMessageProps';
 
 // ============================================================================
 // Types
@@ -169,19 +170,23 @@ export function ChatMessageList({
             // with !streamState.isStreaming to gate on the final response.
             const isLastAssistant =
               !streamState.isStreaming && isLastAssistantMessage(messages, msgIndex);
+            const showFeedback = msg.role === 'assistant' && !!gameId && !!threadId;
 
             return (
-              <div
-                key={msg.id}
-                className={cn(
-                  'max-w-[85%] rounded-2xl px-4 py-3',
-                  msg.role === 'user'
-                    ? 'ml-auto bg-amber-500 text-white'
-                    : 'mr-auto bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
-                )}
-                data-testid={`message-${msg.role}`}
-              >
-                <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
+              <div key={msg.id} data-testid={`message-${msg.role}`}>
+                {/* Core message bubble (role/content/timestamp/avatar/feedback) */}
+                <ChatMessage
+                  {...toChatMessageProps(msg, {
+                    feedback: feedbackMap.get(msg.id) ?? null,
+                    isFeedbackLoading: feedbackLoadingMap.get(msg.id) ?? false,
+                    showFeedback,
+                    onFeedbackChange: async (value, comment) => {
+                      await handleFeedback(msg.id, value, comment);
+                    },
+                  })}
+                />
+
+                {/* TTS speaker button — kept outside <ChatMessage> (atom doesn't own TTS wiring) */}
                 {msg.role === 'assistant' && isTtsSupported && ttsEnabled && (
                   <TtsSpeakerButton
                     text={msg.content}
@@ -190,34 +195,28 @@ export function ChatMessageList({
                     onStop={onStopSpeaking}
                   />
                 )}
+
+                {/* Citations — kept outside <ChatMessage> to preserve RuleSourceCard
+                    (RAG copyright-tier handling; @/types.Citation is incompatible with
+                    ChatMessage's local Citation type) */}
                 {msg.citations && msg.citations.length > 0 && (
                   <RuleSourceCard citations={msg.citations} gameTitle={gameTitle} />
                 )}
+
+                {/* Strategy tier badge — only on last assistant message, not streaming */}
                 {isLastAssistant && streamState.strategyTier && (
                   <div className="mt-2">
                     <ResponseMetaBadge strategyTier={streamState.strategyTier} />
                   </div>
                 )}
+
+                {/* Technical details panel — only on last assistant when editor + debugSteps */}
                 {isLastAssistant && isEditor && streamState.debugSteps.length > 0 && (
                   <TechnicalDetailsPanel
                     debugSteps={streamState.debugSteps}
                     executionId={streamState.executionId}
                     showDebugLink={isAdmin}
                   />
-                )}
-                {/* KB-07: Feedback buttons — only for assistant messages when gameId is available */}
-                {msg.role === 'assistant' && !!gameId && !!threadId && (
-                  <div className="mt-3 pt-3 border-t border-border/30">
-                    <FeedbackButtons
-                      value={feedbackMap.get(msg.id) ?? null}
-                      onFeedbackChange={(feedbackValue, comment) =>
-                        handleFeedback(msg.id, feedbackValue, comment)
-                      }
-                      isLoading={feedbackLoadingMap.get(msg.id) ?? false}
-                      showCommentOnNegative
-                      size="sm"
-                    />
-                  </div>
                 )}
               </div>
             );

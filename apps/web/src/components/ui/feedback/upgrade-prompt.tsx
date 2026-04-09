@@ -4,11 +4,13 @@
  *
  * Shows upgrade CTA when user tries to access tier-locked features.
  *
- * @status ORPHAN — built as part of the tier-gate UX kit (alongside
- * `CollectionProgressBar` and `TierBadge`) but never wired to a gate flow.
- * `TierBadge` did find its way into `library/UsageWidget.tsx`; this CTA did
- * not. Integration is blocked on a product decision about the gate UX
- * (inline nudge vs. modal on action).
+ * **Active consumers:**
+ * - `ui/gates/FeatureGate.tsx`
+ * - `ui/gates/permission-gate.tsx`
+ * - `ui/gates/tier-gate.tsx`
+ *
+ * (Previous `@status ORPHAN` annotation was incorrect — removed during
+ * #292 cycle after identifying the gate system consumers.)
  */
 
 'use client';

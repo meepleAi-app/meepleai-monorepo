@@ -1,7 +1,31 @@
 name: Deploy to Staging
 
+# Spec R2 — Deploy quality gate (Sprint 2b, 2026-04-09):
+# This workflow no longer fires on direct push to main-staging. It is now
+# gated on a successful CI run on main-staging via workflow_run, which
+# closes the feedback loop "main-staging green CI → deploy" as a structural
+# invariant rather than a developer responsibility.
+#
+# Triggers:
+#   1. workflow_run: fires after CI completes on main-staging IF AND ONLY
+#      IF conclusion == 'success' (enforced at job level via `gate` job)
+#   2. workflow_dispatch: manual escape hatch (emergency deploy, retry, etc.)
+#
+# IMPORTANT: under workflow_run, GitHub executes this workflow in the
+# DEFAULT BRANCH context. `github.sha`, `github.ref`, and `github.head_ref`
+# all point to the default branch, NOT the commit that triggered CI. To
+# get the actual deploy SHA we use `github.event.workflow_run.head_sha`
+# (with fallback to github.sha for workflow_dispatch). This is exposed as
+# the env vars DEPLOY_SHA and DEPLOY_BRANCH below — every checkout and
+# every reference to "the commit being deployed" must route through them.
+#
+# Migration note: the previous `on: push: branches: [main-staging]` trigger
+# was removed in favor of workflow_run. To rollback, restore the push block
+# and revert the env-var routing.
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main-staging]
   workflow_dispatch:
     inputs:
@@ -41,18 +65,55 @@ env:
   WEB_IMAGE: ghcr.io/${{ github.repository }}/web
   ENVIRONMENT: staging
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Spec R2 — Deploy SHA/branch routing
+  # Under workflow_run trigger, github.sha and github.ref point to the
+  # default branch, NOT the commit that triggered CI. Use the workflow_run
+  # context to recover the actual deploy SHA, with a fallback to github.sha
+  # for workflow_dispatch and any future trigger that doesn't expose
+  # workflow_run context. Every checkout `ref:` and every shell reference
+  # to the deploy SHA must use these env vars instead of github.sha.
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  DEPLOY_BRANCH: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
 
 jobs:
+  # Spec R2 — Deploy quality gate
+  # All deployment jobs depend on this gate. The gate passes only if:
+  #   - The workflow was triggered manually (workflow_dispatch escape hatch), OR
+  #   - The workflow was triggered by a successful CI run on main-staging
+  #
+  # When ci.yml on main-staging fails, this gate stays in `skipped` state
+  # and no downstream jobs run. The result: zero deploy attempts on red CI.
+  gate:
+    name: CI Quality Gate
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch'
+      || (
+        github.event_name == 'workflow_run'
+        && github.event.workflow_run.conclusion == 'success'
+        && github.event.workflow_run.head_branch == 'main-staging'
+      )
+    steps:
+      - name: Confirm gate inputs
+        run: |
+          echo "Trigger:           ${{ github.event_name }}"
+          echo "Source CI status:  ${{ github.event.workflow_run.conclusion || 'n/a (manual)' }}"
+          echo "Source CI branch:  ${{ github.event.workflow_run.head_branch || 'n/a (manual)' }}"
+          echo "Source CI run id:  ${{ github.event.workflow_run.id || 'n/a (manual)' }}"
+          echo "Deploy SHA:        ${{ env.DEPLOY_SHA }}"
+          echo "Deploy branch:     ${{ env.DEPLOY_BRANCH }}"
+          echo "Gate passed - proceeding with deployment pipeline"
   notify-start:
+    needs: gate
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: started
       workflow_name: "Deploy to Staging"
       environment: staging
-      branch: ${{ github.head_ref || github.ref_name }}
+      branch: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
       actor: ${{ github.actor }}
-      commit_sha: ${{ github.sha }}
-      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      commit_sha: ${{ github.event.workflow_run.head_sha || github.sha }}
+      commit_message: ${{ github.event.workflow_run.head_commit.message || github.event.head_commit.message || 'Manual trigger' }}
       run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       job_list: '["detect-changes", "pre-deploy-check", "build", "migrate-db", "snapshot-baseline", "deploy", "validate", "e2e-staging"]'
       caller_workflow_id: ${{ github.workflow_id }}
@@ -62,6 +123,7 @@ jobs:
   # Detect which components changed
   detect-changes:
     name: Detect Changes
+    needs: gate
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     outputs:
       api: ${{ steps.changes.outputs.api }}
@@ -72,6 +134,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA, not default branch
           fetch-depth: 0  # Full history needed to compare against github.event.before on merge commits
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           # PDFs are managed via S3 blob storage, not git
@@ -147,13 +210,17 @@ jobs:
   pre-deploy-check:
     name: Pre-deploy Validation
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
-    if: github.event_name == 'push' || inputs.skip_tests != true
+    # Spec R2: workflow_run trigger always runs pre-deploy-check (it can't
+    # set skip_tests). workflow_dispatch respects the skip_tests input.
+    # Legacy push branch retained for safety in case the trigger reverts.
+    if: github.event_name == 'push' || github.event_name == 'workflow_run' || inputs.skip_tests != true
     needs: [detect-changes]
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
             apps/
@@ -164,10 +231,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🔍 Checking if CI already passed for commit ${{ github.sha }}..."
+          echo "🔍 Checking if CI already passed for commit ${{ env.DEPLOY_SHA }}..."
 
-          # Check for successful CI runs on this commit (from main-dev PR)
-          CI_STATUS=$(gh api repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs \
+          # Check for successful CI runs on this commit (from main-dev PR
+          # or the gating workflow_run event that triggered this deploy).
+          # Under workflow_run trigger, env.DEPLOY_SHA == workflow_run.head_sha,
+          # so this query targets the actual commit being deployed (NOT the
+          # default branch HEAD that github.sha would resolve to).
+          CI_STATUS=$(gh api repos/${{ github.repository }}/commits/${{ env.DEPLOY_SHA }}/check-runs \
             --jq '[.check_runs[] | select(.name | test("CI Success|Backend|Frontend")) | select(.conclusion=="success")] | length' \
             2>/dev/null || echo "0")
 
@@ -226,6 +297,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
             apps/
@@ -418,6 +490,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
             infra/
@@ -504,7 +577,7 @@ jobs:
               "environment": "staging",
               "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
               "deployed_by": "${{ github.actor }}",
-              "commit": "${{ github.sha }}",
+              "commit": "${{ env.DEPLOY_SHA }}",
               "workflow_run": "${{ github.run_id }}"
             }
             VEREOF
@@ -522,6 +595,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
             tests/
@@ -734,6 +808,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           sparse-checkout: |
             apps/web/
@@ -775,10 +850,10 @@ jobs:
       workflow_name: "Deploy to Staging"
       environment: staging
       is_critical: true
-      branch: ${{ github.head_ref || github.ref_name }}
+      branch: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
       actor: ${{ github.actor }}
-      commit_sha: ${{ github.sha }}
-      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      commit_sha: ${{ github.event.workflow_run.head_sha || github.sha }}
+      commit_message: ${{ github.event.workflow_run.head_commit.message || github.event.head_commit.message || 'Manual trigger' }}
       run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     secrets:
       SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}

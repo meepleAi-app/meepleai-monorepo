@@ -60,21 +60,24 @@ internal sealed class VectorDocumentIndexedForKbFlagHandler
             return;
         }
 
-        // Bulk update bypassing change tracking (perf + avoids loading aggregate).
-        // Idempotent: only updates if HasKnowledgeBase is currently false.
-        var rowsAffected = await _context.SharedGames
-            .Where(g => g.Id == sharedGameId.Value && !g.HasKnowledgeBase)
-            .ExecuteUpdateAsync(
-                setters => setters.SetProperty(g => g.HasKnowledgeBase, true),
-                cancellationToken)
+        // Load the SharedGame row, flip the flag if needed, save.
+        // Idempotent: returns early if HasKnowledgeBase is already true.
+        // Single-row update, no meaningful perf difference vs ExecuteUpdate.
+        var sharedGame = await _context.SharedGames
+            .FirstOrDefaultAsync(g => g.Id == sharedGameId.Value, cancellationToken)
             .ConfigureAwait(false);
 
-        if (rowsAffected > 0)
+        if (sharedGame is null || sharedGame.HasKnowledgeBase)
         {
-            _logger.LogInformation(
-                "Set HasKnowledgeBase=true for SharedGame {SharedGameId} triggered by VectorDocument {DocumentId}",
-                sharedGameId.Value,
-                notification.DocumentId);
+            return;
         }
+
+        sharedGame.HasKnowledgeBase = true;
+        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Set HasKnowledgeBase=true for SharedGame {SharedGameId} triggered by VectorDocument {DocumentId}",
+            sharedGameId.Value,
+            notification.DocumentId);
     }
 }

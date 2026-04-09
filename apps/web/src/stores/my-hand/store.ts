@@ -100,8 +100,9 @@ export const useMyHandStore = create<MyHandState>()(
 );
 
 // Expose getInitialState for test resets (Zustand devtools/immer does not auto-expose this)
+// Returns a fresh copy each call to avoid inter-test state leakage via shared references
 (useMyHandStore as unknown as { getInitialState: () => typeof INITIAL_STATE }).getInitialState =
-  () => INITIAL_STATE;
+  () => ({ ...INITIAL_STATE, slots: createEmptySlots() });
 
 // Selectors
 export const selectSlot = (slotType: MyHandSlotType) => (s: MyHandState) => s.slots[slotType];

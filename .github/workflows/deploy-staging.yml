@@ -84,9 +84,22 @@ jobs:
             packages/
           sparse-checkout-cone-mode: true
 
+      # IMPORTANT: explicitly set `base` to github.event.before for push events.
+      # Without this, paths-filter falls back to comparing the current branch
+      # against the repository's default branch (main-dev), which on a
+      # main-dev → main-staging release shows only the files that diverged
+      # between branches — NOT the files brought in by the merge. This caused
+      # release PR #308 to build a web-only image and silently miss API manifest
+      # changes (apps/api/**/*.yml → SeedManifestGame entries for 159 games).
+      # See paths-filter README "push events" section.
+      #
+      # Only runs on push events. For workflow_dispatch the decision step
+      # below forces a full deploy regardless, so this step would be a no-op.
       - uses: dorny/paths-filter@v4
         id: changes
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
         with:
+          base: ${{ github.event.before }}
           filters: |
             api:
               - 'apps/api/**'
@@ -100,15 +113,26 @@ jobs:
         id: decision
         run: |
           FORCE="${{ inputs.force_full_deploy }}"
+          EVENT="${{ github.event_name }}"
+          BEFORE="${{ github.event.before }}"
           API="${{ steps.changes.outputs.api }}"
           WEB="${{ steps.changes.outputs.web }}"
           INFRA="${{ steps.changes.outputs.infra }}"
 
-          # Force full deploy on: manual force, infra changes, or workflow_dispatch without force (deploy all by default)
-          if [ "$FORCE" = "true" ] || [ "$INFRA" = "true" ]; then
+          # Force full deploy on:
+          # - Manual workflow_dispatch (operator intent is always "deploy now")
+          # - Explicit force_full_deploy=true input
+          # - Infra config changes
+          # - Initial push to branch (before=zeros, paths-filter can't diff)
+          ZEROS="0000000000000000000000000000000000000000"
+          if [ "$EVENT" = "workflow_dispatch" ] \
+            || [ "$FORCE" = "true" ] \
+            || [ "$INFRA" = "true" ] \
+            || [ "$BEFORE" = "$ZEROS" ] \
+            || [ -z "$BEFORE" ]; then
             echo "deploy_api=true" >> $GITHUB_OUTPUT
             echo "deploy_web=true" >> $GITHUB_OUTPUT
-            echo "📦 Full deploy: force=$FORCE, infra=$INFRA"
+            echo "📦 Full deploy: event=$EVENT force=$FORCE infra=$INFRA before=$BEFORE"
           else
             echo "deploy_api=$API" >> $GITHUB_OUTPUT
             echo "deploy_web=$WEB" >> $GITHUB_OUTPUT

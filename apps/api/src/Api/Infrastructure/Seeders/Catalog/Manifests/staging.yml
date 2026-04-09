@@ -11833,6 +11833,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/battlestar-galactica-exodus_rulebook.pdf
     pdfSha256: 933ed636f95700f9dca1d47bf63eb228b86341017def10a649e54e1c18b471cd
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Battlestar%20Galactica%3A%20Exodus%20Expansion
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Battlestar%20Galactica%3A%20Exodus%20Expansion
   - title: Blueprints
     bggId: 140933
     language: en
@@ -11855,6 +11857,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/blueprints_rulebook.pdf
     pdfSha256: ca0473d279040cd8e157f736bb5aa78f2019fed68e278cfafc73f98ef0269bad
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Blueprints
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Blueprints
   - title: 'Frostpunk: The Board Game'
     bggId: 311988
     language: en
@@ -11877,6 +11881,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/frostpunk_rulebook.pdf
     pdfSha256: 3600047bc0167e8f550867c6da4ec75d575bf78291ddbb39a5969c3a14c4d9c6
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Frostpunk%3A%20The%20Board%20Game
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Frostpunk%3A%20The%20Board%20Game
   - title: ISS Vanguard
     bggId: 325494
     language: en
@@ -11903,6 +11909,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/iss-vanguard_rulebook.pdf
     pdfSha256: 76f80aa5a266287e19b5c1423d7177d9ad5167d07e6c9eb402fa616008c4e6ca
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=ISS%20Vanguard
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=ISS%20Vanguard
   - title: Marvel United
     bggId: 298047
     language: en
@@ -11928,6 +11936,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/marvel-united_rulebook.pdf
     pdfSha256: 4cf121cbdc9ba87c94e64eef7d9defff65860c7fb4e9850a0c611f7c2d7ccd1c
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Marvel%20United
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Marvel%20United
   - title: Massive Darkness
     bggId: 197070
     language: en
@@ -11956,6 +11966,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/massive-darkness_rulebook.pdf
     pdfSha256: 0e6da43776336126872fd55c4ff0a186b598eb35f0f81c5983efe0286d19d04c
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Massive%20Darkness
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Massive%20Darkness
   - title: 'Masters of the Universe: Fields of Eternia'
     bggId: 317526
     language: en
@@ -11978,6 +11990,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/masters-of-the-universe-fields-of-eternia_rulebook.pdf
     pdfSha256: 6c75514b523638e01417651123372884f6bbbc94cc81541f7b1187e6b35719f8
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Masters%20of%20the%20Universe%3A%20Fields%20of%20Eternia
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Masters%20of%20the%20Universe%3A%20Fields%20of%20Eternia
   - title: Paleo
     bggId: 300531
     language: en
@@ -12000,6 +12014,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/paleo_rulebook.pdf
     pdfSha256: e25557f8724650419837f690aeadaaa474b652b5610e4d39100c618b92e87e90
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Paleo
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Paleo
   - title: Photosynthesis
     bggId: 218603
     language: en
@@ -12022,6 +12038,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/photosynthesis_rulebook.pdf
     pdfSha256: adfe6e3e69ab40ab8c51482a9d3f9f930d1b0a22d49c55fa3faf8c0cd1e07e26
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Photosynthesis
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Photosynthesis
   - title: 'RONE: Invasion'
     bggId: 368944
     language: en
@@ -12044,6 +12062,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/rone-invasion_rulebook.pdf
     pdfSha256: 0351e250da3d127e0835dce3444ae6151f5328c4b613144d02f74659cc5324dc
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=RONE%3A%20Invasion
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=RONE%3A%20Invasion
   - title: Sagrada
     bggId: 199561
     language: en
@@ -12067,6 +12087,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/sagrada_rulebook.pdf
     pdfSha256: c7c8d54e36bd83aa4b92b0a44184c140cce87c57253b93c5d744aa76f174408f
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Sagrada
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Sagrada
   - title: Santorini
     bggId: 194655
     language: en
@@ -12089,6 +12111,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/santorini_rulebook.pdf
     pdfSha256: 0d1a056e6753d031c8c067f706cbfa064018bfb4279ac9e3c0ed95b4a3d7f19d
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Santorini
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Santorini
   - title: Townsfolk Tussle
     bggId: 312859
     language: en
@@ -12114,6 +12138,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/townsfolk-tussle_rulebook.pdf
     pdfSha256: 9ba02fb2121e962214f5933c021ec66caec242af693d216fdad956a94381bdce
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Townsfolk%20Tussle
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Townsfolk%20Tussle
   - title: Disney Villainous
     bggId: 256382
     language: en
@@ -12137,6 +12163,8 @@ catalog:
     pdfBlobKey: rulebooks/v1/villainous_rulebook.pdf
     pdfSha256: ab41201c70aecc048dc8fd03e20e8b6ba9561dc5e444793ca8d977aba2d9c907
     pdfVersion: '1.0'
+    fallbackImageUrl: https://placehold.co/400x300?text=Disney%20Villainous
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Disney%20Villainous
   defaultAgent:
     name: MeepleAssistant POC
     model: anthropic/claude-3-haiku

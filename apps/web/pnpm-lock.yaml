@@ -166,7 +166,7 @@ importers:
         specifier: ^12.10.1
         version: 12.10.1(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       ajv:
-        specifier: ^8.18.0
+        specifier: '>=8.18.0'
         version: 8.18.0
       ajv-formats:
         specifier: ^3.0.1

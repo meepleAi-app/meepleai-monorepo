@@ -8,10 +8,12 @@ namespace Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 internal class UserHandRepository : IUserHandRepository
 {
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
 
-    public UserHandRepository(MeepleAiDbContext db)
+    public UserHandRepository(MeepleAiDbContext db, TimeProvider timeProvider)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<IReadOnlyList<UserHandSlotData>> GetAllSlotsAsync(Guid userId, CancellationToken ct = default)
@@ -35,6 +37,8 @@ internal class UserHandRepository : IUserHandRepository
     public async Task UpsertSlotAsync(Guid userId, string slotType, Guid entityId, string entityType,
         string? entityLabel, string? entityImageUrl, CancellationToken ct = default)
     {
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
         var existing = await _db.UserHandSlots
             .FirstOrDefaultAsync(s => s.UserId == userId && s.SlotType == slotType, ct)
             .ConfigureAwait(false);
@@ -49,7 +53,7 @@ internal class UserHandRepository : IUserHandRepository
                 EntityType = entityType,
                 EntityLabel = entityLabel,
                 EntityImageUrl = entityImageUrl,
-                PinnedAt = DateTime.UtcNow
+                PinnedAt = now
             });
         }
         else
@@ -58,10 +62,8 @@ internal class UserHandRepository : IUserHandRepository
             existing.EntityType = entityType;
             existing.EntityLabel = entityLabel;
             existing.EntityImageUrl = entityImageUrl;
-            existing.PinnedAt = DateTime.UtcNow;
+            existing.PinnedAt = now;
         }
-
-        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 
     public async Task ClearSlotAsync(Guid userId, string slotType, CancellationToken ct = default)
@@ -73,7 +75,6 @@ internal class UserHandRepository : IUserHandRepository
         if (existing is not null)
         {
             _db.UserHandSlots.Remove(existing);
-            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
         }
     }
 }

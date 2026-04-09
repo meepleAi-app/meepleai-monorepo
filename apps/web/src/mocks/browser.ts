@@ -15,17 +15,60 @@
  */
 import { setupWorker } from 'msw/browser';
 
-import { parseGroupList, computeGroupToggles } from '@/dev-tools/mockControlCore';
-import { buildActiveHandlers } from '@/dev-tools/mswHandlerRegistry';
+import { HANDLER_GROUPS, type HandlerGroupBase } from './handlers/registry';
 
-import { HANDLER_GROUPS } from './handlers/registry';
+import type { HttpHandler } from 'msw';
 
-function getInitialHandlers() {
+// Inline copies of the toggle helpers (also defined in @/dev-tools/mockControlCore
+// and @/dev-tools/mswHandlerRegistry). Duplicated here so that mocks/ stays
+// self-contained and the dev-tools/ folder can be removed without breaking
+// the typecheck — see .github/workflows/dev-tools-isolation.yml.
+function parseGroupList(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
+function computeGroupToggles(
+  allGroups: string[],
+  enableList: string[],
+  disableList: string[]
+): Record<string, boolean> {
+  const result: Record<string, boolean> = {};
+  const hasEnableList = enableList.length > 0;
+  for (const g of allGroups) {
+    if (disableList.includes(g)) {
+      result[g] = false;
+    } else if (hasEnableList) {
+      result[g] = enableList.includes(g);
+    } else {
+      result[g] = true;
+    }
+  }
+  return result;
+}
+
+function buildActiveHandlers(
+  groups: HandlerGroupBase[],
+  groupToggles: Record<string, boolean>
+): HttpHandler[] {
+  const active: HttpHandler[] = [];
+  for (const group of groups) {
+    if (groupToggles[group.name] !== false) {
+      active.push(...group.handlers);
+    }
+  }
+  return active;
+}
+
+function getInitialHandlers(): HttpHandler[] {
   const enable = parseGroupList(process.env.NEXT_PUBLIC_MSW_ENABLE);
   const disable = parseGroupList(process.env.NEXT_PUBLIC_MSW_DISABLE);
   const allNames = HANDLER_GROUPS.map(g => g.name);
   const groupToggles = computeGroupToggles(allNames, enable, disable);
-  return buildActiveHandlers(HANDLER_GROUPS, { groups: groupToggles, overrides: {} });
+  return buildActiveHandlers(HANDLER_GROUPS, groupToggles);
 }
 
 export const worker = setupWorker(...getInitialHandlers());

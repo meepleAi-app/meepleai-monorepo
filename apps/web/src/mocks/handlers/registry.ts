@@ -8,7 +8,6 @@
  *
  * Missing toggle entries are treated as enabled (safe default).
  */
-import type { HandlerGroup } from '@/dev-tools/mswHandlerRegistry';
 
 import { adminHandlers } from './admin.handlers';
 import { authHandlers } from './auth.handlers';
@@ -24,11 +23,23 @@ import { playersHandlers } from './players.handlers';
 import { sessionsHandlers } from './sessions.handlers';
 import { sharedGamesHandlers } from './shared-games.handlers';
 
+import type { HttpHandler } from 'msw';
+
+/**
+ * Local handler-group shape. Mirrors `@/dev-tools/mswHandlerRegistry.HandlerGroup`
+ * but defined here so mocks/ has no static dependency on dev-tools/ — see
+ * .github/workflows/dev-tools-isolation.yml.
+ */
+export interface HandlerGroupBase {
+  name: string;
+  handlers: HttpHandler[];
+}
+
 /**
  * All known MSW handler groups, ordered by domain priority.
  * Group names are stable identifiers used in env-var toggles.
  */
-export const HANDLER_GROUPS: HandlerGroup[] = [
+export const HANDLER_GROUPS: HandlerGroupBase[] = [
   { name: 'auth', handlers: authHandlers },
   { name: 'games', handlers: gamesHandlers },
   { name: 'chat', handlers: chatHandlers },

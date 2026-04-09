@@ -88,6 +88,17 @@
     <Compile Remove="Integration\DocumentProcessing\IndexPdfIntegrationTests.cs" />
     <Compile Remove="Integration\DocumentProcessing\PrivatePdfUploadIntegrationTests.cs" />
   </ItemGroup>
+  <!--
+    MeepleDev: DevTools tests reference Api.DevTools.* types, which Api.csproj
+    excludes from Release builds via <Compile Remove>. Mirror that exclusion
+    here so the test project builds cleanly in Release as well.
+  -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Compile Remove="DevTools\**\*.cs" />
+    <Compile Remove="Integration\DevTools\**\*.cs" />
+    <None Remove="DevTools\**\*.cs" />
+    <None Remove="Integration\DevTools\**\*.cs" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures\**\*.*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />

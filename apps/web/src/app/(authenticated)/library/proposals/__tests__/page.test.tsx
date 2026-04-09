@@ -1,7 +1,6 @@
 /**
  * Tests for My Proposals Page
  * Issue #4056: Verify RequireRole protection
- * Issue #4055: Updated for LibraryNavTabs integration
  */
 
 import { screen } from '@testing-library/react';
@@ -25,12 +24,6 @@ vi.mock('next/navigation', () => ({
 // Mock getCurrentUser action
 vi.mock('@/actions/auth', () => ({
   getCurrentUser: vi.fn(),
-}));
-
-// Mock LibraryNavTabs to isolate page-level testing (Issue #4055)
-// Must use direct file path since page.tsx imports from @/components/library/LibraryNavTabs directly
-vi.mock('@/components/library/LibraryNavTabs', () => ({
-  LibraryNavTabs: () => <div data-testid="library-nav-tabs">Nav Tabs</div>,
 }));
 
 // Mock MyProposalsClient to isolate page-level testing

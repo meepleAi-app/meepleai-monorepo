@@ -53,7 +53,7 @@ export function WelcomeHero({ firstName }: WelcomeHeroProps) {
           </button>
           <button
             type="button"
-            onClick={() => router.push('/library?tab=catalogo')}
+            onClick={() => router.push('/library')}
             className="font-nunito font-bold text-xs text-muted-foreground px-4 py-2 rounded-full border border-border hover:bg-muted/30 transition-colors"
           >
             🔍 Sfoglia catalogo

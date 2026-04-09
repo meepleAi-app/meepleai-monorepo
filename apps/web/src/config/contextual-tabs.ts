@@ -10,9 +10,8 @@ export interface ContextualTab {
  */
 export const CONTEXTUAL_TABS: Record<string, ContextualTab[]> = {
   '/library': [
-    { label: 'I Miei Giochi', href: '/library' },
-    { label: 'Wishlist', href: '/library?tab=wishlist' },
-    { label: 'Catalogo', href: '/library?tab=catalogo' },
+    { label: 'Libreria', href: '/library' },
+    { label: 'Wishlist', href: '/library/wishlist' },
   ],
   '/sessions': [
     { label: 'In corso', href: '/sessions?tab=active' },

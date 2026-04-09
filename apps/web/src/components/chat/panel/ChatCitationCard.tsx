@@ -54,6 +54,8 @@ export function ChatCitationCard({ citation }: ChatCitationCardProps) {
         {citation.openUrl && (
           <a
             href={citation.openUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-1.5 inline-flex items-center gap-1 font-nunito text-[0.72rem] font-extrabold"
             style={{ color: 'hsl(210 40% 40%)' }}
           >

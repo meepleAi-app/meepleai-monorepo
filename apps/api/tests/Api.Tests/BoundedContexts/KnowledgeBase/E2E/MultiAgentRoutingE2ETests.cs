@@ -238,7 +238,9 @@ public class MultiAgentRoutingE2ETests
     {
         var result = _classifier.ClassifyQuery("How to play chess?");
 
-        result.AllScores.Should().HaveCount(4);
+        // 5 intents: Tutorial, RulesQuestion, MoveValidation, StrategicAnalysis, Narrative
+        // (Narrative added in commit 26fcee9bf — feat(ai): add Narrative intent to IntentClassifier)
+        result.AllScores.Should().HaveCount(5);
 
         // Tutorial should be highest for this query
         var tutorialScore = result.AllScores.First(s => s.Intent == AgentIntent.Tutorial);

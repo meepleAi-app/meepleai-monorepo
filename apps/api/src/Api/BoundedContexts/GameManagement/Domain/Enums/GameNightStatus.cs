@@ -11,5 +11,6 @@ public enum GameNightStatus
     Published = 1,
     Cancelled = 2,
     Completed = 3,
+    InProgress = 4,
     Corrupted = 999
 }

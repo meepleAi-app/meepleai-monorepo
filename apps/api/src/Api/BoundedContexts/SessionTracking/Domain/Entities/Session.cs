@@ -107,6 +107,27 @@ public class Session
     public byte[]? RowVersion { get; private set; }
 
     /// <summary>
+    /// Turn order as JSON array of participant IDs. Null if not yet set.
+    /// </summary>
+    public string? TurnOrderJson { get; private set; }
+
+    /// <summary>
+    /// Method used to set the turn order: "Manual" | "Random".
+    /// </summary>
+    [MaxLength(16)]
+    public string? TurnOrderMethod { get; private set; }
+
+    /// <summary>
+    /// Seed used when TurnOrderMethod=Random, for audit/reproducibility.
+    /// </summary>
+    public int? TurnOrderSeed { get; private set; }
+
+    /// <summary>
+    /// Zero-based index of the current player in the turn order.
+    /// </summary>
+    public int? CurrentTurnIndex { get; private set; }
+
+    /// <summary>
     /// Session participants.
     /// </summary>
     public IReadOnlyCollection<Participant> Participants => _participants.AsReadOnly();
@@ -316,6 +337,41 @@ public class Session
             var winner = _participants.First(p => p.Id == winnerId.Value);
             winner.SetFinalRank(1);
         }
+    }
+
+    /// <summary>
+    /// Sets the turn order for this session.
+    /// </summary>
+    /// <param name="method">Manual or Random.</param>
+    /// <param name="order">Ordered participant IDs.</param>
+    /// <param name="seed">Required when method is Random (for audit).</param>
+    public void SetTurnOrder(
+        Api.BoundedContexts.SessionTracking.Domain.Enums.TurnOrderMethod method,
+        IReadOnlyList<Guid> order,
+        int? seed)
+    {
+        if (Status == SessionStatus.Finalized)
+            throw new ConflictException("Cannot set turn order on finalized session.");
+
+        ArgumentNullException.ThrowIfNull(order);
+        if (order.Count == 0)
+            throw new ArgumentException("Turn order cannot be empty.", nameof(order));
+
+        var participantIds = _participants.Select(p => p.Id).ToHashSet();
+        foreach (var id in order)
+        {
+            if (!participantIds.Contains(id))
+                throw new ArgumentException($"Participant {id} is not in this session.", nameof(order));
+        }
+
+        if (method == Api.BoundedContexts.SessionTracking.Domain.Enums.TurnOrderMethod.Random && !seed.HasValue)
+            throw new ArgumentException("Random turn order requires a seed for audit.", nameof(seed));
+
+        TurnOrderJson = System.Text.Json.JsonSerializer.Serialize(order);
+        TurnOrderMethod = method.ToString();
+        TurnOrderSeed = seed;
+        CurrentTurnIndex = 0;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>

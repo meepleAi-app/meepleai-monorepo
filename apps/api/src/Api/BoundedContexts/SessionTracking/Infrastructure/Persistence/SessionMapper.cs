@@ -32,6 +32,10 @@ internal static class SessionMapper
             RowVersion = domain.RowVersion,
             InviteToken = domain.InviteToken,
             InviteExpiresAt = domain.InviteExpiresAt,
+            TurnOrderJson = domain.TurnOrderJson,
+            TurnOrderMethod = domain.TurnOrderMethod,
+            TurnOrderSeed = domain.TurnOrderSeed,
+            CurrentTurnIndex = domain.CurrentTurnIndex,
             Participants = domain.Participants.Select(ParticipantMapper.ToEntity).ToList()
         };
     }
@@ -61,6 +65,10 @@ internal static class SessionMapper
         typeof(Session).GetProperty(nameof(Session.RowVersion))!.SetValue(session, entity.RowVersion);
         typeof(Session).GetProperty(nameof(Session.InviteToken))!.SetValue(session, entity.InviteToken);
         typeof(Session).GetProperty(nameof(Session.InviteExpiresAt))!.SetValue(session, entity.InviteExpiresAt);
+        typeof(Session).GetProperty(nameof(Session.TurnOrderJson))!.SetValue(session, entity.TurnOrderJson);
+        typeof(Session).GetProperty(nameof(Session.TurnOrderMethod))!.SetValue(session, entity.TurnOrderMethod);
+        typeof(Session).GetProperty(nameof(Session.TurnOrderSeed))!.SetValue(session, entity.TurnOrderSeed);
+        typeof(Session).GetProperty(nameof(Session.CurrentTurnIndex))!.SetValue(session, entity.CurrentTurnIndex);
 
         // Map participants (need to access private _participants field)
 #pragma warning disable S3011 // Reflection is required for domain entity hydration from persistence

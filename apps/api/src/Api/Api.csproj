@@ -103,4 +103,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Infrastructure\Seeders\Catalog\Manifests\*.yml" />
   </ItemGroup>
+  <!-- MeepleDev: exclude dev tools from Release builds -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Compile Remove="DevTools/**/*.cs" />
+    <None Remove="DevTools/**/*.cs" />
+  </ItemGroup>
 </Project>

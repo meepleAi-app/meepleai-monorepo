@@ -24,6 +24,7 @@ import { ResponseMetaBadge } from './ResponseMetaBadge';
 import { RuleSourceCard } from './RuleSourceCard';
 import { TechnicalDetailsPanel } from './TechnicalDetailsPanel';
 import { TtsSpeakerButton } from './TtsSpeakerButton';
+import { isLastAssistantMessage } from './utils/isLastAssistantMessage';
 
 // ============================================================================
 // Types
@@ -163,11 +164,11 @@ export function ChatMessageList({
 
           {visibleMessages.map((msg, visibleIndex) => {
             const msgIndex = windowStart + visibleIndex;
-            // Show strategy badge on the last assistant message when available
+            // Show strategy badge on the last assistant message when available.
+            // isLastAssistantMessage checks list structure only; we combine
+            // with !streamState.isStreaming to gate on the final response.
             const isLastAssistant =
-              msg.role === 'assistant' &&
-              !streamState.isStreaming &&
-              msgIndex === messages.length - 1;
+              !streamState.isStreaming && isLastAssistantMessage(messages, msgIndex);
 
             return (
               <div

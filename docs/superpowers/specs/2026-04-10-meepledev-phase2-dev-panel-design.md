@@ -1,10 +1,37 @@
 # MeepleDev Phase 2 — Dev Panel Runtime
 
 **Date**: 2026-04-10
-**Status**: Design (v1, pre spec-panel review)
+**Status**: Design (v2, post spec-panel review)
 **Author**: Brainstorming session with visual companion
+**Reviewed by**: Expert panel (Wiegers, Adzic, Fowler, Nygard, Crispin, Hightower) via `/sc:spec-panel`
 **Related**: `docs/superpowers/specs/2026-04-09-meepledev-fast-dev-loop-design.md` (Phase 1)
 **Phase 1 merged**: PR #356 + #360 + #361 (main-dev @ `ee1c9e51d`)
+
+## Changelog
+
+- **v1 (initial)**: Vision, architettura sub-module `panel/`, 4 feature runtime, 6 SC, 5 milestone, ~45 test
+- **v2 (post spec-panel review)**: Applied all P0 + P1 + P2 fixes:
+  - **P0-W2-1**: SC2-1 split in SC2-1a (PATCH round-trip ≤50ms p95) + SC2-1b (correctness header); test `toggle-runtime.spec.ts` aggiornato con median-of-5 + CI budget 3x
+  - **P0-A2-1**: Aggiunta sezione 3.Z con 7 Given/When/Then executable scenarios
+  - **P0-F2-1**: Split `useBackendToggles` in Query + Mutation hooks (CQS)
+  - **P0-N2-1**: Mutex `switchInProgressController` + last-click-wins policy su scenario switcher
+  - **P0-C2-1**: `NoMockInReleaseTests` esteso per verificare zero tipi `Api.DevTools.Http.*` in Release
+  - **P1-W2-2**: Benchmark SC2-5 obbligatorio con CI workflow `bench-phase2.yml`
+  - **P1-W2-3**: Nuova sezione 1.6 Accessibility (ARIA, keyboard, focus management, axe-core E2E)
+  - **P1-A2-2**: Nuovo E2E `scenario-switch-race.spec.ts` (last-click-wins stress)
+  - **P1-F2-2**: `scenarioSwitcher.ts` spostato fuori da `panel/` a `dev-tools/` (boundary clean)
+  - **P1-F2-3**: `sseRegistry` sostituito da CustomEvent `meepledev:scenario-switch-begin` (zero coupling)
+  - **P1-N2-2**: Mutations in-flight durante scenario switch documentate come known limitation
+  - **P1-N2-3**: Debounce + per-name lock su `setToggle` (no flicker)
+  - **P1-N2-4**: Exponential backoff retry (10s→30s→60s→300s→stop)
+  - **P1-C2-2**: `fetchInterceptor.test.ts` espanso a 9 test case
+  - **P1-C2-4**: Flakiness-resistant E2E pattern (warm-up + median of 5 + CI budget 3x)
+  - **P1-H2-1**: Initial `getToggles()` fetch spostato all'`installPanel()` invece del first mount Toggles section
+  - **P2-F2-4**: `DevPanelClient` da class a pure function module
+  - **P2-C2-5**: Sonner dep check spostato da appendix a M0 deliverable
+  - **P2-W2-4**: Keyboard shortcut collision test come M0 smoke (documentato in README)
+  - **P2-H2-2**: Multi-dev `make integration` warning in CLAUDE.md (M4)
+  - **P2-H2-4**: DevBadge health indicator quando backend toggles error (M4)
 
 ---
 
@@ -28,11 +55,12 @@ Un Dev Panel in-browser che permette al developer di controllare runtime — sen
 
 | ID | Metrica | Target | Verifica |
 |---|---|---|---|
-| **SC2-1** | Toggle BE runtime: tempo tra click e next-request-uses-new-state | ≤ 50ms p95 | E2E test `toggle-runtime.spec.ts` |
+| **SC2-1a** | Toggle BE runtime: PATCH round-trip (click → response OK) | ≤ 50ms p95 | E2E test `toggle-runtime.spec.ts` (step 1) |
+| **SC2-1b** | Toggle BE correctness: post-PATCH, first subsequent chat request header reflects new state | ≤ 1 request window | E2E test `toggle-runtime.spec.ts` (step 2) |
 | **SC2-2** | Scenario switch live: tempo tra click e UI refetchata | ≤ 300ms p95 | E2E test `scenario-switch.spec.ts` |
 | **SC2-3** | Role switch live: tempo tra click e navbar aggiornata | ≤ 200ms p95 | E2E test `role-switch.spec.ts` |
 | **SC2-4** | DevPanel first open: Ctrl+Shift+M → panel visibile | ≤ 100ms (no cold chunk load) | Manual + E2E |
-| **SC2-5** | Request Inspector overhead su fetch: monkey-patch delta | ≤ 5ms p95 per request | Benchmark test |
+| **SC2-5** | Request Inspector overhead su fetch: monkey-patch delta | ≤ 5ms p95 per request | Benchmark test (**obbligatorio**, CI-enforced, vedi 6.7) |
 | **SC2-6** | Zero `Api.DevTools.*` e zero `panel/*` in Release bundle | 0 bytes/types | CI dev-tools-isolation workflow (esistente) |
 
 ### 1.4 Non-goal
@@ -48,6 +76,40 @@ Un Dev Panel in-browser che permette al developer di controllare runtime — sen
 - **Frontend dev** apre il panel per cambiare role e testare permessi, o per switchare scenario tra "empty" e "admin-busy" durante sviluppo di una tabella
 - **Full-stack dev** usa il panel per testare alternativamente "LLM reale, resto mockato" → "tutto mockato" durante debug di un flusso chat
 - **QA / demo** apre il panel con `?devpanel=1` per cambiare scenario al volo durante una demo
+
+### 1.6 Accessibility requirements
+
+Anche se il Dev Panel è un tool dev (non user-facing), rispetta le best practice a11y per preservare la codebase dalle cattive abitudini e permettere uso via screen reader (es. dev blind/low-vision).
+
+**ARIA roles**:
+- Drawer container: `role="dialog"` + `aria-modal="false"` (non bloccante) + `aria-label="MeepleDev Panel"`
+- Tabs nav: `role="tablist"` con 4 `role="tab"` figli, `aria-selected="true"` sul tab attivo
+- Tab panels: `role="tabpanel"` + `aria-labelledby="tab-{id}"`
+- Toggle switches: `role="switch"` + `aria-checked={boolean}` + `aria-label="Toggle {serviceName}"`
+- Error toasts: `role="alert"` + `aria-live="assertive"`
+- Info banners: `role="status"` + `aria-live="polite"`
+- Inspector table: `role="table"` + `role="row"` + `role="columnheader"` + `role="cell"`
+
+**Keyboard navigation**:
+- `Escape`: chiude il panel
+- `Tab` / `Shift+Tab`: naviga tra focusable elements
+- `ArrowLeft` / `ArrowRight` sul tablist: naviga tra tab (WAI tab pattern)
+- `Space` / `Enter` su switch: attiva toggle
+- `Enter` su row inspector: expand/collapse dettagli
+- Primo focusable al mount: il tab attivo (non il bottone close, per ridurre distrazione)
+
+**Focus management**:
+- Focus trap quando il panel è aperto: **NO** (il panel non è modale, l'app sotto resta interattiva)
+- Focus restore alla chiusura: riporta focus all'elemento che ha triggerato l'apertura (badge, keyboard, URL)
+- `@testing-library/user-event` testa il flusso Tab navigation
+
+**Screen reader announcements**:
+- State changes emettono `aria-live` updates: "LLM mock disabled", "Scenario changed to admin-busy", "Role changed to User"
+- Pattern: `<div role="status" aria-live="polite" id="devpanel-announcer" />` in cui scriviamo il messaggio via `setAnnouncement()`
+
+**Testing**:
+- Unit test con `@testing-library/react` + `@testing-library/user-event` per keyboard flow
+- Axe-core check come parte di E2E test `devpanel-a11y.spec.ts`
 
 ---
 
@@ -127,7 +189,8 @@ Un Dev Panel in-browser che permette al developer di controllare runtime — sen
 | `api/devPanelClient.ts` | HTTP client per `/dev/toggles` endpoints; gestione errori → toast | `window.fetch` (bypass interceptor con flag) |
 | `stores/panelUiStore.ts` | Zustand store: `isOpen`, `activeTab`, `collapsed`, `drawerWidth`. Persist su `sessionStorage` | — |
 | `stores/requestInspectorStore.ts` | Ring buffer FIFO, cap 50. Metadata only: `{url, method, status, durationMs, isMock, mockSource, timestamp}`. Filtri computati con `useMemo` | — |
-| `hooks/useBackendToggles.ts` | Fetch `GET /dev/toggles` + cache in-memory; expone `toggles, refetch, setToggle(name, value), resetAll` | `devPanelClient` |
+| `hooks/useBackendTogglesQuery.ts` | **Read-only** hook. Fetch `GET /dev/toggles` + cache in-memory; expone `toggles, knownServices, isLoading, error, refetch` | `devPanelClient` |
+| `hooks/useBackendTogglesMutation.ts` | **Write-only** hook (CQS split). Expone `setToggle(name, value), resetAll, isMutating, mutationError`. Debounce 300ms per toggle name, lock per-name contro click concorrenti | `devPanelClient` |
 | `hooks/useKeyboardShortcut.ts` | Listener Ctrl+Shift+M; toggle `panelUiStore.isOpen` | `panelUiStore`, React effect |
 | `hooks/useFetchInterceptor.ts` | Monkey-patch `window.fetch`, StrictMode-safe con ref sentinel; registra ogni call in `requestInspectorStore` | `requestInspectorStore` |
 | `hooks/useQueryStringPanelOpen.ts` | Al mount legge `?devpanel=1` e apre il panel, rimuove param dalla URL | `panelUiStore`, `window.location` |
@@ -135,10 +198,14 @@ Un Dev Panel in-browser che permette al developer di controllare runtime — sen
 | `sections/ScenariosSection.tsx` | Dropdown scenari da `listScenarioNames()` + reset; click → scenario switch protocol (cancel queries, close SSE, load, commit, invalidate) | `scenarioStore`, `queryClient` |
 | `sections/AuthSection.tsx` | Dropdown ruoli da `scenario.auth.availableUsers`; click → `mockAuthStore.setRole()` + invalidate `/auth/me` | `mockAuthStore`, `queryClient` |
 | `sections/InspectorSection.tsx` | Tabella filtrabile; row click → expand inline | `requestInspectorStore` |
-| `scenarioSwitchProtocol.ts` | Anti-race orchestration: beginSwitch→cancel→close SSE→load→endSwitch→invalidate, try/finally safety + timeout 2s | `scenarioStore`, `mockAuthStore`, `queryClient`, `sseRegistry` |
-| `sseRegistry.ts` | Track open EventSource instances, close-all-on-scenario-switch | — |
 | `index.ts` | Barrel export: `{ DevPanel, installPanel }` | — |
 | `README.md` | Sub-module doc: come aggiungere tab, come gestire state, testing | — |
+
+**Files added OUTSIDE `panel/`** (a livello `dev-tools/` per non violare il boundary "panel is consumer, not extender"):
+
+| File | Responsabilità | Dipendenze |
+|---|---|---|
+| `dev-tools/scenarioSwitcher.ts` | Anti-race orchestration function `switchScenario(name)`: mutex lock + beginSwitch→cancel→dispatch event→load→endSwitch→invalidate, try/finally safety + timeout 2s. **Pure function**, non React. | `scenarioStore`, `mockAuthStore`, `queryClient`, `scenarioManifest`, `scenarioValidator` |
 
 ### 2.3 Componenti Phase 1 modificati
 
@@ -192,6 +259,10 @@ Un Dev Panel in-browser che permette al developer di controllare runtime — sen
       │   ├─ Create requestInspectorStore (empty ring buffer, cap=50)
       │   ├─ Register keyboard listener (Ctrl+Shift+M)
       │   ├─ Read ?devpanel=1 query string → open if present, strip from URL
+      │   ├─ **(H2-1 FIX)** Fire initial GET /dev/toggles fetch NON-blocking
+      │   │   — this ensures the backend state is already synced when the user
+      │   │   first opens the Toggles tab, even after HMR reload. If it fails,
+      │   │   the banner is shown; if it succeeds, the tab opens instantly.
       │   └─ Return { DevPanel, panelUiStore, requestInspectorStore }
       └─ Return complete InstalledDevTools
 3. MockProvider state setTools(installed)
@@ -323,7 +394,16 @@ NEXT chat request from app:
 User action: Select 'admin-busy' in ScenariosSection dropdown
   │
   ▼
-onChange handler invokes scenarioSwitchProtocol(newScenarioName):
+onChange handler invokes switchScenario(newScenarioName):
+
+  STEP 0 — Mutex check (last-click-wins policy):
+    if (switchInProgressController !== null) {
+      // A switch is already running. Cancel it by aborting its controller.
+      // The running switch will observe the abort in STEP 4 and return early.
+      switchInProgressController.abort()
+    }
+    switchInProgressController = new AbortController()
+    const { signal } = switchInProgressController
 
   STEP 1 — Begin switch (block handlers):
     scenarioStore.beginSwitch()   // sets isSwitching=true
@@ -335,16 +415,21 @@ onChange handler invokes scenarioSwitchProtocol(newScenarioName):
   STEP 2 — Cancel in-flight queries:
     queryClient.cancelQueries({ type: 'active' })
 
-  STEP 3 — Close SSE streams:
-    for (const es of sseRegistry.getAll()) es.close()
+  STEP 3 — Close SSE streams via CustomEvent:
+    window.dispatchEvent(new CustomEvent('meepledev:scenario-switch-begin'))
+    // SSE consumer hooks in the app listen for this event and close their
+    // EventSource instances. Zero coupling: the app code does NOT import
+    // anything from dev-tools; only the pre-existing chat SSE hook gains
+    // one extra useEffect listener (guarded by NODE_ENV check so it's
+    // dead-code eliminated in prod).
 
   STEP 4 — Load new scenario:
+    if (signal.aborted) return  // A newer switch has taken over
     const newScenario = SCENARIO_MANIFEST[newScenarioName] as Scenario
     const result = validateScenario(newScenario)
     if (!result.valid) {
-      scenarioStore.endSwitch()
       toast.error('Scenario invalid')
-      return
+      return  // finally block will cleanup
     }
     scenarioStore.loadScenario(newScenario)
     mockAuthStore.reset(newScenario.auth.currentUser, newScenario.auth.availableUsers)
@@ -353,12 +438,30 @@ onChange handler invokes scenarioSwitchProtocol(newScenarioName):
     scenarioStore.endSwitch()  // sets isSwitching=false
 
   STEP 6 — Invalidate and refetch:
+    if (signal.aborted) return
     queryClient.invalidateQueries()
+
+  FINALLY — Clear mutex (only if this invocation is the current one):
+    if (switchInProgressController?.signal === signal) {
+      switchInProgressController = null
+    }
 
 Total time: target ≤ 300ms p95 (SC2-2)
 ```
 
-**Timeout safety**: il protocol è wrapped in `try/finally` — se qualcosa lancia tra step 1 e 5, `endSwitch()` viene comunque chiamato nel `finally` per evitare che `isSwitching=true` rimanga bloccato. Inoltre un `setTimeout(2000)` watchdog force-chiude lo switch e mostra toast rosso.
+**Concurrency policy**: **last-click-wins**. Se l'utente clicca scenario A, poi B prima che A completi, A viene abortito e B prende il controllo. Scelta rationale: dev environment, user aspettativa = "l'ultimo click è quello che voglio".
+
+**Timeout safety**: il protocol è wrapped in `try/finally` — se qualcosa lancia tra step 1 e 5, `endSwitch()` + clear mutex vengono comunque chiamati nel `finally`. Inoltre un `setTimeout(2000)` watchdog force-abort e mostra toast rosso.
+
+**Mutations in-flight (N2-2)**: `queryClient.cancelQueries()` in STEP 2 cancella solo **queries**, non **mutations**. Se un `useMutation` è in volo (es. POST /games in progress), procede normalmente — ma la response refererà a dati del vecchio scenario. Il codice del protocol logga un warning se rileva mutations pending:
+```typescript
+const pendingMutations = queryClient.getMutationCache().getAll()
+  .filter(m => m.state.status === 'pending')
+if (pendingMutations.length > 0) {
+  console.warn('[MeepleDev] Mutations in flight during scenario switch:', pendingMutations.length)
+}
+```
+Il dev è responsabile di attendere il completamento prima di switchare se vuole semantica esatta.
 
 ### 3.6 Flow F — Role switch live
 
@@ -455,6 +558,83 @@ const filtered = useMemo(() => {
 
 **StrictMode safety**: ref sentinel (`interceptorRef.current`) assicura monkey-patch applicato una sola volta anche se React StrictMode monta 2 volte il componente in dev.
 
+### 3.Z Executable scenarios (Given/When/Then)
+
+I seguenti scenari diventano direttamente E2E test Playwright (`apps/web/e2e/dev-loop/`). Sono il criterio di accettazione formale per le feature Phase 2.
+
+```gherkin
+Feature: Runtime toggle backend service
+  Scenario: Switch LLM from mock to real during active session
+    Given `make dev-fast-api` is running with MOCK_LLM=true
+    And the Dev Panel is open via Ctrl+Shift+M
+    And the Toggles tab is active
+    When the user clicks the LLM switch to OFF
+    Then within 50ms the PATCH response is 200 and the switch UI reflects OFF
+    And GET /api/_meepledev/toggles returns llm=false
+    When the user sends POST /api/v1/chat {"message":"hi"}
+    Then the response header "X-Meeple-Mock: backend-di:..." does NOT contain "llm"
+    And the chat response body is from the real LLM provider (verified by absence of "[mock-llm]" prefix)
+
+Feature: Scenario switch preserves navigation context
+  Scenario: Switch scenario while on /library page
+    Given `make dev-fast` is running with NEXT_PUBLIC_DEV_SCENARIO=small-library
+    And the user is on the /library page showing 3 games
+    When the user opens the Dev Panel and switches scenario to "admin-busy"
+    Then within 300ms the /library page shows 20 games
+    And the URL remains "/library" (no navigation triggered)
+    And no unhandled promise rejection appears in console
+    And no "scenario-switching" 503 errors are visible to the user
+
+Feature: Concurrent scenario switches converge to final selection
+  Scenario: Rapid scenario switching (stress)
+    Given the Dev Panel is open on the Scenarios tab
+    When the user selects "empty", then immediately "admin-busy", then "small-library" within 500ms
+    Then the final scenarioStore.scenario.name equals "small-library"
+    And scenarioStore.isSwitching is false within 1s
+    And queryClient has zero in-flight queries
+    And the UI shows exactly 3 games (from small-library seed)
+    And no stale data from intermediate scenarios appears
+
+Feature: Role switch during active form input
+  Scenario: Switch role while editing a form
+    Given the user is Admin editing a game form with unsaved changes
+    When the user switches role to User via Dev Panel
+    Then within 200ms the admin route unmounts (redirect or 403)
+    And a toast appears: "Role changed to User"
+    And the previous form state is discarded (not persisted in sessionStorage)
+
+Feature: Inspector reflects toggle change within next request
+  Scenario: Inspector updates after toggle switch
+    Given the Dev Panel is open on the Inspector tab
+    And the app has made at least 3 fetch calls (seeded history)
+    When the user switches to the Toggles tab, disables LLM, switches back to Inspector
+    And triggers a fresh POST /api/v1/chat by interacting with the chat UI
+    Then a new row appears in the Inspector table within 500ms
+    And the new row has method=POST, status=200
+    And the new row's mockSource does NOT contain "llm"
+    And the inspector does NOT show any row for /api/_meepledev/toggles (internal calls skipped)
+
+Feature: Panel graceful degradation when backend is down
+  Scenario: Open panel with backend unreachable
+    Given `make dev-fast` is running WITHOUT backend (DEV_BACKEND=false)
+    When the user opens the Dev Panel via Ctrl+Shift+M
+    Then the Toggles tab is visible
+    And the MSW groups section is fully functional (13 switches)
+    And the Backend services section shows a red banner "Backend unreachable"
+    And no console error is visible (error logged at warn level only)
+    And clicking Retry in the banner attempts a new GET /api/_meepledev/toggles
+
+Feature: Release build excludes DevTools HTTP surface
+  Scenario: Verify prod build has no dev endpoints
+    Given the Api.dll is built in Release configuration
+    When reflection enumerates all types in the assembly
+    Then no type exists in the namespace "Api.DevTools.Http"
+    And no method "MapMeepleDevTools" is discoverable
+    When the app starts in Release with ASPNETCORE_ENVIRONMENT=Development
+    Then GET /dev/toggles returns 404
+    And PATCH /dev/toggles returns 404
+```
+
 ---
 
 ## 4. Contratti
@@ -540,17 +720,17 @@ export interface PatchTogglesResponse {
   toggles: Record<string, boolean>;
 }
 
+const BASE_URL = '/api/_meepledev';
 const INTERNAL_HEADER = { 'X-Meepledev-Internal': '1' } as const;
+const TIMEOUT_MS = 5000;
 
-export class DevPanelClient {
-  constructor(private baseUrl: string = '/api/_meepledev') {}
+// Pure function module — no class, no singleton, no state.
+export async function getToggles(): Promise<BackendTogglesState> { /* ... */ }
+export async function patchToggles(toggles: Record<string, boolean>): Promise<PatchTogglesResponse> { /* ... */ }
+export async function resetToggles(): Promise<BackendTogglesState> { /* ... */ }
 
-  async getToggles(): Promise<BackendTogglesState> { /* ... */ }
-  async patchToggles(toggles: Record<string, boolean>): Promise<PatchTogglesResponse> { /* ... */ }
-  async resetToggles(): Promise<BackendTogglesState> { /* ... */ }
-}
-
-export const devPanelClient = new DevPanelClient();
+// Aggregate export for convenience
+export const devPanelClient = { getToggles, patchToggles, resetToggles } as const;
 ```
 
 **Route risoluzione**: il baseUrl `/api/_meepledev` viene risolto via Next.js proxy catch-all `/api/[...path]` verso `http://localhost:8080/dev/*`. Non serve proxy route dedicato.
@@ -619,15 +799,24 @@ Tutti con prefix `meepledev-panel-` per namespacing:
 
 ### 4.5 React hooks (public surface)
 
+CQS split: query e mutation hooks separati per evitare coupling rendering/mutation e semplificare testing isolato.
+
 ```typescript
-export function useBackendToggles(): {
+/** Read-only query hook. Components that only display state use this. */
+export function useBackendTogglesQuery(): {
   toggles: Record<string, boolean>;
   knownServices: string[];
   isLoading: boolean;
   error: DevPanelClientError | null;
-  setToggle: (name: string, value: boolean) => Promise<void>;
   refetch: () => Promise<void>;
+};
+
+/** Write-only mutation hook. Components that mutate state use this. */
+export function useBackendTogglesMutation(): {
+  setToggle: (name: string, value: boolean) => Promise<void>;
   resetAll: () => Promise<void>;
+  isMutating: boolean;
+  mutationError: DevPanelClientError | null;
 };
 
 export function useKeyboardShortcut(
@@ -642,6 +831,26 @@ export function useStoreSlice<T, U>(
   store: StoreApi<T>,
   selector: (state: T) => U
 ): U;
+```
+
+**Debounce + lock (mutation hook internals)**:
+
+```typescript
+const inFlightToggles = useRef<Set<string>>(new Set());
+
+async function setToggle(name: string, value: boolean) {
+  if (inFlightToggles.current.has(name)) return; // ignore concurrent click
+  inFlightToggles.current.add(name);
+  try {
+    // Optimistic update via query cache
+    await devPanelClient.patchToggles({ [name]: value });
+  } catch (err) {
+    // Rollback handled in query cache via refetch
+    throw err;
+  } finally {
+    inFlightToggles.current.delete(name);
+  }
+}
 ```
 
 ### 4.6 Internal header contract
@@ -659,7 +868,7 @@ export function useStoreSlice<T, U>(
 - **Combo**: `Ctrl+Shift+M` (`Cmd+Shift+M` su macOS — `event.metaKey || event.ctrlKey`)
 - **Scope**: window listener
 - **Behavior**: toggle `panelUiStore.isOpen`
-- **Conflict**: nessuna collision nota in Chrome/Firefox/Safari. Fallback: badge click o `?devpanel=1`
+- **Conflict**: collision test manuale richiesto durante M0 (Chrome/Firefox/Safari + macOS/Linux/Windows). Eventuali collision documentate in `panel/README.md`. Fallback universale: badge click o `?devpanel=1` URL param (sempre funziona)
 
 ---
 
@@ -669,7 +878,7 @@ export function useStoreSlice<T, U>(
 
 | Failure | Detection | Behavior | Fallback |
 |---|---|---|---|
-| **Backend down** durante `GET /dev/toggles` | `devPanelClient` fetch error | Banner rosso "Backend unreachable — showing FE toggles only"; retry ogni 10s | MSW toggles funzionanti. Backend list nascosta. |
+| **Backend down** durante `GET /dev/toggles` | `devPanelClient` fetch error | Banner rosso "Backend unreachable — showing FE toggles only"; exponential backoff retry: **10s, 30s, 60s, 300s**, poi stop. Manual "Retry" button nel banner forza retry immediato. | MSW toggles funzionanti. Backend list nascosta. |
 | **PATCH /dev/toggles** fallisce | Response != 200 o throw | Optimistic rollback UI + toast errore con traceId | Stato locale non aggiornato. Retry safe. |
 | **Unknown service** in PATCH | Try/catch → 400 | Toast "Unknown service 'xyz'" | Non dovrebbe mai accadere |
 | **`/dev/toggles` 404** | Fetch ritorna 404 | Panel nasconde sezione Backend, mostra banner "Backend mode not available" | 3 sezioni residue funzionanti |
@@ -681,6 +890,8 @@ export function useStoreSlice<T, U>(
 | **`sessionStorage` quota** | Try/catch su setItem | Fallback in-memory | Persistenza disabilitata |
 | **Keyboard conflict** | Non detectable | Badge click o `?devpanel=1` | Documentare in README |
 | **Multi-tab stesso app** | sessionStorage per-tab | Backend state condiviso, refetch on focus | Accettabile |
+| **Multi-dev shared backend via `make integration`** | No detection automatica | `CLAUDE.md` warning section: "il backend state è shared, cambi sono visibili a tutti i dev" (H2-2 doc fix) | Accettabile, dev responsibility |
+| **Panel health not visible from DevBadge** | N/A | DevBadge mostra indicatore rosso se `useBackendTogglesQuery.error != null`, tooltip "Dev Panel backend unreachable" (H2-4) | DevBadge pattern già presente in P1, estensione minimale |
 | **Switch durante mutation in-flight** | `cancelQueries` aborta | Mutation cancellata + toast | Accettabile |
 | **Monkey-patch catch AbortError** | try/catch re-throw | Record status 0 | Rumore filtrable |
 | **Panel in prod per sbaglio** | Build guard + runtime check | Chunk assente; forzato → 404 | Nessun side effect |
@@ -782,7 +993,7 @@ Ogni sezione wrappata in `<ErrorBoundary>` con `<SectionErrorFallback name="X">`
 | `panelUiStore.test.ts` | Initial state da sessionStorage, setOpen/toggle/setActiveTab/setCollapsed/setDrawerWidth, persist su mutation, fallback in-memory |
 | `requestInspectorStore.test.ts` | Ring buffer FIFO cap 50, order newest-first, clear svuota, no body |
 | `devPanelClient.test.ts` | getToggles parse, patchToggles header `X-Meepledev-Internal`, DevPanelClientError wrap, timeout 5s, resetToggles |
-| `fetchInterceptor.test.ts` | Monkey-patch una sola volta (ref sentinel), skip header internal, metadata corretta, AbortError handling, status 0 network error |
+| `fetchInterceptor.test.ts` | 8+ test cases: (1) monkey-patch applicato una volta (ref sentinel), (2) double install idempotent, (3) skip header `X-Meepledev-Internal`, (4) headers normalization (Headers vs object vs array), (5) metadata corretta, (6) AbortError handling preserva eccezione, (7) status 0 su network error, (8) context `this=window` preservato nel chiamare originalFetch, (9) restore `window.fetch` su `uninstall()` |
 | `useBackendToggles.test.ts` | Fetch iniziale, cache, setToggle optimistic + rollback, resetAll, retry on error |
 | `useKeyboardShortcut.test.ts` | Ctrl+Shift+M + Cmd+Shift+M, no trigger con solo Shift+M, cleanup listener |
 | `useQueryStringPanelOpen.test.ts` | Rileva ?devpanel=1, remove via history.replaceState |
@@ -796,6 +1007,7 @@ Ogni sezione wrappata in `<ErrorBoundary>` con `<SectionErrorFallback name="X">`
 |---|---|
 | `DevToolsEndpointsTests.cs` | GetToggles shape, PatchToggles batch + update, 400 unknown key, ResetToggles bootstrap defaults, ToggleChanged event fires |
 | `MockToggleStateProviderResetTests.cs` | ResetToDefaults ripristina post-Set(), thread-safe concurrent Set+Reset |
+| `NoMockInReleaseTests.cs` (esistente P1, estendere) | **(C2-1 FIX)** Aggiungere test `ReleaseAssembly_HasNoDevToolsHttpTypes()` che verifica via reflection: zero `Api.DevTools.Http.*` tipi presenti in `Api.dll` built in Release config. Inoltre aggiungere `DevToolsEndpoints_NotRegisteredInRelease()` che boota WebApplicationFactory con `UseEnvironment("Development")` + `Configuration=Release` e asserta GET/PATCH/POST `/dev/toggles` → 404 |
 
 **Target**: ~10 test.
 
@@ -838,26 +1050,57 @@ test('Ctrl+Shift+M opens panel within 100ms', async ({ page }) => {
 
 Più tests: `?devpanel=1` URL, DevBadge click.
 
-#### `toggle-runtime.spec.ts` (SC2-1)
+#### `toggle-runtime.spec.ts` (SC2-1a + SC2-1b)
 
 ```typescript
-test('backend LLM toggle switches runtime without restart', async ({ page, request }) => {
+test('backend LLM toggle switches runtime — PATCH round-trip + correctness', async ({ page, request }) => {
   await page.goto('/?devpanel=1');
   await page.click('[data-testid="panel-tab-toggles"]');
 
-  const initial = await request.get('/api/_meepledev/toggles');
-  expect((await initial.json()).toggles.llm).toBe(true);
-
-  const start = Date.now();
+  // Warm up: first click (not measured) to prime caches
   await page.click('[data-testid="toggle-llm"]');
   await page.waitForSelector('[data-testid="toggle-llm"][data-state="off"]');
-  const patchTime = Date.now() - start;
-  expect(patchTime).toBeLessThanOrEqual(55); // 5ms tolerance
+  await page.click('[data-testid="toggle-llm"]');  // back to on
+  await page.waitForSelector('[data-testid="toggle-llm"][data-state="on"]');
 
-  const after = await request.get('/api/_meepledev/toggles');
-  expect((await after.json()).toggles.llm).toBe(false);
+  // Measurement: median of 5 runs for latency robustness
+  const timings: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    const target = i % 2 === 0 ? 'off' : 'on';
+    const start = performance.now();
+    await page.click('[data-testid="toggle-llm"]');
+    await page.waitForSelector(`[data-testid="toggle-llm"][data-state="${target}"]`);
+    timings.push(performance.now() - start);
+  }
+  const sorted = [...timings].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+
+  // SC2-1a: PATCH round-trip p95 ≤ 50ms. In CI (shared runner), tolerance is
+  // 3x for flakiness. Local dev should hit ≤50ms easily.
+  const budget = process.env.CI ? 150 : 55;
+  expect(median).toBeLessThanOrEqual(budget);
+
+  // SC2-1b: Correctness — first request AFTER the PATCH must reflect new state
+  // Ensure final state is off
+  const finalState = await request.get('/api/_meepledev/toggles');
+  expect((await finalState.json()).toggles.llm).toBe(false);
+
+  // Trigger a chat request (or any endpoint that uses ILlmService)
+  // Via the app UI or direct backend call
+  const chatRes = await request.post('/api/v1/chat', {
+    data: { message: 'test' },
+  });
+  const mockHeader = chatRes.headers()['x-meeple-mock'] ?? '';
+  // llm should NOT be in the mock list
+  expect(mockHeader).not.toContain('llm');
 });
 ```
+
+**Flakiness strategy** (applied to all E2E latency tests):
+1. **Warm-up run**: first iteration is discarded
+2. **Median of N runs**: N=5 for latency, use median to reduce spike impact
+3. **CI budget**: env variable `CI=true` → 3x local budget (es. local 50ms → CI 150ms)
+4. **Functional assertions always strict**: only latency assertions are relaxed in CI
 
 #### `scenario-switch.spec.ts` (SC2-2)
 
@@ -910,17 +1153,118 @@ test('inspector captures fetch calls with mock headers', async ({ page }) => {
 });
 ```
 
-### 6.7 Benchmark test (opzionale)
+#### `scenario-switch-race.spec.ts` (A2-2 FIX — rapid switch stress)
+
+```typescript
+test('rapid scenario switching converges to final selection', async ({ page }) => {
+  await page.goto('/library?devpanel=1');
+  await page.click('[data-testid="panel-tab-scenarios"]');
+
+  // Fire 3 switches in <500ms (last-click-wins policy)
+  await page.selectOption('[data-testid="scenario-select"]', 'empty');
+  await page.selectOption('[data-testid="scenario-select"]', 'admin-busy');
+  await page.selectOption('[data-testid="scenario-select"]', 'small-library');
+
+  // Wait for final state
+  await page.waitForSelector('[data-testid="game-card"]');
+  expect(await page.locator('[data-testid="game-card"]').count()).toBe(3);
+
+  // Verify no leftover isSwitching flag
+  const isSwitching = await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (window as any).__meepledev__?.scenarioStore?.getState().isSwitching ?? null;
+  });
+  expect(isSwitching).toBe(false);
+
+  // Verify no corruption: exactly the small-library games
+  const titles = await page.locator('[data-testid="game-title"]').allTextContents();
+  expect(titles).toEqual(expect.arrayContaining(['Wingspan', 'Scythe', 'Terraforming Mars']));
+});
+```
+
+#### `devpanel-a11y.spec.ts` (W2-3 FIX — a11y smoke)
+
+```typescript
+import AxeBuilder from '@axe-core/playwright';
+
+test('dev panel has no critical a11y violations', async ({ page }) => {
+  await page.goto('/?devpanel=1');
+  await page.waitForSelector('[data-testid="dev-panel"]');
+
+  const results = await new AxeBuilder({ page })
+    .include('[data-testid="dev-panel"]')
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze();
+
+  const critical = results.violations.filter(v => v.impact === 'critical');
+  expect(critical).toEqual([]);
+});
+
+test('Escape closes the panel', async ({ page }) => {
+  await page.goto('/?devpanel=1');
+  await page.waitForSelector('[data-testid="dev-panel"]');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-testid="dev-panel"]')).not.toBeVisible();
+});
+
+test('ArrowRight on tablist moves focus between tabs', async ({ page }) => {
+  await page.goto('/?devpanel=1');
+  await page.locator('[data-testid="panel-tab-toggles"]').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('[data-testid="panel-tab-scenarios"]')).toBeFocused();
+});
+```
+
+### 6.7 Benchmark test (obbligatorio, CI-enforced)
 
 **NFR SC2-5**: overhead fetch interceptor ≤ 5ms p95.
 
-Vitest bench:
+Vitest bench con asserzione hard-fail:
+
 ```typescript
-// bench/fetchInterceptor.bench.ts
-bench('fetch interceptor overhead', () => {
-  // Baseline vs instrumented, 1000 calls, delta p95 ≤ 5ms
+// apps/web/__tests__/bench/fetchInterceptor.bench.ts
+import { bench, describe, expect } from 'vitest';
+import { installFetchInterceptor, uninstallFetchInterceptor } from '@/dev-tools/panel/hooks/useFetchInterceptor';
+
+describe('fetch interceptor overhead', () => {
+  const N = 1000;
+
+  bench('baseline (no interceptor)', async () => {
+    const t0 = performance.now();
+    for (let i = 0; i < N; i++) {
+      await fetch('data:application/json,{}');
+    }
+    const delta = (performance.now() - t0) / N;
+    // baseline recorded in snapshot file
+  });
+
+  bench('instrumented (with interceptor)', async () => {
+    installFetchInterceptor();
+    try {
+      const t0 = performance.now();
+      for (let i = 0; i < N; i++) {
+        await fetch('data:application/json,{}');
+      }
+      const delta = (performance.now() - t0) / N;
+      // Compare to baseline; assert delta ≤ 5ms
+    } finally {
+      uninstallFetchInterceptor();
+    }
+  });
 });
 ```
+
+**CI wiring** (M4 deliverable):
+```yaml
+# .github/workflows/bench-phase2.yml
+- name: Run fetch interceptor benchmark
+  working-directory: apps/web
+  run: pnpm bench fetchInterceptor
+  env:
+    BENCH_FAIL_ON_REGRESSION: true
+```
+
+Se `delta p95 > 5ms`, il job fallisce. Baseline aggiornato manualmente in PR dedicate (stesso pattern di `bundle-size-baseline.json`).
 
 ### 6.8 Meta-test: dev-tools-isolation (invariato)
 
@@ -965,15 +1309,17 @@ Phase 1 baseline: 116. Dopo Phase 2: ~161.
 **Obiettivo**: struttura vuota `panel/` + backend endpoints funzionanti senza UI.
 
 **Deliverables**:
+- **(C2-5 FIX)** Verifica dipendenza toast library: `grep sonner apps/web/package.json` — se non presente, aggiungi `pnpm add sonner` come primo step di M0
 - `apps/web/src/dev-tools/panel/` subfolder con `index.ts`, `README.md`, `DevPanel.tsx` minimal, `stores/panelUiStore.ts`, `hooks/useKeyboardShortcut.ts`, `hooks/useQueryStringPanelOpen.ts`
 - `apps/api/src/Api/DevTools/Http/DevToolsEndpoints.cs` con GET/PATCH/POST/reset
 - `apps/api/src/Api/DevTools/Http/DevToggleDtos.cs`
 - `apps/api/src/Api/DevTools/Http/DevToolsEndpointsExtensions.cs`
 - `MockToggleStateProvider.ResetToDefaults()` + test
 - `Program.cs` wiring (`MapMeepleDevTools()`)
-- `install.ts` modificato per dynamic import `panel/` + wire shortcut
+- `install.ts` modificato per dynamic import `panel/` + wire shortcut + **initial `getToggles()` fetch** (H2-1)
 - `mock-provider.tsx` modificato per mount DevPanel
-- `devPanelClient.ts` completo
+- `devPanelClient.ts` completo (pure functions)
+- `scenarioSwitcher.ts` (a livello `dev-tools/` fuori da `panel/`) — mutex + anti-race protocol (stub vuoto in M0, implementation in M2)
 - Unit tests: panelUiStore, devPanelClient, useKeyboardShortcut, useQueryStringPanelOpen, DevToolsEndpointsTests, MockToggleStateProviderResetTests
 
 **Definition of done**:
@@ -1093,7 +1439,8 @@ Phase 1 baseline: 116. Dopo Phase 2: ~161.
 ## Appendix — Open tactical decisions (per fase plan)
 
 1. **`worker.resetHandlers` signature esatta MSW v2** — verificare API changelog durante M1
-2. **ErrorBoundary implementation** — shadcn/ui ha un componente o serve custom?
-3. **Toast library** — verificare se `sonner` è già dep (altrimenti custom minimal)
-4. **Scenario MSW handler 503 guard** — quali handler specifici toccare (games, chat, library, sessions?)
-5. **Inspector row expand** — come renderizzare header list compatta (JSON tree vs flat list?)
+2. **ErrorBoundary implementation** — shadcn/ui ha un componente o serve custom? Verificare in M0
+3. **Scenario MSW handler 503 guard** — quali handler specifici toccare (games, chat, library, sessions?). Decisione in M2
+4. **Inspector row expand** — come renderizzare header list compatta (JSON tree vs flat list?). Decisione in M3
+
+*(Decisioni originali su Toast library, DevPanelClient class vs functions, sonner, keyboard collision, a11y: tutte risolte nel spec review v2)*

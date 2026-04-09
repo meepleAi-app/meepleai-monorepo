@@ -14,7 +14,6 @@ import { badgeStory } from './badge.story';
 import { buttonStory } from './button.story';
 import { chatMessageStory } from './chat-message.story';
 import { checkboxStory } from './checkbox.story';
-import { collectionProgressStory } from './collection-progress.story';
 import { confidenceBadgeStory } from './confidence-badge.story';
 import { dialogStory } from './dialog.story';
 import { dropdownMenuStory } from './dropdown-menu.story';
@@ -127,7 +126,6 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
 
   // Gates
   upgradePromptStory,
-  collectionProgressStory,
 ];
 
 /** Look up a story by its slug id */

@@ -30,15 +30,6 @@ export const STORY_METADATA: StoryMeta[] = [
     presetCount: 11,
   },
   {
-    id: 'mobile-card-layout',
-    title: 'MobileCardLayout',
-    category: 'Data Display',
-    description:
-      '[ORPHAN] Mobile hand sidebar + focused card + swipe. Only consumer is /dev/meeple-card demo — real mobile pages use MeepleCard list/compact variants.',
-    controlCount: 2,
-    presetCount: 4,
-  },
-  {
     id: 'entity-list-view',
     title: 'EntityListView',
     category: 'Data Display',

@@ -98,14 +98,14 @@ test.describe('Game Night Journey', () => {
   });
 
   // ==========================================================================
-  // Issue #301: Full happy-path journey — wizard → session → live page
+  // Issue #301: Full happy-path journey — wizard → session → play page
   //
   // Validates integration points NOT covered by unit tests:
-  //   - Cross-page navigation (/sessions/new → /sessions/live/{id})
+  //   - Cross-page navigation (/sessions/new → /sessions/{id}/play)
   //   - Multi-step wizard state accumulation
   //   - API sequencing (createSession → addPlayer × N → startSession)
   //   - Router state transition on successful creation
-  //   - Live session page initial render
+  //   - Session play page initial render with hydration fetch
   //
   // Out of scope for v1 (future issues):
   //   - Pause / resume / finalize (separate UI via /save sub-page)

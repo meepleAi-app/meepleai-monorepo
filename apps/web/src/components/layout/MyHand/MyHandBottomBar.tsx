@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
-import { clearHandSlot } from '@/lib/api/my-hand';
+import { clearHandSlot, updateHandSlot } from '@/lib/api/my-hand';
 import { cn } from '@/lib/utils';
 import { useMyHandStore } from '@/stores/my-hand/store';
 import type { MyHandSlotType } from '@/stores/my-hand/types';
@@ -86,6 +86,7 @@ export function MyHandBottomBar(): React.JSX.Element {
         onConfirm={(slotType, payload) => {
           assignSlot(slotType, payload);
           setPickerOpen(false);
+          updateHandSlot(slotType, payload).catch(() => {});
         }}
       />
     </div>

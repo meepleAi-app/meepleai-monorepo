@@ -100,8 +100,19 @@ export const authHandlers = [
   }),
 
   // GET /api/v1/auth/me - Get current user
+  // Respects NEXT_PUBLIC_DEV_AS_ROLE env var so that navigating directly to
+  // protected routes (e.g. /admin/overview) works without a prior login.
   http.get(`${API_BASE}/api/v1/auth/me`, () => {
-    return HttpResponse.json(mockUserAuth(), {
+    const devRole = (process.env.NEXT_PUBLIC_DEV_AS_ROLE ?? '').toLowerCase();
+    let authData;
+    if (devRole === 'admin' || devRole === 'superadmin') {
+      authData = mockAdminAuth();
+    } else if (devRole === 'editor') {
+      authData = mockEditorAuth();
+    } else {
+      authData = mockUserAuth();
+    }
+    return HttpResponse.json(authData, {
       headers: {
         'X-Correlation-Id': `test-correlation-${Date.now()}`,
       },

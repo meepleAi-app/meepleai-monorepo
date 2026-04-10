@@ -351,9 +351,11 @@ export async function proxy(request: NextRequest) {
     sessionCookieValue
   ) {
     isAuthenticated = true;
-  } else if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true' && sessionCookieValue) {
-    // In mock mode, the MSW handler sets a fake session cookie on login.
-    // Trust its presence without backend validation (no real backend in this mode).
+  } else if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true') {
+    // In mock mode there is no real backend. Trust the session cookie if present
+    // (set by MSW on login), or bypass auth entirely so devs can navigate freely
+    // without having to log in first. Role is read from the cookie or from the
+    // NEXT_PUBLIC_DEV_AS_ROLE env var set in .env.local.
     isAuthenticated = true;
   } else if (sessionCookieValue) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
@@ -361,7 +363,12 @@ export async function proxy(request: NextRequest) {
 
   // Check user role (only trusted when we know the session is valid)
   const userRoleCookie = request.cookies.get(USER_ROLE_COOKIE);
-  const userRole = isAuthenticated ? userRoleCookie?.value || 'user' : 'user';
+  const userRole = isAuthenticated
+    ? userRoleCookie?.value ||
+      (process.env.NEXT_PUBLIC_MOCK_MODE === 'true'
+        ? (process.env.NEXT_PUBLIC_DEV_AS_ROLE ?? 'user')
+        : 'user')
+    : 'user';
   const isAdmin = isAuthenticated && isAdminRole(userRole);
 
   // Check if the current route is protected or public auth route

@@ -19,6 +19,7 @@ import { http, HttpResponse } from 'msw';
 
 import { mockId, HANDLER_BASE } from '../data/factories';
 import { getScenarioBridge } from '../scenarioBridge';
+import { guardScenarioSwitching } from './_shared';
 
 const API_BASE = HANDLER_BASE;
 
@@ -72,6 +73,8 @@ const fallbackSessions: SessionData[] = [
 
 export const sessionsHandlers = [
   http.get(`${API_BASE}/api/v1/sessions`, ({ request }) => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
     const items = currentSessions();
     const url = new URL(request.url);
     const status = url.searchParams.get('status');

@@ -13,6 +13,8 @@
 
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 
+import { QueryClient } from '@tanstack/react-query';
+
 const IS_DEV_MOCK =
   process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
 
@@ -40,11 +42,22 @@ type DevPanelMountComponent = ComponentType<{
   mockControlStore: unknown;
   handlerGroups: Array<{ name: string; handlers: unknown[] }>;
   worker: { resetHandlers: (...h: unknown[]) => void };
+  scenarioStore: unknown;
+  authStore: unknown;
+  queryClient: unknown;
 }>;
 
 interface MockProviderProps {
   children: React.ReactNode;
 }
+
+/**
+ * Dedicated QueryClient for the DevPanel (scenario switching, auth invalidation).
+ * Created outside the component so it's a stable singleton across re-renders.
+ * MockProvider renders outside the app's QueryClientProvider, so we can't use
+ * useQueryClient() here — a dedicated instance is the correct approach.
+ */
+const devQueryClient = new QueryClient();
 
 /**
  * Unregister any service workers that are not MSW's mockServiceWorker.js.
@@ -192,6 +205,9 @@ export function MockProvider({ children }: MockProviderProps) {
             mockControlStore={tools.controlStore}
             handlerGroups={handlerGroups}
             worker={mswWorker}
+            scenarioStore={tools.scenarioStore}
+            authStore={tools.authStore}
+            queryClient={devQueryClient}
           />
         )}
     </>

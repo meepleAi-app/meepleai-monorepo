@@ -12,6 +12,7 @@ import { http, HttpResponse } from 'msw';
 
 import { mockId, HANDLER_BASE } from '../data/factories';
 import { getScenarioBridge } from '../scenarioBridge';
+import { guardScenarioSwitching } from './_shared';
 
 const API_BASE = HANDLER_BASE;
 
@@ -114,6 +115,8 @@ let fallbackLibrary: LibraryItem[] = [
 
 export const libraryHandlers = [
   http.get(`${API_BASE}/api/v1/library/stats`, () => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
     const items = currentLibrary();
     const ratedItems = items.filter(i => i.rating);
     return HttpResponse.json({

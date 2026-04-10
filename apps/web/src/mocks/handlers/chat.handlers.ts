@@ -9,6 +9,7 @@
 
 import { http, HttpResponse } from 'msw';
 
+import { guardScenarioSwitching } from './_shared';
 import {
   createMockChat,
   createMockChatMessage,
@@ -42,6 +43,8 @@ let chats = [
 export const chatHandlers = [
   // GET /api/v1/chat/threads - List chat threads
   http.get(`${API_BASE}/api/v1/chat/threads`, () => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
     return HttpResponse.json(chats, {
       headers: {
         'X-Correlation-Id': `test-correlation-${Date.now()}`,

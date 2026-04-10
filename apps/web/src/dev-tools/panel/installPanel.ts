@@ -20,5 +20,9 @@ export function installPanel(deps: PanelDependencies): InstalledPanel {
   if (typeof console !== 'undefined') {
     console.warn('[MeepleDev Phase 2] Dev Panel installed. Press Ctrl+Shift+M to open.');
   }
+  if (typeof window !== 'undefined') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__meepledev_stores__ = deps;
+  }
   return { uiStore, deps };
 }

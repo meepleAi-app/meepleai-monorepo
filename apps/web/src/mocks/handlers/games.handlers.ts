@@ -5,6 +5,11 @@
  * - List games, get game details
  * - Create, update, delete games
  * - Game rules and specifications
+ *
+ * Data source precedence:
+ * 1. {@link getScenarioBridge} (runtime scenario store, if dev-tools installed)
+ * 2. Local fallback array seeded from factory functions (used by unit tests
+ *    that import handlers without the bridge)
  */
 
 import { http, HttpResponse } from 'msw';
@@ -17,20 +22,65 @@ import {
   mockId,
   HANDLER_BASE,
 } from '../data/factories';
+import { getScenarioBridge, type BridgeMockGame } from '../scenarioBridge';
 
 const API_BASE = HANDLER_BASE;
 
-// In-memory game store for stateful testing
-let games = [
+// Local fallback store for tests that don't install the bridge.
+// When the scenario bridge is active this array is ignored completely.
+let fallbackGames: BridgeMockGame[] = [
   mockChessGame(),
   mockTicTacToeGame(),
   createMockGame({ id: mockId(103), title: 'Monopoly' }),
 ];
 
+function currentGames(): BridgeMockGame[] {
+  const bridge = getScenarioBridge();
+  return bridge ? bridge.getGames() : fallbackGames;
+}
+
+function findGame(id: string): BridgeMockGame | undefined {
+  return currentGames().find(g => g.id === id);
+}
+
+function addGame(game: BridgeMockGame): void {
+  const bridge = getScenarioBridge();
+  if (bridge) {
+    bridge.addGame(game);
+  } else {
+    fallbackGames.push(game);
+  }
+}
+
+function updateGameInStore(id: string, patch: Partial<BridgeMockGame>): BridgeMockGame | null {
+  const bridge = getScenarioBridge();
+  if (bridge) {
+    bridge.updateGame(id, patch);
+    return findGame(id) ?? null;
+  }
+  const idx = fallbackGames.findIndex(g => g.id === id);
+  if (idx === -1) return null;
+  fallbackGames[idx] = { ...fallbackGames[idx], ...patch };
+  return fallbackGames[idx];
+}
+
+function removeGameFromStore(id: string): boolean {
+  const bridge = getScenarioBridge();
+  if (bridge) {
+    if (!findGame(id)) return false;
+    bridge.removeGame(id);
+    return true;
+  }
+  const idx = fallbackGames.findIndex(g => g.id === id);
+  if (idx === -1) return false;
+  fallbackGames.splice(idx, 1);
+  return true;
+}
+
 export const gamesHandlers = [
   // GET /api/v1/games - List all games
   http.get(`${API_BASE}/api/v1/games`, () => {
-    return HttpResponse.json(games, {
+    return HttpResponse.json(currentGames(), {
       headers: {
         'X-Correlation-Id': `test-correlation-${Date.now()}`,
       },
@@ -40,7 +90,7 @@ export const gamesHandlers = [
   // GET /api/v1/games/:id - Get game details
   http.get(`${API_BASE}/api/v1/games/:id`, ({ params }) => {
     const { id } = params;
-    const game = games.find(g => g.id === id);
+    const game = findGame(id as string);
 
     if (!game) {
       return HttpResponse.json({ error: 'Game not found' }, { status: 404 });
@@ -62,7 +112,7 @@ export const gamesHandlers = [
       title: body.title,
     });
 
-    games.push(newGame);
+    addGame(newGame);
 
     return HttpResponse.json(newGame, {
       status: 201,
@@ -77,19 +127,16 @@ export const gamesHandlers = [
     const { id } = params;
     const body = (await request.json()) as { title: string };
 
-    const gameIndex = games.findIndex(g => g.id === id);
+    const updated = updateGameInStore(id as string, {
+      title: body.title,
+      updatedAt: new Date().toISOString(),
+    });
 
-    if (gameIndex === -1) {
+    if (!updated) {
       return HttpResponse.json({ error: 'Game not found' }, { status: 404 });
     }
 
-    games[gameIndex] = {
-      ...games[gameIndex],
-      title: body.title,
-      updatedAt: new Date().toISOString(),
-    };
-
-    return HttpResponse.json(games[gameIndex], {
+    return HttpResponse.json(updated, {
       headers: {
         'X-Correlation-Id': `test-correlation-${Date.now()}`,
       },
@@ -99,13 +146,11 @@ export const gamesHandlers = [
   // DELETE /api/v1/games/:id - Delete game
   http.delete(`${API_BASE}/api/v1/games/:id`, ({ params }) => {
     const { id } = params;
-    const gameIndex = games.findIndex(g => g.id === id);
+    const removed = removeGameFromStore(id as string);
 
-    if (gameIndex === -1) {
+    if (!removed) {
       return HttpResponse.json({ error: 'Game not found' }, { status: 404 });
     }
-
-    games.splice(gameIndex, 1);
 
     return HttpResponse.json(
       { success: true },
@@ -121,7 +166,7 @@ export const gamesHandlers = [
   http.get(`${API_BASE}/api/v1/games/:id/rules`, ({ params }) => {
     const { id } = params;
 
-    if (!games.find(g => g.id === id)) {
+    if (!findGame(id as string)) {
       return HttpResponse.json({ error: 'Game not found' }, { status: 404 });
     }
 
@@ -139,7 +184,7 @@ export const gamesHandlers = [
     const { id } = params;
     const body = (await request.json()) as Record<string, unknown>;
 
-    if (!games.find(g => g.id === id)) {
+    if (!findGame(id as string)) {
       return HttpResponse.json({ error: 'Game not found' }, { status: 404 });
     }
 
@@ -157,9 +202,10 @@ export const gamesHandlers = [
   }),
 ];
 
-// Helper to reset games state between tests
+// Helper to reset games state between tests (only resets the fallback array;
+// when the bridge is active, callers should reload the scenario instead)
 export const resetGamesState = () => {
-  games = [
+  fallbackGames = [
     mockChessGame(),
     mockTicTacToeGame(),
     createMockGame({ id: mockId(103), title: 'Monopoly' }),

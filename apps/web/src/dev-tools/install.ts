@@ -1,3 +1,5 @@
+import { setScenarioBridge } from '@/mocks/scenarioBridge';
+
 import { createMockAuthStore, readRoleFromEnv, readRoleFromQueryString } from './mockAuthStore';
 import { createMockControlStore, parseGroupList } from './mockControlCore';
 import { SCENARIO_MANIFEST } from './scenarioManifest';
@@ -56,6 +58,22 @@ export function installDevTools(): InstalledDevTools {
   });
 
   const scenarioStore = createScenarioStore(scenario);
+
+  // Bridge the scenario store into the mocks/ namespace so MSW handlers can
+  // read current scenario data without importing from @/dev-tools (preserves
+  // the dev-tools isolation contract — see .github/workflows/dev-tools-isolation.yml).
+  setScenarioBridge({
+    getGames: () => scenarioStore.getState().games,
+    getSessions: () => scenarioStore.getState().sessions,
+    getChatHistory: () => scenarioStore.getState().chatHistory,
+    getLibrary: () => scenarioStore.getState().library,
+    getScenarioName: () => scenarioStore.getState().scenario.name,
+    addGame: game => scenarioStore.getState().addGame(game),
+    updateGame: (id, patch) => scenarioStore.getState().updateGame(id, patch),
+    removeGame: id => scenarioStore.getState().removeGame(id),
+    toggleOwned: gameId => scenarioStore.getState().toggleOwned(gameId),
+    toggleWishlist: gameId => scenarioStore.getState().toggleWishlist(gameId),
+  });
 
   const authStore = createMockAuthStore({
     scenarioUser: scenario.auth.currentUser,

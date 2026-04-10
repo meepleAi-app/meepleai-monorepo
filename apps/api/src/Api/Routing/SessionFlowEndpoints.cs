@@ -20,6 +20,7 @@ namespace Api.Routing;
 ///   <item><c>POST /sessions/{sessionId}/scores-with-diary</c> — upsert score with diary (T8)</item>
 ///   <item><c>GET  /sessions/{sessionId}/diary</c> — read single-session diary (T9)</item>
 ///   <item><c>GET  /game-nights/{gameNightId}/diary</c> — read cross-session night diary (T9)</item>
+///   <item><c>GET  /sessions/current</c> — orphan recovery probe (Plan 1bis T4)</item>
 /// </list>
 /// <para>
 /// The score endpoint uses <c>/scores-with-diary</c> to avoid colliding with the
@@ -260,6 +261,31 @@ internal static class SessionFlowEndpoints
         .WithTags("SessionFlow")
         .WithSummary("Read the append-only diary for a whole game night (unions all attached sessions).")
         .Produces(200)
+        .Produces(401);
+
+        // Current session probe (orphan recovery — NFR-9)
+        app.MapGet("/sessions/current", async (
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator
+                .Send(new GetCurrentSessionQuery(userId), ct)
+                .ConfigureAwait(false);
+            return result is null ? Results.NoContent() : Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("SessionFlow_GetCurrentSession")
+        .WithTags("SessionFlow")
+        .WithSummary("Return the caller's latest Active or Paused session (orphan recovery after reload/crash).")
+        .Produces(200)
+        .Produces(204)
         .Produces(401);
 
         // Complete game night (cascade finalize all sessions)

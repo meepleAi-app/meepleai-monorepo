@@ -3,7 +3,7 @@
 import { Suspense, type ReactNode } from 'react';
 
 import { DashboardEngineProvider } from '@/components/dashboard';
-import { CardDetailModal } from '@/components/features/common/CardDetailModal';
+import { ContextualHandBottomBar } from '@/components/layout/ContextualHand';
 import { BackToSessionFAB } from '@/components/session/BackToSessionFAB';
 
 import { DesktopShell } from './DesktopShell';
@@ -19,7 +19,7 @@ export function UserShellClient({ children }: UserShellClientProps) {
       <Suspense>
         <BackToSessionFAB />
       </Suspense>
-      <CardDetailModal />
+      <ContextualHandBottomBar />
     </DesktopShell>
   );
 }

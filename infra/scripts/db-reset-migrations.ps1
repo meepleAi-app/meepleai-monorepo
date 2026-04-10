@@ -97,7 +97,12 @@ Write-Timestamped "[4/7] dotnet ef found: $($efCheck -join ' ')"
 if (-not (Test-Path -LiteralPath $ApiProjectPath)) {
     throw "API project path not found: $ApiProjectPath"
 }
-$migrationsFolder = Join-Path $ApiProjectPath 'Migrations'
+# EF Core migrations live in Infrastructure/Migrations/ in this project
+$migrationsFolder = Join-Path $ApiProjectPath 'Infrastructure' 'Migrations'
+if (-not (Test-Path -LiteralPath $migrationsFolder)) {
+    # Fallback to standard location
+    $migrationsFolder = Join-Path $ApiProjectPath 'Migrations'
+}
 if (-not (Test-Path -LiteralPath $migrationsFolder)) {
     throw "Migrations folder not found in $ApiProjectPath. Nothing to reset."
 }
@@ -150,6 +155,17 @@ if (-not (Confirm-UserAction -Prompt $prompt -Force:$Force)) {
 $logFile = Join-Path $SnapshotPath 'reset.log'
 Write-Timestamped '' -LogFile $logFile
 
+# Load POSTGRES_* env vars from secret file for dotnet ef design-time factory
+# (MeepleAiDbContextFactory reads POSTGRES_HOST/PORT/DB/USER/PASSWORD from env)
+$secretVars = ConvertFrom-SecretFile -Path $SecretFile
+foreach ($key in $secretVars.Keys) {
+    [System.Environment]::SetEnvironmentVariable($key, $secretVars[$key])
+}
+# Ensure POSTGRES_HOST is set (secret may not contain it, default is localhost)
+if (-not [System.Environment]::GetEnvironmentVariable('POSTGRES_HOST')) {
+    [System.Environment]::SetEnvironmentVariable('POSTGRES_HOST', 'localhost')
+}
+
 if ($DryRun) {
     Write-Timestamped '[DRY RUN] Would execute:' -LogFile $logFile
     Write-Timestamped "  dotnet ef database drop --force --project $ApiProjectPath" -LogFile $logFile
@@ -183,7 +199,9 @@ try {
 
 # Step 4: dotnet ef migrations add Initial
 Write-Timestamped "[4/6] dotnet ef migrations add $InitialName..." -LogFile $logFile
-& dotnet ef migrations add $InitialName --project $ApiProjectPath 2>&1 | Tee-Object -FilePath $logFile -Append
+# Compute --output-dir relative to project path (Infrastructure/Migrations or Migrations)
+$relMigrationsDir = [System.IO.Path]::GetRelativePath($ApiProjectPath, $migrationsFolder)
+& dotnet ef migrations add $InitialName --project $ApiProjectPath --output-dir $relMigrationsDir 2>&1 | Tee-Object -FilePath $logFile -Append
 if ($LASTEXITCODE -ne 0) {
     Write-Host '' -ForegroundColor Red
     Write-Host '❌ dotnet ef migrations add failed.' -ForegroundColor Red

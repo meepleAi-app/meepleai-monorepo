@@ -14,8 +14,8 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260408132358_AddSearchVectorColumns")]
-    partial class AddSearchVectorColumns
+    [Migration("20260410113220_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -8511,6 +8511,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<int?>("CurrentTurnIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_turn_index");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -8568,6 +8572,19 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
+
+                    b.Property<string>("TurnOrderJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("turn_order_json");
+
+                    b.Property<string>("TurnOrderMethod")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("turn_order_method");
+
+                    b.Property<int?>("TurnOrderSeed")
+                        .HasColumnType("integer")
+                        .HasColumnName("turn_order_seed");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -10007,6 +10024,12 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int>("GameDataStatus")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("HasKnowledgeBase")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("has_knowledge_base");
+
                     b.Property<bool>("HasUploadedPdf")
                         .HasColumnType("boolean");
 
@@ -10100,6 +10123,10 @@ namespace Api.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_shared_games_bgg_id")
                         .HasFilter("bgg_id IS NOT NULL");
+
+                    b.HasIndex("HasKnowledgeBase")
+                        .HasDatabaseName("ix_shared_games_has_knowledge_base")
+                        .HasFilter("has_knowledge_base = true");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_shared_games_status")
@@ -11359,6 +11386,47 @@ namespace Api.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("chk_game_sessions_duration", "duration_minutes > 0");
                         });
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserHandSlotEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EntityImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("EntityLabel")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("EntityType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("PinnedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SlotType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "SlotType")
+                        .IsUnique()
+                        .HasDatabaseName("IX_user_hand_slots_user_id_slot_type");
+
+                    b.ToTable("user_hand_slots", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity", b =>
@@ -14276,6 +14344,17 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("UserLibraryEntry");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserHandSlotEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity", b =>

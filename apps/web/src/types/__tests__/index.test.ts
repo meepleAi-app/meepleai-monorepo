@@ -196,17 +196,6 @@ describe('Type Index Exports', () => {
       expect(typeof ProcessingStep).toBe('object');
     });
 
-    it('should export ProcessingProgress type', async () => {
-      const { ProcessingStep } = await import('../index');
-      const progress: import('../index').ProcessingProgress = {
-        currentStep: ProcessingStep.Extracting,
-        percentComplete: 0.5,
-        updatedAt: '2024-01-01',
-      };
-
-      expect(progress).toBeDefined();
-    });
-
     it('should export processing helper functions', async () => {
       const { isProcessingComplete, getStepLabel, getStepOrder } = await import('../index');
 

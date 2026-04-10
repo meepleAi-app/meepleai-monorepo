@@ -736,36 +736,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
       return response;
     },
-
-    /**
-     * Create agent with auto-link to SharedGame and document attachment
-     *
-     * @deprecated Prefer createWithSetup (POST /api/v1/agents/create-with-setup) for new code.
-     * This method conflicts with generateSetupGuide on the same URL path `/api/v1/agents/setup`.
-     * The correct backend URL for agent creation with setup should be confirmed and updated.
-     * @see createWithSetup
-     */
-    async createAgentWithSetup(request: {
-      userId: string;
-      userTier: string;
-      userRole: string;
-      gameId: string;
-      addToCollection: boolean;
-      agentType: string;
-      agentName?: string;
-      strategyName?: string;
-      sharedGameId: string;
-      documentIds: string[];
-    }): Promise<{
-      agentId: string;
-      agentName: string;
-      threadId: string;
-      slotUsed: number;
-      gameAddedToCollection: boolean;
-    } | null> {
-      // TODO: resolve URL conflict with generateSetupGuide — both use POST /api/v1/agents/setup
-      return httpClient.post('/api/v1/agents/setup', request);
-    },
   };
 }
 

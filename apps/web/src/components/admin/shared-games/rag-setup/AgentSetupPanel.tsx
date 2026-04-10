@@ -71,16 +71,12 @@ export function AgentSetupPanel({
 
     setCreating(true);
     try {
-      const result = await api.agents.createAgentWithSetup({
-        userId: '', // Set by backend from session
-        userTier: 'premium',
-        userRole: 'admin',
+      const result = await api.agents.createWithSetup({
         gameId,
         addToCollection: false,
         agentType: 'RAG',
         agentName: agentName.trim() || undefined,
         strategyName: 'HybridSearch',
-        sharedGameId: gameId,
         documentIds: selectedDocIds,
       });
 

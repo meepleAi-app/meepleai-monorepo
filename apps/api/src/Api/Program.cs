@@ -666,6 +666,7 @@ v1Api.MapAdminSharedGameContentEndpoints(); // Issue #236: Admin shared game con
 // Infrastructure
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapSessionEndpoints();           // Session management
+v1Api.MapSessionFlowEndpoints();       // Session Flow v2.1 (T9): KB readiness, pause/resume, turn-order, score+diary, diary reads
 
 // ═══ NON-ALPHA: Extended endpoints (gated behind ALPHA_MODE) ═══
 if (!isAlphaMode)

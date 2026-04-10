@@ -32,14 +32,14 @@ else
     BASENAME=$($AWS_S3 cp "s3://$SEED_BLOB_BUCKET/$PREFIX/latest.txt" - | tr -d '[:space:]')
     [ -n "$BASENAME" ] || fail "latest.txt vuoto sul bucket"
 
-    log "scarico $BASENAME (.dump + .sha256 + .meta.json)"
-    $AWS_S3 cp "s3://$SEED_BLOB_BUCKET/$PREFIX/$BASENAME.dump"        "$OUT_DIR/$BASENAME.dump.partial"
-    $AWS_S3 cp "s3://$SEED_BLOB_BUCKET/$PREFIX/$BASENAME.dump.sha256" "$OUT_DIR/$BASENAME.dump.sha256"
-    $AWS_S3 cp "s3://$SEED_BLOB_BUCKET/$PREFIX/$BASENAME.meta.json"   "$OUT_DIR/$BASENAME.meta.json.partial"
+    log "scarico $BASENAME (.dump + .generated-tables.sql + .sha256 + .meta.json)"
+    $AWS_S3 cp "s3://$SEED_BLOB_BUCKET/$PREFIX/$BASENAME.dump"                    "$OUT_DIR/$BASENAME.dump.partial"
+    $AWS_S3 cp "s3://$SEED_BLOB_BUCKET/$PREFIX/$BASENAME.generated-tables.sql"     "$OUT_DIR/$BASENAME.generated-tables.sql" 2>/dev/null || log "no supplement file on bucket (pre-fix snapshot)"
+    $AWS_S3 cp "s3://$SEED_BLOB_BUCKET/$PREFIX/$BASENAME.dump.sha256"              "$OUT_DIR/$BASENAME.dump.sha256"
+    $AWS_S3 cp "s3://$SEED_BLOB_BUCKET/$PREFIX/$BASENAME.meta.json"                "$OUT_DIR/$BASENAME.meta.json.partial"
 
-    # Verifica checksum contro il .partial
-    ( cd "$OUT_DIR" && \
-      sed "s|$BASENAME.dump|$BASENAME.dump.partial|" "$BASENAME.dump.sha256" | sha256sum -c - ) \
+    # Verifica checksum
+    ( cd "$OUT_DIR" && sha256sum -c "$BASENAME.dump.sha256" --ignore-missing ) \
       || fail "sha256 mismatch"
 
     # Atomic rename

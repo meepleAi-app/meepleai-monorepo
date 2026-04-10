@@ -41,8 +41,10 @@ import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useResponsive } from '@/hooks/useResponsive';
 import { api } from '@/lib/api';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
+import { useDisputeDiary } from '@/lib/domain-hooks/useDisputeDiary';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { cn } from '@/lib/utils';
 import { useQuickViewStore } from '@/stores/quick-view';
 
 import { ActivityFeed, type ActivityEvent } from './ActivityFeed';
@@ -194,6 +196,21 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   }, [rulesSentMessages, rulesAgentState.currentAnswer]);
 
   const isRulesStreaming = rulesAgentState.isStreaming;
+
+  // ----- Dispute diary (GAP-006) -----
+  const { createEntry: createDisputeEntry } = useDisputeDiary();
+  const [disputeRegistered, setDisputeRegistered] = useState(false);
+
+  const handleRegisterDispute = useCallback(async () => {
+    if (!rulesAgentState.currentAnswer || !sessionId) return;
+    await createDisputeEntry({
+      sessionId,
+      question: rulesSentMessages.findLast(m => m.role === 'user')?.content ?? '',
+      ruling: rulesAgentState.currentAnswer,
+    });
+    setDisputeRegistered(true);
+    setTimeout(() => setDisputeRegistered(false), 3000);
+  }, [rulesAgentState.currentAnswer, rulesSentMessages, sessionId, createDisputeEntry]);
 
   // ----- Resume context (inject recap as first chat message) -----
   const { data: resumeContext } = useQuery({
@@ -517,6 +534,28 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
               className="h-full flex flex-col"
             />
           </div>
+
+          {/* Registra disputa — visibile solo se c'è risposta AI e streaming completato */}
+          {rulesAgentState.currentAnswer && !isRulesStreaming && (
+            <div className="px-1 pt-2 pb-1">
+              <button
+                type="button"
+                data-testid="register-dispute-btn"
+                onClick={handleRegisterDispute}
+                disabled={disputeRegistered}
+                className={cn(
+                  'w-full text-xs rounded-lg px-3 py-2 border transition-colors',
+                  disputeRegistered
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                    : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                )}
+              >
+                {disputeRegistered
+                  ? '✓ Disputa registrata nel diary'
+                  : 'Registra disputa nel diary'}
+              </button>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
 

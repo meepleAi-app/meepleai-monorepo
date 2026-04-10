@@ -87,7 +87,7 @@ export function InlineGamePicker({
           </span>
           {(game.minPlayers || game.maxPlayers) && (
             <span className="text-[10px] text-muted-foreground">
-              {game.minPlayers}–{game.maxPlayers} giocatori
+              {game.minPlayers ?? '?'}–{game.maxPlayers ?? '?'} giocatori
             </span>
           )}
         </button>

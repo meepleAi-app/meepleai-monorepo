@@ -30,7 +30,7 @@ describe('InlineGamePicker — KB filter', () => {
 
   it('shows empty state when no KB-ready games exist', () => {
     render(<InlineGamePicker games={[noKbGame]} onSelect={vi.fn()} filterKbReady />);
-    expect(screen.getByText(/Nessun gioco/)).toBeInTheDocument();
+    expect(screen.getByText(/Nessun gioco.*con AI disponibile/)).toBeInTheDocument();
   });
 
   it('renders AI badge on KB-ready games', () => {

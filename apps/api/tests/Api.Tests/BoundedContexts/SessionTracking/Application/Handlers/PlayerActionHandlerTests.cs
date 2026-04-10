@@ -450,15 +450,30 @@ public class RollSessionDiceCommandHandlerTests
     private readonly Mock<IDiceRollRepository> _mockDiceRepo = new();
     private readonly Mock<IUnitOfWork> _mockUnitOfWork = new();
     private readonly Mock<ISessionSyncService> _mockSyncService = new();
+    private readonly Api.Infrastructure.MeepleAiDbContext _dbContext;
     private readonly RollSessionDiceCommandHandler _handler;
 
     public RollSessionDiceCommandHandlerTests()
     {
+        // Session Flow v2.1 — T7: handler now appends a dice_rolled diary entry to
+        // the SessionEvents DbSet, so it requires a real (InMemory) DbContext.
+        var options = new DbContextOptionsBuilder<Api.Infrastructure.MeepleAiDbContext>()
+            .UseInMemoryDatabase(databaseName: $"RollDiceUnitTest_{Guid.NewGuid()}")
+            .Options;
+        var mediatorMock = new Mock<IMediator>();
+        var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
+        _dbContext = new Api.Infrastructure.MeepleAiDbContext(
+            options,
+            mediatorMock.Object,
+            eventCollectorMock.Object,
+            null);
+
         _handler = new RollSessionDiceCommandHandler(
             _mockSessionRepo.Object,
             _mockDiceRepo.Object,
             _mockUnitOfWork.Object,
-            _mockSyncService.Object);
+            _mockSyncService.Object,
+            _dbContext);
     }
 
     private static Session CreateActiveSession(Guid sessionId, Guid participantId)

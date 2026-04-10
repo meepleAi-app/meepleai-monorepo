@@ -30,6 +30,20 @@ internal sealed class GetGameNightDiaryQueryHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        // C2 fix: verify caller is the night organizer
+        var organizerId = await _db.GameNightEvents
+            .AsNoTracking()
+            .Where(g => g.Id == request.GameNightEventId)
+            .Select(g => (Guid?)g.OrganizerId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (organizerId is null)
+            throw new Api.Middleware.Exceptions.NotFoundException($"GameNightEvent {request.GameNightEventId} not found.");
+
+        if (organizerId.Value != request.RequesterId)
+            throw new Api.Middleware.Exceptions.ForbiddenException("Only the night organizer can read its diary.");
+
         var query = _db.SessionEvents
             .AsNoTracking()
             .Where(e => e.GameNightId == request.GameNightEventId && !e.IsDeleted);

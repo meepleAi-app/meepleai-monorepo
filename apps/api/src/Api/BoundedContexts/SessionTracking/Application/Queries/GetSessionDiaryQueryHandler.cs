@@ -30,6 +30,20 @@ internal sealed class GetSessionDiaryQueryHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        // C2 fix: verify caller owns the session
+        var sessionOwnerId = await _db.SessionTrackingSessions
+            .AsNoTracking()
+            .Where(s => s.Id == request.SessionId)
+            .Select(s => (Guid?)s.UserId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (sessionOwnerId is null)
+            throw new Api.Middleware.Exceptions.NotFoundException($"Session {request.SessionId} not found.");
+
+        if (sessionOwnerId.Value != request.RequesterId)
+            throw new Api.Middleware.Exceptions.ForbiddenException("Only the session owner can read its diary.");
+
         var query = _db.SessionEvents
             .AsNoTracking()
             .Where(e => e.SessionId == request.SessionId && !e.IsDeleted);

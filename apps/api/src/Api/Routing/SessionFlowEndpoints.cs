@@ -209,15 +209,17 @@ internal static class SessionFlowEndpoints
         .Produces(403)
         .Produces(404);
 
-        // Session diary (read)
+        // Session diary (read) — C2 fix: passes RequesterId for ownership check
         app.MapGet("/sessions/{sessionId:guid}/diary", async (
             Guid sessionId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct,
             string? eventTypes = null,
             DateTime? since = null,
             int? limit = null) =>
         {
+            var userId = httpContext.User.GetUserId();
             var types = string.IsNullOrWhiteSpace(eventTypes)
                 ? null
                 : eventTypes
@@ -225,7 +227,7 @@ internal static class SessionFlowEndpoints
                     .ToArray();
 
             var result = await mediator
-                .Send(new GetSessionDiaryQuery(sessionId, types, since, limit ?? 100), ct)
+                .Send(new GetSessionDiaryQuery(sessionId, userId, types, since, limit ?? 100), ct)
                 .ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -236,15 +238,17 @@ internal static class SessionFlowEndpoints
         .Produces(200)
         .Produces(401);
 
-        // GameNight diary (read)
+        // GameNight diary (read) — C2 fix: passes RequesterId for ownership check
         app.MapGet("/game-nights/{gameNightId:guid}/diary", async (
             Guid gameNightId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct,
             string? eventTypes = null,
             DateTime? since = null,
             int? limit = null) =>
         {
+            var userId = httpContext.User.GetUserId();
             var types = string.IsNullOrWhiteSpace(eventTypes)
                 ? null
                 : eventTypes
@@ -252,7 +256,7 @@ internal static class SessionFlowEndpoints
                     .ToArray();
 
             var result = await mediator
-                .Send(new GetGameNightDiaryQuery(gameNightId, types, since, limit ?? 500), ct)
+                .Send(new GetGameNightDiaryQuery(gameNightId, userId, types, since, limit ?? 500), ct)
                 .ConfigureAwait(false);
             return Results.Ok(result);
         })

@@ -102,7 +102,7 @@ public sealed class CompleteGameNightCommandTests : IAsyncLifetime
             loggerFactory.CreateLogger<CreateSessionCommandHandler>());
 
         _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext);
-        _completeNightHandler = new CompleteGameNightCommandHandler(_dbContext);
+        _completeNightHandler = new CompleteGameNightCommandHandler(_dbContext, unitOfWork);
     }
 
     public async ValueTask DisposeAsync()

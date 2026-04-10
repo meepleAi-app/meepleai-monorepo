@@ -10,11 +10,13 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 /// view ("Tutto quello che è successo stasera").
 /// </summary>
 /// <param name="GameNightEventId">The parent game night envelope id.</param>
+/// <param name="RequesterId">Authenticated user ID for ownership verification.</param>
 /// <param name="EventTypes">Optional whitelist of event types.</param>
 /// <param name="Since">Optional inclusive lower bound on <c>Timestamp</c>.</param>
 /// <param name="Limit">Maximum number of rows to return (default 500 — game nights are larger than single sessions).</param>
 public sealed record GetGameNightDiaryQuery(
     Guid GameNightEventId,
+    Guid RequesterId,
     IReadOnlyList<string>? EventTypes,
     DateTime? Since,
     int Limit = 500

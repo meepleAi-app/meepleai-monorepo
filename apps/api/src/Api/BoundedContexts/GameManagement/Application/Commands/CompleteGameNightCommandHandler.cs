@@ -2,6 +2,7 @@ using System.Text.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,10 +25,12 @@ internal sealed class CompleteGameNightCommandHandler
     : IRequestHandler<CompleteGameNightCommand, CompleteGameNightResult>
 {
     private readonly MeepleAiDbContext _db;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public CompleteGameNightCommandHandler(MeepleAiDbContext db)
+    public CompleteGameNightCommandHandler(MeepleAiDbContext db, IUnitOfWork unitOfWork)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<CompleteGameNightResult> Handle(
@@ -138,7 +141,7 @@ internal sealed class CompleteGameNightCommandHandler
         }
 
         // ── 7. Atomic save ─────────────────────────────────────────────
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return new CompleteGameNightResult(
             GameNightEventId: nightEntity.Id,

@@ -1,5 +1,5 @@
 using Api.Infrastructure;
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Queries;
@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 /// GameNight envelope via the <c>GameNightSessions</c> link table.
 /// </summary>
 internal sealed class GetCurrentSessionQueryHandler
-    : IRequestHandler<GetCurrentSessionQuery, CurrentSessionDto?>
+    : IQueryHandler<GetCurrentSessionQuery, CurrentSessionDto?>
 {
     private readonly MeepleAiDbContext _db;
 

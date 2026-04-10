@@ -201,7 +201,7 @@ public sealed class SessionFlowE2ETests : IAsyncLifetime
 
         // 6. Verify per-session diary contains the required event types.
         var diary1 = await _sessionDiaryHandler!.Handle(
-            new GetSessionDiaryQuery(create1.SessionId, EventTypes: null, Since: null, Limit: 200),
+            new GetSessionDiaryQuery(create1.SessionId, RequesterId: userId, EventTypes: null, Since: null, Limit: 200),
             TestCancellationToken);
 
         diary1.Should().NotBeEmpty();
@@ -260,6 +260,7 @@ public sealed class SessionFlowE2ETests : IAsyncLifetime
         var nightDiary = await freshGameNightDiaryHandler.Handle(
             new GetGameNightDiaryQuery(
                 create1.GameNightEventId,
+                RequesterId: userId,
                 EventTypes: null,
                 Since: null,
                 Limit: 500),

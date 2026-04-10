@@ -128,6 +128,13 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     .FirstOrDefaultAsync(cancellationToken)
                     .ConfigureAwait(false) ?? "Unknown Game";
 
+                // I2 fix: enforce max 5 sessions per GameNight (domain invariant bypass guard)
+                var existingSessionCount = await _db.GameNightSessions
+                    .CountAsync(gns => gns.GameNightEventId == nightEntity.Id, cancellationToken)
+                    .ConfigureAwait(false);
+                if (existingSessionCount >= 5)
+                    throw new ConflictException("A game night cannot have more than 5 sessions.");
+
                 var playOrder = Math.Max(1, nightEntity.Sessions.Count + 1);
                 var linkEntity = new GameNightSessionEntity
                 {

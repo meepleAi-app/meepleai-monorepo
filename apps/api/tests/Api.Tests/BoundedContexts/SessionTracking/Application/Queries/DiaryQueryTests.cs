@@ -157,7 +157,7 @@ public sealed class DiaryQueryTests : IAsyncLifetime
 
         // Act
         var diary = await _sessionDiaryHandler!.Handle(
-            new GetSessionDiaryQuery(createResult.SessionId, EventTypes: null, Since: null),
+            new GetSessionDiaryQuery(createResult.SessionId, RequesterId: userId, EventTypes: null, Since: null),
             TestCancellationToken);
 
         // Assert — chronological order, includes session_created + 2 score_updated events.
@@ -203,7 +203,7 @@ public sealed class DiaryQueryTests : IAsyncLifetime
 
         // Act — query the unified game-night diary.
         var diary = await _gameNightDiaryHandler!.Handle(
-            new GetGameNightDiaryQuery(first.GameNightEventId, EventTypes: null, Since: null),
+            new GetGameNightDiaryQuery(first.GameNightEventId, RequesterId: userId, EventTypes: null, Since: null),
             TestCancellationToken);
 
         // Assert — events from both sessions are present, all scoped to the same night.
@@ -247,6 +247,7 @@ public sealed class DiaryQueryTests : IAsyncLifetime
         var diary = await _sessionDiaryHandler!.Handle(
             new GetSessionDiaryQuery(
                 createResult.SessionId,
+                RequesterId: userId,
                 EventTypes: new[] { "score_updated" },
                 Since: null),
             TestCancellationToken);

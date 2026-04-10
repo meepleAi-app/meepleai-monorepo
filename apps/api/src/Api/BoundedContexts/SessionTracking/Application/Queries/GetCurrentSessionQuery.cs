@@ -1,4 +1,4 @@
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 
@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.SessionTracking.Application.Queries;
 /// Returns the caller's latest Active or Paused session for orphan recovery
 /// after page reload / crash (NFR-9). Returns <c>null</c> when no such session exists.
 /// </summary>
-public record GetCurrentSessionQuery(Guid UserId) : IRequest<CurrentSessionDto?>;
+public record GetCurrentSessionQuery(Guid UserId) : IQuery<CurrentSessionDto?>;
 
 /// <summary>
 /// Lightweight DTO for the current-session probe. Carries only the fields

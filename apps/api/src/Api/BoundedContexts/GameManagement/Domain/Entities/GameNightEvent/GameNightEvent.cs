@@ -111,6 +111,23 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Completes an in-progress ad-hoc night. Transition: InProgress → Completed.
+    /// Unlike <see cref="Complete"/> (Published → Completed), this handles the ad-hoc
+    /// lifecycle where the night skipped scheduling and went straight to InProgress.
+    /// </summary>
+    public void CompleteAdHoc()
+    {
+        ThrowIfCorrupted();
+
+        if (Status != GameNightStatus.InProgress)
+            throw new InvalidOperationException(
+                $"Cannot complete a {Status} game night via ad-hoc completion. Only InProgress nights can be completed via this method.");
+
+        Status = GameNightStatus.Completed;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
     /// Adds a game to an in-progress ad-hoc night. Idempotent for duplicates.
     /// </summary>
     public void AttachAdditionalGame(Guid gameId)

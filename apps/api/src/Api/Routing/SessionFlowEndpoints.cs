@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
@@ -260,6 +261,34 @@ internal static class SessionFlowEndpoints
         .WithSummary("Read the append-only diary for a whole game night (unions all attached sessions).")
         .Produces(200)
         .Produces(401);
+
+        // Complete game night (cascade finalize all sessions)
+        app.MapPost("/game-nights/{gameNightId:guid}/complete", async (
+            Guid gameNightId,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator
+                .Send(new CompleteGameNightCommand(gameNightId, userId), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("SessionFlow_CompleteGameNight")
+        .WithTags("SessionFlow")
+        .WithSummary("Complete an ad-hoc game night: cascade-finalize all sessions and emit diary events.")
+        .Produces(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409);
     }
 
     /// <summary>

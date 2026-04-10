@@ -2,9 +2,13 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
@@ -18,13 +22,22 @@ public class FinalizeSessionCommandHandlerTests
     private readonly Mock<IScoreEntryRepository> _scoreRepoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<ISessionSyncService> _syncServiceMock = new();
+    private readonly MeepleAiDbContext _db;
     private readonly FinalizeSessionCommandHandler _handler;
 
     public FinalizeSessionCommandHandlerTests()
     {
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(databaseName: $"FinalizeSessionUnit_{Guid.NewGuid()}")
+            .Options;
+        _db = new MeepleAiDbContext(
+            options,
+            new Mock<IMediator>().Object,
+            new Mock<IDomainEventCollector>().Object);
+
         _handler = new FinalizeSessionCommandHandler(
             _sessionRepoMock.Object, _scoreRepoMock.Object,
-            _unitOfWorkMock.Object, _syncServiceMock.Object);
+            _unitOfWorkMock.Object, _syncServiceMock.Object, _db);
     }
 
     [Fact]

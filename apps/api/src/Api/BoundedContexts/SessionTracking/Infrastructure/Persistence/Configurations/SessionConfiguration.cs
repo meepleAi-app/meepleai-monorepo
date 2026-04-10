@@ -83,6 +83,21 @@ public class SessionConfiguration : IEntityTypeConfiguration<SessionEntity>
             .IsRowVersion()
             .IsConcurrencyToken();
 
+        // Session Flow v2.1: Turn order fields
+        builder.Property(s => s.TurnOrderJson)
+            .HasColumnName("turn_order_json")
+            .HasColumnType("jsonb");
+
+        builder.Property(s => s.TurnOrderMethod)
+            .HasColumnName("turn_order_method")
+            .HasMaxLength(16);
+
+        builder.Property(s => s.TurnOrderSeed)
+            .HasColumnName("turn_order_seed");
+
+        builder.Property(s => s.CurrentTurnIndex)
+            .HasColumnName("current_turn_index");
+
         // Unique constraint on session code (excluding soft deleted)
         builder.HasIndex(s => s.SessionCode)
             .HasDatabaseName("idx_sessions_code")

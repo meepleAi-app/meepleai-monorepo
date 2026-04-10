@@ -1,11 +1,15 @@
+using System.Text.Json;
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.SessionTracking;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 
@@ -15,17 +19,20 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
     private readonly IScoreEntryRepository _scoreEntryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISessionSyncService _syncService;
+    private readonly MeepleAiDbContext _db;
 
     public FinalizeSessionCommandHandler(
         ISessionRepository sessionRepository,
         IScoreEntryRepository scoreEntryRepository,
         IUnitOfWork unitOfWork,
-        ISessionSyncService syncService)
+        ISessionSyncService syncService,
+        MeepleAiDbContext db)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _scoreEntryRepository = scoreEntryRepository ?? throw new ArgumentNullException(nameof(scoreEntryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
+        _db = db ?? throw new ArgumentNullException(nameof(db));
     }
 
     public async Task<FinalizeSessionResult> Handle(FinalizeSessionCommand request, CancellationToken cancellationToken)
@@ -65,14 +72,64 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // Update participant final ranks (need to access through persistence for now)
         // For now, this is a known limitation that will be addressed in refactoring
 
-        // Save session
+        // Save session (adds tracked changes; SaveChangesAsync below flushes)
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Get winner (rank 1)
-        var winnerId = request.FinalRanks
+        // Get winner (rank 1) from the FinalRanks dictionary.
+        var winnerIdRaw = request.FinalRanks
             .FirstOrDefault(kvp => kvp.Value == 1)
             .Key;
+        Guid? winnerIdNullable = winnerIdRaw != Guid.Empty ? winnerIdRaw : null;
+
+        // P1B-T2: emit session_finalized diary event in the same transaction.
+        // Compute scoreboard snapshot (totals per participant).
+        var scoreboardSnapshot = await _db.SessionTrackingScoreEntries
+            .AsNoTracking()
+            .Where(e => e.SessionId == session.Id)
+            .GroupBy(e => e.ParticipantId)
+            .Select(g => new
+            {
+                participantId = g.Key,
+                total = g.Sum(e => e.ScoreValue)
+            })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // Resolve GameNightId via the link row (if any) so the diary entry is
+        // correlated with the cross-game timeline.
+        var gameNightId = await _db.GameNightSessions
+            .Where(gns => gns.SessionId == session.Id)
+            .Select(gns => (Guid?)gns.GameNightEventId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var finalizedAt = session.FinalizedAt ?? DateTime.UtcNow;
+        var durationSeconds = (int)(finalizedAt - session.SessionDate).TotalSeconds;
+        if (durationSeconds < 0) durationSeconds = 0;
+
+        var finalizedPayload = JsonSerializer.Serialize(new
+        {
+            winnerId = winnerIdNullable,
+            durationSeconds,
+            scoreboard = scoreboardSnapshot
+        });
+
+        _db.SessionEvents.Add(new SessionEventEntity
+        {
+            Id = Guid.NewGuid(),
+            SessionId = session.Id,
+            GameNightId = gameNightId,
+            EventType = "session_finalized",
+            Timestamp = DateTime.UtcNow,
+            Payload = finalizedPayload,
+            CreatedBy = session.UserId,
+            Source = "system",
+            IsDeleted = false
+        });
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        var winnerId = winnerIdRaw;
 
         // UserLibrary integration placeholder
         if (session.GameId != Guid.Empty)

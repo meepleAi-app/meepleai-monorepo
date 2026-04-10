@@ -31,5 +31,11 @@ public class CreateSessionCommandValidator : AbstractValidator<CreateSessionComm
                 .NotEmpty()
                 .MaximumLength(50);
         });
+
+        // Session Flow v2.1 — T4: optional guest names for ad-hoc joins.
+        RuleFor(x => x.GuestNames)
+            .Must(names => names == null || names.All(n => !string.IsNullOrWhiteSpace(n) && n.Length <= 50))
+            .WithMessage("Each guest name must be non-empty and max 50 characters.")
+            .When(x => x.GuestNames != null);
     }
 }

@@ -8508,6 +8508,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<int?>("CurrentTurnIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_turn_index");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -8565,6 +8569,19 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
+
+                    b.Property<string>("TurnOrderJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("turn_order_json");
+
+                    b.Property<string>("TurnOrderMethod")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("turn_order_method");
+
+                    b.Property<int?>("TurnOrderSeed")
+                        .HasColumnType("integer")
+                        .HasColumnName("turn_order_seed");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

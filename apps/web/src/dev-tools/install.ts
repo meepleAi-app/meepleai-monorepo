@@ -43,7 +43,7 @@ export interface InstalledDevTools {
   controlStore: ReturnType<typeof createMockControlStore>;
   scenarioStore: ReturnType<typeof createScenarioStore>;
   authStore: ReturnType<typeof createMockAuthStore>;
-  panel?: { uiStore: unknown };
+  panel?: { uiStore: unknown; inspectorStore: unknown };
 }
 
 export function installDevTools(): InstalledDevTools {

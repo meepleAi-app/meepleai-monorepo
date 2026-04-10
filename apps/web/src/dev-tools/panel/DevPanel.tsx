@@ -7,11 +7,13 @@ import type { DevPanelTab } from '@/dev-tools/types';
 import { SectionErrorBoundary } from './components/SectionErrorBoundary';
 import { useStoreSlice } from './hooks/useStoreSlice';
 import { AuthSection } from './sections/AuthSection';
+import { InspectorSection } from './sections/InspectorSection';
 import { ScenariosSection } from './sections/ScenariosSection';
 import { TogglesSection } from './sections/TogglesSection';
 
 import type { MockControlState, HandlerGroup } from './sections/TogglesSection';
 import type { PanelUiState } from './stores/panelUiStore';
+import type { RequestInspectorState } from './stores/requestInspectorStore';
 import type { QueryClient } from '@tanstack/react-query';
 import type { StoreApi } from 'zustand/vanilla';
 
@@ -23,6 +25,7 @@ export interface DevPanelProps {
   scenarioStore: StoreApi<ScenarioState>;
   authStore: StoreApi<MockAuthState>;
   queryClient: QueryClient;
+  inspectorStore: StoreApi<RequestInspectorState>;
 }
 
 const TABS: { id: DevPanelTab; label: string }[] = [
@@ -40,6 +43,7 @@ export function DevPanel({
   scenarioStore,
   authStore,
   queryClient,
+  inspectorStore,
 }: DevPanelProps): React.JSX.Element | null {
   const isOpen = useStoreSlice(uiStore, s => s.isOpen);
   const activeTab = useStoreSlice(uiStore, s => s.activeTab);
@@ -151,7 +155,9 @@ export function DevPanel({
           </SectionErrorBoundary>
         ) : null}
         {activeTab === 'inspector' ? (
-          <p style={{ color: '#9ca3af', fontSize: 12 }}>[inspector] section coming in M3</p>
+          <SectionErrorBoundary sectionName="Inspector">
+            <InspectorSection inspectorStore={inspectorStore} />
+          </SectionErrorBoundary>
         ) : null}
       </div>
     </div>

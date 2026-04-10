@@ -9,6 +9,7 @@ import { useQueryStringPanelOpen } from './hooks/useQueryStringPanelOpen';
 
 import type { MockControlState, HandlerGroup } from './sections/TogglesSection';
 import type { PanelUiState } from './stores/panelUiStore';
+import type { RequestInspectorState } from './stores/requestInspectorStore';
 import type { QueryClient } from '@tanstack/react-query';
 import type { StoreApi } from 'zustand/vanilla';
 
@@ -20,6 +21,7 @@ export interface DevPanelMountProps {
   scenarioStore: StoreApi<ScenarioState>;
   authStore: StoreApi<MockAuthState>;
   queryClient: QueryClient;
+  inspectorStore: StoreApi<RequestInspectorState>;
 }
 
 export function DevPanelMount({
@@ -30,6 +32,7 @@ export function DevPanelMount({
   scenarioStore,
   authStore,
   queryClient,
+  inspectorStore,
 }: DevPanelMountProps): React.JSX.Element {
   useKeyboardShortcut({ ctrl: true, shift: true, key: 'm' }, () => {
     uiStore.getState().toggle();
@@ -44,6 +47,7 @@ export function DevPanelMount({
       scenarioStore={scenarioStore}
       authStore={authStore}
       queryClient={queryClient}
+      inspectorStore={inspectorStore}
     />
   );
 }

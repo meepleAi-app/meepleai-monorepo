@@ -45,6 +45,7 @@ type DevPanelMountComponent = ComponentType<{
   scenarioStore: unknown;
   authStore: unknown;
   queryClient: unknown;
+  inspectorStore: unknown;
 }>;
 
 interface MockProviderProps {
@@ -199,15 +200,29 @@ export function MockProvider({ children }: MockProviderProps) {
         tools &&
         DevPanelMountComp &&
         mswWorker &&
-        (tools as DevToolsBundle & { panel?: { uiStore: unknown } }).panel && (
+        (tools as DevToolsBundle & { panel?: { uiStore: unknown; inspectorStore: unknown } })
+          .panel && (
           <DevPanelMountComp
-            uiStore={(tools as DevToolsBundle & { panel?: { uiStore: unknown } }).panel!.uiStore}
+            uiStore={
+              (
+                tools as DevToolsBundle & {
+                  panel?: { uiStore: unknown; inspectorStore: unknown };
+                }
+              ).panel!.uiStore
+            }
             mockControlStore={tools.controlStore}
             handlerGroups={handlerGroups}
             worker={mswWorker}
             scenarioStore={tools.scenarioStore}
             authStore={tools.authStore}
             queryClient={devQueryClient}
+            inspectorStore={
+              (
+                tools as DevToolsBundle & {
+                  panel?: { uiStore: unknown; inspectorStore: unknown };
+                }
+              ).panel!.inspectorStore
+            }
           />
         )}
     </>

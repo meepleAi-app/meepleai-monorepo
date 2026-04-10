@@ -1,5 +1,6 @@
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -20,7 +21,8 @@ public record CreateSessionCommand(
     string? Location,
     List<ParticipantDto> Participants,
     Guid? GameNightEventId = null,
-    IReadOnlyList<string>? GuestNames = null
+    IReadOnlyList<string>? GuestNames = null,
+    GameStateTier StateTier = GameStateTier.Minimal
 ) : ICommand<CreateSessionResult>;
 
 /// <summary>

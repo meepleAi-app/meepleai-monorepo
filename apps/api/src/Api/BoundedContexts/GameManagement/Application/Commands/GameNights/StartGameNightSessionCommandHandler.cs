@@ -58,7 +58,8 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             "GameSpecific",
             DateTime.UtcNow,
             null,
-            participants), cancellationToken).ConfigureAwait(false);
+            participants,
+            StateTier: command.StateTier), cancellationToken).ConfigureAwait(false);
 
         // Link the new session to the GameNight aggregate and start it
         try

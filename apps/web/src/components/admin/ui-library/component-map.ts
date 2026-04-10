@@ -347,7 +347,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   command: Command,
   'dropdown-menu': DropdownMenu,
   'focused-card-area': FocusedCardArea,
-  // 'hand-stack': removed — component no longer exists
   separator: Separator,
   sheet: Sheet,
   tabs: Tabs,
@@ -368,7 +367,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
 
   // Animations
   'fade-in': FadeIn,
-  // 'modal-animations': skipped — exports animation variant objects, not a React component
   'stagger-children': StaggerChildren,
 
   // Tags
@@ -397,9 +395,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'background-texture': BackgroundTexture,
 
   // Admin — Layout
-  // 'admin-top-nav': removed — component no longer exists
-  // 'admin-mobile-nav': removed — component no longer exists
-
   'admin-hub-tab-bar': AdminHubTabBar,
   'admin-hub-quick-link': AdminHubQuickLink,
   'admin-hub-empty-state': AdminHubEmptyState,

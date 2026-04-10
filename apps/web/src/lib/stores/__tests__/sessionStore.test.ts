@@ -8,11 +8,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { useSessionStore } from '../session-store';
-import type { ScoreEntry, ScoreboardData } from '@/components/session/types';
-import type {
-  LiveSessionDto,
-  LiveSessionRoundScoreDto,
-} from '@/lib/api/schemas/live-sessions.schemas';
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 
 // Mock the api module
 const mockCreateSession = vi.fn();
@@ -21,7 +17,6 @@ const mockGetByCode = vi.fn();
 const mockPauseSession = vi.fn();
 const mockResumeSession = vi.fn();
 const mockCompleteSession = vi.fn();
-const mockUpdateScore = vi.fn();
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -38,9 +33,6 @@ vi.mock('@/lib/api', () => ({
       recordScore: vi.fn(),
       getScores: vi.fn().mockResolvedValue([]),
       startSession: vi.fn(),
-    },
-    sessionTracking: {
-      updateScore: (...args: unknown[]) => mockUpdateScore(...args),
     },
   },
 }));
@@ -148,48 +140,6 @@ describe('session-store', () => {
     });
   });
 
-  describe('legacy updateScore (Optimistic UI)', () => {
-    it('should call sessionTracking.updateScore', async () => {
-      const mockSession = makeMockSession({ id: 'session-3' });
-
-      mockUpdateScore.mockResolvedValueOnce(undefined);
-
-      const { result } = renderHook(() => useSessionStore());
-      act(() => {
-        useSessionStore.setState({ activeSession: mockSession });
-      });
-
-      await act(async () => {
-        await result.current.updateScore({
-          participantId: 'p1',
-          scoreValue: 15,
-          roundNumber: 1,
-          category: 'Test',
-        });
-      });
-
-      expect(mockUpdateScore).toHaveBeenCalledWith('session-3', {
-        participantId: 'p1',
-        roundNumber: 1,
-        category: 'Test',
-        scoreValue: 15,
-      });
-    });
-
-    it('should throw when updateScore called without active session', async () => {
-      const { result } = renderHook(() => useSessionStore());
-
-      await expect(async () => {
-        await act(async () => {
-          await result.current.updateScore({
-            participantId: 'p1',
-            scoreValue: 10,
-          });
-        });
-      }).rejects.toThrow('No active session');
-    });
-  });
-
   describe('session lifecycle', () => {
     it('should pause a session', async () => {
       const mockSession = makeMockSession({
@@ -229,61 +179,6 @@ describe('session-store', () => {
       });
 
       expect(result.current.activeSession?.status).toBe('InProgress');
-    });
-
-    it('should finalize a session (legacy compat)', async () => {
-      const mockSession = makeMockSession({
-        id: 'session-7',
-        status: 'InProgress',
-      });
-
-      mockCompleteSession.mockResolvedValueOnce(undefined);
-
-      const { result } = renderHook(() => useSessionStore());
-      act(() => {
-        useSessionStore.setState({ activeSession: mockSession });
-      });
-
-      await act(async () => {
-        await result.current.finalizeSession({
-          ranks: { p1: 1, p2: 2 },
-        });
-      });
-
-      expect(result.current.activeSession?.status).toBe('Completed');
-    });
-  });
-
-  describe('SSE integration', () => {
-    it('should add score from SSE event (legacy compat)', () => {
-      const mockScore: ScoreEntry = {
-        id: 'sse-score-1',
-        participantId: 'p1',
-        roundNumber: 2,
-        category: 'SSE',
-        scoreValue: 20,
-        timestamp: new Date(),
-        createdBy: 'user-1',
-      };
-
-      const mockScoreboard: ScoreboardData = {
-        participants: [],
-        scores: [],
-        rounds: [],
-        categories: [],
-      };
-
-      const { result } = renderHook(() => useSessionStore());
-      act(() => {
-        useSessionStore.setState({ scoreboard: mockScoreboard });
-      });
-
-      act(() => {
-        result.current.addScoreFromSSE(mockScore);
-      });
-
-      expect(result.current.scoreboard?.scores).toHaveLength(1);
-      expect(result.current.scoreboard?.scores[0]).toEqual(mockScore);
     });
   });
 

@@ -31,7 +31,7 @@ import { GamePicker } from '@/components/game/GamePicker';
 import { LoadingButton, Spinner } from '@/components/loading';
 import { PdfTable } from '@/components/pdf/PdfTable';
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
-import { ProcessingProgress } from '@/components/progress';
+import { ProcessingProgress } from '@/components/progress/ProcessingProgress';
 import { UploadProgressTracker } from '@/components/ui/admin/upload-progress-tracker';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';

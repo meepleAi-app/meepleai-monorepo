@@ -100,7 +100,7 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
                 new ApplyToolboxTemplateCommand(template.Id, gameId), cancellationToken)
                 .ConfigureAwait(false);
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Toolbox warm-up is best-effort: never propagate exceptions.
         }

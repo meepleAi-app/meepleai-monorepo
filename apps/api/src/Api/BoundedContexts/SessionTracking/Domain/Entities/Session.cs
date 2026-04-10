@@ -375,6 +375,40 @@ public class Session
     }
 
     /// <summary>
+    /// Advances the turn to the next player in the turn order (cyclic).
+    /// Requires the session to be Active and a turn order to be set.
+    /// Plan 1bis — T1.
+    /// </summary>
+    /// <returns>
+    /// A tuple describing the transition: the prior index, the new index, and
+    /// the corresponding participant IDs (used by the command handler to emit
+    /// a <c>turn_advanced</c> diary event).
+    /// </returns>
+    public AdvanceTurnResult AdvanceTurn()
+    {
+        if (Status != SessionStatus.Active)
+            throw new ConflictException($"Cannot advance turn in session with status {Status}.");
+
+        if (string.IsNullOrEmpty(TurnOrderJson) || !CurrentTurnIndex.HasValue)
+            throw new ConflictException("Turn order is not set for this session.");
+
+        var order = System.Text.Json.JsonSerializer.Deserialize<List<Guid>>(TurnOrderJson)
+            ?? new List<Guid>();
+        if (order.Count == 0)
+            throw new ConflictException("Turn order is empty.");
+
+        var fromIndex = CurrentTurnIndex.Value;
+        var toIndex = (fromIndex + 1) % order.Count;
+        var fromParticipantId = order[fromIndex];
+        var toParticipantId = order[toIndex];
+
+        CurrentTurnIndex = toIndex;
+        UpdatedAt = DateTime.UtcNow;
+
+        return new AdvanceTurnResult(fromIndex, toIndex, fromParticipantId, toParticipantId);
+    }
+
+    /// <summary>
     /// Updates audit information.
     /// </summary>
     /// <param name="userId">User performing the update.</param>
@@ -476,6 +510,18 @@ public class Session
         return new string(code);
     }
 }
+
+/// <summary>
+/// Result of a <see cref="Session.AdvanceTurn"/> transition, carrying the
+/// prior and next turn indices together with the corresponding participant
+/// IDs so that command handlers can emit a diary event.
+/// Plan 1bis — T1.
+/// </summary>
+public sealed record AdvanceTurnResult(
+    int FromIndex,
+    int ToIndex,
+    Guid FromParticipantId,
+    Guid ToParticipantId);
 
 /// <summary>
 /// Session type enumeration.

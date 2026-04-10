@@ -138,6 +138,34 @@ internal static class SessionFlowEndpoints
         .Produces(403)
         .Produces(404);
 
+        // Advance turn (Plan 1bis T1)
+        app.MapPost("/sessions/{sessionId:guid}/turn/advance", async (
+            Guid sessionId,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator
+                .Send(new AdvanceTurnCommand(sessionId, userId), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("SessionFlow_AdvanceTurn")
+        .WithTags("SessionFlow")
+        .WithSummary("Advance the turn index to the next participant (cyclic) and emit a turn_advanced diary event.")
+        .Produces(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409);
+
         // Upsert score with diary
         app.MapPost("/sessions/{sessionId:guid}/scores-with-diary", async (
             Guid sessionId,

@@ -70,6 +70,7 @@ import {
   createAgentMemoryClient,
   createAgentDocumentsClient,
   createInfrastructureClient,
+  createSessionFlowClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -120,6 +121,7 @@ import {
   type AgentMemoryClient,
   type AgentDocumentsClient,
   type InfrastructureClient,
+  type SessionFlowClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -358,6 +360,9 @@ export interface ApiClient {
   /** AI Infrastructure Dashboard (admin) */
   infrastructure: InfrastructureClient;
 
+  /** Session Flow v2.1 — lifecycle, turns, scores, diary */
+  sessionFlow: SessionFlowClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -458,6 +463,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     agentMemory: createAgentMemoryClient({ httpClient }), // AgentMemory
     agentDocuments: createAgentDocumentsClient({ httpClient }), // User agent document selection
     infrastructure: createInfrastructureClient({ httpClient }), // AI Infrastructure Dashboard
+    sessionFlow: createSessionFlowClient({ httpClient }), // Session Flow v2.1
     delete: (path: string) => httpClient.delete(path),
   };
 

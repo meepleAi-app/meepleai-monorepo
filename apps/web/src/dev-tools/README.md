@@ -11,7 +11,36 @@ Tree-shaken dal bundle prod via dynamic import + dead-code elimination.
 - `mswHandlerRegistry.ts`: decide quali handler MSW attivare
 - `scenarioValidator.ts`: Ajv loader per JSON scenari
 - `devBadge.tsx`: componente UI (bottom-right)
-- `install.ts`: bootstrap sequence
+- `install.ts`: bootstrap sequence — popola il **scenario bridge** in `@/mocks/scenarioBridge`
+
+## Scenario bridge (issue #366)
+
+Gli handler MSW in `@/mocks/handlers/` non importano da `@/dev-tools/` (per
+preservare l'isolation contract — il folder `dev-tools/` è tree-shaken in prod).
+Invece `install.ts` chiama `setScenarioBridge(...)` esponendo un adapter con
+i metodi `getGames/getSessions/getLibrary/getChatHistory/...`. Gli handler
+(games, library, sessions) leggono da `getScenarioBridge()` se presente, con
+fallback ai factory hardcoded per test unitari senza dev-tools installati.
+
+**Cosa funziona oggi**: scenario → games, library (derivato owned/wishlist), sessions.
+
+**Limiti noti**:
+- I CRUD writes dei handler `sessions/library` mutano un array locale
+  (`fallbackSessions`, `fallbackLibrary`) non il bridge: il reload scenario
+  resetta le modifiche. Questo matchа il contratto "scenario = source of truth".
+- `chat`, `documents`, `game-nights`, `players`, `badges`, `notifications`,
+  `shared-games`, `admin` handlers non ancora collegati al bridge.
+
+## Env vars
+
+| Var | Effetto |
+|---|---|
+| `NEXT_PUBLIC_MOCK_MODE=true` | Attiva MSW + dev-tools (richiede `NODE_ENV=development`) |
+| `NEXT_PUBLIC_DEV_SCENARIO={nome}` | Scenario iniziale (default: `empty`) |
+| `NEXT_PUBLIC_DEV_AS_ROLE={role}` | Override del role utente (`Guest`/`User`/`Editor`/`Admin`/`SuperAdmin`) |
+| `NEXT_PUBLIC_MSW_ENABLE=auth,games` | Abilita solo i gruppi elencati |
+| `NEXT_PUBLIC_MSW_DISABLE=admin` | Disabilita i gruppi elencati (precedenza su ENABLE) |
+| `?dev-role=Admin` (query string) | Override runtime del role (precedenza su env var) |
 
 ## Come aggiungere un nuovo scenario
 

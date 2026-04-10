@@ -1,10 +1,17 @@
 /**
  * MSW handlers for library endpoints (browser-safe)
  * Covers: /api/v1/library/*
+ *
+ * Data source precedence:
+ * 1. Scenario bridge — when installed, derives the library from
+ *    `scenario.library.ownedGameIds` + `wishlistGameIds` crossed with
+ *    `scenario.games`. Metadata (rating, playCount, addedAt) is synthesized.
+ * 2. Local fallback — used by unit tests that don't install the bridge.
  */
 import { http, HttpResponse } from 'msw';
 
 import { mockId, HANDLER_BASE } from '../data/factories';
+import { getScenarioBridge } from '../scenarioBridge';
 
 const API_BASE = HANDLER_BASE;
 
@@ -20,7 +27,52 @@ interface LibraryItem {
   lastPlayedAt?: string;
 }
 
-let libraryItems: LibraryItem[] = [
+/**
+ * Build library items from scenario state when the bridge is active.
+ * Returns null if the bridge is not installed.
+ */
+function libraryFromScenario(): LibraryItem[] | null {
+  const bridge = getScenarioBridge();
+  if (!bridge) return null;
+
+  const { ownedGameIds, wishlistGameIds } = bridge.getLibrary();
+  const gamesById = new Map(bridge.getGames().map(g => [g.id, g]));
+  const items: LibraryItem[] = [];
+  let counter = 200;
+
+  for (const gameId of ownedGameIds) {
+    const game = gamesById.get(gameId);
+    items.push({
+      id: mockId(++counter),
+      gameId,
+      name: game?.title ?? 'Unknown',
+      status: 'owned',
+      rating: typeof game?.averageRating === 'number' ? Math.round(game.averageRating) : undefined,
+      playCount: 0,
+      addedAt: new Date().toISOString(),
+    });
+  }
+
+  for (const gameId of wishlistGameIds) {
+    const game = gamesById.get(gameId);
+    items.push({
+      id: mockId(++counter),
+      gameId,
+      name: game?.title ?? 'Unknown',
+      status: 'wishlist',
+      playCount: 0,
+      addedAt: new Date().toISOString(),
+    });
+  }
+
+  return items;
+}
+
+function currentLibrary(): LibraryItem[] {
+  return libraryFromScenario() ?? fallbackLibrary;
+}
+
+let fallbackLibrary: LibraryItem[] = [
   {
     id: mockId(201),
     gameId: mockId(101),
@@ -62,25 +114,27 @@ let libraryItems: LibraryItem[] = [
 
 export const libraryHandlers = [
   http.get(`${API_BASE}/api/v1/library/stats`, () => {
+    const items = currentLibrary();
+    const ratedItems = items.filter(i => i.rating);
     return HttpResponse.json({
-      totalGames: libraryItems.length,
-      owned: libraryItems.filter(i => i.status === 'owned').length,
-      wishlist: libraryItems.filter(i => i.status === 'wishlist').length,
-      played: libraryItems.filter(i => i.status === 'played').length,
-      wantToPlay: libraryItems.filter(i => i.status === 'want_to_play').length,
-      totalPlays: libraryItems.reduce((sum, i) => sum + i.playCount, 0),
+      totalGames: items.length,
+      owned: items.filter(i => i.status === 'owned').length,
+      wishlist: items.filter(i => i.status === 'wishlist').length,
+      played: items.filter(i => i.status === 'played').length,
+      wantToPlay: items.filter(i => i.status === 'want_to_play').length,
+      totalPlays: items.reduce((sum, i) => sum + i.playCount, 0),
       averageRating:
-        libraryItems.filter(i => i.rating).reduce((sum, i) => sum + (i.rating || 0), 0) /
-        (libraryItems.filter(i => i.rating).length || 1),
+        ratedItems.reduce((sum, i) => sum + (i.rating || 0), 0) / (ratedItems.length || 1),
     });
   }),
 
   http.get(`${API_BASE}/api/v1/library`, ({ request }) => {
+    const items = currentLibrary();
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
     const page = parseInt(url.searchParams.get('page') || '1');
     const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
-    const filtered = status ? libraryItems.filter(i => i.status === status) : [...libraryItems];
+    const filtered = status ? items.filter(i => i.status === status) : [...items];
     const start = (page - 1) * pageSize;
     return HttpResponse.json({
       items: filtered.slice(start, start + pageSize),
@@ -92,7 +146,7 @@ export const libraryHandlers = [
   }),
 
   http.get(`${API_BASE}/api/v1/library/:id`, ({ params }) => {
-    const item = libraryItems.find(i => i.id === params.id);
+    const item = currentLibrary().find(i => i.id === params.id);
     if (!item) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     return HttpResponse.json(item);
   }),
@@ -103,7 +157,7 @@ export const libraryHandlers = [
       name: string;
       status: LibraryItem['status'];
     };
-    if (libraryItems.find(i => i.gameId === body.gameId)) {
+    if (fallbackLibrary.find(i => i.gameId === body.gameId)) {
       return HttpResponse.json({ error: 'Already in library' }, { status: 409 });
     }
     const newItem: LibraryItem = {
@@ -114,40 +168,40 @@ export const libraryHandlers = [
       playCount: 0,
       addedAt: new Date().toISOString(),
     };
-    libraryItems.push(newItem);
+    fallbackLibrary.push(newItem);
     return HttpResponse.json(newItem, { status: 201 });
   }),
 
   http.put(`${API_BASE}/api/v1/library/:id`, async ({ params, request }) => {
-    const idx = libraryItems.findIndex(i => i.id === params.id);
+    const idx = fallbackLibrary.findIndex(i => i.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     const body = (await request.json()) as Partial<LibraryItem>;
-    libraryItems[idx] = { ...libraryItems[idx], ...body };
-    return HttpResponse.json(libraryItems[idx]);
+    fallbackLibrary[idx] = { ...fallbackLibrary[idx], ...body };
+    return HttpResponse.json(fallbackLibrary[idx]);
   }),
 
   http.delete(`${API_BASE}/api/v1/library/:id`, ({ params }) => {
-    const idx = libraryItems.findIndex(i => i.id === params.id);
+    const idx = fallbackLibrary.findIndex(i => i.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    libraryItems.splice(idx, 1);
+    fallbackLibrary.splice(idx, 1);
     return HttpResponse.json({ success: true });
   }),
 
   http.post(`${API_BASE}/api/v1/library/:id/play`, async ({ params }) => {
-    const idx = libraryItems.findIndex(i => i.id === params.id);
+    const idx = fallbackLibrary.findIndex(i => i.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    libraryItems[idx] = {
-      ...libraryItems[idx],
-      playCount: libraryItems[idx].playCount + 1,
+    fallbackLibrary[idx] = {
+      ...fallbackLibrary[idx],
+      playCount: fallbackLibrary[idx].playCount + 1,
       lastPlayedAt: new Date().toISOString(),
     };
-    return HttpResponse.json(libraryItems[idx]);
+    return HttpResponse.json(fallbackLibrary[idx]);
   }),
 ];
 
 // Helper to reset state between tests
 export const resetLibraryState = () => {
-  libraryItems = [
+  fallbackLibrary = [
     {
       id: mockId(201),
       gameId: mockId(101),

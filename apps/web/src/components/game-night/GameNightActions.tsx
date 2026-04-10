@@ -2,7 +2,7 @@
  * GameNightActions — Action buttons for a live game night
  *
  * Renders:
- * - "Aggiungi partita" — navigates to library with gameNightId context
+ * - "Aggiungi partita" — opens GamePickerDialog with KB readiness check
  * - "Concludi serata" — confirmation dialog → completeGameNight API call
  *
  * Plan 2 Task 5 — Session Flow v2.1
@@ -13,8 +13,8 @@
 import { useState } from 'react';
 
 import { CheckCircle, PlusCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
+import { GamePickerDialog } from '@/components/session/GamePickerDialog';
 import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { useCompleteGameNight } from '@/hooks/queries/useSessionFlow';
@@ -38,20 +38,14 @@ export function GameNightActions({
   sessionCount,
   isCompleted,
 }: GameNightActionsProps) {
-  const router = useRouter();
   const { toast } = useToast();
   const completeMutation = useCompleteGameNight();
   const [showConfirm, setShowConfirm] = useState(false);
-
-  function handleAddGame() {
-    // Navigate to the library with the gameNightId as a query param.
-    // The game picker (P2-T6) will read this and create a session in the night.
-    router.push(`/library?gameNightId=${encodeURIComponent(gameNightId)}`);
-  }
+  const [showGamePicker, setShowGamePicker] = useState(false);
 
   function handleComplete() {
     completeMutation.mutate(gameNightId, {
-      onSuccess: (data) => {
+      onSuccess: data => {
         toast({
           title: 'Serata completata!',
           description: `${data.finalizedSessionCount} ${data.finalizedSessionCount === 1 ? 'partita finalizzata' : 'partite finalizzate'}.`,
@@ -76,7 +70,7 @@ export function GameNightActions({
       <div className="flex gap-2 flex-wrap">
         <Button
           variant="outline"
-          onClick={handleAddGame}
+          onClick={() => setShowGamePicker(true)}
           disabled={hasActiveSession}
         >
           <PlusCircle className="h-4 w-4 mr-1" />
@@ -100,13 +94,19 @@ export function GameNightActions({
         title="Concludi serata"
         message={
           hasActiveSession
-            ? 'C\'e ancora una partita in corso. Completala prima di concludere la serata.'
+            ? "C'e ancora una partita in corso. Completala prima di concludere la serata."
             : `Verranno finalizzate tutte le ${sessionCount} partite della serata. Questa azione non puo essere annullata.`
         }
         confirmText="Concludi"
         cancelText="Annulla"
         variant="warning"
         isLoading={completeMutation.isPending}
+      />
+
+      <GamePickerDialog
+        open={showGamePicker}
+        onOpenChange={setShowGamePicker}
+        gameNightEventId={gameNightId}
       />
     </>
   );

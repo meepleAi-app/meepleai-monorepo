@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from 'react';
 
-import { ChevronLeft, ChevronRight, Hand } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Gamepad2, Hand } from 'lucide-react';
 
+import { GamePickerDialog } from '@/components/session/GamePickerDialog';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
-import {
-  useContextualHandStore,
-  selectContext,
-  selectIsLoading,
-} from '@/stores/contextual-hand';
+import { useContextualHandStore, selectContext, selectIsLoading } from '@/stores/contextual-hand';
 
 import { ContextualHandSlot } from './ContextualHandSlot';
 
@@ -27,6 +25,7 @@ export function ContextualHandSidebar() {
   const isLoading = useContextualHandStore(selectIsLoading);
   const initialize = useContextualHandStore(s => s.initialize);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   useEffect(() => {
     initialize();
@@ -78,11 +77,21 @@ export function ContextualHandSidebar() {
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : isIdle && !isCollapsed ? (
-          <div className="space-y-1 px-1 py-4 text-center">
+          <div className="space-y-3 px-1 py-4 text-center">
             <p className="text-sm text-muted-foreground">Nessuna partita attiva.</p>
             <p className="text-xs text-muted-foreground/70">
               Avvia una partita dalla tua libreria.
             </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setIsPickerOpen(true)}
+              data-testid="start-session-from-sidebar"
+            >
+              <Gamepad2 className="h-4 w-4" />
+              Nuova partita
+            </Button>
           </div>
         ) : (
           <>
@@ -93,6 +102,9 @@ export function ContextualHandSidebar() {
           </>
         )}
       </div>
+
+      {/* Game Picker Dialog */}
+      <GamePickerDialog open={isPickerOpen} onOpenChange={setIsPickerOpen} />
     </aside>
   );
 }

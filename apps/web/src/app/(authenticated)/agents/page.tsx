@@ -33,6 +33,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useNavigation } from '@/hooks/useNavigation';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useCardHand } from '@/stores/use-card-hand';
 
@@ -59,6 +60,7 @@ function AgentCard({
 
 export default function AgentsPage() {
   const router = useRouter();
+  const { openDetail } = useNavigation();
   const { drawCard } = useCardHand();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -252,7 +254,7 @@ export default function AgentsPage() {
           <AgentCard
             key={agent.id}
             agent={agent}
-            onClick={() => router.push(`/agents/${agent.id}`)}
+            onClick={() => openDetail(agent.id, 'agent')}
           />
         ))}
         {isLoadingMore && <CardGridSkeletons count={4} />}

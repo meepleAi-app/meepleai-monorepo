@@ -1,13 +1,18 @@
 'use client';
 
+import type { MockAuthState } from '@/dev-tools/mockAuthStore';
+import type { ScenarioState } from '@/dev-tools/scenarioStore';
 import type { DevPanelTab } from '@/dev-tools/types';
 
 import { SectionErrorBoundary } from './components/SectionErrorBoundary';
 import { useStoreSlice } from './hooks/useStoreSlice';
+import { AuthSection } from './sections/AuthSection';
+import { ScenariosSection } from './sections/ScenariosSection';
 import { TogglesSection } from './sections/TogglesSection';
 
 import type { MockControlState, HandlerGroup } from './sections/TogglesSection';
 import type { PanelUiState } from './stores/panelUiStore';
+import type { QueryClient } from '@tanstack/react-query';
 import type { StoreApi } from 'zustand/vanilla';
 
 export interface DevPanelProps {
@@ -15,6 +20,9 @@ export interface DevPanelProps {
   mockControlStore: StoreApi<MockControlState>;
   handlerGroups: HandlerGroup[];
   worker: { resetHandlers: (...handlers: unknown[]) => void };
+  scenarioStore: StoreApi<ScenarioState>;
+  authStore: StoreApi<MockAuthState>;
+  queryClient: QueryClient;
 }
 
 const TABS: { id: DevPanelTab; label: string }[] = [
@@ -29,6 +37,9 @@ export function DevPanel({
   mockControlStore,
   handlerGroups,
   worker,
+  scenarioStore,
+  authStore,
+  queryClient,
 }: DevPanelProps): React.JSX.Element | null {
   const isOpen = useStoreSlice(uiStore, s => s.isOpen);
   const activeTab = useStoreSlice(uiStore, s => s.activeTab);
@@ -124,12 +135,24 @@ export function DevPanel({
               worker={worker}
             />
           </SectionErrorBoundary>
-        ) : (
-          <p style={{ color: '#9ca3af', fontSize: 12 }}>
-            [{activeTab}] section content — coming in M
-            {activeTab === 'scenarios' || activeTab === 'auth' ? '2' : '3'}
-          </p>
-        )}
+        ) : null}
+        {activeTab === 'scenarios' ? (
+          <SectionErrorBoundary sectionName="Scenarios">
+            <ScenariosSection
+              scenarioStore={scenarioStore}
+              authStore={authStore}
+              queryClient={queryClient}
+            />
+          </SectionErrorBoundary>
+        ) : null}
+        {activeTab === 'auth' ? (
+          <SectionErrorBoundary sectionName="Auth">
+            <AuthSection authStore={authStore} queryClient={queryClient} />
+          </SectionErrorBoundary>
+        ) : null}
+        {activeTab === 'inspector' ? (
+          <p style={{ color: '#9ca3af', fontSize: 12 }}>[inspector] section coming in M3</p>
+        ) : null}
       </div>
     </div>
   );

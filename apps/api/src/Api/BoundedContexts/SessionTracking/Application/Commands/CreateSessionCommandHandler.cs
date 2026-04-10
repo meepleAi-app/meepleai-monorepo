@@ -140,6 +140,13 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     Status = GameNightSessionStatus.InProgress.ToString(),
                     StartedAt = DateTimeOffset.UtcNow
                 };
+
+                // Session Flow v2.1 — T5 fix: when nightEntity is loaded (Unchanged) and the
+                // child link has a non-default Guid PK, EF identity-resolution would otherwise
+                // mark the new linkEntity as Modified instead of Added (because GameNightSessionEntity.Id
+                // is configured ValueGeneratedOnAdd). Adding via the DbSet forces Added state and
+                // also keeps the in-memory navigation collection consistent for subsequent code paths.
+                await _db.GameNightSessions.AddAsync(linkEntity, cancellationToken).ConfigureAwait(false);
                 nightEntity.Sessions.Add(linkEntity);
 
                 // Session Flow v2.1 — T4: Emit diary events.

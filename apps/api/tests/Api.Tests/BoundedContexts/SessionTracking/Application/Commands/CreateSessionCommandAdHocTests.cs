@@ -47,6 +47,7 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
     private ServiceProvider? _serviceProvider;
     private MeepleAiDbContext? _dbContext;
     private CreateSessionCommandHandler? _handler;
+    private PauseSessionCommandHandler? _pauseHandler;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -101,6 +102,10 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
             _dbContext,
             mediator,
             loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+
+        // T5: PauseSessionCommandHandler shares the same SessionRepository / UnitOfWork
+        // so the two scenarios that depend on Pause can drive a real domain transition.
+        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext);
     }
 
     public async ValueTask DisposeAsync()
@@ -252,21 +257,134 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
         persistedSession.Participants.Should().Contain(p => p.DisplayName == "Sara" && p.UserId == null);
     }
 
-    [Fact(Skip = "Depends on T5 PauseSessionCommand — unskip in T5.")]
-    public Task Handle_ExistingNightProvided_AttachesGameToNight()
+    [Fact]
+    public async Task Handle_ExistingNightProvided_AttachesGameToNight()
     {
-        // This scenario requires an existing InProgress night with a PAUSED session, then a new
-        // CreateSessionCommand targeting that night with a different GameId.
-        // T5 introduces PauseSessionCommand; unskip and implement together with T5.
-        return Task.CompletedTask;
+        // Arrange — create a first session that owns a fresh ad-hoc GameNight, then pause it
+        // to free the InProgress slot so a second session can be attached to the same night.
+        var (userId, gameId1) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var first = await _handler!.Handle(BuildCommand(userId, gameId1), TestCancellationToken);
+
+        await _pauseHandler!.Handle(
+            new PauseSessionCommand(first.SessionId, userId),
+            TestCancellationToken);
+
+        // Seed a second library game with a Ready KB on the same user.
+        var gameId2 = await _fixture.SeedAnotherLibraryGameAsync(_dbContext!, userId);
+
+        // Build a fresh, isolated handler stack on the same database so the second
+        // CreateSession runs against a clean change tracker. The previous handler chain
+        // (Create + Pause) leaves the SessionEntity tracked with a [Timestamp] RowVersion
+        // that conflicts with subsequent reloads inside the same DbContext instance.
+        await using var freshScope = BuildIsolatedScope();
+        var freshDb = freshScope.GetRequiredService<MeepleAiDbContext>();
+        var freshCreateHandler = BuildCreateHandler(freshScope, freshDb);
+
+        // Act — create another session targeting the SAME GameNightEvent.
+        var second = await freshCreateHandler.Handle(
+            BuildCommand(userId, gameId2, gameNightEventId: first.GameNightEventId),
+            TestCancellationToken);
+
+        // Assert — the existing night is reused and the new game is appended to its
+        // GameIdsJson list. GameNightWasCreated must be false on the second response.
+        second.GameNightEventId.Should().Be(first.GameNightEventId);
+        second.GameNightWasCreated.Should().BeFalse();
+
+        var night = await freshDb.GameNightEvents
+            .AsNoTracking()
+            .Include(e => e.Sessions)
+            .FirstAsync(e => e.Id == first.GameNightEventId, TestCancellationToken);
+
+        night.GameIdsJson.Should().Contain(gameId1.ToString());
+        night.GameIdsJson.Should().Contain(gameId2.ToString());
+        night.Sessions.Should().Contain(s => s.SessionId == first.SessionId);
+        night.Sessions.Should().Contain(s => s.SessionId == second.SessionId);
+
+        // Diary: the second create must have written a "gamenight_game_added" entry.
+        var addedEvents = await freshDb.SessionEvents
+            .AsNoTracking()
+            .Where(e => e.SessionId == second.SessionId && e.EventType == "gamenight_game_added")
+            .ToListAsync(TestCancellationToken);
+        addedEvents.Should().HaveCount(1);
     }
 
-    [Fact(Skip = "Depends on T5 PauseSessionCommand — unskip in T5.")]
-    public Task Handle_ActiveSessionInNight_Throws409()
+    [Fact]
+    public async Task Handle_ActiveSessionInNight_Throws409()
     {
-        // This scenario requires creating an existing night with an ACTIVE session and verifying
-        // the invariant. Without a pause flow, the first session created is always active, so the
-        // invariant can only be exercised once Pause is available.
-        return Task.CompletedTask;
+        // Arrange — create a session that opens an ad-hoc night with an Active session in it.
+        var (userId, gameId1) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var first = await _handler!.Handle(BuildCommand(userId, gameId1), TestCancellationToken);
+
+        // Seed a second library game with a Ready KB on the same user.
+        var gameId2 = await _fixture.SeedAnotherLibraryGameAsync(_dbContext!, userId);
+
+        // Act / Assert — without pausing the first session, attempting to attach a second
+        // session to the same night must fail with ConflictException (409) so the
+        // "1 Active per GameNight" invariant is preserved at the handler level.
+        await Assert.ThrowsAsync<ConflictException>(
+            () => _handler!.Handle(
+                BuildCommand(userId, gameId2, gameNightEventId: first.GameNightEventId),
+                TestCancellationToken));
     }
+
+    /// <summary>
+    /// Builds an isolated DI scope (fresh service provider) pointing at the same
+    /// PostgreSQL database. Used to obtain a clean DbContext + handler stack between
+    /// operations that mutate the same Session aggregate within a single test, in
+    /// order to avoid stale [Timestamp] concurrency conflicts on the shared tracker.
+    /// </summary>
+    private ServiceProvider BuildIsolatedScope()
+    {
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+        return services.BuildServiceProvider();
+    }
+
+    /// <summary>
+    /// Wires a fresh <see cref="CreateSessionCommandHandler"/> against the given DI scope.
+    /// Mirrors the bootstrap done in <see cref="InitializeAsync"/>.
+    /// </summary>
+    private static CreateSessionCommandHandler BuildCreateHandler(
+        ServiceProvider scope,
+        MeepleAiDbContext db)
+    {
+        var eventCollector = scope.GetRequiredService<IDomainEventCollector>();
+        var unitOfWork = scope.GetRequiredService<IUnitOfWork>();
+        var mediator = scope.GetRequiredService<IMediator>();
+        var sessionRepo = new SessionRepository(db, eventCollector);
+
+        var quotaMock = new Mock<ISessionQuotaService>();
+        quotaMock
+            .Setup(s => s.CheckQuotaAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<UserTier>(),
+                It.IsAny<Role>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SessionQuotaResult.Allowed(0, 100));
+
+        var loggerFactory = scope.GetRequiredService<ILoggerFactory>();
+        return new CreateSessionCommandHandler(
+            sessionRepo,
+            unitOfWork,
+            quotaMock.Object,
+            db,
+            mediator,
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+    }
+
+    private static CreateSessionCommand BuildCommand(
+        Guid userId,
+        Guid gameId,
+        Guid? gameNightEventId = null) =>
+        new(
+            UserId: userId,
+            GameId: gameId,
+            SessionType: nameof(Api.BoundedContexts.SessionTracking.Domain.Entities.SessionType.Generic),
+            SessionDate: null,
+            Location: null,
+            Participants: new List<ParticipantDto>
+            {
+                new() { DisplayName = "Owner", IsOwner = true, UserId = userId }
+            },
+            GameNightEventId: gameNightEventId,
+            GuestNames: null);
 }

@@ -474,6 +474,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     Api.DevTools.DevToolsServiceCollectionExtensions.UseMeepleDevTools(app);
+    Api.DevTools.Http.DevToolsEndpointsExtensions.MapMeepleDevTools(app);
 }
 #endif
 

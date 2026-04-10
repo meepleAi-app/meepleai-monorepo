@@ -15,6 +15,7 @@ internal sealed class MockToggleStateProvider
 {
     private readonly ConcurrentDictionary<string, bool> _state;
     private readonly HashSet<string> _knownServices;
+    private readonly IReadOnlyDictionary<string, bool> _bootstrapDefaults;
 
     public event EventHandler<MockToggleChangedEventArgs>? ToggleChanged;
 
@@ -24,13 +25,16 @@ internal sealed class MockToggleStateProvider
     {
         _knownServices = new HashSet<string>(knownServiceNames, StringComparer.OrdinalIgnoreCase);
         _state = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        var defaults = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         foreach (var svc in _knownServices)
         {
             var envKey = $"MOCK_{svc.ToUpperInvariant()}";
             environment.TryGetValue(envKey, out var value);
             var mocked = string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
             _state[svc] = mocked;
+            defaults[svc] = mocked;
         }
+        _bootstrapDefaults = new ReadOnlyDictionary<string, bool>(defaults);
     }
 
     public bool IsMocked(string serviceName)
@@ -58,5 +62,18 @@ internal sealed class MockToggleStateProvider
         }
         _state[serviceName] = mocked;
         ToggleChanged?.Invoke(this, new MockToggleChangedEventArgs(serviceName, mocked));
+    }
+
+    public void ResetToDefaults()
+    {
+        foreach (var kvp in _bootstrapDefaults)
+        {
+            var previous = _state[kvp.Key];
+            _state[kvp.Key] = kvp.Value;
+            if (previous != kvp.Value)
+            {
+                ToggleChanged?.Invoke(this, new MockToggleChangedEventArgs(kvp.Key, kvp.Value));
+            }
+        }
     }
 }

@@ -2,6 +2,7 @@ import { setScenarioBridge } from '@/mocks/scenarioBridge';
 
 import { createMockAuthStore, readRoleFromEnv, readRoleFromQueryString } from './mockAuthStore';
 import { createMockControlStore, parseGroupList } from './mockControlCore';
+import { installPanel } from './panel';
 import { SCENARIO_MANIFEST } from './scenarioManifest';
 import { createScenarioStore } from './scenarioStore';
 import { validateScenario, SCENARIO_FALLBACK } from './scenarioValidator';
@@ -42,6 +43,7 @@ export interface InstalledDevTools {
   controlStore: ReturnType<typeof createMockControlStore>;
   scenarioStore: ReturnType<typeof createScenarioStore>;
   authStore: ReturnType<typeof createMockAuthStore>;
+  panel?: { uiStore: unknown };
 }
 
 export function installDevTools(): InstalledDevTools {
@@ -89,5 +91,7 @@ export function installDevTools(): InstalledDevTools {
     );
   }
 
-  return { controlStore, scenarioStore, authStore };
+  const panel = installPanel();
+
+  return { controlStore, scenarioStore, authStore, panel };
 }

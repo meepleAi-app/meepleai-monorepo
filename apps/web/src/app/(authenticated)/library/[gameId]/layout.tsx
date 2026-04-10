@@ -12,76 +12,40 @@
 
 'use client';
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode } from 'react';
 
-import { Bot, FileText, HelpCircle, MessageSquare, Play, Wrench } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 
-import { useSetNavConfig } from '@/contexts/NavigationContext';
+import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
 export default function LibraryGameDetailLayout({ children }: { children: ReactNode }) {
   const { gameId } = useParams<{ gameId: string }>();
   const router = useRouter();
-  const setNavConfig = useSetNavConfig();
+  const pathname = usePathname();
 
-  useEffect(() => {
-    setNavConfig({
-      miniNav: [
-        {
-          id: 'details',
-          label: 'Dettagli',
-          href: `/library/${gameId}`,
-        },
-        {
-          id: 'agent',
-          label: 'Agente',
-          href: `/library/${gameId}?tab=agent`,
-          icon: Bot,
-        },
-        {
-          id: 'toolkit',
-          label: 'Toolkit',
-          href: `/library/${gameId}?tab=toolkit`,
-          icon: Wrench,
-        },
-        {
-          id: 'faq',
-          label: 'FAQ',
-          href: `/library/${gameId}?tab=faq`,
-          icon: HelpCircle,
-        },
-      ],
-      actionBar: [
-        {
-          id: 'chat-agent',
-          label: 'Chat con Agente',
-          icon: MessageSquare,
-          variant: 'primary',
-          onClick: () => {
-            router.push(`/chat/new?gameId=${gameId}`);
-          },
-        },
-        {
-          id: 'add-pdf',
-          label: 'Carica PDF',
-          icon: FileText,
-          variant: 'ghost',
-          onClick: () => {
-            router.push(`/library/${gameId}?action=upload-pdf`);
-          },
-        },
-        {
-          id: 'new-session',
-          label: 'Avvia Sessione',
-          icon: Play,
-          variant: 'ghost',
-          onClick: () => {
-            router.push(`/sessions/new?gameId=${gameId}`);
-          },
-        },
-      ],
-    });
-  }, [setNavConfig, gameId, router]);
+  const activeTabId = pathname?.includes('tab=faq')
+    ? 'faq'
+    : pathname?.includes('tab=toolkit')
+      ? 'toolkit'
+      : pathname?.includes('tab=agent')
+        ? 'agent'
+        : 'details';
+
+  useMiniNavConfig({
+    breadcrumb: 'Gioco',
+    tabs: [
+      { id: 'details', label: 'Dettagli', href: `/library/${gameId}` },
+      { id: 'agent', label: 'Agente', href: `/library/${gameId}?tab=agent` },
+      { id: 'toolkit', label: 'Toolkit', href: `/library/${gameId}?tab=toolkit` },
+      { id: 'faq', label: 'FAQ', href: `/library/${gameId}?tab=faq` },
+    ],
+    activeTabId,
+    primaryAction: {
+      label: 'Chat con Agente',
+      icon: '💬',
+      onClick: () => router.push(`/chat/new?gameId=${gameId}`),
+    },
+  });
 
   return <>{children}</>;
 }

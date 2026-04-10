@@ -1,6 +1,5 @@
 export { UserShell } from './UserShell';
 export { UserShellClient } from './UserShellClient';
-export { UserTopNav } from './UserTopNav';
 export { DesktopShell } from './DesktopShell';
 export { TopBar } from './TopBar';
 export { TopBarLogo } from './TopBarLogo';

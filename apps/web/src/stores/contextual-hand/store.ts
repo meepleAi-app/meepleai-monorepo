@@ -36,6 +36,7 @@ const initialState = {
   currentSession: null as ContextualHandStore['currentSession'],
   createResult: null as ContextualHandStore['createResult'],
   isLoading: false,
+  isInitialized: false,
   error: null as string | null,
   diaryEntries: [] as ContextualHandStore['diaryEntries'],
   isDiaryLoading: false,
@@ -67,6 +68,7 @@ export const useContextualHandStore = create<ContextualHandStore>()(
         // ── Lifecycle ────────────────────────────────────────────────
 
         initialize: async () => {
+          if (get().isInitialized || get().isLoading) return;
           set(s => {
             s.isLoading = true;
             s.error = null;
@@ -78,12 +80,14 @@ export const useContextualHandStore = create<ContextualHandStore>()(
                 s.currentSession = session;
                 s.context = statusToContext(session.status);
                 s.isLoading = false;
+                s.isInitialized = true;
               });
             } else {
               set(s => {
                 s.context = 'idle';
                 s.currentSession = null;
                 s.isLoading = false;
+                s.isInitialized = true;
               });
             }
           } catch (error) {
@@ -295,11 +299,12 @@ export const useContextualHandStore = create<ContextualHandStore>()(
 
         reset: () =>
           set(s => {
-            Object.assign(s, initialState);
+            Object.assign(s, { ...initialState, isInitialized: false });
           }),
       })),
       {
         name: STORE_NAME,
+        skipHydration: true,
         partialize: s => ({
           currentSession: s.currentSession,
           context: s.context,

@@ -41,6 +41,9 @@ export interface ContextualHandState {
   /** True while any primary async action is in-flight. */
   isLoading: boolean;
 
+  /** True after initialize() has completed successfully (prevents duplicate calls). */
+  isInitialized: boolean;
+
   /** Last error message (cleared on next action). */
   error: string | null;
 

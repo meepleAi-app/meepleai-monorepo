@@ -68,6 +68,7 @@ function resetStore() {
     currentSession: null,
     createResult: null,
     isLoading: false,
+    isInitialized: false,
     error: null,
     diaryEntries: [],
     isDiaryLoading: false,
@@ -178,6 +179,25 @@ describe('useContextualHandStore', () => {
       await promise;
 
       expect(useContextualHandStore.getState().isLoading).toBe(false);
+    });
+
+    it('sets isInitialized to true after successful init', async () => {
+      mockSessionFlow.getCurrentSession.mockResolvedValue(null);
+
+      await useContextualHandStore.getState().initialize();
+
+      expect(useContextualHandStore.getState().isInitialized).toBe(true);
+    });
+
+    it('skips API call when already initialized', async () => {
+      mockSessionFlow.getCurrentSession.mockResolvedValue(null);
+
+      await useContextualHandStore.getState().initialize();
+      expect(mockSessionFlow.getCurrentSession).toHaveBeenCalledTimes(1);
+
+      // Second call should be a no-op
+      await useContextualHandStore.getState().initialize();
+      expect(mockSessionFlow.getCurrentSession).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -545,6 +565,7 @@ describe('useContextualHandStore', () => {
         currentSession: makeSession(),
         createResult: makeCreateResult(),
         isLoading: true,
+        isInitialized: true,
         error: 'something',
         diaryEntries: [{ id: 'e1' } as DiaryEntryDto],
         isDiaryLoading: true,
@@ -558,6 +579,7 @@ describe('useContextualHandStore', () => {
       expect(state.currentSession).toBeNull();
       expect(state.createResult).toBeNull();
       expect(state.isLoading).toBe(false);
+      expect(state.isInitialized).toBe(false);
       expect(state.error).toBeNull();
       expect(state.diaryEntries).toEqual([]);
       expect(state.isDiaryLoading).toBe(false);

@@ -11,51 +11,10 @@
 
 import { useEffect, useMemo } from 'react';
 
-import {
-  Dice5,
-  Trophy,
-  Pause,
-  Play,
-  Flag,
-  RefreshCw,
-  Users,
-  Shuffle,
-  BookOpen,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-
 import { cn } from '@/lib/utils';
 import { useContextualHandStore, selectDiaryEntries, selectIsDiaryLoading } from '@/stores/contextual-hand';
 
-// ─── Event type → icon/color map ─────────────────────────────────────────
-
-interface EventMeta {
-  icon: LucideIcon;
-  color: string;
-  label: string;
-}
-
-const EVENT_META: Record<string, EventMeta> = {
-  session_started: { icon: Play, color: 'text-emerald-500', label: 'Sessione avviata' },
-  session_paused: { icon: Pause, color: 'text-amber-500', label: 'Sessione in pausa' },
-  session_resumed: { icon: Play, color: 'text-emerald-500', label: 'Sessione ripresa' },
-  session_finalized: { icon: Flag, color: 'text-slate-500', label: 'Sessione finalizzata' },
-  turn_advanced: { icon: RefreshCw, color: 'text-blue-500', label: 'Turno avanzato' },
-  turn_order_set: { icon: Shuffle, color: 'text-indigo-500', label: 'Ordine turni impostato' },
-  dice_rolled: { icon: Dice5, color: 'text-orange-500', label: 'Lancio dadi' },
-  score_updated: { icon: Trophy, color: 'text-green-500', label: 'Punteggio aggiornato' },
-  participant_joined: { icon: Users, color: 'text-purple-500', label: 'Partecipante unito' },
-};
-
-const FALLBACK_META: EventMeta = {
-  icon: BookOpen,
-  color: 'text-muted-foreground',
-  label: 'Evento',
-};
-
-function getEventMeta(eventType: string): EventMeta {
-  return EVENT_META[eventType] ?? FALLBACK_META;
-}
+import { getEventMeta, parseSummary } from './diary-utils';
 
 // ─── Component ────────────────────────────────────────────────────────────
 
@@ -122,7 +81,7 @@ export function SessionDiaryTimeline({ sessionId, limit = 30 }: SessionDiaryTime
           });
 
           // Try to extract meaningful payload summary
-          const summary = parseDiarySummary(entry.eventType, entry.payload);
+          const summary = parseSummary(entry.eventType, entry.payload);
 
           return (
             <div
@@ -156,35 +115,6 @@ export function SessionDiaryTimeline({ sessionId, limit = 30 }: SessionDiaryTime
       </div>
     </section>
   );
-}
-
-// ─── Payload parser ────────────────────────────────────────────────────────
-
-function parseDiarySummary(eventType: string, payload: string | null): string | null {
-  if (!payload) return null;
-
-  try {
-    const data = JSON.parse(payload);
-
-    switch (eventType) {
-      case 'dice_rolled':
-        return data.formula
-          ? `${data.formula} → ${data.total ?? ''}`
-          : null;
-      case 'score_updated':
-        return data.newValue !== undefined
-          ? `Nuovo punteggio: ${data.newValue}`
-          : null;
-      case 'turn_advanced':
-        return data.toParticipantId
-          ? 'Prossimo giocatore'
-          : null;
-      default:
-        return null;
-    }
-  } catch {
-    return null;
-  }
 }
 
 export type { SessionDiaryTimelineProps };

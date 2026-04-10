@@ -112,6 +112,7 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
         <div className="relative pb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
+            autoFocus
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Cerca un gioco..."

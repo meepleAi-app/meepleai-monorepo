@@ -12,75 +12,13 @@
 
 import { useMemo } from 'react';
 
-import {
-  BookOpen,
-  Dice5,
-  Flag,
-  Pause,
-  Play,
-  RefreshCw,
-  Shuffle,
-  Trophy,
-  Users,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
+import { getEventMeta, parseSummary } from '@/components/session/diary-utils';
 import { useGameNightDiaryQuery } from '@/hooks/queries/useSessionFlow';
 import { cn } from '@/lib/utils';
-
-// ─── Event type meta ────────────────────────────────────────────────────────
-
-interface EventMeta {
-  icon: LucideIcon;
-  color: string;
-  label: string;
-}
-
-const EVENT_META: Record<string, EventMeta> = {
-  session_started: { icon: Play, color: 'text-emerald-500', label: 'Sessione avviata' },
-  session_paused: { icon: Pause, color: 'text-amber-500', label: 'Sessione in pausa' },
-  session_resumed: { icon: Play, color: 'text-emerald-500', label: 'Sessione ripresa' },
-  session_finalized: { icon: Flag, color: 'text-slate-500', label: 'Sessione finalizzata' },
-  turn_advanced: { icon: RefreshCw, color: 'text-blue-500', label: 'Turno avanzato' },
-  turn_order_set: { icon: Shuffle, color: 'text-indigo-500', label: 'Ordine turni impostato' },
-  dice_rolled: { icon: Dice5, color: 'text-orange-500', label: 'Lancio dadi' },
-  score_updated: { icon: Trophy, color: 'text-green-500', label: 'Punteggio aggiornato' },
-  participant_joined: { icon: Users, color: 'text-purple-500', label: 'Partecipante unito' },
-  game_night_completed: { icon: Flag, color: 'text-primary', label: 'Serata completata' },
-};
-
-const FALLBACK_META: EventMeta = {
-  icon: BookOpen,
-  color: 'text-muted-foreground',
-  label: 'Evento',
-};
-
-function getEventMeta(eventType: string): EventMeta {
-  return EVENT_META[eventType] ?? FALLBACK_META;
-}
-
-// ─── Payload parser ─────────────────────────────────────────────────────────
-
-function parseSummary(eventType: string, payload: string | null): string | null {
-  if (!payload) return null;
-  try {
-    const data = JSON.parse(payload);
-    switch (eventType) {
-      case 'dice_rolled':
-        return data.formula ? `${data.formula} → ${data.total ?? ''}` : null;
-      case 'score_updated':
-        return data.newValue !== undefined ? `Nuovo punteggio: ${data.newValue}` : null;
-      case 'turn_advanced':
-        return data.toParticipantId ? 'Prossimo giocatore' : null;
-      default:
-        return null;
-    }
-  } catch {
-    return null;
-  }
-}
 
 // ─── Component ──────────────────────────────────────────────────────────────
 

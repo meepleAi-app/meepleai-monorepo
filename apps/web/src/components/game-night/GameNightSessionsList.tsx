@@ -97,7 +97,7 @@ export function GameNightSessionsList({ sessions, gameNightId }: GameNightSessio
           return (
             <Link
               key={session.id}
-              href={`/sessions/live/${session.id}`}
+              href={`/sessions/${session.id}`}
               className="flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
             >
               <div className="flex items-center gap-3 min-w-0">

@@ -14,8 +14,14 @@ import type { ContextualHandStore } from '@/stores/contextual-hand/types';
 
 // Mock the store module: we export useContextualHandStore as a vi.fn()
 // that will be configured per-test to return the desired slice of state.
+const { mockUseContextualHandStore } = vi.hoisted(() => ({
+  mockUseContextualHandStore: Object.assign(vi.fn(), {
+    persist: { rehydrate: vi.fn() },
+  }),
+}));
+
 vi.mock('@/stores/contextual-hand', () => ({
-  useContextualHandStore: vi.fn(),
+  useContextualHandStore: mockUseContextualHandStore,
   selectContext: (s: ContextualHandStore) => s.context,
   selectIsLoading: (s: ContextualHandStore) => s.isLoading,
 }));
@@ -37,7 +43,7 @@ import { ContextualHandSidebar } from '../ContextualHandSidebar';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-const mockStore = useContextualHandStore as unknown as Mock;
+const mockStore = mockUseContextualHandStore as unknown as Mock;
 
 /**
  * Configure the mock store so that each `useContextualHandStore(selector)`
@@ -49,6 +55,7 @@ function setMockState(state: Partial<ContextualHandStore>) {
     currentSession: null,
     createResult: null,
     isLoading: false,
+    isInitialized: false,
     error: null,
     diaryEntries: [],
     isDiaryLoading: false,
@@ -111,7 +118,7 @@ describe('ContextualHandSidebar', () => {
     expect(screen.getByText('Nuova partita')).toBeInTheDocument();
   });
 
-  it('renders four slots when session is active', () => {
+  it('renders five slots when session is active', () => {
     setMockState({
       context: 'active',
       isLoading: false,
@@ -130,11 +137,12 @@ describe('ContextualHandSidebar', () => {
 
     expect(screen.getByTestId('slot-session')).toBeInTheDocument();
     expect(screen.getByTestId('slot-game')).toBeInTheDocument();
+    expect(screen.getByTestId('slot-kb')).toBeInTheDocument();
     expect(screen.getByTestId('slot-agent')).toBeInTheDocument();
     expect(screen.getByTestId('slot-toolkit')).toBeInTheDocument();
   });
 
-  it('renders four slots when session is paused', () => {
+  it('renders five slots when session is paused', () => {
     setMockState({
       context: 'paused',
       isLoading: false,
@@ -153,6 +161,7 @@ describe('ContextualHandSidebar', () => {
 
     expect(screen.getByTestId('slot-session')).toBeInTheDocument();
     expect(screen.getByTestId('slot-game')).toBeInTheDocument();
+    expect(screen.getByTestId('slot-kb')).toBeInTheDocument();
   });
 
   it('calls initialize on mount', () => {

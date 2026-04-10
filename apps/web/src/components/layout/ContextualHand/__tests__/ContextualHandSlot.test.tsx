@@ -12,11 +12,16 @@ import type { ContextualHandStore } from '@/stores/contextual-hand/types';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock('@/stores/contextual-hand', () => ({
   useContextualHandStore: vi.fn(),
   selectContext: (s: ContextualHandStore) => s.context,
   selectCurrentSession: (s: ContextualHandStore) => s.currentSession,
   selectCreateResult: (s: ContextualHandStore) => s.createResult,
+  selectKbReadiness: (s: ContextualHandStore) => s.kbReadiness,
 }));
 
 vi.mock('@/components/ui/data-display/meeple-card/MeepleCard', () => ({
@@ -38,6 +43,7 @@ function setMockState(state: Partial<ContextualHandStore>) {
     currentSession: null,
     createResult: null,
     isLoading: false,
+    isInitialized: false,
     error: null,
     diaryEntries: [],
     isDiaryLoading: false,

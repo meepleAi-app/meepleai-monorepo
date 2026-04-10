@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  BookOpen,
   Gamepad2,
   Bot,
   Wrench,
@@ -24,6 +25,7 @@ import { ContextualHandSlot, type HandSlotType } from './ContextualHandSlot';
 const TABS: { type: HandSlotType; icon: typeof Hash; label: string }[] = [
   { type: 'session', icon: Hash, label: 'Partita' },
   { type: 'game', icon: Gamepad2, label: 'Gioco' },
+  { type: 'kb', icon: BookOpen, label: 'KB' },
   { type: 'agent', icon: Bot, label: 'Agente' },
   { type: 'toolkit', icon: Wrench, label: 'Toolkit' },
 ];
@@ -43,6 +45,7 @@ export function ContextualHandBottomBar() {
   const [expandedTab, setExpandedTab] = useState<HandSlotType | null>(null);
 
   useEffect(() => {
+    useContextualHandStore.persist.rehydrate();
     initialize();
   }, [initialize]);
 

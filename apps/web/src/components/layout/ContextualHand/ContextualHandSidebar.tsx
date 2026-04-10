@@ -28,6 +28,7 @@ export function ContextualHandSidebar() {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   useEffect(() => {
+    useContextualHandStore.persist.rehydrate();
     initialize();
   }, [initialize]);
 
@@ -97,6 +98,7 @@ export function ContextualHandSidebar() {
           <>
             <ContextualHandSlot slotType="session" collapsed={isCollapsed} />
             <ContextualHandSlot slotType="game" collapsed={isCollapsed} />
+            <ContextualHandSlot slotType="kb" collapsed={isCollapsed} />
             <ContextualHandSlot slotType="agent" collapsed={isCollapsed} />
             <ContextualHandSlot slotType="toolkit" collapsed={isCollapsed} />
           </>

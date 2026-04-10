@@ -11,7 +11,7 @@
  * Generarlo con: cd apps/web && npx msw init public/ --save
  */
 
-import { useEffect, useState, type ComponentType } from 'react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
 
 const IS_DEV_MOCK =
   process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
@@ -34,6 +34,8 @@ type DevBadgeComponent = ComponentType<{
   scenarioStore: unknown;
   authStore: unknown;
 }>;
+
+type DevPanelMountComponent = ComponentType<{ uiStore: unknown }>;
 
 interface MockProviderProps {
   children: React.ReactNode;
@@ -85,6 +87,9 @@ export function MockProvider({ children }: MockProviderProps) {
   const [ready, setReady] = useState(false);
   const [tools, setTools] = useState<DevToolsBundle | null>(null);
   const [DevBadge, setDevBadge] = useState<DevBadgeComponent | null>(null);
+  const [DevPanelMountComp, setDevPanelMountComp] = useState<DevPanelMountComponent | null>(null);
+  // Track if panel mount has been loaded to avoid duplicate imports
+  const panelMountLoaded = useRef(false);
 
   useEffect(() => {
     if (!IS_DEV_MOCK) return;
@@ -99,8 +104,22 @@ export function MockProvider({ children }: MockProviderProps) {
       import(`${'@'}/dev-tools/devBadge` as string),
     ])
       .then(([devTools, badgeModule]) => {
-        setTools((devTools as { installDevTools: () => DevToolsBundle }).installDevTools());
+        const installed = (
+          devTools as { installDevTools: () => DevToolsBundle & { panel?: { uiStore: unknown } } }
+        ).installDevTools();
+        setTools(installed);
         setDevBadge(() => (badgeModule as { DevBadge: DevBadgeComponent }).DevBadge);
+        // Load DevPanelMount lazily (same bundle, just isolated via dynamic import)
+        if (installed.panel && !panelMountLoaded.current) {
+          panelMountLoaded.current = true;
+          import(`${'@'}/dev-tools/panel/DevPanelMount` as string)
+            .then(mod => {
+              setDevPanelMountComp(
+                () => (mod as { DevPanelMount: DevPanelMountComponent }).DevPanelMount
+              );
+            })
+            .catch(() => {});
+        }
       })
       .catch(() => {
         // dev-tools module not present (e.g. tree-shaken in prod) — silently skip
@@ -141,6 +160,14 @@ export function MockProvider({ children }: MockProviderProps) {
           authStore={tools.authStore}
         />
       )}
+      {IS_DEV_MOCK &&
+        tools &&
+        DevPanelMountComp &&
+        (tools as DevToolsBundle & { panel?: { uiStore: unknown } }).panel && (
+          <DevPanelMountComp
+            uiStore={(tools as DevToolsBundle & { panel?: { uiStore: unknown } }).panel!.uiStore}
+          />
+        )}
     </>
   );
 }

@@ -1,5 +1,10 @@
 import { devPanelClient } from './api/devPanelClient';
+import { installFetchInterceptor } from './hooks/useFetchInterceptor';
 import { createPanelUiStore, type PanelUiState } from './stores/panelUiStore';
+import {
+  createRequestInspectorStore,
+  type RequestInspectorState,
+} from './stores/requestInspectorStore';
 
 import type { StoreApi } from 'zustand/vanilla';
 
@@ -11,18 +16,26 @@ export interface PanelDependencies {
 
 export interface InstalledPanel {
   uiStore: StoreApi<PanelUiState>;
+  inspectorStore: StoreApi<RequestInspectorState>;
   deps: PanelDependencies;
 }
 
 export function installPanel(deps: PanelDependencies): InstalledPanel {
   const uiStore = createPanelUiStore();
+  const inspectorStore = createRequestInspectorStore();
+
+  // Start intercepting fetch calls for the inspector
+  if (typeof window !== 'undefined') {
+    installFetchInterceptor(inspectorStore);
+  }
+
   void devPanelClient.getToggles().catch(() => {});
   if (typeof console !== 'undefined') {
     console.warn('[MeepleDev Phase 2] Dev Panel installed. Press Ctrl+Shift+M to open.');
   }
   if (typeof window !== 'undefined') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).__meepledev_stores__ = deps;
+    (window as any).__meepledev_stores__ = { ...deps, inspectorStore };
   }
-  return { uiStore, deps };
+  return { uiStore, inspectorStore, deps };
 }

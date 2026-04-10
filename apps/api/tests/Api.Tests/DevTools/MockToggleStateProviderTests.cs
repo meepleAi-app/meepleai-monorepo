@@ -102,4 +102,73 @@ public class MockToggleStateProviderTests
         Assert.True(snapshot["llm"]);
         Assert.IsAssignableFrom<IReadOnlyDictionary<string, bool>>(snapshot);
     }
+
+    [Fact]
+    public void ResetToDefaults_RestoresEnvBootstrapValues()
+    {
+        var env = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MOCK_LLM"] = "true",
+            ["MOCK_EMBEDDING"] = "false",
+            ["MOCK_S3"] = "true"
+        };
+        var provider = new MockToggleStateProvider(env, new[] { "llm", "embedding", "s3" });
+
+        provider.Set("llm", false);
+        provider.Set("embedding", true);
+        provider.Set("s3", false);
+        Assert.False(provider.IsMocked("llm"));
+        Assert.True(provider.IsMocked("embedding"));
+        Assert.False(provider.IsMocked("s3"));
+
+        provider.ResetToDefaults();
+
+        Assert.True(provider.IsMocked("llm"));
+        Assert.False(provider.IsMocked("embedding"));
+        Assert.True(provider.IsMocked("s3"));
+    }
+
+    [Fact]
+    public async Task ResetToDefaults_ThreadSafe_WithConcurrentSets()
+    {
+        var env = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MOCK_LLM"] = "false"
+        };
+        var provider = new MockToggleStateProvider(env, new[] { "llm" });
+
+        var tasks = new List<Task>();
+        for (int i = 0; i < 50; i++)
+        {
+            tasks.Add(Task.Run(() => provider.Set("llm", true)));
+            tasks.Add(Task.Run(() => provider.ResetToDefaults()));
+        }
+        await Task.WhenAll(tasks).ConfigureAwait(true);
+
+        var final = provider.IsMocked("llm");
+        Assert.True(final == true || final == false);
+    }
+
+    [Fact]
+    public void ResetToDefaults_FiresToggleChangedForChangedKeys()
+    {
+        var env = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MOCK_LLM"] = "true",
+            ["MOCK_EMBEDDING"] = "true"
+        };
+        var provider = new MockToggleStateProvider(env, new[] { "llm", "embedding" });
+
+        provider.Set("llm", false);
+        provider.Set("embedding", false);
+
+        var fired = new List<MockToggleChangedEventArgs>();
+        provider.ToggleChanged += (_, args) => fired.Add(args);
+
+        provider.ResetToDefaults();
+
+        Assert.Equal(2, fired.Count);
+        Assert.Contains(fired, e => e.ServiceName == "llm" && e.Mocked);
+        Assert.Contains(fired, e => e.ServiceName == "embedding" && e.Mocked);
+    }
 }

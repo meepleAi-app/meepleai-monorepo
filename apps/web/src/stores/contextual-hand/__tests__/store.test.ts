@@ -73,6 +73,7 @@ function resetStore() {
     diaryEntries: [],
     isDiaryLoading: false,
     kbReadiness: null,
+    eventSource: null,
   });
 }
 
@@ -654,6 +655,141 @@ describe('useContextualHandStore', () => {
 
       useContextualHandStore.setState({ currentSession: makeSession({ sessionId: 'abc' }) });
       expect(selectSessionId(useContextualHandStore.getState())).toBe('abc');
+    });
+  });
+
+  // ── subscribeToDiary / unsubscribeFromDiary ─────────────────────────
+
+  describe('subscribeToDiary', () => {
+    let mockClose: ReturnType<typeof vi.fn>;
+    let capturedOnMessage: ((e: MessageEvent) => void) | null;
+    let capturedOnError: (() => void) | null;
+
+    beforeEach(() => {
+      mockClose = vi.fn();
+      capturedOnMessage = null;
+      capturedOnError = null;
+
+      vi.stubGlobal(
+        'EventSource',
+        vi.fn().mockImplementation(() => {
+          const instance = {
+            close: mockClose,
+            onmessage: null as ((e: MessageEvent) => void) | null,
+            onerror: null as (() => void) | null,
+          };
+          // Capture callbacks after they're assigned in the next microtask
+          setTimeout(() => {
+            capturedOnMessage = instance.onmessage;
+            capturedOnError = instance.onerror;
+          }, 0);
+          return instance;
+        })
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('creates EventSource with correct URL and stores it in state', () => {
+      useContextualHandStore.getState().subscribeToDiary('session-123');
+
+      expect(EventSource).toHaveBeenCalledWith(
+        '/api/v1/sessions/session-123/diary/stream'
+      );
+      expect(useContextualHandStore.getState().eventSource).not.toBeNull();
+    });
+
+    it('closes previous EventSource before subscribing again', () => {
+      useContextualHandStore.getState().subscribeToDiary('session-1');
+      const firstEs = useContextualHandStore.getState().eventSource;
+
+      useContextualHandStore.getState().subscribeToDiary('session-2');
+
+      expect(firstEs?.close).toHaveBeenCalled();
+    });
+
+    it('appends received diary entries with deduplication', async () => {
+      useContextualHandStore.getState().subscribeToDiary('s1');
+
+      // Wait for setTimeout in mock to capture onmessage
+      await new Promise((r) => setTimeout(r, 10));
+
+      if (capturedOnMessage) {
+        capturedOnMessage({
+          data: JSON.stringify({ id: 'e1', timestamp: '2026-04-10T12:00:00Z', eventType: 'dice_rolled' }),
+        } as MessageEvent);
+
+        // Send duplicate
+        capturedOnMessage({
+          data: JSON.stringify({ id: 'e1', timestamp: '2026-04-10T12:00:00Z', eventType: 'dice_rolled' }),
+        } as MessageEvent);
+
+        expect(useContextualHandStore.getState().diaryEntries).toHaveLength(1);
+      }
+    });
+  });
+
+  describe('unsubscribeFromDiary', () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        'EventSource',
+        vi.fn().mockImplementation(() => ({
+          close: vi.fn(),
+          onmessage: null,
+          onerror: null,
+        }))
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('closes EventSource and sets state to null', () => {
+      useContextualHandStore.getState().subscribeToDiary('s1');
+      const es = useContextualHandStore.getState().eventSource;
+
+      useContextualHandStore.getState().unsubscribeFromDiary();
+
+      expect(es?.close).toHaveBeenCalled();
+      expect(useContextualHandStore.getState().eventSource).toBeNull();
+    });
+
+    it('does nothing when no EventSource exists', () => {
+      useContextualHandStore.setState({ eventSource: null });
+      // Should not throw
+      useContextualHandStore.getState().unsubscribeFromDiary();
+      expect(useContextualHandStore.getState().eventSource).toBeNull();
+    });
+  });
+
+  describe('reset', () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        'EventSource',
+        vi.fn().mockImplementation(() => ({
+          close: vi.fn(),
+          onmessage: null,
+          onerror: null,
+        }))
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('unsubscribes from diary stream on reset', () => {
+      useContextualHandStore.getState().subscribeToDiary('s1');
+      const es = useContextualHandStore.getState().eventSource;
+
+      useContextualHandStore.getState().reset();
+
+      expect(es?.close).toHaveBeenCalled();
+      expect(useContextualHandStore.getState().eventSource).toBeNull();
+      expect(useContextualHandStore.getState().context).toBe('idle');
     });
   });
 });

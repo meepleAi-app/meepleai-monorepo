@@ -1,4 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
@@ -23,15 +25,21 @@ internal sealed class PauseSessionCommandHandler : ICommandHandler<PauseSessionC
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
     public PauseSessionCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        TimeProvider timeProvider,
+        IDiaryStreamService diaryStream)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task Handle(PauseSessionCommand request, CancellationToken cancellationToken)
@@ -70,19 +78,25 @@ internal sealed class PauseSessionCommandHandler : ICommandHandler<PauseSessionC
             }
         }
 
-        _db.SessionEvents.Add(new SessionEventEntity
+        var diaryEntity = new SessionEventEntity
         {
             Id = Guid.NewGuid(),
             SessionId = session.Id,
             GameNightId = gameNightId,
             EventType = "session_paused",
-            Timestamp = DateTime.UtcNow,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
             Payload = "{}",
             CreatedBy = request.UserId,
             Source = "system",
             IsDeleted = false
-        });
+        };
+        _db.SessionEvents.Add(diaryEntity);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _diaryStream.Publish(diaryEntity.SessionId, new SessionEventDto(
+            diaryEntity.Id, diaryEntity.SessionId, diaryEntity.GameNightId,
+            diaryEntity.EventType, diaryEntity.Timestamp, diaryEntity.Payload,
+            diaryEntity.CreatedBy, diaryEntity.Source));
     }
 }

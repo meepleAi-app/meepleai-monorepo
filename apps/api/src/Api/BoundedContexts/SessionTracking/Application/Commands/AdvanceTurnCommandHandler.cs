@@ -1,9 +1,12 @@
 using System.Text.Json;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.Infrastructure.Extensions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,15 +25,21 @@ internal sealed class AdvanceTurnCommandHandler : ICommandHandler<AdvanceTurnCom
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
     public AdvanceTurnCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        TimeProvider timeProvider,
+        IDiaryStreamService diaryStream)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task<AdvanceTurnCommandResult> Handle(AdvanceTurnCommand request, CancellationToken cancellationToken)
@@ -54,11 +63,7 @@ internal sealed class AdvanceTurnCommandHandler : ICommandHandler<AdvanceTurnCom
 
         // Resolve GameNightId via the link row (if any) so the diary entry is
         // correlated with the cross-game timeline.
-        var gameNightId = await _db.GameNightSessions
-            .Where(gns => gns.SessionId == session.Id)
-            .Select(gns => (Guid?)gns.GameNightEventId)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var gameNightId = await _db.ResolveGameNightIdAsync(session.Id, cancellationToken).ConfigureAwait(false);
 
         var payload = JsonSerializer.Serialize(new
         {
@@ -68,20 +73,26 @@ internal sealed class AdvanceTurnCommandHandler : ICommandHandler<AdvanceTurnCom
             toParticipantId = domainResult.ToParticipantId
         });
 
-        _db.SessionEvents.Add(new SessionEventEntity
+        var diaryEntity = new SessionEventEntity
         {
             Id = Guid.NewGuid(),
             SessionId = session.Id,
             GameNightId = gameNightId,
             EventType = "turn_advanced",
-            Timestamp = DateTime.UtcNow,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
             Payload = payload,
             CreatedBy = request.UserId,
             Source = "user",
             IsDeleted = false
-        });
+        };
+        _db.SessionEvents.Add(diaryEntity);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _diaryStream.Publish(diaryEntity.SessionId, new SessionEventDto(
+            diaryEntity.Id, diaryEntity.SessionId, diaryEntity.GameNightId,
+            diaryEntity.EventType, diaryEntity.Timestamp, diaryEntity.Payload,
+            diaryEntity.CreatedBy, diaryEntity.Source));
 
         return new AdvanceTurnCommandResult(
             domainResult.FromIndex,

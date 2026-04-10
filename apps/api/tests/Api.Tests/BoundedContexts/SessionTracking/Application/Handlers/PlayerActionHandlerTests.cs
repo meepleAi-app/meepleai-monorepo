@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -473,7 +474,9 @@ public class RollSessionDiceCommandHandlerTests
             _mockDiceRepo.Object,
             _mockUnitOfWork.Object,
             _mockSyncService.Object,
-            _dbContext);
+            _dbContext,
+            TimeProvider.System,
+            new DiaryStreamService());
     }
 
     private static Session CreateActiveSession(Guid sessionId, Guid participantId)

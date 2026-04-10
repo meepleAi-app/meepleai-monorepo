@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -37,7 +38,9 @@ public class FinalizeSessionCommandHandlerTests
 
         _handler = new FinalizeSessionCommandHandler(
             _sessionRepoMock.Object, _scoreRepoMock.Object,
-            _unitOfWorkMock.Object, _syncServiceMock.Object, _db);
+            _unitOfWorkMock.Object, _syncServiceMock.Object, _db,
+            TimeProvider.System,
+            new DiaryStreamService());
     }
 
     [Fact]

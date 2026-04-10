@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using System.Text.Json;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
@@ -95,9 +96,12 @@ public sealed class UpsertScoreWithDiaryCommandTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System,
+            new DiaryStreamService());
 
-        _upsertHandler = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, _dbContext);
+        _upsertHandler = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System,
+            new DiaryStreamService());
     }
 
     public async ValueTask DisposeAsync()

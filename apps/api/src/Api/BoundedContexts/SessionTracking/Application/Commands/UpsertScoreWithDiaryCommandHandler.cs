@@ -1,8 +1,11 @@
 using System.Text.Json;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
+using Api.Infrastructure.Extensions;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -26,15 +29,21 @@ internal sealed class UpsertScoreWithDiaryCommandHandler
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
     public UpsertScoreWithDiaryCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        TimeProvider timeProvider,
+        IDiaryStreamService diaryStream)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task<UpsertScoreWithDiaryResult> Handle(
@@ -113,16 +122,12 @@ internal sealed class UpsertScoreWithDiaryCommandHandler
         {
             oldValue = existing.ScoreValue;
             existing.ScoreValue = request.NewValue;
-            existing.Timestamp = DateTime.UtcNow;
+            existing.Timestamp = _timeProvider.GetUtcNow().UtcDateTime;
             entryId = existing.Id;
         }
 
         // Correlate the diary event with the parent GameNight envelope (if any).
-        var gameNightId = await _db.GameNightSessions
-            .Where(gns => gns.SessionId == request.SessionId)
-            .Select(gns => (Guid?)gns.GameNightEventId)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var gameNightId = await _db.ResolveGameNightIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
 
         var payload = JsonSerializer.Serialize(new
         {
@@ -135,20 +140,26 @@ internal sealed class UpsertScoreWithDiaryCommandHandler
             reason = request.Reason
         });
 
-        _db.SessionEvents.Add(new SessionEventEntity
+        var diaryEntity = new SessionEventEntity
         {
             Id = Guid.NewGuid(),
             SessionId = request.SessionId,
             GameNightId = gameNightId,
             EventType = "score_updated",
-            Timestamp = DateTime.UtcNow,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
             Payload = payload,
             CreatedBy = request.RequesterId,
             Source = "user",
             IsDeleted = false
-        });
+        };
+        _db.SessionEvents.Add(diaryEntity);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _diaryStream.Publish(diaryEntity.SessionId, new SessionEventDto(
+            diaryEntity.Id, diaryEntity.SessionId, diaryEntity.GameNightId,
+            diaryEntity.EventType, diaryEntity.Timestamp, diaryEntity.Payload,
+            diaryEntity.CreatedBy, diaryEntity.Source));
 
         return new UpsertScoreWithDiaryResult(entryId, oldValue, request.NewValue);
     }

@@ -1,12 +1,15 @@
 using System.Text.Json;
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
+using Api.Infrastructure.Extensions;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -20,19 +23,25 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISessionSyncService _syncService;
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
     public FinalizeSessionCommandHandler(
         ISessionRepository sessionRepository,
         IScoreEntryRepository scoreEntryRepository,
         IUnitOfWork unitOfWork,
         ISessionSyncService syncService,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        TimeProvider timeProvider,
+        IDiaryStreamService diaryStream)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _scoreEntryRepository = scoreEntryRepository ?? throw new ArgumentNullException(nameof(scoreEntryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task<FinalizeSessionResult> Handle(FinalizeSessionCommand request, CancellationToken cancellationToken)
@@ -97,13 +106,9 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
 
         // Resolve GameNightId via the link row (if any) so the diary entry is
         // correlated with the cross-game timeline.
-        var gameNightId = await _db.GameNightSessions
-            .Where(gns => gns.SessionId == session.Id)
-            .Select(gns => (Guid?)gns.GameNightEventId)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var gameNightId = await _db.ResolveGameNightIdAsync(session.Id, cancellationToken).ConfigureAwait(false);
 
-        var finalizedAt = session.FinalizedAt ?? DateTime.UtcNow;
+        var finalizedAt = session.FinalizedAt ?? _timeProvider.GetUtcNow().UtcDateTime;
         var durationSeconds = (int)(finalizedAt - session.SessionDate).TotalSeconds;
         if (durationSeconds < 0) durationSeconds = 0;
 
@@ -114,20 +119,26 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
             scoreboard = scoreboardSnapshot
         });
 
-        _db.SessionEvents.Add(new SessionEventEntity
+        var diaryEntity = new SessionEventEntity
         {
             Id = Guid.NewGuid(),
             SessionId = session.Id,
             GameNightId = gameNightId,
             EventType = "session_finalized",
-            Timestamp = DateTime.UtcNow,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
             Payload = finalizedPayload,
             CreatedBy = session.UserId,
             Source = "system",
             IsDeleted = false
-        });
+        };
+        _db.SessionEvents.Add(diaryEntity);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _diaryStream.Publish(diaryEntity.SessionId, new SessionEventDto(
+            diaryEntity.Id, diaryEntity.SessionId, diaryEntity.GameNightId,
+            diaryEntity.EventType, diaryEntity.Timestamp, diaryEntity.Payload,
+            diaryEntity.CreatedBy, diaryEntity.Source));
 
         var winnerId = winnerIdRaw;
 
@@ -138,7 +149,7 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         }
 
         // GST-003: Publish SSE event for session finalization
-        var durationMinutes = (int)(DateTime.UtcNow - session.SessionDate).TotalMinutes;
+        var durationMinutes = (int)(_timeProvider.GetUtcNow().UtcDateTime - session.SessionDate).TotalMinutes;
 
         var evt = new SessionFinalizedEvent
         {
@@ -146,7 +157,7 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
             WinnerId = winnerId != Guid.Empty ? winnerId : null,
             FinalRanks = request.FinalRanks,
             DurationMinutes = durationMinutes,
-            Timestamp = DateTime.UtcNow
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime
         };
         await _syncService.PublishEventAsync(request.SessionId, evt, cancellationToken).ConfigureAwait(false);
 

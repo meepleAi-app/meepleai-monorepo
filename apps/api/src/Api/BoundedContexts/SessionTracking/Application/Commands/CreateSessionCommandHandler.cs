@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -28,6 +29,8 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
     private readonly MeepleAiDbContext _db;
     private readonly IMediator _mediator;
     private readonly ILogger<CreateSessionCommandHandler> _logger;
+    private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
     public CreateSessionCommandHandler(
         ISessionRepository sessionRepository,
@@ -35,7 +38,9 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         ISessionQuotaService quotaService,
         MeepleAiDbContext db,
         IMediator mediator,
-        ILogger<CreateSessionCommandHandler> logger)
+        ILogger<CreateSessionCommandHandler> logger,
+        TimeProvider timeProvider,
+        IDiaryStreamService diaryStream)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -43,6 +48,8 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task<CreateSessionResult> Handle(CreateSessionCommand request, CancellationToken cancellationToken)
@@ -145,7 +152,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     GameTitle = gameTitle,
                     PlayOrder = playOrder,
                     Status = GameNightSessionStatus.InProgress.ToString(),
-                    StartedAt = DateTimeOffset.UtcNow
+                    StartedAt = _timeProvider.GetUtcNow()
                 };
 
                 // Session Flow v2.1 — T5 fix: when nightEntity is loaded (Unchanged) and the
@@ -157,24 +164,28 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                 nightEntity.Sessions.Add(linkEntity);
 
                 // Session Flow v2.1 — T4: Emit diary events.
+                var diaryEntities = new List<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity>();
+
                 var sessionCreatedPayload = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     gameId = request.GameId,
                     gameNightEventId = nightEntity.Id,
                     gameNightWasCreated
                 });
-                _db.SessionEvents.Add(new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
+                var sessionCreatedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
                 {
                     Id = Guid.NewGuid(),
                     SessionId = session.Id,
                     GameNightId = nightEntity.Id,
                     EventType = "session_created",
-                    Timestamp = DateTime.UtcNow,
+                    Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
                     Payload = sessionCreatedPayload,
                     CreatedBy = request.UserId,
                     Source = "system",
                     IsDeleted = false
-                });
+                };
+                _db.SessionEvents.Add(sessionCreatedDiary);
+                diaryEntities.Add(sessionCreatedDiary);
 
                 if (gameNightWasCreated)
                 {
@@ -184,18 +195,20 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                         title = nightEntity.Title,
                         isAdHoc = true
                     });
-                    _db.SessionEvents.Add(new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
+                    var nightCreatedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
                     {
                         Id = Guid.NewGuid(),
                         SessionId = session.Id,
                         GameNightId = nightEntity.Id,
                         EventType = "gamenight_created",
-                        Timestamp = DateTime.UtcNow,
+                        Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
                         Payload = nightCreatedPayload,
                         CreatedBy = request.UserId,
                         Source = "system",
                         IsDeleted = false
-                    });
+                    };
+                    _db.SessionEvents.Add(nightCreatedDiary);
+                    diaryEntities.Add(nightCreatedDiary);
                 }
                 else
                 {
@@ -203,22 +216,33 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     {
                         addedGameId = request.GameId
                     });
-                    _db.SessionEvents.Add(new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
+                    var gameAddedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
                     {
                         Id = Guid.NewGuid(),
                         SessionId = session.Id,
                         GameNightId = nightEntity.Id,
                         EventType = "gamenight_game_added",
-                        Timestamp = DateTime.UtcNow,
+                        Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
                         Payload = gameAddedPayload,
                         CreatedBy = request.UserId,
                         Source = "system",
                         IsDeleted = false
-                    });
+                    };
+                    _db.SessionEvents.Add(gameAddedDiary);
+                    diaryEntities.Add(gameAddedDiary);
                 }
 
                 // Single atomic save for session + participants + guest additions + night link + diary events.
                 await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                // Publish diary events to SSE stream after successful save.
+                foreach (var de in diaryEntities)
+                {
+                    _diaryStream.Publish(de.SessionId, new SessionEventDto(
+                        de.Id, de.SessionId, de.GameNightId,
+                        de.EventType, de.Timestamp, de.Payload,
+                        de.CreatedBy, de.Source));
+                }
 
                 // Session Flow v2.1 — T4: Best-effort resolution of AgentDefinition + Toolkit
                 // for the response (frontend uses these to compose the Hand view).
@@ -303,7 +327,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
             {
                 gameIds.Add(request.GameId);
                 existing.GameIdsJson = System.Text.Json.JsonSerializer.Serialize(gameIds);
-                existing.UpdatedAt = DateTimeOffset.UtcNow;
+                existing.UpdatedAt = _timeProvider.GetUtcNow();
             }
 
             return (existing, false);
@@ -311,8 +335,8 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
 
         // Ad-hoc night envelope — build directly at the persistence layer to stay in-scope
         // for a single SaveChanges call.
-        var title = $"Serata del {DateTime.UtcNow:yyyy-MM-dd HH:mm}";
-        var now = DateTimeOffset.UtcNow;
+        var title = $"Serata del {_timeProvider.GetUtcNow().UtcDateTime:yyyy-MM-dd HH:mm}";
+        var now = _timeProvider.GetUtcNow();
         var newEntity = new GameNightEventEntity
         {
             Id = Guid.NewGuid(),

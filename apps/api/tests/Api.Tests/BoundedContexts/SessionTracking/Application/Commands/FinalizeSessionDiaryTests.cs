@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using System.Text.Json;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
@@ -110,15 +111,20 @@ public sealed class FinalizeSessionDiaryTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System,
+            new DiaryStreamService());
 
-        _upsertScoreHandler = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, _dbContext);
+        _upsertScoreHandler = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System,
+            new DiaryStreamService());
         _finalizeHandler = new FinalizeSessionCommandHandler(
             sessionRepo,
             scoreEntryRepo,
             unitOfWork,
             syncMock.Object,
-            _dbContext);
+            _dbContext,
+            TimeProvider.System,
+            new DiaryStreamService());
     }
 
     public async ValueTask DisposeAsync()

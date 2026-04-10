@@ -55,6 +55,9 @@ export interface ContextualHandState {
 
   /** KB readiness probe result (for game picker). */
   kbReadiness: KbReadinessDto | null;
+
+  /** Active EventSource for SSE diary stream (null when not subscribed). */
+  eventSource: EventSource | null;
 }
 
 // ─── Actions ───────────────────────────────────────────────────────────────
@@ -102,6 +105,12 @@ export interface ContextualHandActions {
 
   /** Probe KB readiness for a game (used in game picker). */
   checkKbReadiness: (gameId: string) => Promise<void>;
+
+  /** Subscribe to the SSE diary stream for a session. */
+  subscribeToDiary: (sessionId: string) => void;
+
+  /** Unsubscribe from the SSE diary stream. */
+  unsubscribeFromDiary: () => void;
 
   /** Reset the store to idle state and clear localStorage. */
   reset: () => void;

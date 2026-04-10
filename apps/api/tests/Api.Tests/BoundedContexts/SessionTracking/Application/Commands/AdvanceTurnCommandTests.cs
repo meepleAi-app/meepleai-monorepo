@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using System.Text.Json;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
@@ -97,10 +98,12 @@ public sealed class AdvanceTurnCommandTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System,
+            new DiaryStreamService());
 
-        _setTurnOrderHandler = new SetTurnOrderCommandHandler(sessionRepo, unitOfWork, _dbContext);
-        _advanceTurnHandler = new AdvanceTurnCommandHandler(sessionRepo, unitOfWork, _dbContext);
+        _setTurnOrderHandler = new SetTurnOrderCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System, new DiaryStreamService());
+        _advanceTurnHandler = new AdvanceTurnCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System, new DiaryStreamService());
     }
 
     public async ValueTask DisposeAsync()

@@ -1,10 +1,14 @@
+using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Extensions;
+using Api.Infrastructure;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.Routing;
 
@@ -291,6 +295,69 @@ internal static class SessionFlowEndpoints
         .Produces(200)
         .Produces(204)
         .Produces(401);
+
+        // SSE diary stream (Issue #376)
+        app.MapGet("/sessions/{sessionId:guid}/diary/stream", async (
+            Guid sessionId,
+            HttpContext httpContext,
+            IDiaryStreamService diaryStream,
+            MeepleAiDbContext db,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var sessionOwnerId = await db.SessionTrackingSessions
+                .AsNoTracking()
+                .Where(s => s.Id == sessionId)
+                .Select(s => (Guid?)s.UserId)
+                .FirstOrDefaultAsync(ct)
+                .ConfigureAwait(false);
+
+            if (sessionOwnerId is null) return Results.NotFound();
+            if (sessionOwnerId.Value != userId) return Results.Forbid();
+
+            httpContext.Response.ContentType = "text/event-stream";
+            httpContext.Response.Headers.CacheControl = "no-cache";
+            httpContext.Response.Headers.Connection = "keep-alive";
+
+            var reader = diaryStream.Subscribe(sessionId);
+
+            try
+            {
+                var jsonOpts = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+                await foreach (var entry in reader.ReadAllAsync(ct).ConfigureAwait(false))
+                {
+                    var json = JsonSerializer.Serialize(entry, jsonOpts);
+                    await httpContext.Response.WriteAsync($"id:{entry.Id}\ndata:{json}\n\n", ct).ConfigureAwait(false);
+                    await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Client disconnected — expected
+            }
+            finally
+            {
+                diaryStream.Unsubscribe(sessionId);
+            }
+
+            return Results.Empty;
+        })
+        .RequireAuthenticatedUser()
+        .WithName("SessionFlow_DiaryStream")
+        .WithTags("SessionFlow")
+        .WithSummary("SSE stream of diary events for a session (real-time push).")
+        .Produces(200, contentType: "text/event-stream")
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
 
         // Complete game night (cascade finalize all sessions)
         app.MapPost("/game-nights/{gameNightId:guid}/complete", async (

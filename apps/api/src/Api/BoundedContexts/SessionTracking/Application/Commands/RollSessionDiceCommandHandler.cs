@@ -1,12 +1,15 @@
 using System.Text.Json;
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
+using Api.Infrastructure.Extensions;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -27,19 +30,25 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISessionSyncService _syncService;
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
     public RollSessionDiceCommandHandler(
         ISessionRepository sessionRepository,
         IDiceRollRepository diceRollRepository,
         IUnitOfWork unitOfWork,
         ISessionSyncService syncService,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        TimeProvider timeProvider,
+        IDiaryStreamService diaryStream)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _diceRollRepository = diceRollRepository ?? throw new ArgumentNullException(nameof(diceRollRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task<RollSessionDiceResult> Handle(RollSessionDiceCommand request, CancellationToken cancellationToken)
@@ -64,11 +73,7 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
         // Session Flow v2.1 — T7: append a dice_rolled diary entry alongside the
         // DiceRoll persistence so the cross-game GameNight timeline reflects the
         // action. Resolve GameNightId via the link row (if any).
-        var gameNightId = await _db.GameNightSessions
-            .Where(gns => gns.SessionId == request.SessionId)
-            .Select(gns => (Guid?)gns.GameNightEventId)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var gameNightId = await _db.ResolveGameNightIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
 
         var diaryPayload = JsonSerializer.Serialize(new
         {
@@ -81,20 +86,26 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
             participantId = request.ParticipantId
         });
 
-        _db.SessionEvents.Add(new SessionEventEntity
+        var diaryEntity = new SessionEventEntity
         {
             Id = Guid.NewGuid(),
             SessionId = request.SessionId,
             GameNightId = gameNightId,
             EventType = "dice_rolled",
-            Timestamp = DateTime.UtcNow,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
             Payload = diaryPayload,
             CreatedBy = request.RequesterId,
             Source = "user",
             IsDeleted = false
-        });
+        };
+        _db.SessionEvents.Add(diaryEntity);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _diaryStream.Publish(diaryEntity.SessionId, new SessionEventDto(
+            diaryEntity.Id, diaryEntity.SessionId, diaryEntity.GameNightId,
+            diaryEntity.EventType, diaryEntity.Timestamp, diaryEntity.Payload,
+            diaryEntity.CreatedBy, diaryEntity.Source));
 
         var evt = new DiceRolledEvent
         {

@@ -35,7 +35,12 @@ type DevBadgeComponent = ComponentType<{
   authStore: unknown;
 }>;
 
-type DevPanelMountComponent = ComponentType<{ uiStore: unknown }>;
+type DevPanelMountComponent = ComponentType<{
+  uiStore: unknown;
+  mockControlStore: unknown;
+  handlerGroups: Array<{ name: string; handlers: unknown[] }>;
+  worker: { resetHandlers: (...h: unknown[]) => void };
+}>;
 
 interface MockProviderProps {
   children: React.ReactNode;
@@ -88,6 +93,12 @@ export function MockProvider({ children }: MockProviderProps) {
   const [tools, setTools] = useState<DevToolsBundle | null>(null);
   const [DevBadge, setDevBadge] = useState<DevBadgeComponent | null>(null);
   const [DevPanelMountComp, setDevPanelMountComp] = useState<DevPanelMountComponent | null>(null);
+  const [mswWorker, setMswWorker] = useState<{ resetHandlers: (...h: unknown[]) => void } | null>(
+    null
+  );
+  const [handlerGroups, setHandlerGroups] = useState<Array<{ name: string; handlers: unknown[] }>>(
+    []
+  );
   // Track if panel mount has been loaded to avoid duplicate imports
   const panelMountLoaded = useRef(false);
 
@@ -112,10 +123,21 @@ export function MockProvider({ children }: MockProviderProps) {
         // Load DevPanelMount lazily (same bundle, just isolated via dynamic import)
         if (installed.panel && !panelMountLoaded.current) {
           panelMountLoaded.current = true;
-          import(`${'@'}/dev-tools/panel/DevPanelMount` as string)
-            .then(mod => {
+          Promise.all([
+            import(`${'@'}/dev-tools/panel/DevPanelMount` as string),
+            import(`${'@'}/mocks/browser` as string),
+            import(`${'@'}/mocks/handlers/registry` as string),
+          ])
+            .then(([mountMod, browserMod, registryMod]) => {
               setDevPanelMountComp(
-                () => (mod as { DevPanelMount: DevPanelMountComponent }).DevPanelMount
+                () => (mountMod as { DevPanelMount: DevPanelMountComponent }).DevPanelMount
+              );
+              setMswWorker(
+                (browserMod as { worker: { resetHandlers: (...h: unknown[]) => void } }).worker
+              );
+              setHandlerGroups(
+                (registryMod as { HANDLER_GROUPS: Array<{ name: string; handlers: unknown[] }> })
+                  .HANDLER_GROUPS
               );
             })
             .catch(() => {});
@@ -163,9 +185,13 @@ export function MockProvider({ children }: MockProviderProps) {
       {IS_DEV_MOCK &&
         tools &&
         DevPanelMountComp &&
+        mswWorker &&
         (tools as DevToolsBundle & { panel?: { uiStore: unknown } }).panel && (
           <DevPanelMountComp
             uiStore={(tools as DevToolsBundle & { panel?: { uiStore: unknown } }).panel!.uiStore}
+            mockControlStore={tools.controlStore}
+            handlerGroups={handlerGroups}
+            worker={mswWorker}
           />
         )}
     </>

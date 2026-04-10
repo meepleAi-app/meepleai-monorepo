@@ -91,7 +91,11 @@ export function installDevTools(): InstalledDevTools {
     );
   }
 
-  const panel = installPanel();
+  const panel = installPanel({
+    mockControlStore: controlStore,
+    scenarioStore,
+    authStore,
+  });
 
   return { controlStore, scenarioStore, authStore, panel };
 }

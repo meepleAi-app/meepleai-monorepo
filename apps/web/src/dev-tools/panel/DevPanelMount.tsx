@@ -4,17 +4,33 @@ import { DevPanel } from './DevPanel';
 import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
 import { useQueryStringPanelOpen } from './hooks/useQueryStringPanelOpen';
 
+import type { MockControlState, HandlerGroup } from './sections/TogglesSection';
 import type { PanelUiState } from './stores/panelUiStore';
 import type { StoreApi } from 'zustand/vanilla';
 
 export interface DevPanelMountProps {
   uiStore: StoreApi<PanelUiState>;
+  mockControlStore: StoreApi<MockControlState>;
+  handlerGroups: HandlerGroup[];
+  worker: { resetHandlers: (...handlers: unknown[]) => void };
 }
 
-export function DevPanelMount({ uiStore }: DevPanelMountProps): React.JSX.Element {
+export function DevPanelMount({
+  uiStore,
+  mockControlStore,
+  handlerGroups,
+  worker,
+}: DevPanelMountProps): React.JSX.Element {
   useKeyboardShortcut({ ctrl: true, shift: true, key: 'm' }, () => {
     uiStore.getState().toggle();
   });
   useQueryStringPanelOpen(uiStore);
-  return <DevPanel uiStore={uiStore} />;
+  return (
+    <DevPanel
+      uiStore={uiStore}
+      mockControlStore={mockControlStore}
+      handlerGroups={handlerGroups}
+      worker={worker}
+    />
+  );
 }

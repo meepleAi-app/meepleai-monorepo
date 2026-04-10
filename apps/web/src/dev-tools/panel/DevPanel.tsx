@@ -2,13 +2,19 @@
 
 import type { DevPanelTab } from '@/dev-tools/types';
 
+import { SectionErrorBoundary } from './components/SectionErrorBoundary';
 import { useStoreSlice } from './hooks/useStoreSlice';
+import { TogglesSection } from './sections/TogglesSection';
 
+import type { MockControlState, HandlerGroup } from './sections/TogglesSection';
 import type { PanelUiState } from './stores/panelUiStore';
 import type { StoreApi } from 'zustand/vanilla';
 
 export interface DevPanelProps {
   uiStore: StoreApi<PanelUiState>;
+  mockControlStore: StoreApi<MockControlState>;
+  handlerGroups: HandlerGroup[];
+  worker: { resetHandlers: (...handlers: unknown[]) => void };
 }
 
 const TABS: { id: DevPanelTab; label: string }[] = [
@@ -18,7 +24,12 @@ const TABS: { id: DevPanelTab; label: string }[] = [
   { id: 'inspector', label: 'Inspector' },
 ];
 
-export function DevPanel({ uiStore }: DevPanelProps): React.JSX.Element | null {
+export function DevPanel({
+  uiStore,
+  mockControlStore,
+  handlerGroups,
+  worker,
+}: DevPanelProps): React.JSX.Element | null {
   const isOpen = useStoreSlice(uiStore, s => s.isOpen);
   const activeTab = useStoreSlice(uiStore, s => s.activeTab);
   const drawerWidth = useStoreSlice(uiStore, s => s.drawerWidth);
@@ -105,14 +116,20 @@ export function DevPanel({ uiStore }: DevPanelProps): React.JSX.Element | null {
         aria-labelledby={`panel-tab-${activeTab}`}
         style={{ flex: 1, padding: 16, overflow: 'auto' }}
       >
-        <p style={{ color: '#9ca3af', fontSize: 12 }}>
-          [{activeTab}] section content — coming in M
-          {activeTab === 'toggles'
-            ? '1'
-            : activeTab === 'scenarios' || activeTab === 'auth'
-              ? '2'
-              : '3'}
-        </p>
+        {activeTab === 'toggles' ? (
+          <SectionErrorBoundary sectionName="Toggles">
+            <TogglesSection
+              mockControlStore={mockControlStore}
+              handlerGroups={handlerGroups}
+              worker={worker}
+            />
+          </SectionErrorBoundary>
+        ) : (
+          <p style={{ color: '#9ca3af', fontSize: 12 }}>
+            [{activeTab}] section content — coming in M
+            {activeTab === 'scenarios' || activeTab === 'auth' ? '2' : '3'}
+          </p>
+        )}
       </div>
     </div>
   );

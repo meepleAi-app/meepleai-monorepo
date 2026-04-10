@@ -7,6 +7,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
+using Api.Infrastructure.Extensions;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -97,11 +98,7 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
 
         // Resolve GameNightId via the link row (if any) so the diary entry is
         // correlated with the cross-game timeline.
-        var gameNightId = await _db.GameNightSessions
-            .Where(gns => gns.SessionId == session.Id)
-            .Select(gns => (Guid?)gns.GameNightEventId)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var gameNightId = await _db.ResolveGameNightIdAsync(session.Id, cancellationToken).ConfigureAwait(false);
 
         var finalizedAt = session.FinalizedAt ?? DateTime.UtcNow;
         var durationSeconds = (int)(finalizedAt - session.SessionDate).TotalSeconds;

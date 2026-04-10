@@ -7,6 +7,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
+using Api.Infrastructure.Extensions;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -64,11 +65,7 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
         // Session Flow v2.1 — T7: append a dice_rolled diary entry alongside the
         // DiceRoll persistence so the cross-game GameNight timeline reflects the
         // action. Resolve GameNightId via the link row (if any).
-        var gameNightId = await _db.GameNightSessions
-            .Where(gns => gns.SessionId == request.SessionId)
-            .Select(gns => (Guid?)gns.GameNightEventId)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var gameNightId = await _db.ResolveGameNightIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
 
         var diaryPayload = JsonSerializer.Serialize(new
         {

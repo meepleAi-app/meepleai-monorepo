@@ -4,6 +4,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.Infrastructure.Extensions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -54,11 +55,7 @@ internal sealed class AdvanceTurnCommandHandler : ICommandHandler<AdvanceTurnCom
 
         // Resolve GameNightId via the link row (if any) so the diary entry is
         // correlated with the cross-game timeline.
-        var gameNightId = await _db.GameNightSessions
-            .Where(gns => gns.SessionId == session.Id)
-            .Select(gns => (Guid?)gns.GameNightEventId)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var gameNightId = await _db.ResolveGameNightIdAsync(session.Id, cancellationToken).ConfigureAwait(false);
 
         var payload = JsonSerializer.Serialize(new
         {

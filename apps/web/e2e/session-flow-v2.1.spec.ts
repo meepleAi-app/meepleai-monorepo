@@ -98,6 +98,9 @@ test.describe('Session Flow v2.1', () => {
     const authHelper = new AuthHelper(page);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.user);
+    // Clear Zustand persist state between tests to prevent cross-test bleed
+    await page.goto('about:blank');
+    await page.evaluate(() => localStorage.clear());
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -172,6 +175,11 @@ test.describe('Session Flow v2.1', () => {
       .context()
       .route(`**/api/v1/sessions/${C.SESSION_ID}/diary/stream`, route => route.abort('failed'));
 
+    // Block useSessionSync SSE stream to avoid unhandled network errors
+    await page
+      .context()
+      .route(`**/api/v1/game-sessions/${C.SESSION_ID}/stream`, route => route.abort('failed'));
+
     // Stub session hydration so the detail page does not throw
     await page.context().route(`**/api/v1/live-sessions/${C.SESSION_ID}`, route => {
       if (route.request().method() !== 'GET') return route.continue();
@@ -236,7 +244,6 @@ test.describe('Session Flow v2.1', () => {
     await catanItem.click();
 
     await page.waitForURL(`**/sessions/${C.SESSION_ID}`, { timeout: 10_000 });
-    expect(page.url()).toContain(`/sessions/${C.SESSION_ID}`);
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -288,15 +295,8 @@ test.describe('Session Flow v2.1', () => {
     const gameItem = page.getByTestId(`game-picker-item-${C.GAME_ID_NOT_READY}`);
     await expect(gameItem).toBeVisible({ timeout: 5_000 });
 
-    // Wait for KB status to load (spinner disappears when fetch completes).
-    // GamePickerItem sets disabled={!isReady && !isKbLoading} so the button
-    // gains the disabled attribute only after the query resolves.
-    await expect
-      .poll(() => gameItem.getAttribute('disabled'), {
-        timeout: 5_000,
-        message: 'game item should be disabled after KB readiness resolves to not-ready',
-      })
-      .not.toBeNull();
+    // Wait for KB readiness query to resolve then assert disabled state
+    await expect(gameItem).toBeDisabled({ timeout: 5_000 });
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -361,10 +361,10 @@ test.describe('Session Flow v2.1', () => {
     const sidebar = page.getByTestId('contextual-hand-sidebar');
     await sidebar.waitFor({ state: 'visible', timeout: 10_000 });
 
-    // ── Active: "Pausa" button visible ────────────────────────────────────
-    // The session slot renders a toggle button with text "Pausa" or "Riprendi"
-    const pauseBtn = sidebar.getByRole('button', { name: /^pausa$/i });
+    // ── Active: "Pausa" toggle visible ────────────────────────────────────
+    const pauseBtn = sidebar.getByTestId('pause-resume-toggle');
     await expect(pauseBtn).toBeVisible({ timeout: 5_000 });
+    await expect(pauseBtn).toContainText(/pausa/i);
 
     // ── Click Pausa → POST /pause called ──────────────────────────────────
     await pauseBtn.click();
@@ -372,20 +372,17 @@ test.describe('Session Flow v2.1', () => {
       .poll(() => pauseCalls.length, { timeout: 5_000, message: 'pause endpoint not called' })
       .toBe(1);
 
-    // ── Context flipped to paused: "Riprendi" visible ─────────────────────
-    const resumeBtn = sidebar.getByRole('button', { name: /^riprendi$/i });
-    await expect(resumeBtn).toBeVisible({ timeout: 5_000 });
+    // ── Context flipped to paused: button shows "Riprendi" ────────────────
+    await expect(pauseBtn).toContainText(/riprendi/i, { timeout: 5_000 });
 
     // ── Click Riprendi → POST /resume called ──────────────────────────────
-    await resumeBtn.click();
+    await pauseBtn.click();
     await expect
       .poll(() => resumeCalls.length, { timeout: 5_000, message: 'resume endpoint not called' })
       .toBe(1);
 
-    // ── Back to active: "Pausa" visible again ─────────────────────────────
-    await expect(sidebar.getByRole('button', { name: /^pausa$/i })).toBeVisible({
-      timeout: 5_000,
-    });
+    // ── Back to active: button shows "Pausa" again ────────────────────────
+    await expect(pauseBtn).toContainText(/pausa/i, { timeout: 5_000 });
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -494,8 +491,9 @@ test.describe('Session Flow v2.1', () => {
       timeout: 10_000,
     });
 
-    // Diary panel: 3 diary-entry elements (one per event from both sessions)
+    // Diary panel: wait for first entry to be visible then assert total count
     const diaryEntries = page.getByTestId('diary-entry');
+    await expect(diaryEntries.first()).toBeVisible({ timeout: 5_000 });
     await expect(diaryEntries).toHaveCount(3, { timeout: 5_000 });
   });
 });

@@ -128,7 +128,7 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
                   `${colors.accentBg}/30`
                 )}
               >
-                <ChatStatusBadge status={data.status} showLabel size="md" />
+                <ChatStatusBadge status={data.status} />
                 {data.agentModel && (
                   <span
                     className={cn(

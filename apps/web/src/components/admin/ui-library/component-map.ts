@@ -367,7 +367,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
 
   // Animations
   'fade-in': FadeIn,
-  // 'modal-animations': skipped — exports animation variant objects, not a React component
   'stagger-children': StaggerChildren,
 
   // Tags

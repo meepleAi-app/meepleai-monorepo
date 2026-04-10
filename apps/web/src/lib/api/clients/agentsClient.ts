@@ -514,47 +514,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     },
 
     /**
-     * Save a test result to history (Admin only)
-     * POST /api/v1/admin/test-results → 201 Created { id }
-     * Issue #4962: Wire agent test console to real backend API
-     */
-    async saveTestResult(result: {
-      agentDefinitionId: string;
-      query: string;
-      response: string;
-      modelUsed: string;
-      confidenceScore: number;
-      tokensUsed: number;
-      costEstimate: number;
-      latencyMs: number;
-      strategyOverride?: string;
-      citationsJson?: string;
-    }): Promise<{ id: string }> {
-      const saved = await httpClient.post<{ id: string }>(
-        '/api/v1/admin/test-results',
-        {
-          agentDefinitionId: result.agentDefinitionId,
-          query: result.query,
-          response: result.response,
-          modelUsed: result.modelUsed,
-          confidenceScore: result.confidenceScore,
-          tokensUsed: result.tokensUsed,
-          costEstimate: result.costEstimate,
-          latencyMs: result.latencyMs,
-          strategyOverride: result.strategyOverride,
-          citationsJson: result.citationsJson,
-        },
-        z.object({ id: z.string() })
-      );
-
-      if (!saved) {
-        throw new Error('Failed to save test result: no response from server');
-      }
-
-      return saved;
-    },
-
-    /**
      * Update a user-owned agent (name, strategy)
      * PUT /api/v1/agents/{id}/user
      * Issue #4683: User Agent CRUD Endpoints

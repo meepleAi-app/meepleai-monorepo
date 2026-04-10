@@ -1,4 +1,8 @@
-# Auto-generated migration files - suppress all analyzers
+# Suppress code analysis warnings in EF Core auto-generated migration files.
+# These files are machine-generated and should not be manually edited or held
+# to the same code analysis standards as handwritten code.
+
 [*.cs]
+dotnet_diagnostic.CA1861.severity = none   # constant array arguments
+dotnet_diagnostic.CA1825.severity = none   # avoid zero-length array allocations
 generated_code = true
-dotnet_analyzer_diagnostic.severity = none

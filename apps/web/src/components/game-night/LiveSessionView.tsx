@@ -40,6 +40,7 @@ import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useResponsive } from '@/hooks/useResponsive';
 import { api } from '@/lib/api';
+import { uploadSessionAttachment } from '@/lib/api/clients/sessionAttachmentsClient';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { useDisputeDiary } from '@/lib/domain-hooks/useDisputeDiary';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
@@ -392,6 +393,33 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     [activeSession]
   );
 
+  // ----- Photo capture (GAP-005) -----
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpenPhoto = useCallback(() => {
+    photoInputRef.current?.click();
+  }, []);
+
+  const handlePhotoSelected = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file || !sessionId) return;
+      // Reset so the same file can be re-selected
+      event.target.value = '';
+      // Fire-and-forget upload — does not block the UI
+      void uploadSessionAttachment({
+        sessionId,
+        playerId: activeSession?.players[0]?.id ?? '',
+        file,
+        attachmentType: 'BoardState',
+        caption: `Foto - ${new Date().toLocaleTimeString('it-IT')}`,
+      }).catch(() => {
+        // Silent fail — photo upload must not disrupt the session
+      });
+    },
+    [sessionId, activeSession]
+  );
+
   // ----- Activity events (scores → feed items, newest first) -----
   // Must be above early returns to satisfy rules-of-hooks
   const activityEvents = useMemo<ActivityEvent[]>(() => {
@@ -472,6 +500,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
         onAskArbiter={() => setRulesOpen(true)}
         onTogglePause={handleTogglePause}
         onOpenScores={() => setScoresOpen(true)}
+        onOpenPhoto={handleOpenPhoto}
       />
     </div>
   );
@@ -645,6 +674,15 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
       <div className="px-4 pb-8 space-y-4">
         <LiveScoreboard players={scoreboardPlayers} isRealTime={isConnected} />
         <ScoreAssistant sessionId={sessionId} onScoreRecorded={loadScores} />
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*,image/heic"
+          capture="environment"
+          className="sr-only"
+          onChange={handlePhotoSelected}
+          aria-hidden="true"
+        />
         <QuickActions
           isPaused={isPaused}
           isLoading={isLoading}
@@ -652,6 +690,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
           onAskArbiter={() => setRulesOpen(true)}
           onTogglePause={handleTogglePause}
           onOpenScores={() => setScoresOpen(true)}
+          onOpenPhoto={handleOpenPhoto}
         />
         {/* Setup suggestion chips - show only when chat is empty (mobile) */}
         {chatMessages.length === 0 && agentId && (

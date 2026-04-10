@@ -58,84 +58,98 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
 
         Guid? gameNightId = ownLinkRow?.GameNightEventId;
 
-        // Invariant guard: free every other "InProgress" link slot in the same GameNight
-        // BEFORE flipping our own row to InProgress, so we never violate the partial unique
-        // index from T1. We persist the auto-pauses in their own SaveChanges call so the
-        // unique constraint is satisfied at every transaction boundary — EF batches multiple
-        // UPDATEs in arbitrary order otherwise, which can momentarily leave two
-        // <c>InProgress</c> link rows visible to the index check.
-        if (gameNightId.HasValue)
+        // Wrap ALL mutations in an explicit transaction so that auto-pausing siblings
+        // and resuming the target session commit (or roll back) atomically.
+        // The two SaveChangesAsync calls are still needed to satisfy the partial unique
+        // index (the first flush clears sibling InProgress rows before the second flush
+        // sets this session's row to InProgress), but both live inside a single
+        // transaction — if the second save fails, the first is rolled back too.
+        await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        try
         {
-            var otherInProgressLinks = await _db.GameNightSessions
-                .Where(gns =>
-                    gns.GameNightEventId == gameNightId.Value &&
-                    gns.SessionId != session.Id &&
-                    gns.Status == nameof(GameNightSessionStatus.InProgress))
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            if (otherInProgressLinks.Count > 0)
+            // Invariant guard: free every other "InProgress" link slot in the same GameNight
+            // BEFORE flipping our own row to InProgress, so the partial unique index from T1
+            // never sees two InProgress rows at commit time.
+            if (gameNightId.HasValue)
             {
-                foreach (var otherLink in otherInProgressLinks)
+                var otherInProgressLinks = await _db.GameNightSessions
+                    .Where(gns =>
+                        gns.GameNightEventId == gameNightId.Value &&
+                        gns.SessionId != session.Id &&
+                        gns.Status == nameof(GameNightSessionStatus.InProgress))
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (otherInProgressLinks.Count > 0)
                 {
-                    // Free the link slot first — the unique index is the hard invariant.
-                    otherLink.Status = GameNightSessionStatus.Pending.ToString();
-
-                    var other = await _sessionRepository
-                        .GetByIdAsync(otherLink.SessionId, cancellationToken)
-                        .ConfigureAwait(false);
-
-                    if (other is null || other.Status != SessionStatus.Active)
+                    foreach (var otherLink in otherInProgressLinks)
                     {
-                        continue;
+                        // Free the link slot first — the unique index is the hard invariant.
+                        otherLink.Status = GameNightSessionStatus.Pending.ToString();
+
+                        var other = await _sessionRepository
+                            .GetByIdAsync(otherLink.SessionId, cancellationToken)
+                            .ConfigureAwait(false);
+
+                        if (other is null || other.Status != SessionStatus.Active)
+                        {
+                            continue;
+                        }
+
+                        other.Pause();
+                        await _sessionRepository.UpdateAsync(other, cancellationToken).ConfigureAwait(false);
+
+                        _db.SessionEvents.Add(new SessionEventEntity
+                        {
+                            Id = Guid.NewGuid(),
+                            SessionId = other.Id,
+                            GameNightId = gameNightId,
+                            EventType = "session_paused",
+                            Timestamp = DateTime.UtcNow,
+                            Payload = "{\"reason\":\"auto_pause_on_resume\"}",
+                            CreatedBy = request.UserId,
+                            Source = "system",
+                            IsDeleted = false
+                        });
                     }
 
-                    other.Pause();
-                    await _sessionRepository.UpdateAsync(other, cancellationToken).ConfigureAwait(false);
-
-                    _db.SessionEvents.Add(new SessionEventEntity
-                    {
-                        Id = Guid.NewGuid(),
-                        SessionId = other.Id,
-                        GameNightId = gameNightId,
-                        EventType = "session_paused",
-                        Timestamp = DateTime.UtcNow,
-                        Payload = "{\"reason\":\"auto_pause_on_resume\"}",
-                        CreatedBy = request.UserId,
-                        Source = "system",
-                        IsDeleted = false
-                    });
+                    // Flush auto-pauses so the partial unique index sees zero InProgress
+                    // rows before the next flush adds ours back.
+                    await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 }
-
-                // Persist the auto-pauses BEFORE flipping our own row to InProgress so the
-                // partial unique index never sees two InProgress rows for the same night.
-                await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             }
+
+            // Domain rule: throws ConflictException when not Paused.
+            session.Resume();
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+
+            // Reclaim the link slot for the resumed session.
+            if (ownLinkRow is not null)
+            {
+                ownLinkRow.Status = GameNightSessionStatus.InProgress.ToString();
+            }
+
+            _db.SessionEvents.Add(new SessionEventEntity
+            {
+                Id = Guid.NewGuid(),
+                SessionId = session.Id,
+                GameNightId = gameNightId,
+                EventType = "session_resumed",
+                Timestamp = DateTime.UtcNow,
+                Payload = "{}",
+                CreatedBy = request.UserId,
+                Source = "system",
+                IsDeleted = false
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
         }
-
-        // Domain rule: throws ConflictException when not Paused.
-        session.Resume();
-        await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-
-        // Reclaim the link slot for the resumed session.
-        if (ownLinkRow is not null)
+        catch
         {
-            ownLinkRow.Status = GameNightSessionStatus.InProgress.ToString();
+            await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
+            throw;
         }
-
-        _db.SessionEvents.Add(new SessionEventEntity
-        {
-            Id = Guid.NewGuid(),
-            SessionId = session.Id,
-            GameNightId = gameNightId,
-            EventType = "session_resumed",
-            Timestamp = DateTime.UtcNow,
-            Payload = "{}",
-            CreatedBy = request.UserId,
-            Source = "system",
-            IsDeleted = false
-        });
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

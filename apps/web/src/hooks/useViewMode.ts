@@ -46,7 +46,7 @@ export function useViewMode(): UseViewModeResult {
     const next: ViewMode = viewMode === 'admin' ? 'user' : 'admin';
     writeViewModeCookie(next);
     setViewMode(next);
-    router.push(next === 'admin' ? '/admin/overview' : '/');
+    router.push(next === 'admin' ? '/admin/overview' : '/library');
   }, [viewMode, router]);
 
   return { viewMode, toggle };

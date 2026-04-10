@@ -1,9 +1,11 @@
 /**
  * Game Night Detail Page
  * Issue #33 — P3 Game Night Frontend
+ * Enhanced: Plan 2 Task 5 — Session Flow v2.1 (sessions list, diary, complete action)
  *
  * Shows game night info, RSVP buttons, and participant list.
  * For Draft events, renders the full GameNightPlanningLayout.
+ * For Published/Completed events, renders sessions list, diary, and actions.
  */
 
 'use client';
@@ -13,6 +15,9 @@ import { use, useEffect } from 'react';
 import { Calendar, Check, Edit, HelpCircle, MapPin, Send, Users, X, XCircle } from 'lucide-react';
 import Link from 'next/link';
 
+import { GameNightActions } from '@/components/game-night/GameNightActions';
+import { GameNightDiaryPanel } from '@/components/game-night/GameNightDiaryPanel';
+import { GameNightSessionsList } from '@/components/game-night/GameNightSessionsList';
 import { GameNightPlanningLayout } from '@/components/game-night/planning/GameNightPlanningLayout';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +34,7 @@ import { useSharedGames } from '@/hooks/queries/useSharedGames';
 import { useToast } from '@/hooks/useToast';
 import type { RsvpStatus } from '@/lib/api/schemas/game-nights.schemas';
 import { useGameNightStore } from '@/stores/game-night';
+import type { GameNightActiveSession } from '@/stores/game-night/types';
 
 export default function GameNightDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -44,7 +50,7 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
   const isDraft = event?.status === 'Draft';
   const { data: catalogData } = useSharedGames(undefined, isDraft);
 
-  const { addPlayer, addGame, reset } = useGameNightStore();
+  const { addPlayer, addGame, reset, activeSessions } = useGameNightStore();
 
   // Sync accepted RSVPs and game IDs from the event into the planning store
   useEffect(() => {
@@ -139,6 +145,9 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
 
   const scheduledDate = new Date(event.scheduledAt);
   const isCancelled = event.status === 'Cancelled';
+  const isCompleted = event.status === 'Completed';
+  const isLive = event.status === 'Published';
+  const hasActiveSession = activeSessions.some(s => s.status === 'in_progress');
 
   // Build availableGames list from catalog for the planning picker
   const availableGames = (catalogData?.items ?? []).map(g => ({
@@ -154,7 +163,10 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-quicksand">{event.title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold font-quicksand">{event.title}</h1>
+            <GameNightStatusBadge status={event.status} />
+          </div>
           <p className="text-muted-foreground font-nunito">Organizzata da {event.organizerName}</p>
         </div>
         <div className="flex gap-2">
@@ -172,7 +184,7 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
               </Button>
             </>
           )}
-          {!isCancelled && !isDraft && (
+          {!isCancelled && !isDraft && !isCompleted && (
             <Button
               size="sm"
               variant="destructive"
@@ -224,6 +236,25 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
 
       {/* Planning Layout — shown for Draft events */}
       {isDraft && <GameNightPlanningLayout title={event.title} availableGames={availableGames} />}
+
+      {/* Session Flow sections — shown for Published or Completed events */}
+      {(isLive || isCompleted) && (
+        <>
+          {/* Actions bar */}
+          <GameNightActions
+            gameNightId={id}
+            hasActiveSession={hasActiveSession}
+            sessionCount={activeSessions.length}
+            isCompleted={isCompleted}
+          />
+
+          {/* Sessions list */}
+          <GameNightSessionsList sessions={activeSessions} gameNightId={id} />
+
+          {/* Cross-session diary timeline */}
+          <GameNightDiaryPanel gameNightId={id} />
+        </>
+      )}
 
       {/* RSVP Buttons */}
       {!isDraft && !isCancelled && (
@@ -287,6 +318,23 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
       )}
     </div>
   );
+}
+
+// ─── Helper components ──────────────────────────────────────────────────────
+
+function GameNightStatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case 'Draft':
+      return <Badge variant="secondary">Bozza</Badge>;
+    case 'Published':
+      return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Attiva</Badge>;
+    case 'Completed':
+      return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Completata</Badge>;
+    case 'Cancelled':
+      return <Badge variant="destructive">Annullata</Badge>;
+    default:
+      return <Badge variant="secondary">{status}</Badge>;
+  }
 }
 
 function RsvpBadge({ status }: { status: string }) {

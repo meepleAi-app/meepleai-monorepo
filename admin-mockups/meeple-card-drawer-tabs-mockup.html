@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MeepleAI — Card Page + Drawer Tabs Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--
+  NOTE: This is a static design mockup for internal use only.
+  All data is hardcoded mock content — no user input is processed.
+  innerHTML usage is safe here as all content is developer-authored constants.
+  This file is NOT served to end users or deployed to production.
+-->
+<style>
+:root {
+  --bg: #faf8f5;
+  --bg-card: rgba(255,255,255,0.92);
+  --bg-muted: #f1ede8;
+  --text: #1a1a2e;
+  --text-sec: #64748b;
+  --text-muted: #94a3b8;
+  --border: rgba(0,0,0,0.07);
+  --border-light: rgba(0,0,0,0.04);
+  --shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.06), 0 1px 2px rgba(180,130,80,0.04);
+  --shadow-warm-md: 0 4px 12px rgba(180,130,80,0.08), 0 2px 4px rgba(180,130,80,0.04);
+  --shadow-warm-lg: 0 10px 30px rgba(180,130,80,0.12), 0 4px 8px rgba(180,130,80,0.06);
+  --shadow-warm-xl: 0 20px 50px rgba(180,130,80,0.16), 0 8px 16px rgba(180,130,80,0.08);
+  --phone-w: 390px; --phone-h: 844px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Nunito',sans-serif; background:#e8e4df; color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:24px 16px; }
+h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
+.page-title { text-align:center; margin-bottom:16px; }
+.page-title h1 { font-size:1.4rem; }
+.page-title p { color:var(--text-sec); font-size:0.8rem; margin-top:4px; }
+.entity-switcher { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-bottom:20px; max-width:800px; }
+.entity-btn { padding:6px 14px; border-radius:20px; border:2px solid var(--border); background:var(--bg-card); font-family:'Quicksand',sans-serif; font-size:11px; font-weight:700; cursor:pointer; color:var(--text-sec); transition:all 0.25s; display:flex; align-items:center; gap:5px; }
+.entity-btn:hover { transform:translateY(-1px); box-shadow:var(--shadow-warm-md); }
+.entity-btn.active { color:white; border-color:transparent; box-shadow:var(--shadow-warm-lg); }
+.entity-btn .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.mockup-row { display:flex; gap:32px; flex-wrap:wrap; justify-content:center; align-items:flex-start; }
+.mockup-col { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.mockup-label { font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.8rem; color:var(--text-sec); text-transform:uppercase; letter-spacing:0.08em; }
+.phone { width:var(--phone-w); height:var(--phone-h); background:var(--bg); border-radius:40px; border:3px solid #c8c0b5; box-shadow: 0 30px 80px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.4); overflow:hidden; position:relative; display:flex; flex-direction:column; }
+.status-bar { height:48px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 28px 6px; font-size:12px; font-weight:600; flex-shrink:0; }
+.status-bar .time { font-weight:700; }
+.status-bar .icons { display:flex; gap:4px; font-size:11px; }
+.navbar { height:52px; display:flex; align-items:center; padding:0 16px; background:var(--bg-card); backdrop-filter:blur(12px) saturate(180%); border-bottom:1px solid var(--border); flex-shrink:0; gap:10px; }
+.navbar .back-btn { width:32px; height:32px; border-radius:50%; background:var(--bg-muted); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--text-sec); }
+.navbar .nav-title { font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.95rem; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.navbar .nav-action { width:32px; height:32px; border-radius:50%; background:var(--bg-muted); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--text-sec); }
+.page-content { flex:1; overflow-y:auto; scrollbar-width:none; }
+.page-content::-webkit-scrollbar { display:none; }
+.hero-section { position:relative; height:200px; overflow:hidden; }
+.hero-img { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:80px; }
+.hero-gradient { position:absolute; bottom:0; left:0; right:0; height:80px; background:linear-gradient(to top, var(--bg) 0%, transparent 100%); }
+.hero-badge { position:absolute; top:12px; left:16px; padding:4px 12px; border-radius:20px; font-family:'Quicksand',sans-serif; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:white; backdrop-filter:blur(8px); }
+.hero-rating { position:absolute; top:12px; right:16px; padding:4px 10px; border-radius:12px; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); color:#fbbf24; font-size:12px; font-weight:700; display:flex; align-items:center; gap:4px; }
+.card-info { padding:16px; }
+.card-info .title { font-family:'Quicksand',sans-serif; font-size:1.3rem; font-weight:700; line-height:1.2; }
+.card-info .subtitle { font-size:0.82rem; color:var(--text-sec); margin-top:2px; }
+.card-info .meta-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.meta-chip { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--text-sec); background:var(--bg-muted); padding:4px 10px; border-radius:16px; font-weight:600; }
+.quick-actions-row { display:flex; gap:8px; padding:0 16px 12px; }
+.qa-pill { padding:8px 16px; border-radius:20px; border:1px solid var(--border); background:var(--bg-card); font-family:'Quicksand',sans-serif; font-size:12px; font-weight:700; cursor:pointer; color:var(--text-sec); transition:all 0.2s; display:flex; align-items:center; gap:6px; }
+.qa-pill.primary { color:white; border-color:transparent; }
+.card-nav-footer { display:flex; align-items:center; justify-content:center; gap:6px; padding:8px 16px; border-top:1px solid var(--border-light); border-bottom:1px solid var(--border-light); background:var(--bg-card); }
+.nav-item { display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; padding:4px 10px; border-radius:10px; transition:background 0.2s; }
+.nav-item:hover { background:var(--bg-muted); }
+.nav-item .nav-icon { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; border:1px solid var(--border); background:var(--bg-card); position:relative; }
+.nav-item .nav-label { font-size:8px; font-weight:700; color:var(--text-sec); font-family:'Quicksand',sans-serif; text-transform:uppercase; }
+.nav-badge { position:absolute; top:-3px; right:-3px; min-width:14px; height:14px; border-radius:7px; font-size:7px; font-weight:800; color:white; display:flex; align-items:center; justify-content:center; padding:0 3px; }
+.section { padding:16px; }
+.section-title { font-family:'Quicksand',sans-serif; font-size:0.85rem; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.info-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
+.info-row .label { color:var(--text-muted); }
+.info-row .value { font-weight:600; }
+.stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+.stat-box { padding:10px; border-radius:10px; background:var(--bg-muted); text-align:center; }
+.stat-box .stat-val { font-size:1.2rem; font-weight:800; font-family:'Quicksand',sans-serif; }
+.stat-box .stat-label { font-size:9px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
+.mini-list { display:flex; flex-direction:column; gap:6px; }
+.mini-item { display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-warm-sm); }
+.mini-item .mi-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.mini-item .mi-text { flex:1; }
+.mini-item .mi-title { font-size:12px; font-weight:700; }
+.mini-item .mi-sub { font-size:10px; color:var(--text-sec); }
+.mini-item .mi-badge { padding:3px 8px; border-radius:10px; font-size:9px; font-weight:700; color:white; }
+.drawer-overlay { position:absolute; inset:0; z-index:50; pointer-events:none; transition:background 0.35s; }
+.drawer-overlay.open { background:rgba(0,0,0,0.35); pointer-events:auto; }
+.drawer-panel { position:absolute; left:0; right:0; bottom:0; height:60%; background:var(--bg-card); backdrop-filter:blur(16px) saturate(180%); border-top:1px solid var(--border); box-shadow:0 -8px 32px rgba(0,0,0,0.12); border-radius:20px 20px 0 0; transform:translateY(105%); transition:transform 0.4s cubic-bezier(0.4,0,0.2,1); display:flex; flex-direction:column; overflow:hidden; z-index:51; }
+.drawer-overlay.open .drawer-panel { transform:translateY(0); }
+.drawer-handle-area { display:flex; align-items:center; justify-content:center; padding:8px 0 4px; flex-shrink:0; cursor:grab; }
+.drawer-handle { width:36px; height:4px; border-radius:2px; background:var(--border); }
+.drawer-header { display:flex; align-items:center; gap:8px; padding:4px 16px 8px; flex-shrink:0; }
+.drawer-header .dh-icon { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-size:13px; font-weight:700; }
+.drawer-header .dh-title { font-family:'Quicksand',sans-serif; font-size:0.9rem; font-weight:700; }
+.drawer-header .dh-close { margin-left:auto; width:28px; height:28px; border-radius:50%; background:var(--bg-muted); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--text-sec); }
+.drawer-tabs { display:flex; padding:0 12px; gap:0; border-bottom:1px solid var(--border); flex-shrink:0; overflow-x:auto; scrollbar-width:none; }
+.drawer-tabs::-webkit-scrollbar { display:none; }
+.drawer-tab { padding:8px 12px; font-size:11px; font-weight:700; font-family:'Quicksand',sans-serif; color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent; transition:color 0.2s, border-color 0.2s; background:transparent; border-top:none; border-left:none; border-right:none; white-space:nowrap; display:flex; align-items:center; gap:5px; flex-shrink:0; }
+.drawer-tab.active { border-bottom-color:currentColor; }
+.drawer-tab:hover { color:var(--text); }
+.drawer-tab .tab-badge { min-width:16px; height:16px; border-radius:8px; font-size:8px; font-weight:800; color:white; display:flex; align-items:center; justify-content:center; padding:0 4px; }
+.drawer-content { flex:1; padding:12px 16px; overflow-y:auto; font-size:13px; color:var(--text-sec); line-height:1.6; scrollbar-width:none; }
+.drawer-content::-webkit-scrollbar { display:none; }
+.drawer-content h4 { font-size:13px; color:var(--text); margin-bottom:6px; font-family:'Quicksand',sans-serif; }
+.progress-bar { height:6px; border-radius:3px; background:var(--bg-muted); overflow:hidden; margin:4px 0; }
+.progress-fill { height:100%; border-radius:3px; }
+.chat-bubble { padding:8px 12px; border-radius:12px; font-size:12px; line-height:1.5; max-width:85%; margin-bottom:6px; }
+.chat-bubble.user { background:var(--bg-muted); margin-left:auto; border-bottom-right-radius:4px; }
+.chat-bubble.assistant { border:1px solid var(--border); border-bottom-left-radius:4px; }
+.chat-bubble .cb-time { font-size:9px; color:var(--text-muted); margin-top:2px; }
+.photo-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+.photo-thumb { aspect-ratio:1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.timeline-item { display:flex; gap:8px; padding:6px 0; border-bottom:1px solid var(--border-light); }
+.timeline-dot { width:8px; height:8px; border-radius:50%; margin-top:4px; flex-shrink:0; }
+.timeline-text { font-size:11px; }
+.timeline-text .tl-time { color:var(--text-muted); font-size:10px; }
+.action-group { display:flex; flex-direction:column; gap:6px; }
+.action-btn { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:10px; background:var(--bg-muted); border:none; cursor:pointer; font-family:'Nunito',sans-serif; font-size:12px; font-weight:600; width:100%; text-align:left; }
+.action-btn.danger { color:hsl(0,70%,50%); }
+.config-row { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg-muted); border-radius:8px; margin-bottom:4px; font-size:12px; }
+.config-row .ck { font-family:monospace; color:var(--text-sec); font-size:11px; }
+.config-row .cv { font-weight:700; }
+.tool-preview { padding:12px; border-radius:12px; background:var(--bg-muted); text-align:center; margin:8px 0; }
+.tool-preview .tp-display { font-size:2rem; font-weight:800; font-family:'Quicksand',sans-serif; margin:8px 0; }
+.tool-preview .tp-controls { display:flex; gap:8px; justify-content:center; margin-top:8px; }
+.tool-preview .tp-btn { padding:6px 16px; border-radius:16px; border:1px solid var(--border); background:var(--bg-card); font-size:11px; font-weight:700; cursor:pointer; font-family:'Quicksand',sans-serif; }
+.tool-preview .tp-btn.primary { color:white; border-color:transparent; }
+.status-dot { width:6px; height:6px; border-radius:50%; display:inline-block; margin-right:4px; }
+.status-dot.green { background:hsl(142,70%,45%); }
+.status-dot.amber { background:hsl(38,92%,50%); }
+.status-dot.blue { background:hsl(220,80%,55%); }
+.bottom-bar { height:52px; flex-shrink:0; display:flex; align-items:center; justify-content:space-around; padding:0 16px 12px; background:var(--bg-card); backdrop-filter:blur(16px) saturate(180%); border-top:1px solid var(--border); }
+.bottom-item { display:flex; flex-direction:column; align-items:center; gap:1px; cursor:pointer; font-size:18px; }
+.bottom-item .bl { font-size:8px; font-weight:700; color:var(--text-sec); font-family:'Quicksand',sans-serif; }
+@media (max-width:480px) { .phone { width:100%; height:100vh; border-radius:0; border:none; } body { padding:0; } .page-title, .entity-switcher, .mockup-label { display:none; } }
+</style>
+</head>
+<body>
+<div class="page-title">
+  <h1>MeepleAI — Card Page + Drawer Tabs</h1>
+  <p>Ogni entity ha una pagina detail e un drawer con tab specifici. Seleziona un entity type per esplorare.</p>
+</div>
+<div class="entity-switcher" id="entity-switcher"></div>
+<div class="mockup-row">
+  <div class="mockup-col">
+    <span class="mockup-label" id="phone1-label">Card Page</span>
+    <div class="phone" id="phone-page">
+      <div class="status-bar"><span class="time">14:32</span><div class="icons"><span>📶</span><span>🔋</span></div></div>
+      <div class="navbar" id="page-navbar"></div>
+      <div class="page-content" id="page-content"></div>
+      <div class="bottom-bar">
+        <div class="bottom-item"><span>🏠</span><span class="bl">Home</span></div>
+        <div class="bottom-item"><span>🔍</span><span class="bl">Cerca</span></div>
+        <div class="bottom-item"><span>📚</span><span class="bl">Libreria</span></div>
+        <div class="bottom-item"><span>💬</span><span class="bl">Chat</span></div>
+        <div class="bottom-item"><span>👤</span><span class="bl">Profilo</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup-col">
+    <span class="mockup-label" id="phone2-label">Drawer View</span>
+    <div class="phone" id="phone-drawer">
+      <div class="status-bar"><span class="time">14:32</span><div class="icons"><span>📶</span><span>🔋</span></div></div>
+      <div class="navbar" id="drawer-navbar"></div>
+      <div class="page-content" id="drawer-page-bg" style="opacity:0.3;filter:blur(1px);pointer-events:none;"></div>
+      <div class="drawer-overlay open" id="drawer-overlay">
+        <div class="drawer-panel" onclick="event.stopPropagation()">
+          <div class="drawer-handle-area"><div class="drawer-handle"></div></div>
+          <div class="drawer-header" id="drawer-header"></div>
+          <div class="drawer-tabs" id="drawer-tabs"></div>
+          <div class="drawer-content" id="drawer-content"></div>
+        </div>
+      </div>
+      <div class="bottom-bar" style="opacity:0.3;">
+        <div class="bottom-item"><span>🏠</span><span class="bl">Home</span></div>
+        <div class="bottom-item"><span>🔍</span><span class="bl">Cerca</span></div>
+        <div class="bottom-item"><span>📚</span><span class="bl">Libreria</span></div>
+        <div class="bottom-item"><span>💬</span><span class="bl">Chat</span></div>
+        <div class="bottom-item"><span>👤</span><span class="bl">Profilo</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div style="max-width:960px;margin:32px auto 16px;">
+  <h2 style="font-size:1rem;text-align:center;margin-bottom:4px;">Drawer Tab Specification</h2>
+  <p style="text-align:center;font-size:0.75rem;color:var(--text-sec);margin-bottom:12px;" id="spec-table-sub">Tab configuration per entity type selezionato</p>
+</div>
+<table id="spec-table" style="width:100%;max-width:900px;margin:0 auto 40px;border-collapse:collapse;font-size:12px;">
+  <thead><tr id="spec-thead-row" style="color:white;font-family:'Quicksand',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">
+    <th style="padding:10px 12px;text-align:left;">#</th><th style="padding:10px 12px;text-align:left;">Tab ID</th><th style="padding:10px 12px;text-align:left;">Label</th><th style="padding:10px 12px;text-align:left;">Icona</th><th style="padding:10px 12px;text-align:left;">Contenuto</th><th style="padding:10px 12px;text-align:left;">Badge</th>
+  </tr></thead>
+  <tbody id="spec-table-body"></tbody>
+</table>
+
+<script>
+/*
+ * STATIC MOCKUP — All content is developer-authored constants.
+ * No user input is processed. DOM manipulation uses only hardcoded strings.
+ */
+var ENTITIES={game:{color:{h:25,s:95,l:45},emoji:"\u{1F3B2}",label:"Game",title:"Azul",subtitle:"Plan B Games \u00B7 2017",cover:"linear-gradient(135deg, #1e88e5 0%, #0d47a1 50%, #ffc107 100%)",coverEmoji:"\u{1F537}",rating:7.8,badge:"In Libreria",meta:[{icon:"\u{1F465}",val:"2\u20134"},{icon:"\u23F1\uFE0F",val:"30\u201345m"},{icon:"\u{1F9E9}",val:"1.77"}],navItems:[{icon:"\u{1F4DA}",label:"KB",entity:"kb",count:3},{icon:"\u{1F916}",label:"Agent",entity:"agent",count:1},{icon:"\u{1F4AC}",label:"Chat",entity:"chat",count:5},{icon:"\u{1F3AF}",label:"Sessioni",entity:"session",count:23}],actions:["\u25B6\uFE0F Gioca","\u{1F916} Chiedi AI","\u2764\uFE0F Wishlist"],tabs:[{id:"details",label:"Dettagli",icon:"\u2139\uFE0F",specIcon:"Info",desc:"Publisher, anno, players, durata, complessita"},{id:"rules",label:"Regole",icon:"\u{1F4D6}",specIcon:"BookOpen",badge:12,desc:"FAQ count, documenti regole, link a KB docs",badgeLabel:"faqCount"},{id:"stats",label:"Statistiche",icon:"\u{1F4CA}",specIcon:"BarChart3",badge:23,desc:"Partite giocate, win rate, ultimo giocato",badgeLabel:"totalPlays"},{id:"kb",label:"KB",icon:"\u{1F4C4}",specIcon:"FileText",badge:3,desc:"Documenti indicizzati, stato indexing",badgeLabel:"kbDocCount"},{id:"agent",label:"Agente",icon:"\u{1F916}",specIcon:"Bot",desc:"Agente associato, stato, invocazioni"}]},player:{color:{h:262,s:83,l:58},emoji:"\u{1F464}",label:"Player",title:"Marco R.",subtitle:"Membro dal Gen 2025 \u00B7 89 partite",cover:"linear-gradient(135deg, hsl(262,83%,58%), hsl(262,60%,35%))",coverEmoji:"\u{1F464}",badge:"Pro Player",meta:[{icon:"\u{1F3C6}",val:"47 vittorie"},{icon:"\u{1F3B2}",val:"89 partite"},{icon:"\u{1F4CA}",val:"52.8%"}],navItems:[{icon:"\u{1F3C6}",label:"Vittorie",entity:"player",count:47},{icon:"\u{1F3AF}",label:"Partite",entity:"session",count:89},{icon:"\u2B50",label:"Preferiti",entity:"game",count:5},{icon:"\u{1F3C5}",label:"Trofei",entity:"player",count:8}],actions:["\u{1F4CA} Confronta","\u{1F4AC} Messaggio"],tabs:[{id:"overview",label:"Profilo",icon:"\u{1F464}",specIcon:"User",desc:"Nome, avatar, giochi preferiti, membro dal"},{id:"stats",label:"Statistiche",icon:"\u{1F3C6}",specIcon:"Trophy",badge:47,desc:"Vittorie, partite, win rate, distribuzione giochi",badgeLabel:"totalWins"},{id:"history",label:"Cronologia",icon:"\u{1F4DC}",specIcon:"History",badge:89,desc:"Ultime 10 partite con risultato e punteggio",badgeLabel:"totalSessions"},{id:"achievements",label:"Trofei",icon:"\u{1F3C5}",specIcon:"Award",badge:8,desc:"Badge sbloccati, progresso achievement",badgeLabel:"achievementCount"}]},session:{color:{h:240,s:60,l:55},emoji:"\u{1F3AF}",label:"Session",title:"Serata Azul",subtitle:"Azul \u00B7 Casa di Marco \u00B7 In corso",cover:"linear-gradient(135deg, hsl(240,60%,55%), hsl(240,40%,30%))",coverEmoji:"\u{1F3AF}",badge:"In Corso",meta:[{icon:"\u{1F465}",val:"4 giocatori"},{icon:"\u23F1\uFE0F",val:"45 min"},{icon:"\u{1F4CA}",val:"Turno 3/5"}],navItems:[{icon:"\u{1F465}",label:"Giocatori",entity:"player",count:4},{icon:"\u{1F4DD}",label:"Note",entity:"session",count:1},{icon:"\u{1F527}",label:"Tools",entity:"tool",count:3},{icon:"\u{1F4F7}",label:"Foto",entity:"session",count:4}],actions:["\u25B6\uFE0F Riprendi","\u{1F9F0} Toolkit","\u{1F4E4} Condividi"],tabs:[{id:"overview",label:"Overview",icon:"\u{1F4CB}",specIcon:"Layers",desc:"Gioco, stato, turno, durata, codice sessione"},{id:"scoreboard",label:"Classifica",icon:"\u{1F3C6}",specIcon:"Trophy",badge:4,desc:"Punteggi per round, ranking giocatori",badgeLabel:"playerCount"},{id:"toolkit",label:"Toolkit",icon:"\u{1F527}",specIcon:"Wrench",badge:3,desc:"Dadi, carte, timer, contatori attivi",badgeLabel:"toolCount"},{id:"notes",label:"Note",icon:"\u{1F4DD}",specIcon:"FileText",desc:"Note di sessione, eventi timeline"},{id:"media",label:"Media",icon:"\u{1F4F7}",specIcon:"Camera",badge:4,desc:"Foto, screenshot della sessione",badgeLabel:"photoCount"}]},agent:{color:{h:38,s:92,l:50},emoji:"\u{1F916}",label:"Agent",title:"Azul Rules Expert",subtitle:"RAG Strategy \u00B7 GPT-4o-mini \u00B7 Attivo",cover:"linear-gradient(135deg, hsl(38,92%,50%), hsl(38,70%,30%))",coverEmoji:"\u{1F916}",badge:"Attivo",meta:[{icon:"\u{1F4AC}",val:"342 invocazioni"},{icon:"\u{1F4DA}",val:"3 documenti"},{icon:"\u26A1",val:"1.2s"}],navItems:[{icon:"\u{1F4AC}",label:"Chat",entity:"chat",count:5},{icon:"\u{1F4DA}",label:"KB",entity:"kb",count:3},{icon:"\u{1F9E0}",label:"Memorie",entity:"agent"},{icon:"\u2699\uFE0F",label:"Config",entity:"agent"}],actions:["\u{1F4AC} Chat","\u{1F4CA} Stats","\u2699\uFE0F Config"],tabs:[{id:"overview",label:"Overview",icon:"\u{1F916}",specIcon:"Bot",desc:"Nome, tipo, strategia, modello, stato, gioco collegato"},{id:"stats",label:"Statistiche",icon:"\u26A1",specIcon:"Zap",badge:342,desc:"Invocazioni, latenza media, ultima invocazione",badgeLabel:"invocationCount"},{id:"kb",label:"KB",icon:"\u{1F4C4}",specIcon:"FileText",badge:3,desc:"Documenti associati, stato indexing",badgeLabel:"kbDocCount"},{id:"config",label:"Config",icon:"\u2699\uFE0F",specIcon:"Settings",desc:"Parametri strategia, temperatura, max tokens (read-only)"}]},kb:{color:{h:174,s:60,l:40},emoji:"\u{1F4C4}",label:"KB",title:"azul-regole-ita.pdf",subtitle:"2.4 MB \u00B7 12 pagine \u00B7 Indicizzato",cover:"linear-gradient(135deg, hsl(174,60%,40%), hsl(174,40%,25%))",coverEmoji:"\u{1F4C4}",badge:"Indicizzato",meta:[{icon:"\u{1F4CA}",val:"47 chunks"},{icon:"\u{1F4C4}",val:"12 pagine"},{icon:"\u{1F4BE}",val:"2.4 MB"}],navItems:[{icon:"\u{1F4CA}",label:"Chunks",entity:"kb",count:47},{icon:"\u{1F504}",label:"Reindex",entity:"kb"},{icon:"\u{1F441}\uFE0F",label:"Anteprima",entity:"kb"},{icon:"\u2B07\uFE0F",label:"Download",entity:"kb"}],actions:["\u{1F441}\uFE0F Anteprima","\u{1F504} Reindex","\u2B07\uFE0F Download"],tabs:[{id:"overview",label:"Overview",icon:"\u{1F4C4}",specIcon:"FileText",desc:"Filename, size, pages, stato, date upload/process"},{id:"preview",label:"Anteprima",icon:"\u{1F441}\uFE0F",specIcon:"Eye",desc:"Prime 500 parole del contenuto estratto"},{id:"chunks",label:"Chunks",icon:"\u{1F4CA}",specIcon:"Layers",badge:47,desc:"Chunk count, distribuzione, qualita embedding",badgeLabel:"chunkCount"}]},chat:{color:{h:220,s:80,l:55},emoji:"\u{1F4AC}",label:"Chat",title:"Come si gioca ad Azul?",subtitle:"Azul Rules Expert \u00B7 12 messaggi",cover:"linear-gradient(135deg, hsl(220,80%,55%), hsl(220,60%,35%))",coverEmoji:"\u{1F4AC}",badge:"Attiva",meta:[{icon:"\u{1F4AC}",val:"12 messaggi"},{icon:"\u23F1\uFE0F",val:"5 min fa"},{icon:"\u{1F916}",val:"GPT-4o-mini"}],navItems:[{icon:"\u{1F4AC}",label:"Messaggi",entity:"chat",count:12},{icon:"\u{1F4DA}",label:"Sources",entity:"kb"},{icon:"\u{1F916}",label:"Agente",entity:"agent"},{icon:"\u{1F4E6}",label:"Archivia",entity:"chat"}],actions:["\u{1F4AC} Continua","\u{1F4E4} Esporta"],tabs:[{id:"messages",label:"Messaggi",icon:"\u{1F4AC}",specIcon:"MessageSquare",badge:12,desc:"Ultimi 10 messaggi con scroll",badgeLabel:"messageCount"},{id:"context",label:"Contesto",icon:"\u{1F3AE}",specIcon:"Gamepad2",desc:"Gioco collegato, agente, parametri LLM"},{id:"actions",label:"Azioni",icon:"\u2699\uFE0F",specIcon:"Settings",desc:"Archivia, esporta, elimina, riapri"}]},event:{color:{h:350,s:89,l:60},emoji:"\u{1F4C5}",label:"Event",title:"Serata Giochi da Marco",subtitle:"15 Mar 2026 \u00B7 19:00 \u00B7 Casa di Marco",cover:"linear-gradient(135deg, hsl(350,89%,60%), hsl(350,70%,40%))",coverEmoji:"\u{1F389}",badge:"Confermato",meta:[{icon:"\u{1F465}",val:"5 partecipanti"},{icon:"\u{1F3B2}",val:"3 giochi"},{icon:"\u{1F4CD}",val:"Casa Marco"}],navItems:[{icon:"\u{1F465}",label:"Partecipanti",entity:"player",count:5},{icon:"\u{1F4CD}",label:"Luogo",entity:"event"},{icon:"\u{1F3B2}",label:"Giochi",entity:"game",count:3},{icon:"\u{1F4C5}",label:"Data",entity:"event"}],actions:["\u2705 Conferma","\u{1F4E4} Invita","\u{1F4DD} Note"],tabs:[{id:"overview",label:"Overview",icon:"\u{1F4C5}",specIcon:"Calendar",desc:"Nome, data, orario, luogo, organizzatore"},{id:"participants",label:"Partecipanti",icon:"\u{1F465}",specIcon:"Users",badge:5,desc:"Lista giocatori confermati/pendenti",badgeLabel:"participantCount"},{id:"games",label:"Giochi",icon:"\u{1F3B2}",specIcon:"Dices",badge:3,desc:"Giochi pianificati/giocati nella serata",badgeLabel:"gameCount"},{id:"diary",label:"Diario",icon:"\u{1F4D6}",specIcon:"BookOpen",desc:"Timeline cross-game, foto, momenti"}]},toolkit:{color:{h:142,s:70,l:45},emoji:"\u{1F9F0}",label:"Toolkit",title:"Azul Toolkit v2",subtitle:"Pubblicato \u00B7 3 strumenti \u00B7 Azul",cover:"linear-gradient(135deg, hsl(142,70%,45%), hsl(142,50%,28%))",coverEmoji:"\u{1F9F0}",badge:"Pubblicato",meta:[{icon:"\u{1F527}",val:"3 tools"},{icon:"\u{1F0CF}",val:"1 deck"},{icon:"\u23F1\uFE0F",val:"1 timer"}],navItems:[{icon:"\u{1F527}",label:"Tools",entity:"tool",count:3},{icon:"\u{1F0CF}",label:"Decks",entity:"toolkit",count:1},{icon:"\u23F1\uFE0F",label:"Phases",entity:"toolkit",count:3},{icon:"\u{1F4DC}",label:"Storico",entity:"session",count:12}],actions:["\u25B6\uFE0F Usa","\u270F\uFE0F Modifica","\u{1F4CB} Duplica"],tabs:[{id:"overview",label:"Overview",icon:"\u{1F9F0}",specIcon:"Wrench",desc:"Nome, versione, stato pubblicazione, gioco associato"},{id:"tools",label:"Strumenti",icon:"\u{1F527}",specIcon:"Layers",badge:3,desc:"Lista: dadi, carte, timer, contatori con config",badgeLabel:"toolCount"},{id:"templates",label:"Template",icon:"\u{1F4D0}",specIcon:"Layout",desc:"Scoring template, turn template, phases"},{id:"history",label:"Storico",icon:"\u{1F4DC}",specIcon:"History",badge:12,desc:"Utilizzi recenti, sessioni che hanno usato il toolkit",badgeLabel:"useCount"}]},tool:{color:{h:195,s:80,l:50},emoji:"\u{1F527}",label:"Tool",title:"Timer Turno Azul",subtitle:"Timer \u00B7 5:00 \u00B7 Per giocatore \u00B7 Auto-start",cover:"linear-gradient(135deg, hsl(195,80%,50%), hsl(195,60%,30%))",coverEmoji:"\u23F1\uFE0F",badge:"Attivo",meta:[{icon:"\u23F1\uFE0F",val:"5:00"},{icon:"\u{1F465}",val:"Per giocatore"},{icon:"\u{1F4CA}",val:"23 utilizzi"}],navItems:[{icon:"\u25B6\uFE0F",label:"Usa",entity:"tool"},{icon:"\u270F\uFE0F",label:"Modifica",entity:"tool"},{icon:"\u{1F4CB}",label:"Duplica",entity:"tool"},{icon:"\u{1F4DC}",label:"Storico",entity:"tool"}],actions:["\u25B6\uFE0F Start","\u23F8\uFE0F Pausa","\u{1F504} Reset"],tabs:[{id:"overview",label:"Dettaglio",icon:"\u{1F527}",specIcon:"Wrench",desc:"Nome, tipo, config completa"},{id:"usage",label:"Utilizzo",icon:"\u25B6\uFE0F",specIcon:"Play",desc:"Preview interattiva: start, pause, reset"},{id:"history",label:"Storico",icon:"\u{1F4DC}",specIcon:"History",desc:"Log utilizzi recenti con timestamp e sessione"}]}};
+
+/* Tab content templates — all hardcoded, no user input */
+var TAB_CONTENT = {
+  game: {
+    details: '<h4>Dettagli Gioco</h4><div class="info-row"><span class="label">Editore</span><span class="value">Plan B Games</span></div><div class="info-row"><span class="label">Anno</span><span class="value">2017</span></div><div class="info-row"><span class="label">Giocatori</span><span class="value">2\u20134</span></div><div class="info-row"><span class="label">Durata</span><span class="value">30\u201345 min</span></div><div class="info-row"><span class="label">Complessita</span><span class="value">\u25CF\u25CF\u25CB\u25CB\u25CB (1.77)</span></div><div class="info-row"><span class="label">Categoria</span><span class="value">Astratto, Piazzamento tessere</span></div><p style="margin-top:10px;font-size:12px;line-height:1.6;">Azul sfida i giocatori a decorare le pareti del Palazzo Reale di Evora selezionando le tessere piu belle dalla fabbrica...</p>',
+    rules: '<h4>\u{1F4D6} Regole &amp; FAQ</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(25,95%,45%,0.1);">\u2753</div><div class="mi-text"><div class="mi-title">Posso spostare tessere gia piazzate?</div><div class="mi-sub">No, una volta piazzate sono permanenti \u00B7 \u{1F44D} 47</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(25,95%,45%,0.1);">\u2753</div><div class="mi-text"><div class="mi-title">Cosa succede se la fabbrica e vuota?</div><div class="mi-sub">Il round termina e si procede al punteggio \u00B7 \u{1F44D} 31</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(25,95%,45%,0.1);">\u{1F4C4}</div><div class="mi-text"><div class="mi-title">azul-regole-ita.pdf</div><div class="mi-sub">12 pagine \u00B7 Indicizzato \u00B7 Caricato 15 Gen</div></div></div></div>',
+    stats: '<h4>\u{1F4CA} Statistiche</h4><div class="stat-grid"><div class="stat-box"><div class="stat-val" style="color:hsl(25,95%,45%);">23</div><div class="stat-label">Partite</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(142,70%,45%);">65%</div><div class="stat-label">Win Rate</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(220,80%,55%);">72</div><div class="stat-label">Avg Score</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(262,83%,58%);">2g</div><div class="stat-label">Ultimo</div></div></div><h4 style="margin-top:8px;">Ultime 5 partite</h4><div class="info-row"><span class="label">11 Mar</span><span class="value" style="color:hsl(142,70%,35%);">Vittoria (72 pt)</span></div><div class="info-row"><span class="label">8 Mar</span><span class="value">2\u00B0 posto (61 pt)</span></div><div class="info-row"><span class="label">2 Mar</span><span class="value" style="color:hsl(142,70%,35%);">Vittoria (78 pt)</span></div>',
+    kb: '<h4>\u{1F4C4} Knowledge Base</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(174,60%,40%,0.1);">\u{1F4C4}</div><div class="mi-text"><div class="mi-title">azul-regole-ita.pdf</div><div class="mi-sub">47 chunks \u00B7 Indicizzato</div></div><div class="mi-badge" style="background:hsl(142,70%,45%);">\u2713</div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(174,60%,40%,0.1);">\u{1F4C4}</div><div class="mi-text"><div class="mi-title">azul-strategie.pdf</div><div class="mi-sub">23 chunks \u00B7 Indicizzato</div></div><div class="mi-badge" style="background:hsl(142,70%,45%);">\u2713</div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(38,92%,50%,0.1);">\u{1F4C4}</div><div class="mi-text"><div class="mi-title">azul-espansione.pdf</div><div class="mi-sub">In elaborazione...</div></div><div class="mi-badge" style="background:hsl(38,92%,50%);">\u27F3</div></div></div>',
+    agent: '<h4>\u{1F916} Agente AI</h4><div class="mini-item" style="margin-bottom:12px;"><div class="mi-icon" style="background:hsla(38,92%,50%,0.15);">\u{1F916}</div><div class="mi-text"><div class="mi-title">Azul Rules Expert</div><div class="mi-sub"><span class="status-dot green"></span>Attivo \u00B7 RAG Strategy \u00B7 GPT-4o-mini</div></div></div><div class="stat-grid"><div class="stat-box"><div class="stat-val" style="color:hsl(38,92%,50%);">342</div><div class="stat-label">Invocazioni</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(38,92%,50%);">1.2s</div><div class="stat-label">Latenza</div></div></div><div class="info-row"><span class="label">Ultimo utilizzo</span><span class="value">5 min fa</span></div>'
+  },
+  player: {
+    overview: '<h4>Profilo Giocatore</h4><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;"><div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,60%,35%));display:flex;align-items:center;justify-content:center;color:white;font-size:18px;font-weight:800;font-family:Quicksand,sans-serif;">MR</div><div><div style="font-weight:700;font-size:14px;">Marco Rossi</div><div style="font-size:11px;color:var(--text-sec);">Membro dal Gennaio 2025</div></div></div><div class="info-row"><span class="label">Gioco preferito</span><span class="value">Azul (23 partite)</span></div><div class="info-row"><span class="label">Genere preferito</span><span class="value">Astratto</span></div><div class="info-row"><span class="label">Gruppi</span><span class="value">2 (Game Night Club, Ufficio)</span></div>',
+    stats: '<h4>\u{1F3C6} Statistiche</h4><div class="stat-grid"><div class="stat-box"><div class="stat-val" style="color:hsl(262,83%,58%);">47</div><div class="stat-label">Vittorie</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(262,83%,58%);">89</div><div class="stat-label">Partite</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(142,70%,45%);">52.8%</div><div class="stat-label">Win Rate</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(262,83%,58%);">15</div><div class="stat-label">Giochi</div></div></div><h4>Top 3</h4><div class="info-row"><span class="label">\u{1F947} Azul</span><span class="value">23 partite (65%)</span></div><div class="info-row"><span class="label">\u{1F948} Catan</span><span class="value">18 partite (44%)</span></div><div class="info-row"><span class="label">\u{1F949} Wingspan</span><span class="value">12 partite (58%)</span></div>',
+    history: '<h4>\u{1F4DC} Ultime Partite</h4><div class="info-row"><span class="label">11 Mar \u00B7 Azul</span><span class="value" style="color:hsl(142,70%,35%);">\u{1F3C6} 72 pt</span></div><div class="info-row"><span class="label">8 Mar \u00B7 Catan</span><span class="value">2\u00B0 \u00B7 8 pt</span></div><div class="info-row"><span class="label">2 Mar \u00B7 Azul</span><span class="value" style="color:hsl(142,70%,35%);">\u{1F3C6} 78 pt</span></div><div class="info-row"><span class="label">24 Feb \u00B7 Root</span><span class="value">3\u00B0 \u00B7 12 pt</span></div><div class="info-row"><span class="label">18 Feb \u00B7 Azul</span><span class="value" style="color:hsl(142,70%,35%);">\u{1F3C6} 69 pt</span></div>',
+    achievements: '<h4>\u{1F3C5} Trofei</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(45,100%,50%,0.15);">\u{1F3C5}</div><div class="mi-text"><div class="mi-title">Maestro di Azul</div><div class="mi-sub">50+ partite ad Azul</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(45,100%,50%,0.15);">\u{1F525}</div><div class="mi-text"><div class="mi-title">Streak vincente</div><div class="mi-sub">5 vittorie consecutive</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(45,100%,50%,0.15);">\u{1F3AF}</div><div class="mi-text"><div class="mi-title">Primo gioco</div><div class="mi-sub">Prima partita completata</div></div></div></div><div style="margin-top:10px;font-size:11px;color:var(--text-muted);">8/24 trofei</div><div class="progress-bar"><div class="progress-fill" style="width:33%;background:hsl(262,83%,58%);"></div></div>'
+  },
+  session: {
+    overview: '<h4>Overview Sessione</h4><div class="info-row"><span class="label">Gioco</span><span class="value">Azul</span></div><div class="info-row"><span class="label">Stato</span><span class="value"><span class="status-dot green"></span>In Corso</span></div><div class="info-row"><span class="label">Turno</span><span class="value">3 / 5</span></div><div class="info-row"><span class="label">Durata</span><span class="value">45 min</span></div><div class="info-row"><span class="label">Codice</span><span class="value" style="font-family:monospace;">AZL-7X2K</span></div><h4 style="margin-top:10px;">Giocatori</h4><div class="info-row"><span class="label">\u{1F947} Marco</span><span class="value" style="color:hsl(142,70%,35%);">72 pt</span></div><div class="info-row"><span class="label">\u{1F948} Sara</span><span class="value">61 pt</span></div><div class="info-row"><span class="label">\u{1F949} Luca</span><span class="value">54 pt</span></div><div class="info-row"><span class="label">4. Elena</span><span class="value">48 pt</span></div>',
+    scoreboard: '<h4>\u{1F3C6} Classifica</h4><div style="overflow-x:auto;"><table style="width:100%;font-size:11px;border-collapse:collapse;"><tr style="border-bottom:2px solid var(--border);"><th style="padding:6px;text-align:left;">Giocatore</th><th style="padding:6px;">R1</th><th style="padding:6px;">R2</th><th style="padding:6px;">R3</th><th style="padding:6px;font-weight:800;">Tot</th></tr><tr style="background:hsla(142,70%,45%,0.08);"><td style="padding:6px;font-weight:700;">\u{1F947} Marco</td><td style="padding:6px;text-align:center;">24</td><td style="padding:6px;text-align:center;">26</td><td style="padding:6px;text-align:center;">22</td><td style="padding:6px;text-align:center;font-weight:800;">72</td></tr><tr><td style="padding:6px;">\u{1F948} Sara</td><td style="padding:6px;text-align:center;">21</td><td style="padding:6px;text-align:center;">18</td><td style="padding:6px;text-align:center;">22</td><td style="padding:6px;text-align:center;font-weight:800;">61</td></tr><tr><td style="padding:6px;">\u{1F949} Luca</td><td style="padding:6px;text-align:center;">18</td><td style="padding:6px;text-align:center;">20</td><td style="padding:6px;text-align:center;">16</td><td style="padding:6px;text-align:center;font-weight:800;">54</td></tr></table></div>',
+    toolkit: '<h4>\u{1F527} Toolkit Attivi</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(240,60%,55%,0.1);">\u23F1\uFE0F</div><div class="mi-text"><div class="mi-title">Timer Turno</div><div class="mi-sub"><span class="status-dot green"></span>In esecuzione \u00B7 3:42</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(240,60%,55%,0.1);">\u{1F522}</div><div class="mi-text"><div class="mi-title">Contatore Parete</div><div class="mi-sub">Marco: 12 \u00B7 Sara: 9 \u00B7 Luca: 7</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(240,60%,55%,0.1);">\u{1F3B2}</div><div class="mi-text"><div class="mi-title">Selettore Primo Giocatore</div><div class="mi-sub">Turno corrente: Sara</div></div></div></div>',
+    notes: '<h4>\u{1F4DD} Timeline</h4><div class="timeline-item"><div class="timeline-dot" style="background:hsl(240,60%,55%);"></div><div class="timeline-text"><div>Sessione avviata</div><div class="tl-time">19:00</div></div></div><div class="timeline-item"><div class="timeline-dot" style="background:hsl(142,70%,45%);"></div><div class="timeline-text"><div>Round 1 \u2014 Marco in testa (24pt)</div><div class="tl-time">19:18</div></div></div><div class="timeline-item"><div class="timeline-dot" style="background:hsl(142,70%,45%);"></div><div class="timeline-text"><div>Round 2 \u2014 Marco consolida (50pt)</div><div class="tl-time">19:35</div></div></div><div class="timeline-item"><div class="timeline-dot" style="background:hsl(38,92%,50%);"></div><div class="timeline-text"><div>Nota: &quot;Sara completa riga blu&quot;</div><div class="tl-time">19:42</div></div></div>',
+    media: '<h4>\u{1F4F7} Media</h4><div class="photo-grid"><div class="photo-thumb" style="background:linear-gradient(135deg,#e3f2fd,#bbdefb);">\u{1F4F7}</div><div class="photo-thumb" style="background:linear-gradient(135deg,#f3e5f5,#e1bee7);">\u{1F4F7}</div><div class="photo-thumb" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);">\u{1F4F7}</div><div class="photo-thumb" style="background:linear-gradient(135deg,#fff3e0,#ffe0b2);">\u{1F4F7}</div></div><p style="margin-top:8px;font-size:11px;color:var(--text-muted);">4 foto</p>'
+  },
+  agent: {
+    overview: '<h4>Overview Agente</h4><div class="info-row"><span class="label">Nome</span><span class="value">Azul Rules Expert</span></div><div class="info-row"><span class="label">Tipo</span><span class="value">QA (Rules Assistant)</span></div><div class="info-row"><span class="label">Strategia</span><span class="value">hybrid-rag</span></div><div class="info-row"><span class="label">Modello</span><span class="value">GPT-4o-mini</span></div><div class="info-row"><span class="label">Stato</span><span class="value"><span class="status-dot green"></span>Attivo</span></div><div class="info-row"><span class="label">Gioco</span><span class="value">Azul</span></div>',
+    stats: '<h4>\u26A1 Statistiche</h4><div class="stat-grid"><div class="stat-box"><div class="stat-val" style="color:hsl(38,92%,50%);">342</div><div class="stat-label">Invocazioni</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(38,92%,50%);">1.2s</div><div class="stat-label">Latenza Media</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(38,92%,50%);">5m</div><div class="stat-label">Ultimo Uso</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(38,92%,50%);">97%</div><div class="stat-label">Uptime</div></div></div>',
+    kb: '<h4>\u{1F4C4} Documenti KB</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(174,60%,40%,0.1);">\u{1F4C4}</div><div class="mi-text"><div class="mi-title">azul-regole-ita.pdf</div><div class="mi-sub">47 chunks \u00B7 Indicizzato</div></div><div class="mi-badge" style="background:hsl(142,70%,45%);">\u2713</div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(174,60%,40%,0.1);">\u{1F4C4}</div><div class="mi-text"><div class="mi-title">azul-strategie.pdf</div><div class="mi-sub">23 chunks \u00B7 Indicizzato</div></div><div class="mi-badge" style="background:hsl(142,70%,45%);">\u2713</div></div></div>',
+    config: '<h4>\u2699\uFE0F Configurazione</h4><div class="config-row"><span class="ck">temperature</span><span class="cv">0.7</span></div><div class="config-row"><span class="ck">maxTokens</span><span class="cv">2048</span></div><div class="config-row"><span class="ck">topK</span><span class="cv">5</span></div><div class="config-row"><span class="ck">strategy</span><span class="cv">hybrid-rag</span></div><div class="config-row"><span class="ck">rerankEnabled</span><span class="cv">true</span></div><p style="margin-top:10px;font-size:10px;color:var(--text-muted);">Sola lettura. Modifica dalla pagina Agente.</p>'
+  },
+  kb: {
+    overview: '<h4>Overview Documento</h4><div class="info-row"><span class="label">File</span><span class="value">azul-regole-ita.pdf</span></div><div class="info-row"><span class="label">Dimensione</span><span class="value">2.4 MB</span></div><div class="info-row"><span class="label">Pagine</span><span class="value">12</span></div><div class="info-row"><span class="label">Caratteri</span><span class="value">24,567</span></div><div class="info-row"><span class="label">Stato</span><span class="value"><span class="status-dot green"></span>Indicizzato</span></div><div class="info-row"><span class="label">Caricato</span><span class="value">15 Gen 2026</span></div><div class="info-row"><span class="label">Gioco</span><span class="value">Azul</span></div>',
+    preview: '<h4>\u{1F441}\uFE0F Anteprima</h4><div style="padding:10px;background:var(--bg-muted);border-radius:10px;font-size:12px;line-height:1.7;"><p><strong>AZUL \u2014 Regole del gioco</strong></p><p style="margin-top:6px;">Azul e un gioco astratto per 2-4 giocatori creato da Michael Kiesling. Il gioco e ispirato alle azulejos, le famose piastrelle decorative portoghesi.</p><p style="margin-top:6px;"><strong>Preparazione:</strong> Posizionate le fabbriche circolari al centro del tavolo...</p><p style="margin-top:8px;font-size:10px;color:var(--text-muted);">500/24,567 caratteri</p></div>',
+    chunks: '<h4>\u{1F4CA} Chunks</h4><div class="stat-grid"><div class="stat-box"><div class="stat-val" style="color:hsl(174,60%,40%);">47</div><div class="stat-label">Chunks</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(174,60%,40%);">312</div><div class="stat-label">Avg Tokens</div></div></div><div class="info-row"><span class="label">Similarita media</span><span class="value">0.82</span></div><div class="info-row"><span class="label">Modello</span><span class="value">e5-base (768d)</span></div>'
+  },
+  chat: {
+    messages: '<h4>\u{1F4AC} Conversazione</h4><div style="display:flex;flex-direction:column;gap:6px;"><div class="chat-bubble user">Come si gioca ad Azul?<div class="cb-time">14:20</div></div><div class="chat-bubble assistant">Azul e un gioco di piazzamento tessere per 2-4 giocatori. Ogni turno scegli tessere colorate dalle fabbriche...<div class="cb-time">14:20</div></div><div class="chat-bubble user">Come funziona il punteggio?<div class="cb-time">14:22</div></div><div class="chat-bubble assistant">Quando piazzi una tessera sulla parete, guadagni 1 punto per ogni tessera adiacente. I bonus premiano righe e colonne complete...<div class="cb-time">14:22</div></div><div class="chat-bubble user">E le penalita?<div class="cb-time">14:25</div></div><div class="chat-bubble assistant">Le tessere non piazzate vanno nella floor line: -1, -1, -2, -2, -2, -3, -3.<div class="cb-time">14:25</div></div></div>',
+    context: '<h4>\u{1F3AE} Contesto Chat</h4><div class="info-row"><span class="label">Gioco</span><span class="value">Azul</span></div><div class="info-row"><span class="label">Agente</span><span class="value">Azul Rules Expert</span></div><div class="info-row"><span class="label">Modello</span><span class="value">GPT-4o-mini</span></div><div class="info-row"><span class="label">Temperatura</span><span class="value">0.7</span></div><div class="info-row"><span class="label">Iniziata</span><span class="value">14:20 \u00B7 10 Apr 2026</span></div>',
+    actions: '<h4>\u2699\uFE0F Azioni</h4><div class="action-group"><button class="action-btn"><span class="ab-icon">\u{1F4E6}</span>Archivia conversazione</button><button class="action-btn"><span class="ab-icon">\u{1F4E4}</span>Esporta come TXT</button><button class="action-btn"><span class="ab-icon">\u{1F4CB}</span>Copia link</button><button class="action-btn danger"><span class="ab-icon">\u{1F5D1}\uFE0F</span>Elimina conversazione</button></div>'
+  },
+  event: {
+    overview: '<h4>Overview Evento</h4><div class="info-row"><span class="label">Nome</span><span class="value">Serata Giochi da Marco</span></div><div class="info-row"><span class="label">Data</span><span class="value">15 Marzo 2026</span></div><div class="info-row"><span class="label">Orario</span><span class="value">19:00 \u2013 23:00</span></div><div class="info-row"><span class="label">Luogo</span><span class="value">\u{1F4CD} Casa di Marco</span></div><div class="info-row"><span class="label">Organizzatore</span><span class="value">Marco R.</span></div><div class="info-row"><span class="label">Note</span><span class="value">Portare snack! Pizza alle 21</span></div>',
+    participants: '<h4>\u{1F465} Partecipanti</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(262,83%,58%,0.1);">\u{1F464}</div><div class="mi-text"><div class="mi-title">Marco R.</div><div class="mi-sub">Organizzatore</div></div><div class="mi-badge" style="background:hsl(142,70%,45%);">\u2713</div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(262,83%,58%,0.1);">\u{1F464}</div><div class="mi-text"><div class="mi-title">Sara B.</div><div class="mi-sub">Confermata</div></div><div class="mi-badge" style="background:hsl(142,70%,45%);">\u2713</div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(262,83%,58%,0.1);">\u{1F464}</div><div class="mi-text"><div class="mi-title">Luca M.</div><div class="mi-sub">Confermato</div></div><div class="mi-badge" style="background:hsl(142,70%,45%);">\u2713</div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(38,92%,50%,0.1);">\u{1F464}</div><div class="mi-text"><div class="mi-title">Giulia T.</div><div class="mi-sub">In attesa</div></div><div class="mi-badge" style="background:hsl(38,92%,50%);">?</div></div></div>',
+    games: '<h4>\u{1F3B2} Giochi</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(25,95%,45%,0.1);">\u{1F537}</div><div class="mi-text"><div class="mi-title">Azul</div><div class="mi-sub"><span class="status-dot green"></span>Completato \u00B7 Marco vince</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(25,95%,45%,0.1);">\u{1F3DD}\uFE0F</div><div class="mi-text"><div class="mi-title">Catan</div><div class="mi-sub"><span class="status-dot blue"></span>In corso</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(25,95%,45%,0.1);">\u{1F426}</div><div class="mi-text"><div class="mi-title">Wingspan</div><div class="mi-sub"><span class="status-dot amber"></span>Pianificato</div></div></div></div>',
+    diary: '<h4>\u{1F4D6} Diario</h4><div class="timeline-item"><div class="timeline-dot" style="background:hsl(350,89%,60%);"></div><div class="timeline-text"><div>\u{1F3E0} Arrivo ospiti</div><div class="tl-time">19:00</div></div></div><div class="timeline-item"><div class="timeline-dot" style="background:hsl(25,95%,45%);"></div><div class="timeline-text"><div>\u{1F537} Inizio Azul</div><div class="tl-time">19:15</div></div></div><div class="timeline-item"><div class="timeline-dot" style="background:hsl(142,70%,45%);"></div><div class="timeline-text"><div>\u{1F3C6} Marco vince Azul!</div><div class="tl-time">20:00</div></div></div><div class="timeline-item"><div class="timeline-dot" style="background:hsl(25,95%,45%);"></div><div class="timeline-text"><div>\u{1F3DD}\uFE0F Inizio Catan</div><div class="tl-time">20:15</div></div></div><div class="timeline-item"><div class="timeline-dot" style="background:hsl(350,89%,60%);"></div><div class="timeline-text"><div>\u{1F355} Pausa pizza!</div><div class="tl-time">21:00</div></div></div>'
+  },
+  toolkit: {
+    overview: '<h4>Overview Toolkit</h4><div class="info-row"><span class="label">Nome</span><span class="value">Azul Toolkit v2</span></div><div class="info-row"><span class="label">Versione</span><span class="value">2</span></div><div class="info-row"><span class="label">Stato</span><span class="value"><span class="status-dot green"></span>Pubblicato</span></div><div class="info-row"><span class="label">Gioco</span><span class="value">Azul</span></div><div class="info-row"><span class="label">Strumenti</span><span class="value">3 (timer, counter, dice)</span></div><div class="info-row"><span class="label">Usato in</span><span class="value">12 sessioni</span></div>',
+    tools: '<h4>\u{1F527} Strumenti</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(142,70%,45%,0.1);">\u23F1\uFE0F</div><div class="mi-text"><div class="mi-title">Timer Turno</div><div class="mi-sub">5:00 \u00B7 Per giocatore \u00B7 Auto-start</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(142,70%,45%,0.1);">\u{1F522}</div><div class="mi-text"><div class="mi-title">Contatore Parete</div><div class="mi-sub">0\u201325 \u00B7 Per giocatore</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(142,70%,45%,0.1);">\u{1F3B2}</div><div class="mi-text"><div class="mi-title">Selettore 1\u00B0 Giocatore</div><div class="mi-sub">1d4 \u00B7 Colori fazione</div></div></div></div>',
+    templates: '<h4>\u{1F4D0} Template</h4><h4 style="margin-top:8px;font-size:12px;">Scoring</h4><div class="info-row"><span class="label">Dimensioni</span><span class="value">Righe, Colonne, Set</span></div><div class="info-row"><span class="label">Tipo</span><span class="value">Additivo</span></div><h4 style="margin-top:12px;font-size:12px;">Fasi di turno</h4><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;"><span style="padding:4px 10px;border-radius:12px;background:hsla(142,70%,45%,0.1);font-size:11px;font-weight:700;color:hsl(142,70%,45%);">1. Selezione</span><span style="padding:4px 10px;border-radius:12px;background:hsla(142,70%,45%,0.1);font-size:11px;font-weight:700;color:hsl(142,70%,45%);">2. Piazzamento</span><span style="padding:4px 10px;border-radius:12px;background:hsla(142,70%,45%,0.1);font-size:11px;font-weight:700;color:hsl(142,70%,45%);">3. Punteggio</span></div>',
+    history: '<h4>\u{1F4DC} Storico</h4><div class="info-row"><span class="label">11 Mar \u00B7 Serata Azul</span><span class="value">4 giocatori</span></div><div class="info-row"><span class="label">8 Mar \u00B7 Torneo</span><span class="value">3 giocatori</span></div><div class="info-row"><span class="label">2 Mar \u00B7 Casual</span><span class="value">2 giocatori</span></div><p style="margin-top:8px;font-size:10px;color:var(--text-muted);">12 utilizzi totali</p>'
+  },
+  tool: {
+    overview: '<h4>Dettaglio Strumento</h4><div class="info-row"><span class="label">Nome</span><span class="value">Timer Turno Azul</span></div><div class="info-row"><span class="label">Tipo</span><span class="value">Timer</span></div><div class="info-row"><span class="label">Durata</span><span class="value">5:00 (300s)</span></div><div class="info-row"><span class="label">Per giocatore</span><span class="value">Si</span></div><div class="info-row"><span class="label">Auto-start</span><span class="value">Si</span></div><div class="info-row"><span class="label">Warning</span><span class="value">30s (diventa rosso)</span></div><div class="info-row"><span class="label">Toolkit</span><span class="value">Azul Toolkit v2</span></div>',
+    usage: '<h4>\u25B6\uFE0F Preview</h4><div class="tool-preview"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;">Timer Turno</div><div class="tp-display" style="color:hsl(195,80%,50%);">4:12</div><div class="progress-bar"><div class="progress-fill" style="width:84%;background:hsl(195,80%,50%);"></div></div><div class="tp-controls"><button class="tp-btn">\u23F8\uFE0F Pausa</button><button class="tp-btn primary" style="background:hsl(195,80%,50%);">\u{1F504} Reset</button></div></div><p style="margin-top:8px;font-size:10px;color:var(--text-muted);text-align:center;">Giocatore: Marco \u00B7 Media: 4:12</p>',
+    history: '<h4>\u{1F4DC} Log</h4><div class="info-row"><span class="label">11 Mar 19:15</span><span class="value">Marco \u2014 4:42</span></div><div class="info-row"><span class="label">11 Mar 19:20</span><span class="value">Sara \u2014 3:58</span></div><div class="info-row"><span class="label">11 Mar 19:25</span><span class="value">Luca \u2014 5:00 (scaduto!)</span></div><div class="stat-grid" style="margin-top:10px;"><div class="stat-box"><div class="stat-val" style="color:hsl(195,80%,50%);">23</div><div class="stat-label">Utilizzi</div></div><div class="stat-box"><div class="stat-val" style="color:hsl(195,80%,50%);">4:12</div><div class="stat-label">Media</div></div></div>'
+  }
+};
+
+var currentEntity = 'game';
+var currentTabIdx = 0;
+
+function ec(e) { var c=ENTITIES[e].color; return 'hsl('+c.h+','+c.s+'%,'+c.l+'%)'; }
+function eca(e,a) { var c=ENTITIES[e].color; return 'hsla('+c.h+','+c.s+'%,'+c.l+'%,'+a+')'; }
+
+function setHtml(id, html) { document.getElementById(id).innerHTML = html; }
+
+function renderAll() {
+  var e = ENTITIES[currentEntity];
+  var color = ec(currentEntity);
+  currentTabIdx = 0;
+
+  // Switcher
+  var sw = '';
+  Object.keys(ENTITIES).forEach(function(key) {
+    var v = ENTITIES[key];
+    var act = key === currentEntity;
+    sw += '<button class="entity-btn' + (act ? ' active' : '') + '" onclick="switchEntity(\'' + key + '\')" style="' + (act ? 'background:' + ec(key) + ';color:white;border-color:transparent;' : '') + '">';
+    sw += '<span class="dot" style="background:' + (act ? 'white' : ec(key)) + ';"></span>';
+    sw += v.emoji + ' ' + v.label + '</button>';
+  });
+  setHtml('entity-switcher', sw);
+
+  document.getElementById('phone1-label').textContent = e.emoji + ' ' + e.title + ' \u2014 Page';
+  document.getElementById('phone2-label').textContent = e.emoji + ' ' + e.title + ' \u2014 Drawer';
+
+  var navHtml = '<button class="back-btn" title="Indietro">\u2039</button><span class="nav-title">' + e.title + '</span><button class="nav-action" title="Opzioni">\u22EF</button>';
+  setHtml('page-navbar', navHtml);
+  setHtml('drawer-navbar', navHtml);
+
+  // Page
+  var navItemsHtml = e.navItems.map(function(n) {
+    return '<div class="nav-item"><div class="nav-icon" style="color:' + ec(n.entity) + ';">' + n.icon + (n.count ? '<span class="nav-badge" style="background:' + ec(n.entity) + ';">' + n.count + '</span>' : '') + '</div><span class="nav-label">' + n.label + '</span></div>';
+  }).join('');
+
+  var metaHtml = e.meta.map(function(m) { return '<span class="meta-chip"><span class="icon">' + m.icon + '</span>' + m.val + '</span>'; }).join('');
+  metaHtml += '<span class="meta-chip" style="background:' + eca(currentEntity, 0.1) + ';color:' + color + ';font-weight:700;">' + e.badge + '</span>';
+
+  var actionsHtml = e.actions.map(function(a, i) {
+    return '<button class="qa-pill' + (i === 0 ? ' primary' : '') + '" style="' + (i === 0 ? 'background:' + color + ';border-color:transparent;' : 'color:' + color + ';') + '">' + a + '</button>';
+  }).join('');
+
+  var statHtml = '<div class="section"><div class="stat-grid"><div class="stat-box"><div class="stat-val" style="color:' + color + ';">' + (e.meta[0] ? e.meta[0].val : '') + '</div><div class="stat-label">' + (e.navItems[0] ? e.navItems[0].label : '') + '</div></div><div class="stat-box"><div class="stat-val" style="color:' + color + ';">' + (e.meta[1] ? e.meta[1].val : '') + '</div><div class="stat-label">' + (e.navItems[1] ? e.navItems[1].label : '') + '</div></div></div></div>';
+
+  var pageHtml = '<div class="hero-section"><div class="hero-img" style="background:' + e.cover + ';">' + e.coverEmoji + '</div><div class="hero-gradient"></div><div class="hero-badge" style="background:' + eca(currentEntity, 0.85) + ';">' + e.label + '</div>' + (e.rating ? '<div class="hero-rating">\u2B50 ' + e.rating + '</div>' : '') + '</div><div class="card-info"><div class="title">' + e.title + '</div><div class="subtitle">' + e.subtitle + '</div><div class="meta-row">' + metaHtml + '</div></div><div class="quick-actions-row">' + actionsHtml + '</div><div class="card-nav-footer">' + navItemsHtml + '</div>' + statHtml;
+
+  setHtml('page-content', pageHtml);
+  setHtml('drawer-page-bg', pageHtml);
+
+  renderDrawer();
+  renderSpecTable();
+}
+
+function renderDrawer() {
+  var e = ENTITIES[currentEntity];
+  var color = ec(currentEntity);
+  var tabs = e.tabs;
+
+  setHtml('drawer-header', '<div class="dh-icon" style="background:' + color + ';">' + e.emoji + '</div><span class="dh-title">' + e.title + '</span><button class="dh-close" title="Chiudi">\u2715</button>');
+
+  var tabsHtml = tabs.map(function(t, i) {
+    var act = i === currentTabIdx;
+    return '<button class="drawer-tab' + (act ? ' active' : '') + '" style="' + (act ? 'color:' + color + ';border-bottom-color:' + color + ';' : '') + '" onclick="switchTab(' + i + ')"><span class="tab-icon">' + t.icon + '</span>' + t.label + (t.badge ? '<span class="tab-badge" style="background:' + color + ';">' + t.badge + '</span>' : '') + '</button>';
+  }).join('');
+  setHtml('drawer-tabs', tabsHtml);
+
+  var tabId = tabs[currentTabIdx].id;
+  var content = (TAB_CONTENT[currentEntity] && TAB_CONTENT[currentEntity][tabId]) || '<p style="color:var(--text-muted);text-align:center;padding:20px;">Contenuto non disponibile</p>';
+  setHtml('drawer-content', content);
+}
+
+function renderSpecTable() {
+  var e = ENTITIES[currentEntity];
+  var color = ec(currentEntity);
+  document.getElementById('spec-thead-row').style.background = color;
+  document.getElementById('spec-table-sub').textContent = e.emoji + ' ' + e.label + ' \u2014 ' + e.tabs.length + ' tab';
+
+  var rows = e.tabs.map(function(t, i) {
+    return '<tr style="' + (i % 2 === 1 ? 'background:rgba(180,130,80,0.04);' : '') + '"><td style="padding:8px 12px;font-weight:700;color:' + color + ';">' + (i + 1) + '</td><td style="padding:8px 12px;font-family:monospace;font-size:11px;color:' + color + ';font-weight:600;">' + t.id + '</td><td style="padding:8px 12px;font-weight:700;">' + t.icon + ' ' + t.label + '</td><td style="padding:8px 12px;font-family:monospace;font-size:11px;color:var(--text-sec);">' + t.specIcon + '</td><td style="padding:8px 12px;color:var(--text-sec);">' + t.desc + '</td><td style="padding:8px 12px;">' + (t.badge ? '<span style="padding:2px 8px;border-radius:8px;background:' + eca(currentEntity, 0.15) + ';color:' + color + ';font-size:10px;font-weight:700;">' + (t.badgeLabel || '') + '</span>' : '<span style="color:var(--text-muted);">\u2014</span>') + '</td></tr>';
+  }).join('');
+  setHtml('spec-table-body', rows);
+}
+
+function switchEntity(key) { currentEntity = key; renderAll(); document.getElementById('page-content').scrollTop = 0; }
+function switchTab(idx) { currentTabIdx = idx; renderDrawer(); }
+
+renderAll();
+</script>
+</body>
+</html>

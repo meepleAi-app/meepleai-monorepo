@@ -25,6 +25,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 
+import { toast } from '@/components/layout';
 import { toScoreboardData } from '@/components/session/adapters';
 import { LiveSessionLayout } from '@/components/session/LiveSessionLayout';
 import { ScoreInput } from '@/components/session/ScoreInput';
@@ -403,18 +404,19 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const handlePhotoSelected = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
-      if (!file || !sessionId) return;
+      const playerId = activeSession?.players[0]?.id;
+      if (!file || !sessionId || !playerId) return;
       // Reset so the same file can be re-selected
       event.target.value = '';
       // Fire-and-forget upload — does not block the UI
       void uploadSessionAttachment({
         sessionId,
-        playerId: activeSession?.players[0]?.id ?? '',
+        playerId,
         file,
         attachmentType: 'BoardState',
         caption: `Foto - ${new Date().toLocaleTimeString('it-IT')}`,
       }).catch(() => {
-        // Silent fail — photo upload must not disrupt the session
+        toast.error('Caricamento foto non riuscito. Riprova.');
       });
     },
     [sessionId, activeSession]

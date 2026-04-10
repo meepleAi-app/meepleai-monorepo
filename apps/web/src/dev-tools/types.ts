@@ -81,3 +81,28 @@ export interface ToggleConfig {
   groups: GroupToggles;
   overrides: EndpointOverrides;
 }
+
+// ============================================================================
+// Phase 2 — Dev Panel runtime types
+// ============================================================================
+
+/** Tab identifiers for the Dev Panel. */
+export type DevPanelTab = 'toggles' | 'scenarios' | 'auth' | 'inspector';
+
+/** Backend toggles state returned by GET /dev/toggles. */
+export interface BackendTogglesState {
+  toggles: Record<string, boolean>;
+  knownServices: string[];
+}
+
+/** Request inspector entry (ring buffer item). */
+export interface InspectorEntry {
+  id: string;
+  timestamp: number;
+  method: string;
+  url: string;
+  status: number;
+  durationMs: number;
+  isMock: boolean;
+  mockSource?: string;
+}

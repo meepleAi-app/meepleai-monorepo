@@ -101,11 +101,12 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System);
 
         // T5: PauseSessionCommandHandler shares the same SessionRepository / UnitOfWork
         // so the two scenarios that depend on Pause can drive a real domain transition.
-        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext);
+        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
     }
 
     public async ValueTask DisposeAsync()
@@ -368,7 +369,8 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
             quotaMock.Object,
             db,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System);
     }
 
     private static CreateSessionCommand BuildCommand(

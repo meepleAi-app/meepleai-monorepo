@@ -94,10 +94,11 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System);
 
-        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext);
-        _resumeHandler = new ResumeSessionCommandHandler(sessionRepo, unitOfWork, _dbContext);
+        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
+        _resumeHandler = new ResumeSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
     }
 
     public async ValueTask DisposeAsync()

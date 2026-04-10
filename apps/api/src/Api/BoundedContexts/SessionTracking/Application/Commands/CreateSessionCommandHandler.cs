@@ -28,6 +28,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
     private readonly MeepleAiDbContext _db;
     private readonly IMediator _mediator;
     private readonly ILogger<CreateSessionCommandHandler> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public CreateSessionCommandHandler(
         ISessionRepository sessionRepository,
@@ -35,7 +36,8 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         ISessionQuotaService quotaService,
         MeepleAiDbContext db,
         IMediator mediator,
-        ILogger<CreateSessionCommandHandler> logger)
+        ILogger<CreateSessionCommandHandler> logger,
+        TimeProvider timeProvider)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -43,6 +45,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<CreateSessionResult> Handle(CreateSessionCommand request, CancellationToken cancellationToken)
@@ -145,7 +148,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     GameTitle = gameTitle,
                     PlayOrder = playOrder,
                     Status = GameNightSessionStatus.InProgress.ToString(),
-                    StartedAt = DateTimeOffset.UtcNow
+                    StartedAt = _timeProvider.GetUtcNow()
                 };
 
                 // Session Flow v2.1 — T5 fix: when nightEntity is loaded (Unchanged) and the
@@ -169,7 +172,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     SessionId = session.Id,
                     GameNightId = nightEntity.Id,
                     EventType = "session_created",
-                    Timestamp = DateTime.UtcNow,
+                    Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
                     Payload = sessionCreatedPayload,
                     CreatedBy = request.UserId,
                     Source = "system",
@@ -190,7 +193,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                         SessionId = session.Id,
                         GameNightId = nightEntity.Id,
                         EventType = "gamenight_created",
-                        Timestamp = DateTime.UtcNow,
+                        Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
                         Payload = nightCreatedPayload,
                         CreatedBy = request.UserId,
                         Source = "system",
@@ -209,7 +212,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                         SessionId = session.Id,
                         GameNightId = nightEntity.Id,
                         EventType = "gamenight_game_added",
-                        Timestamp = DateTime.UtcNow,
+                        Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
                         Payload = gameAddedPayload,
                         CreatedBy = request.UserId,
                         Source = "system",
@@ -303,7 +306,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
             {
                 gameIds.Add(request.GameId);
                 existing.GameIdsJson = System.Text.Json.JsonSerializer.Serialize(gameIds);
-                existing.UpdatedAt = DateTimeOffset.UtcNow;
+                existing.UpdatedAt = _timeProvider.GetUtcNow();
             }
 
             return (existing, false);
@@ -311,8 +314,8 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
 
         // Ad-hoc night envelope — build directly at the persistence layer to stay in-scope
         // for a single SaveChanges call.
-        var title = $"Serata del {DateTime.UtcNow:yyyy-MM-dd HH:mm}";
-        var now = DateTimeOffset.UtcNow;
+        var title = $"Serata del {_timeProvider.GetUtcNow().UtcDateTime:yyyy-MM-dd HH:mm}";
+        var now = _timeProvider.GetUtcNow();
         var newEntity = new GameNightEventEntity
         {
             Id = Guid.NewGuid(),

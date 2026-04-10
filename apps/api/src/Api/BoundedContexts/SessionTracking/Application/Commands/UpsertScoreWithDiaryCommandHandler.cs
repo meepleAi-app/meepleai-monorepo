@@ -27,15 +27,18 @@ internal sealed class UpsertScoreWithDiaryCommandHandler
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
 
     public UpsertScoreWithDiaryCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        TimeProvider timeProvider)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<UpsertScoreWithDiaryResult> Handle(
@@ -114,7 +117,7 @@ internal sealed class UpsertScoreWithDiaryCommandHandler
         {
             oldValue = existing.ScoreValue;
             existing.ScoreValue = request.NewValue;
-            existing.Timestamp = DateTime.UtcNow;
+            existing.Timestamp = _timeProvider.GetUtcNow().UtcDateTime;
             entryId = existing.Id;
         }
 
@@ -138,7 +141,7 @@ internal sealed class UpsertScoreWithDiaryCommandHandler
             SessionId = request.SessionId,
             GameNightId = gameNightId,
             EventType = "score_updated",
-            Timestamp = DateTime.UtcNow,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
             Payload = payload,
             CreatedBy = request.RequesterId,
             Source = "user",

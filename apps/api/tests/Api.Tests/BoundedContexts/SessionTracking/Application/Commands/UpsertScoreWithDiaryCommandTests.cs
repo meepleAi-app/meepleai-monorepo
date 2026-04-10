@@ -95,9 +95,10 @@ public sealed class UpsertScoreWithDiaryCommandTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System);
 
-        _upsertHandler = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, _dbContext);
+        _upsertHandler = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
     }
 
     public async ValueTask DisposeAsync()

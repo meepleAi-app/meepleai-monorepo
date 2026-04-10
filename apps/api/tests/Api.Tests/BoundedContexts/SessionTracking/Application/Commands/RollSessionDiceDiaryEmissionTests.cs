@@ -93,7 +93,8 @@ public sealed class RollSessionDiceDiaryEmissionTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System);
 
         var syncMock = new Mock<ISessionSyncService>();
         syncMock
@@ -108,7 +109,8 @@ public sealed class RollSessionDiceDiaryEmissionTests : IAsyncLifetime
             diceRollRepo,
             unitOfWork,
             syncMock.Object,
-            _dbContext);
+            _dbContext,
+            TimeProvider.System);
     }
 
     public async ValueTask DisposeAsync()

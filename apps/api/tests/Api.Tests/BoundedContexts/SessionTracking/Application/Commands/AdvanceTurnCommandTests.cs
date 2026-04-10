@@ -97,10 +97,11 @@ public sealed class AdvanceTurnCommandTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System);
 
-        _setTurnOrderHandler = new SetTurnOrderCommandHandler(sessionRepo, unitOfWork, _dbContext);
-        _advanceTurnHandler = new AdvanceTurnCommandHandler(sessionRepo, unitOfWork, _dbContext);
+        _setTurnOrderHandler = new SetTurnOrderCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
+        _advanceTurnHandler = new AdvanceTurnCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
     }
 
     public async ValueTask DisposeAsync()

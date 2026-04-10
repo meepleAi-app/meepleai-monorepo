@@ -103,10 +103,11 @@ public sealed class DiaryQueryTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System);
 
-        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext);
-        _upsertHandler = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, _dbContext);
+        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
+        _upsertHandler = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
         _sessionDiaryHandler = new GetSessionDiaryQueryHandler(_dbContext);
         _gameNightDiaryHandler = new GetGameNightDiaryQueryHandler(_dbContext);
     }

@@ -99,10 +99,11 @@ public sealed class CompleteGameNightCommandTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System);
 
-        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext);
-        _completeNightHandler = new CompleteGameNightCommandHandler(_dbContext, unitOfWork);
+        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
+        _completeNightHandler = new CompleteGameNightCommandHandler(_dbContext, unitOfWork, TimeProvider.System);
     }
 
     public async ValueTask DisposeAsync()

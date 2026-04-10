@@ -21,19 +21,22 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISessionSyncService _syncService;
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
 
     public FinalizeSessionCommandHandler(
         ISessionRepository sessionRepository,
         IScoreEntryRepository scoreEntryRepository,
         IUnitOfWork unitOfWork,
         ISessionSyncService syncService,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        TimeProvider timeProvider)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _scoreEntryRepository = scoreEntryRepository ?? throw new ArgumentNullException(nameof(scoreEntryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<FinalizeSessionResult> Handle(FinalizeSessionCommand request, CancellationToken cancellationToken)
@@ -100,7 +103,7 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // correlated with the cross-game timeline.
         var gameNightId = await _db.ResolveGameNightIdAsync(session.Id, cancellationToken).ConfigureAwait(false);
 
-        var finalizedAt = session.FinalizedAt ?? DateTime.UtcNow;
+        var finalizedAt = session.FinalizedAt ?? _timeProvider.GetUtcNow().UtcDateTime;
         var durationSeconds = (int)(finalizedAt - session.SessionDate).TotalSeconds;
         if (durationSeconds < 0) durationSeconds = 0;
 
@@ -117,7 +120,7 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
             SessionId = session.Id,
             GameNightId = gameNightId,
             EventType = "session_finalized",
-            Timestamp = DateTime.UtcNow,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
             Payload = finalizedPayload,
             CreatedBy = session.UserId,
             Source = "system",
@@ -135,7 +138,7 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         }
 
         // GST-003: Publish SSE event for session finalization
-        var durationMinutes = (int)(DateTime.UtcNow - session.SessionDate).TotalMinutes;
+        var durationMinutes = (int)(_timeProvider.GetUtcNow().UtcDateTime - session.SessionDate).TotalMinutes;
 
         var evt = new SessionFinalizedEvent
         {
@@ -143,7 +146,7 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
             WinnerId = winnerId != Guid.Empty ? winnerId : null,
             FinalRanks = request.FinalRanks,
             DurationMinutes = durationMinutes,
-            Timestamp = DateTime.UtcNow
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime
         };
         await _syncService.PublishEventAsync(request.SessionId, evt, cancellationToken).ConfigureAwait(false);
 

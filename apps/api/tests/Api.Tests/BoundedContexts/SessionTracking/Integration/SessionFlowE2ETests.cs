@@ -338,17 +338,19 @@ public sealed class SessionFlowE2ETests : IAsyncLifetime
             quotaMock.Object,
             db,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System);
 
-        var setTurnOrder = new SetTurnOrderCommandHandler(sessionRepo, unitOfWork, db);
+        var setTurnOrder = new SetTurnOrderCommandHandler(sessionRepo, unitOfWork, db, TimeProvider.System);
         var roll = new RollSessionDiceCommandHandler(
             sessionRepo,
             diceRollRepo,
             unitOfWork,
             syncMock.Object,
-            db);
-        var upsert = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, db);
-        var pause = new PauseSessionCommandHandler(sessionRepo, unitOfWork, db);
+            db,
+            TimeProvider.System);
+        var upsert = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, db, TimeProvider.System);
+        var pause = new PauseSessionCommandHandler(sessionRepo, unitOfWork, db, TimeProvider.System);
         var sessionDiary = new GetSessionDiaryQueryHandler(db);
         var gameNightDiary = new GetGameNightDiaryQueryHandler(db);
 

@@ -57,7 +57,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _quotaServiceMock.Object,
             _db,
             _mediatorMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            TimeProvider.System);
     }
 
     public void Dispose()
@@ -75,7 +76,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _quotaServiceMock.Object,
             _db,
             _mediatorMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            TimeProvider.System);
 
         Assert.Throws<ArgumentNullException>(act);
     }
@@ -89,7 +91,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _quotaServiceMock.Object,
             _db,
             _mediatorMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            TimeProvider.System);
 
         Assert.Throws<ArgumentNullException>(act);
     }
@@ -103,7 +106,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             null!,
             _db,
             _mediatorMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            TimeProvider.System);
 
         Assert.Throws<ArgumentNullException>(act);
     }
@@ -117,7 +121,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _quotaServiceMock.Object,
             null!,
             _mediatorMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            TimeProvider.System);
 
         Assert.Throws<ArgumentNullException>(act);
     }
@@ -131,7 +136,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _quotaServiceMock.Object,
             _db,
             null!,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            TimeProvider.System);
 
         Assert.Throws<ArgumentNullException>(act);
     }
@@ -145,7 +151,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _quotaServiceMock.Object,
             _db,
             _mediatorMock.Object,
-            null!);
+            null!,
+            TimeProvider.System);
 
         Assert.Throws<ArgumentNullException>(act);
     }

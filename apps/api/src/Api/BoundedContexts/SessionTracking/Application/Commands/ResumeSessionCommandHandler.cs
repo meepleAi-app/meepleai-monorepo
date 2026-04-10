@@ -26,15 +26,18 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
 
     public ResumeSessionCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        TimeProvider timeProvider)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task Handle(ResumeSessionCommand request, CancellationToken cancellationToken)
@@ -106,7 +109,7 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
                             SessionId = other.Id,
                             GameNightId = gameNightId,
                             EventType = "session_paused",
-                            Timestamp = DateTime.UtcNow,
+                            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
                             Payload = "{\"reason\":\"auto_pause_on_resume\"}",
                             CreatedBy = request.UserId,
                             Source = "system",
@@ -136,7 +139,7 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
                 SessionId = session.Id,
                 GameNightId = gameNightId,
                 EventType = "session_resumed",
-                Timestamp = DateTime.UtcNow,
+                Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
                 Payload = "{}",
                 CreatedBy = request.UserId,
                 Source = "system",

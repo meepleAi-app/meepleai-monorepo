@@ -37,7 +37,8 @@ public class FinalizeSessionCommandHandlerTests
 
         _handler = new FinalizeSessionCommandHandler(
             _sessionRepoMock.Object, _scoreRepoMock.Object,
-            _unitOfWorkMock.Object, _syncServiceMock.Object, _db);
+            _unitOfWorkMock.Object, _syncServiceMock.Object, _db,
+            TimeProvider.System);
     }
 
     [Fact]

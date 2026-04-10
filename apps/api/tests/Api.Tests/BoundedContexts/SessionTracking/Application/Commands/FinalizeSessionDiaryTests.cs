@@ -110,15 +110,17 @@ public sealed class FinalizeSessionDiaryTests : IAsyncLifetime
             quotaMock.Object,
             _dbContext,
             mediator,
-            loggerFactory.CreateLogger<CreateSessionCommandHandler>());
+            loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
+            TimeProvider.System);
 
-        _upsertScoreHandler = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, _dbContext);
+        _upsertScoreHandler = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
         _finalizeHandler = new FinalizeSessionCommandHandler(
             sessionRepo,
             scoreEntryRepo,
             unitOfWork,
             syncMock.Object,
-            _dbContext);
+            _dbContext,
+            TimeProvider.System);
     }
 
     public async ValueTask DisposeAsync()

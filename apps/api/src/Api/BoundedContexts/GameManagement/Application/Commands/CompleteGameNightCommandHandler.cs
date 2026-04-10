@@ -26,11 +26,13 @@ internal sealed class CompleteGameNightCommandHandler
 {
     private readonly MeepleAiDbContext _db;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly TimeProvider _timeProvider;
 
-    public CompleteGameNightCommandHandler(MeepleAiDbContext db, IUnitOfWork unitOfWork)
+    public CompleteGameNightCommandHandler(MeepleAiDbContext db, IUnitOfWork unitOfWork, TimeProvider timeProvider)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<CompleteGameNightResult> Handle(
@@ -68,7 +70,7 @@ internal sealed class CompleteGameNightCommandHandler
             .ConfigureAwait(false);
 #pragma warning restore MA0006
 
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var finalizedCount = 0;
 
         foreach (var session in nonFinalizedSessions)
@@ -106,12 +108,12 @@ internal sealed class CompleteGameNightCommandHandler
 #pragma warning restore MA0006
         {
             link.Status = "Completed";
-            link.CompletedAt = DateTimeOffset.UtcNow;
+            link.CompletedAt = _timeProvider.GetUtcNow();
         }
 
         // ── 5. Transition GameNight to Completed ───────────────────────
         nightEntity.Status = "Completed";
-        nightEntity.UpdatedAt = DateTimeOffset.UtcNow;
+        nightEntity.UpdatedAt = _timeProvider.GetUtcNow();
 
         // ── 6. Emit gamenight_completed diary event ────────────────────
         var durationSeconds = (int)(now - nightEntity.CreatedAt).TotalSeconds;

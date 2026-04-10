@@ -473,7 +473,8 @@ public class RollSessionDiceCommandHandlerTests
             _mockDiceRepo.Object,
             _mockUnitOfWork.Object,
             _mockSyncService.Object,
-            _dbContext);
+            _dbContext,
+            TimeProvider.System);
     }
 
     private static Session CreateActiveSession(Guid sessionId, Guid participantId)

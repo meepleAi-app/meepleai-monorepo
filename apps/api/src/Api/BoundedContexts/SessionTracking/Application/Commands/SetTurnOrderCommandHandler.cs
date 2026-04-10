@@ -25,15 +25,18 @@ internal sealed class SetTurnOrderCommandHandler : ICommandHandler<SetTurnOrderC
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
 
     public SetTurnOrderCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        TimeProvider timeProvider)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<SetTurnOrderResult> Handle(SetTurnOrderCommand request, CancellationToken cancellationToken)
@@ -105,7 +108,7 @@ internal sealed class SetTurnOrderCommandHandler : ICommandHandler<SetTurnOrderC
             SessionId = session.Id,
             GameNightId = gameNightId,
             EventType = "turn_order_set",
-            Timestamp = DateTime.UtcNow,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
             Payload = payload,
             CreatedBy = request.UserId,
             Source = "user",

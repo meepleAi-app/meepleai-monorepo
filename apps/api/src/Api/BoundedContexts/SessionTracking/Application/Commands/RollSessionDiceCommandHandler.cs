@@ -28,19 +28,22 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISessionSyncService _syncService;
     private readonly MeepleAiDbContext _db;
+    private readonly TimeProvider _timeProvider;
 
     public RollSessionDiceCommandHandler(
         ISessionRepository sessionRepository,
         IDiceRollRepository diceRollRepository,
         IUnitOfWork unitOfWork,
         ISessionSyncService syncService,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        TimeProvider timeProvider)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _diceRollRepository = diceRollRepository ?? throw new ArgumentNullException(nameof(diceRollRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<RollSessionDiceResult> Handle(RollSessionDiceCommand request, CancellationToken cancellationToken)
@@ -84,7 +87,7 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
             SessionId = request.SessionId,
             GameNightId = gameNightId,
             EventType = "dice_rolled",
-            Timestamp = DateTime.UtcNow,
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime,
             Payload = diaryPayload,
             CreatedBy = request.RequesterId,
             Source = "user",

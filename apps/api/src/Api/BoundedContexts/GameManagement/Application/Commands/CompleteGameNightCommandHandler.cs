@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
 using Api.Middleware.Exceptions;
@@ -27,12 +29,14 @@ internal sealed class CompleteGameNightCommandHandler
     private readonly MeepleAiDbContext _db;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
-    public CompleteGameNightCommandHandler(MeepleAiDbContext db, IUnitOfWork unitOfWork, TimeProvider timeProvider)
+    public CompleteGameNightCommandHandler(MeepleAiDbContext db, IUnitOfWork unitOfWork, TimeProvider timeProvider, IDiaryStreamService diaryStream)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task<CompleteGameNightResult> Handle(
@@ -72,6 +76,7 @@ internal sealed class CompleteGameNightCommandHandler
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var finalizedCount = 0;
+        var diaryEntities = new List<SessionEventEntity>();
 
         foreach (var session in nonFinalizedSessions)
         {
@@ -83,7 +88,7 @@ internal sealed class CompleteGameNightCommandHandler
             var durationSec = (int)(now - session.SessionDate).TotalSeconds;
             if (durationSec < 0) durationSec = 0;
 
-            _db.SessionEvents.Add(new SessionEventEntity
+            var sessionDiary = new SessionEventEntity
             {
                 Id = Guid.NewGuid(),
                 SessionId = session.Id,
@@ -99,7 +104,9 @@ internal sealed class CompleteGameNightCommandHandler
                 CreatedBy = request.UserId,
                 Source = "system",
                 IsDeleted = false
-            });
+            };
+            _db.SessionEvents.Add(sessionDiary);
+            diaryEntities.Add(sessionDiary);
         }
 
         // ── 4. Mark GameNightSession links as Completed ────────────────
@@ -122,7 +129,7 @@ internal sealed class CompleteGameNightCommandHandler
         var anchorSessionId = linkSessionIds.FirstOrDefault();
         if (anchorSessionId != Guid.Empty)
         {
-            _db.SessionEvents.Add(new SessionEventEntity
+            var nightDiary = new SessionEventEntity
             {
                 Id = Guid.NewGuid(),
                 SessionId = anchorSessionId,
@@ -139,11 +146,22 @@ internal sealed class CompleteGameNightCommandHandler
                 CreatedBy = request.UserId,
                 Source = "system",
                 IsDeleted = false
-            });
+            };
+            _db.SessionEvents.Add(nightDiary);
+            diaryEntities.Add(nightDiary);
         }
 
         // ── 7. Atomic save ─────────────────────────────────────────────
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Publish diary events to SSE stream after successful save.
+        foreach (var de in diaryEntities)
+        {
+            _diaryStream.Publish(de.SessionId, new SessionEventDto(
+                de.Id, de.SessionId, de.GameNightId,
+                de.EventType, de.Timestamp, de.Payload,
+                de.CreatedBy, de.Source));
+        }
 
         return new CompleteGameNightResult(
             GameNightEventId: nightEntity.Id,

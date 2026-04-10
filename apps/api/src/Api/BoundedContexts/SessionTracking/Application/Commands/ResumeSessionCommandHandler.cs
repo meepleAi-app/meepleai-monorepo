@@ -1,4 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
@@ -27,17 +29,20 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
     public ResumeSessionCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
         MeepleAiDbContext db,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IDiaryStreamService diaryStream)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task Handle(ResumeSessionCommand request, CancellationToken cancellationToken)
@@ -68,6 +73,9 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
         // sets this session's row to InProgress), but both live inside a single
         // transaction — if the second save fails, the first is rolled back too.
         await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        // Collect diary entities for SSE publishing after successful commit.
+        var diaryEntities = new List<SessionEventEntity>();
 
         try
         {
@@ -103,7 +111,7 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
                         other.Pause();
                         await _sessionRepository.UpdateAsync(other, cancellationToken).ConfigureAwait(false);
 
-                        _db.SessionEvents.Add(new SessionEventEntity
+                        var siblingDiary = new SessionEventEntity
                         {
                             Id = Guid.NewGuid(),
                             SessionId = other.Id,
@@ -114,7 +122,9 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
                             CreatedBy = request.UserId,
                             Source = "system",
                             IsDeleted = false
-                        });
+                        };
+                        _db.SessionEvents.Add(siblingDiary);
+                        diaryEntities.Add(siblingDiary);
                     }
 
                     // Flush auto-pauses so the partial unique index sees zero InProgress
@@ -133,7 +143,7 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
                 ownLinkRow.Status = GameNightSessionStatus.InProgress.ToString();
             }
 
-            _db.SessionEvents.Add(new SessionEventEntity
+            var resumeDiary = new SessionEventEntity
             {
                 Id = Guid.NewGuid(),
                 SessionId = session.Id,
@@ -144,7 +154,9 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
                 CreatedBy = request.UserId,
                 Source = "system",
                 IsDeleted = false
-            });
+            };
+            _db.SessionEvents.Add(resumeDiary);
+            diaryEntities.Add(resumeDiary);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
@@ -153,6 +165,15 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
         {
             await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
             throw;
+        }
+
+        // Publish all diary events after successful commit (best-effort, fire-and-forget).
+        foreach (var de in diaryEntities)
+        {
+            _diaryStream.Publish(de.SessionId, new SessionEventDto(
+                de.Id, de.SessionId, de.GameNightId,
+                de.EventType, de.Timestamp, de.Payload,
+                de.CreatedBy, de.Source));
         }
     }
 }

@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -26,17 +28,20 @@ internal sealed class SetTurnOrderCommandHandler : ICommandHandler<SetTurnOrderC
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
     public SetTurnOrderCommandHandler(
         ISessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
         MeepleAiDbContext db,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IDiaryStreamService diaryStream)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task<SetTurnOrderResult> Handle(SetTurnOrderCommand request, CancellationToken cancellationToken)
@@ -102,7 +107,7 @@ internal sealed class SetTurnOrderCommandHandler : ICommandHandler<SetTurnOrderC
             participantIds = order
         });
 
-        _db.SessionEvents.Add(new SessionEventEntity
+        var diaryEntity = new SessionEventEntity
         {
             Id = Guid.NewGuid(),
             SessionId = session.Id,
@@ -113,9 +118,15 @@ internal sealed class SetTurnOrderCommandHandler : ICommandHandler<SetTurnOrderC
             CreatedBy = request.UserId,
             Source = "user",
             IsDeleted = false
-        });
+        };
+        _db.SessionEvents.Add(diaryEntity);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _diaryStream.Publish(diaryEntity.SessionId, new SessionEventDto(
+            diaryEntity.Id, diaryEntity.SessionId, diaryEntity.GameNightId,
+            diaryEntity.EventType, diaryEntity.Timestamp, diaryEntity.Payload,
+            diaryEntity.CreatedBy, diaryEntity.Source));
 
         return new SetTurnOrderResult(request.Method.ToString(), seed, order);
     }

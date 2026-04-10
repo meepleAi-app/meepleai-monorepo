@@ -41,6 +41,7 @@ const initialState = {
   diaryEntries: [] as ContextualHandStore['diaryEntries'],
   isDiaryLoading: false,
   kbReadiness: null as ContextualHandStore['kbReadiness'],
+  eventSource: null as EventSource | null,
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -82,6 +83,9 @@ export const useContextualHandStore = create<ContextualHandStore>()(
                 s.isLoading = false;
                 s.isInitialized = true;
               });
+              if (statusToContext(session.status) === 'active') {
+                get().subscribeToDiary(session.sessionId);
+              }
             } else {
               set(s => {
                 s.context = 'idle';
@@ -125,6 +129,7 @@ export const useContextualHandStore = create<ContextualHandStore>()(
               s.context = 'active';
               s.isLoading = false;
             });
+            get().subscribeToDiary(result.sessionId);
           } catch (error) {
             set(s => {
               s.error = (error as Error).message;
@@ -295,12 +300,66 @@ export const useContextualHandStore = create<ContextualHandStore>()(
           }
         },
 
+        // ── SSE Diary Stream ─────────────────────────────────────────
+
+        subscribeToDiary: (sessionId: string) => {
+          get().unsubscribeFromDiary();
+          const es = new EventSource(
+            `/api/v1/sessions/${encodeURIComponent(sessionId)}/diary/stream`
+          );
+          let retryCount = 0;
+          const MAX_RETRIES = 5;
+
+          es.onmessage = (event) => {
+            try {
+              const entry = JSON.parse(event.data);
+              set((state) => {
+                if (!state.diaryEntries.some((e) => e.id === entry.id)) {
+                  state.diaryEntries.push(entry);
+                  state.diaryEntries.sort((a, b) =>
+                    a.timestamp.localeCompare(b.timestamp)
+                  );
+                }
+              });
+              retryCount = 0;
+            } catch {
+              /* ignore malformed */
+            }
+          };
+
+          es.onerror = () => {
+            es.close();
+            set({ eventSource: null });
+            retryCount++;
+            if (retryCount > MAX_RETRIES || get().context !== 'active') return;
+            const delay = 3000 * Math.pow(2, retryCount - 1);
+            setTimeout(() => {
+              if (get().context === 'active') {
+                get().loadDiary();
+                get().subscribeToDiary(sessionId);
+              }
+            }, delay);
+          };
+
+          set({ eventSource: es });
+        },
+
+        unsubscribeFromDiary: () => {
+          const { eventSource } = get();
+          if (eventSource) {
+            eventSource.close();
+            set({ eventSource: null });
+          }
+        },
+
         // ── Reset ────────────────────────────────────────────────────
 
-        reset: () =>
+        reset: () => {
+          get().unsubscribeFromDiary();
           set(s => {
             Object.assign(s, { ...initialState, isInitialized: false });
-          }),
+          });
+        },
       })),
       {
         name: STORE_NAME,

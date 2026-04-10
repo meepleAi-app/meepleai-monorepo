@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
@@ -339,18 +340,21 @@ public sealed class SessionFlowE2ETests : IAsyncLifetime
             db,
             mediator,
             loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
-        var setTurnOrder = new SetTurnOrderCommandHandler(sessionRepo, unitOfWork, db, TimeProvider.System);
+        var setTurnOrder = new SetTurnOrderCommandHandler(sessionRepo, unitOfWork, db, TimeProvider.System, new DiaryStreamService());
         var roll = new RollSessionDiceCommandHandler(
             sessionRepo,
             diceRollRepo,
             unitOfWork,
             syncMock.Object,
             db,
-            TimeProvider.System);
-        var upsert = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, db, TimeProvider.System);
-        var pause = new PauseSessionCommandHandler(sessionRepo, unitOfWork, db, TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
+        var upsert = new UpsertScoreWithDiaryCommandHandler(sessionRepo, unitOfWork, db, TimeProvider.System,
+            new DiaryStreamService());
+        var pause = new PauseSessionCommandHandler(sessionRepo, unitOfWork, db, TimeProvider.System, new DiaryStreamService());
         var sessionDiary = new GetSessionDiaryQueryHandler(db);
         var gameNightDiary = new GetGameNightDiaryQueryHandler(db);
 

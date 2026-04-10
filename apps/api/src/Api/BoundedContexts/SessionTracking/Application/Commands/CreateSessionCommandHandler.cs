@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -29,6 +30,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
     private readonly IMediator _mediator;
     private readonly ILogger<CreateSessionCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
     public CreateSessionCommandHandler(
         ISessionRepository sessionRepository,
@@ -37,7 +39,8 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         MeepleAiDbContext db,
         IMediator mediator,
         ILogger<CreateSessionCommandHandler> logger,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IDiaryStreamService diaryStream)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -46,6 +49,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task<CreateSessionResult> Handle(CreateSessionCommand request, CancellationToken cancellationToken)
@@ -160,13 +164,15 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                 nightEntity.Sessions.Add(linkEntity);
 
                 // Session Flow v2.1 — T4: Emit diary events.
+                var diaryEntities = new List<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity>();
+
                 var sessionCreatedPayload = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     gameId = request.GameId,
                     gameNightEventId = nightEntity.Id,
                     gameNightWasCreated
                 });
-                _db.SessionEvents.Add(new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
+                var sessionCreatedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
                 {
                     Id = Guid.NewGuid(),
                     SessionId = session.Id,
@@ -177,7 +183,9 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     CreatedBy = request.UserId,
                     Source = "system",
                     IsDeleted = false
-                });
+                };
+                _db.SessionEvents.Add(sessionCreatedDiary);
+                diaryEntities.Add(sessionCreatedDiary);
 
                 if (gameNightWasCreated)
                 {
@@ -187,7 +195,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                         title = nightEntity.Title,
                         isAdHoc = true
                     });
-                    _db.SessionEvents.Add(new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
+                    var nightCreatedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
                     {
                         Id = Guid.NewGuid(),
                         SessionId = session.Id,
@@ -198,7 +206,9 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                         CreatedBy = request.UserId,
                         Source = "system",
                         IsDeleted = false
-                    });
+                    };
+                    _db.SessionEvents.Add(nightCreatedDiary);
+                    diaryEntities.Add(nightCreatedDiary);
                 }
                 else
                 {
@@ -206,7 +216,7 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     {
                         addedGameId = request.GameId
                     });
-                    _db.SessionEvents.Add(new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
+                    var gameAddedDiary = new Api.Infrastructure.Entities.SessionTracking.SessionEventEntity
                     {
                         Id = Guid.NewGuid(),
                         SessionId = session.Id,
@@ -217,11 +227,22 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                         CreatedBy = request.UserId,
                         Source = "system",
                         IsDeleted = false
-                    });
+                    };
+                    _db.SessionEvents.Add(gameAddedDiary);
+                    diaryEntities.Add(gameAddedDiary);
                 }
 
                 // Single atomic save for session + participants + guest additions + night link + diary events.
                 await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                // Publish diary events to SSE stream after successful save.
+                foreach (var de in diaryEntities)
+                {
+                    _diaryStream.Publish(de.SessionId, new SessionEventDto(
+                        de.Id, de.SessionId, de.GameNightId,
+                        de.EventType, de.Timestamp, de.Payload,
+                        de.CreatedBy, de.Source));
+                }
 
                 // Session Flow v2.1 — T4: Best-effort resolution of AgentDefinition + Toolkit
                 // for the response (frontend uses these to compose the Hand view).

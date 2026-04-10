@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -102,11 +103,12 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
             _dbContext,
             mediator,
             loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
         // T5: PauseSessionCommandHandler shares the same SessionRepository / UnitOfWork
         // so the two scenarios that depend on Pause can drive a real domain transition.
-        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
+        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System, new DiaryStreamService());
     }
 
     public async ValueTask DisposeAsync()
@@ -370,7 +372,8 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
             db,
             mediator,
             loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
     }
 
     private static CreateSessionCommand BuildCommand(

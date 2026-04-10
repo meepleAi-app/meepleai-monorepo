@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -94,7 +95,8 @@ public sealed class RollSessionDiceDiaryEmissionTests : IAsyncLifetime
             _dbContext,
             mediator,
             loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
         var syncMock = new Mock<ISessionSyncService>();
         syncMock
@@ -110,7 +112,8 @@ public sealed class RollSessionDiceDiaryEmissionTests : IAsyncLifetime
             unitOfWork,
             syncMock.Object,
             _dbContext,
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
     }
 
     public async ValueTask DisposeAsync()

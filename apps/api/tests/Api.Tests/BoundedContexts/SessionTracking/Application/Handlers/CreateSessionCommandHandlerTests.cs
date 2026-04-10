@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -58,7 +59,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _db,
             _mediatorMock.Object,
             _loggerMock.Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
     }
 
     public void Dispose()
@@ -77,7 +79,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _db,
             _mediatorMock.Object,
             _loggerMock.Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
         Assert.Throws<ArgumentNullException>(act);
     }
@@ -92,7 +95,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _db,
             _mediatorMock.Object,
             _loggerMock.Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
         Assert.Throws<ArgumentNullException>(act);
     }
@@ -107,7 +111,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _db,
             _mediatorMock.Object,
             _loggerMock.Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
         Assert.Throws<ArgumentNullException>(act);
     }
@@ -122,7 +127,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             null!,
             _mediatorMock.Object,
             _loggerMock.Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
         Assert.Throws<ArgumentNullException>(act);
     }
@@ -137,7 +143,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _db,
             null!,
             _loggerMock.Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
         Assert.Throws<ArgumentNullException>(act);
     }
@@ -152,7 +159,8 @@ public sealed class CreateSessionCommandHandlerTests : IDisposable
             _db,
             _mediatorMock.Object,
             null!,
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
         Assert.Throws<ArgumentNullException>(act);
     }

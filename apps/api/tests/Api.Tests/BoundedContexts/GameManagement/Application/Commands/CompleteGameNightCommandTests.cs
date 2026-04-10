@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -100,10 +101,11 @@ public sealed class CompleteGameNightCommandTests : IAsyncLifetime
             _dbContext,
             mediator,
             loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
-        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
-        _completeNightHandler = new CompleteGameNightCommandHandler(_dbContext, unitOfWork, TimeProvider.System);
+        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System, new DiaryStreamService());
+        _completeNightHandler = new CompleteGameNightCommandHandler(_dbContext, unitOfWork, TimeProvider.System, new DiaryStreamService());
     }
 
     public async ValueTask DisposeAsync()

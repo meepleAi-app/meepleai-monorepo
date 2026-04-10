@@ -1,6 +1,8 @@
 using System.Text.Json;
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -29,6 +31,7 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
     private readonly ISessionSyncService _syncService;
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
+    private readonly IDiaryStreamService _diaryStream;
 
     public RollSessionDiceCommandHandler(
         ISessionRepository sessionRepository,
@@ -36,7 +39,8 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
         IUnitOfWork unitOfWork,
         ISessionSyncService syncService,
         MeepleAiDbContext db,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IDiaryStreamService diaryStream)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _diceRollRepository = diceRollRepository ?? throw new ArgumentNullException(nameof(diceRollRepository));
@@ -44,6 +48,7 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
         _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _diaryStream = diaryStream ?? throw new ArgumentNullException(nameof(diaryStream));
     }
 
     public async Task<RollSessionDiceResult> Handle(RollSessionDiceCommand request, CancellationToken cancellationToken)
@@ -81,7 +86,7 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
             participantId = request.ParticipantId
         });
 
-        _db.SessionEvents.Add(new SessionEventEntity
+        var diaryEntity = new SessionEventEntity
         {
             Id = Guid.NewGuid(),
             SessionId = request.SessionId,
@@ -92,9 +97,15 @@ public class RollSessionDiceCommandHandler : IRequestHandler<RollSessionDiceComm
             CreatedBy = request.RequesterId,
             Source = "user",
             IsDeleted = false
-        });
+        };
+        _db.SessionEvents.Add(diaryEntity);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _diaryStream.Publish(diaryEntity.SessionId, new SessionEventDto(
+            diaryEntity.Id, diaryEntity.SessionId, diaryEntity.GameNightId,
+            diaryEntity.EventType, diaryEntity.Timestamp, diaryEntity.Payload,
+            diaryEntity.CreatedBy, diaryEntity.Source));
 
         var evt = new DiceRolledEvent
         {

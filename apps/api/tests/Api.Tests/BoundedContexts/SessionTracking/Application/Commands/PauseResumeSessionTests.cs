@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -95,10 +96,11 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             _dbContext,
             mediator,
             loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
-        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
-        _resumeHandler = new ResumeSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
+        _pauseHandler = new PauseSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System, new DiaryStreamService());
+        _resumeHandler = new ResumeSessionCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System, new DiaryStreamService());
     }
 
     public async ValueTask DisposeAsync()

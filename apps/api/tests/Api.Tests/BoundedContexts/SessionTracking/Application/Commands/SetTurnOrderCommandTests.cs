@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using System.Text.Json;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
@@ -96,9 +97,10 @@ public sealed class SetTurnOrderCommandTests : IAsyncLifetime
             _dbContext,
             mediator,
             loggerFactory.CreateLogger<CreateSessionCommandHandler>(),
-            TimeProvider.System);
+            TimeProvider.System,
+            new DiaryStreamService());
 
-        _setTurnOrderHandler = new SetTurnOrderCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System);
+        _setTurnOrderHandler = new SetTurnOrderCommandHandler(sessionRepo, unitOfWork, _dbContext, TimeProvider.System, new DiaryStreamService());
     }
 
     public async ValueTask DisposeAsync()

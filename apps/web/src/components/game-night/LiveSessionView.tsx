@@ -200,6 +200,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   // ----- Dispute diary (GAP-006) -----
   const { createEntry: createDisputeEntry } = useDisputeDiary();
   const [disputeRegistered, setDisputeRegistered] = useState(false);
+  const disputeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleRegisterDispute = useCallback(async () => {
     if (!rulesAgentState.currentAnswer || !sessionId) return;
@@ -209,8 +210,15 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
       ruling: rulesAgentState.currentAnswer,
     });
     setDisputeRegistered(true);
-    setTimeout(() => setDisputeRegistered(false), 3000);
+    if (disputeTimerRef.current) clearTimeout(disputeTimerRef.current);
+    disputeTimerRef.current = setTimeout(() => setDisputeRegistered(false), 3000);
   }, [rulesAgentState.currentAnswer, rulesSentMessages, sessionId, createDisputeEntry]);
+
+  useEffect(() => {
+    return () => {
+      if (disputeTimerRef.current) clearTimeout(disputeTimerRef.current);
+    };
+  }, []);
 
   // ----- Resume context (inject recap as first chat message) -----
   const { data: resumeContext } = useQuery({
@@ -541,12 +549,13 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
               <button
                 type="button"
                 data-testid="register-dispute-btn"
-                onClick={handleRegisterDispute}
-                disabled={disputeRegistered}
+                onClick={disputeRegistered ? undefined : handleRegisterDispute}
+                aria-disabled={disputeRegistered}
+                tabIndex={0}
                 className={cn(
                   'w-full text-xs rounded-lg px-3 py-2 border transition-colors',
                   disputeRegistered
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700 cursor-default pointer-events-none'
                     : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
                 )}
               >

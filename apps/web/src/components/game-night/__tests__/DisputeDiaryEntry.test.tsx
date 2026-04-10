@@ -41,7 +41,7 @@ import { useDisputeDiary } from '@/lib/domain-hooks/useDisputeDiary';
 // ---------------------------------------------------------------------------
 function renderDisputeDiaryHook() {
   const { result } = renderHook(() => useDisputeDiary());
-  return result.current;
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -54,12 +54,12 @@ describe('useDisputeDiary', () => {
   });
 
   it('exports a createEntry function', () => {
-    const { createEntry } = renderDisputeDiaryHook();
+    const { createEntry } = renderDisputeDiaryHook().current;
     expect(typeof createEntry).toBe('function');
   });
 
   it('calls api.sessions.saveNote with dispute_resolved noteType', async () => {
-    const { createEntry } = renderDisputeDiaryHook();
+    const { createEntry } = renderDisputeDiaryHook().current;
 
     await createEntry({
       sessionId: 'session-abc',
@@ -77,7 +77,7 @@ describe('useDisputeDiary', () => {
   });
 
   it('includes the question and ruling in the note content', async () => {
-    const { createEntry } = renderDisputeDiaryHook();
+    const { createEntry } = renderDisputeDiaryHook().current;
 
     await createEntry({
       sessionId: 'session-abc',
@@ -91,7 +91,7 @@ describe('useDisputeDiary', () => {
   });
 
   it('omits question line when question is empty', async () => {
-    const { createEntry } = renderDisputeDiaryHook();
+    const { createEntry } = renderDisputeDiaryHook().current;
 
     await createEntry({
       sessionId: 'session-xyz',
@@ -105,7 +105,7 @@ describe('useDisputeDiary', () => {
   });
 
   it('includes sourceChunkId in content when provided', async () => {
-    const { createEntry } = renderDisputeDiaryHook();
+    const { createEntry } = renderDisputeDiaryHook().current;
 
     await createEntry({
       sessionId: 'session-abc',
@@ -120,7 +120,7 @@ describe('useDisputeDiary', () => {
 
   it('propagates API errors', async () => {
     mockSaveNote.mockRejectedValueOnce(new Error('Network error'));
-    const { createEntry } = renderDisputeDiaryHook();
+    const { createEntry } = renderDisputeDiaryHook().current;
 
     await expect(
       createEntry({

@@ -23,6 +23,7 @@ import {
   HANDLER_BASE,
 } from '../data/factories';
 import { getScenarioBridge, type BridgeMockGame } from '../scenarioBridge';
+import { guardScenarioSwitching } from './_shared';
 
 const API_BASE = HANDLER_BASE;
 
@@ -80,6 +81,8 @@ function removeGameFromStore(id: string): boolean {
 export const gamesHandlers = [
   // GET /api/v1/games - List all games
   http.get(`${API_BASE}/api/v1/games`, () => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
     return HttpResponse.json(currentGames(), {
       headers: {
         'X-Correlation-Id': `test-correlation-${Date.now()}`,

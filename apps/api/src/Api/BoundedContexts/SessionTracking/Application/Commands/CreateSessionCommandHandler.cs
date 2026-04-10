@@ -258,11 +258,9 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
                     AgentDefinitionId: agentDefinitionId,
                     ToolkitId: toolkitId);
             }
-            catch (InvalidOperationException) when (attempt < maxRetries - 1)
+            catch (InvalidOperationException ex) when (attempt < maxRetries - 1)
             {
-                // Session code collision detected by SessionRepository.AddAsync before
-                // any entity is added to the ChangeTracker. Retry with a fresh session code;
-                // the ad-hoc night entity (if any) stays tracked for the next iteration.
+                _logger.LogDebug(ex, "Session code collision on attempt {Attempt}, retrying", attempt + 1);
             }
         }
 

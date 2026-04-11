@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { CounterTool } from '@/components/toolkit/CounterTool';
 import { DiceRoller } from '@/components/toolkit/DiceRoller';
 import { Randomizer } from '@/components/toolkit/Randomizer';
+import { Timer } from '@/components/toolkit/Timer';
 import { DEFAULT_TOOLKIT } from '@/lib/config/default-toolkit';
 import type { ToolLogEntry } from '@/lib/types/standalone-toolkit';
 import { appendToolLog, generateLogId, clearOldEntries } from '@/lib/utils/toolkit-log';
@@ -62,6 +63,32 @@ export default function ToolkitPlayPage() {
           ))}
         </div>
       </section>
+
+      {/* Timer */}
+      {DEFAULT_TOOLKIT.timers.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Timer
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {DEFAULT_TOOLKIT.timers.map(config => (
+              <Timer
+                key={config.name}
+                name={config.name}
+                defaultSeconds={config.defaultSeconds}
+                type={config.type}
+                onAction={(action, seconds) =>
+                  addLog({
+                    toolType: 'timer',
+                    action,
+                    result: `${config.name}: ${action} @ ${seconds}s`,
+                  })
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Contatori */}
       <section>

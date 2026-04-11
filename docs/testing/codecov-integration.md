@@ -59,7 +59,7 @@ Coverage is uploaded in `.github/workflows/ci.yml`:
 ### Frontend Upload
 ```yaml
 - name: Upload Coverage
-  uses: codecov/codecov-action@v4
+  uses: codecov/codecov-action@v5
   with:
     files: apps/web/coverage/lcov.info
     flags: frontend
@@ -67,14 +67,25 @@ Coverage is uploaded in `.github/workflows/ci.yml`:
 ```
 
 ### Backend Upload
+
+Coverage is collected with `dotnet-coverage` (Microsoft) to avoid DLL locking on Windows and provide more reliable profiling.
+
 ```yaml
+- name: Install dotnet-coverage
+  run: dotnet tool install --global dotnet-coverage
+
+- name: Run Unit Tests with Coverage
+  run: |
+    dotnet-coverage collect \
+      "dotnet test MeepleAI.Api.sln --filter 'Category=Unit' --no-build --configuration Release" \
+      -f cobertura \
+      -o coverage/unit-coverage.xml
+
 - name: Upload Coverage
-  uses: codecov/codecov-action@v4
+  uses: codecov/codecov-action@v5
   with:
-    files: |
-      apps/api/coverage/unit-coverage.xml
-      apps/api/coverage/integration-coverage.xml
-    flags: backend
+    files: apps/api/coverage/unit-coverage.xml
+    flags: backend-unit,backend
     token: ${{ secrets.CODECOV_TOKEN }}
 ```
 
@@ -123,8 +134,13 @@ pnpm test:coverage
 ### Backend
 ```bash
 cd apps/api
-dotnet test --collect:"XPlat Code Coverage"
-# View: apps/api/TestResults/*/coverage.cobertura.xml
+dotnet tool install --global dotnet-coverage  # Once per machine
+mkdir -p coverage
+dotnet-coverage collect \
+  "dotnet test MeepleAI.Api.sln --filter 'Category=Unit' --no-build --configuration Release" \
+  -f cobertura \
+  -o coverage/unit-coverage.xml
+# View: apps/api/coverage/unit-coverage.xml
 ```
 
 ## Troubleshooting

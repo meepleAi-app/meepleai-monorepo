@@ -137,24 +137,30 @@ jobs:
           dotnet-version: '9.0.x'
           working-directory: apps/api
 
+      - name: Install dotnet-coverage
+        run: |
+          dotnet tool install --global dotnet-coverage
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Run Unit Tests
+      - name: Run Unit Tests with Coverage
         timeout-minutes: 30
         env:
           CI: true
         run: |
-          echo "🧪 Running unit tests..."
-          dotnet test \
-            --filter "Category=Unit" \
-            --logger "console;verbosity=minimal" \
-            --no-build \
-            --configuration Release \
-            --blame-hang-timeout 5min \
-            -p:CollectCoverage=true \
-            -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/unit-coverage.xml
+          echo "🧪 Running unit tests with dotnet-coverage..."
+          mkdir -p coverage
+          dotnet-coverage collect \
+            "dotnet test MeepleAI.Api.sln \
+              --filter Category=Unit \
+              --settings tests/Api.Tests/unit.runsettings \
+              --no-build \
+              --configuration Release \
+              --blame-hang-timeout 5min" \
+            -f cobertura \
+            -o coverage/unit-coverage.xml
           echo "✅ Unit tests passed"
 
       - name: Upload Coverage
@@ -162,7 +168,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: apps/api/coverage/unit-coverage.xml
-          flags: backend-unit
+          flags: backend-unit,backend
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 

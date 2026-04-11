@@ -93,12 +93,15 @@ function SessionModeBar({ sessionId }: { sessionId: string }) {
         <Wrench className="h-5 w-5" />
         <span>Toolkit</span>
       </button>
+      {/* TODO: wire to openDrawer('chat', sessionId) once agent chat drawer is implemented */}
       <button
         type="button"
-        onClick={() => {
-          /* open agent chat drawer */
-        }}
-        className="flex min-w-[48px] flex-col items-center gap-0.5 py-1 text-[10px] font-bold text-muted-foreground"
+        disabled
+        aria-label="Chat AI (prossimamente)"
+        className={cn(
+          'flex min-w-[48px] flex-col items-center gap-0.5 py-1 text-[10px] font-bold',
+          'opacity-40 cursor-not-allowed'
+        )}
       >
         <MessageCircle className="h-5 w-5" />
         <span>AI</span>

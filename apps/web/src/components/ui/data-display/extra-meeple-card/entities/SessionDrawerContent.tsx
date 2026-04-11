@@ -21,13 +21,17 @@ import type { DrawerAction } from '../DrawerActionFooter';
 
 interface SessionDrawerContentProps {
   entityId: string;
+  initialTabId?: string;
 }
 
 type SessionTab = 'live' | 'toolkit' | 'timeline';
 
-export function SessionDrawerContent({ entityId }: SessionDrawerContentProps) {
+export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerContentProps) {
   const { data, loading, error, retry } = useSessionDetail(entityId);
-  const [activeTab, setActiveTab] = useState<SessionTab>('live');
+  const validTabs: SessionTab[] = ['live', 'toolkit', 'timeline'];
+  const [activeTab, setActiveTab] = useState<SessionTab>(
+    validTabs.includes(initialTabId as SessionTab) ? (initialTabId as SessionTab) : 'live'
+  );
   const router = useRouter();
   const colors = ENTITY_COLORS.session;
   const pushDrawer = useCascadeNavigationStore(s => s.pushDrawer);

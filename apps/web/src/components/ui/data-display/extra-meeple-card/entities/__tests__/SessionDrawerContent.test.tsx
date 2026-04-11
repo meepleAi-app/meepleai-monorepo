@@ -122,4 +122,28 @@ describe('SessionDrawerContent', () => {
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
+
+  it('opens toolkit tab when initialTabId is toolkit', () => {
+    vi.mocked(useSessionDetail).mockReturnValue({
+      data: {
+        ...mockData,
+        toolkit: {
+          id: 't1',
+          name: 'My Toolkit',
+          version: 1,
+          isPublished: true,
+          diceTools: [],
+          cardTools: [],
+          timerTools: [],
+          counterTools: [],
+        },
+      },
+      loading: false,
+      error: null,
+      retry: vi.fn(),
+    });
+    render(<SessionDrawerContent entityId="s1" initialTabId="toolkit" />);
+    const toolkitTab = screen.getByRole('tab', { name: /toolkit/i });
+    expect(toolkitTab).toHaveAttribute('aria-selected', 'true');
+  });
 });

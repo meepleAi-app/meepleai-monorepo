@@ -180,6 +180,7 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
         >
           {hasStack && (
             <button
+              type="button"
               onClick={popDrawer}
               className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
               aria-label="Indietro"
@@ -249,6 +250,8 @@ function DrawerEntityRouter({
   linkEntityType?: LinkEntityType;
   liveChatData?: ExtraMeepleCardDrawerProps['liveChatData'];
 }) {
+  const activeTabId = useCascadeNavigationStore(s => s.activeTabId);
+
   switch (entityType) {
     case 'game':
       return <GameDrawerContent entityId={entityId} />;
@@ -273,7 +276,7 @@ function DrawerEntityRouter({
     case 'player':
       return <PlayerDrawerContent entityId={entityId} />;
     case 'session':
-      return <SessionDrawerContent entityId={entityId} />;
+      return <SessionDrawerContent entityId={entityId} initialTabId={activeTabId ?? undefined} />;
     case 'event':
       return <EventDrawerContent entityId={entityId} />;
     case 'toolkit':

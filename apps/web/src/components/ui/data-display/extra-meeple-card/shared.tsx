@@ -67,6 +67,13 @@ export const ENTITY_COLORS = {
     accentBorder: 'border-indigo-200/60',
     activeAccent: 'data-[state=active]:text-indigo-700',
   },
+  event: {
+    hsl: '350 89% 60%',
+    accent: 'text-rose-700',
+    accentBg: 'bg-rose-100',
+    accentBorder: 'border-rose-200/60',
+    activeAccent: 'data-[state=active]:text-rose-700',
+  },
 } as const;
 
 export type EntityVariant = keyof typeof ENTITY_COLORS;

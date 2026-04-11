@@ -42,6 +42,7 @@ import { cn } from '@/lib/utils';
 import { DrawerLoadingSkeleton, DrawerErrorState, DrawerComingSoon } from './drawer-states';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
 import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
+import { EventDrawerContent } from './entities/EventDrawerContent';
 import { PlayerDrawerContent } from './entities/PlayerDrawerContent';
 import { SessionDrawerContent } from './entities/SessionDrawerContent';
 import {
@@ -271,8 +272,9 @@ function DrawerEntityRouter({
       return <PlayerDrawerContent entityId={entityId} />;
     case 'session':
       return <SessionDrawerContent entityId={entityId} />;
-    // Other entity types — Coming Soon until dedicated content components are implemented
     case 'event':
+      return <EventDrawerContent entityId={entityId} />;
+    // Other entity types — Coming Soon until dedicated content components are implemented
     case 'toolkit':
     case 'tool':
       return <DrawerComingSoon label={ENTITY_CONFIG[entityType].label} issueNumber={0} />;

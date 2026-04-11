@@ -303,6 +303,27 @@ export interface SessionDetailData {
   timeline: SessionTimelineEvent[];
 }
 
+/** Event entity detail data (drawer view) */
+export interface EventDetailData {
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  isOnline: boolean;
+  organizerName?: string;
+  /** True if the current user is the organizer */
+  isOrganizer: boolean;
+  /** Current user's RSVP status */
+  rsvpStatus?: 'confirmed' | 'pending' | 'declined' | null;
+  attendeeCount: number;
+  maxAttendees?: number;
+  /** Scheduled activities/sessions in this event */
+  schedule: { id: string; title: string; scheduledAt: string; gameName?: string }[];
+}
+
 /** Collection entity detail data */
 export interface CollectionDetailData {
   id: string;

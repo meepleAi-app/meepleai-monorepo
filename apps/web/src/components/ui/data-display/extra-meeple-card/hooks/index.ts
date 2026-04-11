@@ -5,3 +5,4 @@ export { useKbDetail } from './use-kb-detail';
 export { useEntityDetail } from './use-entity-detail';
 export { usePlayerDetail } from './use-player-detail';
 export { useSessionDetail } from './use-session-detail';
+export { useEventDetail } from './use-event-detail';

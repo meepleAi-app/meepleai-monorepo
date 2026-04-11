@@ -17,8 +17,6 @@ const mockUploadAvatar = vi.hoisted(() => vi.fn());
 const mockUseAuth = vi.hoisted(() => vi.fn());
 const mockUseRecentSessions = vi.hoisted(() => vi.fn());
 const mockUseActivityFeed = vi.hoisted(() => vi.fn());
-const mockDrawCard = vi.hoisted(() => vi.fn());
-
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: mockUseAuth,
 }));
@@ -29,10 +27,6 @@ vi.mock('@/hooks/useRecentSessions', () => ({
 
 vi.mock('@/hooks/useActivityFeed', () => ({
   useActivityFeed: mockUseActivityFeed,
-}));
-
-vi.mock('@/stores/use-card-hand', () => ({
-  useCardHand: () => ({ drawCard: mockDrawCard }),
 }));
 
 vi.mock('@/lib/api', () => ({
@@ -117,7 +111,6 @@ describe('ProfilePage', () => {
     mockUploadAvatar.mockResolvedValue({ ok: true, avatarUrl: 'https://example.com/avatar.jpg' });
     mockUseRecentSessions.mockReturnValue({ sessions: [], isLoading: false, error: null });
     mockUseActivityFeed.mockReturnValue({ items: [], isLoading: false, error: null });
-    mockDrawCard.mockReturnValue(undefined);
   });
 
   it('shows user display name in header', async () => {

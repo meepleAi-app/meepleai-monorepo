@@ -21,6 +21,7 @@ import React from 'react';
 import {
   Bot,
   Calendar,
+  ChevronLeft,
   FileText,
   Gamepad2,
   Layers,
@@ -35,11 +36,17 @@ import {
 import { EmbeddedChatView } from '@/components/chat-unified/EmbeddedChatView';
 import { useDashboardMode } from '@/components/dashboard';
 import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
+import { useCascadeNavigationStore } from '@/lib/stores/cascade-navigation-store';
 import { cn } from '@/lib/utils';
 
-import { DrawerLoadingSkeleton, DrawerErrorState, DrawerComingSoon } from './drawer-states';
-import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
+import { DrawerLoadingSkeleton, DrawerErrorState } from './drawer-states';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
+import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
+import { EventDrawerContent } from './entities/EventDrawerContent';
+import { PlayerDrawerContent } from './entities/PlayerDrawerContent';
+import { SessionDrawerContent } from './entities/SessionDrawerContent';
+import { ToolDrawerContent } from './entities/ToolDrawerContent';
+import { ToolkitDrawerContent } from './entities/ToolkitDrawerContent';
 import {
   GameExtraMeepleCard,
   ChatExtraMeepleCard,
@@ -132,6 +139,10 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
   const { Icon } = config;
   const { isGameMode, activeSessionId } = useDashboardMode();
 
+  const drawerStack = useCascadeNavigationStore(s => s.drawerStack);
+  const popDrawer = useCascadeNavigationStore(s => s.popDrawer);
+  const hasStack = drawerStack.length > 0;
+
   // During an active game session, highlight the drawer to signal session context
   const inSessionContext = isGameMode && !!activeSessionId;
 
@@ -167,6 +178,17 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
           className="relative flex h-14 shrink-0 items-center gap-2.5 px-5"
           style={{ backgroundColor: `hsl(${config.color})` }}
         >
+          {hasStack && (
+            <button
+              type="button"
+              onClick={popDrawer}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
+              aria-label="Indietro"
+              data-testid={DRAWER_TEST_IDS.BACK_BUTTON}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+          )}
           <Icon className="h-4.5 w-4.5 text-white" aria-hidden="true" />
           <h2
             className="font-quicksand text-base font-bold text-white"
@@ -228,6 +250,8 @@ function DrawerEntityRouter({
   linkEntityType?: LinkEntityType;
   liveChatData?: ExtraMeepleCardDrawerProps['liveChatData'];
 }) {
+  const activeTabId = useCascadeNavigationStore(s => s.activeTabId);
+
   switch (entityType) {
     case 'game':
       return <GameDrawerContent entityId={entityId} />;
@@ -249,13 +273,16 @@ function DrawerEntityRouter({
       return <KbDrawerContent entityId={entityId} />;
     case 'links':
       return <LinksDrawerContent entityType={linkEntityType ?? 'Game'} entityId={entityId} />;
-    // Other entity types — Coming Soon until dedicated content components are implemented
     case 'player':
+      return <PlayerDrawerContent entityId={entityId} />;
     case 'session':
+      return <SessionDrawerContent entityId={entityId} initialTabId={activeTabId ?? undefined} />;
     case 'event':
+      return <EventDrawerContent entityId={entityId} />;
     case 'toolkit':
+      return <ToolkitDrawerContent entityId={entityId} />;
     case 'tool':
-      return <DrawerComingSoon label={ENTITY_CONFIG[entityType].label} issueNumber={0} />;
+      return <ToolDrawerContent entityId={entityId} />;
     default:
       return <DrawerErrorState error="Tipo entità non supportato" />;
   }

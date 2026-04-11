@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+
 import { AlertCircle, Bot, Gamepad2, Loader2, MessageSquare, Plus } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
 import { useAgentThreads, useAgentKbDocs } from '@/hooks/queries/useAgentData';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
 import { api } from '@/lib/api';
-import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
+import { cn } from '@/lib/utils';
 
 import type { AgentDetailData, ChatThreadPreview, KbDocumentPreview } from '../types';
 
@@ -76,7 +77,7 @@ function RecentThreadItem({
       onClick={onClick}
       className={cn(
         'flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-slate-100',
-        isSelected && 'border border-blue-300/60 bg-blue-100',
+        isSelected && 'border border-blue-300/60 bg-blue-100'
       )}
     >
       <div className="flex items-center justify-between gap-1 text-[10px] text-slate-400">
@@ -140,7 +141,7 @@ function AgentChatArea({
 
     api.chat
       .createThread({ agentId, title: `Chat con ${agentName}` })
-      .then((thread) => {
+      .then(thread => {
         if (!cancelled && thread?.id) onThreadCreatedRef.current(thread.id);
       })
       .catch((err: unknown) => {
@@ -270,7 +271,7 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
             'flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold font-nunito',
             buttonDisabled
               ? 'cursor-not-allowed bg-slate-200 text-slate-400'
-              : 'bg-blue-600 text-white hover:bg-blue-700',
+              : 'bg-blue-600 text-white hover:bg-blue-700'
           )}
         >
           <Plus className="h-3.5 w-3.5" />
@@ -283,14 +284,16 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
           ) : threads.length === 0 ? (
             <p className="px-2 text-xs text-slate-400">Nessuna chat</p>
           ) : (
-            threads.slice(0, 8).map((thread) => (
-              <RecentThreadItem
-                key={thread.id}
-                thread={thread}
-                isSelected={selectedThreadId === thread.id}
-                onClick={() => setSelectedThreadId(thread.id)}
-              />
-            ))
+            threads
+              .slice(0, 8)
+              .map(thread => (
+                <RecentThreadItem
+                  key={thread.id}
+                  thread={thread}
+                  isSelected={selectedThreadId === thread.id}
+                  onClick={() => setSelectedThreadId(thread.id)}
+                />
+              ))
           )}
         </SidebarSection>
 
@@ -300,7 +303,7 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
           ) : docs.length === 0 ? (
             <p className="px-2 text-xs text-slate-400">Nessun documento</p>
           ) : (
-            docs.slice(0, 5).map((doc) => <KbDocItem key={doc.id} doc={doc} />)
+            docs.slice(0, 5).map(doc => <KbDocItem key={doc.id} doc={doc} />)
           )}
         </SidebarSection>
       </aside>
@@ -315,7 +318,7 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
           agentId={data.id}
           agentName={data.name}
           selectedThreadId={selectedThreadId}
-          onThreadCreated={(id) => setSelectedThreadId(id)}
+          onThreadCreated={id => setSelectedThreadId(id)}
           readiness={readiness}
           readinessLoading={readinessLoading}
         />

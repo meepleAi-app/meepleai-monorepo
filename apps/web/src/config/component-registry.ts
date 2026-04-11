@@ -3719,58 +3719,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
       { name: 'With unread', props: { hasUnread: true } },
     ],
   },
-  {
-    id: 'hand-rail-item',
-    name: 'HandRailItem',
-    importPath: '@/components/layout/UserShell/HandRailItem',
-    category: 'Layout',
-    areas: ['shared'],
-    tier: 'static',
-    description: 'Single card entry on the DesktopHandRail left-edge strip.',
-    tags: ['redesign', 'hand-rail', 'card'],
-    mockProps: {
-      card: { id: 'card-1', entity: 'game', title: 'Wingspan', href: '/library/wingspan' },
-      isActive: false,
-    },
-    mockVariants: [
-      {
-        name: 'Active',
-        props: {
-          card: { id: 'card-active', entity: 'game', title: 'Azul', href: '/library/azul' },
-          isActive: true,
-        },
-      },
-      {
-        name: 'Session card',
-        props: {
-          card: {
-            id: 'card-session',
-            entity: 'session',
-            title: 'Catan · Turno 4',
-            href: '/sessions/catan',
-          },
-          isActive: false,
-        },
-      },
-    ],
-  },
-  {
-    id: 'hand-rail-toolbar',
-    name: 'HandRailToolbar',
-    importPath: '@/components/layout/UserShell/HandRailToolbar',
-    category: 'Layout',
-    areas: ['shared'],
-    tier: 'static',
-    description: 'Pin / expand toolbar at the bottom of the DesktopHandRail.',
-    tags: ['redesign', 'hand-rail', 'toolbar'],
-    mockProps: {
-      isPinned: false,
-      isExpanded: false,
-      onTogglePin: () => {},
-      onToggleExpand: () => {},
-    },
-  },
-
   // ─── Desktop UX Redesign — Shell Containers ───────────────────────────────
 
   {
@@ -3798,18 +3746,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     mockProps: {},
   },
   {
-    id: 'desktop-hand-rail',
-    name: 'DesktopHandRail',
-    importPath: '@/components/layout/UserShell/DesktopHandRail',
-    category: 'Layout',
-    areas: ['shared'],
-    tier: 'static',
-    description:
-      'Persistent left-edge card rail. Reads from useCardHand store — shows active game/session cards with pin/expand controls. Hidden on mobile.',
-    tags: ['redesign', 'shell', 'hand-rail', 'container'],
-    mockProps: {},
-  },
-  {
     id: 'desktop-shell',
     name: 'DesktopShell',
     importPath: '@/components/layout/UserShell/DesktopShell',
@@ -3817,7 +3753,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     areas: ['shared'],
     tier: 'static',
     description:
-      'Full desktop layout wrapper: TopBar (64px) + MiniNavSlot (48px, optional) + DesktopHandRail + main content area + ChatSlideOverPanel.',
+      'Full desktop layout wrapper: TopBar (64px) + MiniNavSlot (48px, optional) + main content area + ChatSlideOverPanel.',
     tags: ['redesign', 'shell', 'layout', 'container'],
     mockProps: {},
   },

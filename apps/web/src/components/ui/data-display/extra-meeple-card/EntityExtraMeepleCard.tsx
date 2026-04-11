@@ -13,9 +13,6 @@
 export { GameExtraMeepleCard } from './entities/GameExtraMeepleCard';
 export type { GameExtraMeepleCardProps } from './entities/GameExtraMeepleCard';
 
-export { PlayerExtraMeepleCard } from './entities/PlayerExtraMeepleCard';
-export type { PlayerExtraMeepleCardProps } from './entities/PlayerExtraMeepleCard';
-
 export { CollectionExtraMeepleCard } from './entities/CollectionExtraMeepleCard';
 export type { CollectionExtraMeepleCardProps } from './entities/CollectionExtraMeepleCard';
 

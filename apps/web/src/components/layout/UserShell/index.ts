@@ -7,6 +7,4 @@ export { TopBarNavLinks } from './TopBarNavLinks';
 export { TopBarSearchPill } from './TopBarSearchPill';
 export { TopBarChatButton } from './TopBarChatButton';
 export { MiniNavSlot } from './MiniNavSlot';
-export { DesktopHandRail } from './DesktopHandRail';
-export { HandRailItem } from './HandRailItem';
-export { HandRailToolbar } from './HandRailToolbar';
+export { RecentsBar } from './RecentsBar';

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 import { ChatRecentCards, type ChatRecentPreview } from './sections/ChatRecentCards';
 import { ContinueCarousel, type ContinueCarouselGame } from './sections/ContinueCarousel';
@@ -23,8 +23,6 @@ import { KpiStrip } from './sections/KpiStrip';
 export function DashboardClient() {
   const { user } = useAuth();
   const router = useRouter();
-  const drawCard = useCardHand(s => s.drawCard);
-
   // TODO(Phase 3): read from useDashboardStore once it exposes Phase 2 fields.
   // For now we render the layout with empty defaults so the shell + hero empty
   // state are visible and the page compiles without depending on data shape.
@@ -50,15 +48,15 @@ export function DashboardClient() {
   );
   useMiniNavConfig(miniNavConfig);
 
-  // Draw this page as a hand card for cross-page context memory
+  // Register this page in recents for cross-page context memory
   useEffect(() => {
-    drawCard({
+    useRecentsStore.getState().push({
       id: 'section-dashboard',
       entity: 'game',
       title: 'Home',
       href: '/dashboard',
     });
-  }, [drawCard]);
+  }, []);
 
   const handleContinueSession = () => {
     const session = liveSession as LiveSessionPreview | null;

@@ -5,7 +5,7 @@
  * @see Issue #4704
  */
 
-// BreadcrumbTrail + NavigationTrailProvider removed — replaced by useCardHand store
+// BreadcrumbTrail + NavigationTrailProvider removed — replaced by useRecentsStore
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs';
 export {
   DropdownMenu,

@@ -87,9 +87,9 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
 
         for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            // TODO: GAP-001 consumption — Session.Create does not yet accept StateTier.
-            // request.StateTier is propagated from StartGameNightSessionCommand but not applied to
-            // the Session entity until the domain model adds the property (tracked separately).
+            // GAP-001 stub: request.StateTier is propagated here from StartGameNightSessionCommand
+            // but not yet applied — Session.Create does not accept StateTier until the domain
+            // model exposes the property (follow-up issue tracked separately).
             session = Session.Create(
                 request.UserId,
                 request.GameId,

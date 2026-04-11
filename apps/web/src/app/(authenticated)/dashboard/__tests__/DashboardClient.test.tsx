@@ -12,19 +12,6 @@ vi.mock('@/components/auth/AuthProvider', () => ({
   }),
 }));
 
-vi.mock('@/stores/use-card-hand', () => {
-  const state = {
-    cards: [],
-    pinnedIds: new Set(),
-    drawCard: vi.fn(),
-    pinCard: vi.fn(),
-    unpinCard: vi.fn(),
-  };
-  return {
-    useCardHand: (selector?: (s: typeof state) => unknown) => (selector ? selector(state) : state),
-  };
-});
-
 vi.mock('@/lib/stores/mini-nav-config-store', () => {
   const state = {
     config: null,

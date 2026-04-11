@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 import { ChatSlideOverPanel } from '@/components/chat/panel/ChatSlideOverPanel';
 import { ContextualHandSidebar } from '@/components/layout/ContextualHand';
 
-import { DesktopHandRail } from './DesktopHandRail';
 import { MiniNavSlot } from './MiniNavSlot';
 import { TopBar } from './TopBar';
 
@@ -32,7 +31,6 @@ export function DesktopShell({ children }: DesktopShellProps) {
       <TopBar />
       <MiniNavSlot />
       <div className="flex-1 flex min-h-0">
-        <DesktopHandRail />
         <main className="flex-1 min-w-0 overflow-y-auto">{children}</main>
         <ContextualHandSidebar />
       </div>

@@ -130,8 +130,6 @@ import { ChatMainArea } from '@/components/chat/panel/ChatMainArea';
 import { ChatMessageBubble } from '@/components/chat/panel/ChatMessageBubble';
 import { ChatPanelHeader } from '@/components/chat/panel/ChatPanelHeader';
 import { ChatSidebar } from '@/components/chat/panel/ChatSidebar';
-import { HandRailItem } from '@/components/layout/UserShell/HandRailItem';
-import { HandRailToolbar } from '@/components/layout/UserShell/HandRailToolbar';
 import { TopBarChatButton } from '@/components/layout/UserShell/TopBarChatButton';
 import { TopBarLogo } from '@/components/layout/UserShell/TopBarLogo';
 import { TopBarSearchPill } from '@/components/layout/UserShell/TopBarSearchPill';
@@ -532,8 +530,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'top-bar-logo': TopBarLogo,
   'top-bar-search-pill': TopBarSearchPill,
   'top-bar-chat-button': TopBarChatButton,
-  'hand-rail-item': HandRailItem,
-  'hand-rail-toolbar': HandRailToolbar,
 
   // Desktop UX Redesign — Dashboard sections
   'greeting-row': GreetingRow,

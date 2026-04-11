@@ -8,6 +8,3 @@ export { TopBarSearchPill } from './TopBarSearchPill';
 export { TopBarChatButton } from './TopBarChatButton';
 export { MiniNavSlot } from './MiniNavSlot';
 export { RecentsBar } from './RecentsBar';
-export { DesktopHandRail } from './DesktopHandRail';
-export { HandRailItem } from './HandRailItem';
-export { HandRailToolbar } from './HandRailToolbar';

@@ -6,10 +6,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock('@/stores/use-card-hand', () => ({
-  useCardHand: () => ({ drawCard: vi.fn() }),
-}));
-
 vi.mock('@/hooks/queries/useGames', () => ({
   useGame: () => ({ data: { title: 'Catan', id: 'g1' } }),
 }));

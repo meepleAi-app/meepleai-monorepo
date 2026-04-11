@@ -65,7 +65,7 @@ describe('useViewMode', () => {
     act(() => {
       result.current.toggle();
     });
-    expect(mockPush).toHaveBeenCalledWith('/');
+    expect(mockPush).toHaveBeenCalledWith('/library');
   });
 
   it('toggle navigates to /admin/overview when switching to admin mode', () => {

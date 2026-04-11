@@ -34,6 +34,11 @@ vi.mock('@/lib/stores/mini-nav-config-store', () => {
   };
 });
 
+vi.mock('@/hooks/queries/useLibrary', () => ({
+  useLibrary: () => ({ data: undefined }),
+  useLibraryStats: () => ({ data: undefined }),
+}));
+
 import { LibraryHub } from '../LibraryHub';
 
 describe('LibraryHub', () => {

@@ -11,6 +11,38 @@ interface TimerProps {
   onAction?: (action: string, seconds: number) => void;
 }
 
+const WARNING_THRESHOLD = 10;
+
+// ── Alert: suono + vibrazione ───────────────────────────────────────
+
+function playAlertSound(): void {
+  try {
+    const ctx = new AudioContext();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.4);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.4);
+    // Rilascia risorse dopo la riproduzione
+    setTimeout(() => void ctx.close(), 600);
+  } catch {
+    // AudioContext non disponibile (es. JSDOM) — fallback silenzioso
+  }
+}
+
+function triggerVibration(): void {
+  try {
+    navigator.vibrate?.([200, 100, 200]);
+  } catch {
+    // API vibrazione non disponibile — fallback silenzioso
+  }
+}
+
 // ── Local timer strategy ────────────────────────────────────────────
 
 function useLocalTimer(defaultSeconds: number) {
@@ -61,9 +93,22 @@ export function Timer({ name, defaultSeconds, type, onAction }: TimerProps) {
   // Phase 2: when in-session, SSE timer_tick events will drive the display.
   const { seconds, running, start, pause, reset } = useLocalTimer(defaultSeconds);
 
-  const warningThreshold = 10;
-  const isWarning = type === 'countdown' && seconds <= warningThreshold && seconds > 0;
+  // Guard: alert fires at most once per timer run
+  const alertFiredRef = useRef(false);
+
+  const isWarning = type === 'countdown' && seconds <= WARNING_THRESHOLD && seconds > 0;
   const isExpired = type === 'countdown' && seconds === 0;
+
+  // Fire sound + vibration once when countdown crosses the warning threshold
+  useEffect(() => {
+    if (type !== 'countdown') return;
+    if (!running) return;
+    if (seconds === WARNING_THRESHOLD && !alertFiredRef.current) {
+      alertFiredRef.current = true;
+      playAlertSound();
+      triggerVibration();
+    }
+  }, [seconds, running, type]);
 
   const handleStart = () => {
     start();
@@ -77,6 +122,7 @@ export function Timer({ name, defaultSeconds, type, onAction }: TimerProps) {
 
   const handleReset = () => {
     reset();
+    alertFiredRef.current = false; // permette all'alert di sparare di nuovo al prossimo avvio
     onAction?.('reset', defaultSeconds);
   };
 

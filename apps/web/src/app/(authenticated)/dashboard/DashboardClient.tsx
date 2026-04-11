@@ -272,7 +272,13 @@ function NewUserGamesBlock({
   const games = useMemo(
     () =>
       [...(catalogData?.games ?? [])]
-        .sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0))
+        .sort((a, b) => {
+          // KB completeness first (spec annotation 1: "ordinati per KB completeness")
+          const aKb = a.hasKnowledgeBase ? 1 : 0;
+          const bKb = b.hasKnowledgeBase ? 1 : 0;
+          if (bKb !== aKb) return bKb - aKb;
+          return (b.averageRating ?? 0) - (a.averageRating ?? 0);
+        })
         .slice(0, 12),
     [catalogData]
   );

@@ -3,12 +3,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 import { Button } from '@/components/ui/primitives/button';
+import { useSessionStream, type TimerEventPayload } from '@/lib/domain-hooks/useSessionStream';
 
 interface TimerProps {
   name: string;
   defaultSeconds: number;
   type: 'countdown' | 'countup' | 'turn';
   onAction?: (action: string, seconds: number) => void;
+  /** When provided, timer state is synchronized with other participants via SSE. */
+  sessionId?: string;
 }
 
 const WARNING_THRESHOLD = 10;
@@ -83,15 +86,41 @@ function useLocalTimer(defaultSeconds: number) {
     }
   }, [seconds, running]);
 
-  return { seconds, running, start, pause, reset };
+  return { seconds, running, start, pause, reset, setSeconds, setRunning };
 }
 
 // ── Component ───────────────────────────────────────────────────────
 
-export function Timer({ name, defaultSeconds, type, onAction }: TimerProps) {
-  // Phase 1: always use local timer (standalone and in-session).
-  // Phase 2: when in-session, SSE timer_tick events will drive the display.
-  const { seconds, running, start, pause, reset } = useLocalTimer(defaultSeconds);
+export function Timer({ name, defaultSeconds, type, onAction, sessionId }: TimerProps) {
+  const { seconds, running, start, pause, reset, setSeconds, setRunning } =
+    useLocalTimer(defaultSeconds);
+
+  // Phase 2: sync timer state from SSE when in a session context
+  useSessionStream(sessionId ?? null, {
+    enabled: !!sessionId,
+    onTimerEvent: useCallback(
+      (payload: TimerEventPayload) => {
+        if (payload.durationSeconds !== undefined) {
+          // TimerStarted
+          setSeconds(payload.durationSeconds);
+          setRunning(true);
+        } else if (payload.pausedAt !== undefined && payload.remainingSeconds !== undefined) {
+          // TimerPaused
+          setSeconds(payload.remainingSeconds);
+          setRunning(false);
+        } else if (payload.resumedAt !== undefined && payload.remainingSeconds !== undefined) {
+          // TimerResumed
+          setSeconds(payload.remainingSeconds);
+          setRunning(true);
+        } else if (payload.resetAt !== undefined) {
+          // TimerReset
+          setSeconds(defaultSeconds);
+          setRunning(false);
+        }
+      },
+      [setSeconds, setRunning, defaultSeconds]
+    ),
+  });
 
   // Guard: alert fires at most once per timer run
   const alertFiredRef = useRef(false);

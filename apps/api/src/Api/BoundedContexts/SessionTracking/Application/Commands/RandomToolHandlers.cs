@@ -5,6 +5,8 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 
 using MediatR;
 
@@ -84,17 +86,20 @@ public sealed class TimerStateManager
 public sealed class StartTimerCommandHandler : IRequestHandler<StartTimerCommand, StartTimerResponse>
 {
     private readonly TimerStateManager _timerManager;
+    private readonly ISessionBroadcastService _broadcast;
     private readonly ILogger<StartTimerCommandHandler> _logger;
 
     public StartTimerCommandHandler(
         TimerStateManager timerManager,
+        ISessionBroadcastService broadcast,
         ILogger<StartTimerCommandHandler> logger)
     {
         _timerManager = timerManager;
+        _broadcast = broadcast;
         _logger = logger;
     }
 
-    public Task<StartTimerResponse> Handle(StartTimerCommand request, CancellationToken cancellationToken)
+    public async Task<StartTimerResponse> Handle(StartTimerCommand request, CancellationToken cancellationToken)
     {
         var timer = _timerManager.CreateTimer(
             request.SessionId,
@@ -108,28 +113,43 @@ public sealed class StartTimerCommandHandler : IRequestHandler<StartTimerCommand
             request.DurationSeconds,
             request.ParticipantName);
 
-        return Task.FromResult(new StartTimerResponse(
+        await _broadcast.PublishAsync(
+            request.SessionId,
+            new TimerStartedEvent(
+                request.SessionId,
+                timer.TimerId,
+                timer.DurationSeconds,
+                request.ParticipantId,
+                request.ParticipantName,
+                timer.StartedAt!.Value),
+            EventVisibility.Public,
+            cancellationToken).ConfigureAwait(false);
+
+        return new StartTimerResponse(
             request.SessionId,
             timer.TimerId,
             timer.DurationSeconds,
-            timer.StartedAt!.Value));
+            timer.StartedAt!.Value);
     }
 }
 
 public sealed class PauseTimerCommandHandler : IRequestHandler<PauseTimerCommand, TimerStatusResponse>
 {
     private readonly TimerStateManager _timerManager;
+    private readonly ISessionBroadcastService _broadcast;
     private readonly ILogger<PauseTimerCommandHandler> _logger;
 
     public PauseTimerCommandHandler(
         TimerStateManager timerManager,
+        ISessionBroadcastService broadcast,
         ILogger<PauseTimerCommandHandler> logger)
     {
         _timerManager = timerManager;
+        _broadcast = broadcast;
         _logger = logger;
     }
 
-    public Task<TimerStatusResponse> Handle(PauseTimerCommand request, CancellationToken cancellationToken)
+    public async Task<TimerStatusResponse> Handle(PauseTimerCommand request, CancellationToken cancellationToken)
     {
         var timer = _timerManager.GetTimer(request.SessionId);
         if (timer == null || !string.Equals(timer.Status, "running", StringComparison.Ordinal))
@@ -147,29 +167,42 @@ public sealed class PauseTimerCommandHandler : IRequestHandler<PauseTimerCommand
             request.SessionId,
             timer.RemainingSeconds);
 
-        return Task.FromResult(new TimerStatusResponse(
+        await _broadcast.PublishAsync(
+            request.SessionId,
+            new TimerPausedEvent(
+                request.SessionId,
+                timer.TimerId,
+                timer.RemainingSeconds,
+                timer.PausedAt.Value),
+            EventVisibility.Public,
+            cancellationToken).ConfigureAwait(false);
+
+        return new TimerStatusResponse(
             request.SessionId,
             timer.TimerId,
             timer.Status,
             timer.RemainingSeconds,
-            DateTime.UtcNow));
+            DateTime.UtcNow);
     }
 }
 
 public sealed class ResumeTimerCommandHandler : IRequestHandler<ResumeTimerCommand, TimerStatusResponse>
 {
     private readonly TimerStateManager _timerManager;
+    private readonly ISessionBroadcastService _broadcast;
     private readonly ILogger<ResumeTimerCommandHandler> _logger;
 
     public ResumeTimerCommandHandler(
         TimerStateManager timerManager,
+        ISessionBroadcastService broadcast,
         ILogger<ResumeTimerCommandHandler> logger)
     {
         _timerManager = timerManager;
+        _broadcast = broadcast;
         _logger = logger;
     }
 
-    public Task<TimerStatusResponse> Handle(ResumeTimerCommand request, CancellationToken cancellationToken)
+    public async Task<TimerStatusResponse> Handle(ResumeTimerCommand request, CancellationToken cancellationToken)
     {
         var timer = _timerManager.GetTimer(request.SessionId);
         if (timer == null || !string.Equals(timer.Status, "paused", StringComparison.Ordinal))
@@ -186,38 +219,64 @@ public sealed class ResumeTimerCommandHandler : IRequestHandler<ResumeTimerComma
             request.SessionId,
             timer.RemainingSeconds);
 
-        return Task.FromResult(new TimerStatusResponse(
+        await _broadcast.PublishAsync(
+            request.SessionId,
+            new TimerResumedEvent(
+                request.SessionId,
+                timer.TimerId,
+                timer.RemainingSeconds,
+                DateTime.UtcNow),
+            EventVisibility.Public,
+            cancellationToken).ConfigureAwait(false);
+
+        return new TimerStatusResponse(
             request.SessionId,
             timer.TimerId,
             timer.Status,
             timer.RemainingSeconds,
-            DateTime.UtcNow));
+            DateTime.UtcNow);
     }
 }
 
 public sealed class ResetTimerCommandHandler : IRequestHandler<ResetTimerCommand, TimerResetResponse>
 {
     private readonly TimerStateManager _timerManager;
+    private readonly ISessionBroadcastService _broadcast;
     private readonly ILogger<ResetTimerCommandHandler> _logger;
 
     public ResetTimerCommandHandler(
         TimerStateManager timerManager,
+        ISessionBroadcastService broadcast,
         ILogger<ResetTimerCommandHandler> logger)
     {
         _timerManager = timerManager;
+        _broadcast = broadcast;
         _logger = logger;
     }
 
-    public Task<TimerResetResponse> Handle(ResetTimerCommand request, CancellationToken cancellationToken)
+    public async Task<TimerResetResponse> Handle(ResetTimerCommand request, CancellationToken cancellationToken)
     {
+        var timer = _timerManager.GetTimer(request.SessionId);
         _timerManager.RemoveTimer(request.SessionId);
 
         _logger.LogInformation("Timer reset for session {SessionId}", request.SessionId);
 
-        return Task.FromResult(new TimerResetResponse(
+        if (timer != null)
+        {
+            await _broadcast.PublishAsync(
+                request.SessionId,
+                new TimerResetEvent(
+                    request.SessionId,
+                    timer.TimerId,
+                    DateTime.UtcNow),
+                EventVisibility.Public,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return new TimerResetResponse(
             request.SessionId,
             true,
-            DateTime.UtcNow));
+            DateTime.UtcNow);
     }
 }
 

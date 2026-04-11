@@ -7,6 +7,23 @@ vi.mock('@/lib/game-night/rules-cache', () => ({
   cacheRulebookAnalyses: vi.fn(),
 }));
 
+const mockFaqs = [
+  {
+    question: 'Quanti punti servono per vincere?',
+    answer: 'Servono 10 punti vittoria.',
+    sourceSection: 'Vittoria',
+    confidence: 0.95,
+    tags: ['punti', 'vittoria'],
+  },
+  {
+    question: 'Posso costruire strade ovunque?',
+    answer: 'No, solo adiacenti alle tue strutture.',
+    sourceSection: 'Costruzione',
+    confidence: 0.9,
+    tags: ['strade'],
+  },
+];
+
 // Mock sharedGamesClient
 vi.mock('@/lib/api/clients/sharedGamesClient', () => ({
   createSharedGamesClient: vi.fn(() => ({
@@ -16,21 +33,14 @@ vi.mock('@/lib/api/clients/sharedGamesClient', () => ({
         sharedGameId: 'g1',
         gameTitle: 'Catan',
         summary: 'Commercia e costruisci per vincere.',
-        keyMechanics: ['Scambio', 'Costruzione'],
-        victoryConditions: {
-          primary: 'Primi 10 punti',
-          alternatives: [],
-          isPointBased: true,
-          targetPoints: 10,
-        },
+        keyMechanics: [],
+        victoryConditions: null,
         resources: [],
-        gamePhases: [
-          { name: 'Setup', description: 'Posiziona esagoni', order: 1, isOptional: false },
-        ],
-        commonQuestions: [],
-        generatedFaqs: [],
+        gamePhases: [],
+        commonQuestions: ['Come si gioca il primo turno?'],
+        generatedFaqs: mockFaqs,
         confidenceScore: 0.9,
-        version: '1',
+        version: 1,
         isActive: true,
         source: 'LLM',
         analyzedAt: '2026-01-01T00:00:00Z',
@@ -47,49 +57,36 @@ vi.mock('@/lib/api/core/httpClient', () => ({
   HttpClient: vi.fn().mockImplementation(() => ({})),
 }));
 
-import { RulesContent } from '../RulesContent';
+import { FaqContent } from '../FaqContent';
 
-describe('RulesContent', () => {
+describe('FaqContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('mostra placeholder quando gameId è null', () => {
-    render(<RulesContent gameId={null} />);
+    render(<FaqContent gameId={null} />);
     expect(screen.getByText(/seleziona un gioco/i)).toBeInTheDocument();
   });
 
   it('mostra loading spinner durante fetch', () => {
-    render(<RulesContent gameId="g1" />);
-    expect(screen.getByTestId('rules-loading')).toBeInTheDocument();
+    render(<FaqContent gameId="g1" />);
+    expect(screen.getByTestId('faq-loading')).toBeInTheDocument();
   });
 
-  it('mostra il summary dopo il fetch', async () => {
-    render(<RulesContent gameId="g1" />);
+  it('mostra le FAQ generate dopo il fetch', async () => {
+    render(<FaqContent gameId="g1" />);
     await waitFor(() => {
-      expect(screen.getByText('Commercia e costruisci per vincere.')).toBeInTheDocument();
+      expect(screen.getByText('Quanti punti servono per vincere?')).toBeInTheDocument();
+      expect(screen.getByText('Servono 10 punti vittoria.')).toBeInTheDocument();
     });
   });
 
-  it('mostra le meccaniche chiave', async () => {
-    render(<RulesContent gameId="g1" />);
+  it('mostra tutte le FAQ', async () => {
+    render(<FaqContent gameId="g1" />);
     await waitFor(() => {
-      expect(screen.getByText('Scambio')).toBeInTheDocument();
-      expect(screen.getByText('Costruzione')).toBeInTheDocument();
-    });
-  });
-
-  it('mostra le fasi di gioco', async () => {
-    render(<RulesContent gameId="g1" />);
-    await waitFor(() => {
-      expect(screen.getByText('Setup')).toBeInTheDocument();
-    });
-  });
-
-  it('mostra le condizioni di vittoria', async () => {
-    render(<RulesContent gameId="g1" />);
-    await waitFor(() => {
-      expect(screen.getByText(/primi 10 punti/i)).toBeInTheDocument();
+      expect(screen.getByText('Posso costruire strade ovunque?')).toBeInTheDocument();
+      expect(screen.getByText('No, solo adiacenti alle tue strutture.')).toBeInTheDocument();
     });
   });
 
@@ -107,9 +104,17 @@ describe('RulesContent', () => {
           resources: [],
           gamePhases: [],
           commonQuestions: [],
-          generatedFaqs: [],
+          generatedFaqs: [
+            {
+              question: 'FAQ da cache?',
+              answer: 'Sì, dalla cache.',
+              sourceSection: 'Cache',
+              confidence: 0.8,
+              tags: [],
+            },
+          ],
           confidenceScore: 0.9,
-          version: '1',
+          version: 1,
           isActive: true,
           source: 'LLM',
           analyzedAt: '2026-01-01T00:00:00Z',
@@ -123,14 +128,13 @@ describe('RulesContent', () => {
       gameTitle: 'Catan',
     });
 
-    render(<RulesContent gameId="g1" />);
+    render(<FaqContent gameId="g1" />);
     await waitFor(() => {
-      expect(screen.getByText('Da cache.')).toBeInTheDocument();
+      expect(screen.getByText('FAQ da cache?')).toBeInTheDocument();
     });
   });
 
-  it('mostra messaggio se nessuna analisi disponibile', async () => {
-    // Reset cache mock to avoid bleeding from previous test
+  it('mostra messaggio se nessuna FAQ disponibile', async () => {
     const { getCachedAnalyses } = await import('@/lib/game-night/rules-cache');
     vi.mocked(getCachedAnalyses).mockReturnValue(null);
 
@@ -139,7 +143,7 @@ describe('RulesContent', () => {
       getGameAnalysis: vi.fn().mockResolvedValue([]),
     } as any);
 
-    render(<RulesContent gameId="g1" />);
+    render(<FaqContent gameId="g1" />);
     await waitFor(() => {
       expect(screen.getByText(/non disponibili/i)).toBeInTheDocument();
     });

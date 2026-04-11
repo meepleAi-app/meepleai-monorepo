@@ -261,15 +261,11 @@ function NewUserGamesBlock({
   onSearchChange,
   filter,
   onFilterChange,
-  viewMode,
-  onViewModeChange,
 }: {
   search: string;
   onSearchChange: (v: string) => void;
   filter: string;
   onFilterChange: (v: string) => void;
-  viewMode: 'grid' | 'list' | 'carousel';
-  onViewModeChange: (v: 'grid' | 'list' | 'carousel') => void;
 }) {
   const { data: catalogData, isLoading } = useGames(undefined, undefined, 1, 20);
   // Sort client-side by rating descending, take top 12
@@ -316,9 +312,6 @@ function NewUserGamesBlock({
       filterChips={GAMES_FILTERS}
       activeFilterId={filter}
       onFilterChange={onFilterChange}
-      viewMode={viewMode}
-      onViewModeChange={onViewModeChange}
-      showViewToggle
     >
       {isLoading ? (
         <LoadingSkeleton count={6} />
@@ -327,7 +320,7 @@ function NewUserGamesBlock({
           <p className="text-xs text-[var(--nh-text-muted,#94a3b8)] bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3 font-medium">
             💡 Libreria vuota — ecco i top giochi dal catalogo. Aggiungili per iniziare!
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {filtered.map(game => {
               const status = batchStatus?.results?.[game.id];
               const inLibrary = status?.inLibrary ?? false;
@@ -397,15 +390,12 @@ export function DashboardClient() {
 
   const [gamesSearch, setGamesSearch] = useState('');
   const [gamesFilter, setGamesFilter] = useState('all');
-  const [gamesViewMode, setGamesViewMode] = useState<'grid' | 'list' | 'carousel'>('grid');
 
   const [sessionsSearch, setSessionsSearch] = useState('');
   const [sessionsFilter, setSessionsFilter] = useState('all');
-  const [sessionsViewMode, setSessionsViewMode] = useState<'grid' | 'list' | 'carousel'>('grid');
 
   const [agentsSearch, setAgentsSearch] = useState('');
   const [agentsFilter, setAgentsFilter] = useState('all');
-  const [agentsViewMode, setAgentsViewMode] = useState<'grid' | 'list' | 'carousel'>('grid');
 
   useMiniNavConfig(
     useMemo(
@@ -439,9 +429,9 @@ export function DashboardClient() {
       subtitle: entry.gamePublisher ?? undefined,
       imageUrl: entry.gameImageUrl ?? undefined,
       rating: entry.averageRating ?? undefined,
-      variant: gamesViewMode === 'list' ? 'list' : 'grid',
+      variant: 'grid',
     }));
-  }, [libraryData, gamesViewMode]);
+  }, [libraryData]);
 
   const filteredGameItems = useMemo(() => {
     let result = gameItems;
@@ -465,7 +455,7 @@ export function DashboardClient() {
       entity: 'session' as MeepleEntityType,
       title: `Sessione ${session.id.slice(0, 8)}`,
       subtitle: session.status,
-      variant: sessionsViewMode === 'list' ? 'list' : 'grid',
+      variant: 'grid',
       status:
         session.status.toLowerCase() === 'inprogress'
           ? ('inprogress' as const)
@@ -475,7 +465,7 @@ export function DashboardClient() {
               ? ('setup' as const)
               : undefined,
     }));
-  }, [sessionsData, sessionsViewMode]);
+  }, [sessionsData]);
 
   const filteredSessionItems = useMemo(() => {
     let result = sessionItems;
@@ -501,10 +491,10 @@ export function DashboardClient() {
       entity: 'agent' as MeepleEntityType,
       title: agent.name,
       subtitle: agent.type,
-      variant: agentsViewMode === 'list' ? 'list' : 'grid',
+      variant: 'grid',
       status: agent.isActive ? ('active' as const) : ('idle' as const),
     }));
-  }, [agentsData, agentsViewMode]);
+  }, [agentsData]);
 
   const filteredAgentItems = useMemo(() => {
     let result = agentItems;
@@ -536,8 +526,6 @@ export function DashboardClient() {
             onSearchChange={setGamesSearch}
             filter={gamesFilter}
             onFilterChange={setGamesFilter}
-            viewMode={gamesViewMode}
-            onViewModeChange={setGamesViewMode}
           />
         ) : (
           <HubLayout
@@ -547,9 +535,6 @@ export function DashboardClient() {
             filterChips={GAMES_FILTERS}
             activeFilterId={gamesFilter}
             onFilterChange={setGamesFilter}
-            viewMode={gamesViewMode}
-            onViewModeChange={setGamesViewMode}
-            showViewToggle
           >
             <MeepleCardGrid entity="game" items={filteredGameItems} isLoading={libraryLoading} />
           </HubLayout>
@@ -565,9 +550,6 @@ export function DashboardClient() {
           filterChips={SESSIONS_FILTERS}
           activeFilterId={sessionsFilter}
           onFilterChange={setSessionsFilter}
-          viewMode={sessionsViewMode}
-          onViewModeChange={setSessionsViewMode}
-          showViewToggle
         >
           <MeepleCardGrid
             entity="session"
@@ -594,9 +576,6 @@ export function DashboardClient() {
           filterChips={AGENTS_FILTERS}
           activeFilterId={agentsFilter}
           onFilterChange={setAgentsFilter}
-          viewMode={agentsViewMode}
-          onViewModeChange={setAgentsViewMode}
-          showViewToggle
         >
           <MeepleCardGrid
             entity="agent"

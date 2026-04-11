@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useMyGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import type { GameNightDto } from '@/lib/api/schemas/game-nights.schemas';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 function GameNightCard({ event }: { event: GameNightDto }) {
   const scheduledDate = new Date(event.scheduledAt);
@@ -95,16 +95,14 @@ function EmptyState({ tab }: { tab: string }) {
 export function GameNightsContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') ?? 'upcoming';
-  const { drawCard } = useCardHand();
-
   useEffect(() => {
-    drawCard({
+    useRecentsStore.getState().push({
       id: 'section-game-nights',
       entity: 'event',
       title: 'Game Nights',
       href: '/game-nights',
     });
-  }, [drawCard]);
+  }, []);
 
   const upcomingQuery = useUpcomingGameNights();
   const mineQuery = useMyGameNights();

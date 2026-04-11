@@ -14,7 +14,7 @@ import { useEffect } from 'react';
 
 import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 import { AddGameDrawerController } from './AddGameDrawer';
 import { LibraryHub } from './LibraryHub';
@@ -36,16 +36,14 @@ export function LibraryLoadingSkeleton() {
 }
 
 export function LibraryContent() {
-  const { drawCard } = useCardHand();
-
   useEffect(() => {
-    drawCard({
+    useRecentsStore.getState().push({
       id: 'section-library',
       entity: 'game',
       title: 'Library',
       href: '/library',
     });
-  }, [drawCard]);
+  }, []);
 
   return (
     <>

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 import { CatalogCarouselSection, type CatalogGame } from './sections/CatalogCarouselSection';
 import {
@@ -74,7 +74,6 @@ function entryToContinueGame(e: UserLibraryEntry): ContinuePlayingGame {
  */
 export function LibraryHub() {
   const router = useRouter();
-  const drawCard = useCardHand(s => s.drawCard);
 
   const { data: stats } = useLibraryStats();
   const { data: libraryData } = useLibrary({
@@ -155,13 +154,13 @@ export function LibraryHub() {
   useMiniNavConfig(miniNavConfig);
 
   useEffect(() => {
-    drawCard({
+    useRecentsStore.getState().push({
       id: 'section-library-hub',
       entity: 'game',
       title: 'Library',
       href: '/library',
     });
-  }, [drawCard]);
+  }, []);
 
   const handleAddGame = () => {
     router.push('/library?action=add');

@@ -26,7 +26,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { api } from '@/lib/api';
 import type { LiveSessionSummaryDto } from '@/lib/api/schemas/live-sessions.schemas';
 import type { SessionSummaryDto } from '@/lib/api/schemas/session-tracking.schemas';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 // ========== Status Helpers ==========
 
@@ -68,17 +68,16 @@ export function SessionsContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') ?? 'active';
   const router = useRouter();
-  const { drawCard } = useCardHand();
   const { isMobile } = useResponsive();
 
   useEffect(() => {
-    drawCard({
+    useRecentsStore.getState().push({
       id: 'section-sessions',
       entity: 'session',
       title: 'Sessions',
       href: '/sessions',
     });
-  }, [drawCard]);
+  }, []);
 
   const [activeSessions, setActiveSessions] = useState<LiveSessionSummaryDto[]>([]);
   const [historySessions, setHistorySessions] = useState<SessionSummaryDto[]>([]);

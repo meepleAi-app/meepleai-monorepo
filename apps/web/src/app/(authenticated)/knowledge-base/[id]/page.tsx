@@ -20,7 +20,7 @@ import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useEntityNavigation } from '@/hooks/useEntityNavigation';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 interface DocumentDetail {
   id: string;
@@ -45,8 +45,6 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
     agentId: document?.agentId,
   });
 
-  const drawCard = useCardHand(s => s.drawCard);
-
   useEffect(() => {
     // Attempt to load document metadata
     // The actual API may vary - this provides the page structure
@@ -56,13 +54,13 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
       fileName: 'Documento',
     };
     setDocument(doc);
-    drawCard({
+    useRecentsStore.getState().push({
       id: documentId,
       entity: 'kb',
       title: doc.fileName,
       href: `/knowledge-base/${documentId}`,
     });
-  }, [documentId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [documentId]);
 
   if (loading) {
     return (

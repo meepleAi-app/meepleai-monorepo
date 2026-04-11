@@ -35,7 +35,7 @@ import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 /** Agent card wrapper using MeepleAgentCard adapter for navItems wiring */
 function AgentCard({
@@ -61,7 +61,6 @@ function AgentCard({
 export default function AgentsPage() {
   const _router = useRouter();
   const { openDetail } = useNavigation();
-  const { drawCard } = useCardHand();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
@@ -70,13 +69,13 @@ export default function AgentsPage() {
   const [viewMode, setViewMode] = useViewPreference('agents');
 
   useEffect(() => {
-    drawCard({
+    useRecentsStore.getState().push({
       id: 'section-agents',
       entity: 'agent',
       title: 'Agents',
       href: '/agents',
     });
-  }, [drawCard]);
+  }, []);
 
   // Use real API (Issue #4126)
   const { data: agents = [], isLoading: _isLoading } = useAgents({

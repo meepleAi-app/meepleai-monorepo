@@ -22,7 +22,7 @@ import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
 import { useChatSessionLimit, useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 // ─── Agent Group ─────────────────────────────────────────────────────────────
 
@@ -138,18 +138,17 @@ function AgentGroupSection({
 
 export default function ChatListPage() {
   const router = useRouter();
-  const { drawCard } = useCardHand();
   const { data, isLoading, error } = useRecentChatSessions(500);
   const { data: limitData } = useChatSessionLimit();
 
   useEffect(() => {
-    drawCard({
+    useRecentsStore.getState().push({
       id: 'section-chat',
       entity: 'chat',
       title: 'Chat',
       href: '/chat',
     });
-  }, [drawCard]);
+  }, []);
 
   const groups = useMemo(() => {
     const sessions = data?.sessions ?? [];

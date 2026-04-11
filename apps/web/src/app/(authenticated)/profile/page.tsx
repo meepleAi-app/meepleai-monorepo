@@ -39,7 +39,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRecentSessions } from '@/hooks/useRecentSessions';
 import { api } from '@/lib/api';
 import type { UserLibraryStats } from '@/lib/api/schemas/library.schemas';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -326,7 +326,6 @@ function ActivityTab(): React.ReactElement {
 export default function ProfilePage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { drawCard } = useCardHand();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   const { data: profile } = useQuery({
@@ -336,13 +335,13 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    drawCard({
+    useRecentsStore.getState().push({
       id: 'section-profile',
       entity: 'player',
       title: 'Profile',
       href: '/profile',
     });
-  }, [drawCard]);
+  }, []);
 
   const displayName = profile?.displayName ?? user?.displayName ?? user?.email ?? 'Player';
   const avatarUrl = profile?.avatarUrl ?? null;

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 interface QuickCardItem {
   id: string;
@@ -19,17 +19,15 @@ interface QuickCardsCarouselProps {
 }
 
 export function QuickCardsCarousel({ items }: QuickCardsCarouselProps) {
-  const { drawCard } = useCardHand();
   const router = useRouter();
 
   function handleTap(item: QuickCardItem) {
     const href = item.href ?? getDefaultHref(item);
-    drawCard({
+    useRecentsStore.getState().push({
       id: item.id,
       entity: item.entity,
       title: item.title,
       href,
-      imageUrl: item.imageUrl,
     });
     router.push(href);
   }

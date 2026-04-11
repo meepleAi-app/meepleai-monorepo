@@ -42,6 +42,7 @@ import { cn } from '@/lib/utils';
 import { DrawerLoadingSkeleton, DrawerErrorState, DrawerComingSoon } from './drawer-states';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
 import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
+import { PlayerDrawerContent } from './entities/PlayerDrawerContent';
 import {
   GameExtraMeepleCard,
   ChatExtraMeepleCard,
@@ -265,8 +266,9 @@ function DrawerEntityRouter({
       return <KbDrawerContent entityId={entityId} />;
     case 'links':
       return <LinksDrawerContent entityType={linkEntityType ?? 'Game'} entityId={entityId} />;
-    // Other entity types — Coming Soon until dedicated content components are implemented
     case 'player':
+      return <PlayerDrawerContent entityId={entityId} />;
+    // Other entity types — Coming Soon until dedicated content components are implemented
     case 'session':
     case 'event':
     case 'toolkit':

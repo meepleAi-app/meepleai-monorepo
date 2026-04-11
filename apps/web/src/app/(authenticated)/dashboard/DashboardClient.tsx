@@ -2,13 +2,17 @@
 
 import { useMemo, useState } from 'react';
 
+import Link from 'next/link';
+
 import { useAuth } from '@/components/auth/AuthProvider';
 import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardProps, MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useAgents } from '@/hooks/queries/useAgents';
-import { useLibrary } from '@/hooks/queries/useLibrary';
+import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
+import { useGames } from '@/hooks/queries/useGames';
+import { useAddGameToLibrary, useLibrary } from '@/hooks/queries/useLibrary';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
 // ---------------------------------------------------------------------------
@@ -32,7 +36,18 @@ const AGENTS_FILTERS: FilterChip[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Internal sub-components (not exported, live in same file per spec)
+// Toolkit tools (static — no API required)
+// ---------------------------------------------------------------------------
+
+const TOOLKIT_TOOLS = [
+  { id: 'dice', icon: '🎲', name: 'Dado', desc: 'Lancia d4–d20' },
+  { id: 'timer', icon: '⏳', name: 'Clessidra', desc: 'Timer per turno' },
+  { id: 'score', icon: '📊', name: 'Scoreboard', desc: 'Punteggi multi-player' },
+  { id: 'token', icon: '🪙', name: 'Token', desc: 'Contatori risorse' },
+] as const;
+
+// ---------------------------------------------------------------------------
+// Sub-components
 // ---------------------------------------------------------------------------
 
 function GreetingHeader({ displayName }: { displayName: string }) {
@@ -72,23 +87,54 @@ function LoadingSkeleton({ count }: { count: number }) {
   );
 }
 
-function EmptyState({ entity }: { entity: MeepleEntityType }) {
-  const messages: Partial<Record<MeepleEntityType, { icon: string; text: string }>> = {
-    game: { icon: '🎲', text: 'Nessun gioco ancora. Aggiungi qualcosa alla libreria!' },
-    session: { icon: '🎯', text: 'Nessuna sessione. Inizia una nuova partita!' },
-    agent: { icon: '🤖', text: 'Nessun agente disponibile.' },
-    toolkit: { icon: '🛠️', text: 'Nessun toolkit ancora.' },
-    player: { icon: '👤', text: 'Nessun giocatore.' },
-    kb: { icon: '📚', text: 'Nessuna knowledge base.' },
-    chat: { icon: '💬', text: 'Nessuna chat.' },
-    event: { icon: '📅', text: 'Nessun evento.' },
-    tool: { icon: '🔧', text: 'Nessuno strumento.' },
-  };
-  const msg = messages[entity] ?? { icon: '📋', text: 'Nessun elemento.' };
+// CTA for empty sections (sessions, agents)
+interface CtaAction {
+  label: string;
+  href: string;
+  primary?: boolean;
+}
+
+function EmptyCTA({
+  icon,
+  title,
+  sub,
+  actions,
+}: {
+  icon: string;
+  title: string;
+  sub: string;
+  actions: CtaAction[];
+}) {
   return (
-    <div className="flex flex-col items-center gap-2 py-8 text-[var(--nh-text-muted,#94a3b8)]">
-      <span className="text-3xl">{msg.icon}</span>
-      <p className="text-sm font-medium">{msg.text}</p>
+    <div
+      className="flex flex-col items-center gap-3 py-6 px-4 text-center
+                 rounded-xl border border-dashed border-[rgba(180,130,80,0.25)]
+                 bg-[var(--nh-bg-card,white)]"
+    >
+      <span className="text-3xl">{icon}</span>
+      <div>
+        <p className="font-[Quicksand] font-bold text-sm text-[var(--nh-text-primary,#1a1a1a)]">
+          {title}
+        </p>
+        <p className="text-xs text-[var(--nh-text-muted,#94a3b8)] mt-1 max-w-[240px] mx-auto leading-relaxed">
+          {sub}
+        </p>
+      </div>
+      <div className="flex gap-2 flex-wrap justify-center">
+        {actions.map(a => (
+          <Link
+            key={a.href}
+            href={a.href}
+            className={
+              a.primary
+                ? 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] bg-[var(--nh-text-primary,#1a1a1a)] text-white'
+                : 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] border border-[var(--nh-text-primary,#1a1a1a)] text-[var(--nh-text-primary,#1a1a1a)]'
+            }
+          >
+            {a.label}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
@@ -97,18 +143,198 @@ function MeepleCardGrid({
   entity,
   items,
   isLoading,
+  emptyNode,
 }: {
   entity: MeepleEntityType;
   items: MeepleCardProps[];
   isLoading: boolean;
+  emptyNode?: React.ReactNode;
 }) {
   if (isLoading) return <LoadingSkeleton count={6} />;
-  if (items.length === 0) return <EmptyState entity={entity} />;
-
+  if (items.length === 0) {
+    if (emptyNode) return <>{emptyNode}</>;
+    return (
+      <div className="flex flex-col items-center gap-2 py-8 text-[var(--nh-text-muted,#94a3b8)]">
+        <p className="text-sm font-medium">Nessun elemento.</p>
+      </div>
+    );
+  }
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       {items.map(item => (
         <MeepleCard key={item.id ?? item.title} {...item} />
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Catalog games for new user — with "Aggiungi" button overlay
+// ---------------------------------------------------------------------------
+
+function CatalogGameCard({
+  game,
+  inLibrary,
+  onAdd,
+  adding,
+}: {
+  game: {
+    id: string;
+    title: string;
+    publisher?: string | null;
+    imageUrl?: string | null;
+    averageRating?: number | null;
+  };
+  inLibrary: boolean;
+  onAdd: (gameId: string) => void;
+  adding: boolean;
+}) {
+  return (
+    <div className="relative">
+      <MeepleCard
+        entity="game"
+        variant="grid"
+        id={game.id}
+        title={game.title}
+        subtitle={game.publisher ?? undefined}
+        imageUrl={game.imageUrl ?? undefined}
+        rating={game.averageRating ?? undefined}
+      />
+      <button
+        onClick={() => !inLibrary && !adding && onAdd(game.id)}
+        disabled={inLibrary || adding}
+        aria-label={
+          inLibrary ? `${game.title} già in libreria` : `Aggiungi ${game.title} alla libreria`
+        }
+        className={
+          inLibrary
+            ? 'absolute bottom-2 left-2 right-2 h-7 rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/5 text-[var(--nh-text-muted,#94a3b8)] cursor-default'
+            : adding
+              ? 'absolute bottom-2 left-2 right-2 h-7 rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/20 text-white cursor-wait'
+              : 'absolute bottom-2 left-2 right-2 h-7 rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-[var(--nh-text-primary,#1a1a1a)] text-white hover:opacity-90 active:scale-95 transition-transform'
+        }
+      >
+        {inLibrary ? '✓ In libreria' : adding ? '…' : '＋ Aggiungi'}
+      </button>
+    </div>
+  );
+}
+
+function NewUserGamesBlock({
+  search,
+  onSearchChange,
+  filter,
+  onFilterChange,
+  viewMode,
+  onViewModeChange,
+}: {
+  search: string;
+  onSearchChange: (v: string) => void;
+  filter: string;
+  onFilterChange: (v: string) => void;
+  viewMode: 'grid' | 'list' | 'carousel';
+  onViewModeChange: (v: 'grid' | 'list' | 'carousel') => void;
+}) {
+  const { data: catalogData, isLoading } = useGames(undefined, undefined, 1, 20);
+  // Sort client-side by rating descending, take top 12
+  const games = useMemo(
+    () =>
+      [...(catalogData?.games ?? [])]
+        .sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0))
+        .slice(0, 12),
+    [catalogData]
+  );
+
+  const gameIds = useMemo(() => games.map(g => g.id), [games]);
+  const { data: batchStatus } = useBatchGameStatus(gameIds, gameIds.length > 0);
+
+  const addMutation = useAddGameToLibrary();
+  const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
+
+  const handleAdd = async (gameId: string) => {
+    setAddingIds(prev => new Set(prev).add(gameId));
+    try {
+      await addMutation.mutateAsync({ gameId });
+    } finally {
+      setAddingIds(prev => {
+        const next = new Set(prev);
+        next.delete(gameId);
+        return next;
+      });
+    }
+  };
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return games;
+    const q = search.toLowerCase();
+    return games.filter(
+      g => g.title.toLowerCase().includes(q) || g.publisher?.toLowerCase().includes(q)
+    );
+  }, [games, search]);
+
+  return (
+    <HubLayout
+      searchPlaceholder="Cerca giochi..."
+      searchValue={search}
+      onSearchChange={onSearchChange}
+      filterChips={GAMES_FILTERS}
+      activeFilterId={filter}
+      onFilterChange={onFilterChange}
+      viewMode={viewMode}
+      onViewModeChange={onViewModeChange}
+      showViewToggle
+    >
+      {isLoading ? (
+        <LoadingSkeleton count={6} />
+      ) : (
+        <>
+          <p className="text-xs text-[var(--nh-text-muted,#94a3b8)] bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3 font-medium">
+            💡 Libreria vuota — ecco i top giochi dal catalogo. Aggiungili per iniziare!
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {filtered.map(game => {
+              const status = batchStatus?.results?.[game.id];
+              const inLibrary = status?.inLibrary ?? false;
+              return (
+                <CatalogGameCard
+                  key={game.id}
+                  game={game}
+                  inLibrary={inLibrary}
+                  onAdd={handleAdd}
+                  adding={addingIds.has(game.id)}
+                />
+              );
+            })}
+          </div>
+        </>
+      )}
+    </HubLayout>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Toolkit carousel (always shown, static data)
+// ---------------------------------------------------------------------------
+
+function ToolkitCarousel() {
+  return (
+    <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
+      {TOOLKIT_TOOLS.map(tool => (
+        <Link
+          key={tool.id}
+          href={`/toolkit?tool=${tool.id}`}
+          className="flex-shrink-0 w-24 bg-[var(--nh-bg-card,white)] border border-[var(--nh-border,rgba(0,0,0,0.07))]
+                     rounded-xl p-3 flex flex-col items-center gap-1.5
+                     hover:shadow-md transition-shadow"
+        >
+          <span className="text-2xl">{tool.icon}</span>
+          <span className="font-[Quicksand] font-bold text-xs text-center leading-tight text-[var(--nh-text-primary,#1a1a1a)]">
+            {tool.name}
+          </span>
+          <span className="text-[10px] text-[var(--nh-text-muted,#94a3b8)] text-center leading-tight">
+            {tool.desc}
+          </span>
+        </Link>
       ))}
     </div>
   );
@@ -122,7 +348,6 @@ export function DashboardClient() {
   const { user } = useAuth();
   const displayName = user?.displayName ?? 'giocatore';
 
-  // Local state for search + filters + view modes per block
   const [gamesSearch, setGamesSearch] = useState('');
   const [gamesFilter, setGamesFilter] = useState('all');
   const [gamesViewMode, setGamesViewMode] = useState<'grid' | 'list' | 'carousel'>('grid');
@@ -135,27 +360,27 @@ export function DashboardClient() {
   const [agentsFilter, setAgentsFilter] = useState('all');
   const [agentsViewMode, setAgentsViewMode] = useState<'grid' | 'list' | 'carousel'>('grid');
 
-  // Mini-nav config (breadcrumb only, single tab)
-  const miniNavConfig = useMemo(
-    () => ({
-      breadcrumb: 'Home',
-      tabs: [{ id: 'overview', label: 'Overview', href: '/dashboard' }],
-      activeTabId: 'overview',
-    }),
-    []
+  useMiniNavConfig(
+    useMemo(
+      () => ({
+        breadcrumb: 'Home',
+        tabs: [{ id: 'overview', label: 'Overview', href: '/dashboard' }],
+        activeTabId: 'overview',
+      }),
+      []
+    )
   );
-  useMiniNavConfig(miniNavConfig);
 
-  // ---------------------------------------------------------------------------
   // Data fetching
-  // ---------------------------------------------------------------------------
-
   const { data: libraryData, isLoading: libraryLoading } = useLibrary({ page: 1, pageSize: 12 });
   const { data: sessionsData, isLoading: sessionsLoading } = useActiveSessions();
   const { data: agentsData, isLoading: agentsLoading } = useAgents({ activeOnly: false });
 
+  // Detect new user: library loaded with no items
+  const isNewUser = !libraryLoading && (libraryData?.items ?? []).length === 0;
+
   // ---------------------------------------------------------------------------
-  // Data mapping — library entries to MeepleCardProps
+  // Library → MeepleCardProps
   // ---------------------------------------------------------------------------
 
   const gameItems: MeepleCardProps[] = useMemo(() => {
@@ -179,15 +404,11 @@ export function DashboardClient() {
         g => g.title.toLowerCase().includes(q) || g.subtitle?.toLowerCase().includes(q)
       );
     }
-    if (gamesFilter === 'wishlist') {
-      // Wishlist filter: re-fetch with state param would be ideal; for now show all
-      // TODO: pass currentState filter to useLibrary when gamesFilter === 'wishlist'
-    }
     return result;
-  }, [gameItems, gamesSearch, gamesFilter]);
+  }, [gameItems, gamesSearch]);
 
   // ---------------------------------------------------------------------------
-  // Data mapping — sessions to MeepleCardProps
+  // Sessions → MeepleCardProps
   // ---------------------------------------------------------------------------
 
   const sessionItems: MeepleCardProps[] = useMemo(() => {
@@ -216,19 +437,16 @@ export function DashboardClient() {
       result = result.filter(s => s.title.toLowerCase().includes(q));
     }
     if (sessionsFilter === 'active') {
-      result = result.filter(
-        s => s.status === 'inprogress' || s.status === 'active' || s.status === 'setup'
-      );
+      result = result.filter(s => s.status === 'inprogress' || s.status === 'setup');
     }
     return result;
   }, [sessionItems, sessionsSearch, sessionsFilter]);
 
   // ---------------------------------------------------------------------------
-  // Data mapping — agents to MeepleCardProps
+  // Agents → MeepleCardProps
   // ---------------------------------------------------------------------------
 
   const agentItems: MeepleCardProps[] = useMemo(() => {
-    // useAgents returns AgentDto[] directly
     const agents: Array<{ id: string; name: string; type: string; isActive: boolean }> =
       Array.isArray(agentsData) ? agentsData : [];
     return agents.map(agent => ({
@@ -261,30 +479,40 @@ export function DashboardClient() {
 
   return (
     <div className="flex flex-col gap-6 px-4 pb-24 pt-4 max-w-[1440px] mx-auto">
-      {/* Greeting */}
       <GreetingHeader displayName={displayName} />
 
       {/* Block 1: Games */}
       <HubBlock title="🎲 Giochi">
-        <HubLayout
-          searchPlaceholder="Cerca giochi..."
-          searchValue={gamesSearch}
-          onSearchChange={setGamesSearch}
-          filterChips={GAMES_FILTERS}
-          activeFilterId={gamesFilter}
-          onFilterChange={setGamesFilter}
-          viewMode={gamesViewMode}
-          onViewModeChange={setGamesViewMode}
-          showViewToggle
-        >
-          <MeepleCardGrid entity="game" items={filteredGameItems} isLoading={libraryLoading} />
-        </HubLayout>
+        {isNewUser ? (
+          <NewUserGamesBlock
+            search={gamesSearch}
+            onSearchChange={setGamesSearch}
+            filter={gamesFilter}
+            onFilterChange={setGamesFilter}
+            viewMode={gamesViewMode}
+            onViewModeChange={setGamesViewMode}
+          />
+        ) : (
+          <HubLayout
+            searchPlaceholder="Cerca giochi..."
+            searchValue={gamesSearch}
+            onSearchChange={setGamesSearch}
+            filterChips={GAMES_FILTERS}
+            activeFilterId={gamesFilter}
+            onFilterChange={setGamesFilter}
+            viewMode={gamesViewMode}
+            onViewModeChange={setGamesViewMode}
+            showViewToggle
+          >
+            <MeepleCardGrid entity="game" items={filteredGameItems} isLoading={libraryLoading} />
+          </HubLayout>
+        )}
       </HubBlock>
 
       {/* Block 2: Sessions */}
       <HubBlock title="🎯 Sessioni">
         <HubLayout
-          searchPlaceholder="Cerca sessioni..."
+          searchPlaceholder="Filtra per stato..."
           searchValue={sessionsSearch}
           onSearchChange={setSessionsSearch}
           filterChips={SESSIONS_FILTERS}
@@ -298,12 +526,20 @@ export function DashboardClient() {
             entity="session"
             items={filteredSessionItems}
             isLoading={sessionsLoading}
+            emptyNode={
+              <EmptyCTA
+                icon="🎯"
+                title="Nessuna sessione"
+                sub="Inizia una nuova partita e traccia i tuoi progressi in tempo reale."
+                actions={[{ label: '＋ Crea sessione', href: '/sessions/new', primary: true }]}
+              />
+            }
           />
         </HubLayout>
       </HubBlock>
 
       {/* Block 3: Agents */}
-      <HubBlock title="🤖 Agenti">
+      <HubBlock title="🤖 Agenti AI">
         <HubLayout
           searchPlaceholder="Cerca agenti..."
           searchValue={agentsSearch}
@@ -315,15 +551,28 @@ export function DashboardClient() {
           onViewModeChange={setAgentsViewMode}
           showViewToggle
         >
-          <MeepleCardGrid entity="agent" items={filteredAgentItems} isLoading={agentsLoading} />
+          <MeepleCardGrid
+            entity="agent"
+            items={filteredAgentItems}
+            isLoading={agentsLoading}
+            emptyNode={
+              <EmptyCTA
+                icon="🤖"
+                title="Nessun agente attivo"
+                sub="Avvia una chat con un agente AI per ricevere aiuto durante la partita."
+                actions={[
+                  { label: '💬 Avvia chat', href: '/chat', primary: true },
+                  { label: '＋ Crea agente', href: '/agents/new' },
+                ]}
+              />
+            }
+          />
         </HubLayout>
       </HubBlock>
 
-      {/* Block 4: Toolkit (placeholder) */}
+      {/* Block 4: Toolkit */}
       <HubBlock title="🛠️ Toolkit">
-        <HubLayout searchPlaceholder="Cerca toolkit...">
-          <MeepleCardGrid entity="toolkit" items={[]} isLoading={false} />
-        </HubLayout>
+        <ToolkitCarousel />
       </HubBlock>
     </div>
   );

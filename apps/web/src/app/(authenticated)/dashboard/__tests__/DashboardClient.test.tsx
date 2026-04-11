@@ -12,30 +12,34 @@ vi.mock('@/components/auth/AuthProvider', () => ({
   }),
 }));
 
-vi.mock('@/stores/use-card-hand', () => {
-  const state = {
-    cards: [],
-    pinnedIds: new Set(),
-    drawCard: vi.fn(),
-    pinCard: vi.fn(),
-    unpinCard: vi.fn(),
-  };
-  return {
-    useCardHand: (selector?: (s: typeof state) => unknown) => (selector ? selector(state) : state),
-  };
-});
-
 vi.mock('@/lib/stores/mini-nav-config-store', () => {
-  const state = {
-    config: null,
-    setConfig: vi.fn(),
-    clear: vi.fn(),
-  };
+  const state = { config: null, setConfig: vi.fn(), clear: vi.fn() };
   return {
     useMiniNavConfigStore: (selector?: (s: typeof state) => unknown) =>
       selector ? selector(state) : state,
   };
 });
+
+vi.mock('@/hooks/queries/useLibrary', () => ({
+  useLibrary: () => ({ data: { items: [] }, isLoading: false }),
+  useAddGameToLibrary: () => ({ mutateAsync: vi.fn() }),
+}));
+
+vi.mock('@/hooks/queries/useActiveSessions', () => ({
+  useActiveSessions: () => ({ data: { sessions: [] }, isLoading: false }),
+}));
+
+vi.mock('@/hooks/queries/useAgents', () => ({
+  useAgents: () => ({ data: [], isLoading: false }),
+}));
+
+vi.mock('@/hooks/queries/useGames', () => ({
+  useGames: () => ({ data: { games: [] }, isLoading: false }),
+}));
+
+vi.mock('@/hooks/queries/useBatchGameStatus', () => ({
+  useBatchGameStatus: () => ({ data: { results: {} } }),
+}));
 
 import { DashboardClient } from '../DashboardClient';
 
@@ -46,17 +50,39 @@ describe('DashboardClient', () => {
 
   it('renders the greeting with the user name', () => {
     render(<DashboardClient />);
-    expect(screen.getByText('Marco')).toBeInTheDocument();
+    expect(screen.getByText(/Marco/)).toBeInTheDocument();
   });
 
-  it('renders the KPI strip', () => {
+  it('renders hub block titles', () => {
     render(<DashboardClient />);
-    expect(screen.getByText(/libreria/i)).toBeInTheDocument();
-    expect(screen.getByText(/sessioni/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Giochi/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Sessioni/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Agenti/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Toolkit/i).length).toBeGreaterThan(0);
   });
 
-  it('renders the empty-state hero when no live session', () => {
+  it('shows catalog hint for new user with empty library', () => {
     render(<DashboardClient />);
-    expect(screen.getByText(/Nessuna partita in corso/i)).toBeInTheDocument();
+    expect(screen.getByText(/Libreria vuota/i)).toBeInTheDocument();
+  });
+
+  it('shows empty CTA for sessions', () => {
+    render(<DashboardClient />);
+    expect(screen.getByText(/Nessuna sessione/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Crea sessione/i })).toBeInTheDocument();
+  });
+
+  it('shows empty CTA for agents with two actions', () => {
+    render(<DashboardClient />);
+    expect(screen.getByText(/Nessun agente attivo/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Avvia chat/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Crea agente/i })).toBeInTheDocument();
+  });
+
+  it('renders toolkit tools', () => {
+    render(<DashboardClient />);
+    expect(screen.getByText('Dado')).toBeInTheDocument();
+    expect(screen.getByText('Clessidra')).toBeInTheDocument();
+    expect(screen.getByText('Scoreboard')).toBeInTheDocument();
   });
 });

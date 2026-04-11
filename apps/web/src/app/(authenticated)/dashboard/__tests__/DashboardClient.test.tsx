@@ -21,7 +21,7 @@ vi.mock('@/lib/stores/mini-nav-config-store', () => {
 });
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
-  useLibrary: () => ({ data: { items: [] }, isLoading: false }),
+  useLibrary: vi.fn(() => ({ data: { items: [] }, isLoading: false })),
   useAddGameToLibrary: () => ({ mutateAsync: vi.fn() }),
 }));
 
@@ -34,18 +34,28 @@ vi.mock('@/hooks/queries/useAgents', () => ({
 }));
 
 vi.mock('@/hooks/queries/useGames', () => ({
-  useGames: () => ({ data: { games: [] }, isLoading: false }),
+  useGames: vi.fn(() => ({ data: { games: [] }, isLoading: false })),
 }));
 
 vi.mock('@/hooks/queries/useBatchGameStatus', () => ({
   useBatchGameStatus: () => ({ data: { results: {} } }),
 }));
 
+import { useLibrary } from '@/hooks/queries/useLibrary';
+import { useGames } from '@/hooks/queries/useGames';
 import { DashboardClient } from '../DashboardClient';
 
 describe('DashboardClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useLibrary).mockReturnValue({
+      data: { items: [] },
+      isLoading: false,
+    } as ReturnType<typeof useLibrary>);
+    vi.mocked(useGames).mockReturnValue({
+      data: { games: [] },
+      isLoading: false,
+    } as ReturnType<typeof useGames>);
   });
 
   it('renders the greeting with the user name', () => {
@@ -84,5 +94,76 @@ describe('DashboardClient', () => {
     expect(screen.getByText('Dado')).toBeInTheDocument();
     expect(screen.getByText('Clessidra')).toBeInTheDocument();
     expect(screen.getByText('Scoreboard')).toBeInTheDocument();
+  });
+
+  describe('returning user (library has games)', () => {
+    beforeEach(() => {
+      vi.mocked(useLibrary).mockReturnValue({
+        data: {
+          items: [
+            {
+              id: 'lib-1',
+              gameId: 'g1',
+              gameTitle: 'Puerto Rico',
+              gamePublisher: 'Alea',
+              gameImageUrl: null,
+              averageRating: 8.5,
+            },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 12,
+        },
+        isLoading: false,
+      } as ReturnType<typeof useLibrary>);
+    });
+
+    it('does NOT show catalog hint banner for returning user', () => {
+      render(<DashboardClient />);
+      expect(screen.queryByText(/Libreria vuota/i)).not.toBeInTheDocument();
+    });
+
+    it('shows library game title for returning user', () => {
+      render(<DashboardClient />);
+      expect(screen.getByText('Puerto Rico')).toBeInTheDocument();
+    });
+  });
+
+  describe('new user catalog sort — KB-first', () => {
+    beforeEach(() => {
+      vi.mocked(useGames).mockReturnValue({
+        data: {
+          games: [
+            // rating più alta ma senza KB
+            {
+              id: 'g1',
+              title: 'Game NoKB High Rating',
+              publisher: 'Pub',
+              createdAt: '2024-01-01T00:00:00Z',
+              averageRating: 9.5,
+              hasKnowledgeBase: false,
+            },
+            // rating più bassa ma con KB
+            {
+              id: 'g2',
+              title: 'Game WithKB Low Rating',
+              publisher: 'Pub',
+              createdAt: '2024-01-01T00:00:00Z',
+              averageRating: 7.0,
+              hasKnowledgeBase: true,
+            },
+          ],
+        },
+        isLoading: false,
+      } as ReturnType<typeof useGames>);
+    });
+
+    it('renders KB game before non-KB game regardless of rating', () => {
+      render(<DashboardClient />);
+      const gameNames = screen.getAllByText(/Game (WithKB|NoKB)/);
+      // First match should be the KB game
+      expect(gameNames[0]).toHaveTextContent('Game WithKB Low Rating');
+      expect(gameNames[1]).toHaveTextContent('Game NoKB High Rating');
+    });
   });
 });

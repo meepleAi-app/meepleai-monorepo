@@ -106,6 +106,7 @@ export const useCascadeNavigationStore = create<CascadeNavigationState>()(
             {
               state: 'deckStack',
               activeEntityId: null,
+              drawerStack: [],
             },
             false,
             'closeDrawer/toDeckStack'
@@ -119,9 +120,17 @@ export const useCascadeNavigationStore = create<CascadeNavigationState>()(
 
       pushDrawer: (entityType: MeepleEntityType, entityId: string) => {
         const current = get();
+        // Guard: can only push when a drawer is already open
+        if (
+          current.state !== 'drawer' ||
+          current.activeEntityType === null ||
+          current.activeEntityId === null
+        ) {
+          return;
+        }
         const entry: DrawerStackEntry = {
-          entityType: current.activeEntityType!,
-          entityId: current.activeEntityId!,
+          entityType: current.activeEntityType,
+          entityId: current.activeEntityId,
           activeTabId: current.activeTabId ?? undefined,
         };
         const stack = [...current.drawerStack, entry].slice(-3); // max 3
@@ -141,7 +150,16 @@ export const useCascadeNavigationStore = create<CascadeNavigationState>()(
       popDrawer: () => {
         const current = get();
         if (current.drawerStack.length === 0) {
-          get().closeDrawer();
+          // Inline closeDrawer logic to keep devtools action name accurate
+          if (current.deckStackSkipped) {
+            set({ ...initialState }, false, 'popDrawer/toClosed');
+          } else {
+            set(
+              { state: 'deckStack', activeEntityId: null, drawerStack: [] },
+              false,
+              'popDrawer/toDeckStack'
+            );
+          }
           return;
         }
         const stack = [...current.drawerStack];

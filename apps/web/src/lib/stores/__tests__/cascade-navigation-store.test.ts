@@ -40,6 +40,7 @@ describe('drawer stack', () => {
     act(() => store.getState().popDrawer());
 
     expect(store.getState().state).toBe('closed');
+    expect(store.getState().drawerStack).toHaveLength(0);
   });
 
   it('popDrawer returns to deckStack when opened from deckStack and stack is empty', () => {

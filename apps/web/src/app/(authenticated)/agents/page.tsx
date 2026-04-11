@@ -59,7 +59,7 @@ function AgentCard({
 }
 
 export default function AgentsPage() {
-  const router = useRouter();
+  const _router = useRouter();
   const { openDetail } = useNavigation();
   const { drawCard } = useCardHand();
   const [searchQuery, setSearchQuery] = useState('');
@@ -251,11 +251,7 @@ export default function AgentsPage() {
         data-testid="card-grid"
       >
         {visibleAgents.map(agent => (
-          <AgentCard
-            key={agent.id}
-            agent={agent}
-            onClick={() => openDetail(agent.id, 'agent')}
-          />
+          <AgentCard key={agent.id} agent={agent} onClick={() => openDetail(agent.id, 'agent')} />
         ))}
         {isLoadingMore && <CardGridSkeletons count={4} />}
       </div>

@@ -34,7 +34,6 @@ import { useSharedGames } from '@/hooks/queries/useSharedGames';
 import { useToast } from '@/hooks/useToast';
 import type { RsvpStatus } from '@/lib/api/schemas/game-nights.schemas';
 import { useGameNightStore } from '@/stores/game-night';
-import type { GameNightActiveSession } from '@/stores/game-night/types';
 
 export default function GameNightDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);

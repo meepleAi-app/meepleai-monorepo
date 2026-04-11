@@ -67,7 +67,7 @@ function slotLabel(slotType: HandSlotType) {
   }
 }
 
-function slotEntity(slotType: HandSlotType): MeepleEntityType {
+function _slotEntity(slotType: HandSlotType): MeepleEntityType {
   switch (slotType) {
     case 'game':
       return 'game';

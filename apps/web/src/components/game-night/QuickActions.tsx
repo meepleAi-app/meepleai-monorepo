@@ -14,7 +14,7 @@
  * Issue #5587 — Live Game Session UI
  */
 
-import { BookOpen, Scale, Pause, Play, BarChart3 } from 'lucide-react';
+import { BookOpen, Scale, Pause, Play, BarChart3, Camera } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,8 @@ export interface QuickActionsProps {
   onAskArbiter: () => void;
   onTogglePause: () => void;
   onOpenScores: () => void;
+  /** Optional: when provided, shows the Foto button that triggers a file picker */
+  onOpenPhoto?: () => void;
   className?: string;
 }
 
@@ -38,6 +40,7 @@ export function QuickActions({
   onAskArbiter,
   onTogglePause,
   onOpenScores,
+  onOpenPhoto,
   className,
 }: QuickActionsProps) {
   const actions = [
@@ -69,11 +72,26 @@ export function QuickActions({
       onClick: onOpenScores,
       variant: 'outline' as const,
     },
+    ...(onOpenPhoto
+      ? [
+          {
+            id: 'photo',
+            label: 'Foto',
+            icon: Camera,
+            onClick: onOpenPhoto,
+            variant: 'outline' as const,
+          },
+        ]
+      : []),
   ];
 
   return (
     <div
-      className={cn('grid grid-cols-2 gap-2 sm:grid-cols-4', className)}
+      className={cn(
+        'grid grid-cols-2 gap-2',
+        onOpenPhoto ? 'sm:grid-cols-5' : 'sm:grid-cols-4',
+        className
+      )}
       data-testid="quick-actions"
     >
       {actions.map(action => {

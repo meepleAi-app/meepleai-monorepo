@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
@@ -45,7 +44,6 @@ function EmptyState() {
 // ========== Hub page ==========
 
 export default function SessionsHubPage() {
-  const router = useRouter();
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'carousel'>('list');
@@ -57,11 +55,6 @@ export default function SessionsHubPage() {
     breadcrumb: 'Sessioni',
     tabs: [{ id: 'all', label: 'Sessioni', href: '/sessions' }],
     activeTabId: 'all',
-    primaryAction: {
-      label: 'Nuova',
-      icon: '+',
-      onClick: () => router.push('/sessions/new'),
-    },
   });
 
   const items = useMemo(() => {
@@ -100,7 +93,7 @@ export default function SessionsHubPage() {
 
   return (
     <HubLayout
-      searchPlaceholder="Cerca sessioni..."
+      searchPlaceholder="Filtra per stato..."
       filterChips={FILTERS}
       activeFilterId={activeFilter}
       onFilterChange={setActiveFilter}
@@ -116,7 +109,13 @@ export default function SessionsHubPage() {
       ) : items.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-24">
+        <div
+          className={
+            viewMode === 'list'
+              ? 'flex flex-col gap-2 px-4 pb-24'
+              : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-24'
+          }
+        >
           {items.map(item => (
             <MeepleCard key={item.id} {...item} />
           ))}

@@ -187,7 +187,13 @@ export default function GamesHubPage() {
           <EmptyKB />
         )
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-24">
+        <div
+          className={
+            viewMode === 'list'
+              ? 'flex flex-col gap-2 px-4 pb-24'
+              : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-24'
+          }
+        >
           {items.map(item => (
             <MeepleCard key={item.id} {...item} />
           ))}

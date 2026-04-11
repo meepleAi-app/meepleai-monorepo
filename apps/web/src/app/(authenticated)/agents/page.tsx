@@ -7,6 +7,7 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
+import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 // ========== Filter chips ==========
 
@@ -55,13 +56,9 @@ export default function AgentsHubPage() {
   });
 
   const items = useMemo(() => {
-    // useAgents returns GetAllAgentsResponse | AgentDto[] depending on API shape
-    // The query function returns api.agents.getAll() which yields GetAllAgentsResponse
-    const agents = Array.isArray(data)
-      ? data
-      : ((data as { agents?: unknown[] } | undefined)?.agents ?? []);
+    const agents = (data ?? []) as AgentDto[];
     const q = search.toLowerCase();
-    return (agents as Array<{ id: string; name: string; type: string; isActive: boolean }>)
+    return agents
       .filter(a => {
         if (activeFilter === 'active') return a.isActive === true;
         return true;
@@ -93,7 +90,13 @@ export default function AgentsHubPage() {
       ) : items.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-24">
+        <div
+          className={
+            viewMode === 'list'
+              ? 'flex flex-col gap-2 px-4 pb-24'
+              : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-24'
+          }
+        >
           {items.map(item => (
             <MeepleCard key={item.id} {...item} />
           ))}

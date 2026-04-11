@@ -390,7 +390,9 @@ export async function proxy(request: NextRequest) {
   if (isPublicAuthRoute && isAuthenticated) {
     // Check if there's a 'from' parameter to redirect back to
     const fromParam = request.nextUrl.searchParams.get('from');
-    const defaultDest = isAdmin ? '/admin' : '/library';
+    // Respect meepleai_view_mode cookie: if admin chose user view, send to /library
+    const viewModeCookie = request.cookies.get('meepleai_view_mode')?.value;
+    const defaultDest = isAdmin && viewModeCookie !== 'user' ? '/admin' : '/library';
     const redirectUrl =
       fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
         ? new URL(fromParam, request.url)
@@ -401,7 +403,9 @@ export async function proxy(request: NextRequest) {
 
   // Redirect authenticated users from homepage to dashboard
   if (isHomePage && isAuthenticated) {
-    const defaultDest = isAdmin ? '/admin' : '/library';
+    // Respect meepleai_view_mode cookie: if admin chose user view, send to /library
+    const viewModeCookie = request.cookies.get('meepleai_view_mode')?.value;
+    const defaultDest = isAdmin && viewModeCookie !== 'user' ? '/admin' : '/library';
     const response = NextResponse.redirect(new URL(defaultDest, request.url));
     return addSecurityHeaders(response, requestOrigin);
   }

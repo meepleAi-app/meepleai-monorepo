@@ -40,10 +40,16 @@ const AGENTS_FILTERS: FilterChip[] = [
 // ---------------------------------------------------------------------------
 
 const TOOLKIT_TOOLS = [
-  { id: 'dice', icon: '🎲', name: 'Dado', desc: 'Lancia d4–d20' },
-  { id: 'timer', icon: '⏳', name: 'Clessidra', desc: 'Timer per turno' },
-  { id: 'score', icon: '📊', name: 'Scoreboard', desc: 'Punteggi multi-player' },
-  { id: 'token', icon: '🪙', name: 'Token', desc: 'Contatori risorse' },
+  { id: 'dice', icon: '🎲', name: 'Dado', desc: 'Lancia d4–d20', iconBg: 'bg-amber-100' },
+  { id: 'timer', icon: '⏳', name: 'Clessidra', desc: 'Timer per turno', iconBg: 'bg-sky-100' },
+  {
+    id: 'score',
+    icon: '📊',
+    name: 'Scoreboard',
+    desc: 'Punteggi multi-player',
+    iconBg: 'bg-purple-100',
+  },
+  { id: 'token', icon: '🪙', name: 'Token', desc: 'Contatori risorse', iconBg: 'bg-green-100' },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -177,6 +183,7 @@ function CatalogGameCard({
   inLibrary,
   onAdd,
   adding,
+  hasKb,
 }: {
   game: {
     id: string;
@@ -188,6 +195,7 @@ function CatalogGameCard({
   inLibrary: boolean;
   onAdd: (gameId: string) => void;
   adding: boolean;
+  hasKb?: boolean;
 }) {
   return (
     <div
@@ -201,6 +209,13 @@ function CatalogGameCard({
           <img src={game.imageUrl} alt={game.title} className="w-full h-full object-cover" />
         ) : (
           <span className="text-3xl select-none">🎲</span>
+        )}
+        {hasKb !== undefined && (
+          <span
+            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] text-white leading-none ${hasKb ? 'bg-green-500' : 'bg-[#94a3b8]'}`}
+          >
+            {hasKb ? 'KB ✓' : 'KB –'}
+          </span>
         )}
       </div>
 
@@ -323,6 +338,7 @@ function NewUserGamesBlock({
                   inLibrary={inLibrary}
                   onAdd={handleAdd}
                   adding={addingIds.has(game.id)}
+                  hasKb={game.hasKnowledgeBase}
                 />
               );
             })}
@@ -339,32 +355,35 @@ function NewUserGamesBlock({
 
 function ToolkitCarousel() {
   return (
-    <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
-      {TOOLKIT_TOOLS.map(tool => (
-        <Link
-          key={tool.id}
-          href={`/toolkit?tool=${tool.id}`}
-          className="flex-shrink-0 w-[100px] bg-[var(--nh-bg-card,white)]
-                     border border-[var(--nh-border,rgba(0,0,0,0.07))]
-                     rounded-xl p-2.5 flex flex-col items-center gap-1.5
-                     hover:shadow-md transition-shadow"
-        >
-          {/* Icon box — colored square matching mockup tk-icon */}
-          <span
-            className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center
-                       text-xl bg-amber-100"
+    <>
+      <p className="text-[10px] text-[var(--nh-text-muted,#94a3b8)] font-semibold mb-2">
+        Strumenti disponibili subito, senza libreria
+      </p>
+      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
+        {TOOLKIT_TOOLS.map(tool => (
+          <Link
+            key={tool.id}
+            href={`/toolkit?tool=${tool.id}`}
+            className="flex-shrink-0 w-[100px] bg-[var(--nh-bg-card,white)]
+                       border border-[var(--nh-border,rgba(0,0,0,0.07))]
+                       rounded-xl p-2.5 flex flex-col items-center gap-1.5
+                       hover:shadow-md transition-shadow"
           >
-            {tool.icon}
-          </span>
-          <span className="font-[Quicksand] font-bold text-[11px] text-center leading-tight text-[var(--nh-text-primary,#1a1a1a)]">
-            {tool.name}
-          </span>
-          <span className="text-[9px] text-[var(--nh-text-muted,#94a3b8)] text-center leading-tight">
-            {tool.desc}
-          </span>
-        </Link>
-      ))}
-    </div>
+            <span
+              className={`w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-xl ${tool.iconBg}`}
+            >
+              {tool.icon}
+            </span>
+            <span className="font-[Quicksand] font-bold text-[11px] text-center leading-tight text-[var(--nh-text-primary,#1a1a1a)]">
+              {tool.name}
+            </span>
+            <span className="text-[9px] text-[var(--nh-text-muted,#94a3b8)] text-center leading-tight">
+              {tool.desc}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </>
   );
 }
 

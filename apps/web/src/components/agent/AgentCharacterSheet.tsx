@@ -205,10 +205,10 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
             Configura
           </a>
         )}
-      </aside>
 
-      {/* Connection bar */}
-      <ConnectionBar connections={agentConnections} onPipClick={handlePipClick} className="px-1" />
+        {/* connection bar — at the bottom of portrait, below title+meta */}
+        <ConnectionBar connections={agentConnections} onPipClick={handlePipClick} />
+      </aside>
 
       {/* ── Scrollable body ───────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col gap-6 min-w-0">

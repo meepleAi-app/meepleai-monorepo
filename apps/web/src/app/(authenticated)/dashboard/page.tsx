@@ -8,7 +8,6 @@
 
 import { RequireRole } from '@/components/auth/RequireRole';
 
-import { DashboardMobile } from './dashboard-mobile';
 import { DashboardClient } from './DashboardClient';
 
 import type { Metadata } from 'next';
@@ -29,12 +28,7 @@ export const dynamic = 'force-dynamic';
 export default function GamingHubDashboardPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <div className="md:hidden">
-        <DashboardMobile />
-      </div>
-      <div className="hidden md:block">
-        <DashboardClient />
-      </div>
+      <DashboardClient />
     </RequireRole>
   );
 }

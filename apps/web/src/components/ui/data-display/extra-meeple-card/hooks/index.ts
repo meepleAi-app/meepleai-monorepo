@@ -7,3 +7,4 @@ export { usePlayerDetail } from './use-player-detail';
 export { useSessionDetail } from './use-session-detail';
 export { useEventDetail } from './use-event-detail';
 export { useToolkitDetail } from './use-toolkit-detail';
+export { useToolDetail } from './use-tool-detail';

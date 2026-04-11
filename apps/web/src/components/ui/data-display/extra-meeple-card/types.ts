@@ -629,6 +629,24 @@ export interface ToolkitDetailData {
   history: { version: number; updatedAt: string; note?: string }[];
 }
 
+/** Individual tool detail data (drawer view) */
+export interface ToolDetailData {
+  id: string;
+  name: string;
+  /** Tool category: 'dice' | 'card' | 'timer' | 'counter' */
+  toolType: 'dice' | 'card' | 'timer' | 'counter';
+  toolkitId?: string;
+  toolkitName?: string;
+  /** True if the current user owns/can edit this tool */
+  isOwner: boolean;
+  /** True if there is an active session that can use this tool */
+  hasActiveSession: boolean;
+  /** Tool-specific configuration as key-value pairs */
+  config: Record<string, string | number | boolean>;
+  /** Preview description generated from config */
+  previewDescription?: string;
+}
+
 export type SharedGameExtraMeepleCardTab = 'details' | 'documents' | 'kb-cards';
 
 export interface SharedGameExtraMeepleCardProps {

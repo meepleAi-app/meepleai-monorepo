@@ -39,12 +39,13 @@ import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/nav
 import { useCascadeNavigationStore } from '@/lib/stores/cascade-navigation-store';
 import { cn } from '@/lib/utils';
 
-import { DrawerLoadingSkeleton, DrawerErrorState, DrawerComingSoon } from './drawer-states';
+import { DrawerLoadingSkeleton, DrawerErrorState } from './drawer-states';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
 import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
 import { EventDrawerContent } from './entities/EventDrawerContent';
 import { PlayerDrawerContent } from './entities/PlayerDrawerContent';
 import { SessionDrawerContent } from './entities/SessionDrawerContent';
+import { ToolDrawerContent } from './entities/ToolDrawerContent';
 import { ToolkitDrawerContent } from './entities/ToolkitDrawerContent';
 import {
   GameExtraMeepleCard,
@@ -277,9 +278,8 @@ function DrawerEntityRouter({
       return <EventDrawerContent entityId={entityId} />;
     case 'toolkit':
       return <ToolkitDrawerContent entityId={entityId} />;
-    // Other entity types — Coming Soon until dedicated content components are implemented
     case 'tool':
-      return <DrawerComingSoon label={ENTITY_CONFIG[entityType].label} issueNumber={0} />;
+      return <ToolDrawerContent entityId={entityId} />;
     default:
       return <DrawerErrorState error="Tipo entità non supportato" />;
   }

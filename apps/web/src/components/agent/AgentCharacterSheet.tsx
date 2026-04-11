@@ -69,11 +69,14 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
     error: readinessError,
   } = useAgentStatus(data.id);
   const { handlePipClick } = useConnectionBarNav(data.id);
-  const agentConnections = buildAgentConnections({
-    gameCount: data.gameId ? 1 : 0,
-    kbCount: docs.length,
-    chatCount: threads.length,
-  });
+  const agentConnections =
+    docsLoading || threadsLoading
+      ? []
+      : buildAgentConnections({
+          gameCount: data.gameId ? 1 : 0,
+          kbCount: docs.length,
+          chatCount: threads.length,
+        });
 
   // Derive status from flags
   const agentStatus: 'active' | 'idle' | 'error' = !data.isActive

@@ -51,8 +51,6 @@ export function GameDetailDesktop({
     );
   }
 
-  const isNotInLibrary = !game;
-
   if (isError) {
     return (
       <div className="p-6 text-sm text-destructive" data-testid="game-detail-desktop-error">
@@ -60,6 +58,8 @@ export function GameDetailDesktop({
       </div>
     );
   }
+
+  const isNotInLibrary = !game;
 
   const heroMetadata: MeepleCardMetadata[] = [];
   if (game?.gameYearPublished) {

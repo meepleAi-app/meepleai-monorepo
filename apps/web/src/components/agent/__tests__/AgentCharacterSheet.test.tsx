@@ -18,8 +18,7 @@ vi.mock('@/hooks/useConnectionBarNav', () => ({
 vi.mock('@/components/ui/data-display/connection-bar', () => ({
   ConnectionBar: ({ connections }: { connections: Array<unknown> }) =>
     connections.length > 0 ? <div data-testid="connection-bar" /> : null,
-  buildAgentConnections: (counts: Record<string, number>) =>
-    Object.values(counts).some(v => v > 0) ? [{ count: 1 }] : [],
+  buildAgentConnections: () => [{ count: 1 }], // always returns non-empty (real impl always returns 3 pips)
 }));
 vi.mock('@/components/chat-unified/ChatThreadView', () => ({
   ChatThreadView: () => <div data-testid="chat-thread-view" />,
@@ -55,8 +54,8 @@ describe('AgentCharacterSheet', () => {
     expect(screen.getByTestId('connection-bar')).toBeInTheDocument();
   });
 
-  it('does not render connection-bar when no game and no docs', () => {
+  it('renders connection-bar even when no game or docs (empty pips)', () => {
     render(<AgentCharacterSheet data={{ ...mockAgent, gameId: undefined, gameName: undefined }} />);
-    expect(screen.queryByTestId('connection-bar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('connection-bar')).toBeInTheDocument();
   });
 });

@@ -118,7 +118,7 @@ describe('SessionScoreboardPage', () => {
   it('renders nothing when isLoading and no session', () => {
     mockSessionStore.isLoading = true;
     const { container } = render(
-      <SessionScoreboardPage params={Promise.resolve({ id: SESSION_ID })} />
+      <SessionScoreboardPage params={{ id: SESSION_ID } as unknown as Promise<{ id: string }>} />
     );
     // Loading spinner shown, no session content
     expect(screen.queryByTestId('session-header')).not.toBeInTheDocument();
@@ -127,19 +127,25 @@ describe('SessionScoreboardPage', () => {
 
   it('renders session header when session is loaded', () => {
     mockSessionStore.activeSession = makeActiveSession();
-    render(<SessionScoreboardPage params={Promise.resolve({ id: SESSION_ID })} />);
+    render(
+      <SessionScoreboardPage params={{ id: SESSION_ID } as unknown as Promise<{ id: string }>} />
+    );
     expect(screen.getByTestId('session-header')).toBeInTheDocument();
   });
 
   it('renders connection-bar when session has players and game', () => {
     mockSessionStore.activeSession = makeActiveSession();
-    render(<SessionScoreboardPage params={Promise.resolve({ id: SESSION_ID })} />);
+    render(
+      <SessionScoreboardPage params={{ id: SESSION_ID } as unknown as Promise<{ id: string }>} />
+    );
     expect(screen.getByTestId('connection-bar')).toBeInTheDocument();
   });
 
   it('does not render connection-bar when session has no game and no players', () => {
     mockSessionStore.activeSession = makeActiveSession({ gameId: null, players: [] });
-    render(<SessionScoreboardPage params={Promise.resolve({ id: SESSION_ID })} />);
+    render(
+      <SessionScoreboardPage params={{ id: SESSION_ID } as unknown as Promise<{ id: string }>} />
+    );
     expect(screen.queryByTestId('connection-bar')).not.toBeInTheDocument();
   });
 });

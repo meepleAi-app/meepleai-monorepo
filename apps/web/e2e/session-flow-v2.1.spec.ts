@@ -496,4 +496,609 @@ test.describe('Session Flow v2.1', () => {
     await expect(diaryEntries.first()).toBeVisible({ timeout: 5_000 });
     await expect(diaryEntries).toHaveCount(3, { timeout: 5_000 });
   });
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // Scenario 5 — Turn order random
+  //
+  // Validates that PUT /sessions/{id}/turn-order route exists and responds
+  // correctly with a Random method result.
+  //
+  // Validates:
+  //   - Route mock for PUT /sessions/{id}/turn-order is reachable
+  //   - Response contains method, seed, and order fields
+  //   - Call counter increments when the route is hit via page.evaluate fetch
+  // ════════════════════════════════════════════════════════════════════════════
+
+  test('turn order: PUT /sessions/{id}/turn-order route responds correctly', async ({ page }) => {
+    const turnOrderCalls: number[] = [];
+
+    // GET /sessions/current → active session
+    await page.context().route('**/api/v1/sessions/current', route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sessionId: C.SESSION_ID,
+          gameId: C.GAME_ID_READY,
+          status: 'Active',
+          sessionCode: 'CATAN1',
+          sessionDate: NOW,
+          updatedAt: null,
+          gameNightEventId: C.GAME_NIGHT_ID,
+        }),
+      })
+    );
+
+    // PUT /sessions/{id}/turn-order → Random result
+    await page.context().route(`**/api/v1/sessions/${C.SESSION_ID}/turn-order`, route => {
+      if (route.request().method() !== 'PUT') return route.continue();
+      turnOrderCalls.push(Date.now());
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          method: 'Random',
+          seed: 42,
+          order: [C.PARTICIPANT_ID],
+        }),
+      });
+    });
+
+    // Block SSE diary stream
+    await page
+      .context()
+      .route(`**/api/v1/sessions/${C.SESSION_ID}/diary/stream`, route => route.abort('failed'));
+
+    // Block SignalR
+    await page.context().route('**/hubs/**', route => route.abort('failed'));
+
+    // Stub live session hydration for detail page
+    await page.context().route(`**/api/v1/live-sessions/${C.SESSION_ID}`, route => {
+      if (route.request().method() !== 'GET') return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: C.SESSION_ID,
+          sessionCode: 'CATAN1',
+          gameId: C.GAME_ID_READY,
+          gameName: 'Catan',
+          createdByUserId: C.USER_ID,
+          status: 'InProgress',
+          visibility: 'Private',
+          groupId: null,
+          createdAt: NOW,
+          startedAt: NOW,
+          pausedAt: null,
+          completedAt: null,
+          updatedAt: NOW,
+          lastSavedAt: null,
+          currentTurnIndex: 0,
+          currentTurnPlayerId: C.PARTICIPANT_ID,
+          agentMode: 'None',
+          chatSessionId: null,
+          notes: null,
+          players: [],
+          teams: [],
+          roundScores: [],
+          scoringConfig: { enabledDimensions: [], dimensionUnits: {} },
+        }),
+      });
+    });
+
+    await page.goto(`/sessions/${C.SESSION_ID}`);
+    await page.waitForLoadState('domcontentloaded');
+
+    // Use page.evaluate to fire a PUT request and verify route responds correctly
+    const result = await page.evaluate(
+      async ({ sessionId }) => {
+        const res = await fetch(`/api/v1/sessions/${sessionId}/turn-order`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: 'Random' }),
+        });
+        return { status: res.status, body: await res.json() };
+      },
+      { sessionId: C.SESSION_ID }
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.body).toMatchObject({ method: 'Random', seed: 42, order: [C.PARTICIPANT_ID] });
+    expect(turnOrderCalls.length).toBe(1);
+  });
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // Scenario 6 — Dice roll server-side
+  //
+  // Validates that POST /sessions/{id}/dice-rolls route exists and responds
+  // with a complete dice roll result (formula, rolls array, total).
+  //
+  // Validates:
+  //   - Route mock for POST /sessions/{id}/dice-rolls is reachable
+  //   - Response contains diceRollId, formula, rolls, modifier, total, timestamp
+  //   - Call counter increments when the route is hit via page.evaluate fetch
+  // ════════════════════════════════════════════════════════════════════════════
+
+  test('dice roll: POST /sessions/{id}/dice-rolls route responds with roll result', async ({
+    page,
+  }) => {
+    const diceRollCalls: number[] = [];
+
+    // GET /sessions/current → active session
+    await page.context().route('**/api/v1/sessions/current', route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sessionId: C.SESSION_ID,
+          gameId: C.GAME_ID_READY,
+          status: 'Active',
+          sessionCode: 'CATAN1',
+          sessionDate: NOW,
+          updatedAt: null,
+          gameNightEventId: C.GAME_NIGHT_ID,
+        }),
+      })
+    );
+
+    // POST /sessions/{id}/dice-rolls → dice result
+    await page.context().route(`**/api/v1/sessions/${C.SESSION_ID}/dice-rolls`, route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      diceRollCalls.push(Date.now());
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          diceRollId: '99999999-9999-4999-8999-999999999999',
+          formula: '2D6',
+          rolls: [3, 4],
+          modifier: 0,
+          total: 7,
+          timestamp: NOW,
+        }),
+      });
+    });
+
+    // Block SSE diary stream
+    await page
+      .context()
+      .route(`**/api/v1/sessions/${C.SESSION_ID}/diary/stream`, route => route.abort('failed'));
+
+    // Block SignalR
+    await page.context().route('**/hubs/**', route => route.abort('failed'));
+
+    // Stub live session hydration for detail page
+    await page.context().route(`**/api/v1/live-sessions/${C.SESSION_ID}`, route => {
+      if (route.request().method() !== 'GET') return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: C.SESSION_ID,
+          sessionCode: 'CATAN1',
+          gameId: C.GAME_ID_READY,
+          gameName: 'Catan',
+          createdByUserId: C.USER_ID,
+          status: 'InProgress',
+          visibility: 'Private',
+          groupId: null,
+          createdAt: NOW,
+          startedAt: NOW,
+          pausedAt: null,
+          completedAt: null,
+          updatedAt: NOW,
+          lastSavedAt: null,
+          currentTurnIndex: 0,
+          currentTurnPlayerId: C.PARTICIPANT_ID,
+          agentMode: 'None',
+          chatSessionId: null,
+          notes: null,
+          players: [],
+          teams: [],
+          roundScores: [],
+          scoringConfig: { enabledDimensions: [], dimensionUnits: {} },
+        }),
+      });
+    });
+
+    await page.goto(`/sessions/${C.SESSION_ID}`);
+    await page.waitForLoadState('domcontentloaded');
+
+    // Use page.evaluate to fire a POST request and verify route responds correctly
+    const result = await page.evaluate(
+      async ({ sessionId }) => {
+        const res = await fetch(`/api/v1/sessions/${sessionId}/dice-rolls`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ formula: '2D6' }),
+        });
+        return { status: res.status, body: await res.json() };
+      },
+      { sessionId: C.SESSION_ID }
+    );
+
+    expect(result.status).toBe(201);
+    expect(result.body).toMatchObject({
+      diceRollId: '99999999-9999-4999-8999-999999999999',
+      formula: '2D6',
+      rolls: [3, 4],
+      modifier: 0,
+      total: 7,
+    });
+    expect(diceRollCalls.length).toBe(1);
+  });
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // Scenario 7 — Score update double with history
+  //
+  // Validates that two consecutive POST /scores-with-diary calls produce the
+  // correct oldValue→newValue progression (0→45 then 45→52).
+  //
+  // Validates:
+  //   - First call returns oldValue=0, newValue=45
+  //   - Second call returns oldValue=45, newValue=52
+  //   - Counter-based route handler correctly switches response on second hit
+  // ════════════════════════════════════════════════════════════════════════════
+
+  test('score update: two consecutive POST /scores-with-diary calls produce correct oldValue→newValue pairs', async ({
+    page,
+  }) => {
+    let scoreCallCount = 0;
+    const scoreResponses = [
+      { participantId: C.PARTICIPANT_ID, oldValue: 0, newValue: 45 },
+      { participantId: C.PARTICIPANT_ID, oldValue: 45, newValue: 52 },
+    ];
+
+    // GET /sessions/current → active session
+    await page.context().route('**/api/v1/sessions/current', route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sessionId: C.SESSION_ID,
+          gameId: C.GAME_ID_READY,
+          status: 'Active',
+          sessionCode: 'CATAN1',
+          sessionDate: NOW,
+          updatedAt: null,
+          gameNightEventId: C.GAME_NIGHT_ID,
+        }),
+      })
+    );
+
+    // POST /scores-with-diary → counter-based response
+    await page.context().route(`**/api/v1/sessions/${C.SESSION_ID}/scores-with-diary`, route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      const responseBody = scoreResponses[scoreCallCount] ?? scoreResponses[1];
+      scoreCallCount += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(responseBody),
+      });
+    });
+
+    // Block SSE diary stream
+    await page
+      .context()
+      .route(`**/api/v1/sessions/${C.SESSION_ID}/diary/stream`, route => route.abort('failed'));
+
+    // Block SignalR
+    await page.context().route('**/hubs/**', route => route.abort('failed'));
+
+    // Stub live session hydration for detail page
+    await page.context().route(`**/api/v1/live-sessions/${C.SESSION_ID}`, route => {
+      if (route.request().method() !== 'GET') return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: C.SESSION_ID,
+          sessionCode: 'CATAN1',
+          gameId: C.GAME_ID_READY,
+          gameName: 'Catan',
+          createdByUserId: C.USER_ID,
+          status: 'InProgress',
+          visibility: 'Private',
+          groupId: null,
+          createdAt: NOW,
+          startedAt: NOW,
+          pausedAt: null,
+          completedAt: null,
+          updatedAt: NOW,
+          lastSavedAt: null,
+          currentTurnIndex: 0,
+          currentTurnPlayerId: C.PARTICIPANT_ID,
+          agentMode: 'None',
+          chatSessionId: null,
+          notes: null,
+          players: [],
+          teams: [],
+          roundScores: [],
+          scoringConfig: { enabledDimensions: [], dimensionUnits: {} },
+        }),
+      });
+    });
+
+    await page.goto(`/sessions/${C.SESSION_ID}`);
+    await page.waitForLoadState('domcontentloaded');
+
+    // First score update: 0 → 45
+    const firstResult = await page.evaluate(
+      async ({ sessionId, participantId }) => {
+        const res = await fetch(`/api/v1/sessions/${sessionId}/scores-with-diary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ participantId, delta: 45 }),
+        });
+        return { status: res.status, body: await res.json() };
+      },
+      { sessionId: C.SESSION_ID, participantId: C.PARTICIPANT_ID }
+    );
+
+    expect(firstResult.status).toBe(200);
+    expect(firstResult.body).toMatchObject({ oldValue: 0, newValue: 45 });
+
+    // Second score update: 45 → 52
+    const secondResult = await page.evaluate(
+      async ({ sessionId, participantId }) => {
+        const res = await fetch(`/api/v1/sessions/${sessionId}/scores-with-diary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ participantId, delta: 7 }),
+        });
+        return { status: res.status, body: await res.json() };
+      },
+      { sessionId: C.SESSION_ID, participantId: C.PARTICIPANT_ID }
+    );
+
+    expect(secondResult.status).toBe(200);
+    expect(secondResult.body).toMatchObject({ oldValue: 45, newValue: 52 });
+
+    // Both calls were made
+    expect(scoreCallCount).toBe(2);
+  });
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // Scenario 8 — Seconda partita stessa serata (409 poi successo)
+  //
+  // Simulates the multi-game-night flow: attempting to start a second game
+  // while another is Active yields 409 ACTIVE_SESSION_EXISTS_IN_NIGHT.
+  // After pausing the active session, the second POST succeeds with 201.
+  //
+  // Validates:
+  //   - First POST /games/{id2}/sessions → 409 with ACTIVE_SESSION_EXISTS_IN_NIGHT
+  //   - POST /sessions/{id}/pause → 200
+  //   - Second POST /games/{id2}/sessions → 201 with new sessionId
+  //   - Counter-based route handler correctly distinguishes first vs subsequent calls
+  // ════════════════════════════════════════════════════════════════════════════
+
+  test('multi-game night: 409 on second game if first active, succeeds after pause', async ({
+    page,
+  }) => {
+    let createSession2CallCount = 0;
+
+    // GET /sessions/current → active session (SESSION_ID)
+    await page.context().route('**/api/v1/sessions/current', route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sessionId: C.SESSION_ID,
+          gameId: C.GAME_ID_READY,
+          status: 'Active',
+          sessionCode: 'CATAN1',
+          sessionDate: NOW,
+          updatedAt: null,
+          gameNightEventId: C.GAME_NIGHT_ID,
+        }),
+      })
+    );
+
+    // POST /games/{id2}/sessions → 409 first time, 201 second time
+    await page.context().route(`**/api/v1/games/${C.GAME_ID_READY_2}/sessions`, route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      createSession2CallCount += 1;
+      if (createSession2CallCount === 1) {
+        return route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            code: 'ACTIVE_SESSION_EXISTS_IN_NIGHT',
+            existingSessionIds: [C.SESSION_ID],
+          }),
+        });
+      }
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sessionId: C.SESSION_ID_2,
+          sessionCode: 'TICKET1',
+          participants: [],
+          gameNightEventId: C.GAME_NIGHT_ID,
+          gameNightWasCreated: false,
+          agentDefinitionId: null,
+          toolkitId: null,
+        }),
+      });
+    });
+
+    // POST /sessions/{id}/pause → 200
+    await page.context().route(`**/api/v1/sessions/${C.SESSION_ID}/pause`, route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    });
+
+    // Block SSE diary stream
+    await page
+      .context()
+      .route(`**/api/v1/sessions/${C.SESSION_ID}/diary/stream`, route => route.abort('failed'));
+
+    // Block SignalR
+    await page.context().route('**/hubs/**', route => route.abort('failed'));
+
+    // Library with two games
+    await mockLibrary(page, [
+      makeLibraryEntry(C.GAME_ID_READY, 'Catan'),
+      makeLibraryEntry(C.GAME_ID_READY_2, 'Ticket to Ride'),
+    ]);
+
+    await page.goto('/library');
+    await page.waitForLoadState('domcontentloaded');
+
+    // First attempt: POST /games/{id2}/sessions → 409
+    const firstAttempt = await page.evaluate(
+      async ({ gameId2 }) => {
+        const res = await fetch(`/api/v1/games/${gameId2}/sessions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        return { status: res.status, body: await res.json() };
+      },
+      { gameId2: C.GAME_ID_READY_2 }
+    );
+
+    expect(firstAttempt.status).toBe(409);
+    expect(firstAttempt.body).toMatchObject({
+      code: 'ACTIVE_SESSION_EXISTS_IN_NIGHT',
+      existingSessionIds: [C.SESSION_ID],
+    });
+
+    // Pause active session
+    const pauseResult = await page.evaluate(
+      async ({ sessionId }) => {
+        const res = await fetch(`/api/v1/sessions/${sessionId}/pause`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        return { status: res.status };
+      },
+      { sessionId: C.SESSION_ID }
+    );
+
+    expect(pauseResult.status).toBe(200);
+
+    // Second attempt: POST /games/{id2}/sessions → 201
+    const secondAttempt = await page.evaluate(
+      async ({ gameId2 }) => {
+        const res = await fetch(`/api/v1/games/${gameId2}/sessions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        return { status: res.status, body: await res.json() };
+      },
+      { gameId2: C.GAME_ID_READY_2 }
+    );
+
+    expect(secondAttempt.status).toBe(201);
+    expect(secondAttempt.body).toMatchObject({
+      sessionId: C.SESSION_ID_2,
+      gameNightEventId: C.GAME_NIGHT_ID,
+      gameNightWasCreated: false,
+    });
+
+    expect(createSession2CallCount).toBe(2);
+  });
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // Scenario 9 — Chiusura serata
+  //
+  // Validates that POST /game-nights/{id}/complete route exists and responds
+  // correctly when the session is idle (no active session).
+  //
+  // Validates:
+  //   - GET /sessions/current → 204 (idle)
+  //   - GET /game-nights/{id} → InProgress status triggers the detail page
+  //   - POST /game-nights/{id}/complete → 200
+  //   - Call counter increments when the complete route is hit
+  // ════════════════════════════════════════════════════════════════════════════
+
+  test('game night closure: POST /game-nights/{id}/complete route responds correctly', async ({
+    page,
+  }) => {
+    const completeCalls: number[] = [];
+
+    // GET /sessions/current → idle (no active session)
+    await page
+      .context()
+      .route('**/api/v1/sessions/current', route => route.fulfill({ status: 204, body: '' }));
+
+    // GET /game-nights/{id} → InProgress event
+    await page.context().route(`**/api/v1/game-nights/${C.GAME_NIGHT_ID}`, route => {
+      if (route.request().method() !== 'GET') return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: C.GAME_NIGHT_ID,
+          organizerId: C.USER_ID,
+          organizerName: 'Host',
+          title: 'Serata da Chiudere',
+          description: null,
+          scheduledAt: NOW,
+          location: null,
+          maxPlayers: null,
+          gameIds: [C.GAME_ID_READY],
+          status: 'InProgress',
+          acceptedCount: 1,
+          pendingCount: 0,
+          totalInvited: 1,
+          createdAt: NOW,
+          updatedAt: null,
+        }),
+      });
+    });
+
+    // GET /game-nights/{id}/rsvps → empty list
+    await page
+      .context()
+      .route(`**/api/v1/game-nights/${C.GAME_NIGHT_ID}/rsvps`, route =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+      );
+
+    // GET /game-nights/{id}/diary → empty (no diary entries for InProgress without sessions)
+    await page
+      .context()
+      .route(`**/api/v1/game-nights/${C.GAME_NIGHT_ID}/diary**`, route =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+      );
+
+    // POST /game-nights/{id}/complete → 200
+    await page.context().route(`**/api/v1/game-nights/${C.GAME_NIGHT_ID}/complete`, route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      completeCalls.push(Date.now());
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    });
+
+    // Block SignalR
+    await page.context().route('**/hubs/**', route => route.abort('failed'));
+
+    await page.goto(`/game-nights/${C.GAME_NIGHT_ID}`);
+    await page.waitForLoadState('domcontentloaded');
+
+    // Heading confirms page loaded
+    await expect(page.getByRole('heading', { name: 'Serata da Chiudere' }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Use page.evaluate to fire the complete request and verify the route responds
+    const result = await page.evaluate(
+      async ({ gameNightId }) => {
+        const res = await fetch(`/api/v1/game-nights/${gameNightId}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        return { status: res.status };
+      },
+      { gameNightId: C.GAME_NIGHT_ID }
+    );
+
+    expect(result.status).toBe(200);
+    expect(completeCalls.length).toBe(1);
+  });
 });

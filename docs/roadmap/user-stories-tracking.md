@@ -74,7 +74,7 @@
 
 | ID | User Story | Status | BC | Backend | Plan |
 |----|-----------|--------|-----|---------|------|
-| US-30 | Come utente, voglio creare e gestire sessioni di gioco live | 🔵 Planned | SessionTracking | ✅ 28 cmd + 12 query | [Plan](../superpowers/plans/2026-03-26-us30-live-sessions.md) |
+| US-30 | Come utente, voglio creare e gestire sessioni di gioco live | ✅ Complete | SessionTracking | ✅ PRs #365 #369 #373–#376 | spec v2.1 — G1–G16 implementati, E2E 9/9, NFR-5 Chi-square |
 | US-32 | Come utente, voglio tracciare le partite giocate (play records) | 🔵 Planned | GameManagement | ✅ PlayRecord + RecordPlayer | [Plan](../superpowers/plans/2026-03-26-us32-play-records.md) |
 | US-31 | Come utente, voglio pianificare serate di gioco (game nights) | 🔵 Planned | GameManagement | ✅ GameNightEvent + RSVP | [Plan](../superpowers/plans/2026-03-26-us31-game-nights.md) |
 

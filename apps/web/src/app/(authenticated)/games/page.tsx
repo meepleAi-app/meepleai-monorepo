@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -72,7 +72,7 @@ function EmptyKB() {
 
 // ========== Hub page ==========
 
-export default function GamesHubPage() {
+function GamesHubContent() {
   const searchParams = useSearchParams();
   const activeTab = (searchParams.get('tab') ?? 'library') as 'library' | 'catalog' | 'kb';
 
@@ -200,5 +200,13 @@ export default function GamesHubPage() {
         </div>
       )}
     </HubLayout>
+  );
+}
+
+export default function GamesHubPage() {
+  return (
+    <Suspense>
+      <GamesHubContent />
+    </Suspense>
   );
 }

@@ -45,6 +45,7 @@ import { AgentChatDrawerLayout } from './entities/AgentChatDrawerLayout';
 import { EventDrawerContent } from './entities/EventDrawerContent';
 import { PlayerDrawerContent } from './entities/PlayerDrawerContent';
 import { SessionDrawerContent } from './entities/SessionDrawerContent';
+import { ToolkitDrawerContent } from './entities/ToolkitDrawerContent';
 import {
   GameExtraMeepleCard,
   ChatExtraMeepleCard,
@@ -274,8 +275,9 @@ function DrawerEntityRouter({
       return <SessionDrawerContent entityId={entityId} />;
     case 'event':
       return <EventDrawerContent entityId={entityId} />;
-    // Other entity types — Coming Soon until dedicated content components are implemented
     case 'toolkit':
+      return <ToolkitDrawerContent entityId={entityId} />;
+    // Other entity types — Coming Soon until dedicated content components are implemented
     case 'tool':
       return <DrawerComingSoon label={ENTITY_CONFIG[entityType].label} issueNumber={0} />;
     default:

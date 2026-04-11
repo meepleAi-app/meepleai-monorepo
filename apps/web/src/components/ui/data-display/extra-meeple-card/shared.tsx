@@ -74,6 +74,13 @@ export const ENTITY_COLORS = {
     accentBorder: 'border-rose-200/60',
     activeAccent: 'data-[state=active]:text-rose-700',
   },
+  toolkit: {
+    hsl: '142 70% 45%',
+    accent: 'text-green-700',
+    accentBg: 'bg-green-100',
+    accentBorder: 'border-green-200/60',
+    activeAccent: 'data-[state=active]:text-green-700',
+  },
 } as const;
 
 export type EntityVariant = keyof typeof ENTITY_COLORS;

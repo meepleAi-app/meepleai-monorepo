@@ -610,6 +610,25 @@ export interface SharedGameDetailData extends GameDetailData {
   linkedAgent: { id: string; name: string; isActive: boolean } | null;
 }
 
+/** Toolkit entity detail data (drawer view) */
+export interface ToolkitDetailData {
+  id: string;
+  name: string;
+  description?: string;
+  version: number;
+  isPublished: boolean;
+  /** True if the current user owns/can edit this toolkit */
+  isOwner: boolean;
+  gameId?: string;
+  gameName?: string;
+  diceTools: { name: string; diceType: string; quantity: number }[];
+  cardTools: { name: string; deckType: string; cardCount: number }[];
+  timerTools: { name: string; durationSeconds: number; timerType: string }[];
+  counterTools: { name: string; minValue: number; maxValue: number; defaultValue: number }[];
+  /** Previous versions of this toolkit */
+  history: { version: number; updatedAt: string; note?: string }[];
+}
+
 export type SharedGameExtraMeepleCardTab = 'details' | 'documents' | 'kb-cards';
 
 export interface SharedGameExtraMeepleCardProps {

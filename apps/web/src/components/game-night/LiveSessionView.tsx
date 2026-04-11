@@ -437,7 +437,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
         toast.error('Caricamento foto non riuscito. Riprova.');
       });
     },
-    [sessionId, activeSession]
+    [sessionId, activeSession, user?.id]
   );
 
   // ----- Activity events (scores → feed items, newest first) -----

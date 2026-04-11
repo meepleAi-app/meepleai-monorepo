@@ -286,6 +286,23 @@ export interface PlayerDetailData {
   recentGames: { name: string; date: string; result: 'win' | 'loss' | 'draw' }[];
 }
 
+/** Session entity detail data (drawer view) */
+export interface SessionDetailData {
+  id: string;
+  sessionCode: string;
+  status: SessionStatus;
+  /** Display title (game name or custom) */
+  title: string;
+  gameId?: string;
+  gameName?: string;
+  gameImageUrl?: string;
+  startedAt?: string;
+  completedAt?: string;
+  players: SessionPlayerInfo[];
+  toolkit?: ToolkitData;
+  timeline: SessionTimelineEvent[];
+}
+
 /** Collection entity detail data */
 export interface CollectionDetailData {
   id: string;

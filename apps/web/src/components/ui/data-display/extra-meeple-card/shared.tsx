@@ -60,6 +60,13 @@ export const ENTITY_COLORS = {
     accentBorder: 'border-teal-200/60',
     activeAccent: 'data-[state=active]:text-teal-700',
   },
+  session: {
+    hsl: '240 60% 55%',
+    accent: 'text-indigo-700',
+    accentBg: 'bg-indigo-100',
+    accentBorder: 'border-indigo-200/60',
+    activeAccent: 'data-[state=active]:text-indigo-700',
+  },
 } as const;
 
 export type EntityVariant = keyof typeof ENTITY_COLORS;

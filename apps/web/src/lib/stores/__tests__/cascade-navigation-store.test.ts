@@ -42,6 +42,15 @@ describe('drawer stack', () => {
     expect(store.getState().state).toBe('closed');
   });
 
+  it('popDrawer returns to deckStack when opened from deckStack and stack is empty', () => {
+    const store = useCascadeNavigationStore;
+    act(() => store.getState().openDeckStack('game', 'src1'));
+    act(() => store.getState().openDrawer('game', 'g1'));
+    act(() => store.getState().popDrawer());
+
+    expect(store.getState().state).toBe('deckStack');
+  });
+
   it('drawer stack max depth is 3', () => {
     const store = useCascadeNavigationStore;
     act(() => store.getState().openDrawer('game', 'g1'));

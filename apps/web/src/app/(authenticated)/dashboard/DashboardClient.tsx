@@ -18,7 +18,6 @@ import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 const GAMES_FILTERS: FilterChip[] = [
   { id: 'all', label: 'Tutti' },
   { id: 'recent', label: 'Recenti' },
-  { id: 'wishlist', label: 'Wishlist' },
 ];
 
 const SESSIONS_FILTERS: FilterChip[] = [
@@ -102,7 +101,6 @@ function MeepleCardGrid({
   entity: MeepleEntityType;
   items: MeepleCardProps[];
   isLoading: boolean;
-  viewMode?: 'grid' | 'list' | 'carousel';
 }) {
   if (isLoading) return <LoadingSkeleton count={6} />;
   if (items.length === 0) return <EmptyState entity={entity} />;
@@ -279,12 +277,7 @@ export function DashboardClient() {
           onViewModeChange={setGamesViewMode}
           showViewToggle
         >
-          <MeepleCardGrid
-            entity="game"
-            items={filteredGameItems}
-            isLoading={libraryLoading}
-            viewMode={gamesViewMode}
-          />
+          <MeepleCardGrid entity="game" items={filteredGameItems} isLoading={libraryLoading} />
         </HubLayout>
       </HubBlock>
 
@@ -305,7 +298,6 @@ export function DashboardClient() {
             entity="session"
             items={filteredSessionItems}
             isLoading={sessionsLoading}
-            viewMode={sessionsViewMode}
           />
         </HubLayout>
       </HubBlock>
@@ -323,12 +315,7 @@ export function DashboardClient() {
           onViewModeChange={setAgentsViewMode}
           showViewToggle
         >
-          <MeepleCardGrid
-            entity="agent"
-            items={filteredAgentItems}
-            isLoading={agentsLoading}
-            viewMode={agentsViewMode}
-          />
+          <MeepleCardGrid entity="agent" items={filteredAgentItems} isLoading={agentsLoading} />
         </HubLayout>
       </HubBlock>
 

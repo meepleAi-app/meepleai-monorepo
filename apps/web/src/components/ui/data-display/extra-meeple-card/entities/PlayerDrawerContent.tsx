@@ -156,9 +156,9 @@ export function PlayerDrawerContent({ entityId }: PlayerDrawerContentProps) {
                   Nessuna partita recente
                 </p>
               ) : (
-                data.recentGames.map(g => (
+                data.recentGames.map((g, idx) => (
                   <div
-                    key={`${g.name}-${g.date}`}
+                    key={idx}
                     className="flex items-center justify-between rounded-lg bg-white/50 border border-slate-200/40 p-2.5"
                   >
                     <div>

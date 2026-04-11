@@ -95,6 +95,9 @@ export function Timer({ name, defaultSeconds, type, onAction, sessionId }: Timer
   const { seconds, running, start, pause, reset, setSeconds, setRunning } =
     useLocalTimer(defaultSeconds);
 
+  // Guard: alert fires at most once per timer run
+  const alertFiredRef = useRef(false);
+
   // Phase 2: sync timer state from SSE when in a session context
   useSessionStream(sessionId ?? null, {
     enabled: !!sessionId,
@@ -113,17 +116,15 @@ export function Timer({ name, defaultSeconds, type, onAction, sessionId }: Timer
           setSeconds(payload.remainingSeconds);
           setRunning(true);
         } else if (payload.resetAt !== undefined) {
-          // TimerReset
+          // TimerReset (remote)
           setSeconds(defaultSeconds);
           setRunning(false);
+          alertFiredRef.current = false;
         }
       },
       [setSeconds, setRunning, defaultSeconds]
     ),
   });
-
-  // Guard: alert fires at most once per timer run
-  const alertFiredRef = useRef(false);
 
   const isWarning = type === 'countdown' && seconds <= WARNING_THRESHOLD && seconds > 0;
   const isExpired = type === 'countdown' && seconds === 0;

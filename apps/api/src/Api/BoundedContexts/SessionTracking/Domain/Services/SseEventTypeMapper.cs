@@ -75,6 +75,7 @@ public static class SseEventTypeMapper
         [typeof(TimerPausedEvent)] = "session:timer",
         [typeof(TimerResumedEvent)] = "session:timer",
         [typeof(TimerResetEvent)] = "session:timer",
+        [typeof(TimerCompletedEvent)] = "session:timer",
 
         // Game Night diary → session:gamenight
         [typeof(GameNightEvents.GameStartedInNightEvent)] = "session:gamenight",

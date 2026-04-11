@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.Middleware.Exceptions;
 
 using MediatR;
 
@@ -154,7 +155,7 @@ public sealed class PauseTimerCommandHandler : IRequestHandler<PauseTimerCommand
         var timer = _timerManager.GetTimer(request.SessionId);
         if (timer == null || !string.Equals(timer.Status, "running", StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("No running timer found for this session");
+            throw new ConflictException("No running timer found for this session");
         }
 
         // Calculate remaining time before pausing
@@ -207,7 +208,7 @@ public sealed class ResumeTimerCommandHandler : IRequestHandler<ResumeTimerComma
         var timer = _timerManager.GetTimer(request.SessionId);
         if (timer == null || !string.Equals(timer.Status, "paused", StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("No paused timer found for this session");
+            throw new ConflictException("No paused timer found for this session");
         }
 
         timer.Status = "running";

@@ -126,7 +126,7 @@ export function RulesContent({ gameId }: RulesContentProps) {
             {analysis.gamePhases
               .sort((a, b) => a.order - b.order)
               .map(phase => (
-                <li key={phase.name} className="text-muted-foreground">
+                <li key={phase.order} className="text-muted-foreground">
                   <span className="font-medium text-foreground">{phase.name}</span>
                   {' — '}
                   {phase.description}

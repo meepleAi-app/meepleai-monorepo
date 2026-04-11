@@ -48,7 +48,7 @@ public sealed record TimerCompletedEvent(
     Guid SessionId,
     Guid TimerId,
     DateTime CompletedAt
-);
+) : INotification;
 
 /// <summary>
 /// Event when a timer is reset.

@@ -16,6 +16,7 @@ interface FaqContentProps {
 export function FaqContent({ gameId }: FaqContentProps) {
   const [analysis, setAnalysis] = useState<RulebookAnalysisDto | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!gameId) return;
@@ -27,6 +28,7 @@ export function FaqContent({ gameId }: FaqContentProps) {
     }
 
     setLoading(true);
+    setError(false);
 
     const client = createSharedGamesClient({ httpClient: new HttpClient() });
     client
@@ -37,9 +39,7 @@ export function FaqContent({ gameId }: FaqContentProps) {
           setAnalysis(analyses[0]);
         }
       })
-      .catch(() => {
-        // leave analysis null → empty state
-      })
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [gameId]);
 
@@ -66,7 +66,7 @@ export function FaqContent({ gameId }: FaqContentProps) {
 
   const faqs = analysis?.generatedFaqs ?? [];
 
-  if (faqs.length === 0) {
+  if (error || faqs.length === 0) {
     return (
       <div data-testid="faq-content" className="flex flex-col h-full">
         <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -80,7 +80,7 @@ export function FaqContent({ gameId }: FaqContentProps) {
   return (
     <div data-testid="faq-content" className="space-y-3 text-sm">
       {faqs.map((faq, i) => (
-        <div key={i} className="space-y-1">
+        <div key={faq.question || i} className="space-y-1">
           <p className="font-medium text-foreground">{faq.question}</p>
           <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
         </div>

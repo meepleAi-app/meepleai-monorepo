@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 
-import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card/types';
 
 const MAX_RECENTS = 4;
 const STORAGE_KEY = 'meeple-recents';

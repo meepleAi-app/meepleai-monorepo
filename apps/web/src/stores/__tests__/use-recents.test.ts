@@ -10,8 +10,8 @@ function makeRecent(id: string, entity: MeepleEntityType = 'game') {
 
 describe('useRecentsStore', () => {
   beforeEach(() => {
-    act(() => useRecentsStore.getState().clear());
     sessionStorage.clear();
+    act(() => useRecentsStore.getState().clear());
   });
 
   it('starts empty', () => {

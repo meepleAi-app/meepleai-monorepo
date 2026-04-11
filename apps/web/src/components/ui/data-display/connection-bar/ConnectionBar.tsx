@@ -74,9 +74,9 @@ function ConnectionPipButton({
           <Plus aria-hidden="true" className="h-3 w-3" strokeWidth={2.5} />
           <span className="sr-only">+</span>
         </>
-      ) : (
+      ) : pip.count > 0 ? (
         <span className="tabular-nums">{pip.count}</span>
-      )}
+      ) : null}
       <span>{pip.label}</span>
     </button>
   );

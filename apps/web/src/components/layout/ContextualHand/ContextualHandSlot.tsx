@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
+import type { MeepleEntityType, CardStatus } from '@/components/ui/data-display/meeple-card/types';
 import { cn } from '@/lib/utils';
 import {
   useContextualHandStore,
@@ -22,8 +23,6 @@ import {
   selectContext,
   selectKbReadiness,
 } from '@/stores/contextual-hand';
-
-import type { MeepleEntityType, CardStatus } from '@/components/ui/data-display/meeple-card/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -68,7 +67,7 @@ function slotLabel(slotType: HandSlotType) {
   }
 }
 
-function slotEntity(slotType: HandSlotType): MeepleEntityType {
+function _slotEntity(slotType: HandSlotType): MeepleEntityType {
   switch (slotType) {
     case 'game':
       return 'game';
@@ -103,9 +102,7 @@ export function ContextualHandSlot({ slotType, collapsed, className }: Contextua
       <div
         className={cn(
           'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
-          hasContent
-            ? 'bg-primary/10 text-primary'
-            : 'text-muted-foreground/50',
+          hasContent ? 'bg-primary/10 text-primary' : 'text-muted-foreground/50',
           className
         )}
         title={slotLabel(slotType)}
@@ -150,6 +147,7 @@ export function ContextualHandSlot({ slotType, collapsed, className }: Contextua
           badge={isPaused ? 'In pausa' : 'Attiva'}
         />
         <button
+          data-testid="pause-resume-toggle"
           onClick={isPaused ? resumeSession : pauseSession}
           className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 min-h-[44px]"
         >

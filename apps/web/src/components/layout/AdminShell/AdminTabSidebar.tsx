@@ -20,7 +20,9 @@ export function AdminTabSidebar({ forceVisible }: AdminTabSidebarProps) {
   const activeSection = getActiveSection(pathname);
 
   return (
-    <div
+    <nav
+      role="navigation"
+      aria-label="Navigazione admin"
       className={cn(
         forceVisible
           ? 'flex flex-col h-full w-full'
@@ -83,6 +85,6 @@ export function AdminTabSidebar({ forceVisible }: AdminTabSidebarProps) {
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 }

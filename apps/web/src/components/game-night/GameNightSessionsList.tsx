@@ -9,19 +9,14 @@
 
 'use client';
 
-import {
-  Gamepad2,
-  Play,
-  Pause,
-  CheckCircle2,
-  Clock,
-} from 'lucide-react';
+import { Gamepad2, Play, Pause, CheckCircle2, Clock } from 'lucide-react';
 import Link from 'next/link';
-import type { LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { GameNightActiveSession } from '@/stores/game-night/types';
+
+import type { LucideIcon } from 'lucide-react';
 
 // ─── Status metadata ────────────────────────────────────────────────────────
 
@@ -67,7 +62,10 @@ export interface GameNightSessionsListProps {
   gameNightId: string;
 }
 
-export function GameNightSessionsList({ sessions, gameNightId }: GameNightSessionsListProps) {
+export function GameNightSessionsList({
+  sessions,
+  gameNightId: _gameNightId,
+}: GameNightSessionsListProps) {
   if (sessions.length === 0) {
     return (
       <Card>
@@ -105,9 +103,7 @@ export function GameNightSessionsList({ sessions, gameNightId }: GameNightSessio
                   {session.playOrder}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate font-nunito">
-                    {session.gameTitle}
-                  </p>
+                  <p className="text-sm font-medium truncate font-nunito">{session.gameTitle}</p>
                   {session.startedAt && (
                     <p className="text-[11px] text-muted-foreground">
                       {new Date(session.startedAt).toLocaleTimeString('it-IT', {

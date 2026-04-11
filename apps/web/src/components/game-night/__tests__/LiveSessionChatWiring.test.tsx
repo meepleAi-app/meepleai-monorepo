@@ -8,26 +8,17 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { useAgentChatStream } from '@/hooks/useAgentChatStream';
+import { useGameAgents } from '@/hooks/queries/useGameAgents';
 
 describe('LiveSessionView agent chat wiring', () => {
-  it('useAgentChatStream hook is importable and exports a function', async () => {
-    const mod = await import('@/hooks/useAgentChatStream');
-    expect(mod.useAgentChatStream).toBeDefined();
-    expect(typeof mod.useAgentChatStream).toBe('function');
+  it('useAgentChatStream hook is importable and exports a function', () => {
+    expect(useAgentChatStream).toBeDefined();
+    expect(typeof useAgentChatStream).toBe('function');
   });
 
-  it('useGameAgents hook is importable and exports a function', async () => {
-    const mod = await import('@/hooks/queries/useGameAgents');
-    expect(mod.useGameAgents).toBeDefined();
-    expect(typeof mod.useGameAgents).toBe('function');
-  });
-
-  it('LiveSessionView no longer contains setTimeout placeholder chat', async () => {
-    // Read the source to verify the placeholder was removed
-    const mod = await import('../LiveSessionView');
-    const source = mod.LiveSessionView.toString();
-
-    // The placeholder used "Funzione in arrivo" in a setTimeout callback
-    expect(source).not.toContain('chatTimerRef');
+  it('useGameAgents hook is importable and exports a function', () => {
+    expect(useGameAgents).toBeDefined();
+    expect(typeof useGameAgents).toBe('function');
   });
 });

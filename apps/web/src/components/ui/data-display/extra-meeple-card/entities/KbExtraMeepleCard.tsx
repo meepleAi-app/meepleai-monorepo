@@ -163,7 +163,7 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
         {/* ── Overview ───────────────────────────────────────────── */}
         <TabsContent value="overview" className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Status badge */}
-          <KbStatusBadge status={data.status} size="md" />
+          <KbStatusBadge status={data.status} />
 
           {/* Filename chip */}
           <div className="flex items-center gap-2 rounded-lg border border-teal-200/40 bg-teal-50/60 px-3 py-2">

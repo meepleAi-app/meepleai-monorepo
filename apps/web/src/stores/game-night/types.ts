@@ -25,6 +25,7 @@ export interface GameNightGame {
   thumbnailUrl?: string;
   minPlayers?: number;
   maxPlayers?: number;
+  kbStatus?: 'indexed' | 'not_indexed' | 'unknown';
 }
 
 export type DiaryEntryType =

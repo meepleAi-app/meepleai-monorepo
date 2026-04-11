@@ -34,10 +34,11 @@ import {
   TurnOrderTool,
   WhiteboardTool,
 } from '@/components/session';
-import type { CounterToolConfig, Participant } from '@/components/session/types';
+import type { CounterToolConfig, Participant, ScoreboardData } from '@/components/session/types';
 import { CardDeckTool } from '@/components/toolkit';
 import { DiceRoller as ToolkitDiceRoller } from '@/components/toolkit/DiceRoller';
 import { Timer as ToolkitTimer } from '@/components/toolkit/Timer';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useCounterTool } from '@/lib/domain-hooks/useCounterTool';
 import { useDiceRoller } from '@/lib/domain-hooks/useDiceRoller';
 import { useGameToolkit } from '@/lib/domain-hooks/useGameToolkit';
@@ -124,18 +125,46 @@ export function ActiveSessionPageContent() {
 
   const {
     activeSession,
-    scoreboard,
-    participants,
+    scores,
     loadSession,
     pauseSession,
     resumeSession,
-    finalizeSession,
-    addScoreFromSSE,
+    completeSession,
+    handleScoreUpdate,
     isLoading,
     error,
     activeTool,
     setActiveTool,
   } = useSessionStore();
+
+  const { data: currentUser } = useCurrentUser();
+
+  // ── Derived data from new store shape ─────────────────────────────────────
+
+  const participants = (activeSession?.players ?? []).map(p => ({
+    id: p.id,
+    displayName: p.displayName,
+    isOwner: p.role === 'Host',
+    isCurrentUser: p.userId !== null && p.userId === currentUser?.id,
+    avatarColor: p.color,
+    totalScore: p.totalScore,
+    rank: p.currentRank,
+  }));
+
+  const derivedScoreboard: ScoreboardData = {
+    participants,
+    scores: scores.map(s => ({
+      id: `${s.playerId}-${s.round}-${s.dimension}`,
+      participantId: s.playerId,
+      roundNumber: s.round,
+      category: s.dimension,
+      scoreValue: s.value,
+      timestamp: new Date(s.recordedAt),
+      createdBy: s.playerId,
+    })),
+    rounds: [...new Set(scores.map(s => s.round))].sort((a, b) => a - b),
+    categories: [...new Set(scores.map(s => s.dimension))],
+  };
 
   // ── URL ↔ store sync ──────────────────────────────────────────────────────
 
@@ -177,6 +206,7 @@ export function ActiveSessionPageContent() {
   // ── Dice roller (Issue #4974) ─────────────────────────────────────────────
 
   const currentParticipant = participants.find(p => p.isCurrentUser);
+
   const diceRoller = useDiceRoller({
     sessionId,
     participantId: currentParticipant?.id ?? '',
@@ -210,7 +240,14 @@ export function ActiveSessionPageContent() {
   const { isConnected, error: sseError } = useSessionSync({
     sessionId,
     onScoreUpdate: scoreEntry => {
-      addScoreFromSSE(scoreEntry);
+      handleScoreUpdate({
+        playerId: scoreEntry.participantId,
+        round: scoreEntry.roundNumber ?? 1,
+        dimension: scoreEntry.category ?? 'score',
+        value: scoreEntry.scoreValue,
+        unit: null,
+        recordedAt: scoreEntry.timestamp.toISOString(),
+      });
       const participant = participants.find(p => p.id === scoreEntry.participantId);
       if (participant) {
         toast.success(`${participant.displayName}: +${scoreEntry.scoreValue}`);
@@ -239,14 +276,8 @@ export function ActiveSessionPageContent() {
   };
 
   const handleFinalize = async () => {
-    if (!scoreboard) return;
-    const rankedParticipants = [...participants].sort((a, b) => b.totalScore - a.totalScore);
-    const ranks: Record<string, number> = {};
-    rankedParticipants.forEach((p, index) => {
-      ranks[p.id] = index + 1;
-    });
     try {
-      await finalizeSession({ ranks });
+      await completeSession();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to finalize session');
     }
@@ -256,7 +287,7 @@ export function ActiveSessionPageContent() {
   const isCurrentUserOwner = participants.find(p => p.isCurrentUser)?.isOwner ?? false;
 
   // Loading state
-  if (isLoading || !activeSession || !scoreboard) {
+  if (isLoading || !activeSession) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
@@ -319,7 +350,7 @@ export function ActiveSessionPageContent() {
   const toolContent = (() => {
     // ── Base tools (only rendered when not overridden) ──────────────────────
     if (activeTool === 'scoreboard' && visibleBaseToolIds.has('scoreboard')) {
-      return <Scoreboard data={scoreboard} isRealTime={isConnected} />;
+      return <Scoreboard data={derivedScoreboard} isRealTime={isConnected} />;
     }
 
     if (activeTool === 'turn-order' && visibleBaseToolIds.has('turn-order')) {
@@ -459,7 +490,7 @@ export function ActiveSessionPageContent() {
     }
 
     // Fallback to scoreboard
-    return <Scoreboard data={scoreboard} isRealTime={isConnected} />;
+    return <Scoreboard data={derivedScoreboard} isRealTime={isConnected} />;
   })();
 
   return (

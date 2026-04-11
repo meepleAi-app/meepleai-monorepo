@@ -29,7 +29,7 @@ vi.mock('@/hooks/queries/useEstimateAgentCost', () => ({
 vi.mock('@/lib/api', () => ({
   api: {
     agents: {
-      createAgentWithSetup: vi.fn(),
+      createWithSetup: vi.fn(),
     },
   },
 }));

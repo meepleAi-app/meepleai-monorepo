@@ -12,10 +12,6 @@ import { cn } from '@/lib/utils';
 
 export interface AgentStatusBadgeProps {
   status: string;
-  /** Show text label alongside icon (accepted but ignored in stub) */
-  showLabel?: boolean;
-  /** Size variant (accepted but ignored in stub) */
-  size?: string;
   className?: string;
 }
 
@@ -49,10 +45,6 @@ export interface AgentModelInfoProps {
   modelName?: string;
   model?: string;
   strategyName?: string;
-  /** Show icon (accepted but ignored in stub) */
-  showIcon?: boolean;
-  /** Size variant (accepted but ignored in stub) */
-  size?: string;
   className?: string;
 }
 
@@ -79,8 +71,6 @@ export interface AgentStatsDisplayProps {
   };
   invocationCount?: number;
   lastInvokedAt?: string | null;
-  /** Layout variant (accepted but ignored in stub) */
-  layout?: string;
   className?: string;
 }
 
@@ -106,8 +96,6 @@ export function AgentStatsDisplay({
 
 export interface KbStatusBadgeProps {
   status: string;
-  /** Size variant (accepted but ignored in stub) */
-  size?: string;
   className?: string;
 }
 
@@ -143,10 +131,6 @@ export const DocumentStatusBadge = KbStatusBadge;
 
 export interface ChatStatusBadgeProps {
   status: string;
-  /** Show text label (accepted but ignored in stub) */
-  showLabel?: boolean;
-  /** Size variant (accepted but ignored in stub) */
-  size?: string;
   className?: string;
 }
 

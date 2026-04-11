@@ -11,55 +11,38 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
-import { Bot, Camera, LayoutDashboard, Trophy, Users } from 'lucide-react';
-
-import { useSetNavConfig } from '@/contexts/NavigationContext';
+import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
 interface SessionNavConfigProps {
   sessionId: string;
 }
 
 export function SessionNavConfig({ sessionId }: SessionNavConfigProps) {
-  const setNavConfig = useSetNavConfig();
+  const pathname = usePathname();
 
-  useEffect(() => {
-    setNavConfig({
-      miniNav: [
-        {
-          id: 'partita',
-          label: 'Partita',
-          href: `/sessions/live/${sessionId}`,
-          icon: LayoutDashboard,
-        },
-        {
-          id: 'agent',
-          label: 'Chat AI',
-          href: `/sessions/live/${sessionId}/agent`,
-          icon: Bot,
-        },
-        {
-          id: 'scores',
-          label: 'Punteggi',
-          href: `/sessions/live/${sessionId}/scores`,
-          icon: Trophy,
-        },
-        {
-          id: 'photos',
-          label: 'Foto',
-          href: `/sessions/live/${sessionId}/photos`,
-          icon: Camera,
-        },
-        {
-          id: 'players',
-          label: 'Giocatori',
-          href: `/sessions/live/${sessionId}/players`,
-          icon: Users,
-        },
-      ],
-    });
-  }, [sessionId, setNavConfig]);
+  const activeTabId = pathname?.includes('/players')
+    ? 'players'
+    : pathname?.includes('/photos')
+      ? 'photos'
+      : pathname?.includes('/scores')
+        ? 'scores'
+        : pathname?.includes('/agent')
+          ? 'agent'
+          : 'partita';
+
+  useMiniNavConfig({
+    breadcrumb: 'Partita',
+    tabs: [
+      { id: 'partita', label: 'Partita', href: `/sessions/live/${sessionId}` },
+      { id: 'agent', label: 'Chat AI', href: `/sessions/live/${sessionId}/agent` },
+      { id: 'scores', label: 'Punteggi', href: `/sessions/live/${sessionId}/scores` },
+      { id: 'photos', label: 'Foto', href: `/sessions/live/${sessionId}/photos` },
+      { id: 'players', label: 'Giocatori', href: `/sessions/live/${sessionId}/players` },
+    ],
+    activeTabId,
+  });
 
   return null;
 }

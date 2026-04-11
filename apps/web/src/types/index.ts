@@ -49,8 +49,6 @@ export { ApiError, createApiError } from './api';
 // PDF Processing Types
 export { ProcessingStep, isProcessingComplete, getStepLabel, getStepOrder } from './pdf';
 
-export type { ProcessingProgress } from './pdf';
-
 // Search Types
 export type {
   SearchFilters,
@@ -85,13 +83,7 @@ export type {
   LeaderboardPeriod,
 } from './badges';
 
-export {
-  BadgeTier,
-  getTierIcon,
-  getCelebratoryTitle,
-  getTierOrder,
-  getTierClass,
-} from './badges';
+export { BadgeTier, getTierIcon, getCelebratoryTitle, getTierOrder, getTierClass } from './badges';
 
 // Rate Limit Configuration Types (Issue #2750)
 export type {
@@ -123,9 +115,4 @@ export type {
   Breakpoints,
 } from './layout';
 
-export {
-  BREAKPOINTS,
-  ACTION_BAR_SLOTS,
-  FAB_DIMENSIONS,
-  ANIMATION_TIMING,
-} from './layout';
+export { BREAKPOINTS, ACTION_BAR_SLOTS, FAB_DIMENSIONS, ANIMATION_TIMING } from './layout';

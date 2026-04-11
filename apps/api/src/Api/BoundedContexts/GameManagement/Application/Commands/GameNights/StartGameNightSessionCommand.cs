@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.SharedKernel.Application.Interfaces;
 using FluentValidation;
 
@@ -14,7 +15,8 @@ internal record StartGameNightSessionCommand(
     Guid GameId,
     string GameTitle,
     Guid UserId,
-    IReadOnlyList<ParticipantDto>? Participants = null
+    IReadOnlyList<ParticipantDto>? Participants = null,
+    GameStateTier StateTier = GameStateTier.Minimal
 ) : ICommand<StartGameNightSessionResult>;
 
 internal record StartGameNightSessionResult(

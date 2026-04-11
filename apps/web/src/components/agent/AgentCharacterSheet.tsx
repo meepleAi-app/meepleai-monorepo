@@ -562,7 +562,7 @@ function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
         <p className="font-nunito text-xs font-medium text-[#e6edf3] truncate">{doc.fileName}</p>
         <p className="font-nunito text-[10px] text-[#8b949e]">{date}</p>
       </div>
-      <KbStatusBadge status={doc.status} size="sm" />
+      <KbStatusBadge status={doc.status} />
     </li>
   );
 }

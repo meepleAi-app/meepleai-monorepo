@@ -112,7 +112,7 @@ export const KbCardStatusRow = memo(function KbCardStatusRow({
           {document.fileName}
         </span>
 
-        <KbStatusBadge status={status} size="sm" />
+        <KbStatusBadge status={status} />
 
         {/* Retry button */}
         {canRetry && (

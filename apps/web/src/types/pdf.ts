@@ -17,22 +17,6 @@ export enum ProcessingStep {
 }
 
 /**
- * Processing progress response from API
- */
-/**
- * @deprecated Import `ProcessingProgress` from `@/lib/api` instead.
- * This interface is stale — the authoritative type is the Zod schema
- * in `lib/api/schemas/pdf.schemas.ts` (ProcessingProgressSchema).
- */
-export interface ProcessingProgress {
-  currentStep: ProcessingStep;
-  percentComplete: number;
-  estimatedTimeRemaining?: number;
-  errorMessage?: string;
-  updatedAt: string;
-}
-
-/**
  * Helper to check if processing is in a terminal state
  */
 export function isProcessingComplete(step: ProcessingStep): boolean {

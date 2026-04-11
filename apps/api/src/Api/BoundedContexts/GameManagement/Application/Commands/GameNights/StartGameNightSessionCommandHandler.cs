@@ -1,5 +1,7 @@
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameToolbox.Application.Commands;
+using Api.BoundedContexts.GameToolbox.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
@@ -58,7 +60,8 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             "GameSpecific",
             DateTime.UtcNow,
             null,
-            participants), cancellationToken).ConfigureAwait(false);
+            participants,
+            StateTier: command.StateTier), cancellationToken).ConfigureAwait(false);
 
         // Link the new session to the GameNight aggregate and start it
         try
@@ -71,12 +74,37 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
 
             await _autoSaveScheduler.RegisterAsync(createResult.SessionId, cancellationToken).ConfigureAwait(false);
 
+            // Best-effort fire-and-forget: detach from the handler's CancellationToken so the
+            // warm-up does not block the response and is not cancelled on client disconnect.
+            _ = TryApplyToolboxTemplateAsync(command.GameId, CancellationToken.None);
+
             return new StartGameNightSessionResult(
                 createResult.SessionId, gns.Id, createResult.SessionCode, gns.PlayOrder);
         }
         catch (InvalidOperationException ex)
         {
             throw new ConflictException(ex.Message);
+        }
+    }
+
+    private async Task TryApplyToolboxTemplateAsync(Guid gameId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var templates = await _mediator.Send(
+                new GetToolboxTemplatesQuery(GameId: gameId), cancellationToken)
+                .ConfigureAwait(false);
+
+            var template = templates.FirstOrDefault();
+            if (template is null) return;
+
+            await _mediator.Send(
+                new ApplyToolboxTemplateCommand(template.Id, gameId), cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Toolbox warm-up is best-effort: never propagate exceptions.
         }
     }
 

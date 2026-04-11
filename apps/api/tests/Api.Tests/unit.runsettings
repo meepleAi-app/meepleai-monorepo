@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Run settings for Unit tests with dotnet-coverage.
+  Used by: ci.yml backend-unit job.
+  Coverage thresholds are enforced by Codecov via .codecov.yml (backend flag: 90% target).
+-->
+<RunSettings>
+  <RunConfiguration>
+    <!-- Maximum time for entire test session: 20 minutes -->
+    <TestSessionTimeout>1200000</TestSessionTimeout>
+
+    <!-- Results directory -->
+    <ResultsDirectory>./TestResults</ResultsDirectory>
+
+    <!-- Parallel execution: unit tests are safe to parallelize -->
+    <MaxCpuCount>0</MaxCpuCount>
+    <DisableParallelization>false</DisableParallelization>
+  </RunConfiguration>
+
+  <LoggerRunSettings>
+    <Loggers>
+      <Logger friendlyName="console" enabled="True">
+        <Configuration>
+          <Verbosity>minimal</Verbosity>
+        </Configuration>
+      </Logger>
+    </Loggers>
+  </LoggerRunSettings>
+
+  <!-- xUnit specific settings -->
+  <xUnit>
+    <DiagnosticMessages>false</DiagnosticMessages>
+    <AppDomain>denied</AppDomain>
+  </xUnit>
+</RunSettings>

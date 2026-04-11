@@ -127,8 +127,8 @@ function EmptyCTA({
             href={a.href}
             className={
               a.primary
-                ? 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] bg-[var(--nh-text-primary,#1a1a1a)] text-white'
-                : 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] border border-[var(--nh-text-primary,#1a1a1a)] text-[var(--nh-text-primary,#1a1a1a)]'
+                ? 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] bg-amber-600 text-white shadow-[0_2px_8px_rgba(180,100,20,.25)]'
+                : 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] border border-amber-600 text-amber-600'
             }
           >
             {a.label}
@@ -190,16 +190,36 @@ function CatalogGameCard({
   adding: boolean;
 }) {
   return (
-    <div className="relative">
-      <MeepleCard
-        entity="game"
-        variant="grid"
-        id={game.id}
-        title={game.title}
-        subtitle={game.publisher ?? undefined}
-        imageUrl={game.imageUrl ?? undefined}
-        rating={game.averageRating ?? undefined}
-      />
+    <div
+      className="bg-[var(--nh-bg-card,white)] border border-[var(--nh-border,rgba(0,0,0,0.07))]
+                 rounded-xl shadow-sm overflow-hidden flex flex-col"
+    >
+      {/* Thumbnail */}
+      <div className="relative h-[68px] flex items-center justify-center bg-gradient-to-br from-[#fdf0e0] to-[#fce8cc] overflow-hidden flex-shrink-0">
+        {game.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={game.imageUrl} alt={game.title} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-3xl select-none">🎲</span>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="px-2 pt-1.5 pb-1 flex-1 min-h-0">
+        <p
+          className="font-[Quicksand] font-bold text-[11px] leading-tight
+                     overflow-hidden line-clamp-2 text-[var(--nh-text-primary,#1a1a2e)]"
+        >
+          {game.title}
+        </p>
+        {game.publisher && (
+          <p className="text-[10px] text-[var(--nh-text-secondary,#64748b)] mt-0.5 truncate">
+            {game.publisher}
+          </p>
+        )}
+      </div>
+
+      {/* Add button */}
       <button
         onClick={() => !inLibrary && !adding && onAdd(game.id)}
         disabled={inLibrary || adding}
@@ -208,13 +228,14 @@ function CatalogGameCard({
         }
         className={
           inLibrary
-            ? 'absolute bottom-2 left-2 right-2 h-7 rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/5 text-[var(--nh-text-muted,#94a3b8)] cursor-default'
+            ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/5 text-[var(--nh-text-muted,#94a3b8)] cursor-default'
             : adding
-              ? 'absolute bottom-2 left-2 right-2 h-7 rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/20 text-white cursor-wait'
-              : 'absolute bottom-2 left-2 right-2 h-7 rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-[var(--nh-text-primary,#1a1a1a)] text-white hover:opacity-90 active:scale-95 transition-transform'
+              ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/20 text-white cursor-wait'
+              : 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-amber-600 text-white hover:opacity-90 active:scale-95 transition-transform'
         }
       >
-        {inLibrary ? '✓ In libreria' : adding ? '…' : '＋ Aggiungi'}
+        <span className="text-xs leading-none">＋</span>
+        {inLibrary ? 'In libreria' : adding ? '…' : 'Aggiungi'}
       </button>
     </div>
   );
@@ -318,20 +339,27 @@ function NewUserGamesBlock({
 
 function ToolkitCarousel() {
   return (
-    <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
+    <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
       {TOOLKIT_TOOLS.map(tool => (
         <Link
           key={tool.id}
           href={`/toolkit?tool=${tool.id}`}
-          className="flex-shrink-0 w-24 bg-[var(--nh-bg-card,white)] border border-[var(--nh-border,rgba(0,0,0,0.07))]
-                     rounded-xl p-3 flex flex-col items-center gap-1.5
+          className="flex-shrink-0 w-[100px] bg-[var(--nh-bg-card,white)]
+                     border border-[var(--nh-border,rgba(0,0,0,0.07))]
+                     rounded-xl p-2.5 flex flex-col items-center gap-1.5
                      hover:shadow-md transition-shadow"
         >
-          <span className="text-2xl">{tool.icon}</span>
-          <span className="font-[Quicksand] font-bold text-xs text-center leading-tight text-[var(--nh-text-primary,#1a1a1a)]">
+          {/* Icon box — colored square matching mockup tk-icon */}
+          <span
+            className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center
+                       text-xl bg-amber-100"
+          >
+            {tool.icon}
+          </span>
+          <span className="font-[Quicksand] font-bold text-[11px] text-center leading-tight text-[var(--nh-text-primary,#1a1a1a)]">
             {tool.name}
           </span>
-          <span className="text-[10px] text-[var(--nh-text-muted,#94a3b8)] text-center leading-tight">
+          <span className="text-[9px] text-[var(--nh-text-muted,#94a3b8)] text-center leading-tight">
             {tool.desc}
           </span>
         </Link>

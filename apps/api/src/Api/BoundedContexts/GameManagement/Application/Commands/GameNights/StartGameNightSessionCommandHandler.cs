@@ -74,7 +74,9 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
 
             await _autoSaveScheduler.RegisterAsync(createResult.SessionId, cancellationToken).ConfigureAwait(false);
 
-            await TryApplyToolboxTemplateAsync(command.GameId, cancellationToken).ConfigureAwait(false);
+            // Best-effort fire-and-forget: detach from the handler's CancellationToken so the
+            // warm-up does not block the response and is not cancelled on client disconnect.
+            _ = TryApplyToolboxTemplateAsync(command.GameId, CancellationToken.None);
 
             return new StartGameNightSessionResult(
                 createResult.SessionId, gns.Id, createResult.SessionCode, gns.PlayOrder);

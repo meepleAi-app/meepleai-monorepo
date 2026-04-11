@@ -57,7 +57,12 @@ public class StartGameNightSessionStateTierTests
             IsTwoFactorEnabled: false,
             TwoFactorEnabledAt: null,
             Level: 1,
-            ExperiencePoints: 0);
+            ExperiencePoints: 0,
+            EmailVerified: true,
+            EmailVerifiedAt: DateTime.UtcNow,
+            VerificationGracePeriodEndsAt: null,
+            OnboardingCompleted: true,
+            OnboardingSkipped: false);
 
     private static CreateSessionResult MakeSessionResult(Guid sessionId, Guid gameNightId) =>
         new CreateSessionResult(

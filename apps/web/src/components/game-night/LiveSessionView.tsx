@@ -39,6 +39,7 @@ import {
 // Dialog import removed — arbiter now uses Rules Sheet
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
+import { useAuth } from '@/hooks/useAuth';
 import { useResponsive } from '@/hooks/useResponsive';
 import { api } from '@/lib/api';
 import { uploadSessionAttachment } from '@/lib/api/clients/sessionAttachmentsClient';
@@ -123,6 +124,9 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const _pauseSession = useSessionStore(s => s.pauseSession);
   const resumeSession = useSessionStore(s => s.resumeSession);
   const handleSessionUpdate = useSessionStore(s => s.handleSessionUpdate);
+
+  // ----- Auth -----
+  const { user } = useAuth();
 
   // ----- Responsive -----
   const { isDesktop } = useResponsive();
@@ -404,8 +408,22 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const handlePhotoSelected = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
-      const playerId = activeSession?.players[0]?.id;
+      // Resolve the current user's participant — do not fall back to players[0] as that
+      // would permanently mis-attribute attachments in multi-player sessions (GAP-005 fix).
+      const playerId = activeSession?.players.find(p => p.userId === user?.id)?.id;
       if (!file || !sessionId || !playerId) return;
+      // Validate file type and size before upload (max 20 MB, images only).
+      const MAX_SIZE_BYTES = 20 * 1024 * 1024;
+      if (!file.type.startsWith('image/')) {
+        toast.error('Sono supportate solo immagini.');
+        event.target.value = '';
+        return;
+      }
+      if (file.size > MAX_SIZE_BYTES) {
+        toast.error('La foto supera il limite di 20 MB.');
+        event.target.value = '';
+        return;
+      }
       // Reset so the same file can be re-selected
       event.target.value = '';
       // Fire-and-forget upload — does not block the UI
@@ -580,13 +598,12 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
               <button
                 type="button"
                 data-testid="register-dispute-btn"
-                onClick={disputeRegistered ? undefined : handleRegisterDispute}
-                aria-disabled={disputeRegistered}
-                tabIndex={0}
+                onClick={handleRegisterDispute}
+                disabled={disputeRegistered}
                 className={cn(
                   'w-full text-xs rounded-lg px-3 py-2 border transition-colors',
                   disputeRegistered
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700 cursor-default pointer-events-none'
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700 cursor-default'
                     : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
                 )}
               >

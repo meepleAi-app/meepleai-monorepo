@@ -6,6 +6,7 @@ import { Menu } from 'lucide-react';
 
 import { DashboardEngineProvider } from '@/components/dashboard';
 import { UserMenuDropdown } from '@/components/layout/UserMenuDropdown';
+import { ViewModeToggle } from '@/components/layout/ViewModeToggle';
 import { NotificationBell } from '@/components/notifications';
 import { useNavbarHeightStore } from '@/lib/stores/navbar-height-store';
 
@@ -48,6 +49,7 @@ export function AdminShell({ children }: AdminShellProps) {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex-1" />
+          <ViewModeToggle />
           <NotificationBell />
           <UserMenuDropdown />
         </header>

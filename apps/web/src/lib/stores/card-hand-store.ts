@@ -68,6 +68,8 @@ export const useCardHand = create<CardHandStore>()(
   )
 );
 
+// Use shallow equality in consumers (useCardHand(selectPinnedCards, shallow)) to avoid
+// referential instability from .filter() and .sort() creating new arrays each call.
 export const selectPinnedCards = (s: CardHandStore) => s.cards.filter(c => c.pinned);
 
 export const selectRecentCards = (s: CardHandStore) =>

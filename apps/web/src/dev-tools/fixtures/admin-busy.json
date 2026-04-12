@@ -4,32 +4,32 @@
   "description": "Admin con 20 giochi, 50 sessioni e libreria popolata — per testare liste lunghe e performance UI.",
   "auth": {
     "currentUser": {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000002",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000002",
       "email": "admin@meeple.local",
       "displayName": "Admin",
       "role": "Admin"
     },
     "availableUsers": [
       {
-        "id": "a0eebc99-9c0b-4ef8-bb6d-000000000002",
+        "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000002",
         "email": "admin@meeple.local",
         "displayName": "Admin",
         "role": "Admin"
       },
       {
-        "id": "a0eebc99-9c0b-4ef8-bb6d-000000000001",
+        "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000001",
         "email": "dev@meeple.local",
         "displayName": "Dev User",
         "role": "User"
       },
       {
-        "id": "a0eebc99-9c0b-4ef8-bb6d-000000000014",
+        "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000014",
         "email": "editor@meeple.local",
         "displayName": "Editor",
         "role": "Editor"
       },
       {
-        "id": "a0eebc99-9c0b-4ef8-bb6d-000000000000",
+        "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000000",
         "email": "guest@meeple.local",
         "displayName": "Guest",
         "role": "Guest"
@@ -38,140 +38,140 @@
   },
   "games": [
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000c9",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000c9",
       "title": "Wingspan",
       "publisher": "Stonemaier Games",
       "averageRating": 8.1,
       "bggId": 266192
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000ca",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000ca",
       "title": "Scythe",
       "publisher": "Stonemaier Games",
       "averageRating": 8.3,
       "bggId": 169786
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000cb",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cb",
       "title": "Terraforming Mars",
       "publisher": "FryxGames",
       "averageRating": 8.4,
       "bggId": 167791
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000cc",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cc",
       "title": "Brass: Birmingham",
       "publisher": "Roxley",
       "averageRating": 8.6,
       "bggId": 224517
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000cd",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cd",
       "title": "Gloomhaven",
       "publisher": "Cephalofair",
       "averageRating": 8.7,
       "bggId": 174430
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000ce",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000ce",
       "title": "Ark Nova",
       "publisher": "Capstone Games",
       "averageRating": 8.5,
       "bggId": 342942
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000cf",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cf",
       "title": "Spirit Island",
       "publisher": "Greater Than Games",
       "averageRating": 8.3,
       "bggId": 162886
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000d0",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d0",
       "title": "Everdell",
       "publisher": "Starling Games",
       "averageRating": 8,
       "bggId": 199792
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000d1",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d1",
       "title": "Root",
       "publisher": "Leder Games",
       "averageRating": 8,
       "bggId": 237182
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000d2",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d2",
       "title": "Concordia",
       "publisher": "PD-Verlag",
       "averageRating": 8.1,
       "bggId": 124361
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000d3",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d3",
       "title": "Twilight Imperium 4",
       "publisher": "Fantasy Flight",
       "averageRating": 8.7,
       "bggId": 233078
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000d4",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d4",
       "title": "Dune: Imperium",
       "publisher": "Dire Wolf",
       "averageRating": 8.4,
       "bggId": 316554
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000d5",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d5",
       "title": "Lost Ruins of Arnak",
       "publisher": "CGE",
       "averageRating": 8,
       "bggId": 312484
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000d6",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d6",
       "title": "Great Western Trail",
       "publisher": "Eggertspiele",
       "averageRating": 8.2,
       "bggId": 193738
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000d7",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d7",
       "title": "Pax Pamir 2",
       "publisher": "Wehrlegig",
       "averageRating": 8.3,
       "bggId": 256960
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000d8",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d8",
       "title": "Puerto Rico",
       "publisher": "Ravensburger",
       "averageRating": 7.9,
       "bggId": 3076
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000d9",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d9",
       "title": "Azul",
       "publisher": "Plan B",
       "averageRating": 7.8,
       "bggId": 230802
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000da",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000da",
       "title": "Catan",
       "publisher": "Kosmos",
       "averageRating": 7.1,
       "bggId": 13
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000db",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000db",
       "title": "7 Wonders Duel",
       "publisher": "Repos",
       "averageRating": 8,
       "bggId": 173346
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-0000000000dc",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000dc",
       "title": "Agricola",
       "publisher": "Lookout",
       "averageRating": 7.9,
@@ -180,285 +180,285 @@
   ],
   "sessions": [
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000012d",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000c9",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000012d",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000c9",
       "startedAt": "2026-01-01T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000012e",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000ca",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000012e",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000ca",
       "startedAt": "2026-01-02T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000012f",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cb",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000012f",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cb",
       "startedAt": "2026-01-03T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000130",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cc",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000130",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cc",
       "startedAt": "2026-01-04T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000131",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cd",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000131",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cd",
       "startedAt": "2026-01-05T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000132",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000ce",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000132",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000ce",
       "startedAt": "2026-01-06T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000133",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cf",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000133",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cf",
       "startedAt": "2026-01-07T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000134",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d0",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000134",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d0",
       "startedAt": "2026-01-08T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000135",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d1",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000135",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d1",
       "startedAt": "2026-01-09T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000136",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d2",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000136",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d2",
       "startedAt": "2026-01-10T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000137",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d3",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000137",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d3",
       "startedAt": "2026-01-11T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000138",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d4",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000138",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d4",
       "startedAt": "2026-01-12T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000139",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d5",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000139",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d5",
       "startedAt": "2026-01-13T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000013a",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d6",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000013a",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d6",
       "startedAt": "2026-01-14T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000013b",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d7",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000013b",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d7",
       "startedAt": "2026-01-15T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000013c",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d8",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000013c",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d8",
       "startedAt": "2026-01-16T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000013d",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d9",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000013d",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d9",
       "startedAt": "2026-01-17T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000013e",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000da",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000013e",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000da",
       "startedAt": "2026-01-18T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000013f",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000db",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000013f",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000db",
       "startedAt": "2026-01-19T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000140",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000dc",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000140",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000dc",
       "startedAt": "2026-01-20T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000141",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000c9",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000141",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000c9",
       "startedAt": "2026-01-21T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000142",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000ca",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000142",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000ca",
       "startedAt": "2026-01-22T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000143",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cb",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000143",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cb",
       "startedAt": "2026-01-23T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000144",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cc",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000144",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cc",
       "startedAt": "2026-01-24T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000145",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cd",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000145",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cd",
       "startedAt": "2026-01-25T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000146",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000ce",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000146",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000ce",
       "startedAt": "2026-01-26T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000147",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cf",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000147",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cf",
       "startedAt": "2026-01-27T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000148",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d0",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000148",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d0",
       "startedAt": "2026-01-28T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000149",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d1",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000149",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d1",
       "startedAt": "2026-02-01T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000014a",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d2",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000014a",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d2",
       "startedAt": "2026-02-02T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000014b",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d3",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000014b",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d3",
       "startedAt": "2026-02-03T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000014c",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d4",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000014c",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d4",
       "startedAt": "2026-02-04T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000014d",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d5",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000014d",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d5",
       "startedAt": "2026-02-05T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000014e",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d6",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000014e",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d6",
       "startedAt": "2026-02-06T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000014f",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d7",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000014f",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d7",
       "startedAt": "2026-02-07T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000150",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d8",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000150",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d8",
       "startedAt": "2026-02-08T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000151",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d9",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000151",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d9",
       "startedAt": "2026-02-09T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000152",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000da",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000152",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000da",
       "startedAt": "2026-02-10T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000153",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000db",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000153",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000db",
       "startedAt": "2026-02-11T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000154",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000dc",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000154",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000dc",
       "startedAt": "2026-02-12T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000155",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000c9",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000155",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000c9",
       "startedAt": "2026-02-13T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000156",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000ca",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000156",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000ca",
       "startedAt": "2026-02-14T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000157",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cb",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000157",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cb",
       "startedAt": "2026-02-15T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000158",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cc",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000158",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cc",
       "startedAt": "2026-02-16T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-000000000159",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cd",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000159",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cd",
       "startedAt": "2026-02-17T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000015a",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000ce",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000015a",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000ce",
       "startedAt": "2026-02-18T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000015b",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000cf",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000015b",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cf",
       "startedAt": "2026-02-19T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000015c",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d0",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000015c",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d0",
       "startedAt": "2026-02-20T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000015d",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d1",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000015d",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d1",
       "startedAt": "2026-02-21T19:00:00.000Z"
     },
     {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-00000000015e",
-      "gameId": "a0eebc99-9c0b-4ef8-bb6d-0000000000d2",
+      "id": "MOCK-a0eebc99-9c0b-4ef8-bb6d-00000000015e",
+      "gameId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d2",
       "startedAt": "2026-02-22T19:00:00.000Z"
     }
   ],
   "library": {
     "ownedGameIds": [
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000c9",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000ca",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000cb",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000cc",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000cd",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000ce",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000cf",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000d0",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000d1",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000d2",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000d3",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000d4",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000d5",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000d6",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000d7"
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000c9",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000ca",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cb",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cc",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cd",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000ce",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000cf",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d0",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d1",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d2",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d3",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d4",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d5",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d6",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d7"
     ],
     "wishlistGameIds": [
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000d8",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000d9",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000da",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000db",
-      "a0eebc99-9c0b-4ef8-bb6d-0000000000dc"
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d8",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000d9",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000da",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000db",
+      "MOCK-a0eebc99-9c0b-4ef8-bb6d-0000000000dc"
     ]
   },
   "chatHistory": [
     {
-      "chatId": "a0eebc99-9c0b-4ef8-bb6d-000000000191",
+      "chatId": "MOCK-a0eebc99-9c0b-4ef8-bb6d-000000000191",
       "messages": [
         {
           "role": "user",

@@ -74,7 +74,9 @@ describe('MSW handlers × scenario bridge (issue #366)', () => {
       setScenarioBridge(makeBridge({ getScenarioName: () => 'empty' }));
       const res = await callHandler(gamesHandlers, 'GET', `${BASE}/api/v1/games`);
       expect(res.status).toBe(200);
-      expect(res.body).toEqual([]);
+      const body = res.body as { games: unknown[]; total: number };
+      expect(body.games).toEqual([]);
+      expect(body.total).toBe(0);
     });
 
     it('GET /api/v1/library returns empty items when bridge library is empty', async () => {
@@ -120,7 +122,7 @@ describe('MSW handlers × scenario bridge (issue #366)', () => {
       setScenarioBridge(smallLibraryBridge);
       const res = await callHandler(gamesHandlers, 'GET', `${BASE}/api/v1/games`);
       expect(res.status).toBe(200);
-      const games = res.body as Array<{ id: string; title: string }>;
+      const { games } = res.body as { games: Array<{ id: string; title: string }> };
       expect(games).toHaveLength(2);
       expect(games[0].title).toBe('Wingspan');
       expect(games[1].title).toBe('Scythe');
@@ -131,13 +133,13 @@ describe('MSW handlers × scenario bridge (issue #366)', () => {
       const res = await callHandler(libraryHandlers, 'GET', `${BASE}/api/v1/library`);
       expect(res.status).toBe(200);
       const body = res.body as {
-        items: Array<{ gameId: string; name: string; status: string }>;
+        items: Array<{ gameId: string; gameTitle: string; currentState: string }>;
         totalCount: number;
       };
       expect(body.totalCount).toBe(2);
-      expect(body.items.find(i => i.gameId === 'g1')?.status).toBe('owned');
-      expect(body.items.find(i => i.gameId === 'g1')?.name).toBe('Wingspan');
-      expect(body.items.find(i => i.gameId === 'g2')?.status).toBe('wishlist');
+      expect(body.items.find(i => i.gameId === 'g1')?.currentState).toBe('Owned');
+      expect(body.items.find(i => i.gameId === 'g1')?.gameTitle).toBe('Wingspan');
+      expect(body.items.find(i => i.gameId === 'g2')?.currentState).toBe('Wishlist');
     });
 
     it('GET /api/v1/sessions enriches bridge sessions with game name', async () => {
@@ -158,7 +160,7 @@ describe('MSW handlers × scenario bridge (issue #366)', () => {
       // Bridge NOT installed
       const res = await callHandler(gamesHandlers, 'GET', `${BASE}/api/v1/games`);
       expect(res.status).toBe(200);
-      const games = res.body as Array<{ title: string }>;
+      const { games } = res.body as { games: Array<{ title: string }> };
       expect(games.length).toBeGreaterThan(0);
       // Default fallback contains Chess
       expect(games.some(g => g.title === 'Chess')).toBe(true);

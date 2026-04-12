@@ -24,6 +24,9 @@ const GAMES_FILTERS: FilterChip[] = [
   { id: 'recent', label: 'Recenti' },
 ];
 
+// Catalog view (new-user) has no server-side sort by date — only "Tutti" makes sense
+const CATALOG_FILTERS: FilterChip[] = [{ id: 'all', label: 'Tutti' }];
+
 const SESSIONS_FILTERS: FilterChip[] = [
   { id: 'all', label: 'Tutte' },
   { id: 'active', label: 'Attive' },
@@ -146,12 +149,10 @@ function EmptyCTA({
 }
 
 function MeepleCardGrid({
-  entity,
   items,
   isLoading,
   emptyNode,
 }: {
-  entity: MeepleEntityType;
   items: MeepleCardProps[];
   isLoading: boolean;
   emptyNode?: React.ReactNode;
@@ -212,7 +213,7 @@ function CatalogGameCard({
         )}
         {hasKb !== undefined && (
           <span
-            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] text-white leading-none ${hasKb ? 'bg-green-500' : 'bg-[#94a3b8]'}`}
+            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] text-white leading-none ${hasKb ? 'bg-green-500' : 'bg-[var(--nh-text-muted,#94a3b8)]'}`}
           >
             {hasKb ? 'KB ✓' : 'KB –'}
           </span>
@@ -315,7 +316,7 @@ function NewUserGamesBlock({
       searchPlaceholder="Cerca giochi..."
       searchValue={search}
       onSearchChange={onSearchChange}
-      filterChips={GAMES_FILTERS}
+      filterChips={CATALOG_FILTERS}
       activeFilterId={filter}
       onFilterChange={onFilterChange}
     >
@@ -542,7 +543,7 @@ export function DashboardClient() {
             activeFilterId={gamesFilter}
             onFilterChange={setGamesFilter}
           >
-            <MeepleCardGrid entity="game" items={filteredGameItems} isLoading={libraryLoading} />
+            <MeepleCardGrid items={filteredGameItems} isLoading={libraryLoading} />
           </HubLayout>
         )}
       </HubBlock>
@@ -558,7 +559,6 @@ export function DashboardClient() {
           onFilterChange={setSessionsFilter}
         >
           <MeepleCardGrid
-            entity="session"
             items={filteredSessionItems}
             isLoading={sessionsLoading}
             emptyNode={
@@ -584,7 +584,6 @@ export function DashboardClient() {
           onFilterChange={setAgentsFilter}
         >
           <MeepleCardGrid
-            entity="agent"
             items={filteredAgentItems}
             isLoading={agentsLoading}
             emptyNode={

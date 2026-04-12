@@ -25,9 +25,9 @@
 export interface BridgeMockGame {
   id: string;
   title: string;
-  publisher?: string;
-  averageRating?: number;
-  bggId?: number;
+  publisher?: string | null;
+  averageRating?: number | null;
+  bggId?: number | null;
   [key: string]: unknown;
 }
 

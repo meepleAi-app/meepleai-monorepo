@@ -135,14 +135,15 @@ export function ChatSlideOverPanel() {
 
   // Abort any in-flight SSE when the panel is closed or the component unmounts,
   // so we don't leak the fetch or fire state updates after the user navigated away.
+  const { stopStreaming } = stream;
   useEffect(() => {
     if (!isOpen) {
-      stream.stopStreaming();
+      stopStreaming();
     }
     return () => {
-      stream.stopStreaming();
+      stopStreaming();
     };
-  }, [isOpen, stream]);
+  }, [isOpen, stopStreaming]);
 
   // Adapt recent sessions to sidebar shape
   const recentChats: ChatRecentItem[] = useMemo(() => {

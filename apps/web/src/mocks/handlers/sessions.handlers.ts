@@ -88,6 +88,30 @@ export const sessionsHandlers = [
     });
   }),
 
+  // GET /api/v1/sessions/active — used by sessionsClient.getActive()
+  // Returns PaginatedSessionsResponse: { sessions, total, page, pageSize }
+  // Must be registered BEFORE /api/v1/sessions/:id to avoid "active" being
+  // matched as an ID.
+  http.get(`${API_BASE}/api/v1/sessions/active`, ({ request }) => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
+    const url = new URL(request.url);
+    const limit = parseInt(url.searchParams.get('limit') || '20');
+    const offset = parseInt(url.searchParams.get('offset') || '0');
+    return HttpResponse.json({
+      sessions: [],
+      total: 0,
+      page: Math.floor(offset / limit) + 1,
+      pageSize: limit,
+    });
+  }),
+
+  // GET /api/v1/sessions/current — used by session-flow client
+  // Returns 204 when no session is active (client handles null as no session).
+  http.get(`${API_BASE}/api/v1/sessions/current`, () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.get(`${API_BASE}/api/v1/sessions/:id`, ({ params }) => {
     const session = currentSessions().find(s => s.id === params.id);
     if (!session) return HttpResponse.json({ error: 'Not found' }, { status: 404 });

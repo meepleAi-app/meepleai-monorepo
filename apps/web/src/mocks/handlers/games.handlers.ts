@@ -80,14 +80,25 @@ function removeGameFromStore(id: string): boolean {
 
 export const gamesHandlers = [
   // GET /api/v1/games - List all games
+  // Returns PaginatedGamesResponse: { games, total, page, pageSize, totalPages }
   http.get(`${API_BASE}/api/v1/games`, () => {
     const guard = guardScenarioSwitching();
     if (guard) return guard;
-    return HttpResponse.json(currentGames(), {
-      headers: {
-        'X-Correlation-Id': `test-correlation-${Date.now()}`,
+    const games = currentGames();
+    return HttpResponse.json(
+      {
+        games,
+        total: games.length,
+        page: 1,
+        pageSize: Math.max(games.length, 1),
+        totalPages: 1,
       },
-    });
+      {
+        headers: {
+          'X-Correlation-Id': `test-correlation-${Date.now()}`,
+        },
+      }
+    );
   }),
 
   // GET /api/v1/games/:id - Get game details

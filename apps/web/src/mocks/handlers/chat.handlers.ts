@@ -145,6 +145,14 @@ export const chatHandlers = [
     return createSSEResponse(events, sseOptions);
   }),
 
+  // GET /api/v1/users/:userId/chat-sessions/recent — used by useRecentChatSessions
+  // Returns ChatSessionSummaryDto[] (plain array, not paginated)
+  http.get(`${API_BASE}/api/v1/users/:userId/chat-sessions/recent`, () => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
+    return HttpResponse.json([]);
+  }),
+
   // GET /api/v1/agents - List agents
   http.get(`${API_BASE}/api/v1/agents`, () => {
     const agents = [

@@ -16,24 +16,26 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-import { Timer, MessageCircle, Crown, LogOut } from 'lucide-react';
+import { Timer, Crown, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { ChatSlideOverPanel } from '@/components/chat/panel/ChatSlideOverPanel';
 import { LiveScoreboard } from '@/components/game-night/LiveScoreboard';
 import type { LiveScoreboardPlayer } from '@/components/game-night/LiveScoreboard';
+import { SessionChatWidget } from '@/components/game-night/SessionChatWidget';
 import { GameOverModal } from '@/components/session/live/GameOverModal';
 import type { GameOverPlayer } from '@/components/session/live/GameOverModal';
 import { OfflineBanner } from '@/components/session/live/OfflineBanner';
 import { TurnStateHeader } from '@/components/session/live/TurnStateHeader';
 import { QuickToolBar } from '@/components/session/QuickToolBar';
 import type { ToolId } from '@/components/session/QuickToolBar';
+import { RagQuickLinks } from '@/components/session/RagQuickLinks';
 import { ScoreNumpad } from '@/components/session/ScoreNumpad';
-import { GradientButton } from '@/components/ui/buttons/GradientButton';
+import { ToolSheetContent } from '@/components/session/ToolSheetContent';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { SessionBottomNav, type SessionTab } from '@/components/ui/navigation/SessionBottomNav';
 import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
-import { useChatPanel } from '@/hooks/useChatPanel';
+import { useSessionInlineChat } from '@/hooks/useSessionInlineChat';
 import { api } from '@/lib/api';
 import type { TurnPhasesDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { PLAYER_COLOR_HEX } from '@/lib/constants/player-colors';
@@ -85,8 +87,13 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
   // End session confirm
   const [showEndConfirm, setShowEndConfirm] = useState(false);
 
-  // Chat panel (inline slide-over, no navigation)
-  const { open: openChat } = useChatPanel();
+  // S3 — inline chat state for Tab "Chiedi"
+  const {
+    messages: chatMessages,
+    isStreaming: chatStreaming,
+    error: chatError,
+    send: sendChat,
+  } = useSessionInlineChat(session?.gameId);
   const [sessionEnded, setSessionEnded] = useState(false);
 
   // Turn phases
@@ -315,6 +322,9 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
             {/* Quick tools */}
             <QuickToolBar activeTool={activeTool} onSelectTool={handleSelectTool} />
 
+            {/* S4 — RAG quick links from game KB */}
+            <RagQuickLinks gameId={session?.gameId} />
+
             {/* Scoreboard summary */}
             <div>
               <h3 className="text-sm font-semibold mb-2 text-[var(--gaming-text-secondary,#ccc)]">
@@ -365,37 +375,18 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
 
         {/* ——— Tab: Chiedi ——— */}
         {activeTab === 'chat' && (
-          <div className="flex flex-col items-center justify-center p-8 space-y-6 min-h-[60vh]">
-            <div className="h-20 w-20 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-              <MessageCircle className="h-10 w-10 text-amber-500" />
-            </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold font-quicksand">Chiedi all&apos;assistente AI</h3>
-              <p className="text-sm text-muted-foreground max-w-xs">
-                Hai dubbi sulle regole? Chiedi al nostro assistente e ottieni risposte immediate.
+          <div className="p-4 space-y-2">
+            {chatError && (
+              <p className="text-xs text-red-400 text-center" role="alert">
+                {chatError}
               </p>
-            </div>
-            <div className="w-full max-w-xs">
-              <GradientButton
-                fullWidth
-                size="lg"
-                onClick={() =>
-                  openChat(
-                    session?.gameId && session.gameName
-                      ? {
-                          id: session.gameId,
-                          name: session.gameName,
-                          pdfCount: 0,
-                          kbStatus: 'ready',
-                        }
-                      : undefined
-                  )
-                }
-                data-testid="open-chat-btn"
-              >
-                Apri Chat AI
-              </GradientButton>
-            </div>
+            )}
+            <SessionChatWidget
+              messages={chatMessages}
+              isStreaming={chatStreaming}
+              onSend={sendChat}
+              defaultExpanded
+            />
           </div>
         )}
 
@@ -473,11 +464,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
         onOpenChange={setToolSheetOpen}
         title={activeTool ? activeTool.charAt(0).toUpperCase() + activeTool.slice(1) : 'Strumento'}
       >
-        <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-muted-foreground">
-            Strumento: <span className="font-semibold">{activeTool}</span>
-          </p>
-        </div>
+        <ToolSheetContent activeTool={activeTool} />
       </BottomSheet>
 
       {/* Score Numpad BottomSheet */}

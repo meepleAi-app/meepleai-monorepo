@@ -38,6 +38,7 @@ internal class GameToolkitEntityConfiguration : IEntityTypeConfiguration<GameToo
         builder.Property(e => e.CardToolsJson).HasColumnType("jsonb");
         builder.Property(e => e.TimerToolsJson).HasColumnType("jsonb");
         builder.Property(e => e.CounterToolsJson).HasColumnType("jsonb");
+        builder.Property(e => e.UserDicePresetsJson).HasColumnType("jsonb");
 
         // JSONB columns for templates
         builder.Property(e => e.ScoringTemplateJson).HasColumnType("jsonb");

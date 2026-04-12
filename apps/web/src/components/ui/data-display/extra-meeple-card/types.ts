@@ -6,8 +6,9 @@
  * ~600×900px card with 4-tab system (Overview, Toolkit, Scoreboard, History).
  */
 
+/* eslint-disable import/order -- mixed type imports across external/internal/relative groups; ESLint plugin reorder rule conflicts with itself */
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
-
+import type { LucideIcon } from 'lucide-react';
 import type {
   SessionStatus,
   SessionPlayerInfo,
@@ -18,10 +19,10 @@ import type {
   SessionMediaCounts,
   SessionActionHandlers,
 } from './session-types-compat';
+/* eslint-enable import/order */
 
 /** Chat status */
 export type ChatStatus = 'active' | 'archived' | 'pending' | 'waiting' | 'closed';
-import type { LucideIcon } from 'lucide-react';
 
 // Re-export session types for convenience
 export type {
@@ -283,6 +284,44 @@ export interface PlayerDetailData {
   favoriteGame?: string;
   achievements: { id: string; name: string; icon: string }[];
   recentGames: { name: string; date: string; result: 'win' | 'loss' | 'draw' }[];
+}
+
+/** Session entity detail data (drawer view) */
+export interface SessionDetailData {
+  id: string;
+  sessionCode: string;
+  status: SessionStatus;
+  /** Display title (game name or custom) */
+  title: string;
+  gameId?: string;
+  gameName?: string;
+  gameImageUrl?: string;
+  startedAt?: string;
+  completedAt?: string;
+  players: SessionPlayerInfo[];
+  toolkit?: ToolkitData;
+  timeline: SessionTimelineEvent[];
+}
+
+/** Event entity detail data (drawer view) */
+export interface EventDetailData {
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  isOnline: boolean;
+  organizerName?: string;
+  /** True if the current user is the organizer */
+  isOrganizer: boolean;
+  /** Current user's RSVP status */
+  rsvpStatus?: 'confirmed' | 'pending' | 'declined' | null;
+  attendeeCount: number;
+  maxAttendees?: number;
+  /** Scheduled activities/sessions in this event */
+  schedule: { id: string; title: string; scheduledAt: string; gameName?: string }[];
 }
 
 /** Collection entity detail data */
@@ -569,6 +608,43 @@ export interface SharedGameDetailData extends GameDetailData {
   documents: SharedGameDocumentInfo[];
   kbCards: SharedGameKbCardInfo[];
   linkedAgent: { id: string; name: string; isActive: boolean } | null;
+}
+
+/** Toolkit entity detail data (drawer view) */
+export interface ToolkitDetailData {
+  id: string;
+  name: string;
+  description?: string;
+  version: number;
+  isPublished: boolean;
+  /** True if the current user owns/can edit this toolkit */
+  isOwner: boolean;
+  gameId?: string;
+  gameName?: string;
+  diceTools: { name: string; diceType: string; quantity: number }[];
+  cardTools: { name: string; deckType: string; cardCount: number }[];
+  timerTools: { name: string; durationSeconds: number; timerType: string }[];
+  counterTools: { name: string; minValue: number; maxValue: number; defaultValue: number }[];
+  /** Previous versions of this toolkit */
+  history: { version: number; updatedAt: string; note?: string }[];
+}
+
+/** Individual tool detail data (drawer view) */
+export interface ToolDetailData {
+  id: string;
+  name: string;
+  /** Tool category: 'dice' | 'card' | 'timer' | 'counter' */
+  toolType: 'dice' | 'card' | 'timer' | 'counter';
+  toolkitId?: string;
+  toolkitName?: string;
+  /** True if the current user owns/can edit this tool */
+  isOwner: boolean;
+  /** True if there is an active session that can use this tool */
+  hasActiveSession: boolean;
+  /** Tool-specific configuration as key-value pairs */
+  config: Record<string, string | number | boolean>;
+  /** Preview description generated from config */
+  previewDescription?: string;
 }
 
 export type SharedGameExtraMeepleCardTab = 'details' | 'documents' | 'kb-cards';

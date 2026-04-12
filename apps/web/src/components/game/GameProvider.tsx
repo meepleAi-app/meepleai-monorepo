@@ -161,7 +161,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       const created = await api.games.create(name);
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Type assertion for API response mapping
       const newGame = {
         id: created.id,
         title: created.title,

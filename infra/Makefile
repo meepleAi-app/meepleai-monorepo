@@ -15,6 +15,29 @@ dev-down: ## Stop dev environment
 	$(COMPOSE) -f compose.dev.yml --profile ai --profile monitoring \
 		--profile automation --profile proxy --profile storage down
 
+# ================================================================
+# MeepleDev fast dev loop (Phase 1)
+# ================================================================
+
+dev-fast: ## Fast dev loop (reads .env.dev.local)
+	@bash scripts/dev-fast.sh
+
+dev-fast-api: ## Fast dev + local dotnet watch + Postgres
+	@DEV_BACKEND=true DEV_POSTGRES=true bash scripts/dev-fast.sh
+
+dev-fast-full: ## Fast dev + backend + Postgres + Redis, all mocks OFF
+	@DEV_BACKEND=true DEV_POSTGRES=true DEV_REDIS=true \
+	 MOCK_LLM=false MOCK_EMBEDDING=false MOCK_BGG=false \
+	 MOCK_S3=false MOCK_SMOLDOCLING=false MOCK_UNSTRUCTURED=false \
+	 MOCK_N8N=false MOCK_RERANKER=false \
+	 bash scripts/dev-fast.sh
+
+dev-fast-down: ## Stop everything started by dev-fast
+	@bash scripts/dev-fast-down.sh
+
+dev-fast-check: ## Verify .env.dev.local against template
+	@bash scripts/dev-env-check.sh
+
 tunnel: ## Open SSH tunnels to staging server
 	bash scripts/integration-tunnel.sh start
 
@@ -137,6 +160,26 @@ backup-cron-install: ## Install daily backup cron job (3 AM)
 backup-cron-show: ## Show installed backup cron jobs
 	@crontab -l 2>/dev/null | grep meepleai || echo "No MeepleAI cron jobs found"
 
+# === DB Snapshot (local dev) ===
+
+db-snapshot: ## Create local DB snapshot before migration reset
+	pwsh scripts/db-save-state.ps1
+
+db-snapshot-sanitized: ## Create DB snapshot without sensitive tables
+	pwsh scripts/db-save-state.ps1 -Sanitize
+
+db-reset-migrations: ## Reset migrations using snapshot (requires SNAP=path)
+	@if [ -z "$(SNAP)" ]; then echo "ERROR: SNAP=<snapshot-path> required" && exit 1; fi
+	pwsh scripts/db-reset-migrations.ps1 -SnapshotPath $(SNAP)
+
+db-restore-snapshot: ## Restore data from snapshot (requires SNAP=path)
+	@if [ -z "$(SNAP)" ]; then echo "ERROR: SNAP=<snapshot-path> required" && exit 1; fi
+	pwsh scripts/db-restore-state.ps1 -SnapshotPath $(SNAP)
+
+db-rollback-safetynet: ## Rollback using snapshot safety-net (requires SNAP=path)
+	@if [ -z "$(SNAP)" ]; then echo "ERROR: SNAP=<snapshot-path> required" && exit 1; fi
+	pwsh scripts/db-restore-state.ps1 -SnapshotPath $(SNAP) -UseSafetyNet
+
 # === Utilities ===
 
 logs: ## Tail logs for a service (usage: make logs s=api)
@@ -151,6 +194,36 @@ logging-down: ## Stop log aggregation stack
 logs-ui: ## Open Grafana log explorer in browser (staging)
 	@echo "Grafana Logs: https://meepleai.app/grafana"
 	@echo "  Explore → Loki → {container_name=~\"meepleai-.*\"}"
+
+# ================================================================
+# Seed snapshot lifecycle (bake + consume)
+# See docs/development/snapshot-seed-workflow.md
+# ================================================================
+
+seed-index: ## Bake: indicizza tutti i PDF e produce snapshot locale
+	@bash scripts/seed-index-preflight.sh
+	$(COMPOSE) -f compose.dev.yml --profile ai up -d postgres redis api embedding-service smoldocling-service
+	@bash scripts/wait-for-healthy.sh api 180
+	@bash scripts/seed-index-wait.sh
+	@bash scripts/seed-index-dump.sh
+	@echo "::notice:: snapshot pronto in data/snapshots/ — lancia 'make seed-index-publish' per caricarlo"
+
+seed-index-publish: ## Upload snapshot più recente a seed blob bucket
+	@bash scripts/seed-index-publish.sh
+
+dev-from-snapshot: ## Dev env con seed pre-indicizzato (veloce, consume flow)
+	@bash scripts/snapshot-fetch.sh
+	@bash scripts/snapshot-verify.sh
+	$(COMPOSE) -f compose.dev.yml up -d postgres
+	@bash scripts/wait-for-healthy.sh postgres 60
+	@bash scripts/snapshot-restore.sh
+	@SKIP_CATALOG_SEED=true $(COMPOSE) -f compose.dev.yml --profile ai up -d
+	@echo "::notice:: dev env pronto (snapshot $$(cat data/snapshots/.latest))"
+
+dev-from-snapshot-force: ## Come dev-from-snapshot ma azzera il volume postgres
+	$(COMPOSE) -f compose.dev.yml rm -svf postgres || true
+	$(COMPOSE) -f compose.dev.yml down postgres -v || true
+	@$(MAKE) dev-from-snapshot
 
 ps: ## Show running containers
 	$(COMPOSE) ps
@@ -256,7 +329,8 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
 	node $(ROOT)/scripts/validate-workflows.js
 	@echo "✅ Workflows valid"
 
-.PHONY: dev dev-core dev-down tunnel tunnel-stop tunnel-status integration-check integration \
+.PHONY: dev dev-core dev-down dev-fast dev-fast-api dev-fast-full dev-fast-down dev-fast-check \
+        tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down staging staging-down prod prod-down \
         alpha alpha-core alpha-down \
         secrets-setup secrets-sync \
@@ -264,4 +338,5 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
         logs logging logging-down logs-ui ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
         sec-scan sec-pentest test-e2e test-visual test-perf validate-workflows \
-        backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show
+        backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
+        db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet

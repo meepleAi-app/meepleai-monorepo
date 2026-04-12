@@ -60,6 +60,34 @@ export const ENTITY_COLORS = {
     accentBorder: 'border-teal-200/60',
     activeAccent: 'data-[state=active]:text-teal-700',
   },
+  session: {
+    hsl: '240 60% 55%',
+    accent: 'text-indigo-700',
+    accentBg: 'bg-indigo-100',
+    accentBorder: 'border-indigo-200/60',
+    activeAccent: 'data-[state=active]:text-indigo-700',
+  },
+  event: {
+    hsl: '350 89% 60%',
+    accent: 'text-rose-700',
+    accentBg: 'bg-rose-100',
+    accentBorder: 'border-rose-200/60',
+    activeAccent: 'data-[state=active]:text-rose-700',
+  },
+  toolkit: {
+    hsl: '142 70% 45%',
+    accent: 'text-green-700',
+    accentBg: 'bg-green-100',
+    accentBorder: 'border-green-200/60',
+    activeAccent: 'data-[state=active]:text-green-700',
+  },
+  tool: {
+    hsl: '195 80% 50%',
+    accent: 'text-cyan-700',
+    accentBg: 'bg-cyan-100',
+    accentBorder: 'border-cyan-200/60',
+    activeAccent: 'data-[state=active]:text-cyan-700',
+  },
 } as const;
 
 export type EntityVariant = keyof typeof ENTITY_COLORS;

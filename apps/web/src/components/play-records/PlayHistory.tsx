@@ -1,35 +1,22 @@
-/**
- * PlayHistory - Paginated Play Records List with Filters
- *
- * Features:
- * - Paginated session list using MeepleCard
- * - Filters: game, status, date range, search
- * - Sort: recent, oldest, game name, duration
- * - Grid/list view toggle
- * - Empty state
- *
- * Issue #3892: Play Records Frontend UI
- */
-
 'use client';
 
-import { useState, useEffect } from 'react';
+/**
+ * PlayHistory — Lista partite mobile-first con filter chips
+ *
+ * - Ricerca inline
+ * - Filter chips orizzontali (stato, ordinamento)
+ * - MeepleCard variant="list" con badge stato + vincitore
+ * - Empty state e skeleton
+ * - Paginazione "Carica altro"
+ */
 
-import { Calendar, Filter, Grid3X3, List, Search, X, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import { Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/overlays/select';
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+import { buildSessionNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayHistory } from '@/lib/domain-hooks/usePlayRecords';
 import {
@@ -37,289 +24,301 @@ import {
   selectFilters,
   selectHasActiveFilters,
 } from '@/lib/stores/play-records-store';
+import { cn } from '@/lib/utils';
 
-export interface PlayHistoryProps {
-  userId?: string; // Optional: filter by specific user (default: current user)
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatDuration(duration: string | null): string {
+  if (!duration) return '';
+  // .NET TimeSpan "HH:MM:SS" or "D.HH:MM:SS"
+  // eslint-disable-next-line security/detect-unsafe-regex
+  const dotNetMatch = duration.match(/^(?:(\d+)\.)?(\d+):(\d+):(\d+)$/);
+  if (dotNetMatch) {
+    const days = dotNetMatch[1] ? parseInt(dotNetMatch[1]) : 0;
+    const hours = parseInt(dotNetMatch[2]) + days * 24;
+    const minutes = parseInt(dotNetMatch[3]);
+    const h = hours > 0 ? `${hours}h` : '';
+    const m = minutes > 0 ? `${minutes}min` : '';
+    return [h, m].filter(Boolean).join(' ') || '';
+  }
+  // ISO 8601 "PT2H30M"
+  // eslint-disable-next-line security/detect-unsafe-regex
+  const isoMatch = duration.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/);
+  if (isoMatch) {
+    const h = isoMatch[1] ? `${isoMatch[1]}h` : '';
+    const m = isoMatch[2] ? `${isoMatch[2]}min` : '';
+    return [h, m].filter(Boolean).join(' ') || '';
+  }
+  return duration;
 }
 
-export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
+function statusLabel(status: PlayRecordStatus): string {
+  switch (status) {
+    case 'Completed':
+      return '✅ Completata';
+    case 'InProgress':
+      return '🔄 In corso';
+    case 'Planned':
+      return '📅 Pianificata';
+    case 'Archived':
+      return '🗄 Archiviata';
+  }
+}
+
+function statusBadgeColor(status: PlayRecordStatus): string {
+  switch (status) {
+    case 'Completed':
+      return 'text-emerald-400 bg-emerald-400/10';
+    case 'InProgress':
+      return 'text-blue-400 bg-blue-400/10';
+    case 'Planned':
+      return 'text-slate-400 bg-white/5';
+    case 'Archived':
+      return 'text-slate-500 bg-white/5';
+  }
+}
+
+// ── Filter chips config ──────────────────────────────────────────────────────
+
+const STATUS_CHIPS: { value: PlayRecordStatus | 'all'; label: string }[] = [
+  { value: 'all', label: 'Tutte' },
+  { value: 'Completed', label: 'Completate' },
+  { value: 'InProgress', label: 'In corso' },
+  { value: 'Planned', label: 'Pianificate' },
+];
+
+const SORT_CHIPS: { value: 'recent' | 'oldest' | 'game'; label: string }[] = [
+  { value: 'recent', label: 'Recenti' },
+  { value: 'oldest', label: 'Meno recenti' },
+  { value: 'game', label: 'Per gioco' },
+];
+
+// ── Component ────────────────────────────────────────────────────────────────
+
+export interface PlayHistoryProps {
+  /** Filtra per gioco specifico (entry point dalla library card) */
+  gameId?: string;
+  /** Limita il numero di risultati (per uso embedded, es. tab Storico) */
+  limit?: number;
+}
+
+export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
 
   const filters = usePlayRecordsStore(selectFilters);
-  const viewMode = usePlayRecordsStore(state => state.viewMode);
   const sortBy = usePlayRecordsStore(state => state.sortBy);
-  const sidebarOpen = usePlayRecordsStore(state => state.sidebarOpen);
   const hasActiveFilters = usePlayRecordsStore(selectHasActiveFilters);
 
   const setFilter = usePlayRecordsStore(state => state.setFilter);
   const resetFilters = usePlayRecordsStore(state => state.resetFilters);
-  const setViewMode = usePlayRecordsStore(state => state.setViewMode);
   const setSortBy = usePlayRecordsStore(state => state.setSortBy);
-  const toggleSidebar = usePlayRecordsStore(state => state.toggleSidebar);
 
-  // Fetch play history
-  const { data, isLoading, error } = usePlayHistory({
-    page: currentPage,
-    pageSize: 20,
-    gameId: filters.gameId,
-    status: filters.status === 'all' ? undefined : filters.status,
-    dateFrom: filters.dateFrom,
-    dateTo: filters.dateTo,
-  });
-
-  // Reset to page 1 when filters change
+  // Reset pagina quando cambiano i filtri
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters.gameId, filters.status, filters.dateFrom, filters.dateTo]);
+  }, [filters.gameId, filters.status, search]);
 
-  const handleCardClick = (recordId: string) => {
-    router.push(`/play-records/${recordId}`);
-  };
+  const { data, isLoading, error } = usePlayHistory({
+    page: currentPage,
+    pageSize: limit ?? 20,
+    gameId: propGameId ?? filters.gameId,
+    status: filters.status === 'all' ? undefined : filters.status,
+  });
 
-  const formatDuration = (duration: string | null): string => {
-    if (!duration) return 'N/A';
-    // Handle .NET TimeSpan format "HH:MM:SS" or "D.HH:MM:SS"
-    // eslint-disable-next-line security/detect-unsafe-regex -- anchored regex, no backtracking risk
-    const dotNetMatch = duration.match(/^(?:(\d+)\.)?(\d+):(\d+):(\d+)$/);
-    if (dotNetMatch) {
-      const days = dotNetMatch[1] ? parseInt(dotNetMatch[1]) : 0;
-      const hours = parseInt(dotNetMatch[2]) + days * 24;
-      const minutes = parseInt(dotNetMatch[3]);
-      const h = hours > 0 ? `${hours}h` : '';
-      const m = minutes > 0 ? `${minutes}m` : '';
-      return [h, m].filter(Boolean).join(' ') || 'N/A';
-    }
-    // Fallback: ISO 8601 duration (e.g., "PT2H30M")
-    // eslint-disable-next-line security/detect-unsafe-regex -- ISO 8601 duration, anchored and safe
-    const isoMatch = duration.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/);
-    if (isoMatch) {
-      const hours = isoMatch[1] ? `${isoMatch[1]}h` : '';
-      const minutes = isoMatch[2] ? `${isoMatch[2]}m` : '';
-      return [hours, minutes].filter(Boolean).join(' ') || 'N/A';
-    }
-    return duration;
-  };
-
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'Completed':
-        return '120 100% 35%'; // Green
-      case 'InProgress':
-        return '25 95% 45%'; // Orange
-      case 'Planned':
-        return '220 70% 50%'; // Blue
-      case 'Archived':
-        return '0 0% 50%'; // Gray
-      default:
-        return '220 70% 50%';
-    }
-  };
+  const allRecords = data?.records ?? [];
+  const records = search.trim()
+    ? allRecords.filter(r => r.gameName.toLowerCase().includes(search.toLowerCase()))
+    : allRecords;
+  const hasMore = data ? currentPage < data.totalPages : false;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Play History</h2>
-          <p className="text-muted-foreground">
-            Your recorded game sessions
-            {data && ` (${data.totalCount} total)`}
-          </p>
-        </div>
-
-        {/* View Controls */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setViewMode('grid')}
-            aria-label="Grid view"
+    <div className="flex flex-col gap-3" data-testid="play-history">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--gaming-text-muted,#666677)]" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Cerca per gioco o giocatore…"
+          className="w-full rounded-xl bg-white/5 border border-white/8 pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+          data-testid="play-history-search"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+            aria-label="Cancella ricerca"
           >
-            <Grid3X3 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setViewMode('list')}
-            aria-label="List view"
-          >
-            <List className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={toggleSidebar} aria-label="Toggle filters">
-            <Filter className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Filters Bar */}
-      <div className={`grid gap-4 ${sidebarOpen ? 'grid-cols-4' : 'grid-cols-1'}`}>
-        {sidebarOpen && (
-          <>
-            <div>
-              <Label htmlFor="search" className="text-sm">
-                Search
-              </Label>
-              <div className="relative mt-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Search sessions..."
-                  value={filters.searchQuery}
-                  onChange={e => setFilter('searchQuery', e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="status" className="text-sm">
-                Status
-              </Label>
-              <Select
-                value={filters.status}
-                onValueChange={value => setFilter('status', value as PlayRecordStatus | 'all')}
-              >
-                <SelectTrigger id="status" className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sessions</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="InProgress">In Progress</SelectItem>
-                  <SelectItem value="Planned">Planned</SelectItem>
-                  <SelectItem value="Archived">Archived</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="sort" className="text-sm">
-                Sort By
-              </Label>
-              <Select
-                value={sortBy}
-                onValueChange={value =>
-                  setSortBy(value as 'recent' | 'oldest' | 'game' | 'duration')
-                }
-              >
-                <SelectTrigger id="sort" className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recent">Most Recent</SelectItem>
-                  <SelectItem value="oldest">Oldest First</SelectItem>
-                  <SelectItem value="game">Game Name</SelectItem>
-                  <SelectItem value="duration">Duration</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {hasActiveFilters && (
-              <div className="flex items-end">
-                <Button variant="ghost" size="sm" onClick={resetFilters} className="w-full">
-                  <X className="w-4 h-4 mr-2" />
-                  Clear Filters
-                </Button>
-              </div>
-            )}
-          </>
+            <X className="h-4 w-4" />
+          </button>
         )}
       </div>
 
-      {/* Loading State */}
+      {/* Filter chips — stato */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
+        {STATUS_CHIPS.map(chip => (
+          <button
+            key={chip.value}
+            type="button"
+            onClick={() => setFilter('status', chip.value as PlayRecordStatus | 'all')}
+            className={cn(
+              'flex-shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
+              filters.status === chip.value
+                ? 'border-amber-500/40 bg-amber-500/15 text-amber-400'
+                : 'border-white/8 bg-white/5 text-white/50 hover:border-white/15'
+            )}
+            data-testid={`filter-status-${chip.value}`}
+          >
+            {chip.label}
+          </button>
+        ))}
+
+        <div className="h-5 w-px bg-white/10 flex-shrink-0 self-center" />
+
+        {SORT_CHIPS.map(chip => (
+          <button
+            key={chip.value}
+            type="button"
+            onClick={() => setSortBy(chip.value)}
+            className={cn(
+              'flex-shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
+              sortBy === chip.value
+                ? 'border-white/20 bg-white/10 text-white'
+                : 'border-white/8 bg-white/5 text-white/40 hover:border-white/15'
+            )}
+            data-testid={`sort-${chip.value}`}
+          >
+            {chip.label}
+          </button>
+        ))}
+
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="flex-shrink-0 rounded-full border border-white/8 bg-white/5 px-3 py-1 text-xs font-semibold text-red-400 hover:bg-red-400/10"
+            data-testid="reset-filters"
+          >
+            <X className="inline h-3 w-3 mr-1" />
+            Reset
+          </button>
+        )}
+      </div>
+
+      {/* Loading skeleton */}
       {isLoading && (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-48 bg-muted animate-pulse rounded-lg" />
+        <div className="flex flex-col gap-2" data-testid="play-history-loading">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-xl bg-white/5" />
           ))}
         </div>
       )}
 
-      {/* Error State */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error instanceof Error ? error.message : 'Failed to load play history'}
-          </AlertDescription>
-        </Alert>
+      {/* Error */}
+      {!isLoading && error && (
+        <div
+          className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+          data-testid="play-history-error"
+        >
+          {error instanceof Error ? error.message : 'Errore nel caricamento delle partite.'}
+        </div>
       )}
 
-      {/* Empty State */}
-      {!isLoading && !error && data?.records.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          <Calendar className="w-16 h-16 mx-auto mb-4 opacity-20" />
-          <h3 className="text-lg font-semibold mb-2">No Play Records Yet</h3>
-          <p className="mb-4">
-            {hasActiveFilters
-              ? 'No sessions match your filters'
-              : 'Start recording your game sessions'}
-          </p>
+      {/* Empty */}
+      {!isLoading && !error && records.length === 0 && (
+        <div
+          className="flex flex-col items-center gap-4 py-16 text-center"
+          data-testid="play-history-empty"
+        >
+          <span className="text-5xl">🎲</span>
+          <div>
+            <p className="text-base font-bold text-white">Nessuna partita registrata</p>
+            <p className="mt-1 text-sm text-white/40">
+              {hasActiveFilters
+                ? 'Nessun risultato con i filtri attivi.'
+                : 'Inizia a registrare le tue partite!'}
+            </p>
+          </div>
           {hasActiveFilters && (
-            <Button variant="outline" onClick={resetFilters}>
-              Clear Filters
-            </Button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/60 hover:bg-white/5"
+            >
+              Rimuovi filtri
+            </button>
           )}
         </div>
       )}
 
-      {/* Records Grid/List */}
-      {!isLoading && !error && data && data.records.length > 0 && (
-        <div
-          className={
-            viewMode === 'grid'
-              ? 'grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-              : 'space-y-3'
-          }
-        >
-          {data.records.map(record => (
-            <MeepleCard
-              key={record.id}
-              entity="session"
-              variant={viewMode === 'grid' ? 'grid' : 'list'}
-              title={record.gameName}
-              subtitle={new Date(record.sessionDate).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-              metadata={[
-                { label: `${record.playerCount} players` },
-                { label: formatDuration(record.duration) },
-                { label: record.status },
-              ]}
-              badge={record.status}
-              onClick={() => handleCardClick(record.id)}
-              data-testid={`play-record-${record.id}`}
-            />
-          ))}
+      {/* List */}
+      {!isLoading && !error && records.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {records.map(record => {
+            const dateStr = new Date(record.sessionDate).toLocaleDateString('it-IT', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            });
+            const dur = formatDuration(record.duration);
+
+            const metaParts = [
+              `${record.playerCount} ${record.playerCount === 1 ? 'giocatore' : 'giocatori'}`,
+              dateStr,
+              ...(dur ? [dur] : []),
+            ];
+
+            return (
+              <div key={record.id} className="relative">
+                <MeepleCard
+                  entity="session"
+                  variant="list"
+                  title={record.gameName}
+                  subtitle={dateStr}
+                  metadata={metaParts.map(label => ({ label }))}
+                  badge={record.status}
+                  navItems={buildSessionNavItems(
+                    {
+                      playerCount: record.playerCount,
+                      hasNotes: false,
+                      toolCount: 0,
+                      photoCount: 0,
+                    },
+                    { onPlayersClick: undefined }
+                  )}
+                  onClick={() => router.push(`/play-records/${record.id}`)}
+                  data-testid={`play-record-${record.id}`}
+                />
+                {/* Status + winner overlay */}
+                <div className="pointer-events-none absolute bottom-2.5 right-3 flex flex-col items-end gap-1">
+                  <span
+                    className={cn(
+                      'rounded-md px-2 py-0.5 text-[10px] font-semibold',
+                      statusBadgeColor(record.status)
+                    )}
+                  >
+                    {statusLabel(record.status)}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Pagination */}
-      {data && data.totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {currentPage} of {data.totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage >= data.totalPages}
-            onClick={() => setCurrentPage(prev => Math.min(data.totalPages, prev + 1))}
-          >
-            Next
-          </Button>
-        </div>
+      {/* Load more */}
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => setCurrentPage(p => p + 1)}
+          className="py-3 text-sm font-semibold text-white/40 hover:text-white/70"
+          data-testid="load-more-btn"
+        >
+          Carica altro…
+        </button>
       )}
     </div>
   );

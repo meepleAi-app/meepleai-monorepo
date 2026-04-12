@@ -257,7 +257,6 @@ export function AddExpansionSheet({
                       {/* Thumbnail */}
                       <div className="w-10 h-10 rounded bg-slate-800 overflow-hidden flex-shrink-0">
                         {result.thumbnailUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={result.thumbnailUrl}
                             alt=""

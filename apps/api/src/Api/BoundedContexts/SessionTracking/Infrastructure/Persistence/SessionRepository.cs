@@ -110,6 +110,13 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         existing.InviteToken = session.InviteToken;
         existing.InviteExpiresAt = session.InviteExpiresAt;
 
+        // Session Flow v2.1 — T6: Propagate turn order fields so SetTurnOrder
+        // domain transitions are persisted by UpdateAsync.
+        existing.TurnOrderJson = session.TurnOrderJson;
+        existing.TurnOrderMethod = session.TurnOrderMethod;
+        existing.TurnOrderSeed = session.TurnOrderSeed;
+        existing.CurrentTurnIndex = session.CurrentTurnIndex;
+
         // Update participants (sync collection)
         existing.Participants.Clear();
         foreach (var participant in session.Participants)

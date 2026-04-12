@@ -37,10 +37,9 @@ describe('UNIFIED_NAV_ITEMS', () => {
     expect(ids).toContain('sessions');
   });
 
-  it('library item has children', () => {
+  it('library item has no children (Hub is the single landing)', () => {
     const library = UNIFIED_NAV_ITEMS.find(item => item.id === 'library');
-    expect(library?.children).toBeDefined();
-    expect(library!.children!.length).toBeGreaterThan(0);
+    expect(library?.children).toBeUndefined();
   });
 
   it('welcome is anonOnly', () => {

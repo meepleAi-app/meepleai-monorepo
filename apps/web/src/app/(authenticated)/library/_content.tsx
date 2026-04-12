@@ -2,33 +2,21 @@
 
 /**
  * Library Page Client Content
- * Issue #2464, #2613, #2618 — Library management
- * Issue #5042 — Tab-based routing
- * Issue #5167 — Tab rename: Games (personal) / Collection (shared catalog)
- * Issue #5168 — AddGameDrawer (right-side Sheet for adding games)
  *
- * Tab routing:
- *   (default)           → La mia Libreria  → PersonalLibraryPage (vetrina layout)
- *   ?tab=catalogo       → Catalogo Condiviso → PublicLibraryClient
- *
- * Action routing:
- *   ?action=add         → AddGameDrawer opens (wizard: manual or from catalog)
- *
- * Note: Uses dynamicImport (renamed from 'dynamic') to avoid Turbopack
- * naming collision with the server→client boundary stub identifier.
- * See: apps/web/src/app/(chat)/chat/new/page.tsx for same pattern.
+ * Renders the canonical Library Hub with its carousel landing layout and the
+ * AddGameDrawer (driven by `?action=add`). Legacy tab routes (`?tab=personal`,
+ * `?tab=catalogo`, `?tab=wishlist`) were removed in favour of the Hub as the
+ * single entry point. Wishlist remains reachable as a standalone route at
+ * `/library/wishlist`.
  */
 
 import { useEffect } from 'react';
 
-import dynamicImport from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
-
-import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 import { AddGameDrawerController } from './AddGameDrawer';
+import { LibraryHub } from './LibraryHub';
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 
@@ -46,65 +34,21 @@ export function LibraryLoadingSkeleton() {
   );
 }
 
-// ── Dynamic imports (ssr: false avoids DOMMatrix / framer-motion issues) ─────
-
-// Default tab: personal library vetrina (Issue #5167 rework)
-const PersonalLibraryPageClient = dynamicImport(
-  () =>
-    import('@/components/library/PersonalLibraryPage').then(mod => ({
-      default: mod.PersonalLibraryPage,
-    })),
-  {
-    ssr: false,
-    loading: () => <LibraryLoadingSkeleton />,
-  }
-);
-
-// Public catalog tab: shared catalog browse (Task 10 — placeholder)
-const PublicLibraryPageClient = dynamicImport(() => import('./public/PublicLibraryClient'), {
-  ssr: false,
-  loading: () => <LibraryLoadingSkeleton />,
-});
-
-// Wishlist tab: user's wishlist (US-10)
-const WishlistPageClient = dynamicImport(
-  () => import('./wishlist/page').then(mod => ({ default: mod.default })),
-  {
-    ssr: false,
-    loading: () => <LibraryLoadingSkeleton />,
-  }
-);
-
-// ── Tab switcher + drawer controller ──────────────────────────────────────────
-
 export function LibraryContent() {
-  const searchParams = useSearchParams();
-  const tab = searchParams.get('tab');
-  const { drawCard } = useCardHand();
-
   useEffect(() => {
-    drawCard({
+    useRecentsStore.getState().push({
       id: 'section-library',
       entity: 'game',
       title: 'Library',
       href: '/library',
     });
-  }, [drawCard]);
+  }, []);
 
   return (
     <>
-      {/* Tab content — PersonalLibraryPage now includes its own sidebar */}
-      {tab === 'wishlist' ? (
-        <WishlistPageClient />
-      ) : tab === 'catalogo' ? (
-        <PublicLibraryPageClient />
-      ) : (
-        <PersonalLibraryPageClient />
-      )}
-
+      <LibraryHub />
       {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}
       <AddGameDrawerController />
-      <FloatingActionPill page="library" />
     </>
   );
 }

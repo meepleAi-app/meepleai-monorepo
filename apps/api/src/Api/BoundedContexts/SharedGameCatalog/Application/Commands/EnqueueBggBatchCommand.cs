@@ -13,4 +13,9 @@ public record EnqueueBggBatchCommand : IRequest<List<BggImportQueueEntity>>
     /// Collection of BGG IDs to import
     /// </summary>
     public required List<int> BggIds { get; init; }
+
+    /// <summary>
+    /// User ID performing the import (for audit trail). Null if not authenticated.
+    /// </summary>
+    public Guid? RequestedByUserId { get; init; }
 }

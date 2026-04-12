@@ -1,10 +1,25 @@
 /**
  * MSW handlers for session endpoints (browser-safe)
  * Covers: /api/v1/sessions/*
+ *
+ * Data source precedence:
+ * 1. Scenario bridge — derives sessions from `scenario.sessions` cross-joined
+ *    with `scenario.games` for the `gameName`.
+ * 2. Local fallback — used by unit tests without the bridge.
+ *
+ * NOTE: The scenario session shape is minimal (`{id, gameId, startedAt}`); the
+ * API response shape is enriched (sessionCode, participants, etc.). Missing
+ * fields are synthesized: sessionCode from `id.slice(-6)`, participants `[]`.
+ * CRUD writes currently mutate only the fallback array; when the bridge is
+ * active, writes are applied on top of the derived list in-memory per request,
+ * which means scenario reload resets any CRUD mutations. This matches the
+ * "scenario is the source of truth" contract from issue #366.
  */
 import { http, HttpResponse } from 'msw';
 
 import { mockId, HANDLER_BASE } from '../data/factories';
+import { getScenarioBridge } from '../scenarioBridge';
+import { guardScenarioSwitching } from './_shared';
 
 const API_BASE = HANDLER_BASE;
 
@@ -20,7 +35,27 @@ interface SessionData {
   completedAt?: string;
 }
 
-const sessions: SessionData[] = [
+function sessionsFromScenario(): SessionData[] | null {
+  const bridge = getScenarioBridge();
+  if (!bridge) return null;
+  const gamesById = new Map(bridge.getGames().map(g => [g.id, g]));
+  return bridge.getSessions().map(s => ({
+    id: s.id,
+    sessionCode: s.id.slice(-6).toUpperCase(),
+    gameId: s.gameId,
+    gameName: gamesById.get(s.gameId)?.title,
+    status: 'Active' as const,
+    participants: [],
+    notes: [],
+    createdAt: s.startedAt ?? new Date().toISOString(),
+  }));
+}
+
+function currentSessions(): SessionData[] {
+  return sessionsFromScenario() ?? fallbackSessions;
+}
+
+const fallbackSessions: SessionData[] = [
   {
     id: mockId(601),
     sessionCode: 'ABC123',
@@ -38,9 +73,12 @@ const sessions: SessionData[] = [
 
 export const sessionsHandlers = [
   http.get(`${API_BASE}/api/v1/sessions`, ({ request }) => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
+    const items = currentSessions();
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
-    const filtered = status ? sessions.filter(s => s.status === status) : [...sessions];
+    const filtered = status ? items.filter(s => s.status === status) : [...items];
     return HttpResponse.json({
       items: filtered,
       totalCount: filtered.length,
@@ -50,8 +88,32 @@ export const sessionsHandlers = [
     });
   }),
 
+  // GET /api/v1/sessions/active — used by sessionsClient.getActive()
+  // Returns PaginatedSessionsResponse: { sessions, total, page, pageSize }
+  // Must be registered BEFORE /api/v1/sessions/:id to avoid "active" being
+  // matched as an ID.
+  http.get(`${API_BASE}/api/v1/sessions/active`, ({ request }) => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
+    const url = new URL(request.url);
+    const limit = parseInt(url.searchParams.get('limit') || '20');
+    const offset = parseInt(url.searchParams.get('offset') || '0');
+    return HttpResponse.json({
+      sessions: [],
+      total: 0,
+      page: Math.floor(offset / limit) + 1,
+      pageSize: limit,
+    });
+  }),
+
+  // GET /api/v1/sessions/current — used by session-flow client
+  // Returns 204 when no session is active (client handles null as no session).
+  http.get(`${API_BASE}/api/v1/sessions/current`, () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.get(`${API_BASE}/api/v1/sessions/:id`, ({ params }) => {
-    const session = sessions.find(s => s.id === params.id);
+    const session = currentSessions().find(s => s.id === params.id);
     if (!session) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     return HttpResponse.json(session);
   }),
@@ -68,37 +130,37 @@ export const sessionsHandlers = [
       notes: [],
       createdAt: new Date().toISOString(),
     };
-    sessions.push(newSession);
+    fallbackSessions.push(newSession);
     return HttpResponse.json(newSession, { status: 201 });
   }),
 
   http.put(`${API_BASE}/api/v1/sessions/:id/pause`, ({ params }) => {
-    const idx = sessions.findIndex(s => s.id === params.id);
+    const idx = fallbackSessions.findIndex(s => s.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    sessions[idx] = { ...sessions[idx], status: 'Paused' };
-    return HttpResponse.json(sessions[idx]);
+    fallbackSessions[idx] = { ...fallbackSessions[idx], status: 'Paused' };
+    return HttpResponse.json(fallbackSessions[idx]);
   }),
 
   http.put(`${API_BASE}/api/v1/sessions/:id/resume`, ({ params }) => {
-    const idx = sessions.findIndex(s => s.id === params.id);
+    const idx = fallbackSessions.findIndex(s => s.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    sessions[idx] = { ...sessions[idx], status: 'Active' };
-    return HttpResponse.json(sessions[idx]);
+    fallbackSessions[idx] = { ...fallbackSessions[idx], status: 'Active' };
+    return HttpResponse.json(fallbackSessions[idx]);
   }),
 
   http.put(`${API_BASE}/api/v1/sessions/:id/complete`, ({ params }) => {
-    const idx = sessions.findIndex(s => s.id === params.id);
+    const idx = fallbackSessions.findIndex(s => s.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    sessions[idx] = {
-      ...sessions[idx],
+    fallbackSessions[idx] = {
+      ...fallbackSessions[idx],
       status: 'Finalized',
       completedAt: new Date().toISOString(),
     };
-    return HttpResponse.json(sessions[idx]);
+    return HttpResponse.json(fallbackSessions[idx]);
   }),
 
   http.post(`${API_BASE}/api/v1/sessions/:id/participants`, async ({ params, request }) => {
-    const idx = sessions.findIndex(s => s.id === params.id);
+    const idx = fallbackSessions.findIndex(s => s.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     const body = (await request.json()) as { displayName: string };
     const participant = {
@@ -107,16 +169,16 @@ export const sessionsHandlers = [
       isOwner: false,
       totalScore: 0,
     };
-    sessions[idx].participants.push(participant);
+    fallbackSessions[idx].participants.push(participant);
     return HttpResponse.json(participant, { status: 201 });
   }),
 
   http.delete(
     `${API_BASE}/api/v1/sessions/:sessionId/participants/:participantId`,
     ({ params }) => {
-      const idx = sessions.findIndex(s => s.id === params.sessionId);
+      const idx = fallbackSessions.findIndex(s => s.id === params.sessionId);
       if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-      sessions[idx].participants = sessions[idx].participants.filter(
+      fallbackSessions[idx].participants = fallbackSessions[idx].participants.filter(
         p => p.id !== params.participantId
       );
       return HttpResponse.json({ success: true });
@@ -124,24 +186,24 @@ export const sessionsHandlers = [
   ),
 
   http.post(`${API_BASE}/api/v1/sessions/:id/notes`, async ({ params, request }) => {
-    const idx = sessions.findIndex(s => s.id === params.id);
+    const idx = fallbackSessions.findIndex(s => s.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     const body = (await request.json()) as { content: string };
-    sessions[idx].notes.push(body.content);
+    fallbackSessions[idx].notes.push(body.content);
     return HttpResponse.json({ success: true });
   }),
 
   http.delete(`${API_BASE}/api/v1/sessions/:id`, ({ params }) => {
-    const idx = sessions.findIndex(s => s.id === params.id);
+    const idx = fallbackSessions.findIndex(s => s.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    sessions.splice(idx, 1);
+    fallbackSessions.splice(idx, 1);
     return HttpResponse.json({ success: true });
   }),
 ];
 
 // Helper to reset session state between tests
 export const resetSessionsState = () => {
-  sessions.splice(0, sessions.length, {
+  fallbackSessions.splice(0, fallbackSessions.length, {
     id: mockId(601),
     sessionCode: 'ABC123',
     gameId: mockId(101),

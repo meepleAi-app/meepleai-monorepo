@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions required for TypedStreamingEvent narrowing */
 /**
  * Streaming SSE Schemas (Issue #1007)
  *

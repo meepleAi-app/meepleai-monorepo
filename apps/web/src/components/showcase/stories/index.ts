@@ -7,14 +7,12 @@
 
 // ─── Existing Stories ─────────────────────────────────────────────────────────
 import { actionGridStory } from './action-grid.story';
-import { agentStatsDisplayStory } from './agent-stats-display.story';
 import { agentStatusBadgeStory } from './agent-status-badge.story';
 import { alertStory } from './alert.story';
 import { badgeStory } from './badge.story';
 import { buttonStory } from './button.story';
 import { chatMessageStory } from './chat-message.story';
 import { checkboxStory } from './checkbox.story';
-import { collectionProgressStory } from './collection-progress.story';
 import { confidenceBadgeStory } from './confidence-badge.story';
 import { dialogStory } from './dialog.story';
 import { dropdownMenuStory } from './dropdown-menu.story';
@@ -26,7 +24,6 @@ import { kpiCardsStory } from './kpi-cards.story';
 import { meepleAvatarStory } from './meeple-avatar.story';
 import { meepleCardStory } from './meeple-card.story';
 import { meepleLogoStory } from './meeple-logo.story';
-import { pageTransitionStory } from './page-transition.story';
 import { popoverStory } from './popover.story';
 import { progressStory } from './progress.story';
 import { radioGroupStory } from './radio-group.story';
@@ -43,22 +40,14 @@ import { tabsStory } from './tabs.story';
 import { tagStripStory } from './tag-strip.story';
 import { textareaStory } from './textarea.story';
 import { tierBadgeStory } from './tier-badge.story';
-
 // ─── Forms ────────────────────────────────────────────────────────────────────
-
 // ─── Overlays ─────────────────────────────────────────────────────────────────
 import { tooltipStory } from './tooltip.story';
-
 // ─── Feedback ────────────────────────────────────────────────────────────────
-
 // ─── Navigation ──────────────────────────────────────────────────────────────
-
 // ─── Layout ──────────────────────────────────────────────────────────────────
-
 // ─── Meeple ──────────────────────────────────────────────────────────────────
-
 // ─── Agent ───────────────────────────────────────────────────────────────────
-
 // ─── Charts ──────────────────────────────────────────────────────────────────
 import { upgradePromptStory } from './upgrade-prompt.story';
 import { waterfallChartStory } from './waterfall-chart.story';
@@ -95,9 +84,6 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
   // Tags
   tagStripStory,
 
-  // Animations
-  pageTransitionStory,
-
   // Forms
   buttonStory,
   inputStory,
@@ -124,7 +110,6 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
 
   // Agent
   agentStatusBadgeStory,
-  agentStatsDisplayStory,
   strategyBadgeStory,
 
   // Charts
@@ -133,7 +118,6 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
 
   // Gates
   upgradePromptStory,
-  collectionProgressStory,
 ];
 
 /** Look up a story by its slug id */

@@ -15,7 +15,9 @@ import { useState } from 'react';
 
 import { BookOpen, Search, Heart } from 'lucide-react';
 
+import { MeepleGameCatalogCard } from '@/components/catalog/MeepleGameCatalogCard';
 import { EmptyStateCard, SkeletonCardGrid } from '@/components/features/common';
+import { MeepleLibraryGameCard } from '@/components/library/MeepleLibraryGameCard';
 import { MeepleCard, entityHsl } from '@/components/ui/data-display/meeple-card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/navigation/tabs';
 import { useLibrary } from '@/hooks/queries/useLibrary';
@@ -72,17 +74,14 @@ export function LibraryPanel() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
               {libraryItems.map(entry => (
-                <MeepleCard
+                <MeepleLibraryGameCard
                   key={entry.gameId}
-                  id={entry.gameId}
-                  entity="game"
+                  game={entry}
                   variant="grid"
-                  title={entry.gameTitle ?? 'Gioco'}
-                  subtitle={entry.gamePublisher ?? undefined}
-                  imageUrl={entry.gameImageUrl ?? entry.gameIconUrl ?? undefined}
-                  rating={entry.averageRating ?? undefined}
-                  ratingMax={10}
-                  onClick={() => openDetail(entry.gameId, 'game')}
+                  onConfigureAgent={() => {}}
+                  onUploadPdf={() => {}}
+                  onEditNotes={() => {}}
+                  onRemove={() => {}}
                 />
               ))}
             </div>
@@ -115,16 +114,10 @@ export function LibraryPanel() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {catalogItems.map(game => (
-                <MeepleCard
+                <MeepleGameCatalogCard
                   key={game.id}
-                  id={game.id}
-                  entity="game"
+                  game={game}
                   variant="grid"
-                  title={game.title}
-                  subtitle={`${game.minPlayers}-${game.maxPlayers} giocatori`}
-                  imageUrl={game.imageUrl ?? game.thumbnailUrl ?? undefined}
-                  rating={game.averageRating ?? undefined}
-                  ratingMax={10}
                   onClick={() => openDetail(game.id, 'game')}
                 />
               ))}

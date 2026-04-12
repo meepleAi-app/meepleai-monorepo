@@ -122,6 +122,78 @@ public class GetGamePdfsQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenPdfLinkedViaGamesSharedGameId_ReturnsPdf()
+    {
+        // Regression for post-PR #267 fix: a PDF uploaded against a games row that is linked to a
+        // shared game (games.SharedGameId = request.GameId) must be retrievable when querying
+        // by the shared game id, even though pdf_documents.SharedGameId is null.
+        // The previous implementation resolved a SINGLE games row and missed PDFs on other
+        // games rows linked to the same SharedGameId.
+
+        // Arrange
+        var userId = Guid.NewGuid();
+        var sharedGameId = Guid.NewGuid();
+
+        // Two different games rows linked to the same shared game (different version/language)
+        var olderGameId = Guid.NewGuid();
+        var newerGameId = Guid.NewGuid();
+        _db.Games.Add(new GameEntity
+        {
+            Id = olderGameId,
+            Name = "Catan (EN base)",
+            SharedGameId = sharedGameId,
+            CreatedAt = DateTime.UtcNow.AddHours(-2)
+        });
+        _db.Games.Add(new GameEntity
+        {
+            Id = newerGameId,
+            Name = "Catan (IT expansion)",
+            SharedGameId = sharedGameId,
+            CreatedAt = DateTime.UtcNow.AddHours(-1)
+        });
+
+        // PDF on the older games row
+        _db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            GameId = olderGameId,
+            SharedGameId = null, // intentionally null — link is via games.SharedGameId
+            FileName = "EnBaseRules.pdf",
+            FilePath = "/tmp/en.pdf",
+            FileSizeBytes = 100,
+            UploadedByUserId = userId,
+            UploadedAt = DateTime.UtcNow.AddMinutes(-30),
+            Language = "EN"
+        });
+
+        // PDF on the newer games row
+        _db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            GameId = newerGameId,
+            SharedGameId = null,
+            FileName = "ItExpansionRules.pdf",
+            FilePath = "/tmp/it.pdf",
+            FileSizeBytes = 200,
+            UploadedByUserId = userId,
+            UploadedAt = DateTime.UtcNow,
+            Language = "IT"
+        });
+        await _db.SaveChangesAsync();
+
+        var query = new GetGamePdfsQuery(sharedGameId, userId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert — both PDFs returned, ordered by UploadedAt desc
+        result.Should().HaveCount(2);
+        result.Select(p => p.Name).Should().BeEquivalentTo(
+            ["ItExpansionRules", "EnBaseRules"],
+            options => options.WithStrictOrdering());
+    }
+
+    [Fact]
     public async Task Handle_ReturnsPdfsOrderedByUploadDateDescending()
     {
         // Arrange

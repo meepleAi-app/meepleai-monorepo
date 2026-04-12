@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 import { openDB, type IDBPDatabase } from 'idb';
 
 export type ToolkitOperationType = 'dice_roll' | 'score_update' | 'add_note' | 'card_draw';

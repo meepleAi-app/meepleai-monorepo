@@ -9,12 +9,18 @@ export type {
   NavFooterItem,
   CardStatus,
   CoverLabel,
-  MobileCardLayoutProps,
   Carousel3DProps,
 } from './types';
-export { MobileCardLayout } from './mobile/MobileCardLayout';
 export { FlipCard } from './features/FlipCard';
 export { HoverPreview } from './features/HoverPreview';
 export { Carousel3D } from './features/Carousel3D';
+export { EntityTable } from './features/EntityTable';
+export type {
+  EntityTableProps,
+  EntityTableSortColumn,
+  EntityTableSortDirection,
+} from './features/EntityTable';
+export { FlipBack } from './features/FlipBack';
+export type { FlipBackProps, FlipBackSection } from './features/FlipBack';
 export { MeepleCardSkeleton } from './skeleton';
 export { entityColors, entityHsl, entityLabel, entityIcon } from './tokens';

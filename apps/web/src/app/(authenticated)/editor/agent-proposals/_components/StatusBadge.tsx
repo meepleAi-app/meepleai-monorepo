@@ -16,7 +16,6 @@ interface StatusBadgeProps {
   status: Status;
 }
 
-/* eslint-disable security/detect-object-injection -- Safe status config Record access */
 const statusConfig: Record<
   Status,
   {
@@ -63,4 +62,3 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     </Badge>
   );
 }
-/* eslint-enable security/detect-object-injection */

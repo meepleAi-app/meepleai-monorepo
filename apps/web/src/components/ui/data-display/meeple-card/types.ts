@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import type { ManaPip } from './parts/ManaPips';
+
 // 9 entity types only
 export type MeepleEntityType =
   | 'game'
@@ -12,8 +14,8 @@ export type MeepleEntityType =
   | 'toolkit'
   | 'tool';
 
-// 5 variants only
-export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero';
+// 6 variants
+export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero' | 'focus';
 
 export interface MeepleCardMetadata {
   icon?: ReactNode;
@@ -37,6 +39,8 @@ export interface NavFooterItem {
   showPlus?: boolean;
   disabled?: boolean;
   onClick?: () => void;
+  onPlusClick?: () => void;
+  href?: string;
 }
 
 export type CardStatus =
@@ -74,6 +78,7 @@ export interface MeepleCardProps {
   coverLabels?: CoverLabel[];
   actions?: MeepleCardAction[];
   navItems?: NavFooterItem[];
+  manaPips?: ManaPip[];
   onClick?: () => void;
   flippable?: boolean;
   flipBackContent?: ReactNode;
@@ -85,13 +90,8 @@ export interface MeepleCardProps {
   onDragEnd?: () => void;
   className?: string;
   customColor?: string;
-}
-
-export interface MobileCardLayoutProps {
-  cards: MeepleCardProps[];
-  activeId?: string;
-  onCardSelect?: (id: string) => void;
-  className?: string;
+  /** Optional test id forwarded to the root wrapper element. */
+  'data-testid'?: string;
 }
 
 export interface Carousel3DProps {

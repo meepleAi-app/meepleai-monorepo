@@ -1,98 +1,238 @@
 /**
  * MSW handlers for library endpoints (browser-safe)
  * Covers: /api/v1/library/*
+ *
+ * Response shapes match the real API Zod schemas:
+ * - UserLibraryEntrySchema  (library.schemas.ts)
+ * - UserLibraryStatsSchema  (library.schemas.ts)
+ * - PaginatedLibraryResponseSchema (library.schemas.ts)
+ *
+ * Data source precedence:
+ * 1. Scenario bridge — when installed, derives the library from
+ *    `scenario.library.ownedGameIds` + `wishlistGameIds` crossed with
+ *    `scenario.games`. Metadata is synthesized.
+ * 2. Local fallback — used by unit tests that don't install the bridge.
  */
 import { http, HttpResponse } from 'msw';
 
 import { mockId, HANDLER_BASE } from '../data/factories';
+import { getScenarioBridge } from '../scenarioBridge';
+import { guardScenarioSwitching } from './_shared';
 
 const API_BASE = HANDLER_BASE;
 
+// Matches UserLibraryEntrySchema from library.schemas.ts
 interface LibraryItem {
   id: string;
+  userId: string;
   gameId: string;
-  name: string;
-  status: 'owned' | 'wishlist' | 'played' | 'want_to_play';
-  rating?: number;
-  playCount: number;
-  notes?: string;
+  gameTitle: string;
+  gamePublisher: string | null;
   addedAt: string;
-  lastPlayedAt?: string;
+  isFavorite: boolean;
+  currentState: 'Nuovo' | 'InPrestito' | 'Wishlist' | 'Owned';
+  hasKb: boolean;
+  kbCardCount: number;
+  kbIndexedCount: number;
+  kbProcessingCount: number;
+  hasRagAccess: boolean;
+  agentIsOwned: boolean;
+  isPrivateGame: boolean;
+  canProposeToCatalog: boolean;
+  averageRating?: number | null;
+  gameImageUrl?: string | null;
+  gameIconUrl?: string | null;
 }
 
-let libraryItems: LibraryItem[] = [
+const MOCK_USER_ID = mockId(1);
+
+/**
+ * Build library items from scenario state when the bridge is active.
+ * Returns null if the bridge is not installed.
+ */
+function libraryFromScenario(): LibraryItem[] | null {
+  const bridge = getScenarioBridge();
+  if (!bridge) return null;
+
+  const { ownedGameIds, wishlistGameIds } = bridge.getLibrary();
+  const gamesById = new Map(bridge.getGames().map(g => [g.id, g]));
+  const items: LibraryItem[] = [];
+  let counter = 200;
+
+  for (const gameId of ownedGameIds) {
+    const game = gamesById.get(gameId);
+    items.push({
+      id: mockId(++counter),
+      userId: MOCK_USER_ID,
+      gameId,
+      gameTitle: game?.title ?? 'Unknown',
+      gamePublisher: (game?.publisher as string | undefined) ?? null,
+      addedAt: new Date().toISOString(),
+      isFavorite: false,
+      currentState: 'Owned',
+      hasKb: false,
+      kbCardCount: 0,
+      kbIndexedCount: 0,
+      kbProcessingCount: 0,
+      hasRagAccess: false,
+      agentIsOwned: true,
+      isPrivateGame: false,
+      canProposeToCatalog: false,
+      averageRating: typeof game?.averageRating === 'number' ? game.averageRating : null,
+    });
+  }
+
+  for (const gameId of wishlistGameIds) {
+    const game = gamesById.get(gameId);
+    items.push({
+      id: mockId(++counter),
+      userId: MOCK_USER_ID,
+      gameId,
+      gameTitle: game?.title ?? 'Unknown',
+      gamePublisher: (game?.publisher as string | undefined) ?? null,
+      addedAt: new Date().toISOString(),
+      isFavorite: false,
+      currentState: 'Wishlist',
+      hasKb: false,
+      kbCardCount: 0,
+      kbIndexedCount: 0,
+      kbProcessingCount: 0,
+      hasRagAccess: false,
+      agentIsOwned: true,
+      isPrivateGame: false,
+      canProposeToCatalog: false,
+    });
+  }
+
+  return items;
+}
+
+function currentLibrary(): LibraryItem[] {
+  return libraryFromScenario() ?? fallbackLibrary;
+}
+
+let fallbackLibrary: LibraryItem[] = [
   {
     id: mockId(201),
+    userId: MOCK_USER_ID,
     gameId: mockId(101),
-    name: 'Catan',
-    status: 'owned',
-    rating: 8,
-    playCount: 15,
+    gameTitle: 'Catan',
+    gamePublisher: 'KOSMOS',
     addedAt: '2024-01-15T10:00:00Z',
-    lastPlayedAt: '2024-12-01T18:30:00Z',
+    isFavorite: true,
+    currentState: 'Owned',
+    hasKb: false,
+    kbCardCount: 0,
+    kbIndexedCount: 0,
+    kbProcessingCount: 0,
+    hasRagAccess: false,
+    agentIsOwned: true,
+    isPrivateGame: false,
+    canProposeToCatalog: false,
+    averageRating: 8,
   },
   {
     id: mockId(202),
+    userId: MOCK_USER_ID,
     gameId: mockId(102),
-    name: 'Ticket to Ride',
-    status: 'owned',
-    rating: 9,
-    playCount: 22,
+    gameTitle: 'Ticket to Ride',
+    gamePublisher: 'Days of Wonder',
     addedAt: '2024-02-20T14:00:00Z',
-    lastPlayedAt: '2024-12-15T20:00:00Z',
+    isFavorite: false,
+    currentState: 'Owned',
+    hasKb: false,
+    kbCardCount: 0,
+    kbIndexedCount: 0,
+    kbProcessingCount: 0,
+    hasRagAccess: false,
+    agentIsOwned: true,
+    isPrivateGame: false,
+    canProposeToCatalog: false,
+    averageRating: 9,
   },
   {
     id: mockId(203),
+    userId: MOCK_USER_ID,
     gameId: mockId(103),
-    name: 'Wingspan',
-    status: 'wishlist',
-    playCount: 0,
+    gameTitle: 'Wingspan',
+    gamePublisher: 'Stonemaier Games',
     addedAt: '2024-06-10T09:00:00Z',
+    isFavorite: false,
+    currentState: 'Wishlist',
+    hasKb: false,
+    kbCardCount: 0,
+    kbIndexedCount: 0,
+    kbProcessingCount: 0,
+    hasRagAccess: false,
+    agentIsOwned: true,
+    isPrivateGame: false,
+    canProposeToCatalog: false,
   },
   {
     id: mockId(204),
+    userId: MOCK_USER_ID,
     gameId: mockId(104),
-    name: 'Scythe',
-    status: 'want_to_play',
-    playCount: 2,
+    gameTitle: 'Scythe',
+    gamePublisher: 'Stonemaier Games',
     addedAt: '2024-03-05T11:00:00Z',
-    lastPlayedAt: '2024-08-20T15:00:00Z',
+    isFavorite: false,
+    currentState: 'Owned',
+    hasKb: false,
+    kbCardCount: 0,
+    kbIndexedCount: 0,
+    kbProcessingCount: 0,
+    hasRagAccess: false,
+    agentIsOwned: true,
+    isPrivateGame: false,
+    canProposeToCatalog: false,
+    averageRating: 9,
   },
 ];
 
+// ─── Stats must be registered BEFORE /library/:id to avoid matching "stats" as an ID ───
+
 export const libraryHandlers = [
+  // GET /api/v1/library/stats — matches UserLibraryStatsSchema
   http.get(`${API_BASE}/api/v1/library/stats`, () => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
+    const items = currentLibrary();
     return HttpResponse.json({
-      totalGames: libraryItems.length,
-      owned: libraryItems.filter(i => i.status === 'owned').length,
-      wishlist: libraryItems.filter(i => i.status === 'wishlist').length,
-      played: libraryItems.filter(i => i.status === 'played').length,
-      wantToPlay: libraryItems.filter(i => i.status === 'want_to_play').length,
-      totalPlays: libraryItems.reduce((sum, i) => sum + i.playCount, 0),
-      averageRating:
-        libraryItems.filter(i => i.rating).reduce((sum, i) => sum + (i.rating || 0), 0) /
-        (libraryItems.filter(i => i.rating).length || 1),
+      totalGames: items.length,
+      favoriteGames: items.filter(i => i.isFavorite).length,
+      privatePdfs: 0,
+      nuovoCount: items.filter(i => i.currentState === 'Nuovo').length,
+      inPrestitoCount: items.filter(i => i.currentState === 'InPrestito').length,
+      wishlistCount: items.filter(i => i.currentState === 'Wishlist').length,
+      ownedCount: items.filter(i => i.currentState === 'Owned').length,
     });
   }),
 
+  // GET /api/v1/library — matches PaginatedLibraryResponseSchema
   http.get(`${API_BASE}/api/v1/library`, ({ request }) => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
+    const items = currentLibrary();
     const url = new URL(request.url);
-    const status = url.searchParams.get('status');
     const page = parseInt(url.searchParams.get('page') || '1');
     const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
-    const filtered = status ? libraryItems.filter(i => i.status === status) : [...libraryItems];
+    const totalCount = items.length;
+    const totalPages = Math.max(Math.ceil(totalCount / pageSize), 1);
     const start = (page - 1) * pageSize;
+    const pageItems = items.slice(start, start + pageSize);
     return HttpResponse.json({
-      items: filtered.slice(start, start + pageSize),
-      totalCount: filtered.length,
+      items: pageItems,
       page,
       pageSize,
-      totalPages: Math.ceil(filtered.length / pageSize),
+      totalCount,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
     });
   }),
 
   http.get(`${API_BASE}/api/v1/library/:id`, ({ params }) => {
-    const item = libraryItems.find(i => i.id === params.id);
+    const item = currentLibrary().find(i => i.id === params.id);
     if (!item) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     return HttpResponse.json(item);
   }),
@@ -100,90 +240,127 @@ export const libraryHandlers = [
   http.post(`${API_BASE}/api/v1/library`, async ({ request }) => {
     const body = (await request.json()) as {
       gameId: string;
-      name: string;
-      status: LibraryItem['status'];
+      notes?: string | null;
+      isFavorite?: boolean;
     };
-    if (libraryItems.find(i => i.gameId === body.gameId)) {
+    if (fallbackLibrary.find(i => i.gameId === body.gameId)) {
       return HttpResponse.json({ error: 'Already in library' }, { status: 409 });
     }
     const newItem: LibraryItem = {
       id: mockId(Math.floor(Math.random() * 9000) + 1000),
+      userId: MOCK_USER_ID,
       gameId: body.gameId,
-      name: body.name,
-      status: body.status,
-      playCount: 0,
+      gameTitle: 'Unknown Game',
+      gamePublisher: null,
       addedAt: new Date().toISOString(),
+      isFavorite: body.isFavorite ?? false,
+      currentState: 'Owned',
+      hasKb: false,
+      kbCardCount: 0,
+      kbIndexedCount: 0,
+      kbProcessingCount: 0,
+      hasRagAccess: false,
+      agentIsOwned: true,
+      isPrivateGame: false,
+      canProposeToCatalog: false,
     };
-    libraryItems.push(newItem);
+    fallbackLibrary.push(newItem);
     return HttpResponse.json(newItem, { status: 201 });
   }),
 
   http.put(`${API_BASE}/api/v1/library/:id`, async ({ params, request }) => {
-    const idx = libraryItems.findIndex(i => i.id === params.id);
+    const idx = fallbackLibrary.findIndex(i => i.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
     const body = (await request.json()) as Partial<LibraryItem>;
-    libraryItems[idx] = { ...libraryItems[idx], ...body };
-    return HttpResponse.json(libraryItems[idx]);
+    fallbackLibrary[idx] = { ...fallbackLibrary[idx], ...body };
+    return HttpResponse.json(fallbackLibrary[idx]);
   }),
 
   http.delete(`${API_BASE}/api/v1/library/:id`, ({ params }) => {
-    const idx = libraryItems.findIndex(i => i.id === params.id);
+    const idx = fallbackLibrary.findIndex(i => i.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    libraryItems.splice(idx, 1);
+    fallbackLibrary.splice(idx, 1);
     return HttpResponse.json({ success: true });
-  }),
-
-  http.post(`${API_BASE}/api/v1/library/:id/play`, async ({ params }) => {
-    const idx = libraryItems.findIndex(i => i.id === params.id);
-    if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    libraryItems[idx] = {
-      ...libraryItems[idx],
-      playCount: libraryItems[idx].playCount + 1,
-      lastPlayedAt: new Date().toISOString(),
-    };
-    return HttpResponse.json(libraryItems[idx]);
   }),
 ];
 
 // Helper to reset state between tests
 export const resetLibraryState = () => {
-  libraryItems = [
+  fallbackLibrary = [
     {
       id: mockId(201),
+      userId: MOCK_USER_ID,
       gameId: mockId(101),
-      name: 'Catan',
-      status: 'owned',
-      rating: 8,
-      playCount: 15,
+      gameTitle: 'Catan',
+      gamePublisher: 'KOSMOS',
       addedAt: '2024-01-15T10:00:00Z',
-      lastPlayedAt: '2024-12-01T18:30:00Z',
+      isFavorite: true,
+      currentState: 'Owned',
+      hasKb: false,
+      kbCardCount: 0,
+      kbIndexedCount: 0,
+      kbProcessingCount: 0,
+      hasRagAccess: false,
+      agentIsOwned: true,
+      isPrivateGame: false,
+      canProposeToCatalog: false,
+      averageRating: 8,
     },
     {
       id: mockId(202),
+      userId: MOCK_USER_ID,
       gameId: mockId(102),
-      name: 'Ticket to Ride',
-      status: 'owned',
-      rating: 9,
-      playCount: 22,
+      gameTitle: 'Ticket to Ride',
+      gamePublisher: 'Days of Wonder',
       addedAt: '2024-02-20T14:00:00Z',
-      lastPlayedAt: '2024-12-15T20:00:00Z',
+      isFavorite: false,
+      currentState: 'Owned',
+      hasKb: false,
+      kbCardCount: 0,
+      kbIndexedCount: 0,
+      kbProcessingCount: 0,
+      hasRagAccess: false,
+      agentIsOwned: true,
+      isPrivateGame: false,
+      canProposeToCatalog: false,
+      averageRating: 9,
     },
     {
       id: mockId(203),
+      userId: MOCK_USER_ID,
       gameId: mockId(103),
-      name: 'Wingspan',
-      status: 'wishlist',
-      playCount: 0,
+      gameTitle: 'Wingspan',
+      gamePublisher: 'Stonemaier Games',
       addedAt: '2024-06-10T09:00:00Z',
+      isFavorite: false,
+      currentState: 'Wishlist',
+      hasKb: false,
+      kbCardCount: 0,
+      kbIndexedCount: 0,
+      kbProcessingCount: 0,
+      hasRagAccess: false,
+      agentIsOwned: true,
+      isPrivateGame: false,
+      canProposeToCatalog: false,
     },
     {
       id: mockId(204),
+      userId: MOCK_USER_ID,
       gameId: mockId(104),
-      name: 'Scythe',
-      status: 'want_to_play',
-      playCount: 2,
+      gameTitle: 'Scythe',
+      gamePublisher: 'Stonemaier Games',
       addedAt: '2024-03-05T11:00:00Z',
-      lastPlayedAt: '2024-08-20T15:00:00Z',
+      isFavorite: false,
+      currentState: 'Owned',
+      hasKb: false,
+      kbCardCount: 0,
+      kbIndexedCount: 0,
+      kbProcessingCount: 0,
+      hasRagAccess: false,
+      agentIsOwned: true,
+      isPrivateGame: false,
+      canProposeToCatalog: false,
+      averageRating: 9,
     },
   ];
 };

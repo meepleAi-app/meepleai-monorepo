@@ -3991,6 +3991,68 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("game_night_rsvps", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightSessionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<Guid>("GameNightEventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_night_event_id");
+
+                    b.Property<string>("GameTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("game_title");
+
+                    b.Property<int>("PlayOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("play_order");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("WinnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("winner_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId")
+                        .HasDatabaseName("IX_game_night_sessions_game_id");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("IX_game_night_sessions_session_id");
+
+                    b.HasIndex("GameNightEventId", "PlayOrder")
+                        .IsUnique()
+                        .HasDatabaseName("IX_game_night_sessions_event_play_order");
+
+                    b.ToTable("game_night_sessions", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GamePhaseTemplateEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5458,6 +5520,9 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserDicePresetsJson")
+                        .HasColumnType("jsonb");
 
                     b.Property<int>("Version")
                         .ValueGeneratedOnAdd()
@@ -8443,6 +8508,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<int?>("CurrentTurnIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_turn_index");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -8501,6 +8570,19 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
 
+                    b.Property<string>("TurnOrderJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("turn_order_json");
+
+                    b.Property<string>("TurnOrderMethod")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("turn_order_method");
+
+                    b.Property<int?>("TurnOrderSeed")
+                        .HasColumnType("integer")
+                        .HasColumnName("turn_order_seed");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -8549,6 +8631,10 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid?>("GameNightId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_night_id");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -8568,6 +8654,8 @@ namespace Api.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedBy");
+
+                    b.HasIndex("GameNightId");
 
                     b.HasIndex("SessionId", "EventType");
 
@@ -9933,6 +10021,12 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int>("GameDataStatus")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("HasKnowledgeBase")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("has_knowledge_base");
+
                     b.Property<bool>("HasUploadedPdf")
                         .HasColumnType("boolean");
 
@@ -10026,6 +10120,10 @@ namespace Api.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_shared_games_bgg_id")
                         .HasFilter("bgg_id IS NOT NULL");
+
+                    b.HasIndex("HasKnowledgeBase")
+                        .HasDatabaseName("ix_shared_games_has_knowledge_base")
+                        .HasFilter("has_knowledge_base = true");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_shared_games_status")
@@ -11285,6 +11383,47 @@ namespace Api.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("chk_game_sessions_duration", "duration_minutes > 0");
                         });
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserHandSlotEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EntityImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("EntityLabel")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("EntityType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("PinnedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SlotType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "SlotType")
+                        .IsUnique()
+                        .HasDatabaseName("IX_user_hand_slots_user_id_slot_type");
+
+                    b.ToTable("user_hand_slots", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity", b =>
@@ -12997,6 +13136,17 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Event");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightSessionEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.GameNightEventEntity", "GameNightEvent")
+                        .WithMany("Sessions")
+                        .HasForeignKey("GameNightEventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GameNightEvent");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GamePhaseTemplateEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
@@ -14193,6 +14343,17 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("UserLibraryEntry");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserHandSlotEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity", "PrivateGame")
@@ -14390,6 +14551,8 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightEventEntity", b =>
                 {
                     b.Navigation("Rsvps");
+
+                    b.Navigation("Sessions");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameSessionStateEntity", b =>

@@ -4,6 +4,9 @@
  * Displays an animated meeple character representing the AI assistant
  * with different visual states to communicate AI activity/confidence.
  *
+ * **Active consumers (transitive):**
+ * - `ui/meeple/chat-message.tsx` → `chat-unified/ChatMessageList.tsx` (#292)
+ *
  * @see docs/04-frontend/wireframes-playful-boardroom.md (lines 358-389)
  * @see docs/04-frontend/improvements/03-brainstorm-ideas.md (#2.1 AI Avatar)
  */

@@ -4,7 +4,13 @@
  * Displays chat messages with role-based layout, confidence badges,
  * citations, typing indicators, and feedback buttons following Playful Boardroom design.
  *
+ * **Active consumers:**
+ * - `chat-unified/ChatMessageList.tsx` — composed via `toChatMessageProps` adapter (#292).
+ *   Citations + TTS + strategy badge + technical details panel remain in the
+ *   orchestrator (ChatMessageList) — ChatMessage handles bubble/avatar/feedback.
+ *
  * @see docs/04-frontend/wireframes-playful-boardroom.md (Page 4 - Chat AI)
+ * @see docs/development/chat-message-api-compatibility.md (#292 spike findings)
  * @issue #1831 (UI-004)
  * @issue #3352 (AI Response Feedback System)
  */

@@ -2,7 +2,15 @@
  * Upgrade Prompt Component
  * Epic #4068 - Issue #4179
  *
- * Shows upgrade CTA when user tries to access tier-locked features
+ * Shows upgrade CTA when user tries to access tier-locked features.
+ *
+ * **Active consumers:**
+ * - `ui/gates/FeatureGate.tsx`
+ * - `ui/gates/permission-gate.tsx`
+ * - `ui/gates/tier-gate.tsx`
+ *
+ * (Previous `@status ORPHAN` annotation was incorrect — removed during
+ * #292 cycle after identifying the gate system consumers.)
  */
 
 'use client';
@@ -31,20 +39,25 @@ const TIER_LABELS: Record<Exclude<UserTier, 'free'>, string> = {
   normal: 'Normal',
   premium: 'Premium',
   pro: 'Pro',
-  enterprise: 'Enterprise'
+  enterprise: 'Enterprise',
 };
 
 const TIER_BENEFITS: Record<Exclude<UserTier, 'free'>, string[]> = {
   normal: ['100 games', '500MB storage', 'Drag & drop'],
   premium: ['500 games', '5GB storage', 'Bulk actions', 'Agent creation'],
   pro: ['500 games', '5GB storage', 'Bulk actions', 'Agent creation'], // Alias
-  enterprise: ['Unlimited games', 'Unlimited storage', 'Advanced analytics', 'Priority support']
+  enterprise: ['Unlimited games', 'Unlimited storage', 'Advanced analytics', 'Priority support'],
 };
 
 /**
  * Inline variant - compact prompt shown within card
  */
-function InlineUpgradePrompt({ requiredTier, featureName, onUpgrade, className }: UpgradePromptProps) {
+function InlineUpgradePrompt({
+  requiredTier,
+  featureName,
+  onUpgrade,
+  className,
+}: UpgradePromptProps) {
   return (
     <div
       className={cn(
@@ -85,7 +98,12 @@ function InlineUpgradePrompt({ requiredTier, featureName, onUpgrade, className }
 /**
  * Modal variant - prominent overlay prompt
  */
-function ModalUpgradePrompt({ requiredTier, featureName, onUpgrade, className }: UpgradePromptProps) {
+function ModalUpgradePrompt({
+  requiredTier,
+  featureName,
+  onUpgrade,
+  className,
+}: UpgradePromptProps) {
   return (
     <div
       className={cn(
@@ -106,10 +124,7 @@ function ModalUpgradePrompt({ requiredTier, featureName, onUpgrade, className }:
           <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600">
             <Crown className="w-5 h-5 text-white" />
           </div>
-          <h3
-            id="upgrade-prompt-title"
-            className="text-lg font-bold text-foreground"
-          >
+          <h3 id="upgrade-prompt-title" className="text-lg font-bold text-foreground">
             {TIER_LABELS[requiredTier]} Required
           </h3>
         </div>

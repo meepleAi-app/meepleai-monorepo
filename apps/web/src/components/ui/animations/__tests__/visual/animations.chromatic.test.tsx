@@ -1,15 +1,16 @@
 /**
  * Animation Components Chromatic Visual Tests (Issue #2965 Wave 9)
  *
- * Visual regression tests for FadeIn, PageTransition, and StaggerChildren.
+ * Visual regression tests for FadeIn and StaggerChildren.
  * Tests animation components in light and dark themes.
+ *
+ * Note: PageTransition stories were removed via Path D (YAGNI) in #293 cycle.
  */
 
 import React from 'react';
 import { describe, it } from 'vitest';
 import type { Meta, StoryObj } from '@storybook/react';
 import { FadeIn } from '../../FadeIn';
-import { PageTransition } from '../../PageTransition';
 import { StaggerChildren } from '../../StaggerChildren';
 
 /**
@@ -23,13 +24,6 @@ describe('Animation Components - Chromatic Visual Tests', () => {
     it('should match visual snapshot - Direction down', () => {});
     it('should match visual snapshot - Direction left', () => {});
     it('should match visual snapshot - Direction right', () => {});
-    it('should match visual snapshot - Dark mode', () => {});
-  });
-
-  describe('PageTransition', () => {
-    it('should match visual snapshot - Fade variant', () => {});
-    it('should match visual snapshot - Slide variant', () => {});
-    it('should match visual snapshot - Scale variant', () => {});
     it('should match visual snapshot - Dark mode', () => {});
   });
 
@@ -59,9 +53,7 @@ const ThemeWrapper = ({
 }: {
   children: React.ReactNode;
   dark?: boolean;
-}) => (
-  <div className={dark ? 'dark bg-slate-900 p-8' : 'bg-background p-8'}>{children}</div>
-);
+}) => <div className={dark ? 'dark bg-slate-900 p-8' : 'bg-background p-8'}>{children}</div>;
 
 // ============================================
 // FadeIn Stories
@@ -145,53 +137,6 @@ export const FadeInDarkMode: FadeInStory = {
 };
 
 // ============================================
-// PageTransition Stories (separate meta for Storybook)
-// ============================================
-
-export const PageTransitionFade: FadeInStory = {
-  render: () => (
-    <ThemeWrapper>
-      <PageTransition variant="fade">
-        <SampleCard title="Page Transition - Fade" />
-      </PageTransition>
-    </ThemeWrapper>
-  ),
-};
-
-export const PageTransitionSlide: FadeInStory = {
-  render: () => (
-    <ThemeWrapper>
-      <PageTransition variant="slide">
-        <SampleCard title="Page Transition - Slide" />
-      </PageTransition>
-    </ThemeWrapper>
-  ),
-};
-
-export const PageTransitionScale: FadeInStory = {
-  render: () => (
-    <ThemeWrapper>
-      <PageTransition variant="scale">
-        <SampleCard title="Page Transition - Scale" />
-      </PageTransition>
-    </ThemeWrapper>
-  ),
-};
-
-export const PageTransitionDarkMode: FadeInStory = {
-  render: () => (
-    <ThemeWrapper dark>
-      <PageTransition variant="fade">
-        <SampleCard title="Page Transition Dark" dark />
-      </PageTransition>
-    </ThemeWrapper>
-  ),
-  parameters: {
-    backgrounds: { default: 'dark' },
-  },
-};
-
-// ============================================
 // StaggerChildren Stories
 // ============================================
 
@@ -261,7 +206,7 @@ export const ThemeComparison: FadeInStory = {
     </div>
   ),
   decorators: [
-    (Story) => (
+    Story => (
       <div className="bg-slate-500 p-8">
         <Story />
       </div>

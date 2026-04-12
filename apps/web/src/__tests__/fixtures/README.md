@@ -485,3 +485,41 @@ See `TESTING_PATTERNS.md` for comprehensive guidance on React act() warnings and
 - Async Test Helpers: `__tests__/utils/async-test-helpers.ts`
 - Testing Patterns: `TESTING_PATTERNS.md`
 - API Types: `lib/api.ts`
+
+## Convenzione Selettori (2026-04-12)
+
+### Priorità selettori per nuovi test
+
+1. **`getByRole`** ✅ preferito — semantico, accessibile, resistente a cambi di lingua e DOM
+   ```tsx
+   getByRole('button', { name: /salva/i })
+   getByRole('alert')
+   getByRole('status')
+   getByRole('dialog', { name: /conferma/i })
+   ```
+
+2. **`getByLabelText`** ✅ ottimo per form
+   ```tsx
+   getByLabelText(/email/i)
+   getByLabelText(/password/i)
+   ```
+
+3. **`getByText(UI_CONSTANT)`** ⚠️ accettabile per empty state/messaggi
+   ```tsx
+   import { EMPTY, ERROR } from '../fixtures/test-strings';
+   getByText(EMPTY.notifications)
+   ```
+
+4. **`getByText('stringa italiana hardcoded')`** ❌ da evitare nei nuovi test
+5. **`getByTestId`** ❌ ultima risorsa — documenta il motivo nel commento
+
+### Quando usare test-strings.ts
+
+Usa le costanti in `test-strings.ts` quando:
+- Il componente non ha un `role` semantico appropriato
+- Il testo è un messaggio di stato (empty state, errore, caricamento)
+- Il componente non usa `useIntl()` / `FormattedMessage`
+
+Non serve per:
+- Titoli di giochi o dati utente nei test (invarianti di test, non UI)
+- Contenuto dinamico costruito nel test stesso

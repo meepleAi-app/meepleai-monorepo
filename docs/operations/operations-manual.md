@@ -1192,6 +1192,30 @@ curl http://localhost:3000/
 
 **Init container**: `ollama-pull` (curlimages/curl:8.12.1) runs once after Ollama is healthy to pull the `nomic-embed-text` model. CPU 1.0 / RAM 512M, `restart: "no"`.
 
+### First-Time Model Setup
+
+The compose stack auto-pulls a baseline embedding model, but the LLM models needed by the RAG pipeline must be pulled separately. Use the idempotent helper script:
+
+```bash
+# Pulls qwen2.5:1.5b + mxbai-embed-large by default (idempotent — skips models already pulled)
+docker exec meepleai-ollama bash /scripts/ollama-init.sh
+
+# Pull additional / different models
+docker exec -e OLLAMA_MODELS="qwen2.5:1.5b mxbai-embed-large llama3:8b" \
+  meepleai-ollama bash /scripts/ollama-init.sh
+```
+
+**Verify**:
+
+```bash
+docker exec meepleai-ollama ollama list
+# Expected output: rows for each model in OLLAMA_MODELS
+```
+
+**Troubleshooting** — if the RAG chat endpoint returns a `503` / "LLM model '...' is not available" error, the model is missing on the Ollama server. Run the script above with the model name from the error message.
+
+> **Note** (post-PR #267 fix): `OllamaLlmClient` now detects HTTP 404 with "model" in the body and surfaces a distinctive error pointing operators to the exact `ollama pull` command. The previous behaviour returned an empty RAG response silently.
+
 ### Daily Operations
 
 ```bash
@@ -2665,6 +2689,7 @@ Existing runbooks in `docs/operations/runbooks/`:
 | `error-spike.md` | Sudden increase in error rate |
 | `high-error-rate.md` | Sustained high error rate (> 5%) |
 | `infrastructure-monitoring.md` | Monitoring infrastructure issues |
+| `session-autosave-stale.md` | `AutoSaveSessionJob` has not run in over 120s (2 missed ticks) |
 | `slow-performance.md` | API latency exceeding thresholds |
 
 ---
@@ -2673,6 +2698,7 @@ Existing runbooks in `docs/operations/runbooks/`:
 
 | File | Purpose |
 |------|---------|
+| `docs/operations/ci-cd-pipeline.md` | 3-stage CI/CD pipeline reference (Spec R1+R2) |
 | `infra/docker-compose.yml` | Base compose (environment-neutral) |
 | `infra/compose.dev.yml` | Development overrides |
 | `infra/compose.prod.yml` | Production overrides |

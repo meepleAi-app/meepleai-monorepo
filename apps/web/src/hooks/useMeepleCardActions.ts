@@ -17,8 +17,10 @@
 
 import { useMemo } from 'react';
 
-import { BookMarked, BookX, Library } from 'lucide-react';
+import { ArrowRight, BookMarked, Library } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
+import { toast } from '@/components/layout/Toast';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import {
   useAddGameToLibrary,
@@ -51,16 +53,24 @@ export interface UseMeepleCardActionsOptions {
 /**
  * Builds library actions for a game in 'catalog' context.
  *
+ * S3 (library-to-game epic) — direct add + auto-navigate flow.
+ *
  * Visibility matrix:
- * | Action              | Guest              | User, not in lib   | User, in lib |
- * |---------------------|--------------------|--------------------|--------------|
- * | Add to library      | visible + disabled | visible + enabled  | hidden       |
- * | Remove from library | hidden             | hidden             | visible + enabled |
+ * | Action              | Guest              | User, not in lib   | User, in lib       |
+ * |---------------------|--------------------|--------------------|--------------------|
+ * | Add to library      | visible + disabled | visible + enabled  | hidden             |
+ * | Go to game page     | hidden             | hidden             | visible + enabled  |
+ * | Remove from library | hidden             | hidden             | hidden (via wizard)|
+ *
+ * On successful direct add (no wizard): show a 2s toast and navigate to
+ * `/library/games/{gameId}`. The wizard path remains available via the
+ * `onAddToLibrary` callback.
  */
 function useGameCatalogActions(
   gameId: string,
   options: UseMeepleCardActionsOptions
 ): QuickAction[] {
+  const router = useRouter();
   const { data: user } = useCurrentUser();
   const isAuthenticated = !!user;
 
@@ -71,10 +81,9 @@ function useGameCatalogActions(
   const isInLibrary = libraryStatus?.inLibrary ?? false;
 
   const addToLibrary = useAddGameToLibrary();
-  const removeFromLibrary = useRemoveGameFromLibrary();
 
   // Destructure callbacks to avoid options object reference in deps (prevents infinite re-renders)
-  const { onAddToLibrary, onRemoveFromLibrary } = options;
+  const { onAddToLibrary } = options;
 
   return useMemo((): QuickAction[] => {
     const addAction: QuickAction = {
@@ -82,42 +91,47 @@ function useGameCatalogActions(
       label: 'Aggiungi a Libreria',
       onClick: () => {
         if (onAddToLibrary) {
+          // Wizard path — caller opens a modal for custom metadata
           onAddToLibrary();
-        } else {
-          addToLibrary.mutate({ gameId });
+          return;
         }
+        // S3 — direct add + toast + auto-navigate
+        addToLibrary.mutate(
+          { gameId },
+          {
+            onSuccess: () => {
+              toast.success('Aggiunto alla libreria');
+              router.push(`/library/games/${gameId}`);
+            },
+            onError: error => {
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : 'Impossibile aggiungere il gioco. Riprova.';
+              toast.error(message);
+            },
+          }
+        );
       },
       // Guest: visible but disabled — action exists, requires login
       disabled: !isAuthenticated,
       disabledTooltip: 'Accedi per aggiungere alla libreria',
-      // Already in library: hide entirely — action not applicable
+      // Already in library: hide entirely — replaced by "Vai al gioco" action below
       hidden: isInLibrary,
     };
 
-    const removeAction: QuickAction = {
-      icon: BookX,
-      label: 'Rimuovi da Libreria',
+    const goToGameAction: QuickAction = {
+      icon: ArrowRight,
+      label: 'Vai al gioco',
       onClick: () => {
-        if (onRemoveFromLibrary) {
-          onRemoveFromLibrary();
-        } else {
-          removeFromLibrary.mutate(gameId);
-        }
+        router.push(`/library/games/${gameId}`);
       },
-      // Guest or not in library: hide entirely — action not applicable
+      // Only visible for authenticated users who already own the game
       hidden: !isAuthenticated || !isInLibrary,
     };
 
-    return [addAction, removeAction];
-  }, [
-    gameId,
-    isAuthenticated,
-    isInLibrary,
-    addToLibrary,
-    removeFromLibrary,
-    onAddToLibrary,
-    onRemoveFromLibrary,
-  ]);
+    return [addAction, goToGameAction];
+  }, [gameId, isAuthenticated, isInLibrary, addToLibrary, onAddToLibrary, router]);
 }
 
 /**

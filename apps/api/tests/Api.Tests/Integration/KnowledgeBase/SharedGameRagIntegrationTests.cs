@@ -181,6 +181,7 @@ public sealed class SharedGameRagIntegrationTests
         private static readonly Guid TestGameId = new("50000000-0000-0000-0000-000000000001");
         private static readonly Guid TestSharedGameId = new("60000000-0000-0000-0000-000000000001");
         private static readonly Guid TestPdfDocId = new("70000000-0000-0000-0000-000000000001");
+        private static readonly Guid TestUploaderUserId = new("80000000-0000-0000-0000-000000000001");
 
         public PostgresFullTextSearchTests(SharedTestcontainersFixture fixture)
         {
@@ -211,6 +212,31 @@ public sealed class SharedGameRagIntegrationTests
             }
         }
 
+        private async Task SeedUploaderAsync(Guid userId)
+        {
+            // Idempotent seed: only add if not present to support tests that seed multiple PDFs with the same uploader.
+            var exists = await _dbContext!.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.Id == userId, TestCancellationToken);
+            if (exists)
+            {
+                return;
+            }
+
+            _dbContext.Users.Add(new UserEntity
+            {
+                Id = userId,
+                Email = $"uploader-{userId:N}@tests.meepleai.local",
+                DisplayName = "SharedGameRag Test Uploader",
+                PasswordHash = "test-hash",
+                Role = "admin",
+                Tier = "free",
+                CreatedAt = DateTime.UtcNow,
+                Status = "Active",
+            });
+            await _dbContext.SaveChangesAsync(TestCancellationToken);
+        }
+
         public async ValueTask DisposeAsync()
         {
             _dbContext?.Dispose();
@@ -231,7 +257,9 @@ public sealed class SharedGameRagIntegrationTests
         [Fact]
         public async Task FullTextSearchAsync_WithSharedGameId_ShouldExecuteWithoutError()
         {
-            // Arrange — seed a game and text chunks with SharedGameId
+            // Arrange — seed a user (FK target), game and text chunks with SharedGameId
+            await SeedUploaderAsync(TestUploaderUserId);
+
             _dbContext!.Games.Add(new GameEntity
             {
                 Id = TestGameId,
@@ -246,7 +274,7 @@ public sealed class SharedGameRagIntegrationTests
                 FileName = "catan-rules.pdf",
                 FilePath = "/uploads/catan-rules.pdf",
                 FileSizeBytes = 50000,
-                UploadedByUserId = Guid.NewGuid(),
+                UploadedByUserId = TestUploaderUserId,
                 UploadedAt = DateTime.UtcNow,
                 ProcessingState = "Ready",
                 IsActiveForRag = true,
@@ -337,6 +365,8 @@ public sealed class SharedGameRagIntegrationTests
             // Arrange — seed chunks where GameId differs from SharedGameId
             // This tests the OR clause: a user searches by SharedGameId but the chunk's
             // GameId is set to the private game or a different ID.
+            await SeedUploaderAsync(TestUploaderUserId);
+
             var privateGameId = Guid.NewGuid();
             var sharedCatalogId = new Guid("60000000-0000-0000-0000-000000000099");
             var pdfId = Guid.NewGuid();
@@ -355,7 +385,7 @@ public sealed class SharedGameRagIntegrationTests
                 FileName = "private-rules.pdf",
                 FilePath = "/uploads/private-rules.pdf",
                 FileSizeBytes = 30000,
-                UploadedByUserId = Guid.NewGuid(),
+                UploadedByUserId = TestUploaderUserId,
                 UploadedAt = DateTime.UtcNow,
                 ProcessingState = "Ready",
                 IsActiveForRag = true,

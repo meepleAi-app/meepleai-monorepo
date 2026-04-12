@@ -128,7 +128,7 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
                   `${colors.accentBg}/30`
                 )}
               >
-                <ChatStatusBadge status={data.status} showLabel size="md" />
+                <ChatStatusBadge status={data.status} />
                 {data.agentModel && (
                   <span
                     className={cn(
@@ -244,7 +244,6 @@ export const ChatExtraMeepleCard = React.memo(function ChatExtraMeepleCard({
               {data.gameName && (
                 <div className="flex items-center gap-3 rounded-lg bg-white/60 border border-slate-200/40 p-3">
                   {data.gameThumbnailUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={data.gameThumbnailUrl}
                       alt={data.gameName}

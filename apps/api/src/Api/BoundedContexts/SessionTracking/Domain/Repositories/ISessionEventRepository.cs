@@ -37,4 +37,14 @@ public interface ISessionEventRepository
     /// Adds a new session event.
     /// </summary>
     Task AddAsync(SessionEvent sessionEvent, CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets session events by game night ID, ordered chronologically.
+    /// Used for the cross-game diary timeline.
+    /// </summary>
+    Task<IEnumerable<SessionEvent>> GetByGameNightIdAsync(
+        Guid gameNightId,
+        int limit = 200,
+        int offset = 0,
+        CancellationToken ct = default);
 }

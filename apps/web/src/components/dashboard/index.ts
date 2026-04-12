@@ -14,7 +14,7 @@ export { HeroBanner } from './HeroBanner';
 export { QuickActionsRow } from './QuickActionsRow';
 export { DashboardScrollRow } from './DashboardScrollRow';
 
-// Dashboard V2 Components (Issue #4581)
+// Dashboard pieces (Issue #4581)
 export { EmptyState } from './empty-states';
 export { FilterBar } from './filter-bar';
 export { GameCollectionGrid } from './game-collection-grid';

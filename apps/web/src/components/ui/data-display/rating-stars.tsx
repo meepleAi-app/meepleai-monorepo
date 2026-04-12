@@ -1,3 +1,14 @@
+/**
+ * RatingStars — star rating display with configurable scale and size.
+ *
+ * Use this on pages OUTSIDE the `MeepleCard` system (e.g., `GameHeader`, review
+ * lists, game detail hero). `MeepleCard` itself uses the internal token-based
+ * `parts/Rating.tsx` for its grid/list/featured variants.
+ *
+ * Features: half-stars, BGG 10-point → 5-star conversion, muted variant,
+ * optional numeric value display.
+ */
+
 import React from 'react';
 
 import { Star } from 'lucide-react';

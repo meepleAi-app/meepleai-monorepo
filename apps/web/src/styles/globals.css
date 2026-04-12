@@ -719,3 +719,17 @@
     animation: none;
   }
 }
+
+/* ============================================================================
+ * Chat slide-over panel animations (Phase 4)
+ * ============================================================================ */
+@keyframes chatPanelSlideIn {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

@@ -52,8 +52,10 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         if (user is null)
             return TierLimits.FreeTier;
 
-        // Admin users get unlimited access
-        if (string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase))
+        // SuperAdmin, Admin and Editor users get unlimited access
+        if (string.Equals(user.Role, "superadmin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(user.Role, "editor", StringComparison.OrdinalIgnoreCase))
             return TierLimits.Unlimited;
 
         // Contributors are resolved as premium

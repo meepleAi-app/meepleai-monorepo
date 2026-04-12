@@ -2,14 +2,12 @@
  * Gaming Hub Dashboard
  *
  * Authenticated user dashboard with gaming-focused hub.
- * Uses DashboardClient with HeroBanner, QuickActionsRow,
- * and MeepleCard-based game sections.
+ * Uses DashboardClient with 4 hub blocks: Giochi, Sessioni, Agenti AI, Toolkit.
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
 
-import { DashboardClient } from './dashboard-client';
-import { DashboardMobile } from './dashboard-mobile';
+import { DashboardClient } from './DashboardClient';
 
 import type { Metadata } from 'next';
 
@@ -29,12 +27,7 @@ export const dynamic = 'force-dynamic';
 export default function GamingHubDashboardPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <div className="md:hidden">
-        <DashboardMobile />
-      </div>
-      <div className="hidden md:block">
-        <DashboardClient />
-      </div>
+      <DashboardClient />
     </RequireRole>
   );
 }

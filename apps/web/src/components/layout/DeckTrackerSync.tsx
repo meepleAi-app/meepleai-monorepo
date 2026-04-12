@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 interface DeckTrackerSyncProps {
   entity: MeepleEntityType;
@@ -13,17 +13,9 @@ interface DeckTrackerSyncProps {
   imageUrl?: string;
 }
 
-export function DeckTrackerSync({
-  entity,
-  id,
-  title,
-  href,
-  subtitle,
-  imageUrl,
-}: DeckTrackerSyncProps) {
-  const drawCard = useCardHand(s => s.drawCard);
+export function DeckTrackerSync({ entity, id, title, href }: DeckTrackerSyncProps) {
   useEffect(() => {
-    drawCard({ id, entity, title, href, subtitle, imageUrl });
+    useRecentsStore.getState().push({ id, entity, title, href });
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }

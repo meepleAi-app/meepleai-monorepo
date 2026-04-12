@@ -110,7 +110,6 @@ function PhotoAttachmentCard({ attachment, onClick, canDelete, onDelete }: Photo
         }}
       >
         {attachment.thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={attachment.thumbnailUrl}
             alt={attachment.caption || 'Session photo'}
@@ -363,7 +362,6 @@ export function SessionPhotoGallery({
                 {lightboxLoading ? (
                   <Skeleton className="h-64 w-full" />
                 ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={
                       lightboxDetail?.downloadUrl ||

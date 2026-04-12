@@ -3,6 +3,13 @@ name: CI
 on:
   pull_request:
     branches: [main, main-dev, main-staging, frontend-dev, backend-dev]
+  push:
+    # Spec R2 — CI optimization (2026-04-09): ci.yml must run on push to
+    # main-staging so deploy-staging.yml can gate on its conclusion via
+    # workflow_run. Only main-staging is listed here to avoid duplicate
+    # CI runs on every push to other branches (the pull_request trigger
+    # already covers feature branches via the PR flow).
+    branches: [main-staging]
   workflow_dispatch:
   workflow_call:  # Allow reuse by deploy-staging.yml
 
@@ -130,24 +137,30 @@ jobs:
           dotnet-version: '9.0.x'
           working-directory: apps/api
 
+      - name: Install dotnet-coverage
+        run: |
+          dotnet tool install --global dotnet-coverage
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Run Unit Tests
+      - name: Run Unit Tests with Coverage
         timeout-minutes: 30
         env:
           CI: true
         run: |
-          echo "🧪 Running unit tests..."
-          dotnet test \
-            --filter "Category=Unit" \
-            --logger "console;verbosity=minimal" \
-            --no-build \
-            --configuration Release \
-            --blame-hang-timeout 5min \
-            -p:CollectCoverage=true \
-            -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/unit-coverage.xml
+          echo "🧪 Running unit tests with dotnet-coverage..."
+          mkdir -p coverage
+          dotnet-coverage collect \
+            "dotnet test MeepleAI.Api.sln \
+              --filter Category=Unit \
+              --settings tests/Api.Tests/unit.runsettings \
+              --no-build \
+              --configuration Release \
+              --blame-hang-timeout 5min" \
+            -f cobertura \
+            -o coverage/unit-coverage.xml
           echo "✅ Unit tests passed"
 
       - name: Upload Coverage
@@ -155,17 +168,29 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: apps/api/coverage/unit-coverage.xml
-          flags: backend-unit
+          flags: backend-unit,backend
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 
   # Backend Integration Tests (requires service containers, runs in parallel with unit tests)
   # Phase 2+3: 4 parallel threads per shard, 3-shard matrix for ~4-12x total speedup
+  #
+  # Spec R1 — CI optimization (2026-04-09): backend-integration runs ONLY on
+  # release-candidate PRs (target main-staging or main) and on workflow_dispatch
+  # / workflow_call (from deploy-staging.yml). Feature PRs against main-dev
+  # skip this job to keep wall-clock under 10min on the commit stage. Coverage
+  # is regained at the acceptance stage when merging into main-staging.
   backend-integration:
     name: Backend - Integration (${{ matrix.shard.name }})
     runs-on: ${{ needs.changes.outputs.runner }}
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    if: |
+      github.event_name == 'workflow_dispatch'
+      || github.event_name == 'workflow_call'
+      || (
+        (github.base_ref == 'main-staging' || github.base_ref == 'main')
+        && needs.changes.outputs.backend == 'true'
+      )
     strategy:
       fail-fast: false
       matrix:

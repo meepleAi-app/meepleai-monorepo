@@ -6,6 +6,13 @@ import type { ComponentType } from 'react';
 
 // ─── Data Display ─────────────────────────────────────────────────────────────
 
+import { CatalogCarouselSection } from '@/app/(authenticated)/library/sections/CatalogCarouselSection';
+import { ContinuePlayingSection } from '@/app/(authenticated)/library/sections/ContinuePlayingSection';
+import { LibraryFilterBar } from '@/app/(authenticated)/library/sections/LibraryFilterBar';
+import { LibraryHeader } from '@/app/(authenticated)/library/sections/LibraryHeader';
+import { LibraryHubCarousel } from '@/app/(authenticated)/library/sections/LibraryHubCarousel';
+import { PersonalLibrarySection } from '@/app/(authenticated)/library/sections/PersonalLibrarySection';
+import { WishlistCarouselSection } from '@/app/(authenticated)/library/sections/WishlistCarouselSection';
 import { ActivityFeed } from '@/components/admin/ActivityFeed';
 import { ActivityFeed as ActivityTimeline } from '@/components/admin/ActivityFeed';
 import { AgentBuilderHeader } from '@/components/admin/agent-builder/AgentBuilderHeader';
@@ -110,11 +117,19 @@ import { ActivityTable } from '@/components/admin/users/activity-table';
 import { InlineRoleSelect } from '@/components/admin/users/InlineRoleSelect';
 import { PermissionsMatrix } from '@/components/admin/users/permissions-matrix';
 import { RoleCard } from '@/components/admin/users/role-card';
+import { ChatCitationCard } from '@/components/chat/panel/ChatCitationCard';
+import { ChatContextSwitcher } from '@/components/chat/panel/ChatContextSwitcher';
+import { ChatInputBar } from '@/components/chat/panel/ChatInputBar';
+import { ChatMainArea } from '@/components/chat/panel/ChatMainArea';
+import { ChatMessageBubble } from '@/components/chat/panel/ChatMessageBubble';
+import { ChatPanelHeader } from '@/components/chat/panel/ChatPanelHeader';
+import { ChatSidebar } from '@/components/chat/panel/ChatSidebar';
+import { TopBarChatButton } from '@/components/layout/UserShell/TopBarChatButton';
+import { TopBarLogo } from '@/components/layout/UserShell/TopBarLogo';
+import { TopBarSearchPill } from '@/components/layout/UserShell/TopBarSearchPill';
 import { AdminConfirmationDialog } from '@/components/ui/admin/admin-confirmation-dialog';
-import { AgentStatsDisplay } from '@/components/ui/agent/AgentStatsDisplay';
 import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
 import { FadeIn } from '@/components/ui/animations/FadeIn';
-import { PageTransition } from '@/components/ui/animations/PageTransition';
 import { StaggerChildren } from '@/components/ui/animations/StaggerChildren';
 import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 import { Accordion } from '@/components/ui/data-display/accordion';
@@ -125,7 +140,6 @@ import { Card } from '@/components/ui/data-display/card';
 import { CardGridSkeletons } from '@/components/ui/data-display/CardGridSkeletons';
 import { CitationLink } from '@/components/ui/data-display/citation-link';
 import { Collapsible } from '@/components/ui/data-display/collapsible';
-import { CollectionLimitIndicator as CollectionLimitIndicatorDataDisplay } from '@/components/ui/data-display/CollectionLimitIndicator';
 import { ConfidenceBadge } from '@/components/ui/data-display/confidence-badge';
 import { DataTable } from '@/components/ui/data-display/data-table';
 import { AddEntityLinkModal } from '@/components/ui/data-display/entity-link/add-entity-link-modal';
@@ -150,15 +164,11 @@ import { StatusCard } from '@/components/ui/data-display/status-card';
 import { Table } from '@/components/ui/data-display/table';
 import { UserRoleBadge } from '@/components/ui/data-display/user-role-badge';
 import { UserStatusIndicator } from '@/components/ui/data-display/user-status-indicator';
-
 // ─── Feedback ─────────────────────────────────────────────────────────────────
-
 import { BulkCollectionWarning } from '@/components/ui/dialogs/bulk-collection-warning';
 import { CollectionRemovalWarning } from '@/components/ui/dialogs/collection-removal-warning';
 import { Alert } from '@/components/ui/feedback/alert';
 import { AlertDialog } from '@/components/ui/feedback/alert-dialog';
-import { CollectionLimitIndicator } from '@/components/ui/feedback/collection-limit-indicator';
-import { CollectionProgressBar } from '@/components/ui/feedback/collection-progress-bar';
 import { ConfidenceBadge as FeedbackConfidenceBadge } from '@/components/ui/feedback/ConfidenceBadge';
 import { ConfirmDialog } from '@/components/ui/feedback/confirm-dialog';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
@@ -169,9 +179,7 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Toaster } from '@/components/ui/feedback/sonner';
 import { TierBadge } from '@/components/ui/feedback/tier-badge';
 import { UpgradePrompt } from '@/components/ui/feedback/upgrade-prompt';
-
 // ─── Forms ────────────────────────────────────────────────────────────────────
-
 import { Form } from '@/components/ui/forms/form';
 import { Switch } from '@/components/ui/forms/switch';
 import { FeatureGate } from '@/components/ui/gates/FeatureGate';
@@ -213,15 +221,10 @@ import { Slider } from '@/components/ui/primitives/slider';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { Toggle } from '@/components/ui/primitives/toggle';
 import { ToggleGroup } from '@/components/ui/primitives/toggle-group';
-
 // ─── Overlays ─────────────────────────────────────────────────────────────────
-
 // ─── Animations ───────────────────────────────────────────────────────────────
-
 // ModalAnimations exports animation variant objects, not a React component — skipped
-
 // ─── Tags ─────────────────────────────────────────────────────────────────────
-
 import { TagBadge } from '@/components/ui/tags/TagBadge';
 import { TagOverflow } from '@/components/ui/tags/TagOverflow';
 import { TagStrip } from '@/components/ui/tags/TagStrip';
@@ -280,7 +283,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'card-grid-skeletons': CardGridSkeletons,
   'citation-link': CitationLink,
   collapsible: Collapsible,
-  'collection-limit-indicator': CollectionLimitIndicatorDataDisplay,
   'confidence-badge': ConfidenceBadge,
   'entity-link-badge': EntityLinkBadge,
   'entity-link-card': EntityLinkCard,
@@ -305,8 +307,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   // Feedback
   alert: Alert,
   'alert-dialog': AlertDialog,
-  'collection-limit-indicator-feedback': CollectionLimitIndicator,
-  'collection-progress-bar': CollectionProgressBar,
   'feedback-confidence-badge': FeedbackConfidenceBadge,
   'confirm-dialog': ConfirmDialog,
   'impersonation-banner': ImpersonationBanner,
@@ -339,7 +339,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   command: Command,
   'dropdown-menu': DropdownMenu,
   'focused-card-area': FocusedCardArea,
-  // 'hand-stack': removed — component no longer exists
   separator: Separator,
   sheet: Sheet,
   tabs: Tabs,
@@ -360,8 +359,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
 
   // Animations
   'fade-in': FadeIn,
-  // 'modal-animations': skipped — exports animation variant objects, not a React component
-  'page-transition': PageTransition,
   'stagger-children': StaggerChildren,
 
   // Tags
@@ -383,7 +380,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'motion-button': MotionButton,
 
   // Agent
-  'agent-stats-display': AgentStatsDisplay,
   'agent-status-badge': AgentStatusBadge,
 
   // Icons & Background
@@ -391,9 +387,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'background-texture': BackgroundTexture,
 
   // Admin — Layout
-  // 'admin-top-nav': removed — component no longer exists
-  // 'admin-mobile-nav': removed — component no longer exists
-
   'admin-hub-tab-bar': AdminHubTabBar,
   'admin-hub-quick-link': AdminHubQuickLink,
   'admin-hub-empty-state': AdminHubEmptyState,
@@ -526,4 +519,27 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'bulk-actions-toolbar': BulkActionsToolbar,
   'service-health-matrix': ServiceHealthMatrix,
   'ai-models-table': AiModelsTable,
+
+  // Desktop UX Redesign — Shell atomics
+  'top-bar-logo': TopBarLogo,
+  'top-bar-search-pill': TopBarSearchPill,
+  'top-bar-chat-button': TopBarChatButton,
+
+  // Desktop UX Redesign — Library Hub sections
+  'library-header': LibraryHeader,
+  'library-filter-bar': LibraryFilterBar,
+  'library-hub-carousel': LibraryHubCarousel,
+  'personal-library-section': PersonalLibrarySection,
+  'catalog-carousel-section': CatalogCarouselSection,
+  'wishlist-carousel-section': WishlistCarouselSection,
+  'continue-playing-section': ContinuePlayingSection,
+
+  // Desktop UX Redesign — Chat slide-over panel
+  'chat-panel-header': ChatPanelHeader,
+  'chat-context-switcher': ChatContextSwitcher,
+  'chat-message-bubble': ChatMessageBubble,
+  'chat-citation-card-panel': ChatCitationCard,
+  'chat-input-bar': ChatInputBar,
+  'chat-sidebar': ChatSidebar,
+  'chat-main-area': ChatMainArea,
 };

@@ -25,6 +25,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 
+import { toast } from '@/components/layout';
 import { toScoreboardData } from '@/components/session/adapters';
 import { LiveSessionLayout } from '@/components/session/LiveSessionLayout';
 import { ScoreInput } from '@/components/session/ScoreInput';
@@ -38,11 +39,15 @@ import {
 // Dialog import removed — arbiter now uses Rules Sheet
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
+import { useAuth } from '@/hooks/useAuth';
 import { useResponsive } from '@/hooks/useResponsive';
 import { api } from '@/lib/api';
+import { uploadSessionAttachment } from '@/lib/api/clients/sessionAttachmentsClient';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
+import { useDisputeDiary } from '@/lib/domain-hooks/useDisputeDiary';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { cn } from '@/lib/utils';
 import { useQuickViewStore } from '@/stores/quick-view';
 
 import { ActivityFeed, type ActivityEvent } from './ActivityFeed';
@@ -120,6 +125,9 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const resumeSession = useSessionStore(s => s.resumeSession);
   const handleSessionUpdate = useSessionStore(s => s.handleSessionUpdate);
 
+  // ----- Auth -----
+  const { user } = useAuth();
+
   // ----- Responsive -----
   const { isDesktop } = useResponsive();
 
@@ -194,6 +202,29 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   }, [rulesSentMessages, rulesAgentState.currentAnswer]);
 
   const isRulesStreaming = rulesAgentState.isStreaming;
+
+  // ----- Dispute diary (GAP-006) -----
+  const { createEntry: createDisputeEntry } = useDisputeDiary();
+  const [disputeRegistered, setDisputeRegistered] = useState(false);
+  const disputeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleRegisterDispute = useCallback(async () => {
+    if (!rulesAgentState.currentAnswer || !sessionId) return;
+    await createDisputeEntry({
+      sessionId,
+      question: rulesSentMessages.findLast(m => m.role === 'user')?.content ?? '',
+      ruling: rulesAgentState.currentAnswer,
+    });
+    setDisputeRegistered(true);
+    if (disputeTimerRef.current) clearTimeout(disputeTimerRef.current);
+    disputeTimerRef.current = setTimeout(() => setDisputeRegistered(false), 3000);
+  }, [rulesAgentState.currentAnswer, rulesSentMessages, sessionId, createDisputeEntry]);
+
+  useEffect(() => {
+    return () => {
+      if (disputeTimerRef.current) clearTimeout(disputeTimerRef.current);
+    };
+  }, []);
 
   // ----- Resume context (inject recap as first chat message) -----
   const { data: resumeContext } = useQuery({
@@ -367,6 +398,48 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     [activeSession]
   );
 
+  // ----- Photo capture (GAP-005) -----
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpenPhoto = useCallback(() => {
+    photoInputRef.current?.click();
+  }, []);
+
+  const handlePhotoSelected = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      // Resolve the current user's participant — do not fall back to players[0] as that
+      // would permanently mis-attribute attachments in multi-player sessions (GAP-005 fix).
+      const playerId = activeSession?.players.find(p => p.userId === user?.id)?.id;
+      if (!file || !sessionId || !playerId) return;
+      // Validate file type and size before upload (max 20 MB, images only).
+      const MAX_SIZE_BYTES = 20 * 1024 * 1024;
+      if (!file.type.startsWith('image/')) {
+        toast.error('Sono supportate solo immagini.');
+        event.target.value = '';
+        return;
+      }
+      if (file.size > MAX_SIZE_BYTES) {
+        toast.error('La foto supera il limite di 20 MB.');
+        event.target.value = '';
+        return;
+      }
+      // Reset so the same file can be re-selected
+      event.target.value = '';
+      // Fire-and-forget upload — does not block the UI
+      void uploadSessionAttachment({
+        sessionId,
+        playerId,
+        file,
+        attachmentType: 'BoardState',
+        caption: `Foto - ${new Date().toLocaleTimeString('it-IT')}`,
+      }).catch(() => {
+        toast.error('Caricamento foto non riuscito. Riprova.');
+      });
+    },
+    [sessionId, activeSession, user?.id]
+  );
+
   // ----- Activity events (scores → feed items, newest first) -----
   // Must be above early returns to satisfy rules-of-hooks
   const activityEvents = useMemo<ActivityEvent[]>(() => {
@@ -447,6 +520,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
         onAskArbiter={() => setRulesOpen(true)}
         onTogglePause={handleTogglePause}
         onOpenScores={() => setScoresOpen(true)}
+        onOpenPhoto={handleOpenPhoto}
       />
     </div>
   );
@@ -517,6 +591,28 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
               className="h-full flex flex-col"
             />
           </div>
+
+          {/* Registra disputa — visibile solo se c'è risposta AI e streaming completato */}
+          {rulesAgentState.currentAnswer && !isRulesStreaming && (
+            <div className="px-1 pt-2 pb-1">
+              <button
+                type="button"
+                data-testid="register-dispute-btn"
+                onClick={handleRegisterDispute}
+                disabled={disputeRegistered}
+                className={cn(
+                  'w-full text-xs rounded-lg px-3 py-2 border transition-colors',
+                  disputeRegistered
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700 cursor-default'
+                    : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                )}
+              >
+                {disputeRegistered
+                  ? '✓ Disputa registrata nel diary'
+                  : 'Registra disputa nel diary'}
+              </button>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
 
@@ -597,6 +693,15 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
       <div className="px-4 pb-8 space-y-4">
         <LiveScoreboard players={scoreboardPlayers} isRealTime={isConnected} />
         <ScoreAssistant sessionId={sessionId} onScoreRecorded={loadScores} />
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*,image/heic"
+          capture="environment"
+          className="sr-only"
+          onChange={handlePhotoSelected}
+          aria-hidden="true"
+        />
         <QuickActions
           isPaused={isPaused}
           isLoading={isLoading}
@@ -604,6 +709,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
           onAskArbiter={() => setRulesOpen(true)}
           onTogglePause={handleTogglePause}
           onOpenScores={() => setScoresOpen(true)}
+          onOpenPhoto={handleOpenPhoto}
         />
         {/* Setup suggestion chips - show only when chat is empty (mobile) */}
         {chatMessages.length === 0 && agentId && (

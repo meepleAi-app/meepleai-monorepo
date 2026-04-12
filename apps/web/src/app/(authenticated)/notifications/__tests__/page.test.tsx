@@ -18,6 +18,7 @@ import userEvent from '@testing-library/user-event';
 
 import NotificationsPage from '../page';
 import type { NotificationDto } from '@/lib/api';
+import { EMPTY } from '../../../../__tests__/fixtures/test-strings';
 
 // ============================================================================
 // Mocks
@@ -230,7 +231,7 @@ describe('NotificationsPage', () => {
 
     render(<NotificationsPage />);
 
-    expect(screen.getByText('Nessuna notifica')).toBeInTheDocument();
+    expect(screen.getByText(EMPTY.notifications)).toBeInTheDocument();
   });
 
   it('should show empty state with unread tab message', async () => {
@@ -246,7 +247,7 @@ describe('NotificationsPage', () => {
 
     // The empty state container has the text "Nessuna notifica non letta"
     // Also appears in header subtitle, so check for the empty state icon (Bell) + text combo
-    const emptyStates = screen.getAllByText('Nessuna notifica non letta');
+    const emptyStates = screen.getAllByText(EMPTY.notificationsUnread);
     // At least one should be in the empty state container (not just the header)
     expect(emptyStates.length).toBeGreaterThanOrEqual(1);
   });
@@ -301,7 +302,7 @@ describe('NotificationsPage', () => {
     // Click a type filter that has no matching notifications
     await user.click(screen.getByText('Link condivisi'));
 
-    expect(screen.getByText('Nessuna notifica di questo tipo')).toBeInTheDocument();
+    expect(screen.getByText(EMPTY.notificationsOfType)).toBeInTheDocument();
   });
 
   it('should display all type filter chips', () => {
@@ -322,6 +323,6 @@ describe('NotificationsPage', () => {
 
     render(<NotificationsPage />);
 
-    expect(screen.getByText('Nessuna notifica non letta')).toBeInTheDocument();
+    expect(screen.getByText(EMPTY.notificationsUnread)).toBeInTheDocument();
   });
 });

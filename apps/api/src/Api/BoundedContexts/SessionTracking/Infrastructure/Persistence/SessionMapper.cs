@@ -32,6 +32,10 @@ internal static class SessionMapper
             RowVersion = domain.RowVersion,
             InviteToken = domain.InviteToken,
             InviteExpiresAt = domain.InviteExpiresAt,
+            TurnOrderJson = domain.TurnOrderJson,
+            TurnOrderMethod = domain.TurnOrderMethod,
+            TurnOrderSeed = domain.TurnOrderSeed,
+            CurrentTurnIndex = domain.CurrentTurnIndex,
             Participants = domain.Participants.Select(ParticipantMapper.ToEntity).ToList()
         };
     }
@@ -61,6 +65,10 @@ internal static class SessionMapper
         typeof(Session).GetProperty(nameof(Session.RowVersion))!.SetValue(session, entity.RowVersion);
         typeof(Session).GetProperty(nameof(Session.InviteToken))!.SetValue(session, entity.InviteToken);
         typeof(Session).GetProperty(nameof(Session.InviteExpiresAt))!.SetValue(session, entity.InviteExpiresAt);
+        typeof(Session).GetProperty(nameof(Session.TurnOrderJson))!.SetValue(session, entity.TurnOrderJson);
+        typeof(Session).GetProperty(nameof(Session.TurnOrderMethod))!.SetValue(session, entity.TurnOrderMethod);
+        typeof(Session).GetProperty(nameof(Session.TurnOrderSeed))!.SetValue(session, entity.TurnOrderSeed);
+        typeof(Session).GetProperty(nameof(Session.CurrentTurnIndex))!.SetValue(session, entity.CurrentTurnIndex);
 
         // Map participants (need to access private _participants field)
 #pragma warning disable S3011 // Reflection is required for domain entity hydration from persistence
@@ -400,6 +408,7 @@ internal static class SessionEventMapper
         {
             Id = domain.Id,
             SessionId = domain.SessionId,
+            GameNightId = domain.GameNightId,
             EventType = domain.EventType,
             Timestamp = domain.Timestamp,
             Payload = domain.Payload,
@@ -418,6 +427,7 @@ internal static class SessionEventMapper
 
         typeof(SessionEvent).GetProperty(nameof(SessionEvent.Id))!.SetValue(sessionEvent, entity.Id);
         typeof(SessionEvent).GetProperty(nameof(SessionEvent.SessionId))!.SetValue(sessionEvent, entity.SessionId);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.GameNightId))!.SetValue(sessionEvent, entity.GameNightId);
         typeof(SessionEvent).GetProperty(nameof(SessionEvent.EventType))!.SetValue(sessionEvent, entity.EventType);
         typeof(SessionEvent).GetProperty(nameof(SessionEvent.Timestamp))!.SetValue(sessionEvent, entity.Timestamp);
         typeof(SessionEvent).GetProperty(nameof(SessionEvent.Payload))!.SetValue(sessionEvent, entity.Payload);

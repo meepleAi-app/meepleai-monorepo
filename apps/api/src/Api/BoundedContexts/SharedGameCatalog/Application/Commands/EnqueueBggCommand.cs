@@ -18,4 +18,9 @@ public record EnqueueBggCommand : IRequest<BggImportQueueEntity>
     /// Optional game name for UI display
     /// </summary>
     public string? GameName { get; init; }
+
+    /// <summary>
+    /// User ID performing the import (for audit trail). Null if not authenticated.
+    /// </summary>
+    public Guid? RequestedByUserId { get; init; }
 }

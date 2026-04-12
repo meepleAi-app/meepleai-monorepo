@@ -89,6 +89,7 @@ internal static class SharedGameCatalogPublicEndpoints
         [FromQuery] int pageSize = 20,
         [FromQuery] string sortBy = "Title",
         [FromQuery] bool sortDescending = false,
+        [FromQuery] bool? hasKb = null, // S2 (library-to-game epic) — filter for AI-ready games
         CancellationToken ct = default)
     {
         var query = new SearchSharedGamesQuery(
@@ -104,7 +105,8 @@ internal static class SharedGameCatalogPublicEndpoints
             pageNumber,
             pageSize,
             sortBy,
-            sortDescending);
+            sortDescending,
+            HasKnowledgeBase: hasKb);
 
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);

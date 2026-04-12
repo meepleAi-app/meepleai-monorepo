@@ -28,10 +28,10 @@ import { RefreshCw, FileText } from 'lucide-react';
 
 import { KbStatusBadge } from '@/components/ui/data-display/extra-meeple-card/badge-stubs';
 import type { KbStatusBadgeProps } from '@/components/ui/data-display/extra-meeple-card/badge-stubs';
-
-type KbIndexingStatus = KbStatusBadgeProps['status'];
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 import { cn } from '@/lib/utils';
+
+type KbIndexingStatus = KbStatusBadgeProps['status'];
 
 // ============================================================================
 // Types
@@ -112,7 +112,7 @@ export const KbCardStatusRow = memo(function KbCardStatusRow({
           {document.fileName}
         </span>
 
-        <KbStatusBadge status={status} size="sm" />
+        <KbStatusBadge status={status} />
 
         {/* Retry button */}
         {canRetry && (

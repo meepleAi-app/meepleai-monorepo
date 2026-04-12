@@ -8,36 +8,29 @@
 
 'use client';
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode } from 'react';
 
-import { BarChart2, History, Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
-import { useSetNavConfig } from '@/contexts/NavigationContext';
+import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
 export default function PlayRecordsLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const setNavConfig = useSetNavConfig();
+  const pathname = usePathname();
 
-  useEffect(() => {
-    setNavConfig({
-      miniNav: [
-        { id: 'records', label: 'Partite', href: '/play-records', icon: History },
-        { id: 'stats', label: 'Statistiche', href: '/play-records?tab=stats', icon: BarChart2 },
-      ],
-      actionBar: [
-        {
-          id: 'new-record',
-          label: 'Nuova Partita',
-          icon: Plus,
-          variant: 'primary',
-          onClick: () => {
-            router.push('/play-records/new');
-          },
-        },
-      ],
-    });
-  }, [setNavConfig, router]);
+  useMiniNavConfig({
+    breadcrumb: 'Partite',
+    tabs: [
+      { id: 'records', label: 'Partite', href: '/play-records' },
+      { id: 'stats', label: 'Statistiche', href: '/play-records?tab=stats' },
+    ],
+    activeTabId: pathname?.includes('tab=stats') ? 'stats' : 'records',
+    primaryAction: {
+      label: 'Nuova Partita',
+      icon: '＋',
+      onClick: () => router.push('/play-records/new'),
+    },
+  });
 
   return <>{children}</>;
 }

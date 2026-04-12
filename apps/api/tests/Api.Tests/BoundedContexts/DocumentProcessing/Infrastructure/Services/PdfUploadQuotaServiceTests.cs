@@ -91,6 +91,30 @@ public class PdfUploadQuotaServiceTests
     }
 
     [Fact]
+    public async Task CheckQuotaAsync_SuperAdminUser_BypassesQuotaCheck()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.SuperAdmin;
+
+        // Act
+        var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
+
+        // Assert
+        result.Allowed.Should().BeTrue();
+        result.DailyUploadsUsed.Should().Be(0);
+        result.DailyLimit.Should().Be(int.MaxValue);
+        result.WeeklyUploadsUsed.Should().Be(0);
+        result.WeeklyLimit.Should().Be(int.MaxValue);
+
+        // Verify Redis was never called
+        _databaseMock.Verify(
+            db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task CheckQuotaAsync_DailyLimitReached_DeniesAccess()
     {
         // Arrange
@@ -414,6 +438,23 @@ public class PdfUploadQuotaServiceTests
     }
 
     [Fact]
+    public async Task GetQuotaInfoAsync_SuperAdminUser_ReturnsUnlimitedQuota()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.SuperAdmin;
+
+        // Act
+        var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
+
+        // Assert
+        info.IsUnlimited.Should().BeTrue();
+        info.DailyLimit.Should().Be(int.MaxValue);
+        info.WeeklyLimit.Should().Be(int.MaxValue);
+    }
+
+    [Fact]
     public async Task GetQuotaInfoAsync_RegularUser_ReturnsQuotaInfo()
     {
         // Arrange
@@ -678,6 +719,23 @@ public class PdfUploadQuotaServiceTests
         var gameId = Guid.NewGuid();
         var userTier = UserTier.Normal;
         var userRole = AuthRole.Editor;
+
+        // Act
+        var result = await _service.CheckPerGameQuotaAsync(userId, gameId, userTier, userRole);
+
+        // Assert
+        result.Allowed.Should().BeTrue();
+        result.PerGameLimit.Should().Be(int.MaxValue);
+    }
+
+    [Fact]
+    public async Task CheckPerGameQuotaAsync_SuperAdminUser_BypassesQuotaCheck()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.SuperAdmin;
 
         // Act
         var result = await _service.CheckPerGameQuotaAsync(userId, gameId, userTier, userRole);

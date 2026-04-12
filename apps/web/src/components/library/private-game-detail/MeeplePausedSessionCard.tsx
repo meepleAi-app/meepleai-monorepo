@@ -8,7 +8,7 @@
  * Preserves confirmation dialog for old sessions (>30 days).
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -18,6 +18,7 @@ const PlayIcon = <Play className="h-4 w-4" />;
 const Trash2Icon = <Trash2 className="h-4 w-4" />;
 
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
+import { buildSessionNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
 
 export interface PausedSession {
@@ -77,6 +78,25 @@ export function MeeplePausedSessionCard({
     }
   };
 
+  const navItems = useMemo(
+    () =>
+      buildSessionNavItems(
+        {
+          playerCount: session.participants.length,
+          hasNotes: session.hasNotes,
+          toolCount: 0,
+          photoCount: session.hasPhotos ? 1 : 0,
+        },
+        {
+          // Resume is the primary action; slot handlers no-op in this view
+          onPlayersClick: () => {},
+          onNotesClick: session.hasNotes ? () => {} : undefined,
+          onPhotosClick: session.hasPhotos ? () => {} : undefined,
+        }
+      ),
+    [session.participants.length, session.hasNotes, session.hasPhotos]
+  );
+
   return (
     <>
       <MeepleCard
@@ -86,6 +106,7 @@ export function MeeplePausedSessionCard({
         subtitle={subtitle}
         metadata={metadata}
         badge={isOld ? 'Vecchia' : undefined}
+        navItems={navItems}
         actions={[
           {
             icon: PlayIcon,

@@ -26,8 +26,6 @@ import {
   Users2,
 } from 'lucide-react';
 
-import { LIBRARY_TABS } from '@/config/library-navigation';
-
 import type { UnifiedNavItem, UnifiedNavSubItem, NavItemVisibility } from './navigation.types';
 
 // Re-export types for backward compatibility
@@ -49,23 +47,12 @@ export interface NavItem {
 }
 
 /**
- * Build library children from LIBRARY_TABS (library-navigation.ts).
- */
-const LIBRARY_CHILDREN: UnifiedNavSubItem[] = LIBRARY_TABS.map(tab => ({
-  id: tab.id,
-  href: tab.href,
-  label: tab.label,
-  ariaLabel: `Navigate to ${tab.label}`,
-  icon: tab.icon,
-}));
-
-/**
  * Unified navigation items — single source of truth.
  *
  * | id        | label     | priority | visibility   | note                     |
  * |-----------|-----------|----------|-------------|--------------------------|
  * | welcome       | Welcome   | 0        | anonOnly    | landing page only        |
- * | library       | Libreria  | 2        | authOnly    | children: tabs           |
+ * | library       | Libreria  | 2        | authOnly    | Hub landing              |
  * | chat          | Chat      | 3        | authOnly    |                          |
  * | notifications | Notifiche | 4        | authOnly    | hideFromMainNav          |
  * | game-nights   | Serate    | 5        | authOnly    |                          |
@@ -109,7 +96,6 @@ const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
     testId: 'nav-library',
     activePattern: /^\/library/,
     visibility: { authOnly: true },
-    children: LIBRARY_CHILDREN,
   },
   {
     id: 'chat',

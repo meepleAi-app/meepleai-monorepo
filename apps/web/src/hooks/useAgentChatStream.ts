@@ -6,7 +6,7 @@
  * Parses RagStreamingEvent format (numeric StreamingEventType enum)
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 // StreamingEventType enum values from backend
 const StreamingEventType = {
@@ -174,6 +174,20 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
     stopStreaming();
     setState(INITIAL_STATE);
   }, [stopStreaming]);
+
+  // Close the active stream when a dev-tools scenario switch begins (dev only).
+  useEffect(() => {
+    const onScenarioSwitch = (): void => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+    window.addEventListener('meepledev:scenario-switch-begin', onScenarioSwitch);
+    return () => {
+      window.removeEventListener('meepledev:scenario-switch-begin', onScenarioSwitch);
+    };
+  }, []);
 
   const sendMessage = useCallback(
     (

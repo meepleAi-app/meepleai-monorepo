@@ -48,6 +48,27 @@ public class SessionEntity
     /// </summary>
     public DateTime? InviteExpiresAt { get; set; }
 
+    /// <summary>
+    /// Turn order as JSON array of participant IDs (Session Flow v2.1).
+    /// </summary>
+    public string? TurnOrderJson { get; set; }
+
+    /// <summary>
+    /// Method used to set turn order: "Manual" | "Random".
+    /// </summary>
+    [MaxLength(16)]
+    public string? TurnOrderMethod { get; set; }
+
+    /// <summary>
+    /// Seed used when TurnOrderMethod=Random, for audit/reproducibility.
+    /// </summary>
+    public int? TurnOrderSeed { get; set; }
+
+    /// <summary>
+    /// Zero-based index of current player in turn order.
+    /// </summary>
+    public int? CurrentTurnIndex { get; set; }
+
     // Navigation properties
     public ICollection<ParticipantEntity> Participants { get; set; } = new List<ParticipantEntity>();
 }

@@ -78,6 +78,36 @@ public sealed class TierEnforcementServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetLimitsAsync_SuperAdminUser_ReturnsUnlimited()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        await SeedUser(userId, role: "superadmin", tier: "free");
+        await SeedTierDefinition("free", TierLimits.FreeTier);
+
+        // Act
+        var limits = await _sut.GetLimitsAsync(userId);
+
+        // Assert
+        limits.Should().Be(TierLimits.Unlimited);
+    }
+
+    [Fact]
+    public async Task GetLimitsAsync_EditorUser_ReturnsUnlimited()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        await SeedUser(userId, role: "editor", tier: "free");
+        await SeedTierDefinition("free", TierLimits.FreeTier);
+
+        // Act
+        var limits = await _sut.GetLimitsAsync(userId);
+
+        // Assert
+        limits.Should().Be(TierLimits.Unlimited);
+    }
+
+    [Fact]
     public async Task GetLimitsAsync_FreeUser_ReturnsFreeTierLimits()
     {
         // Arrange

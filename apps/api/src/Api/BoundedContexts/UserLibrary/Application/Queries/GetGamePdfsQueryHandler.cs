@@ -29,13 +29,16 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
         GetGamePdfsQuery request,
         CancellationToken cancellationToken)
     {
-        // Resolve gameId: may be a shared_games.Id, games.Id, or private_games.Id
-        // Query pdf_documents matching any of these associations
-        var resolvedGameId = await _db.Games
-            .AsNoTracking()
-            .Where(g => g.Id == request.GameId || g.SharedGameId == request.GameId)
-            .Select(g => (Guid?)g.Id)
-            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        // request.GameId may be a games.Id, a shared_games.Id, or a private_games.Id.
+        //
+        // Bug fix (post-PR #267): the previous implementation resolved a SINGLE games row via
+        // FirstOrDefault and then filtered pdf_documents.GameId by that one Id. When multiple
+        // games rows share the same SharedGameId (e.g. different version/language entries),
+        // PDFs uploaded against the other games rows were silently dropped.
+        //
+        // Fix: query through games.SharedGameId via EXISTS subquery so we catch every PDF whose
+        // games row links to the requested shared game, regardless of which games row was picked
+        // by the legacy resolver.
 
         // For private games, verify the requesting user owns the game
         var ownedPrivateGameId = await _db.PrivateGames
@@ -47,8 +50,14 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
         var entities = await _db.PdfDocuments
             .AsNoTracking()
             .Where(p =>
-                (resolvedGameId != null && p.GameId == resolvedGameId) ||
+                // Direct match: p.GameId IS the requested games.Id (local/library upload path)
+                p.GameId == request.GameId ||
+                // JOIN match: p.GameId points to a games row whose SharedGameId == request.GameId
+                // (catches PDFs uploaded against any games row linked to the same shared catalog entry)
+                _db.Games.Any(g => g.Id == p.GameId && g.SharedGameId == request.GameId) ||
+                // Legacy direct shared link (older PDFs that wrote SharedGameId directly)
                 p.SharedGameId == request.GameId ||
+                // Owned private games
                 (ownedPrivateGameId != null && p.PrivateGameId == ownedPrivateGameId))
             .OrderByDescending(p => p.UploadedAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);

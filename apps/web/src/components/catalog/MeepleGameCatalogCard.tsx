@@ -28,6 +28,18 @@ import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
+import {
+  MeepleCard,
+  MeepleCardSkeleton,
+  type MeepleCardAction,
+  type MeepleCardMetadata,
+  type MeepleCardVariant,
+} from '@/components/ui/data-display/meeple-card';
+import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { useGameInLibraryStatus } from '@/hooks/queries';
+import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
+import { api } from '@/lib/api';
+import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 // Dynamic imports to avoid DOMMatrix SSR error on statically generated pages
 const KbDrawerSheet = dynamic(
@@ -46,17 +58,6 @@ const SessionDrawerSheet = dynamic(
   () => import('@/components/library/SessionDrawerSheet').then(m => m.SessionDrawerSheet),
   { ssr: false }
 );
-import {
-  MeepleCard,
-  MeepleCardSkeleton,
-  type MeepleCardAction,
-  type MeepleCardMetadata,
-  type MeepleCardVariant,
-} from '@/components/ui/data-display/meeple-card';
-import { useGameInLibraryStatus } from '@/hooks/queries';
-import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
-import { api } from '@/lib/api';
-import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 // ============================================================================
 // Types
@@ -216,6 +217,29 @@ export function MeepleGameCatalogCard({
   // Build badge
   const badge = inLibrary && !isLoadingStatus ? 'In Libreria' : undefined;
 
+  // Build nav items — only when game is in user's library (drawers only render then)
+  const navItems = useMemo(() => {
+    if (!inLibrary) return undefined;
+    return buildGameNavItems(
+      {
+        kbCount: kbDocuments?.length ?? 0,
+        agentCount: 0,
+        chatCount: 0,
+        sessionCount: 0,
+      },
+      {
+        onKbClick: () => setKbDrawerOpen(true),
+        onAgentClick: () => setAgentDrawerOpen(true),
+        onChatClick: () => setChatDrawerOpen(true),
+        onSessionClick: () => setSessionDrawerOpen(true),
+        onKbPlus: () => setKbDrawerOpen(true),
+        onAgentPlus: () => setAgentDrawerOpen(true),
+        onChatPlus: () => setChatDrawerOpen(true),
+        onSessionPlus: () => setSessionDrawerOpen(true),
+      }
+    );
+  }, [inLibrary, kbDocuments]);
+
   if (isLoadingStatus) {
     return <MeepleCardSkeleton variant={variant} />;
   }
@@ -232,7 +256,9 @@ export function MeepleGameCatalogCard({
         ratingMax={10}
         metadata={metadata}
         badge={badge}
+        status={inLibrary ? 'owned' : undefined}
         actions={actions}
+        navItems={navItems}
         onClick={onClick ? () => onClick(game.id) : undefined}
         className={className}
         data-testid={`catalog-game-card-${game.id}`}

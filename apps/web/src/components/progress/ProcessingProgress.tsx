@@ -8,13 +8,16 @@
 import { useEffect, useState, useCallback, useRef, type CSSProperties } from 'react';
 
 import { api, type ProcessingProgress as ApiProcessingProgress } from '@/lib/api';
-import {
-  ProcessingStep,
-  type ProcessingProgress as ProcessingProgressType,
-  isProcessingComplete,
-  getStepLabel,
-  getStepOrder,
-} from '@/types/pdf';
+import { ProcessingStep, isProcessingComplete, getStepLabel, getStepOrder } from '@/types/pdf';
+
+/** Transformed progress with estimatedTimeRemaining in seconds (converted from API TimeSpan string) */
+interface ProcessingProgressType {
+  currentStep: ProcessingStep;
+  percentComplete: number;
+  estimatedTimeRemaining?: number;
+  errorMessage?: string;
+  updatedAt: string;
+}
 
 import { SkeletonLoader } from '../loading';
 

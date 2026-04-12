@@ -22,11 +22,11 @@ import {
   type Edge,
   BackgroundVariant,
 } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-
 import { LayoutGrid, GitFork } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+
+import '@xyflow/react/dist/style.css';
 
 import {
   LINK_ENTITY_CONFIG,

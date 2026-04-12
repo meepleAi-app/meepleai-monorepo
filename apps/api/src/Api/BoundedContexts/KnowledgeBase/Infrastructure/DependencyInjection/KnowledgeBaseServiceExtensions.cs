@@ -1,3 +1,5 @@
+using Amazon.Runtime;
+using Amazon.S3;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
@@ -28,6 +30,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
+using Api.Infrastructure.Seeders.Catalog.SeedBlob;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -222,9 +225,69 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<IOpenRouterFileLogger>(sp =>
         {
             var config = sp.GetRequiredService<IConfiguration>();
-            var logDir = config["OPENROUTER_LOG_PATH"] ?? Path.Combine("logs", "openrouter");
-            Directory.CreateDirectory(logDir);
-            return new OpenRouterFileLogger(logDir);
+            var logger = sp.GetRequiredService<ILogger<OpenRouterFileLogger>>();
+            var configuredPath = config["OPENROUTER_LOG_PATH"];
+            var fallbackDir = Path.Combine(Path.GetTempPath(), "meepleai", "openrouter");
+
+            // Prefer configured path, otherwise fall back to system temp dir to avoid
+            // permission issues when running under restricted users (e.g. non-root in containers).
+            var logDir = !string.IsNullOrWhiteSpace(configuredPath) ? configuredPath : fallbackDir;
+
+            if (TryCreateDirectory(logDir, logger))
+            {
+                return new OpenRouterFileLogger(logDir);
+            }
+
+            // Primary path failed. Try fallback only if it's different from the primary
+            // to avoid retrying the same failing path.
+            if (!string.Equals(Path.GetFullPath(logDir), Path.GetFullPath(fallbackDir), StringComparison.Ordinal)
+                && TryCreateDirectory(fallbackDir, logger))
+            {
+                logger.LogWarning(
+                    "OpenRouter log directory {ConfiguredDir} not writable, using fallback {FallbackDir}",
+                    logDir, fallbackDir);
+                return new OpenRouterFileLogger(fallbackDir);
+            }
+
+            // Both paths failed — degrade to no-op logger rather than poisoning DI.
+            logger.LogError(
+                "Unable to create OpenRouter log directory (tried {ConfiguredDir} and {FallbackDir}); "
+                + "file logging disabled for this process",
+                logDir, fallbackDir);
+            return new NoOpOpenRouterFileLogger();
+        });
+
+        // Seed PDF bucket — readonly accessor for the meepleai-seeds bucket
+        services.AddSingleton<ISeedBlobReader>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var diLogger = sp.GetRequiredService<ILogger<NoOpSeedBlobReader>>();
+
+            var bucket = config["SEED_BUCKET_NAME"];
+            var endpoint = config["SEED_BUCKET_ENDPOINT"];
+            var accessKey = config["SEED_BUCKET_ACCESS_KEY"];
+            var secretKey = config["SEED_BUCKET_SECRET_KEY"];
+
+            if (string.IsNullOrWhiteSpace(bucket)
+                || string.IsNullOrWhiteSpace(endpoint)
+                || string.IsNullOrWhiteSpace(accessKey)
+                || string.IsNullOrWhiteSpace(secretKey))
+            {
+                diLogger.LogInformation(
+                    "SEED_BUCKET_* env vars not fully set; using NoOpSeedBlobReader (PDF seeding disabled)");
+                return new NoOpSeedBlobReader();
+            }
+
+            var s3Config = new AmazonS3Config
+            {
+                ServiceURL = endpoint,
+                ForcePathStyle = bool.TryParse(
+                    config["SEED_BUCKET_FORCE_PATH_STYLE"], out var fps) && fps,
+            };
+
+            var credentials = new BasicAWSCredentials(accessKey, secretKey);
+            var client = new AmazonS3Client(credentials, s3Config);
+            return new S3SeedBlobReader(client, bucket);
         });
 
         // Issue #5074: OpenRouter usage cache — polls /auth/key every 60s, accumulates daily spend
@@ -254,6 +317,63 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #5477: Redis rate-limiting health monitor — pings Redis every 30s, alerts admins on failure
         services.AddSingleton<RedisRateLimitingHealthMonitor>();
         services.AddHostedService(sp => sp.GetRequiredService<RedisRateLimitingHealthMonitor>());
+    }
+
+    /// <summary>
+    /// Attempts to create a directory, catching permission and IO exceptions so
+    /// singleton factories don't poison DI when the target path is not writable.
+    /// </summary>
+    private static bool TryCreateDirectory(string path, ILogger logger)
+    {
+        try
+        {
+            Directory.CreateDirectory(path);
+            return true;
+        }
+        catch (Exception ex) when (
+            ex is UnauthorizedAccessException
+            or IOException
+            or ArgumentException
+            or NotSupportedException)
+        {
+            logger.LogDebug(ex, "Failed to create directory {Path}", path);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// No-op implementation used when OpenRouter file logging cannot be initialized.
+    /// Degrades gracefully to avoid failing DI resolution for a non-critical logging concern.
+    /// </summary>
+    private sealed class NoOpOpenRouterFileLogger : IOpenRouterFileLogger
+    {
+        public void LogRequest(
+            string requestId,
+            string model,
+            string provider,
+            string source,
+            Guid? userId,
+            int promptTokens,
+            int completionTokens,
+            decimal costUsd,
+            long latencyMs,
+            bool success,
+            bool isFreeModel,
+            string? sessionId,
+            string? errorMessage = null)
+        {
+            // no-op
+        }
+
+        public void LogRateLimitHit(string model, int httpStatus, int retryAfterMs, int currentRpm, int limitRpm)
+        {
+            // no-op
+        }
+
+        public void LogCircuitBreakerEvent(string provider, string newState, int consecutiveFailures)
+        {
+            // no-op
+        }
     }
 
     private static void AddInfrastructureServices(IServiceCollection services)

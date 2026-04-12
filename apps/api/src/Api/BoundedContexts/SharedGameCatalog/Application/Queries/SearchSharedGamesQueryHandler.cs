@@ -47,7 +47,9 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             query.MechanicIds?.Count ?? 0,
             query.PageNumber);
 
-        // Try cache first (L1: 15min, L2: 1h)
+        // Try cache first (L1: 15min, L2: 1h).
+        // Tagged "search-games" so event handlers (e.g. VectorDocumentIndexedForKbFlagHandler)
+        // can invalidate the whole namespace on relevant domain events.
         return await _cache.GetOrCreateAsync<PagedResult<SharedGameDto>>(
             cacheKey,
             async cancel => await ExecuteSearchAsync(query, cancel).ConfigureAwait(false),
@@ -56,8 +58,15 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 LocalCacheExpiration = TimeSpan.FromMinutes(15),  // L1
                 Expiration = TimeSpan.FromHours(1)  // L2
             },
+            tags: _searchGamesTags,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Cache tag used to invalidate all SearchSharedGamesQueryHandler entries
+    /// when the underlying projection changes (e.g. HasKnowledgeBase flip).
+    /// </summary>
+    private static readonly IReadOnlyList<string> _searchGamesTags = new[] { "search-games" };
 
     private async Task<PagedResult<SharedGameDto>> ExecuteSearchAsync(SearchSharedGamesQuery query, CancellationToken cancellationToken)
     {
@@ -137,6 +146,12 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             dbQuery = dbQuery.Where(g => g.ComplexityRating <= query.MaxComplexity.Value);
         }
 
+        // S2 — Knowledge Base filter: only games with indexed KB
+        if (query.HasKnowledgeBase.HasValue)
+        {
+            dbQuery = dbQuery.Where(g => g.HasKnowledgeBase == query.HasKnowledgeBase.Value);
+        }
+
         // Apply sorting
         dbQuery = query.SortBy switch
         {
@@ -183,7 +198,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 (GameStatus)g.Status,
                 g.CreatedAt,
                 g.ModifiedAt,
-                g.IsRagPublic))
+                g.IsRagPublic,
+                g.HasKnowledgeBase))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -215,7 +231,7 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var statusStr = query.Status?.ToString() ?? "null";
 
         // Create compact hash for long parameter combinations
-        var keyComponents = $"{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}";
+        var keyComponents = $"{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}|{query.HasKnowledgeBase?.ToString() ?? "null"}";
 
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(keyComponents)));
 

@@ -4,7 +4,14 @@ import { immer } from 'zustand/middleware/immer';
 
 import type { SessionParticipant } from '@/stores/session/types';
 
-import type { GameNightSummary, GameNightGame, TimelineSlot } from './types';
+import type {
+  GameNightSummary,
+  GameNightGame,
+  TimelineSlot,
+  GameNightActiveSession,
+  DiaryEntry,
+  PlayerResource,
+} from './types';
 
 interface GameNightState {
   gameNights: GameNightSummary[];
@@ -14,6 +21,9 @@ interface GameNightState {
   players: SessionParticipant[];
   selectedGames: GameNightGame[];
   timeline: TimelineSlot[];
+  activeSessions: GameNightActiveSession[];
+  diary: DiaryEntry[];
+  playerResources: PlayerResource[];
 
   setGameNights: (nights: GameNightSummary[]) => void;
   selectGameNight: (id: string | null) => void;
@@ -24,6 +34,11 @@ interface GameNightState {
   addGame: (game: GameNightGame) => void;
   removeGame: (gameId: string) => void;
   setTimeline: (timeline: TimelineSlot[]) => void;
+  setActiveSessions: (sessions: GameNightActiveSession[]) => void;
+  addDiaryEntry: (entry: DiaryEntry) => void;
+  setDiary: (entries: DiaryEntry[]) => void;
+  setPlayerResources: (resources: PlayerResource[]) => void;
+  updatePlayerResource: (participantId: string, key: string, value: number) => void;
   reset: () => void;
 }
 
@@ -35,6 +50,9 @@ const initialState = {
   players: [] as SessionParticipant[],
   selectedGames: [] as GameNightGame[],
   timeline: [] as TimelineSlot[],
+  activeSessions: [] as GameNightActiveSession[],
+  diary: [] as DiaryEntry[],
+  playerResources: [] as PlayerResource[],
 };
 
 export const useGameNightStore = create<GameNightState>()(
@@ -81,6 +99,29 @@ export const useGameNightStore = create<GameNightState>()(
         set(s => {
           s.timeline = timeline;
         }),
+      setActiveSessions: sessions =>
+        set(s => {
+          s.activeSessions = sessions;
+        }),
+      addDiaryEntry: entry =>
+        set(s => {
+          if (!s.diary.some(e => e.id === entry.id)) {
+            s.diary.push(entry);
+          }
+        }),
+      setDiary: entries =>
+        set(s => {
+          s.diary = entries;
+        }),
+      setPlayerResources: resources =>
+        set(s => {
+          s.playerResources = resources;
+        }),
+      updatePlayerResource: (participantId, key, value) =>
+        set(s => {
+          const pr = s.playerResources.find(r => r.participantId === participantId);
+          if (pr) pr.resources[key] = value;
+        }),
       reset: () => set(() => ({ ...initialState })),
     })),
     { name: 'game-night-store' }
@@ -95,3 +136,8 @@ export const selectSelectedGames = (s: GameNightState) => s.selectedGames;
 export const selectTimeline = (s: GameNightState) => s.timeline;
 export const selectIsLoading = (s: GameNightState) => s.isLoading;
 export const selectPlayerCount = (s: GameNightState) => s.players.length;
+export const selectActiveSessions = (s: GameNightState) => s.activeSessions;
+export const selectDiary = (s: GameNightState) => s.diary;
+export const selectPlayerResources = (s: GameNightState) => s.playerResources;
+export const selectCurrentActiveSession = (s: GameNightState) =>
+  s.activeSessions.find(sess => sess.status === 'in_progress') ?? null;

@@ -33,6 +33,8 @@ export const GameSchema = z.object({
   isPublished: z.boolean().optional(),
   approvalStatus: z.string().nullable().optional(),
   publishedAt: z.string().nullable().optional(),
+  // S2 — true when game has indexed KB (AI-ready); mirrors SharedGameSchema field
+  hasKnowledgeBase: z.boolean().optional(),
 });
 
 export type Game = z.infer<typeof GameSchema>;

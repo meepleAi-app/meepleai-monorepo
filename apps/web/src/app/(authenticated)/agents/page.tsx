@@ -18,9 +18,9 @@ import { Bot, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { AgentCreationSheet } from '@/components/agent/config';
+import { MeepleAgentCard } from '@/components/agent/MeepleAgentCard';
 import { CardGridSkeletons } from '@/components/ui/data-display/CardGridSkeletons';
 import { ListPageHeader, useViewPreference } from '@/components/ui/data-display/ListPageHeader';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import {
   Select,
   SelectContent,
@@ -33,10 +33,11 @@ import { Input } from '@/components/ui/primitives/input';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useNavigation } from '@/hooks/useNavigation';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
-/** Agent card wrapper to use entity actions hook per-card */
+/** Agent card wrapper using MeepleAgentCard adapter for navItems wiring */
 function AgentCard({
   agent,
   onClick,
@@ -45,23 +46,21 @@ function AgentCard({
   onClick: () => void;
 }) {
   return (
-    <MeepleCard
-      entity="agent"
+    <MeepleAgentCard
+      agent={{
+        id: agent.id,
+        name: agent.name,
+        description: `${agent.type} · ${agent.strategyName} · ${agent.invocationCount} uses`,
+      }}
       variant="grid"
-      title={agent.name}
-      subtitle={`${agent.type} agent`}
-      metadata={[
-        { label: 'Usage', value: `${agent.invocationCount} uses` },
-        { label: 'Strategy', value: agent.strategyName },
-      ]}
       onClick={onClick}
     />
   );
 }
 
 export default function AgentsPage() {
-  const router = useRouter();
-  const { drawCard } = useCardHand();
+  const _router = useRouter();
+  const { openDetail } = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
@@ -70,13 +69,13 @@ export default function AgentsPage() {
   const [viewMode, setViewMode] = useViewPreference('agents');
 
   useEffect(() => {
-    drawCard({
+    useRecentsStore.getState().push({
       id: 'section-agents',
       entity: 'agent',
       title: 'Agents',
       href: '/agents',
     });
-  }, [drawCard]);
+  }, []);
 
   // Use real API (Issue #4126)
   const { data: agents = [], isLoading: _isLoading } = useAgents({
@@ -251,11 +250,7 @@ export default function AgentsPage() {
         data-testid="card-grid"
       >
         {visibleAgents.map(agent => (
-          <AgentCard
-            key={agent.id}
-            agent={agent}
-            onClick={() => router.push(`/agents/${agent.id}`)}
-          />
+          <AgentCard key={agent.id} agent={agent} onClick={() => openDetail(agent.id, 'agent')} />
         ))}
         {isLoadingMore && <CardGridSkeletons count={4} />}
       </div>

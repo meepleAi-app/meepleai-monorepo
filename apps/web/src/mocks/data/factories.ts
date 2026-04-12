@@ -101,20 +101,45 @@ export const createMockSessionStatus = (
 export type MockGame = {
   id: string;
   title: string;
+  publisher: string | null;
+  yearPublished: number | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  minPlayTimeMinutes: number | null;
+  maxPlayTimeMinutes: number | null;
+  bggId: number | null;
   createdAt: string;
   updatedAt?: string;
+  imageUrl?: string | null;
+  iconUrl?: string | null;
+  description?: string | null;
+  averageRating?: number | null;
+  hasKnowledgeBase?: boolean;
 };
 
 export const createMockGame = (overrides?: Partial<MockGame>): MockGame => ({
   id: overrides?.id || mockId(100),
   title: overrides?.title || 'Test Game',
+  publisher: overrides?.publisher ?? null,
+  yearPublished: overrides?.yearPublished ?? null,
+  minPlayers: overrides?.minPlayers ?? null,
+  maxPlayers: overrides?.maxPlayers ?? null,
+  minPlayTimeMinutes: overrides?.minPlayTimeMinutes ?? null,
+  maxPlayTimeMinutes: overrides?.maxPlayTimeMinutes ?? null,
+  bggId: overrides?.bggId ?? null,
   createdAt: overrides?.createdAt || new Date().toISOString(),
   updatedAt: overrides?.updatedAt,
+  imageUrl: overrides?.imageUrl ?? null,
+  iconUrl: overrides?.iconUrl ?? null,
+  description: overrides?.description ?? null,
+  averageRating: overrides?.averageRating ?? null,
+  hasKnowledgeBase: overrides?.hasKnowledgeBase ?? false,
 });
 
-export const mockChessGame = (): MockGame => createMockGame({ id: mockId(101), title: 'Chess' });
+export const mockChessGame = (): MockGame =>
+  createMockGame({ id: mockId(101), title: 'Chess', minPlayers: 2, maxPlayers: 2 });
 export const mockTicTacToeGame = (): MockGame =>
-  createMockGame({ id: mockId(102), title: 'Tic-Tac-Toe' });
+  createMockGame({ id: mockId(102), title: 'Tic-Tac-Toe', minPlayers: 2, maxPlayers: 2 });
 
 // =============================================================================
 // RULESPEC FIXTURES

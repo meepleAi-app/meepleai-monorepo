@@ -33,7 +33,8 @@ public sealed record SharedGameDto(
     GameStatus Status,
     DateTime CreatedAt,
     DateTime? ModifiedAt,
-    bool IsRagPublic = false);
+    bool IsRagPublic = false,
+    bool HasKnowledgeBase = false);
 
 /// <summary>
 /// Data transfer object for game rules.

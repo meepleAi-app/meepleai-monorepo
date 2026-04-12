@@ -253,6 +253,70 @@ await expect(page.getByText('Success')).toBeVisible();
 
 ---
 
+## When NOT to Use E2E Tests
+
+E2E tests are **expensive** (slow, fragile, infra-coupled). Before writing one,
+check whether the same assertion already lives at a cheaper layer. The test
+pyramid for this monorepo:
+
+```
+       E2E (Playwright)        ← user journeys (login → wizard → session → finalize)
+     Integration (Vitest+MSW)  ← hook + API contract validation
+   Unit (Vitest)               ← components, hooks, utilities, pure functions
+```
+
+**Spec panel rule** (Crispin / Fowler / Beck consensus, 2026-04-09):
+
+> If a test verifies the rendering of a single component or the behavior of a
+> single hook, it belongs in **Vitest** (Q1), not Playwright (Q2/Q3).
+
+### ❌ Don't write an E2E for these
+
+| Anti-pattern | Where to test instead |
+|---|---|
+| Single component rendering ("does badge X show on prop Y") | Component test (`*.test.tsx`) |
+| Hook return shape ("does `useFoo` return `{ data, isLoading }`") | Hook test (`renderHook` + Vitest) |
+| API client mapping ("does the client serialize the request") | API client test (`*.test.ts`) |
+| Schema validation ("does Zod accept this shape") | Schema unit test |
+| Conditional UI based on a single boolean | Component test with prop matrix |
+| Anything that requires more mock layers than the test has assertions | Anything else |
+
+### ✅ Do write an E2E for these
+
+| Pattern | Example |
+|---|---|
+| Multi-step user journey across pages | Login → wizard → session → play → pause → resume → finalize |
+| Cross-component coordination | Drag-and-drop between two panels with persistence |
+| Browser-only behavior | Service worker, IndexedDB persistence across remounts, file upload |
+| Visual regression on critical screens | Hero banner, dashboard, payment page |
+| Accessibility audits on flows | Keyboard-only navigation through a 5-step flow |
+
+### Cost signal: count the mock layers
+
+If your E2E spec needs more than ~3 of these layers, it's probably the wrong
+test level:
+
+1. Cookie injection (`addCookies`)
+2. Env var bypass (`PLAYWRIGHT_AUTH_BYPASS`)
+3. `setupMockAuth()` for `/auth/me`
+4. Route glob mocks for the actual API endpoints
+5. Schema-compliant mock data that matches Zod validators
+6. UI state setup (clicking through to reach the tested component)
+
+A test that needs all 6 is verifying infrastructure choreography, not user
+behavior. Move the assertion to a unit test.
+
+### Historical example
+
+PR #283 added `game-night-soft-filter.spec.ts` (4 tests for the F1 PDF-aware
+soft filter). PR #297 attempted to fix its local execution. A multi-expert
+spec panel review (2026-04-09) concluded that the test duplicated 15
+existing unit tests (`GameKbBadge.test.tsx` × 3, `GameKbWarning.test.tsx` × 4,
+`GameNightWizard.test.tsx` × 8) without adding signal, while requiring all
+6 mock layers above. The file was deleted; PR #297 was closed.
+
+---
+
 ## Troubleshooting
 
 ### Test Times Out

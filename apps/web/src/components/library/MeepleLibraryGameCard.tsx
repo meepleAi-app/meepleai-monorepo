@@ -19,6 +19,7 @@ import {
   type MeepleCardMetadata,
   type CardStatus,
 } from '@/components/ui/data-display/meeple-card';
+import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
 import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import { libraryKeys } from '@/hooks/queries/useLibrary';
@@ -50,8 +51,6 @@ export interface MeepleLibraryGameCardProps {
   onEditNotes: (gameId: string, gameTitle: string, currentNotes?: string | null) => void;
   /** Remove game callback */
   onRemove: (gameId: string, gameTitle: string) => void;
-  /** @deprecated Unused since Issue #4999 */
-  onAskAgent?: (gameId: string) => void;
   /** Change game state callback */
   onChangeState?: (gameId: string, gameTitle: string, newState: GameStateType) => void;
   /** Share game callback */
@@ -79,12 +78,6 @@ function mapGameStateToStatus(state: GameStateType | null | undefined): CardStat
   return undefined;
 }
 
-function formatPlayCount(count: number): string {
-  if (count === 0) return 'Mai giocato';
-  if (count === 1) return '1 partita';
-  return `${count} partite`;
-}
-
 // ============================================================================
 // Component
 // ============================================================================
@@ -92,11 +85,10 @@ function formatPlayCount(count: number): string {
 export function MeepleLibraryGameCard({
   game,
   variant = 'grid',
-  onConfigureAgent,
-  onUploadPdf,
-  onEditNotes,
-  onRemove,
-  onAskAgent: _onAskAgent,
+  onConfigureAgent: _onConfigureAgent,
+  onUploadPdf: _onUploadPdf,
+  onEditNotes: _onEditNotes,
+  onRemove: _onRemove,
   onChangeState: _onChangeState,
   onShare: _onShare,
   selectionMode = false,
@@ -109,7 +101,7 @@ export function MeepleLibraryGameCard({
   const queryClient = useQueryClient();
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
-  const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
+  const _handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
 
   const [wishlistDialogOpen, setWishlistDialogOpen] = useState(false);
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
@@ -132,15 +124,18 @@ export function MeepleLibraryGameCard({
     staleTime: 2 * 60 * 1000,
   });
 
-  const modelDisplayName: Record<string, string> = {
-    'llama-3.3-70b-free': 'Llama Free',
-    'google-gemini-pro': 'Gemini Pro',
-    'deepseek-chat': 'DeepSeek',
-    'llama-3.3-70b': 'Llama Pro',
-    default: 'Default',
-  };
+  const modelDisplayName = useMemo<Record<string, string>>(
+    () => ({
+      'llama-3.3-70b-free': 'Llama Free',
+      'google-gemini-pro': 'Gemini Pro',
+      'deepseek-chat': 'DeepSeek',
+      'llama-3.3-70b': 'Llama Pro',
+      default: 'Default',
+    }),
+    []
+  );
 
-  const handleToggleFavorite = useCallback(async () => {
+  const _handleToggleFavorite = useCallback(async () => {
     if (isTogglingFavorite) return;
     setIsTogglingFavorite(true);
     try {
@@ -170,7 +165,9 @@ export function MeepleLibraryGameCard({
   // ============================================================================
 
   const metadata: MeepleCardMetadata[] = useMemo(() => {
-    const items: MeepleCardMetadata[] = [{ label: formatPlayCount(0) }];
+    // Note: real play count not yet available on UserLibraryEntry — chip omitted
+    // until backend exposes it (deferred Task 5/6 in plan).
+    const items: MeepleCardMetadata[] = [];
 
     if (agentConfigured) {
       items.push({ label: `Agent: ${modelDisplayName[agentModel]}` });
@@ -206,6 +203,29 @@ export function MeepleLibraryGameCard({
   const badge = game.isFavorite ? '❤️ Preferito' : undefined;
   const showRagBadge = game.hasKb || game.currentState === 'Owned';
 
+  const navItems = useMemo(
+    () =>
+      buildGameNavItems(
+        {
+          kbCount: game.kbCardCount ?? 0,
+          agentCount: agentConfigured ? 1 : 0,
+          chatCount: 0,
+          sessionCount: 0,
+        },
+        {
+          onKbClick: () => setKbDrawerOpen(true),
+          onAgentClick: () => setAgentDrawerOpen(true),
+          onChatClick: () => setChatDrawerOpen(true),
+          onSessionClick: () => setSessionDrawerOpen(true),
+          onKbPlus: () => setKbDrawerOpen(true),
+          onAgentPlus: () => setAgentDrawerOpen(true),
+          onChatPlus: () => setChatDrawerOpen(true),
+          onSessionPlus: () => setSessionDrawerOpen(true),
+        }
+      ),
+    [game.kbCardCount, agentConfigured]
+  );
+
   // ============================================================================
   // Render
   // ============================================================================
@@ -224,6 +244,7 @@ export function MeepleLibraryGameCard({
         metadata={metadata}
         badge={badge}
         status={mappedStatus}
+        navItems={navItems}
         onClick={
           selectionMode
             ? undefined

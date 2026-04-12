@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meepleai.app/schemas/scenario.schema.json",
+  "title": "MeepleDev Scenario",
+  "type": "object",
+  "required": ["name", "description", "auth", "games", "sessions", "library", "chatHistory"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Lowercase, kebab-case identifier"
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "auth": {
+      "type": "object",
+      "required": ["currentUser", "availableUsers"],
+      "additionalProperties": false,
+      "properties": {
+        "currentUser": { "$ref": "#/$defs/user" },
+        "availableUsers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/user" }
+        }
+      }
+    },
+    "games": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/game" }
+    },
+    "sessions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/session" }
+    },
+    "library": {
+      "type": "object",
+      "required": ["ownedGameIds", "wishlistGameIds"],
+      "additionalProperties": false,
+      "properties": {
+        "ownedGameIds": { "type": "array", "items": { "type": "string" } },
+        "wishlistGameIds": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "chatHistory": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/chat" }
+    },
+    "bggGames": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/bggGame" },
+      "description": "Seed BGG lookups for MockBggApiService"
+    },
+    "documents": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/document" },
+      "description": "Seed PDF extractions for MockSmolDocling/Unstructured"
+    }
+  },
+  "$defs": {
+    "user": {
+      "type": "object",
+      "required": ["id", "email", "displayName", "role"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^MOCK-" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": {
+          "type": "string",
+          "enum": ["Guest", "User", "Editor", "Admin", "SuperAdmin"]
+        }
+      }
+    },
+    "game": {
+      "type": "object",
+      "required": ["id", "title"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^MOCK-" },
+        "title": { "type": "string" },
+        "publisher": { "type": "string" },
+        "averageRating": { "type": "number", "minimum": 0, "maximum": 10 },
+        "bggId": { "type": "integer" }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": ["id", "gameId"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^MOCK-" },
+        "gameId": { "type": "string", "pattern": "^MOCK-" },
+        "startedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "chat": {
+      "type": "object",
+      "required": ["chatId", "messages"],
+      "additionalProperties": false,
+      "properties": {
+        "chatId": { "type": "string", "pattern": "^MOCK-" },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["role", "content"],
+            "properties": {
+              "role": { "type": "string", "enum": ["user", "assistant", "system"] },
+              "content": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "bggGame": {
+      "type": "object",
+      "required": ["bggId", "name"],
+      "additionalProperties": true,
+      "properties": {
+        "bggId": { "type": "integer" },
+        "name": { "type": "string" }
+      }
+    },
+    "document": {
+      "type": "object",
+      "required": ["id", "pages"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^MOCK-" },
+        "pages": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

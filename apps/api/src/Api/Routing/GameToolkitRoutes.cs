@@ -194,6 +194,45 @@ internal static class GameToolkitRoutes
         .WithSummary("Remove a counter tool from the toolkit")
         .Produces<GameToolkitDto>(200);
 
+        // ---- User Dice Presets ----
+
+        toolkits.MapPost("/{id:guid}/user-dice-presets", async (Guid id, AddUserDicePresetRequest request, HttpContext ctx, IMediator m) =>
+        {
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+            var command = new AddUserDicePresetCommand(id, userId, request.Name, request.Formula);
+            var result = await m.Send(command).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AddUserDicePreset")
+        .WithSummary("Add a user dice preset to the toolkit")
+        .Produces<GameToolkitDto>(200);
+
+        toolkits.MapGet("/{id:guid}/user-dice-presets", async (Guid id, HttpContext ctx, IMediator m) =>
+        {
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+            var result = await m.Send(new GetUserDicePresetsQuery(id, userId)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetUserDicePresets")
+        .WithSummary("Get user dice presets for the current user")
+        .Produces<IReadOnlyList<UserDicePresetDto>>(200);
+
+        toolkits.MapDelete("/{id:guid}/user-dice-presets/{name}", async (Guid id, string name, HttpContext ctx, IMediator m) =>
+        {
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+            var result = await m.Send(new RemoveUserDicePresetCommand(id, userId, name)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("RemoveUserDicePreset")
+        .WithSummary("Remove a user dice preset from the toolkit")
+        .Produces<GameToolkitDto>(200);
+
         // ---- Templates ----
 
         toolkits.MapPut("/{id:guid}/scoring-template", async (Guid id, SetScoringTemplateRequest request, IMediator m) =>

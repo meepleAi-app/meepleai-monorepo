@@ -185,8 +185,8 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
             <div className="space-y-3">
               {/* Status + Model row */}
               <div className="flex items-center justify-between gap-2 rounded-lg bg-blue-50/50 border border-blue-200/40 p-3">
-                <AgentStatusBadge status={agentStatus} showLabel size="md" />
-                <AgentModelInfo modelName={modelName} showIcon size="md" />
+                <AgentStatusBadge status={agentStatus} />
+                <AgentModelInfo modelName={modelName} />
               </div>
 
               {/* Linked game chip */}
@@ -271,7 +271,6 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
                   invocationCount: data.invocationCount,
                   lastExecutedAt: data.lastInvokedAt ?? undefined,
                 }}
-                layout="vertical"
               />
               {data.invocationCount === 0 && (
                 <p className="font-nunito text-xs text-slate-400 text-center py-4">
@@ -589,7 +588,7 @@ function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
         <p className="font-nunito text-xs font-medium text-slate-700 truncate">{doc.fileName}</p>
         <p className="font-nunito text-[10px] text-slate-400">{date}</p>
       </div>
-      <KbStatusBadge status={doc.status} size="sm" />
+      <KbStatusBadge status={doc.status} />
     </div>
   );
 }

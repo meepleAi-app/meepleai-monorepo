@@ -7,13 +7,10 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
-
-import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import { useSharedGame } from '@/hooks/queries';
-import { useRemoveGameFromLibrary } from '@/hooks/queries';
+import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { UserGameDto } from '@/lib/api/dashboard-client';
 
 import { AgentDrawerSheet } from './AgentDrawerSheet';
@@ -60,25 +57,13 @@ export function MeepleUserLibraryCard({
   onClick,
   className,
 }: MeepleUserLibraryCardProps) {
-  const router = useRouter();
-
-  // Lazy-load full game detail (unused — flip removed since flipData no longer valid)
-  const [fetchDetail, setFetchDetail] = useState(false);
-  useSharedGame(game.id, fetchDetail);
-
-  const removeMutation = useRemoveGameFromLibrary();
-
-  // Drawer states
+  // Drawer states — opened via navItems click handlers
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
   const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
 
-  const handleFlipTrigger = useCallback(() => {
-    setFetchDetail(true);
-  }, []);
-
-  // Build metadata chips (label required, icon must be string)
+  // Build metadata chips
   const metadata = [
     game.minPlayers && game.maxPlayers
       ? { label: `${game.minPlayers}-${game.maxPlayers} giocatori` }
@@ -89,8 +74,31 @@ export function MeepleUserLibraryCard({
 
   const badge = game.isOwned ? 'Owned' : game.inWishlist ? 'Wishlist' : undefined;
 
-  // Drawer open handlers (replacing removed onManaPipClick / linkedEntities)
-  const _handleFlip = handleFlipTrigger; // keep reference to avoid lint unused
+  // Build navItems. UserGameDto only has playCount; other counts default to 0
+  // (drawers expose the actual data when opened).
+  // TODO: deferred Task 5/6 in plan — wire real KB/agent/chat counts via batch endpoint.
+  const navItems = useMemo(
+    () =>
+      buildGameNavItems(
+        {
+          kbCount: 0,
+          agentCount: 0,
+          chatCount: 0,
+          sessionCount: game.playCount ?? 0,
+        },
+        {
+          onKbClick: () => setKbDrawerOpen(true),
+          onAgentClick: () => setAgentDrawerOpen(true),
+          onChatClick: () => setChatDrawerOpen(true),
+          onSessionClick: () => setSessionDrawerOpen(true),
+          onKbPlus: () => setKbDrawerOpen(true),
+          onAgentPlus: () => setAgentDrawerOpen(true),
+          onChatPlus: () => setChatDrawerOpen(true),
+          onSessionPlus: () => setSessionDrawerOpen(true),
+        }
+      ),
+    [game.playCount]
+  );
 
   return (
     <>
@@ -105,12 +113,14 @@ export function MeepleUserLibraryCard({
         ratingMax={10}
         metadata={metadata}
         badge={badge}
+        status="owned"
+        navItems={navItems}
         onClick={onClick ? () => onClick(game.id) : undefined}
         className={className}
         data-testid={`library-game-card-${game.id}`}
       />
 
-      {/* Drawer sheets — opened via external triggers if needed */}
+      {/* Drawer sheets — wired to navItems click handlers */}
       <KbDrawerSheet
         open={kbDrawerOpen}
         onOpenChange={setKbDrawerOpen}
@@ -134,20 +144,6 @@ export function MeepleUserLibraryCard({
         onOpenChange={setSessionDrawerOpen}
         gameId={game.id}
         gameTitle={game.title}
-      />
-
-      {/* Pre-fetch trigger (suppress unused-var lint) */}
-      <span
-        hidden
-        aria-hidden
-        onClick={() => {
-          router.push(`/sessions/new?gameId=${game.id}`);
-          removeMutation.mutate(game.id);
-          setKbDrawerOpen(false);
-          setChatDrawerOpen(false);
-          setAgentDrawerOpen(false);
-          setSessionDrawerOpen(false);
-        }}
       />
     </>
   );

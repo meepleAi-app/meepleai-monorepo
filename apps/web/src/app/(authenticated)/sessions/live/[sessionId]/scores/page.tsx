@@ -8,6 +8,7 @@
 
 import { use } from 'react';
 
+import { AutosaveIndicator } from '@/components/session/live/AutosaveIndicator';
 import { ScoreBoard } from '@/components/session/live/ScoreBoard';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
@@ -20,5 +21,12 @@ export default function LiveSessionScoresPage({ params }: LiveSessionScoresPageP
   const players = useLiveSessionStore(s => s.players);
   const isHost = players.find(p => p.isHost)?.isHost ?? false;
 
-  return <ScoreBoard sessionId={sessionId} isHost={isHost} />;
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-end px-4 pt-2">
+        <AutosaveIndicator />
+      </div>
+      <ScoreBoard sessionId={sessionId} isHost={isHost} />
+    </div>
+  );
 }

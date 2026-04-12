@@ -13,9 +13,10 @@ interface Props {
   entityId: string;
   activeTab?: string;
   onNavigate: () => void;
+  isArchived?: boolean;
 }
 
-export function ChatDrawerContent({ entityId, activeTab, onNavigate }: Props) {
+export function ChatDrawerContent({ entityId, activeTab, onNavigate, isArchived = false }: Props) {
   const [tab, setTab] = useState<Tab>(
     TABS.includes(activeTab as Tab) ? (activeTab as Tab) : 'Messaggi'
   );
@@ -54,12 +55,23 @@ export function ChatDrawerContent({ entityId, activeTab, onNavigate }: Props) {
         >
           💬 Continua
         </Link>
-        <button
-          type="button"
-          className="px-3 py-2 text-[11px] font-semibold text-white/60 border border-white/15 rounded-xl hover:text-white/80 transition-colors"
-        >
-          📦 Archivia
-        </button>
+        {isArchived ? (
+          <button
+            type="button"
+            onClick={onNavigate}
+            className="px-3 py-2 text-[11px] font-semibold text-white/60 border border-white/15 rounded-xl hover:text-white/80 transition-colors"
+          >
+            🔓 Riapri
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onNavigate}
+            className="px-3 py-2 text-[11px] font-semibold text-white/60 border border-white/15 rounded-xl hover:text-white/80 transition-colors"
+          >
+            📦 Archivia
+          </button>
+        )}
         <Link
           href={`/chat/${entityId}`}
           onClick={onNavigate}

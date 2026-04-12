@@ -65,7 +65,15 @@ const STEP_ICONS: Record<WizardStep, React.ElementType> = {
 
 // ========== Component ==========
 
-export function SessionWizardMobile() {
+interface SessionWizardMobileProps {
+  prefilledGameId?: string;
+  prefilledGameName?: string;
+}
+
+export function SessionWizardMobile({
+  prefilledGameId: _prefilledGameId,
+  prefilledGameName: _prefilledGameName,
+}: SessionWizardMobileProps = {}) {
   const router = useRouter();
   const [step, setStep] = useState<WizardStep>(1);
   const [searchQuery, setSearchQuery] = useState('');

@@ -14,7 +14,7 @@
 import { useCallback, useState } from 'react';
 
 import { PartyPopper } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { GameNightWizard } from '@/components/game-night/GameNightWizard';
 import { SessionCreationWizard } from '@/components/session/SessionCreationWizard';
@@ -25,6 +25,9 @@ import { SessionWizardMobile } from './session-wizard-mobile';
 export default function NewSessionPage() {
   const [showWizard, setShowWizard] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefilledGameId = searchParams.get('gameId') ?? undefined;
+  const prefilledGameName = searchParams.get('gameName') ?? undefined;
 
   const handleWizardComplete = useCallback(
     (sessionId: string) => {
@@ -37,7 +40,10 @@ export default function NewSessionPage() {
     <>
       {/* Mobile: simplified 3-step wizard */}
       <div className="lg:hidden container mx-auto px-4 py-6">
-        <SessionWizardMobile />
+        <SessionWizardMobile
+          prefilledGameId={prefilledGameId}
+          prefilledGameName={prefilledGameName}
+        />
       </div>
 
       {/* Desktop: full wizard */}

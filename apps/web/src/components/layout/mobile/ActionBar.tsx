@@ -1,7 +1,7 @@
 'use client';
 
 import { BarChart3, ChevronLeft, MessageCircle, MoreHorizontal, Wrench } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { useDashboardMode } from '@/components/dashboard';
 import { entityHsl, entityIcon } from '@/components/ui/data-display/meeple-card/tokens';
@@ -35,7 +35,7 @@ function NormalActionBar() {
   const cta = resolveCTA(pathname);
 
   const handleOverflow = () => {
-    const target = allCards[3] ?? allCards[0];
+    const target = allCards[3];
     if (target) openDrawer(target.entityType, target.entityId);
   };
 
@@ -57,7 +57,6 @@ function NormalActionBar() {
           <button
             key={card.id}
             type="button"
-            role="button"
             aria-label={card.label}
             onClick={() => openDrawer(card.entityType, card.entityId)}
             data-testid={`action-bar-chip-${card.id}`}
@@ -109,6 +108,7 @@ function NormalActionBar() {
 }
 
 function SessionActionBar({ sessionId }: { sessionId: string }) {
+  const router = useRouter();
   const openDrawer = useCascadeNavigationStore(s => s.openDrawer);
 
   return (
@@ -124,7 +124,7 @@ function SessionActionBar({ sessionId }: { sessionId: string }) {
     >
       <button
         type="button"
-        onClick={() => window.history.back()}
+        onClick={() => router.back()}
         className="flex min-w-[48px] flex-col items-center gap-0.5 py-1 text-[10px] font-bold text-muted-foreground"
       >
         <ChevronLeft className="h-5 w-5" />

@@ -7,6 +7,7 @@ import { ActionBar } from '@/components/layout/mobile/ActionBar';
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn().mockReturnValue('/dashboard'),
+  useRouter: vi.fn().mockReturnValue({ back: vi.fn() }),
 }));
 
 vi.mock('@/components/dashboard', () => ({

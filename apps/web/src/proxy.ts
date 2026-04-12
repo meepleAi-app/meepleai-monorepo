@@ -473,7 +473,8 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith('/api/') ||
       pathname.startsWith('/health') ||
       pathname.startsWith('/offline') ||
-      pathname.startsWith('/_next/');
+      pathname.startsWith('/_next/') ||
+      pathname === '/mockServiceWorker.js'; // MSW SW must never be redirected
 
     if (!isAlphaRoute && !isAuthRoute && !isPublicRoute) {
       const response = NextResponse.redirect(new URL('/dashboard', request.url));

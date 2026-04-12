@@ -97,8 +97,14 @@ describe('AgentChatPanel', () => {
       expect(screen.getByText(/Catan/i)).toBeInTheDocument();
     });
 
-    it.skip('should render agent mode selector', () => {
-      // TODO: Component selector structure investigation required
+    it('should render agent mode selector', () => {
+      renderPanel();
+
+      // The agent mode selector is the first combobox in the panel
+      const comboboxes = screen.getAllByRole('combobox');
+      expect(comboboxes.length).toBeGreaterThanOrEqual(1);
+      // First combobox is the agent mode selector
+      expect(comboboxes[0]).toBeInTheDocument();
     });
 
     it('should render PDF selector', () => {
@@ -418,25 +424,15 @@ describe('AgentChatPanel', () => {
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it.skip('should disable input while typing indicator is active', async () => {
-      // TODO: Component does not currently disable input during API call
-      // This is a nice-to-have UX improvement for future implementation
+    it('should disable input while typing indicator is active', async () => {
       const user = userEvent.setup();
 
       // Simulate slow API response
-      vi.mocked(global.fetch).mockImplementationOnce(
-        () =>
-          new Promise(resolve => {
-            setTimeout(
-              () =>
-                resolve({
-                  ok: true,
-                  json: async () => ({ answer: 'Delayed response', citations: [] }),
-                } as Response),
-              100
-            );
-          })
-      );
+      let resolveResponse!: (value: Response) => void;
+      const slowResponsePromise = new Promise<Response>(resolve => {
+        resolveResponse = resolve;
+      });
+      vi.mocked(global.fetch).mockImplementationOnce(() => slowResponsePromise);
 
       renderPanel();
 
@@ -446,8 +442,16 @@ describe('AgentChatPanel', () => {
       await user.type(input, 'Question');
       await user.click(sendButton);
 
-      // Input should be disabled while waiting
-      expect(input).toBeDisabled();
+      // Input should be disabled while waiting (isTyping = true)
+      await waitFor(() => {
+        expect(input).toBeDisabled();
+      });
+
+      // Resolve the response and verify input becomes enabled
+      resolveResponse({
+        ok: true,
+        json: async () => ({ answer: 'Delayed response', citations: [] }),
+      } as Response);
 
       await waitFor(() => {
         expect(input).not.toBeDisabled();
@@ -460,9 +464,9 @@ describe('AgentChatPanel', () => {
   // =========================================================================
 
   describe('Typing Indicator', () => {
-    it.skip('should show typing indicator while waiting for response', async () => {
-      // TODO: testid query with regex not finding elements
-    });
+    // REMOVED (2026-04-12): TypingIndicator renders only animated spans with no accessible role or
+    // data-testid, making it untestable by role/label in jsdom without adding implementation coupling.
+    // The 'hide after response' test below covers the typing state indirectly.
 
     it('should hide typing indicator after response', async () => {
       const user = userEvent.setup();
@@ -564,8 +568,37 @@ describe('AgentChatPanel', () => {
   // =========================================================================
 
   describe('PDF Reference Interaction', () => {
-    it.skip('should call onPdfReferenceClick when citation is clicked', async () => {
-      // TODO: PDF reference not clickable - component investigation required
+    it('should call onPdfReferenceClick when citation is clicked', async () => {
+      const user = userEvent.setup();
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          answer: 'Answer with citation',
+          citations: [
+            {
+              documentId: 'pdf-1',
+              documentTitle: 'Regolamento Base',
+              pageNumber: 5,
+              excerpt: 'Cited text here',
+              score: 0.95,
+            },
+          ],
+        }),
+      } as Response);
+
+      renderPanel();
+
+      const input = screen.getByPlaceholderText(/fai una domanda/i);
+      const sendButton = screen.getByRole('button', { name: /invia/i });
+
+      await user.type(input, 'Question');
+      await user.click(sendButton);
+
+      // Wait for the PDF reference card to appear
+      const referenceCard = await screen.findByTestId('meeple-pdf-reference-card');
+      await user.click(referenceCard);
+
+      expect(mockOnPdfReferenceClick).toHaveBeenCalledWith(5, 'pdf-1');
     });
   });
 });

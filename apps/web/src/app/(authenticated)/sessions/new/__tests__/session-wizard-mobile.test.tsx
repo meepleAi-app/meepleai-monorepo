@@ -16,7 +16,7 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibrary: () => ({ data: { items: [] }, isLoading: false }),
 }));
 
-const mockApi = {
+const mockApi = vi.hoisted(() => ({
   games: { getPhaseTemplates: vi.fn().mockResolvedValue([]) },
   liveSessions: {
     createSession: vi.fn().mockResolvedValue('session-123'),
@@ -28,7 +28,7 @@ const mockApi = {
     updateTurnOrder: vi.fn().mockResolvedValue(undefined),
     configurePhases: vi.fn().mockResolvedValue(undefined),
   },
-};
+}));
 
 vi.mock('@/lib/api', () => ({ api: mockApi }));
 

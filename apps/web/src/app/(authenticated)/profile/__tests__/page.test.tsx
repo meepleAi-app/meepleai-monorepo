@@ -6,6 +6,7 @@ import { screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
+import { PROFILE } from '../../../../__tests__/fixtures/test-strings';
 
 import ProfilePage from '../page';
 
@@ -175,7 +176,7 @@ describe('ProfilePage', () => {
     });
 
     expect(screen.getByText('My Library')).toBeInTheDocument();
-    expect(screen.getByText('Storia di gioco')).toBeInTheDocument();
+    expect(screen.getByText(PROFILE.gameHistory)).toBeInTheDocument();
   });
 
   it('switches to Achievements tab and shows achievements grid', async () => {

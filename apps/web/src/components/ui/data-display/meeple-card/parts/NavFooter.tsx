@@ -2,6 +2,8 @@
 
 import type { KeyboardEvent } from 'react';
 
+import Link from 'next/link';
+
 import { entityHsl } from '../tokens';
 
 import type { NavFooterItem } from '../types';
@@ -37,28 +39,8 @@ export function NavFooter({ items, size = 'sm' }: NavFooterProps) {
           }
         };
 
-        return (
-          <div
-            key={i}
-            role="button"
-            tabIndex={item.disabled ? -1 : 0}
-            aria-disabled={item.disabled}
-            aria-label={item.label}
-            title={item.label}
-            onClick={e => {
-              e.stopPropagation();
-              handleActivate();
-            }}
-            onKeyDown={handleKeyDown}
-            className={`group/nav relative flex flex-col items-center gap-0.5 outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--nav-hover-border)] ${
-              item.disabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer'
-            }`}
-            style={
-              {
-                '--nav-hover-border': borderHover,
-              } as React.CSSProperties
-            }
-          >
+        const innerContent = (
+          <>
             <div
               className={`relative flex ${iconSize} items-center justify-center rounded-full border border-[var(--mc-nav-icon-border)] bg-[var(--mc-nav-icon-bg)] transition-all duration-200 group-hover/nav:scale-[1.08] group-hover/nav:border-[var(--nav-hover-border)] group-hover/nav:bg-[var(--nav-hover-bg)] group-hover/nav:shadow-[var(--nav-hover-shadow)] group-active/nav:scale-95 group-active/nav:shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]`}
               style={
@@ -100,6 +82,50 @@ export function NavFooter({ items, size = 'sm' }: NavFooterProps) {
             <span className="text-[7px] font-semibold uppercase tracking-wide text-[var(--mc-text-muted)] transition-colors group-hover/nav:text-[var(--mc-text-secondary)]">
               {item.label}
             </span>
+          </>
+        );
+
+        const commonClassName = `group/nav relative flex flex-col items-center gap-0.5 outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--nav-hover-border)] ${
+          item.disabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer'
+        }`;
+        const commonStyle = { '--nav-hover-border': borderHover } as React.CSSProperties;
+
+        if (item.href && !item.disabled) {
+          return (
+            <Link
+              key={i}
+              href={item.href}
+              className={commonClassName}
+              style={commonStyle}
+              aria-label={item.label}
+              title={item.label}
+              onClick={e => {
+                e.stopPropagation();
+                item.onClick?.();
+              }}
+            >
+              {innerContent}
+            </Link>
+          );
+        }
+
+        return (
+          <div
+            key={i}
+            role="button"
+            tabIndex={item.disabled ? -1 : 0}
+            aria-disabled={item.disabled}
+            aria-label={item.label}
+            title={item.label}
+            onClick={e => {
+              e.stopPropagation();
+              handleActivate();
+            }}
+            onKeyDown={handleKeyDown}
+            className={commonClassName}
+            style={commonStyle}
+          >
+            {innerContent}
           </div>
         );
       })}

@@ -17,9 +17,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Timer, MessageCircle, Crown, LogOut } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { ChatSlideOverPanel } from '@/components/chat/panel/ChatSlideOverPanel';
 import { LiveScoreboard } from '@/components/game-night/LiveScoreboard';
 import type { LiveScoreboardPlayer } from '@/components/game-night/LiveScoreboard';
 import { GameOverModal } from '@/components/session/live/GameOverModal';
@@ -33,6 +33,7 @@ import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { SessionBottomNav, type SessionTab } from '@/components/ui/navigation/SessionBottomNav';
 import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
+import { useChatPanel } from '@/hooks/useChatPanel';
 import { api } from '@/lib/api';
 import type { TurnPhasesDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { PLAYER_COLOR_HEX } from '@/lib/constants/player-colors';
@@ -83,6 +84,9 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
 
   // End session confirm
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+
+  // Chat panel (inline slide-over, no navigation)
+  const { open: openChat } = useChatPanel();
   const [sessionEnded, setSessionEnded] = useState(false);
 
   // Turn phases
@@ -371,14 +375,27 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
                 Hai dubbi sulle regole? Chiedi al nostro assistente e ottieni risposte immediate.
               </p>
             </div>
-            <Link
-              href={session?.gameId ? `/chat?gameId=${session.gameId}` : '/chat'}
-              className="w-full max-w-xs"
-            >
-              <GradientButton fullWidth size="lg">
+            <div className="w-full max-w-xs">
+              <GradientButton
+                fullWidth
+                size="lg"
+                onClick={() =>
+                  openChat(
+                    session?.gameId && session.gameName
+                      ? {
+                          id: session.gameId,
+                          name: session.gameName,
+                          pdfCount: 0,
+                          kbStatus: 'ready',
+                        }
+                      : undefined
+                  )
+                }
+                data-testid="open-chat-btn"
+              >
                 Apri Chat AI
               </GradientButton>
-            </Link>
+            </div>
           </div>
         )}
 
@@ -489,12 +506,14 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
           </p>
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={() => setShowEndConfirm(false)}
               className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-medium hover:bg-white/20"
             >
               Annulla
             </button>
             <button
+              type="button"
               onClick={handleEndSession}
               className="flex-1 rounded-xl bg-red-500 py-3 text-sm font-medium text-white hover:bg-red-600"
             >
@@ -503,6 +522,9 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
           </div>
         </div>
       </BottomSheet>
+
+      {/* Chat slide-over — keeps user in session, no navigation */}
+      <ChatSlideOverPanel />
     </div>
   );
 }

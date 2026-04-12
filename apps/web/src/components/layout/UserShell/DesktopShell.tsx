@@ -5,7 +5,8 @@ import type { ReactNode } from 'react';
 import { ChatSlideOverPanel } from '@/components/chat/panel/ChatSlideOverPanel';
 import { ActionPill } from '@/components/layout/ActionPill';
 import { HandRail } from '@/components/layout/HandRail';
-import { MobileBottomBar } from '@/components/layout/MobileBottomBar';
+import { ActionBar } from '@/components/layout/mobile/ActionBar';
+import { HandDrawer } from '@/components/layout/mobile/HandDrawer';
 
 import { MiniNavSlot } from './MiniNavSlot';
 import { SessionBanner } from './SessionBanner';
@@ -29,6 +30,7 @@ interface DesktopShellProps {
  *   │              │ main content                  │
  *   │              │      [ActionPill floating]    │
  *   └──────────────┴──────────────────────────────┘
+ *   Mobile: ActionBar (bottom nav) + HandDrawer (bottom sheet)
  */
 export function DesktopShell({ children }: DesktopShellProps) {
   return (
@@ -44,7 +46,8 @@ export function DesktopShell({ children }: DesktopShellProps) {
         </div>
       </div>
       <ChatSlideOverPanel />
-      <MobileBottomBar />
+      <ActionBar />
+      <HandDrawer />
     </div>
   );
 }

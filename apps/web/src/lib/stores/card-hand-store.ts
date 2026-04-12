@@ -27,10 +27,13 @@ interface CardHandStore {
 const MAX_CARDS = 10;
 
 function evict(cards: HandCard[]): HandCard[] {
-  if (cards.length <= MAX_CARDS) return cards;
-  const oldest = [...cards].filter(c => !c.pinned).sort((a, b) => a.addedAt - b.addedAt)[0];
-  if (!oldest) return cards; // all pinned
-  return cards.filter(c => c.id !== oldest.id);
+  let result = cards;
+  while (result.length > MAX_CARDS) {
+    const oldest = [...result].filter(c => !c.pinned).sort((a, b) => a.addedAt - b.addedAt)[0];
+    if (!oldest) break; // all pinned, cannot evict further
+    result = result.filter(c => c.id !== oldest.id);
+  }
+  return result;
 }
 
 export const useCardHand = create<CardHandStore>()(
@@ -43,7 +46,9 @@ export const useCardHand = create<CardHandStore>()(
           if (existing) {
             return {
               cards: evict(
-                s.cards.map(c => (c.id === card.id ? { ...c, ...card, addedAt: Date.now() } : c))
+                s.cards.map(c =>
+                  c.id === card.id ? { ...c, ...card, pinned: c.pinned, addedAt: Date.now() } : c
+                )
               ),
             };
           }

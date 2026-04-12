@@ -243,6 +243,45 @@ Search overlay: full-width input floats over content, entity filter chips below 
 
 ---
 
+## 4b. Action → Landing con Drawer Aperto
+
+Quando l'utente esegue un'azione contestuale (da ActionPill, footer di un drawer, o navItem), la navigazione atterra sulla pagina dell'entità target con il **drawer già aperto sulla tab corretta**.
+
+### Mapping azione → tab di atterraggio
+
+| Azione | Pagina di destinazione | Drawer aperto su |
+|--------|----------------------|------------------|
+| `▶ Gioca` (da game) | `/games/:id/sessions/new` | Session drawer · tab **Live** |
+| `🤖 Chiedi AI` (da game) | `/agents/:id/chat` | Agent drawer · tab **Overview** |
+| `↑ Carica PDF` (da game/kb) | `/games/:id/kb` | KB drawer · tab **Overview** (upload pre-aperto) |
+| `💬 Continua` (da chat) | `/chat/:id` | Chat drawer · tab **Messaggi** |
+| `▶ Riprendi` (da session) | `/sessions/:id` | Session drawer · tab **Live** |
+| `▶ Usa` (da toolkit) | `/sessions/new?toolkit=:id` | Toolkit drawer · tab **Template** |
+| `💬 Chat` (da agent) | `/agents/:id/chat` | Agent drawer · tab **Overview** |
+| `🔄 Reindex` (da kb) | stessa pagina | KB drawer · tab **Overview** (progress visibile) |
+
+### Meccanismo di implementazione
+
+La navigazione porta un **navigation state** (non URL param, non persistito) che il componente legge on mount:
+
+```ts
+// mittente (es. ActionPill CTA o drawer footer button)
+router.push('/agents/abc/chat', {
+  state: { drawerOpen: true, drawerTab: 'overview' }
+});
+
+// destinazione (es. AgentPage)
+const location = useLocation();
+const { drawerOpen, drawerTab } = location.state ?? {};
+useEffect(() => {
+  if (drawerOpen) openHandDrawer({ tab: drawerTab });
+}, []);
+```
+
+Su **desktop**, la stessa logica apre una panel laterale o uno stato contestuale al posto del drawer mobile.
+
+---
+
 ## 5. Drawer Specialization per Entity
 
 Each entity type has a specialized drawer using the `E` data model from `admin-mockups/meeple-card-drawer-tabs-mockup.html`. The drawer shows the **currently active card** from the hand.
@@ -341,28 +380,126 @@ State is mutually exclusive: only one of `▶ Riprendi` or `📊 Risultati` is s
 
 ---
 
-## 6. MeepleCard — `navItems` Prop
+## 6. MeepleCard — Varianti, ManaPips e navItems
 
-When a `MeepleCard` is rendered on an entity page (e.g., game detail), it exposes `navItems` in its footer to navigate to child entities. These items **also trigger `drawCard()`** on the hand store, keeping hand and page in sync.
+### 6.1 Varianti di visualizzazione
+
+| Variant | Contesto | Dimensione |
+|---------|----------|-----------|
+| `grid` (default) | Dashboard hub, libreria, ricerca | 196px wide |
+| `list` | Lista compatta multi-colonna | full-width row, 72px tall |
+| `compact` | Risultati ricerca, suggestion inline | 160px wide, ridotto |
+| `focus` | Pagina entità (header area) | full content-width, auto height |
+| `featured` | Card in evidenza, primo slot dashboard | full-width hero |
+
+### 6.2 ManaPips
+
+**ManaPips** sono piccoli indicatori circolari colorati (8–10px) che compaiono sul bordo inferiore della card nelle varianti `grid` e `compact`. Indicano visivamente quali tipi di entità figlio sono collegati, senza testo.
+
+```
+┌──────────────────────┐
+│  [cover image]       │
+│  Catan               │
+│  Klaus Teuber        │
+│  ★ 7.1               │
+│  ● ● ●  ·  +1        │  ← ManaPips row
+└──────────────────────┘
+   🎮  📚  🤖  (+toolkit)
+```
+
+**Regole di visualizzazione ManaPips**:
+- Mostra max 3 pip; se ne esistono 4+, mostra 3 + `+N`
+- Pip colorato (`opacity: 1`) = entità esiste e ha contenuto
+- Pip grigio (`opacity: 0.25`) = entità non collegata (opzionale, solo se `showEmpty=true`)
+- Pip con badge numerico: solo se `count > 0` (es. `3 sessioni`)
+
+**Per variante**:
+- `grid`: pip row da 8px con badge count piccolo
+- `compact`: pip da 6px senza badge
+- `list`: pip row inline dopo il rating
+- `focus` / `featured`: pip sostituiti dai **navItems chip** completi (§6.3)
+
+**Mapping entity → pip color**:
+```ts
+const PIP_COLORS: Record<EntityType, string> = {
+  session:  'hsl(240,60%,55%)',   // blue
+  kb:       'hsl(210,40%,55%)',   // light blue
+  agent:    'hsl(38,92%,50%)',    // amber
+  toolkit:  'hsl(142,70%,45%)',   // green
+  chat:     'hsl(220,80%,55%)',   // blue accent
+  player:   'hsl(262,83%,58%)',   // purple
+  event:    'hsl(350,89%,60%)',   // red
+  tool:     'hsl(195,80%,50%)',   // teal
+  game:     'hsl(25,95%,45%)',    // orange
+}
+```
+
+### 6.3 navItems (variante focus/featured)
+
+Quando una `MeepleCard` è renderizzata in variante `focus` o `featured`, i ManaPips si espandono in navItem chip cliccabili. Questi chip **trigger `drawCard()`** sul hand store.
 
 ```ts
 interface NavFooterItem {
   label: string         // "Sessioni"
   href: string          // "/games/abc123/sessions"
   entityType: EntityType
-  count?: number        // "12 sessioni"
+  count?: number        // 12
   icon?: string
 }
 ```
 
-**Example — Game MeepleCard footer**:
+**Esempio — Game MeepleCard (focus)**:
 ```
 [🎮 Sessioni 12]  [📚 Docs 3]  [🧰 Toolkit]  [🤖 Agente]
 ```
 
-Tap on a `navItem` chip:
-1. Navigate to `href`
-2. `drawCard({ entityType, entityId, label, ... })` → card added to hand
+Tap su un navItem chip:
+1. Naviga a `href`
+2. `drawCard({ entityType, entityId, label, ... })` → card aggiunta alla mano
+
+---
+
+## 6b. Dashboard Hub e MeepleCard in Focus
+
+### Dashboard = MeepleCard Grid
+
+La dashboard home (`/dashboard`) non usa più i componenti `.game-card` / `.hub-block` / `.game-thumb` del mockup `dashboard-new-user-mockup.html`. Questi vengono **rimpiazzati da MeepleCard** in variante `grid` o `compact`.
+
+| Sezione dashboard | Componente precedente | Componente nuovo |
+|-------------------|----------------------|------------------|
+| Giochi recenti / libreria | `.game-card` (thumb + badge + titolo) | `MeepleCard variant="grid"` con ManaPips |
+| Sessioni recenti | `.empty-cta` block | `MeepleCard variant="compact" entity="session"` |
+| Agenti | `.empty-cta` block | `MeepleCard variant="compact" entity="agent"` |
+| Toolkit carousel | `.tk-card` | `MeepleCard variant="compact" entity="toolkit"` |
+
+**Empty state** (nuovo utente): usa il pattern `.empty-cta` del mockup originale — icona grande, titolo, sottotitolo, CTA button — invariato. Solo i card popolati usano MeepleCard.
+
+**Filter chips**: i chip `Tutti / Recenti / ★ Preferiti` sopra la griglia rimangono e filtrano il tipo di MeepleCard mostrate.
+
+### Entity Page = MeepleCard in Focus
+
+Quando l'utente naviga a una pagina entità (es. `/games/:id`), il contenuto della pagina inizia con una `MeepleCard variant="focus"` che occupa la larghezza completa del content area.
+
+```
+┌─────────────────────────────────────────────┐
+│  TopBar                                     │
+├─────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────┐    │
+│  │  MeepleCard variant="focus"         │    │  ← entity header
+│  │  [cover hero]  titolo  rating       │    │
+│  │  metadata chips                     │    │
+│  │  [navItem chips — sessioni/docs/…]  │    │  ← espansi da ManaPips
+│  └─────────────────────────────────────┘    │
+│                                             │
+│  entity-specific content below             │
+│  (session list, doc list, etc.)             │
+└─────────────────────────────────────────────┘
+        ↕ (mobile: drawer auto-aperto sulla tab corretta)
+```
+
+**Su mobile**: arrivare su una pagina entità via action → MeepleCard focus visibile + Hand Drawer auto-aperto (§4b).
+
+**Su desktop**: HandRail evidenzia il chip corrispondente; la card in focus è cliccabile per aprire un detail panel laterale (futuro scope) o è solo informativa.
 
 ---
 
@@ -426,7 +563,10 @@ The breadcrumb in ActionPill is derived from the URL segments, resolved to entit
 | `ActionBar` | `components/layout/mobile/ActionBar.tsx` | New |
 | `HandDrawer` | `components/layout/mobile/HandDrawer.tsx` | New — uses `.dr-panel` CSS |
 | `DrawerContent` | `components/layout/mobile/drawer/DrawerContent.tsx` | New — per-entity switch |
-| `MeepleCard` navItems | `components/ui/data-display/meeple-card/MeepleCard.tsx` | Extend (prop exists) |
+| `MeepleCard` navItems + ManaPips | `components/ui/data-display/meeple-card/MeepleCard.tsx` | Extend: add `manaPips` prop, `variant="focus"` |
+| `ManaPips` sub-component | `components/ui/data-display/meeple-card/ManaPips.tsx` | New |
+| Dashboard hub grid | `app/(user)/dashboard/page.tsx` | Modify: replace `.game-card` with `MeepleCard` |
+| Entity focus card | `components/layout/EntityFocusCard.tsx` | New — wrapper for `MeepleCard variant="focus"` |
 | `useCardHand` store | `stores/use-card-hand.ts` | Extend: sections, persist pins |
 | `useNavBreadcrumb` | `hooks/useNavBreadcrumb.ts` | New |
 | `useMiniNavConfig` | `hooks/useMiniNavConfig.ts` | **Deprecated** — remove all usages, replaced by `useNavBreadcrumb` |

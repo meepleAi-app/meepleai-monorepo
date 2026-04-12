@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useNavBreadcrumb } from '../useNavBreadcrumb';
+import { useNavBreadcrumb } from '@/lib/hooks/useNavBreadcrumb';
 import type { HandCard } from '@/lib/stores/card-hand-store';
 
 // Mock token imports

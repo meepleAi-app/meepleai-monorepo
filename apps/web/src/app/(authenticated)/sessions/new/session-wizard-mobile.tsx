@@ -220,7 +220,9 @@ export function SessionWizardMobile({
             displayName: player.displayName,
             color: player.color,
           });
-          addedPlayerIds.push(playerId);
+          if (playerId && typeof playerId === 'string') {
+            addedPlayerIds.push(playerId);
+          }
         } catch (playerErr) {
           const failedName = player.displayName;
           const remaining = players.length - addedPlayerIds.length;
@@ -284,7 +286,7 @@ export function SessionWizardMobile({
                 if (s === 1 && !!prefilledGameId) return;
                 if (s < step) setStep(s);
               }}
-              disabled={s > step}
+              disabled={s > step || (s === 1 && !!prefilledGameId)}
               className={cn(
                 'flex items-center justify-center h-10 w-10 rounded-full transition-all',
                 isActive && 'bg-amber-500 text-white shadow-md scale-110',

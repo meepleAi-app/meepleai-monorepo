@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { PlayHistory } from '@/components/play-records/PlayHistory';
@@ -102,10 +102,10 @@ describe('PlayHistory', () => {
     );
   };
 
-  it('renders play history title', () => {
+  it('renders play history container', () => {
     renderComponent();
-    expect(screen.getByText('Play History')).toBeInTheDocument();
-    expect(screen.getByText(/Your recorded game sessions/)).toBeInTheDocument();
+    expect(screen.getByTestId('play-history')).toBeInTheDocument();
+    expect(screen.getByTestId('play-history-search')).toBeInTheDocument();
   });
 
   it('displays session cards', () => {
@@ -134,19 +134,15 @@ describe('PlayHistory', () => {
     } as any);
 
     renderComponent();
-    expect(screen.getByText('No Play Records Yet')).toBeInTheDocument();
+    expect(screen.getByTestId('play-history-empty')).toBeInTheDocument();
+    expect(screen.getByText('Nessuna partita registrata')).toBeInTheDocument();
   });
 
-  it('toggles view mode', () => {
+  it('shows filter chips for status', () => {
     renderComponent();
-    const gridButton = screen.getByLabelText('Grid view');
-    const listButton = screen.getByLabelText('List view');
-
-    expect(gridButton).toBeInTheDocument();
-    expect(listButton).toBeInTheDocument();
-
-    fireEvent.click(listButton);
-    // Store update would be tested separately
+    expect(screen.getByTestId('filter-status-all')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-status-Completed')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-status-InProgress')).toBeInTheDocument();
   });
 
   it('shows error state', () => {

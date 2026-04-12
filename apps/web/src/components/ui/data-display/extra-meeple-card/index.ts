@@ -12,7 +12,6 @@
 export { ExtraMeepleCard } from './ExtraMeepleCard';
 export {
   GameExtraMeepleCard,
-  PlayerExtraMeepleCard,
   CollectionExtraMeepleCard,
   AgentExtraMeepleCard,
   ChatExtraMeepleCard,

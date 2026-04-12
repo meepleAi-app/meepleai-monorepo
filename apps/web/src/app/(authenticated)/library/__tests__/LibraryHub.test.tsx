@@ -7,21 +7,6 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => ({ get: () => null }),
 }));
 
-vi.mock('@/stores/use-card-hand', () => {
-  const state = {
-    cards: [],
-    pinnedIds: new Set(),
-    drawCard: vi.fn(),
-    pinCard: vi.fn(),
-    unpinCard: vi.fn(),
-    expandedStack: false,
-    toggleExpandStack: vi.fn(),
-  };
-  return {
-    useCardHand: (selector?: (s: typeof state) => unknown) => (selector ? selector(state) : state),
-  };
-});
-
 vi.mock('@/lib/stores/mini-nav-config-store', () => {
   const state = {
     config: null,
@@ -33,6 +18,11 @@ vi.mock('@/lib/stores/mini-nav-config-store', () => {
       selector ? selector(state) : state,
   };
 });
+
+vi.mock('@/hooks/queries/useLibrary', () => ({
+  useLibrary: () => ({ data: undefined }),
+  useLibraryStats: () => ({ data: undefined }),
+}));
 
 import { LibraryHub } from '../LibraryHub';
 

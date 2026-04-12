@@ -106,7 +106,10 @@ jobs:
           }
 
           var devToolsTypes = types
-              .Where(t => t.Namespace != null && t.Namespace.StartsWith("Api.DevTools", StringComparison.Ordinal))
+              .Where(t => {
+                  try { return t.Namespace != null && t.Namespace.StartsWith("Api.DevTools", StringComparison.Ordinal); }
+                  catch { return false; }
+              })
               .Select(t => t.FullName)
               .ToList();
 

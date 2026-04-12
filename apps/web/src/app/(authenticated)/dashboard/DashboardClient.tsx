@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
@@ -14,6 +14,7 @@ import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
 import { useGames } from '@/hooks/queries/useGames';
 import { useAddGameToLibrary, useLibrary } from '@/hooks/queries/useLibrary';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
+import { useRecentsStore } from '@/stores/use-recents';
 
 // ---------------------------------------------------------------------------
 // Filter chip definitions
@@ -414,6 +415,16 @@ export function DashboardClient() {
       []
     )
   );
+
+  // Register this page in recents for cross-page context memory
+  useEffect(() => {
+    useRecentsStore.getState().push({
+      id: 'section-dashboard',
+      entity: 'game',
+      title: 'Home',
+      href: '/dashboard',
+    });
+  }, []);
 
   // Data fetching
   const { data: libraryData, isLoading: libraryLoading } = useLibrary({ page: 1, pageSize: 12 });

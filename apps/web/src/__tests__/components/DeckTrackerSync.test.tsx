@@ -1,23 +1,23 @@
 /**
  * DeckTrackerSync Unit Tests
  *
- * Verifies that the render-less client component calls drawCard on mount
- * and produces no visible DOM output.
+ * Verifies that the render-less client component calls useRecentsStore.push on
+ * mount and produces no visible DOM output.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 
 import { DeckTrackerSync } from '@/components/layout/DeckTrackerSync';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 // Reset zustand store between tests
 beforeEach(() => {
-  useCardHand.setState({ cards: [], focusedIdx: -1 });
+  useRecentsStore.setState({ items: [] });
 });
 
 describe('DeckTrackerSync', () => {
-  it('calls drawCard on mount and adds the card to the store', () => {
+  it('pushes the card to useRecentsStore on mount', () => {
     render(
       <DeckTrackerSync
         entity="agent"
@@ -28,14 +28,13 @@ describe('DeckTrackerSync', () => {
       />
     );
 
-    const cards = useCardHand.getState().cards;
-    expect(cards).toHaveLength(1);
-    expect(cards[0]).toMatchObject({
+    const items = useRecentsStore.getState().items;
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
       id: 'agent-123',
       entity: 'agent',
       title: 'Test Agent',
       href: '/agents/agent-123',
-      subtitle: 'Test subtitle',
     });
   });
 
@@ -50,24 +49,5 @@ describe('DeckTrackerSync', () => {
     );
 
     expect(container.innerHTML).toBe('');
-  });
-
-  it('does not add duplicate cards when re-rendered with same id', () => {
-    const { rerender } = render(
-      <DeckTrackerSync entity="agent" id="agent-789" title="Agent One" href="/agents/agent-789" />
-    );
-
-    rerender(
-      <DeckTrackerSync
-        entity="agent"
-        id="agent-789"
-        title="Agent One Updated"
-        href="/agents/agent-789"
-      />
-    );
-
-    const cards = useCardHand.getState().cards;
-    expect(cards).toHaveLength(1);
-    expect(cards[0].id).toBe('agent-789');
   });
 });

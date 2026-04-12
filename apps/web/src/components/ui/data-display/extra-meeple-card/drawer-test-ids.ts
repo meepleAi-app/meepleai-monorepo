@@ -15,6 +15,12 @@ export const DRAWER_TEST_IDS = {
   /** Error state container (role="alert") */
   ERROR_STATE: 'drawer-error-state',
 
+  /** Back button shown when drawer stack has entries */
+  BACK_BUTTON: 'drawer-back-button',
+
+  /** Action footer shown at the bottom of drawer content */
+  ACTION_FOOTER: 'drawer-action-footer',
+
   /**
    * Coming-soon placeholder for entity types not yet implemented.
    * Use COMING_SOON(issueNumber) to get the full id.

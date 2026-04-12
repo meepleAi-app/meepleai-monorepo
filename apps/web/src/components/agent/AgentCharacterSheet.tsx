@@ -25,10 +25,12 @@ import { useRouter } from 'next/navigation';
 
 import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
 import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
+import { ConnectionBar, buildAgentConnections } from '@/components/ui/data-display/connection-bar';
 import { KbStatusBadge } from '@/components/ui/data-display/extra-meeple-card/badge-stubs';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
+import { useConnectionBarNav } from '@/hooks/useConnectionBarNav';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -66,6 +68,15 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
     isLoading: readinessLoading,
     error: readinessError,
   } = useAgentStatus(data.id);
+  const { handlePipClick } = useConnectionBarNav(data.id);
+  const agentConnections =
+    docsLoading || threadsLoading
+      ? []
+      : buildAgentConnections({
+          gameCount: data.gameId ? 1 : 0,
+          kbCount: docs.length,
+          chatCount: threads.length,
+        });
 
   // Derive status from flags
   const agentStatus: 'active' | 'idle' | 'error' = !data.isActive
@@ -197,6 +208,9 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
             Configura
           </a>
         )}
+
+        {/* connection bar — at the bottom of portrait, below title+meta */}
+        <ConnectionBar connections={agentConnections} onPipClick={handlePipClick} />
       </aside>
 
       {/* ── Scrollable body ───────────────────────────────────────────────── */}

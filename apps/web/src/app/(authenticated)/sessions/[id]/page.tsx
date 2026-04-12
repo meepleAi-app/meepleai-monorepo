@@ -28,7 +28,12 @@ import {
   SessionQuickActions,
 } from '@/components/session';
 import { toScoreboardData, toSession } from '@/components/session/adapters';
+import {
+  ConnectionBar,
+  buildSessionConnections,
+} from '@/components/ui/data-display/connection-bar';
 import { RelatedEntitiesSection } from '@/components/ui/data-display/entity-link/related-entities-section';
+import { useConnectionBarNav } from '@/hooks/useConnectionBarNav';
 import type { LiveSessionStatus } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/session-store';
@@ -75,6 +80,8 @@ export default function SessionScoreboardPage({ params }: SessionPageProps) {
       handleSessionUpdate({ ...session, status: 'Completed' as LiveSessionStatus });
     }
   }, [handleSessionUpdate]);
+
+  const { handlePipClick } = useConnectionBarNav(id);
 
   // Connect SSE
   const { isConnected } = useSessionSync({
@@ -142,6 +149,15 @@ export default function SessionScoreboardPage({ params }: SessionPageProps) {
   return (
     <div className="max-w-[1200px] mx-auto px-4 py-6 pb-32 lg:pb-24 space-y-6">
       <SessionHeader session={session} onPause={handlePause} onFinalize={completeSession} />
+      <ConnectionBar
+        connections={buildSessionConnections({
+          gameCount: activeSession.gameId ? 1 : 0,
+          playerCount: activeSession.players.length,
+          toolCount: 0,
+          agentCount: 0,
+        })}
+        onPipClick={handlePipClick}
+      />
 
       <LiveIndicator
         startedAt={activeSession.startedAt}

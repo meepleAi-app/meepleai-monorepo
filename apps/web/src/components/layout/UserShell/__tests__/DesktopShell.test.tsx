@@ -22,6 +22,14 @@ vi.mock('@/components/chat/panel/ChatSlideOverPanel', () => ({
   ChatSlideOverPanel: () => null,
 }));
 
+vi.mock('@/components/layout/mobile/ActionBar', () => ({
+  ActionBar: () => null,
+}));
+
+vi.mock('@/components/layout/mobile/HandDrawer', () => ({
+  HandDrawer: () => null,
+}));
+
 import { DesktopShell } from '../DesktopShell';
 
 describe('DesktopShell', () => {

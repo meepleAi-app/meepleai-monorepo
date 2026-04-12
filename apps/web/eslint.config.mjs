@@ -31,6 +31,7 @@ export default [
       "jest.setup.js",
       "jest.teardown.js",
       "scripts/**", // Node.js utility scripts - exempt from browser linting
+      "retake.mjs", // Playwright dev script — uses browser globals inside page.evaluate() callbacks
       "**/__tests__/**", // Unit test files - TypeScript handles syntax checking
       "**/*.test.{ts,tsx,js,jsx}", // Test files - avoid ESLint parser conflicts
     ],

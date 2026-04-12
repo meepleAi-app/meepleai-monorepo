@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { usePathname } from 'next/navigation';
+import { useShallow } from 'zustand/react/shallow';
 
 import { useCardHand, selectPinnedCards, selectRecentCards } from '@/lib/stores/card-hand-store';
 import { cn } from '@/lib/utils';
@@ -12,8 +13,8 @@ import { HandRailCard } from './HandRailCard';
 export function HandRail() {
   const [expanded, setExpanded] = useState(false);
   const pathname = usePathname();
-  const pinned = useCardHand(selectPinnedCards);
-  const recent = useCardHand(selectRecentCards);
+  const pinned = useCardHand(useShallow(selectPinnedCards));
+  const recent = useCardHand(useShallow(selectRecentCards));
 
   if (pinned.length === 0 && recent.length === 0) return null;
 

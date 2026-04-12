@@ -45,6 +45,16 @@ export type GameKbSettingsPayload = Omit<GameKbSettings, 'gameId'>;
 
 import type { HttpClient } from '../core/httpClient';
 
+// ── Quick Links (S4) ────────────────────────────────────────────────────────
+
+export const QuickLinkSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  snippet: z.string(),
+});
+export const QuickLinksSchema = z.array(QuickLinkSchema);
+export type QuickLink = z.infer<typeof QuickLinkSchema>;
+
 export interface CreateKnowledgeBaseClientParams {
   httpClient: HttpClient;
 }
@@ -220,6 +230,19 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
       const result = await httpClient.get(
         `/api/v1/knowledge-base/${encodeURIComponent(gameId)}/documents`,
         z.array(GameDocumentSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * S4: Get RAG quick links for a game (max 4 from the game's KB)
+     * @param gameId Game ID (GUID format)
+     * @returns Array of quick link items (id, title, snippet)
+     */
+    async getQuickLinks(gameId: string): Promise<QuickLink[]> {
+      const result = await httpClient.get(
+        `/api/v1/knowledge-base/quick-links?gameId=${encodeURIComponent(gameId)}`,
+        QuickLinksSchema
       );
       return result ?? [];
     },

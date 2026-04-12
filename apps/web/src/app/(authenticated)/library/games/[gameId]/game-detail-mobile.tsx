@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { FocusedGameCard } from '@/components/game-detail/mobile/FocusedGameCard';
 import { GameDetailsDrawer } from '@/components/game-detail/mobile/GameDetailsDrawer';
 import { type GameTabId } from '@/components/game-detail/tabs';
+import { StartSessionSheet } from '@/components/session/StartSessionSheet';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
@@ -31,6 +32,7 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
   const { data: game, isLoading, error } = useLibraryGameDetail(gameId);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [initialTab, setInitialTab] = useState<GameTabId>('info');
+  const [sessionSheetOpen, setSessionSheetOpen] = useState(false);
 
   const handleOpenDrawer = () => {
     setInitialTab('info');
@@ -84,13 +86,23 @@ export default function GameDetailMobile({ gameId }: GameDetailMobileProps) {
 
   return (
     <div className="flex h-full flex-col" data-testid="game-detail-mobile">
-      <FocusedGameCard game={game} onOpenDrawer={handleOpenDrawer} />
+      <FocusedGameCard
+        game={game}
+        onOpenDrawer={handleOpenDrawer}
+        onStartSession={() => setSessionSheetOpen(true)}
+      />
       <GameDetailsDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         gameId={gameId}
         initialTab={initialTab}
         isNotInLibrary={false}
+      />
+      <StartSessionSheet
+        open={sessionSheetOpen}
+        onOpenChange={setSessionSheetOpen}
+        gameId={gameId}
+        gameName={game.gameTitle}
       />
     </div>
   );

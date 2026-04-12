@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText } from 'lucide-react';
+import { FileText, Play } from 'lucide-react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
@@ -10,6 +10,7 @@ import type { LibraryGameDetail } from '@/hooks/queries/useLibrary';
 interface FocusedGameCardProps {
   game: LibraryGameDetail;
   onOpenDrawer: () => void;
+  onStartSession: () => void;
 }
 
 /**
@@ -21,7 +22,7 @@ interface FocusedGameCardProps {
  *
  * Reference: docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.5
  */
-export function FocusedGameCard({ game, onOpenDrawer }: FocusedGameCardProps) {
+export function FocusedGameCard({ game, onOpenDrawer, onStartSession }: FocusedGameCardProps) {
   const metadata: MeepleCardMetadata[] = [];
   if (game.gameYearPublished) {
     metadata.push({ label: String(game.gameYearPublished) });
@@ -53,16 +54,29 @@ export function FocusedGameCard({ game, onOpenDrawer }: FocusedGameCardProps) {
         />
       </div>
 
-      <Button
-        type="button"
-        onClick={onOpenDrawer}
-        size="lg"
-        className="w-full gap-2"
-        data-testid="focused-game-details-button"
-      >
-        <FileText className="h-4 w-4" />
-        Dettagli
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          onClick={onStartSession}
+          size="lg"
+          className="flex-1 gap-2 bg-[hsl(142,70%,45%)] text-white hover:bg-[hsl(142,70%,40%)]"
+          data-testid="focused-game-start-button"
+        >
+          <Play className="h-4 w-4" />
+          Avvia Partita
+        </Button>
+        <Button
+          type="button"
+          onClick={onOpenDrawer}
+          size="lg"
+          variant="outline"
+          className="gap-2"
+          data-testid="focused-game-details-button"
+        >
+          <FileText className="h-4 w-4" />
+          Dettagli
+        </Button>
+      </div>
     </div>
   );
 }

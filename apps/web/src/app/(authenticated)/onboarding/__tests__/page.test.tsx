@@ -57,6 +57,7 @@ vi.mock('next/image', () => ({
 // ─── Subject under test ───────────────────────────────────────────────────────
 
 import OnboardingPage from '../page';
+import { GREETING, ERROR } from '../../../../__tests__/fixtures/test-strings';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ describe('OnboardingPage', () => {
     setupAuth();
     render(<OnboardingPage />);
 
-    expect(screen.getByText('Benvenuto!')).toBeInTheDocument();
+    expect(screen.getByText(GREETING.welcome)).toBeInTheDocument();
     expect(screen.getByLabelText('Display Name')).toBeInTheDocument();
 
     const emailInput = screen.getByLabelText('Email') as HTMLInputElement;
@@ -162,7 +163,7 @@ describe('OnboardingPage', () => {
     await user.click(screen.getByRole('button', { name: /Entra/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('Errore di rete');
+      expect(screen.getByRole('alert')).toHaveTextContent(ERROR.network);
     });
     expect(mockPush).not.toHaveBeenCalled();
   });
@@ -181,7 +182,7 @@ describe('OnboardingPage', () => {
     render(<OnboardingPage />);
 
     // Should render spinner, not form
-    expect(screen.queryByText('Benvenuto!')).not.toBeInTheDocument();
+    expect(screen.queryByText(GREETING.welcome)).not.toBeInTheDocument();
     // Loader2 renders as an svg with animate-spin
     const spinner = document.querySelector('.animate-spin');
     expect(spinner).toBeInTheDocument();

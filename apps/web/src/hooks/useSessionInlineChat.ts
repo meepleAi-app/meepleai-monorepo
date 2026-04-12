@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 import type { ChatMessage } from '@/components/game-night/SessionChatWidget';
 import { api } from '@/lib/api';
@@ -8,7 +8,8 @@ import { api } from '@/lib/api';
 interface UseSessionInlineChatReturn {
   messages: ChatMessage[];
   isStreaming: boolean;
-  send: (text: string) => void;
+  error: string | null;
+  send: (text: string) => Promise<void>;
 }
 
 export function useSessionInlineChat(
@@ -16,10 +17,12 @@ export function useSessionInlineChat(
 ): UseSessionInlineChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const threadIdRef = useRef<string | null>(null);
 
   const send = useCallback(
     async (text: string) => {
+      setError(null);
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'user',
@@ -31,20 +34,18 @@ export function useSessionInlineChat(
 
       try {
         let thread;
-        if (!threadId) {
+        if (!threadIdRef.current) {
           thread = await api.chat.createThread({
             gameId: gameId ?? null,
             initialMessage: text,
           });
-          setThreadId(thread.id);
+          threadIdRef.current = thread.id;
         } else {
-          thread = await api.chat.addMessage(threadId, { content: text, role: 'user' });
+          thread = await api.chat.addMessage(threadIdRef.current!, { content: text, role: 'user' });
         }
 
         // Extract the last assistant message from the returned thread
-        const assistantMsgs = thread.messages.filter(
-          (m: { role: string }) => m.role === 'assistant'
-        );
+        const assistantMsgs = thread.messages.filter(m => m.role === 'assistant');
         const last = assistantMsgs[assistantMsgs.length - 1];
         if (last) {
           const assistantMsg: ChatMessage = {
@@ -56,13 +57,13 @@ export function useSessionInlineChat(
           setMessages(prev => [...prev, assistantMsg]);
         }
       } catch {
-        // Silent fail — user can retry
+        setError("Errore nell'invio del messaggio.");
       } finally {
         setIsStreaming(false);
       }
     },
-    [gameId, threadId]
+    [gameId]
   );
 
-  return { messages, isStreaming, send };
+  return { messages, isStreaming, error, send };
 }

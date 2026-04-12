@@ -80,7 +80,7 @@ function DiaryEventForm({
 
   const player = players.find(p => p.id === selectedPlayerId) ?? null;
 
-  const canSubmit = (): boolean => {
+  const canSubmit = useMemo(() => {
     switch (selectedType) {
       case 'manual_entry':
         return noteText.trim() !== '';
@@ -95,10 +95,10 @@ function DiaryEventForm({
       default:
         return false;
     }
-  };
+  }, [selectedType, noteText, diceFormula, diceTotal, scoreCategory, scoreDelta, nextPlayerId]);
 
   const handleSubmit = () => {
-    if (!canSubmit()) return;
+    if (!canSubmit) return;
 
     const extra = player
       ? { playerId: player.id, playerName: player.name, round: currentRound }
@@ -191,7 +191,7 @@ function DiaryEventForm({
           value={noteText}
           onChange={e => setNoteText(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter' && canSubmit()) handleSubmit();
+            if (e.key === 'Enter' && canSubmit) handleSubmit();
           }}
           autoFocus
           className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
@@ -288,10 +288,10 @@ function DiaryEventForm({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!canSubmit()}
+          disabled={!canSubmit}
           className={cn(
             'flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors',
-            canSubmit()
+            canSubmit
               ? 'bg-[hsl(142,70%,45%)] text-white hover:bg-[hsl(142,70%,40%)]'
               : 'cursor-not-allowed bg-gray-200 text-gray-400'
           )}

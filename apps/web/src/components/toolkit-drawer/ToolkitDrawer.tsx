@@ -20,7 +20,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 import { lockScroll, unlockScroll } from '@/lib/scroll-lock';
 import { cn } from '@/lib/utils';
-import { getTimerStore } from '@/stores/toolkit-timer-store';
+import { destroyTimerStore, getTimerStore } from '@/stores/toolkit-timer-store';
 
 import { PlayerBar } from './shared/PlayerBar';
 import { DiceRollerTab } from './tabs/DiceRollerTab';
@@ -44,7 +44,8 @@ function playTimerEndSound() {
       (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtxClass) return;
     const ctx = new AudioCtxClass();
-    [0, 0.35, 0.7].forEach(delay => {
+    const delays = [0, 0.35, 0.7];
+    delays.forEach((delay, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
@@ -56,6 +57,9 @@ function playTimerEndSound() {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.28);
       osc.start(ctx.currentTime + delay);
       osc.stop(ctx.currentTime + delay + 0.3);
+      if (i === delays.length - 1) {
+        osc.onended = () => ctx.close().catch(() => {});
+      }
     });
   } catch {
     // Web Audio not supported or blocked
@@ -108,7 +112,7 @@ function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
     [onClose]
   );
 
-  // Escape key + scroll lock lifecycle
+  // Escape key + scroll lock + timer cleanup lifecycle
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     lockScroll();
@@ -116,8 +120,9 @@ function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       unlockScroll();
+      destroyTimerStore(gameId);
     };
-  }, [handleKeyDown]);
+  }, [handleKeyDown, gameId]);
 
   // ── Timer end: sound + diary log (fires from any active tab) ─────────────
   useEffect(() => {

@@ -114,9 +114,11 @@ export function getTimerStore(gameId: string): UseBoundStore<StoreApi<TimerStore
       },
 
       adjustTime(deltaSec: number) {
-        set(s => ({
-          remaining: Math.max(0, Math.min(s.remaining + deltaSec, 5999)),
-        }));
+        set(s => {
+          const newRemaining = Math.max(0, Math.min(s.remaining + deltaSec, 5999));
+          const newStatus = s.status === 'ended' && newRemaining > 0 ? 'paused' : s.status;
+          return { remaining: newRemaining, status: newStatus };
+        });
       },
 
       setAutoResetOnTurn(enabled: boolean) {
@@ -128,4 +130,13 @@ export function getTimerStore(gameId: string): UseBoundStore<StoreApi<TimerStore
   }
 
   return storeRegistry.get(gameId)!;
+}
+
+/**
+ * Destroys the timer store for a given gameId, clearing the interval and
+ * removing it from the registry. Call when the ToolkitDrawer unmounts.
+ */
+export function destroyTimerStore(gameId: string): void {
+  clearTimerInterval(gameId);
+  storeRegistry.delete(gameId);
 }

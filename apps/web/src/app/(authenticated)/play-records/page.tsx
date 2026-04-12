@@ -9,10 +9,16 @@
 import { useState } from 'react';
 
 import { BarChart3 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
 import { NewPlayRecordSheet } from '@/components/play-records/NewPlayRecordSheet';
-import { PlayHistory } from '@/components/play-records/PlayHistory';
+// PlayHistory usa uno Zustand store con `persist` (localStorage) — SSR disabilitato
+// per evitare crash React 19 useSyncExternalStore durante hydration.
+const PlayHistory = dynamic(
+  () => import('@/components/play-records/PlayHistory').then(m => ({ default: m.PlayHistory })),
+  { ssr: false }
+);
 import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 

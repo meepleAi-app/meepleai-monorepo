@@ -127,7 +127,10 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
     status: filters.status === 'all' ? undefined : filters.status,
   });
 
-  const records = data?.records ?? [];
+  const allRecords = data?.records ?? [];
+  const records = search.trim()
+    ? allRecords.filter(r => r.gameName.toLowerCase().includes(search.toLowerCase()))
+    : allRecords;
   const hasMore = data ? currentPage < data.totalPages : false;
 
   return (

@@ -13,7 +13,7 @@
 
 import { useState } from 'react';
 
-import { ChevronDown, ChevronUp, Edit, Share2, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Edit } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -405,34 +405,6 @@ export default function PlayRecordDetailsPage() {
           </div>
         )}
       </div>
-
-      {/* Bottom action row (sticky) */}
-      {record.status !== 'Archived' && (
-        <div className="fixed bottom-[calc(var(--size-mobile-nav,56px)+8px)] left-0 right-0 px-4 z-20">
-          <div className="flex gap-3">
-            <button
-              type="button"
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 py-3 text-sm font-semibold text-red-400 hover:bg-red-500/15"
-              aria-label="Elimina partita"
-              data-testid="delete-record-btn"
-              onClick={() => toast.info('Funzione non ancora disponibile')}
-            >
-              <Trash2 className="h-4 w-4" />
-              Elimina
-            </button>
-            <button
-              type="button"
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white/60 hover:bg-white/10"
-              aria-label="Condividi partita"
-              data-testid="share-record-btn"
-              onClick={() => toast.info('Funzione non ancora disponibile')}
-            >
-              <Share2 className="h-4 w-4" />
-              Condividi
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

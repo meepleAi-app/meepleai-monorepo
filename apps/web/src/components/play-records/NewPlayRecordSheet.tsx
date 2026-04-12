@@ -5,7 +5,7 @@
  *
  * Step 1 — Gioco: picker dalla libreria + data + visibilità
  * Step 2 — Giocatori: righe player con punteggio inline + vincitore auto
- * Step 3 — Riepilogo: classifica + note + durata opzionali + Salva
+ * Step 3 — Riepilogo: classifica + note opzionali + Salva
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -81,7 +81,6 @@ export function NewPlayRecordSheet({
 
   // Step 3 — Riepilogo
   const [notes, setNotes] = useState('');
-  const [duration, setDuration] = useState(''); // "2h 30min" o "150" (minuti)
 
   // Pulizia timer su unmount
   useEffect(
@@ -104,7 +103,6 @@ export function NewPlayRecordSheet({
       setPlayers([]);
       setNewPlayerName('');
       setNotes('');
-      setDuration('');
     }
   }, [open, preselectedGameId, preselectedGameName]);
 
@@ -164,20 +162,37 @@ export function NewPlayRecordSheet({
         visibility,
       });
 
-      // Aggiunge i giocatori in parallelo
+      // Aggiunge i giocatori sequenzialmente (il backend li assegna con UUID server)
       if (players.length > 0) {
-        await Promise.allSettled(
-          players.map(p => playRecordsApi.addPlayer(recordId, { displayName: p.name }))
+        for (const p of players) {
+          await playRecordsApi.addPlayer(recordId, { displayName: p.name });
+        }
+
+        // Recupera il record salvato per ottenere gli UUID server dei giocatori
+        const savedRecord = await playRecordsApi.getRecord(recordId);
+        const scoredPlayers = players.filter(
+          p => p.score.trim() !== '' && !isNaN(parseFloat(p.score))
         );
+
+        if (scoredPlayers.length > 0) {
+          await Promise.allSettled(
+            scoredPlayers.map(p => {
+              const serverPlayer = savedRecord.players.find(sp => sp.displayName === p.name);
+              if (!serverPlayer) return Promise.resolve();
+              return playRecordsApi.recordScore(recordId, {
+                playerId: serverPlayer.id,
+                dimension: 'Total',
+                value: parseFloat(p.score),
+              });
+            })
+          );
+        }
       }
 
-      // Aggiorna note/durata se presenti
+      // Aggiorna le note se presenti
       const notesVal = notes.trim() || undefined;
-      const durationFormatted = parseDurationToTimeSpan(duration);
-      if (notesVal || durationFormatted) {
-        await playRecordsApi.updateRecord(recordId, {
-          notes: notesVal,
-        });
+      if (notesVal) {
+        await playRecordsApi.updateRecord(recordId, { notes: notesVal });
       }
 
       handleClose();
@@ -187,28 +202,6 @@ export function NewPlayRecordSheet({
       setSaving(false);
     }
   };
-
-  // ── Duration parsing ─────────────────────────────────────────────────────────
-
-  function parseDurationToTimeSpan(input: string): string | undefined {
-    const trimmed = input.trim();
-    if (!trimmed) return undefined;
-    // "2h 30min" → "02:30:00"
-    const hMatch = trimmed.match(/(?:(\d+)h)?\s*(?:(\d+)min)?/);
-    if (hMatch && (hMatch[1] || hMatch[2])) {
-      const h = parseInt(hMatch[1] ?? '0');
-      const m = parseInt(hMatch[2] ?? '0');
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
-    }
-    // Solo numero → minuti
-    const mins = parseInt(trimmed);
-    if (!isNaN(mins)) {
-      const h = Math.floor(mins / 60);
-      const m = mins % 60;
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
-    }
-    return undefined;
-  }
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -483,21 +476,6 @@ export function NewPlayRecordSheet({
                   rows={3}
                   className="w-full rounded-xl bg-white/5 border border-white/8 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
                   data-testid="notes-input"
-                />
-              </div>
-
-              {/* Durata */}
-              <div>
-                <label className="block text-xs font-semibold text-white/50 mb-1.5">
-                  ⏱ Durata (opzionale)
-                </label>
-                <input
-                  type="text"
-                  value={duration}
-                  onChange={e => setDuration(e.target.value)}
-                  placeholder="Es. 2h 30min oppure 150"
-                  className="w-full rounded-xl bg-white/5 border border-white/8 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
-                  data-testid="duration-input"
                 />
               </div>
 

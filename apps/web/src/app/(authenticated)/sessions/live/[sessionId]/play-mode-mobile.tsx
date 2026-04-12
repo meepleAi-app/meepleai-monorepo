@@ -29,6 +29,7 @@ import { OfflineBanner } from '@/components/session/live/OfflineBanner';
 import { TurnStateHeader } from '@/components/session/live/TurnStateHeader';
 import { QuickToolBar } from '@/components/session/QuickToolBar';
 import type { ToolId } from '@/components/session/QuickToolBar';
+import { RagQuickLinks } from '@/components/session/RagQuickLinks';
 import { ScoreNumpad } from '@/components/session/ScoreNumpad';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { SessionBottomNav, type SessionTab } from '@/components/ui/navigation/SessionBottomNav';
@@ -318,6 +319,9 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
 
             {/* Quick tools */}
             <QuickToolBar activeTool={activeTool} onSelectTool={handleSelectTool} />
+
+            {/* S4 — RAG quick links from game KB */}
+            <RagQuickLinks gameId={session?.gameId} />
 
             {/* Scoreboard summary */}
             <div>

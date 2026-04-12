@@ -339,6 +339,17 @@ export default [
       "security/detect-non-literal-fs-filename": "off",
       "security/detect-unsafe-regex": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
+      // TEST-001: Prefer semantic queries over test IDs (accessibility-first testing)
+      // getByRole() is more resilient and tests what users actually experience.
+      // Use getByTestId() only as a last resort and add a comment explaining why.
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "CallExpression[callee.property.name='getByTestId']",
+          message:
+            "Prefer getByRole() over getByTestId(). Use getByTestId only as last resort and add a comment explaining why.",
+        },
+      ],
     },
   },
   // Configuration for E2E tests (Playwright) - Must come after TypeScript config to override

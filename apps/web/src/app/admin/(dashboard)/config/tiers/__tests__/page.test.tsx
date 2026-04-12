@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
+import { EMPTY, LOADING, ERROR, ADMIN } from '../../../../../../__tests__/fixtures/test-strings';
 
 const mockGetTiers = vi.hoisted(() => vi.fn());
 const mockCreateTier = vi.hoisted(() => vi.fn());
@@ -92,7 +93,7 @@ describe('AdminTiersPage', () => {
     mockGetTiers.mockReturnValue(new Promise(() => {})); // never resolves
     renderWithQuery(<AdminTiersPage />);
 
-    expect(screen.getByText(/caricamento tier/i)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(LOADING.tiers, 'i'))).toBeInTheDocument();
   });
 
   it('renders tier rows after loading', async () => {
@@ -112,7 +113,7 @@ describe('AdminTiersPage', () => {
     renderWithQuery(<AdminTiersPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Nessun tier trovato.')).toBeInTheDocument();
+      expect(screen.getByText(EMPTY.tiers)).toBeInTheDocument();
     });
   });
 
@@ -138,7 +139,7 @@ describe('AdminTiersPage', () => {
 
     await user.click(screen.getByTestId('btn-edit-free'));
 
-    expect(screen.getByText('Modifica tier: free')).toBeInTheDocument();
+    expect(screen.getByText(`${ADMIN.editTierPrefix}free`)).toBeInTheDocument();
     expect(screen.queryByTestId('field-name')).not.toBeInTheDocument();
     const displayField = screen.getByTestId('field-displayName') as HTMLInputElement;
     expect(displayField.value).toBe('Free');
@@ -173,7 +174,7 @@ describe('AdminTiersPage', () => {
     renderWithQuery(<AdminTiersPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Errore nel caricamento dei tier.')).toBeInTheDocument();
+      expect(screen.getByText(ERROR.tiersLoad)).toBeInTheDocument();
     });
   });
 });

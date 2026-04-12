@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { axe } from 'jest-axe';
 
 import MyProposalsClient from '../MyProposalsClient';
+import { EMPTY, LOADING, ERROR } from '../../../../../__tests__/fixtures/test-strings';
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({
@@ -127,7 +128,7 @@ describe('MyProposalsClient', () => {
       } as any);
 
       render(<MyProposalsClient />);
-      expect(screen.getByText('Caricamento proposte...')).toBeInTheDocument();
+      expect(screen.getByText(LOADING.proposals)).toBeInTheDocument();
     });
   });
 
@@ -140,7 +141,7 @@ describe('MyProposalsClient', () => {
       } as any);
 
       render(<MyProposalsClient />);
-      expect(screen.getByText('Errore di Caricamento')).toBeInTheDocument();
+      expect(screen.getByText(ERROR.loading)).toBeInTheDocument();
       expect(screen.getByText('Network error')).toBeInTheDocument();
     });
 
@@ -165,7 +166,7 @@ describe('MyProposalsClient', () => {
       } as any);
 
       render(<MyProposalsClient />);
-      expect(screen.getByText('Nessuna Proposta')).toBeInTheDocument();
+      expect(screen.getByText(EMPTY.proposals)).toBeInTheDocument();
     });
 
     it('shows link to private games in empty state', () => {

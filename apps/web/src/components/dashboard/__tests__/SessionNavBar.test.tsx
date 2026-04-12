@@ -52,13 +52,12 @@ describe('SessionNavBar', () => {
 
   it('renders the exit button', () => {
     renderNavBar();
-    expect(screen.getByTestId('session-exit-button')).toBeInTheDocument();
-    expect(screen.getByTestId('session-exit-button')).toHaveTextContent('← Esci');
+    expect(screen.getByRole('button', { name: /esci dalla sessione/i })).toBeInTheDocument();
   });
 
   it('calls onExit when the exit button is clicked', () => {
     const { onExit } = renderNavBar();
-    fireEvent.click(screen.getByTestId('session-exit-button'));
+    fireEvent.click(screen.getByRole('button', { name: /esci dalla sessione/i }));
     expect(onExit).toHaveBeenCalledTimes(1);
   });
 

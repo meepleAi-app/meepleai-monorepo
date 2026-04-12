@@ -82,7 +82,7 @@ internal sealed class CreateAgentDefinitionCommandValidator : AbstractValidator<
                 .MustAsync(async (cmd, kbCardIds, ct) =>
                     await vectorDocumentRepository.AnyBelongsToGameAsync(kbCardIds, cmd.GameId!.Value, ct)
                         .ConfigureAwait(false))
-                .WithMessage("L'agent deve avere almeno 1 KB card del game associato.");
+                .WithMessage("The agent must have at least 1 KB card associated with the game.");
         });
     }
 }

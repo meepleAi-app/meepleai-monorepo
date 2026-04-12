@@ -22,9 +22,12 @@ export function RagQuickLinks({ gameId, className }: RagQuickLinksProps) {
 
   useEffect(() => {
     if (!gameId) return;
-    api.knowledgeBase.getQuickLinks(gameId).then(data => {
-      setLinks(data.slice(0, 4));
-    });
+    api.knowledgeBase
+      .getQuickLinks(gameId)
+      .then(data => {
+        setLinks(data.slice(0, 4));
+      })
+      .catch(() => {});
   }, [gameId]);
 
   if (!gameId || links.length === 0) return null;

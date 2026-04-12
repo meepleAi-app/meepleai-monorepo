@@ -35,9 +35,16 @@ let fallbackGames: BridgeMockGame[] = [
   createMockGame({ id: mockId(103), title: 'Monopoly' }),
 ];
 
+/** Ensure all fields required by GameSchema are present (bridge may return minimal objects). */
+function normalizeGame(g: BridgeMockGame): BridgeMockGame {
+  const base = createMockGame({ id: g.id as string, title: g.title as string });
+  return { ...base, ...g };
+}
+
 function currentGames(): BridgeMockGame[] {
   const bridge = getScenarioBridge();
-  return bridge ? bridge.getGames() : fallbackGames;
+  const raw = bridge ? bridge.getGames() : fallbackGames;
+  return raw.map(normalizeGame);
 }
 
 function findGame(id: string): BridgeMockGame | undefined {

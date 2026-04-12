@@ -10,6 +10,7 @@
  */
 
 import { adminHandlers } from './admin.handlers';
+import { agentsHandlers } from './agents.handlers';
 import { authHandlers } from './auth.handlers';
 import { badgesHandlers } from './badges.handlers';
 import { catalogHandlers } from './catalog.handlers';
@@ -19,6 +20,7 @@ import { gameNightsHandlers } from './game-nights.handlers';
 import { gamesHandlers } from './games.handlers';
 import { libraryHandlers } from './library.handlers';
 import { notificationsHandlers } from './notifications.handlers';
+import { playRecordsHandlers } from './play-records.handlers';
 import { playersHandlers } from './players.handlers';
 import { sessionsHandlers } from './sessions.handlers';
 import { sharedGamesHandlers } from './shared-games.handlers';
@@ -26,6 +28,7 @@ import { sharedGamesHandlers } from './shared-games.handlers';
 export const handlers = [
   ...authHandlers,
   ...gamesHandlers,
+  ...agentsHandlers,
   ...chatHandlers,
   ...documentsHandlers,
   ...libraryHandlers,
@@ -35,6 +38,7 @@ export const handlers = [
   ...sessionsHandlers,
   ...gameNightsHandlers,
   ...playersHandlers,
+  ...playRecordsHandlers,
   ...notificationsHandlers,
   ...badgesHandlers,
 ];
@@ -42,6 +46,7 @@ export const handlers = [
 // Re-export individual handler groups for per-story overrides in Storybook
 export { authHandlers } from './auth.handlers';
 export { gamesHandlers } from './games.handlers';
+export { agentsHandlers, resetAgentsState } from './agents.handlers';
 export { chatHandlers } from './chat.handlers';
 export { resetChatState } from './chat.handlers';
 export { documentsHandlers } from './documents.handlers';
@@ -52,5 +57,6 @@ export { adminHandlers } from './admin.handlers';
 export { sessionsHandlers, resetSessionsState } from './sessions.handlers';
 export { gameNightsHandlers, resetGameNightsState } from './game-nights.handlers';
 export { playersHandlers, resetPlayersState } from './players.handlers';
+export { playRecordsHandlers } from './play-records.handlers';
 export { notificationsHandlers, resetNotificationsState } from './notifications.handlers';
 export { badgesHandlers, resetBadgesState } from './badges.handlers';

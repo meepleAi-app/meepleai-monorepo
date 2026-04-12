@@ -1,6 +1,11 @@
 /**
  * MSW handlers for game night endpoints (browser-safe)
  * Covers: /api/v1/game-nights/*
+ *
+ * Data shape matches GameNightDtoSchema (game-nights.schemas.ts):
+ * id, organizerId, organizerName, title, description, scheduledAt,
+ * location, maxPlayers, gameIds, status, acceptedCount, pendingCount,
+ * totalInvited, createdAt
  */
 import { http, HttpResponse } from 'msw';
 
@@ -8,52 +13,66 @@ import { mockId, HANDLER_BASE } from '../data/factories';
 
 const API_BASE = HANDLER_BASE;
 
-interface GameNight {
+interface GameNightDto {
   id: string;
-  title: string;
-  date: string;
-  location?: string;
-  status: 'Planned' | 'InProgress' | 'Completed' | 'Cancelled';
   organizerId: string;
-  participants: Array<{
-    id: string;
-    userId: string;
-    displayName: string;
-    rsvpStatus: 'Pending' | 'Accepted' | 'Declined';
-  }>;
-  playlist: Array<{ id: string; gameId: string; gameName: string; order: number }>;
+  organizerName: string;
+  title: string;
+  description: string | null;
+  scheduledAt: string;
+  location: string | null;
+  maxPlayers: number | null;
+  gameIds: string[];
+  status: 'Draft' | 'Published' | 'Cancelled' | 'Completed';
+  acceptedCount: number;
+  pendingCount: number;
+  totalInvited: number;
   createdAt: string;
 }
 
-const gameNights: GameNight[] = [
-  {
-    id: mockId(801),
-    title: 'Friday Game Night',
-    date: '2026-04-11T19:00:00Z',
-    location: 'Casa di Alice',
-    status: 'Planned',
-    organizerId: mockId(1),
-    participants: [
-      { id: mockId(901), userId: mockId(1), displayName: 'Alice', rsvpStatus: 'Accepted' },
-      { id: mockId(902), userId: mockId(2), displayName: 'Bob', rsvpStatus: 'Pending' },
-    ],
-    playlist: [
-      { id: mockId(1401), gameId: mockId(101), gameName: 'Catan', order: 1 },
-      { id: mockId(1402), gameId: mockId(103), gameName: 'Wingspan', order: 2 },
-    ],
-    createdAt: '2026-04-01T10:00:00Z',
-  },
-];
+const SEED: GameNightDto = {
+  id: mockId(801),
+  organizerId: mockId(1),
+  organizerName: 'Test User',
+  title: 'Friday Game Night',
+  description: 'Serata di giochi da tavolo',
+  scheduledAt: '2026-04-18T19:00:00Z',
+  location: 'Casa di Alice',
+  maxPlayers: 6,
+  gameIds: [mockId(101), mockId(103)],
+  status: 'Published',
+  acceptedCount: 1,
+  pendingCount: 1,
+  totalInvited: 2,
+  createdAt: '2026-04-01T10:00:00Z',
+};
+
+const gameNights: GameNightDto[] = [{ ...SEED }];
 
 export const gameNightsHandlers = [
+  // Upcoming game nights (all published)
   http.get(`${API_BASE}/api/v1/game-nights`, () => {
-    return HttpResponse.json({
-      items: gameNights,
-      totalCount: gameNights.length,
-      page: 1,
-      pageSize: 20,
-      totalPages: 1,
-    });
+    return HttpResponse.json(gameNights);
+  }),
+
+  // My game nights (organized by current user)
+  http.get(`${API_BASE}/api/v1/game-nights/mine`, () => {
+    return HttpResponse.json(gameNights.filter(n => n.organizerId === mockId(1)));
+  }),
+
+  http.get(`${API_BASE}/api/v1/game-nights/:id/rsvps`, ({ params }) => {
+    const night = gameNights.find(n => n.id === params.id);
+    if (!night) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
+    return HttpResponse.json([
+      {
+        id: mockId(901),
+        userId: mockId(1),
+        userName: 'Test User',
+        status: 'Accepted',
+        respondedAt: new Date().toISOString(),
+        createdAt: night.createdAt,
+      },
+    ]);
   }),
 
   http.get(`${API_BASE}/api/v1/game-nights/:id`, ({ params }) => {
@@ -63,92 +82,62 @@ export const gameNightsHandlers = [
   }),
 
   http.post(`${API_BASE}/api/v1/game-nights`, async ({ request }) => {
-    const body = (await request.json()) as { title: string; date: string; location?: string };
-    const newNight: GameNight = {
+    const body = (await request.json()) as Partial<GameNightDto>;
+    const newNight: GameNightDto = {
       id: mockId(Math.floor(Math.random() * 9000) + 1000),
-      title: body.title,
-      date: body.date,
-      location: body.location,
-      status: 'Planned',
       organizerId: mockId(1),
-      participants: [],
-      playlist: [],
+      organizerName: 'Test User',
+      title: body.title ?? 'New Game Night',
+      description: body.description ?? null,
+      scheduledAt: body.scheduledAt ?? new Date().toISOString(),
+      location: body.location ?? null,
+      maxPlayers: body.maxPlayers ?? null,
+      gameIds: body.gameIds ?? [],
+      status: 'Draft',
+      acceptedCount: 0,
+      pendingCount: 0,
+      totalInvited: 0,
       createdAt: new Date().toISOString(),
     };
     gameNights.push(newNight);
-    return HttpResponse.json(newNight, { status: 201 });
+    return HttpResponse.json(newNight.id, { status: 201 });
   }),
 
   http.put(`${API_BASE}/api/v1/game-nights/:id`, async ({ params, request }) => {
     const idx = gameNights.findIndex(n => n.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    const body = (await request.json()) as Partial<GameNight>;
+    const body = (await request.json()) as Partial<GameNightDto>;
     gameNights[idx] = { ...gameNights[idx], ...body };
-    return HttpResponse.json(gameNights[idx]);
+    return new HttpResponse(null, { status: 204 });
   }),
 
-  http.delete(`${API_BASE}/api/v1/game-nights/:id`, ({ params }) => {
+  http.post(`${API_BASE}/api/v1/game-nights/:id/publish`, ({ params }) => {
     const idx = gameNights.findIndex(n => n.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    gameNights.splice(idx, 1);
-    return HttpResponse.json({ success: true });
+    gameNights[idx].status = 'Published';
+    return new HttpResponse(null, { status: 204 });
   }),
 
-  http.post(`${API_BASE}/api/v1/game-nights/:id/invite`, async ({ params, request }) => {
+  http.post(`${API_BASE}/api/v1/game-nights/:id/cancel`, ({ params }) => {
     const idx = gameNights.findIndex(n => n.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    const body = (await request.json()) as { userId: string; displayName: string };
-    const participant = {
-      id: mockId(Math.floor(Math.random() * 9000) + 1000),
-      userId: body.userId,
-      displayName: body.displayName,
-      rsvpStatus: 'Pending' as const,
-    };
-    gameNights[idx].participants.push(participant);
-    return HttpResponse.json(participant, { status: 201 });
+    gameNights[idx].status = 'Cancelled';
+    return new HttpResponse(null, { status: 204 });
   }),
 
-  http.put(`${API_BASE}/api/v1/game-nights/:id/rsvp`, async ({ params, request }) => {
-    const idx = gameNights.findIndex(n => n.id === params.id);
-    if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    const body = (await request.json()) as { status: 'Accepted' | 'Declined' };
-    const pIdx = gameNights[idx].participants.findIndex(p => p.userId === mockId(1));
-    if (pIdx !== -1) gameNights[idx].participants[pIdx].rsvpStatus = body.status;
-    return HttpResponse.json(gameNights[idx]);
+  http.post(`${API_BASE}/api/v1/game-nights/:id/invite`, () => {
+    return new HttpResponse(null, { status: 204 });
   }),
 
-  http.post(`${API_BASE}/api/v1/game-nights/:id/playlist`, async ({ params, request }) => {
+  http.post(`${API_BASE}/api/v1/game-nights/:id/rsvp`, async ({ params, request }) => {
     const idx = gameNights.findIndex(n => n.id === params.id);
     if (idx === -1) return HttpResponse.json({ error: 'Not found' }, { status: 404 });
-    const body = (await request.json()) as { gameId: string; gameName: string };
-    const item = {
-      id: mockId(Math.floor(Math.random() * 9000) + 1000),
-      gameId: body.gameId,
-      gameName: body.gameName,
-      order: gameNights[idx].playlist.length + 1,
-    };
-    gameNights[idx].playlist.push(item);
-    return HttpResponse.json(item, { status: 201 });
+    const body = (await request.json()) as { response: string };
+    if (body.response === 'Accepted') gameNights[idx].acceptedCount++;
+    return new HttpResponse(null, { status: 204 });
   }),
 ];
 
-// Helper to reset game night state between tests
 export const resetGameNightsState = () => {
-  gameNights.splice(0, gameNights.length, {
-    id: mockId(801),
-    title: 'Friday Game Night',
-    date: '2026-04-11T19:00:00Z',
-    location: 'Casa di Alice',
-    status: 'Planned',
-    organizerId: mockId(1),
-    participants: [
-      { id: mockId(901), userId: mockId(1), displayName: 'Alice', rsvpStatus: 'Accepted' },
-      { id: mockId(902), userId: mockId(2), displayName: 'Bob', rsvpStatus: 'Pending' },
-    ],
-    playlist: [
-      { id: mockId(1401), gameId: mockId(101), gameName: 'Catan', order: 1 },
-      { id: mockId(1402), gameId: mockId(103), gameName: 'Wingspan', order: 2 },
-    ],
-    createdAt: '2026-04-01T10:00:00Z',
-  });
+  gameNights.splice(0, gameNights.length, { ...SEED });
 };

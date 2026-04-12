@@ -39,10 +39,8 @@ export function DesktopShell({ children }: DesktopShellProps) {
         <div className="flex flex-col flex-1 min-w-0">
           <MiniNavSlot />
           <SessionBanner />
-          <main className="flex-1 min-w-0 overflow-y-auto relative">
-            {children}
-            <ActionPill />
-          </main>
+          <main className="flex-1 min-w-0 overflow-y-auto">{children}</main>
+          <ActionPill />
         </div>
       </div>
       <ChatSlideOverPanel />

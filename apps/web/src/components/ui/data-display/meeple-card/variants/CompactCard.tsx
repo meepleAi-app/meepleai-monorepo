@@ -1,11 +1,12 @@
 'use client';
 
+import { ManaPips } from '../parts/ManaPips';
 import { entityHsl } from '../tokens';
 
 import type { MeepleCardProps } from '../types';
 
 export function CompactCard(props: MeepleCardProps) {
-  const { entity, title, badge, onClick, className = '' } = props;
+  const { entity, title, badge, manaPips, onClick, className = '' } = props;
   const testId = props['data-testid'];
 
   return (
@@ -32,6 +33,7 @@ export function CompactCard(props: MeepleCardProps) {
           {badge}
         </span>
       )}
+      {manaPips && manaPips.length > 0 && <ManaPips pips={manaPips} size="sm" />}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import type { ManaPip } from './parts/ManaPips';
+
 // 9 entity types only
 export type MeepleEntityType =
   | 'game'
@@ -12,8 +14,8 @@ export type MeepleEntityType =
   | 'toolkit'
   | 'tool';
 
-// 5 variants only
-export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero';
+// 6 variants
+export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero' | 'focus';
 
 export interface MeepleCardMetadata {
   icon?: ReactNode;
@@ -38,6 +40,7 @@ export interface NavFooterItem {
   disabled?: boolean;
   onClick?: () => void;
   onPlusClick?: () => void;
+  href?: string;
 }
 
 export type CardStatus =
@@ -75,6 +78,7 @@ export interface MeepleCardProps {
   coverLabels?: CoverLabel[];
   actions?: MeepleCardAction[];
   navItems?: NavFooterItem[];
+  manaPips?: ManaPip[];
   onClick?: () => void;
   flippable?: boolean;
   flipBackContent?: ReactNode;

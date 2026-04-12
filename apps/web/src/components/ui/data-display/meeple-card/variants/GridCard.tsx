@@ -3,6 +3,7 @@
 import { AccentBorder } from '../parts/AccentBorder';
 import { Cover } from '../parts/Cover';
 import { EntityBadge } from '../parts/EntityBadge';
+import { ManaPips } from '../parts/ManaPips';
 import { MetaChips } from '../parts/MetaChips';
 import { NavFooter } from '../parts/NavFooter';
 import { QuickActions } from '../parts/QuickActions';
@@ -27,6 +28,7 @@ export function GridCard(props: MeepleCardProps) {
     badge,
     actions = [],
     navItems = [],
+    manaPips,
     showQuickActions,
     onClick,
     className = '',
@@ -73,6 +75,7 @@ export function GridCard(props: MeepleCardProps) {
         {rating !== undefined && <Rating value={rating} max={ratingMax} />}
         {metadata.length > 0 && <MetaChips metadata={metadata} />}
       </div>
+      {manaPips && manaPips.length > 0 && <ManaPips pips={manaPips} size="md" />}
       {navItems.length > 0 && <NavFooter items={navItems} />}
     </div>
   );

@@ -31,6 +31,7 @@ import { QuickToolBar } from '@/components/session/QuickToolBar';
 import type { ToolId } from '@/components/session/QuickToolBar';
 import { RagQuickLinks } from '@/components/session/RagQuickLinks';
 import { ScoreNumpad } from '@/components/session/ScoreNumpad';
+import { ToolSheetContent } from '@/components/session/ToolSheetContent';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { SessionBottomNav, type SessionTab } from '@/components/ui/navigation/SessionBottomNav';
 import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
@@ -457,11 +458,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
         onOpenChange={setToolSheetOpen}
         title={activeTool ? activeTool.charAt(0).toUpperCase() + activeTool.slice(1) : 'Strumento'}
       >
-        <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-muted-foreground">
-            Strumento: <span className="font-semibold">{activeTool}</span>
-          </p>
-        </div>
+        <ToolSheetContent activeTool={activeTool} />
       </BottomSheet>
 
       {/* Score Numpad BottomSheet */}

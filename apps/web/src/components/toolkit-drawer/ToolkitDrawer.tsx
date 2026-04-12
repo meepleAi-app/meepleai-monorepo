@@ -14,21 +14,57 @@
  * Tab content is placeholder until individual tab components are implemented.
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { lockScroll, unlockScroll } from '@/lib/scroll-lock';
 import { cn } from '@/lib/utils';
+import { destroyTimerStore, getTimerStore } from '@/stores/toolkit-timer-store';
 
 import { PlayerBar } from './shared/PlayerBar';
 import { DiceRollerTab } from './tabs/DiceRollerTab';
 import { EventDiaryTab } from './tabs/EventDiaryTab';
 import { NotesTab } from './tabs/NotesTab';
 import { ScoreboardTab } from './tabs/ScoreboardTab';
+import { TimerTab } from './tabs/TimerTab';
 import { ToolkitDrawerProvider, useToolkitDrawer } from './ToolkitDrawerProvider';
 
 import type { ToolkitDrawerProps, ToolkitTab } from './types';
+
+// ============================================================================
+// Web Audio — timer-end beep (three ascending tones)
+// ============================================================================
+
+function playTimerEndSound() {
+  if (typeof window === 'undefined') return;
+  try {
+    const AudioCtxClass =
+      window.AudioContext ??
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtxClass) return;
+    const ctx = new AudioCtxClass();
+    const delays = [0, 0.35, 0.7];
+    delays.forEach((delay, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime + delay);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + delay + 0.25);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.28);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.3);
+      if (i === delays.length - 1) {
+        osc.onended = () => ctx.close().catch(() => {});
+      }
+    });
+  } catch {
+    // Web Audio not supported or blocked
+  }
+}
 
 // ============================================================================
 // Tab Configuration
@@ -43,6 +79,7 @@ interface TabConfig {
 
 const TABS: TabConfig[] = [
   { key: 'dice', label: 'Dadi', icon: '\uD83C\uDFB2', testId: 'toolkit-tab-dice' },
+  { key: 'timer', label: 'Timer', icon: '\u23F1\uFE0F', testId: 'toolkit-tab-timer' },
   { key: 'notes', label: 'Note', icon: '\uD83D\uDCDD', testId: 'toolkit-tab-notes' },
   { key: 'diary', label: 'Diario', icon: '\uD83D\uDCD6', testId: 'toolkit-tab-diary' },
   { key: 'scores', label: 'Punti', icon: '\uD83C\uDFC6', testId: 'toolkit-tab-scores' },
@@ -65,9 +102,9 @@ export function ToolkitDrawer({ gameId, sessionId, onClose, defaultTab }: Toolki
 // ============================================================================
 
 function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
-  const { activeTab, setActiveTab } = useToolkitDrawer();
+  const { activeTab, setActiveTab, gameId, store, logEvent } = useToolkitDrawer();
 
-  // Escape key handler
+  // ── Escape key handler ────────────────────────────────────────────────────
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -75,7 +112,7 @@ function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
     [onClose]
   );
 
-  // Escape key + scroll lock lifecycle
+  // Escape key + scroll lock + timer cleanup lifecycle
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     lockScroll();
@@ -83,8 +120,36 @@ function ToolkitDrawerInner({ onClose }: { onClose: () => void }) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       unlockScroll();
+      destroyTimerStore(gameId);
     };
-  }, [handleKeyDown]);
+  }, [handleKeyDown, gameId]);
+
+  // ── Timer end: sound + diary log (fires from any active tab) ─────────────
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { gameId: endedId } = (e as CustomEvent<{ gameId: string }>).detail;
+      if (endedId !== gameId) return;
+      playTimerEndSound();
+      const total = getTimerStore(gameId).getState().totalSeconds;
+      logEvent('timer_end', { durationSeconds: total });
+    };
+    window.addEventListener('toolkit:timer-end', handler);
+    return () => window.removeEventListener('toolkit:timer-end', handler);
+  }, [gameId, logEvent]);
+
+  // ── Auto-reset timer on turn advance (when checkbox is enabled) ──────────
+  const currentTurnIndex = store(s => s.currentTurnIndex);
+  const isFirstTurnMount = useRef(true);
+  useEffect(() => {
+    if (isFirstTurnMount.current) {
+      isFirstTurnMount.current = false;
+      return;
+    }
+    const timerStore = getTimerStore(gameId);
+    if (timerStore.getState().autoResetOnTurn) {
+      timerStore.getState().reset();
+    }
+  }, [currentTurnIndex, gameId]);
 
   return (
     <AnimatePresence>
@@ -171,6 +236,8 @@ function TabContent({ tab }: { tab: ToolkitTab }) {
   switch (tab) {
     case 'dice':
       return <DiceRollerTab />;
+    case 'timer':
+      return <TimerTab />;
     case 'notes':
       return <NotesTab />;
     case 'diary':

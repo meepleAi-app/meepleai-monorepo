@@ -47,4 +47,12 @@ describe('resolveCTA', () => {
     expect(resolveCTA('/')).toBeNull();
     expect(resolveCTA('/toolkit')).toBeNull();
   });
+
+  it('does not match /library-export or similar false positives', () => {
+    expect(resolveCTA('/library-export')).toBeNull();
+  });
+
+  it('does not match /sessions-archive or similar false positives', () => {
+    expect(resolveCTA('/sessions-archive')).toBeNull();
+  });
 });

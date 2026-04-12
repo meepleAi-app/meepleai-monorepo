@@ -11,7 +11,7 @@ export function resolveCTA(pathname: string): CTAConfig | null {
   if (pathname === '/dashboard') {
     return { label: '+ Aggiungi gioco', href: '/library?action=add' };
   }
-  if (pathname === '/library' || pathname.startsWith('/library')) {
+  if (pathname === '/library' || pathname.startsWith('/library/')) {
     return { label: '+ Aggiungi', href: '/library?action=add' };
   }
   if (/^\/games\/[^/]+$/.test(pathname)) {
@@ -26,7 +26,7 @@ export function resolveCTA(pathname: string): CTAConfig | null {
   if (/^\/agents\/[^/]+$/.test(pathname)) {
     return { label: '💬 Inizia chat', href: `${pathname}/chat` };
   }
-  if (pathname === '/sessions' || pathname.startsWith('/sessions')) {
+  if (pathname === '/sessions' || pathname.startsWith('/sessions/')) {
     return { label: '▶ Nuova sessione', href: '/sessions/new' };
   }
   return null;

@@ -12,7 +12,6 @@
 
 import { useEffect } from 'react';
 
-import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useRecentsStore } from '@/stores/use-recents';
 
@@ -50,7 +49,6 @@ export function LibraryContent() {
       <LibraryHub />
       {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}
       <AddGameDrawerController />
-      <FloatingActionPill page="library" />
     </>
   );
 }

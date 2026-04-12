@@ -16,7 +16,6 @@ import { useRouter } from 'next/navigation';
 
 import { ChatListMobile } from '@/components/chat-unified/ChatListMobile';
 import { MeepleChatCard } from '@/components/chat-unified/MeepleChatCard';
-import { FloatingActionPill } from '@/components/layout/FloatingActionPill';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
@@ -263,10 +262,6 @@ export default function ChatListPage() {
             </div>
           )}
         </main>
-      </div>
-      {/* FAB — desktop only: mobile uses ChatListMobile's own navigation */}
-      <div className="hidden lg:block">
-        <FloatingActionPill page="chat" />
       </div>
     </>
   );

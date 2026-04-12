@@ -10,10 +10,6 @@ vi.mock('../AddGameDrawer', () => ({
   AddGameDrawerController: () => null,
 }));
 
-vi.mock('@/components/layout/FloatingActionPill', () => ({
-  FloatingActionPill: () => null,
-}));
-
 describe('LibraryContent', () => {
   afterEach(() => {
     vi.clearAllMocks();

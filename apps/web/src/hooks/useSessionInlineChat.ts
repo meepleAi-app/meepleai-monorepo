@@ -19,9 +19,12 @@ export function useSessionInlineChat(
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const threadIdRef = useRef<string | null>(null);
+  const isSendingRef = useRef(false);
 
   const send = useCallback(
     async (text: string) => {
+      if (isSendingRef.current) return;
+      isSendingRef.current = true;
       setError(null);
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -60,6 +63,7 @@ export function useSessionInlineChat(
         setError("Errore nell'invio del messaggio.");
       } finally {
         setIsStreaming(false);
+        isSendingRef.current = false;
       }
     },
     [gameId]

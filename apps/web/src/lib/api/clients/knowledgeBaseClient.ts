@@ -240,8 +240,9 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
      * @returns Array of quick link items (id, title, snippet)
      */
     async getQuickLinks(gameId: string): Promise<QuickLink[]> {
+      // Route: GET /api/v1/knowledge-base/{gameId}/quick-links (path param, consistent with other KB endpoints)
       const result = await httpClient.get(
-        `/api/v1/knowledge-base/quick-links?gameId=${encodeURIComponent(gameId)}`,
+        `/api/v1/knowledge-base/${encodeURIComponent(gameId)}/quick-links`,
         QuickLinksSchema
       );
       return result ?? [];

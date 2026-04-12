@@ -27,7 +27,9 @@ export function RagQuickLinks({ gameId, className }: RagQuickLinksProps) {
       .then(data => {
         setLinks(data.slice(0, 4));
       })
-      .catch(() => {});
+      .catch(err => {
+        console.error('[RagQuickLinks] Failed to fetch quick links:', err);
+      });
   }, [gameId]);
 
   if (!gameId || links.length === 0) return null;

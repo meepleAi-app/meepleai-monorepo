@@ -17,6 +17,7 @@ const EVENT_ICON: Record<DiaryEventType, string> = {
   player_joined: '👤',
   round_advance: '🔔',
   score_reset: '♻️',
+  timer_end: '⏱️',
 };
 
 function formatTime(timestamp: number): string {
@@ -66,6 +67,14 @@ function describeEvent(event: DiaryEvent): string {
     }
     case 'score_reset': {
       return 'Punteggi azzerati';
+    }
+    case 'timer_end': {
+      const dur = payload.durationSeconds as number | undefined;
+      if (!dur) return 'Timer scaduto';
+      const m = Math.floor(dur / 60);
+      const s = dur % 60;
+      const label = m > 0 ? `${m}m${s > 0 ? ` ${s}s` : ''}` : `${s}s`;
+      return `Timer scaduto (${label})`;
     }
     default:
       return JSON.stringify(payload);

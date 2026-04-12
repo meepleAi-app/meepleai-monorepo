@@ -56,7 +56,7 @@ function AddCategoryButton({ onAdd }: { onAdd: (name: string) => void }) {
           if (e.key === 'Enter') submit();
           if (e.key === 'Escape') setOpen(false);
         }}
-        placeholder="Nome"
+        placeholder="es. Catan"
         className="w-20 rounded border border-[hsl(142,70%,45%)] px-1 text-[10px] outline-none"
         data-testid="add-category-input"
       />
@@ -178,7 +178,7 @@ export function ScoreboardTab() {
     <div className="flex flex-col gap-3" data-testid="scoreboard-tab">
       {/* Categories row */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Categorie</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Partite</h3>
         <AddCategoryButton onAdd={handleAddCategory} />
       </div>
 

@@ -83,7 +83,7 @@ function MonetaTool() {
 
 // ── Contatore ─────────────────────────────────────────────────────────────────
 
-function ContatoTool() {
+function ContatoreTool() {
   const [count, setCount] = useState(0);
 
   return (
@@ -190,7 +190,7 @@ interface ToolSheetContentProps {
 export function ToolSheetContent({ activeTool }: ToolSheetContentProps) {
   if (activeTool === 'dadi') return <DadoTool />;
   if (activeTool === 'moneta') return <MonetaTool />;
-  if (activeTool === 'contatore') return <ContatoTool />;
+  if (activeTool === 'contatore') return <ContatoreTool />;
   if (activeTool === 'timer') return <TimerTool />;
   if (activeTool === 'carte') {
     return (

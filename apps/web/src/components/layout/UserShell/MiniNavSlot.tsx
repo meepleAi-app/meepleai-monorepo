@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useMiniNavConfigStore } from '@/lib/stores/mini-nav-config-store';
 import { cn } from '@/lib/utils';
 
+import { RecentsBar } from './RecentsBar';
+
 /**
  * MiniNavSlot — renders the mini-nav registered by the current page.
  * Hidden when no config is set.
@@ -52,6 +54,7 @@ export function MiniNavSlot() {
         );
       })}
       <div className="flex-1" />
+      <RecentsBar />
       {config.primaryAction && (
         <button
           type="button"

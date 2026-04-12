@@ -9,7 +9,7 @@
 // Tab Navigation
 // ============================================================================
 
-export type ToolkitTab = 'dice' | 'notes' | 'diary' | 'scores';
+export type ToolkitTab = 'dice' | 'timer' | 'notes' | 'diary' | 'scores';
 
 // ============================================================================
 // Diary Event Types
@@ -23,7 +23,8 @@ export type DiaryEventType =
   | 'manual_entry'
   | 'player_joined'
   | 'round_advance'
-  | 'score_reset';
+  | 'score_reset'
+  | 'timer_end';
 
 // ============================================================================
 // Player

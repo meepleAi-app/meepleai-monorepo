@@ -15,7 +15,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import type { Participant, ScoreEntry, ScoreboardData } from '@/components/session/types';
 import { api } from '@/lib/api';
 import type {
   LiveSessionDto,
@@ -46,23 +45,6 @@ export interface SessionStore {
 
   /** Currently active tool in the session Tool Rail (Issue #4974) */
   activeTool: ToolId;
-
-  // Legacy compat (used by toolkit pages)
-  /** @deprecated Use activeSession.players instead */
-  scoreboard: ScoreboardData | null;
-  /** @deprecated Use activeSession.players instead */
-  participants: Participant[];
-  /** @deprecated Use completeSession instead */
-  finalizeSession: (request: { ranks: Record<string, number> }) => Promise<void>;
-  /** @deprecated Use handleScoreUpdate instead */
-  addScoreFromSSE: (scoreEntry: ScoreEntry) => void;
-  /** @deprecated Use recordScore instead */
-  updateScore: (request: {
-    participantId: string;
-    roundNumber?: number | null;
-    category?: string | null;
-    scoreValue: number;
-  }) => Promise<void>;
 
   // Actions — Session Lifecycle
   createSession: (request: CreateLiveSessionRequest) => Promise<string>;
@@ -100,9 +82,6 @@ const initialState = {
   isLoading: false,
   error: null as string | null,
   activeTool: 'scoreboard' as ToolId,
-  // Legacy compat
-  scoreboard: null as ScoreboardData | null,
-  participants: [] as Participant[],
 };
 
 export const useSessionStore = create<SessionStore>()(
@@ -399,54 +378,6 @@ export const useSessionStore = create<SessionStore>()(
 
       handleSessionUpdate: (session: LiveSessionDto) => {
         set({ activeSession: session }, false, 'handleSessionUpdate');
-      },
-
-      // ========== Legacy Compat ==========
-      finalizeSession: async () => {
-        const { activeSession } = get();
-        if (!activeSession) throw new Error('No active session');
-        await api.liveSessions.completeSession(activeSession.id);
-        set(
-          state => ({
-            activeSession: state.activeSession
-              ? { ...state.activeSession, status: 'Completed' as LiveSessionStatus }
-              : null,
-          }),
-          false,
-          'finalizeSession/compat'
-        );
-      },
-
-      addScoreFromSSE: (scoreEntry: ScoreEntry) => {
-        set(
-          state => ({
-            scoreboard: state.scoreboard
-              ? {
-                  ...state.scoreboard,
-                  scores: [...state.scoreboard.scores, scoreEntry],
-                }
-              : null,
-          }),
-          false,
-          'addScoreFromSSE/compat'
-        );
-      },
-
-      // Legacy updateScore compat
-      updateScore: async (request: {
-        participantId: string;
-        roundNumber?: number | null;
-        category?: string | null;
-        scoreValue: number;
-      }) => {
-        const { activeSession } = get();
-        if (!activeSession) throw new Error('No active session');
-        await api.sessionTracking.updateScore(activeSession.id, {
-          participantId: request.participantId,
-          roundNumber: request.roundNumber ?? null,
-          category: request.category ?? null,
-          scoreValue: request.scoreValue,
-        });
       },
 
       // ========== Reset ==========

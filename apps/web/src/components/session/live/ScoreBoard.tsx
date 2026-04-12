@@ -62,7 +62,12 @@ function PlayerScoreCard({
       </div>
 
       {/* Score */}
-      <p className="text-2xl font-quicksand font-bold text-gray-900">{score}</p>
+      <p
+        data-testid={`player-score-${player.id}`}
+        className="text-2xl font-quicksand font-bold text-gray-900"
+      >
+        {score}
+      </p>
 
       {/* Online indicator */}
       <div className="flex items-center gap-1">
@@ -81,6 +86,7 @@ function PlayerScoreCard({
       {isHost && (
         <div className="flex gap-1 pt-1">
           <Button
+            data-testid={`score-decrement-${player.id}`}
             variant="outline"
             size="sm"
             className="flex-1 h-8 px-2"
@@ -90,6 +96,7 @@ function PlayerScoreCard({
             <Minus className="h-3 w-3" />
           </Button>
           <Button
+            data-testid={`score-increment-${player.id}`}
             variant="outline"
             size="sm"
             className="flex-1 h-8 px-2"

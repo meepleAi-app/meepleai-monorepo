@@ -211,10 +211,7 @@ describe('Form Component', () => {
   });
 
   describe('Form Submission', () => {
-    // Skip: Flaky timing test - react-hook-form + zod validation timing inconsistent in jsdom
-    // Form submission race condition between validation and handleSubmit
-    // TODO: Refactor with deterministic form state testing (Issue #1881)
-    it.skip('should submit form with valid data', async () => {
+    it('should submit form with valid data', async () => {
       const user = userEvent.setup();
       const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
@@ -228,14 +225,18 @@ describe('Form Component', () => {
       const submitButton = screen.getByRole('button', { name: /submit/i });
       await user.click(submitButton);
 
+      // react-hook-form passes (data, event) — match data only via objectContaining
       await waitFor(
         () => {
-          expect(mockSubmit).toHaveBeenCalledWith({
-            username: 'testuser',
-            email: 'test@example.com',
-          });
+          expect(mockSubmit).toHaveBeenCalledWith(
+            expect.objectContaining({
+              username: 'testuser',
+              email: 'test@example.com',
+            }),
+            expect.anything()
+          );
         },
-        { timeout: 3000 }
+        { timeout: 3000, interval: 50 }
       );
     });
 
@@ -303,10 +304,7 @@ describe('Form Component', () => {
       expect(screen.getByRole('button', { name: /submit/i })).toHaveFocus();
     });
 
-    // Skip: Flaky timing test - Enter key form submission timing inconsistent in jsdom
-    // Same race condition as 'should submit form with valid data' test
-    // TODO: Refactor with deterministic form state testing (Issue #1881)
-    it.skip('should submit form on Enter key in input field', async () => {
+    it('should submit form on Enter key in input field', async () => {
       const user = userEvent.setup();
       const mockSubmit = vi.fn();
       render(<TestForm onSubmit={mockSubmit} />);
@@ -317,14 +315,18 @@ describe('Form Component', () => {
       await user.type(usernameInput, 'testuser');
       await user.type(emailInput, 'test@example.com{Enter}');
 
+      // react-hook-form passes (data, event) — match data only via objectContaining
       await waitFor(
         () => {
-          expect(mockSubmit).toHaveBeenCalledWith({
-            username: 'testuser',
-            email: 'test@example.com',
-          });
+          expect(mockSubmit).toHaveBeenCalledWith(
+            expect.objectContaining({
+              username: 'testuser',
+              email: 'test@example.com',
+            }),
+            expect.anything()
+          );
         },
-        { timeout: 3000 }
+        { timeout: 3000, interval: 50 }
       );
     });
   });

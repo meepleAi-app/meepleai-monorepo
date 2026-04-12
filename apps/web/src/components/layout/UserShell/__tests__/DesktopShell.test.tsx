@@ -3,19 +3,8 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/',
+  useRouter: () => ({ push: vi.fn() }),
 }));
-
-vi.mock('@/stores/use-card-hand', () => {
-  const state = {
-    cards: [],
-    pinnedIds: new Set<string>(),
-    pinCard: vi.fn(),
-    unpinCard: vi.fn(),
-  };
-  return {
-    useCardHand: (selector?: (s: typeof state) => unknown) => (selector ? selector(state) : state),
-  };
-});
 
 vi.mock('@/components/notifications', () => ({
   NotificationBell: () => <button aria-label="Notifications">🔔</button>,
@@ -25,17 +14,32 @@ vi.mock('@/components/layout/UserMenuDropdown', () => ({
   UserMenuDropdown: () => <button aria-label="User menu">MR</button>,
 }));
 
+vi.mock('@/components/layout/ContextualHand', () => ({
+  ContextualHandSidebar: () => null,
+}));
+
+vi.mock('@/components/chat/panel/ChatSlideOverPanel', () => ({
+  ChatSlideOverPanel: () => null,
+}));
+
+vi.mock('@/components/layout/mobile/ActionBar', () => ({
+  ActionBar: () => null,
+}));
+
+vi.mock('@/components/layout/mobile/HandDrawer', () => ({
+  HandDrawer: () => null,
+}));
+
 import { DesktopShell } from '../DesktopShell';
 
 describe('DesktopShell', () => {
-  it('renders top bar, mini-nav slot, hand rail and children', () => {
+  it('renders top bar, mini-nav slot and children', () => {
     render(
       <DesktopShell>
         <div data-testid="content">hello</div>
       </DesktopShell>
     );
     expect(screen.getByTestId('top-bar')).toBeInTheDocument();
-    expect(screen.getByTestId('desktop-hand-rail')).toBeInTheDocument();
     expect(screen.getByTestId('content')).toBeInTheDocument();
   });
 

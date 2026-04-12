@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MeepleAI — Navigation Redesign Mockup v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--
+  Static design mockup for internal use only.
+  All content is developer-authored constants. Not served to end users.
+  Reflects spec: docs/superpowers/specs/2026-04-10-card-drawer-navigation-redesign-design.md
+-->
+<style>
+:root {
+  --bg:#faf8f5; --bg-card:rgba(255,255,255,0.92); --bg-muted:#f1ede8;
+  --text:#1a1a2e; --text-sec:#64748b; --text-muted:#94a3b8;
+  --border:rgba(0,0,0,0.07); --border-light:rgba(0,0,0,0.04);
+  --shadow-sm:0 1px 3px rgba(180,130,80,0.06),0 1px 2px rgba(180,130,80,0.04);
+  --shadow-md:0 4px 12px rgba(180,130,80,0.08),0 2px 4px rgba(180,130,80,0.04);
+  --shadow-lg:0 10px 30px rgba(180,130,80,0.12),0 4px 8px rgba(180,130,80,0.06);
+  --shadow-xl:0 20px 50px rgba(180,130,80,0.16),0 8px 16px rgba(180,130,80,0.08);
+  --phone-w:390px; --phone-h:844px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Nunito',sans-serif;background:#e8e4df;color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 12px}
+h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
+.pg-title{text-align:center;margin-bottom:12px}
+.pg-title h1{font-size:1.3rem}
+.pg-title p{color:var(--text-sec);font-size:0.75rem;margin-top:3px;max-width:700px}
+.e-switch{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;max-width:820px}
+.e-btn{padding:5px 12px;border-radius:18px;border:2px solid var(--border);background:var(--bg-card);font-family:'Quicksand',sans-serif;font-size:10px;font-weight:700;cursor:pointer;color:var(--text-sec);transition:all .25s;display:flex;align-items:center;gap:4px}
+.e-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.e-btn.active{color:white;border-color:transparent;box-shadow:var(--shadow-lg)}
+.e-btn .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.view-toggle{display:flex;gap:4px;justify-content:center;margin-bottom:16px}
+.vt-btn{padding:5px 14px;border-radius:16px;border:1px solid var(--border);background:var(--bg-card);font-family:'Quicksand',sans-serif;font-size:10px;font-weight:700;cursor:pointer;color:var(--text-sec);transition:all .2s}
+.vt-btn.active{background:var(--text);color:white;border-color:transparent}
+.mockup-row{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.mockup-col{display:flex;flex-direction:column;align-items:center;gap:6px}
+.mockup-label{font-family:'Quicksand',sans-serif;font-weight:700;font-size:0.72rem;color:var(--text-sec);text-transform:uppercase;letter-spacing:.08em}
+.phone{width:var(--phone-w);height:var(--phone-h);background:var(--bg);border-radius:40px;border:3px solid #c8c0b5;box-shadow:0 30px 80px rgba(0,0,0,.15),0 8px 24px rgba(0,0,0,.1),inset 0 0 0 1px rgba(255,255,255,.4);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.sbar{height:44px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 5px;font-size:11px;font-weight:600;flex-shrink:0}
+.sbar .t{font-weight:700} .sbar .i{display:flex;gap:3px;font-size:10px}
+.topbar{height:48px;display:flex;align-items:center;padding:0 14px;background:var(--bg-card);backdrop-filter:blur(12px) saturate(180%);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px}
+.topbar .logo{font-family:'Quicksand',sans-serif;font-weight:800;font-size:.9rem;color:hsl(25,95%,45%);display:flex;align-items:center;gap:5px}
+.topbar .logo .dice{width:24px;height:24px;background:hsl(25,95%,45%);border-radius:5px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:800}
+.topbar .spacer{flex:1}
+.topbar .tb-btn{width:30px;height:30px;border-radius:50%;background:var(--bg-muted);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-sec)}
+.topbar .avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,60%,35%));color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Quicksand',sans-serif;border:2px solid white}
+.mininav{height:40px;display:flex;align-items:center;gap:2px;padding:0 14px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0;font-size:11px}
+.mininav .breadcrumb{color:var(--text-muted);font-weight:600;margin-right:8px;white-space:nowrap;font-size:10px}
+.mininav .mn-tab{padding:4px 8px;border-radius:8px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all .2s;font-family:'Quicksand',sans-serif;font-size:10px;position:relative;white-space:nowrap}
+.mininav .mn-tab.active{color:var(--text)}
+.mininav .mn-tab.active::after{content:'';position:absolute;bottom:-8px;left:6px;right:6px;height:2px;border-radius:1px}
+.mininav .mn-tab .cnt{font-size:8px;padding:1px 4px;border-radius:4px;background:rgba(160,120,60,.1);margin-left:2px;font-weight:800}
+.mininav .mn-spacer{flex:1}
+.mininav .recents{display:flex;gap:3px;align-items:center}
+.mininav .rec-pill{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;cursor:pointer;transition:all .2s;border:1.5px solid transparent}
+.mininav .rec-pill:hover{transform:scale(1.15)}
+.session-banner{height:28px;display:flex;align-items:center;gap:6px;padding:0 14px;flex-shrink:0;font-size:10px;font-weight:700;font-family:'Quicksand',sans-serif}
+.session-banner .sb-dot{width:6px;height:6px;border-radius:50%;background:hsl(240,60%,55%);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.session-banner .sb-text{color:hsl(240,60%,45%);flex:1}
+.session-banner .sb-btn{padding:2px 8px;border-radius:8px;border:1px solid hsla(240,60%,55%,.3);background:transparent;font-size:9px;font-weight:700;color:hsl(240,60%,55%);cursor:pointer;font-family:'Quicksand',sans-serif}
+.session-banner .sb-close{width:20px;height:20px;border-radius:50%;border:none;background:hsla(240,60%,55%,.1);color:hsl(240,60%,55%);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
+.pgc{flex:1;overflow-y:auto;scrollbar-width:none}
+.pgc::-webkit-scrollbar{display:none}
+.hero{position:relative;height:180px;overflow:hidden}
+.hero-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:72px}
+.hero-grad{position:absolute;bottom:0;left:0;right:0;height:70px;background:linear-gradient(to top,var(--bg) 0%,transparent 100%)}
+.hero-badge{position:absolute;top:10px;left:14px;padding:3px 10px;border-radius:16px;font-family:'Quicksand',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:white;backdrop-filter:blur(8px)}
+.hero-rating{position:absolute;top:10px;right:14px;padding:3px 8px;border-radius:10px;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);color:#fbbf24;font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px}
+.cinfo{padding:12px 16px 8px}
+.cinfo .ti{font-family:'Quicksand',sans-serif;font-size:1.15rem;font-weight:700;line-height:1.2}
+.cinfo .sub{font-size:.78rem;color:var(--text-sec);margin-top:1px}
+.meta-chip{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text-sec);background:var(--bg-muted);padding:3px 8px;border-radius:12px;font-weight:600}
+.conn-bar{display:flex;gap:5px;padding:6px 16px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.conn-bar::-webkit-scrollbar{display:none}
+.conn-pip{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:14px;font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;font-family:'Quicksand',sans-serif}
+.conn-pip:hover{transform:scale(1.04);box-shadow:var(--shadow-md)}
+.conn-pip .cp-count{font-weight:800;font-variant-numeric:tabular-nums}
+.conn-pip.empty{border:1.5px dashed;opacity:.55}
+.qactions{display:flex;gap:6px;padding:4px 16px 10px}
+.qa-btn{padding:6px 14px;border-radius:16px;border:1px solid var(--border);background:var(--bg-card);font-family:'Quicksand',sans-serif;font-size:11px;font-weight:700;cursor:pointer;color:var(--text-sec);transition:all .2s;display:flex;align-items:center;gap:4px}
+.qa-btn.primary{color:white;border-color:transparent}
+.sect{padding:10px 16px}
+.sect-title{font-family:'Quicksand',sans-serif;font-size:.8rem;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.info-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:11px}
+.info-row .lb{color:var(--text-muted)} .info-row .vl{font-weight:600}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.stat-box{padding:8px;border-radius:8px;background:var(--bg-muted);text-align:center}
+.stat-box .sv{font-size:1.1rem;font-weight:800;font-family:'Quicksand',sans-serif}
+.stat-box .sl{font-size:8px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.mini-list{display:flex;flex-direction:column;gap:4px}
+.mini-item{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-sm)}
+.mini-item .mi-icon{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.mini-item .mi-text{flex:1}
+.mini-item .mi-ti{font-size:11px;font-weight:700}
+.mini-item .mi-sub{font-size:9px;color:var(--text-sec)}
+.mini-item .mi-badge{padding:2px 6px;border-radius:8px;font-size:8px;font-weight:700;color:white}
+.bbar{height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-around;padding:0 12px 10px;background:var(--bg-card);backdrop-filter:blur(16px) saturate(180%);border-top:1px solid var(--border)}
+.bbar.session-mode{border-top:2px solid hsl(240,60%,55%)}
+.bb-item{display:flex;flex-direction:column;align-items:center;gap:0;cursor:pointer;font-size:16px;min-width:44px}
+.bb-item .bl{font-size:8px;font-weight:700;color:var(--text-sec);font-family:'Quicksand',sans-serif}
+.bb-item.active .bl{color:hsl(25,95%,45%)}
+.dr-overlay{position:absolute;inset:0;z-index:50;pointer-events:none;transition:background .35s}
+.dr-overlay.open{background:rgba(0,0,0,.35);pointer-events:auto}
+.dr-panel{position:absolute;left:0;right:0;bottom:0;height:58%;background:var(--bg-card);backdrop-filter:blur(16px) saturate(180%);border-top:1px solid var(--border);box-shadow:0 -8px 32px rgba(0,0,0,.12);border-radius:18px 18px 0 0;transform:translateY(105%);transition:transform .4s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden;z-index:51}
+.dr-overlay.open .dr-panel{transform:translateY(0)}
+.dr-handle{width:32px;height:3px;border-radius:2px;background:var(--border);margin:8px auto 4px;flex-shrink:0}
+.dr-header{display:flex;align-items:center;gap:6px;padding:2px 14px 6px;flex-shrink:0}
+.dr-header .dh-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700}
+.dr-header .dh-title{font-family:'Quicksand',sans-serif;font-size:.82rem;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dr-header .dh-close{width:24px;height:24px;border-radius:50%;background:var(--bg-muted);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-sec)}
+.dr-tabs{display:flex;padding:0 10px;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.dr-tabs::-webkit-scrollbar{display:none}
+.dr-tab{padding:6px 10px;font-size:10px;font-weight:700;font-family:'Quicksand',sans-serif;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:color .2s,border-color .2s;background:transparent;border-top:none;border-left:none;border-right:none;white-space:nowrap;display:flex;align-items:center;gap:4px;flex-shrink:0}
+.dr-tab.active{border-bottom-color:currentColor}
+.dr-tab:hover{color:var(--text)}
+.dr-tab .tb{min-width:14px;height:14px;border-radius:7px;font-size:7px;font-weight:800;color:white;display:flex;align-items:center;justify-content:center;padding:0 3px}
+.dr-content{flex:1;padding:10px 14px;overflow-y:auto;font-size:12px;color:var(--text-sec);line-height:1.6;scrollbar-width:none}
+.dr-content::-webkit-scrollbar{display:none}
+.dr-content h4{font-size:12px;color:var(--text);margin-bottom:5px;font-family:'Quicksand',sans-serif}
+.dr-footer{display:flex;align-items:center;gap:4px;padding:8px 14px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg)}
+.dr-footer .af-btn{display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;border:none;font-family:'Quicksand',sans-serif}
+.dr-footer .af-btn.primary{color:white}
+.dr-footer .af-btn.secondary{background:var(--bg-muted);color:var(--text-sec)}
+.pbar{height:5px;border-radius:3px;background:var(--bg-muted);overflow:hidden;margin:3px 0}
+.pfill{height:100%;border-radius:3px}
+.cb{padding:6px 10px;border-radius:10px;font-size:11px;line-height:1.5;max-width:82%;margin-bottom:4px}
+.cb.user{background:var(--bg-muted);margin-left:auto;border-bottom-right-radius:3px}
+.cb.asst{border:1px solid var(--border);border-bottom-left-radius:3px}
+.cb .cbt{font-size:8px;color:var(--text-muted);margin-top:1px}
+.cite-pill{display:inline-flex;align-items:center;gap:2px;padding:1px 6px;border-radius:6px;font-size:8px;font-weight:700;cursor:pointer;margin:0 2px}
+.tl-item{display:flex;gap:6px;padding:4px 0;border-bottom:1px solid var(--border-light)}
+.tl-dot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.tl-text{font-size:10px}
+.tl-text .tl-time{color:var(--text-muted);font-size:9px}
+.photo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.photo-thumb{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.cfg-row{display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:var(--bg-muted);border-radius:6px;margin-bottom:3px;font-size:11px}
+.cfg-row .ck{font-family:monospace;color:var(--text-sec);font-size:10px}
+.cfg-row .cv{font-weight:700}
+.tool-preview{padding:10px;border-radius:10px;background:var(--bg-muted);text-align:center;margin:6px 0}
+.tool-preview .tp-display{font-size:1.6rem;font-weight:800;font-family:'Quicksand',sans-serif;margin:6px 0}
+.tool-preview .tp-controls{display:flex;gap:6px;justify-content:center;margin-top:6px}
+.tool-preview .tp-btn{padding:4px 12px;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);font-size:10px;font-weight:700;cursor:pointer;font-family:'Quicksand',sans-serif}
+.tool-preview .tp-btn.primary{color:white;border-color:transparent}
+.sd{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:3px}
+.sd.green{background:hsl(142,70%,45%)} .sd.amber{background:hsl(38,92%,50%)} .sd.blue{background:hsl(220,80%,55%)}
+.spec-wrap{max-width:960px;margin:24px auto 12px}
+.spec-wrap h2{font-size:.95rem;text-align:center;margin-bottom:3px}
+.spec-wrap p{text-align:center;font-size:.7rem;color:var(--text-sec);margin-bottom:10px}
+.spec-tbl{width:100%;max-width:920px;margin:0 auto 32px;border-collapse:collapse;font-size:11px}
+.spec-tbl th{font-family:'Quicksand',sans-serif;font-weight:700;padding:8px 10px;text-align:left;color:white;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.spec-tbl td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.spec-tbl tr:nth-child(even){background:rgba(180,130,80,.04)}
+@media(max-width:480px){.phone{width:100%;height:100vh;border-radius:0;border:none}body{padding:0}.pg-title,.e-switch,.mockup-label,.view-toggle,.spec-wrap,.spec-tbl{display:none}}
+</style>
+</head>
+<body>
+<div class="pg-title">
+  <h1>MeepleAI — Navigation Redesign v2</h1>
+  <p>Page-first: MiniNav + recents, ConnectionBar, Drawer 2-3 tab + action footer, Session Mode. No sidebar.</p>
+</div>
+<div class="e-switch" id="e-switch"></div>
+<div class="view-toggle">
+  <button class="vt-btn active" onclick="setView('page')">Page</button>
+  <button class="vt-btn" onclick="setView('drawer')">Drawer</button>
+  <button class="vt-btn" onclick="setView('session')">Session Mode</button>
+</div>
+<div class="mockup-row" id="mockup-row"></div>
+<div class="spec-wrap"><h2>Drawer Tab + Footer Spec</h2><p id="spec-sub"></p></div>
+<table class="spec-tbl" id="spec-tbl"><thead><tr id="spec-thead" style="color:white"><th>#</th><th>Tab ID</th><th>Label</th><th>Icona</th><th>Contenuto</th><th>Badge</th></tr></thead><tbody id="spec-body"></tbody></table>
+<div class="spec-wrap" style="margin-top:0"><h2>Action Footer</h2><p id="footer-sub"></p></div>
+<table class="spec-tbl" id="footer-tbl"><thead><tr id="footer-thead" style="color:white"><th>Azione</th><th>Variante</th><th>Condizione</th></tr></thead><tbody id="footer-body"></tbody></table>
+
+<script>
+/* STATIC MOCKUP — developer-authored constants only. */
+var EC={game:{h:25,s:95,l:45},player:{h:262,s:83,l:58},session:{h:240,s:60,l:55},agent:{h:38,s:92,l:50},kb:{h:174,s:60,l:40},chat:{h:220,s:80,l:55},event:{h:350,s:89,l:60},toolkit:{h:142,s:70,l:45},tool:{h:195,s:80,l:50}};
+function hsl(e){var c=EC[e]||EC.game;return c.h+','+c.s+'%,'+c.l+'%'}
+function hsla(e,a){return'hsla('+hsl(e)+','+a+')'}
+
+var E={
+game:{c:EC.game,em:"\u{1F3B2}",lb:"Game",ti:"Azul",sub:"Plan B Games \u00B7 2017",cov:"linear-gradient(135deg,#1e88e5,#0d47a1 50%,#ffc107)",ce:"\u{1F537}",rt:7.8,badge:"In Libreria",meta:[{i:"\u{1F465}",v:"2\u20134"},{i:"\u23F1\uFE0F",v:"30\u201345m"},{i:"\u{1F9E9}",v:"1.77"}],conn:[{et:"agent",cnt:1,lb:"Agent",i:"\u{1F916}"},{et:"kb",cnt:3,lb:"KB",i:"\u{1F4C4}"},{et:"chat",cnt:5,lb:"Chat",i:"\u{1F4AC}"},{et:"session",cnt:23,lb:"Sessioni",i:"\u{1F3AF}"}],actions:["\u25B6\uFE0F Gioca","\u{1F916} Chiedi AI"],tabs:[{id:"info",lb:"Info",ic:"\u2139\uFE0F",sp:"Info",desc:"Publisher, anno, giocatori, durata, complessita"},{id:"stats",lb:"Stats",ic:"\u{1F4CA}",sp:"BarChart3",bg:23,bgl:"totalPlays",desc:"Partite, win rate, avg score. Nascosto se 0."},{id:"history",lb:"Storico",ic:"\u{1F4DC}",sp:"History",desc:"Ultime partite. Ogni riga linka sessione."}],footer:[{lb:"\u25B6\uFE0F Gioca",v:"primary",cond:"Sempre"},{lb:"\u{1F916} Chiedi AI",v:"primary",cond:"Se agent attivo"},{lb:"\u2197\uFE0F Apri",v:"secondary",cond:"Sempre"}],tc:{info:'<h4>Dettagli</h4><div class="info-row"><span class="lb">Editore</span><span class="vl">Plan B Games</span></div><div class="info-row"><span class="lb">Anno</span><span class="vl">2017</span></div><div class="info-row"><span class="lb">Giocatori</span><span class="vl">2\u20134</span></div><div class="info-row"><span class="lb">Durata</span><span class="vl">30\u201345 min</span></div><div class="info-row"><span class="lb">Complessita</span><span class="vl">\u25CF\u25CF\u25CB\u25CB\u25CB (1.77)</span></div>',stats:'<h4>\u{1F4CA} Stats</h4><div class="stat-grid"><div class="stat-box"><div class="sv" style="color:hsl(25,95%,45%);">23</div><div class="sl">Partite</div></div><div class="stat-box"><div class="sv" style="color:hsl(142,70%,45%);">65%</div><div class="sl">Win Rate</div></div><div class="stat-box"><div class="sv" style="color:hsl(220,80%,55%);">72</div><div class="sl">Avg Score</div></div><div class="stat-box"><div class="sv" style="color:hsl(262,83%,58%);">2g</div><div class="sl">Ultimo</div></div></div>',history:'<h4>\u{1F4DC} Storico</h4><div class="info-row"><span class="lb">11 Mar</span><span class="vl" style="color:hsl(142,70%,35%);">\u{1F3C6} 72pt</span></div><div class="info-row"><span class="lb">8 Mar</span><span class="vl">2\u00B0 61pt</span></div><div class="info-row"><span class="lb">2 Mar</span><span class="vl" style="color:hsl(142,70%,35%);">\u{1F3C6} 78pt</span></div>'}},
+player:{c:EC.player,em:"\u{1F464}",lb:"Player",ti:"Marco R.",sub:"Membro Gen 2025 \u00B7 89 partite",cov:"linear-gradient(135deg,hsl(262,83%,58%),hsl(262,60%,35%))",ce:"\u{1F464}",badge:"Pro",meta:[{i:"\u{1F3C6}",v:"47 vittorie"},{i:"\u{1F3B2}",v:"89 partite"},{i:"\u{1F4CA}",v:"52.8%"}],conn:[{et:"session",cnt:89,lb:"Sessioni",i:"\u{1F3AF}"},{et:"game",cnt:5,lb:"Preferiti",i:"\u2B50"}],actions:["\u{1F4CA} Confronta"],tabs:[{id:"profile",lb:"Profilo",ic:"\u{1F464}",sp:"User",desc:"Avatar, nome, gruppi"},{id:"stats",lb:"Stats",ic:"\u{1F3C6}",sp:"Trophy",bg:47,bgl:"totalWins",desc:"Vittorie, win rate, top 3"},{id:"history",lb:"Storico",ic:"\u{1F4DC}",sp:"History",bg:89,bgl:"totalSessions",desc:"Ultime sessioni. Linka sessione+gioco."}],footer:[{lb:"\u{1F4CA} Confronta",v:"secondary",cond:"Se partite in comune"},{lb:"\u2197\uFE0F Apri",v:"secondary",cond:"Sempre"}],tc:{profile:'<h4>Profilo</h4><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,60%,35%));display:flex;align-items:center;justify-content:center;color:white;font-size:15px;font-weight:800;">MR</div><div><div style="font-weight:700;font-size:13px;">Marco Rossi</div><div style="font-size:10px;color:var(--text-sec);">Gen 2025</div></div></div><div class="info-row"><span class="lb">Preferito</span><span class="vl">Azul</span></div><div class="info-row"><span class="lb">Gruppi</span><span class="vl">Game Night Club</span></div>',stats:'<h4>\u{1F3C6} Stats</h4><div class="stat-grid"><div class="stat-box"><div class="sv" style="color:hsl(262,83%,58%);">47</div><div class="sl">Vittorie</div></div><div class="stat-box"><div class="sv" style="color:hsl(142,70%,45%);">52.8%</div><div class="sl">Win Rate</div></div></div><div class="info-row"><span class="lb">\u{1F947} Azul</span><span class="vl">23 (65%)</span></div><div class="info-row"><span class="lb">\u{1F948} Catan</span><span class="vl">18 (44%)</span></div>',history:'<h4>\u{1F4DC} Storico</h4><div class="info-row"><span class="lb">11 Mar \u00B7 Azul</span><span class="vl" style="color:hsl(142,70%,35%);">\u{1F3C6} 72pt</span></div><div class="info-row"><span class="lb">8 Mar \u00B7 Catan</span><span class="vl">2\u00B0 8pt</span></div><div class="info-row"><span class="lb">2 Mar \u00B7 Azul</span><span class="vl" style="color:hsl(142,70%,35%);">\u{1F3C6} 78pt</span></div>'}},
+session:{c:EC.session,em:"\u{1F3AF}",lb:"Session",ti:"Serata Azul",sub:"In corso \u00B7 Turno 3/5",cov:"linear-gradient(135deg,hsl(240,60%,55%),hsl(240,40%,30%))",ce:"\u{1F3AF}",badge:"In Corso",meta:[{i:"\u{1F465}",v:"4 giocatori"},{i:"\u23F1\uFE0F",v:"45 min"},{i:"\u{1F4CA}",v:"T 3/5"}],conn:[{et:"game",cnt:1,lb:"Gioco",i:"\u{1F3B2}"},{et:"player",cnt:4,lb:"Giocatori",i:"\u{1F465}"},{et:"tool",cnt:3,lb:"Tools",i:"\u{1F527}"},{et:"agent",cnt:1,lb:"Agente",i:"\u{1F916}"}],actions:["\u25B6\uFE0F Riprendi"],tabs:[{id:"live",lb:"Live",ic:"\u{1F4CB}",sp:"Layers",desc:"Classifica live. Giocatori cliccabili."},{id:"toolkit",lb:"Toolkit",ic:"\u{1F527}",sp:"Wrench",bg:3,bgl:"toolCount",desc:"Strumenti attivi. Nascosto se no toolkit."},{id:"timeline",lb:"Timeline",ic:"\u{1F552}",sp:"Clock",desc:"Feed crono: eventi + note + foto"}],footer:[{lb:"\u25B6\uFE0F Riprendi",v:"primary",cond:"Se in corso/pausa"},{lb:"\u{1F4CA} Risultati",v:"secondary",cond:"Se completata"},{lb:"\u2197\uFE0F Apri",v:"secondary",cond:"Sempre"}],tc:{live:'<h4>Live</h4><div class="info-row"><span class="lb">Stato</span><span class="vl"><span class="sd green"></span>In Corso</span></div><div class="info-row"><span class="lb">Turno</span><span class="vl">3/5</span></div><div class="info-row"><span class="lb">Codice</span><span class="vl" style="font-family:monospace;">AZL-7X2K</span></div><h4 style="margin-top:6px;">Classifica</h4><div class="info-row"><span class="lb">\u{1F947} Marco</span><span class="vl" style="color:hsl(142,70%,35%);">72pt</span></div><div class="info-row"><span class="lb">\u{1F948} Sara</span><span class="vl">61pt</span></div><div class="info-row"><span class="lb">\u{1F949} Luca</span><span class="vl">54pt</span></div>',toolkit:'<h4>\u{1F527} Toolkit</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(240,60%,55%,.1);">\u23F1\uFE0F</div><div class="mi-text"><div class="mi-ti">Timer Turno</div><div class="mi-sub"><span class="sd green"></span>3:42</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(240,60%,55%,.1);">\u{1F522}</div><div class="mi-text"><div class="mi-ti">Contatore Parete</div><div class="mi-sub">Marco:12 Sara:9</div></div></div></div>',timeline:'<h4>\u{1F552} Timeline</h4><div class="tl-item"><div class="tl-dot" style="background:hsl(240,60%,55%);"></div><div class="tl-text"><div>Sessione avviata</div><div class="tl-time">19:00</div></div></div><div class="tl-item"><div class="tl-dot" style="background:hsl(142,70%,45%);"></div><div class="tl-text"><div>Round 1 \u2014 Marco 24pt</div><div class="tl-time">19:18</div></div></div><div class="tl-item"><div class="tl-dot" style="background:hsl(38,92%,50%);"></div><div class="tl-text"><div>Nota: Sara riga blu</div><div class="tl-time">19:42</div></div></div>'}},
+agent:{c:EC.agent,em:"\u{1F916}",lb:"Agent",ti:"Azul Rules Expert",sub:"RAG \u00B7 GPT-4o-mini \u00B7 Attivo",cov:"linear-gradient(135deg,hsl(38,92%,50%),hsl(38,70%,30%))",ce:"\u{1F916}",badge:"Attivo",meta:[{i:"\u{1F4AC}",v:"342 inv"},{i:"\u{1F4DA}",v:"3 docs"},{i:"\u26A1",v:"1.2s"}],conn:[{et:"game",cnt:1,lb:"Gioco",i:"\u{1F3B2}"},{et:"kb",cnt:3,lb:"KB",i:"\u{1F4C4}"},{et:"chat",cnt:5,lb:"Chat",i:"\u{1F4AC}"}],actions:["\u{1F4AC} Chat"],tabs:[{id:"overview",lb:"Overview",ic:"\u{1F916}",sp:"Bot",desc:"Nome, strategia, modello, stato, gioco"},{id:"history",lb:"Storico",ic:"\u{1F4DC}",sp:"History",bg:342,bgl:"invocationCount",desc:"Invocazioni recenti. Linka a chat."},{id:"config",lb:"Config",ic:"\u2699\uFE0F",sp:"Settings",desc:"Parametri read-only"}],footer:[{lb:"\u{1F4AC} Chat",v:"primary",cond:"Se attivo + KB"},{lb:"\u{1F504} Riavvia",v:"secondary",cond:"Se errore/idle"},{lb:"\u2197\uFE0F Apri",v:"secondary",cond:"Sempre"}],tc:{overview:'<h4>Overview</h4><div class="info-row"><span class="lb">Nome</span><span class="vl">Azul Rules Expert</span></div><div class="info-row"><span class="lb">Strategia</span><span class="vl">hybrid-rag</span></div><div class="info-row"><span class="lb">Modello</span><span class="vl">GPT-4o-mini</span></div><div class="info-row"><span class="lb">Stato</span><span class="vl"><span class="sd green"></span>Attivo</span></div><div class="info-row"><span class="lb">KB</span><span class="vl">3 docs</span></div>',history:'<h4>\u{1F4DC} Invocazioni</h4><div class="info-row"><span class="lb">14:20 Regole</span><span class="vl">1.1s</span></div><div class="info-row"><span class="lb">14:18 Strategia</span><span class="vl">1.4s</span></div><div class="info-row"><span class="lb">13:55 Punteggio</span><span class="vl">0.9s</span></div>',config:'<h4>\u2699\uFE0F Config</h4><div class="cfg-row"><span class="ck">temperature</span><span class="cv">0.7</span></div><div class="cfg-row"><span class="ck">maxTokens</span><span class="cv">2048</span></div><div class="cfg-row"><span class="ck">topK</span><span class="cv">5</span></div><div class="cfg-row"><span class="ck">rerank</span><span class="cv">true</span></div><p style="margin-top:6px;font-size:9px;color:var(--text-muted);">Sola lettura</p>'}},
+kb:{c:EC.kb,em:"\u{1F4C4}",lb:"KB",ti:"azul-regole-ita.pdf",sub:"2.4 MB \u00B7 12 pag \u00B7 Indicizzato",cov:"linear-gradient(135deg,hsl(174,60%,40%),hsl(174,40%,25%))",ce:"\u{1F4C4}",badge:"Indicizzato",meta:[{i:"\u{1F4CA}",v:"47 chunks"},{i:"\u{1F4C4}",v:"12 pag"},{i:"\u{1F4BE}",v:"2.4 MB"}],conn:[{et:"game",cnt:1,lb:"Gioco",i:"\u{1F3B2}"},{et:"agent",cnt:1,lb:"Agente",i:"\u{1F916}"}],actions:["\u{1F504} Reindex","\u2B07\uFE0F Download"],tabs:[{id:"overview",lb:"Overview",ic:"\u{1F4C4}",sp:"FileText",desc:"Metadata file, stato, embedding"},{id:"preview",lb:"Anteprima",ic:"\u{1F441}\uFE0F",sp:"Eye",desc:"Prime ~500 parole"},{id:"citations",lb:"Citazioni",ic:"\u{1F4AC}",sp:"MessageCircle",desc:"Chat che hanno citato con pag/\u00A7"}],footer:[{lb:"\u{1F504} Reindex",v:"secondary",cond:"Se indexed/failed"},{lb:"\u2B07\uFE0F Download",v:"secondary",cond:"Sempre"},{lb:"\u2197\uFE0F Apri",v:"secondary",cond:"Sempre"}],tc:{overview:'<h4>Overview</h4><div class="info-row"><span class="lb">File</span><span class="vl">azul-regole-ita.pdf</span></div><div class="info-row"><span class="lb">Size</span><span class="vl">2.4 MB</span></div><div class="info-row"><span class="lb">Pagine</span><span class="vl">12</span></div><div class="info-row"><span class="lb">Chunks</span><span class="vl">47</span></div><div class="info-row"><span class="lb">Stato</span><span class="vl"><span class="sd green"></span>Indicizzato</span></div><div class="info-row"><span class="lb">Embedding</span><span class="vl">e5-base 768d</span></div>',preview:'<h4>\u{1F441}\uFE0F Anteprima</h4><div style="padding:8px;background:var(--bg-muted);border-radius:8px;font-size:11px;line-height:1.6;"><p><strong>AZUL \u2014 Regole</strong></p><p style="margin-top:4px;">Azul e un gioco astratto per 2-4 giocatori. Le tessere vengono selezionate dalle fabbriche...</p><p style="margin-top:6px;font-size:9px;color:var(--text-muted);">500/24,567 char</p></div>',citations:'<h4>\u{1F4AC} Citazioni</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(220,80%,55%,.1);">\u{1F4AC}</div><div class="mi-text"><div class="mi-ti">Come si gioca ad Azul?</div><div class="mi-sub">p.3 \u00A73, p.5 \u00A71 \u00B7 12 Mar</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(220,80%,55%,.1);">\u{1F4AC}</div><div class="mi-text"><div class="mi-ti">Strategia punteggio</div><div class="mi-sub">p.8 \u00A72 \u00B7 10 Mar</div></div></div></div>'}},
+chat:{c:EC.chat,em:"\u{1F4AC}",lb:"Chat",ti:"Come si gioca ad Azul?",sub:"Azul Rules Expert \u00B7 12 msg",cov:"linear-gradient(135deg,hsl(220,80%,55%),hsl(220,60%,35%))",ce:"\u{1F4AC}",badge:"Attiva",meta:[{i:"\u{1F4AC}",v:"12 msg"},{i:"\u23F1\uFE0F",v:"5 min fa"},{i:"\u{1F916}",v:"GPT-4o-mini"}],conn:[{et:"agent",cnt:1,lb:"Agente",i:"\u{1F916}"},{et:"game",cnt:1,lb:"Gioco",i:"\u{1F3B2}"}],actions:["\u{1F4AC} Continua"],tabs:[{id:"messages",lb:"Messaggi",ic:"\u{1F4AC}",sp:"MessageSquare",bg:12,bgl:"msgCount",desc:"Messaggi con citation pills cliccabili"},{id:"sources",lb:"Fonti",ic:"\u{1F4C4}",sp:"FileText",desc:"KB docs citati con pagine/\u00A7"}],footer:[{lb:"\u{1F4AC} Continua",v:"primary",cond:"Se attiva"},{lb:"\u{1F4E6} Archivia",v:"secondary",cond:"Se attiva"},{lb:"\u{1F513} Riapri",v:"secondary",cond:"Se archiviata"},{lb:"\u2197\uFE0F Apri",v:"secondary",cond:"Sempre"}],tc:{messages:'<h4>\u{1F4AC} Chat</h4><div style="display:flex;flex-direction:column;gap:4px;"><div class="cb user">Come si gioca ad Azul?<div class="cbt">14:20</div></div><div class="cb asst">Azul e un gioco di piazzamento tessere per 2-4 giocatori. <span class="cite-pill" style="background:hsla(174,60%,40%,.12);color:hsl(174,60%,40%);">\u{1F4C4} p.3 \u00A73</span><div class="cbt">14:20</div></div><div class="cb user">Il punteggio?<div class="cbt">14:22</div></div><div class="cb asst">1pt per ogni tessera adiacente. Bonus per righe/colonne. <span class="cite-pill" style="background:hsla(174,60%,40%,.12);color:hsl(174,60%,40%);">\u{1F4C4} p.8 \u00A72</span><div class="cbt">14:22</div></div></div>',sources:'<h4>\u{1F4C4} Fonti</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(174,60%,40%,.1);">\u{1F4C4}</div><div class="mi-text"><div class="mi-ti">azul-regole-ita.pdf</div><div class="mi-sub">3 citazioni \u00B7 p.3, p.5, p.8</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(174,60%,40%,.1);">\u{1F4C4}</div><div class="mi-text"><div class="mi-ti">azul-strategie.pdf</div><div class="mi-sub">1 citazione \u00B7 p.2</div></div></div></div>'}},
+event:{c:EC.event,em:"\u{1F4C5}",lb:"Event",ti:"Serata da Marco",sub:"15 Mar \u00B7 19:00 \u00B7 Casa Marco",cov:"linear-gradient(135deg,hsl(350,89%,60%),hsl(350,70%,40%))",ce:"\u{1F389}",badge:"Confermato",meta:[{i:"\u{1F465}",v:"5 pers"},{i:"\u{1F3B2}",v:"3 giochi"},{i:"\u{1F4CD}",v:"Casa Marco"}],conn:[{et:"player",cnt:5,lb:"Partecipanti",i:"\u{1F465}"},{et:"game",cnt:3,lb:"Giochi",i:"\u{1F3B2}"},{et:"session",cnt:2,lb:"Sessioni",i:"\u{1F3AF}"}],actions:["\u2705 Conferma","\u{1F4E4} Invita"],tabs:[{id:"overview",lb:"Overview",ic:"\u{1F4C5}",sp:"Calendar",desc:"Data, luogo, partecipanti con stato"},{id:"program",lb:"Programma",ic:"\u{1F3B2}",sp:"Dices",bg:3,bgl:"gameCount",desc:"Giochi + diario timeline"}],footer:[{lb:"\u2705 Conferma",v:"primary",cond:"Se non confermato"},{lb:"\u274C Declina",v:"secondary",cond:"Se confermato"},{lb:"\u{1F4E4} Invita",v:"secondary",cond:"Se organizzatore"},{lb:"\u2197\uFE0F Apri",v:"secondary",cond:"Sempre"}],tc:{overview:'<h4>Overview</h4><div class="info-row"><span class="lb">Data</span><span class="vl">15 Mar 2026</span></div><div class="info-row"><span class="lb">Ora</span><span class="vl">19:00\u201323:00</span></div><div class="info-row"><span class="lb">Luogo</span><span class="vl">\u{1F4CD} Casa di Marco</span></div><h4 style="margin-top:6px;">Partecipanti</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(262,83%,58%,.1);">\u{1F464}</div><div class="mi-text"><div class="mi-ti">Marco R.</div><div class="mi-sub">Organizzatore</div></div><div class="mi-badge" style="background:hsl(142,70%,45%);">\u2713</div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(38,92%,50%,.1);">\u{1F464}</div><div class="mi-text"><div class="mi-ti">Giulia T.</div><div class="mi-sub">In attesa</div></div><div class="mi-badge" style="background:hsl(38,92%,50%);">?</div></div></div>',program:'<h4>\u{1F3B2} Programma</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(25,95%,45%,.1);">\u{1F537}</div><div class="mi-text"><div class="mi-ti">Azul</div><div class="mi-sub"><span class="sd green"></span>Completato</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(25,95%,45%,.1);">\u{1F3DD}\uFE0F</div><div class="mi-text"><div class="mi-ti">Catan</div><div class="mi-sub"><span class="sd blue"></span>In corso</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(25,95%,45%,.1);">\u{1F426}</div><div class="mi-text"><div class="mi-ti">Wingspan</div><div class="mi-sub"><span class="sd amber"></span>Pianificato</div></div></div></div>'}},
+toolkit:{c:EC.toolkit,em:"\u{1F9F0}",lb:"Toolkit",ti:"Azul Toolkit v2",sub:"Pubblicato \u00B7 3 strumenti",cov:"linear-gradient(135deg,hsl(142,70%,45%),hsl(142,50%,28%))",ce:"\u{1F9F0}",badge:"Pubblicato",meta:[{i:"\u{1F527}",v:"3 tools"},{i:"\u{1F0CF}",v:"1 deck"},{i:"\u23F1\uFE0F",v:"1 timer"}],conn:[{et:"game",cnt:1,lb:"Gioco",i:"\u{1F3B2}"},{et:"tool",cnt:3,lb:"Tools",i:"\u{1F527}"},{et:"session",cnt:12,lb:"Sessioni",i:"\u{1F3AF}"}],actions:["\u25B6\uFE0F Usa"],tabs:[{id:"overview",lb:"Overview",ic:"\u{1F9F0}",sp:"Wrench",desc:"Nome, versione, lista strumenti"},{id:"template",lb:"Template",ic:"\u{1F4D0}",sp:"Layout",desc:"Scoring + turn phases"},{id:"history",lb:"Storico",ic:"\u{1F4DC}",sp:"History",bg:12,bgl:"useCount",desc:"Sessioni che lo hanno usato"}],footer:[{lb:"\u25B6\uFE0F Usa",v:"primary",cond:"Se pubblicato"},{lb:"\u270F\uFE0F Modifica",v:"secondary",cond:"Se owner"},{lb:"\u2197\uFE0F Apri",v:"secondary",cond:"Sempre"}],tc:{overview:'<h4>Overview</h4><div class="info-row"><span class="lb">Nome</span><span class="vl">Azul Toolkit v2</span></div><div class="info-row"><span class="lb">Versione</span><span class="vl">2</span></div><div class="info-row"><span class="lb">Stato</span><span class="vl"><span class="sd green"></span>Pubblicato</span></div><h4 style="margin-top:6px;">Strumenti</h4><div class="mini-list"><div class="mini-item"><div class="mi-icon" style="background:hsla(142,70%,45%,.1);">\u23F1\uFE0F</div><div class="mi-text"><div class="mi-ti">Timer Turno</div><div class="mi-sub">5:00 per giocatore</div></div></div><div class="mini-item"><div class="mi-icon" style="background:hsla(142,70%,45%,.1);">\u{1F522}</div><div class="mi-text"><div class="mi-ti">Contatore</div><div class="mi-sub">0\u201325</div></div></div></div>',template:'<h4>\u{1F4D0} Template</h4><div class="info-row"><span class="lb">Scoring</span><span class="vl">Righe+Colonne+Set</span></div><div style="display:flex;gap:3px;margin-top:6px;"><span style="padding:3px 8px;border-radius:10px;background:hsla(142,70%,45%,.1);font-size:10px;font-weight:700;color:hsl(142,70%,45%);">1.Selezione</span><span style="padding:3px 8px;border-radius:10px;background:hsla(142,70%,45%,.1);font-size:10px;font-weight:700;color:hsl(142,70%,45%);">2.Piazzamento</span><span style="padding:3px 8px;border-radius:10px;background:hsla(142,70%,45%,.1);font-size:10px;font-weight:700;color:hsl(142,70%,45%);">3.Punteggio</span></div>',history:'<h4>\u{1F4DC} Storico</h4><div class="info-row"><span class="lb">11 Mar Serata</span><span class="vl">4 giocatori</span></div><div class="info-row"><span class="lb">8 Mar Torneo</span><span class="vl">3 giocatori</span></div><p style="margin-top:6px;font-size:9px;color:var(--text-muted);">12 utilizzi</p>'}},
+tool:{c:EC.tool,em:"\u{1F527}",lb:"Tool",ti:"Timer Turno Azul",sub:"Timer \u00B7 5:00 \u00B7 Per giocatore",cov:"linear-gradient(135deg,hsl(195,80%,50%),hsl(195,60%,30%))",ce:"\u23F1\uFE0F",badge:"Attivo",meta:[{i:"\u23F1\uFE0F",v:"5:00"},{i:"\u{1F465}",v:"Per giocatore"},{i:"\u{1F4CA}",v:"23 utilizzi"}],conn:[{et:"toolkit",cnt:1,lb:"Toolkit",i:"\u{1F9F0}"}],actions:["\u25B6\uFE0F Start"],tabs:[{id:"detail",lb:"Dettaglio",ic:"\u{1F527}",sp:"Wrench",desc:"Config completa, toolkit parent"},{id:"preview",lb:"Preview",ic:"\u25B6\uFE0F",sp:"Play",desc:"Timer countdown interattivo"}],footer:[{lb:"\u25B6\uFE0F Usa",v:"primary",cond:"Se in sessione attiva"},{lb:"\u270F\uFE0F Modifica",v:"secondary",cond:"Se owner"},{lb:"\u2197\uFE0F Apri",v:"secondary",cond:"Sempre"}],tc:{detail:'<h4>Dettaglio</h4><div class="info-row"><span class="lb">Tipo</span><span class="vl">Timer</span></div><div class="info-row"><span class="lb">Durata</span><span class="vl">5:00</span></div><div class="info-row"><span class="lb">Per giocatore</span><span class="vl">Si</span></div><div class="info-row"><span class="lb">Auto-start</span><span class="vl">Si</span></div><div class="info-row"><span class="lb">Warning</span><span class="vl">30s</span></div><div class="info-row"><span class="lb">Toolkit</span><span class="vl">Azul Toolkit v2</span></div>',preview:'<h4>\u25B6\uFE0F Preview</h4><div class="tool-preview"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;font-weight:700;">Timer Turno</div><div class="tp-display" style="color:hsl(195,80%,50%);">4:12</div><div class="pbar"><div class="pfill" style="width:84%;background:hsl(195,80%,50%);"></div></div><div class="tp-controls"><button class="tp-btn">\u23F8\uFE0F Pausa</button><button class="tp-btn primary" style="background:hsl(195,80%,50%);">\u{1F504} Reset</button></div></div>'}}
+};
+
+var cur='game',tabIdx=0,view='page';
+function setH(id,h){document.getElementById(id).innerHTML=h}
+
+function renderAll(){tabIdx=0;renderSwitcher();renderPhones();renderSpec()}
+
+function renderSwitcher(){
+  var h='';Object.keys(E).forEach(function(k){var v=E[k],a=k===cur;
+    h+='<button class="e-btn'+(a?' active':'')+'" onclick="sw(\''+k+'\')" style="'+(a?'background:hsl('+hsl(k)+');color:white;border-color:transparent;':'')+'"><span class="dot" style="background:'+(a?'white':'hsl('+hsl(k)+')')+';"></span>'+v.em+' '+v.lb+'</button>';
+  });setH('e-switch',h);
+}
+
+function renderPhones(){
+  var e=view==='session'?E.session:E[cur],ek=view==='session'?'session':cur,col='hsl('+hsl(ek)+')';
+  var recents='';[{em:'\u{1F3B2}',et:'game'},{em:'\u{1F916}',et:'agent'},{em:'\u{1F4AC}',et:'chat'}].forEach(function(r){recents+='<div class="rec-pill" style="background:'+hsla(r.et,.1)+';color:hsl('+hsl(r.et)+');">'+r.em+'</div>';});
+  var mnTabs='';e.tabs.forEach(function(t,i){mnTabs+='<span class="mn-tab'+(i===0?' active':'')+'" style="'+(i===0?'color:'+col+';':'')+'">'+t.lb+(t.bg?'<span class="cnt">'+t.bg+'</span>':'')+'</span>';});
+  var connBar='';e.conn.forEach(function(p){var em=p.cnt===0;connBar+='<div class="conn-pip'+(em?' empty':'')+'" style="background:'+(em?'transparent':hsla(p.et,.1))+';color:hsl('+hsl(p.et)+');'+(em?'border-color:'+hsla(p.et,.3)+';':'')+'"><span>'+p.i+'</span>'+(em?'+':'<span class="cp-count">'+p.cnt+'</span>')+' '+p.lb+'</div>';});
+  var metaHtml='';e.meta.forEach(function(m){metaHtml+='<span class="meta-chip"><span style="font-size:10px;">'+m.i+'</span>'+m.v+'</span>';});metaHtml+='<span class="meta-chip" style="background:'+hsla(ek,.1)+';color:'+col+';font-weight:700;">'+e.badge+'</span>';
+  var actBtns='';e.actions.forEach(function(a,i){actBtns+='<button class="qa-btn'+(i===0?' primary':'')+'" style="'+(i===0?'background:'+col+';':'color:'+col+';')+'">'+a+'</button>';});
+  var sBanner='';if(view==='session'){sBanner='<div class="session-banner" style="background:hsla(240,60%,55%,.06);border-bottom:1px solid hsla(240,60%,55%,.15);"><span class="sb-dot"></span><span class="sb-text">Sessione: Serata Azul \u00B7 T3/5</span><button class="sb-btn">\u{1F4CA}</button><button class="sb-btn">\u{1F9F0}</button><button class="sb-btn">\u{1F4AC}</button><button class="sb-close">\u2715</button></div>';}
+  var showDrawer=view==='drawer'||view==='session';
+  var drawerHTML='';if(showDrawer){var tabs='';e.tabs.forEach(function(t,i){var a=i===tabIdx;tabs+='<button class="dr-tab'+(a?' active':'')+'" style="'+(a?'color:'+col+';border-bottom-color:'+col+';':'')+'" onclick="stab('+i+')"><span>'+t.ic+'</span>'+t.lb+(t.bg?'<span class="tb" style="background:'+col+';">'+t.bg+'</span>':'')+'</button>';});var tabId=e.tabs[tabIdx].id;var content=e.tc[tabId]||'<p style="color:var(--text-muted);padding:16px;text-align:center;">Disponibile prossimamente</p>';var fBtns='';e.footer.forEach(function(f){fBtns+='<button class="af-btn '+(f.v==='primary'?'primary':'secondary')+'" style="'+(f.v==='primary'?'background:'+col+';':'')+'">'+f.lb+'</button>';});drawerHTML='<div class="dr-overlay open"><div class="dr-panel" onclick="event.stopPropagation()"'+(view==='session'?' style="border-top:2px solid hsl(240,60%,55%);"':'')+'><div class="dr-handle"></div><div class="dr-header"><div class="dh-icon" style="background:'+col+';">'+e.em+'</div><span class="dh-title">'+e.ti+'</span><button class="dh-close">\u2715</button></div><div class="dr-tabs">'+tabs+'</div><div class="dr-content">'+content+'</div><div class="dr-footer">'+fBtns+'</div></div></div>';}
+  var bbar='';if(view==='session'){bbar='<div class="bbar session-mode"><div class="bb-item"><span>\u25C0</span><span class="bl">Back</span></div><div class="bb-item" style="color:hsl(240,60%,55%);"><span>\u{1F4CA}</span><span class="bl" style="color:hsl(240,60%,55%);">Classifica</span></div><div class="bb-item"><span>\u{1F9F0}</span><span class="bl">Toolkit</span></div><div class="bb-item"><span>\u{1F4AC}</span><span class="bl">AI</span></div><div class="bb-item"><span>\u22EF</span><span class="bl">Altro</span></div></div>';}else{bbar='<div class="bbar"><div class="bb-item active"><span>\u{1F3E0}</span><span class="bl">Home</span></div><div class="bb-item"><span>\u{1F50D}</span><span class="bl">Cerca</span></div><div class="bb-item"><span>\u{1F4DA}</span><span class="bl">Libreria</span></div><div class="bb-item"><span>\u{1F4AC}</span><span class="bl">Chat</span></div><div class="bb-item"><span>\u{1F464}</span><span class="bl">Profilo</span></div></div>';}
+  var pgHtml='<div class="hero"><div class="hero-img" style="background:'+e.cov+';">'+e.ce+'</div><div class="hero-grad"></div><div class="hero-badge" style="background:'+hsla(ek,.85)+';">'+e.lb+'</div>'+(e.rt?'<div class="hero-rating">\u2B50 '+e.rt+'</div>':'')+'</div><div class="cinfo"><div class="ti">'+e.ti+'</div><div class="sub">'+e.sub+'</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">'+metaHtml+'</div></div><div class="conn-bar">'+connBar+'</div><div class="qactions">'+actBtns+'</div>';
+  var labels={page:'Entity Page',drawer:'Drawer aperto',session:'Session Mode'};
+  setH('mockup-row','<div class="mockup-col"><span class="mockup-label">'+labels[view]+'</span><div class="phone"><div class="sbar"><span class="t">14:32</span><div class="i"><span>\u{1F4F6}</span><span>\u{1F50B}</span></div></div><div class="topbar"><div class="logo"><div class="dice">\u{1F3B2}</div>MeepleAI</div><div class="spacer"></div><div class="tb-btn">\u{1F50D}</div><div class="tb-btn">\u{1F514}</div><div class="avatar">MR</div></div><div class="mininav"><span class="breadcrumb">\u203A '+e.lb+' / '+e.ti+'</span>'+mnTabs+'<div class="mn-spacer"></div><div class="recents">'+recents+'</div></div>'+sBanner+'<div class="pgc" style="'+(showDrawer?'opacity:.3;filter:blur(1px);pointer-events:none;':'')+'">'+pgHtml+'</div>'+drawerHTML+bbar+'</div></div>');
+}
+
+function renderSpec(){
+  var e=view==='session'?E.session:E[cur],ek=view==='session'?'session':cur,col='hsl('+hsl(ek)+')';
+  document.getElementById('spec-thead').style.background=col;document.getElementById('footer-thead').style.background=col;
+  document.getElementById('spec-sub').textContent=e.em+' '+e.lb+' \u2014 '+e.tabs.length+' tab';
+  document.getElementById('footer-sub').textContent=e.em+' '+e.lb+' \u2014 '+e.footer.length+' azioni';
+  var tb='';e.tabs.forEach(function(t,i){tb+='<tr style="'+(i%2?'background:rgba(180,130,80,.04);':'')+'"><td style="font-weight:700;color:'+col+';">'+(i+1)+'</td><td style="font-family:monospace;font-size:10px;color:'+col+';font-weight:600;">'+t.id+'</td><td style="font-weight:700;">'+t.ic+' '+t.lb+'</td><td style="font-family:monospace;font-size:10px;color:var(--text-sec);">'+t.sp+'</td><td style="color:var(--text-sec);">'+t.desc+'</td><td>'+(t.bg?'<span style="padding:2px 6px;border-radius:6px;background:'+hsla(ek,.15)+';color:'+col+';font-size:9px;font-weight:700;">'+(t.bgl||'')+'</span>':'\u2014')+'</td></tr>';});
+  setH('spec-body',tb);
+  var fb='';e.footer.forEach(function(f,i){fb+='<tr style="'+(i%2?'background:rgba(180,130,80,.04);':'')+'"><td style="font-weight:700;">'+f.lb+'</td><td><span style="padding:2px 6px;border-radius:6px;font-size:9px;font-weight:700;'+(f.v==='primary'?'background:'+col+';color:white;':'background:var(--bg-muted);color:var(--text-sec);')+'">'+f.v+'</span></td><td style="color:var(--text-sec);">'+f.cond+'</td></tr>';});
+  setH('footer-body',fb);
+}
+
+function sw(k){cur=k;if(view==='session')cur='session';renderAll()}
+function stab(i){tabIdx=i;renderPhones()}
+function setView(v){view=v;if(v==='session')cur='session';renderAll();document.querySelectorAll('.vt-btn').forEach(function(b){b.classList.toggle('active',(v==='page'&&b.textContent==='Page')||(v==='drawer'&&b.textContent==='Drawer')||(v==='session'&&b.textContent==='Session Mode'));});}
+renderAll();
+</script>
+</body>
+</html>

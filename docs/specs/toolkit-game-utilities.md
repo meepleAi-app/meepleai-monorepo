@@ -2,7 +2,7 @@
 
 > **Version**: 0.2
 > **Date**: 2026-04-02
-> **Status**: Draft — revised after spec-panel review
+> **Status**: ✅ Phase 1 Complete — all OIs closed (2026-04-11)
 > **Bounded Contexts**: `GameToolkit`, `GameToolbox`, `SessionTracking`
 
 ---
@@ -374,10 +374,10 @@ POST /api/v1/sessions/{id}/tool-events (in-session)
 | OI-1 | ~~Verificare `DiceToolConfig` supporto `string[]` faces~~ — **CHIUSO** ✅ `CustomFaces: string[]?` già presente | — | — | — |
 | OI-2 | *(rimandato a Phase 2)* VirtualTable design | — | — | Phase 2 |
 | OI-3 | *(rimandato a Phase 2)* Transport annuncio dado | — | — | Phase 2 |
-| OI-4 | Schema localStorage `StandaloneToolLog` | FE Dev | 🟢 Bassa | — |
-| OI-5 | TimerTool offline fallback — validare con Sprint 2 SSE team | FE Dev | 🟡 Media | Timer in-session |
-| OI-6 | `POST /api/v1/sessions/{id}/tool-events` non esiste — **da creare** in `SessionTracking` BC come parte di questa feature | BE Dev | 🔴 Alta | Session log |
-| OI-7 | Player dropdown (§9.4) — Phase 1: free-text o lista in-memory locale, **non** accoppiato a `SharedContext`. Integrazione `SharedContext` rimandata a Phase 2 | FE Dev | 🟡 Media | UX turni |
+| OI-4 | ~~Schema localStorage `StandaloneToolLog`~~ — **CHIUSO** ✅ `ToolLogEntry` + `toolkit-log.ts` + tests | — | — | — |
+| OI-5 | TimerTool offline fallback — **DEFERRED Phase 2** ✅ (Timer.tsx usa sempre local timer in Phase 1) | — | — | Phase 2 |
+| OI-6 | ~~`POST /api/v1/sessions/{id}/tool-events` non esiste~~ — **CHIUSO** ✅ Implementato come `POST /game-sessions/{id}/events` + `useSessionToolLog` hook | — | — | — |
+| OI-7 | ~~Player dropdown (§9.4)~~ — **CHIUSO** ✅ Free-text "Chi gioca?" in `toolkit/play/page.tsx` | — | — | — |
 
 ---
 

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Health;
@@ -52,6 +53,9 @@ internal static class SessionTrackingServiceExtensions
 
         // Auto-save scheduler service (dynamic per-session Quartz jobs)
         services.AddScoped<IAutoSaveSchedulerService, QuartzAutoSaveSchedulerService>();
+
+        // Issue #376: SSE diary stream (Channel-based in-process pub/sub)
+        services.AddSingleton<IDiaryStreamService, DiaryStreamService>();
 
         // F3: AutoSave health observability — tracker, logger, and TimeProvider
         services.TryAddSingleton(TimeProvider.System);

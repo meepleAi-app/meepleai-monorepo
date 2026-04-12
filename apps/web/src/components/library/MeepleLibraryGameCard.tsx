@@ -51,8 +51,6 @@ export interface MeepleLibraryGameCardProps {
   onEditNotes: (gameId: string, gameTitle: string, currentNotes?: string | null) => void;
   /** Remove game callback */
   onRemove: (gameId: string, gameTitle: string) => void;
-  /** @deprecated Unused since Issue #4999 */
-  onAskAgent?: (gameId: string) => void;
   /** Change game state callback */
   onChangeState?: (gameId: string, gameTitle: string, newState: GameStateType) => void;
   /** Share game callback */
@@ -91,7 +89,6 @@ export function MeepleLibraryGameCard({
   onUploadPdf: _onUploadPdf,
   onEditNotes: _onEditNotes,
   onRemove: _onRemove,
-  onAskAgent: _onAskAgent,
   onChangeState: _onChangeState,
   onShare: _onShare,
   selectionMode = false,

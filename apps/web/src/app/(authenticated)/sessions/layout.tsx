@@ -8,36 +8,29 @@
 
 'use client';
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode } from 'react';
 
-import { Clock, History, Play } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
-import { useSetNavConfig } from '@/contexts/NavigationContext';
+import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
 export default function SessionsLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const setNavConfig = useSetNavConfig();
+  const pathname = usePathname();
 
-  useEffect(() => {
-    setNavConfig({
-      miniNav: [
-        { id: 'active', label: 'Attive', href: '/sessions', icon: Clock },
-        { id: 'history', label: 'Storico', href: '/sessions?tab=history', icon: History },
-      ],
-      actionBar: [
-        {
-          id: 'new-session',
-          label: 'Nuova Sessione',
-          icon: Play,
-          variant: 'primary',
-          onClick: () => {
-            router.push('/sessions/new');
-          },
-        },
-      ],
-    });
-  }, [setNavConfig, router]);
+  useMiniNavConfig({
+    breadcrumb: 'Sessioni',
+    tabs: [
+      { id: 'active', label: 'Attive', href: '/sessions' },
+      { id: 'history', label: 'Storico', href: '/sessions?tab=history' },
+    ],
+    activeTabId: pathname?.includes('tab=history') ? 'history' : 'active',
+    primaryAction: {
+      label: 'Nuova Sessione',
+      icon: '▶',
+      onClick: () => router.push('/sessions/new'),
+    },
+  });
 
   return <>{children}</>;
 }

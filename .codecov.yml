@@ -31,7 +31,14 @@ coverage:
 
   # Track coverage by bounded context
   flags:
-    # Backend overall
+    # Backend unit (uploaded from backend-unit CI job)
+    backend-unit:
+      paths:
+        - apps/api/src/Api/BoundedContexts/**
+      carryforward: true
+      carryforward_mode: "all"
+
+    # Backend overall (combined unit + integration)
     backend:
       paths:
         - apps/api/src/Api/BoundedContexts/**

@@ -310,7 +310,7 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
                               })}
                             </p>
                           </div>
-                          <KbStatusBadge status={doc.status} size="sm" />
+                          <KbStatusBadge status={doc.status} />
                         </div>
                       ))}
                 </div>
@@ -370,7 +370,7 @@ function GameAgentCard({ agent, gameId }: { agent: GameAgentPreview; gameId: str
             )}
           </div>
         </div>
-        <AgentStatusBadge status={status} showLabel size="sm" />
+        <AgentStatusBadge status={status} />
       </div>
 
       {/* CTAs */}

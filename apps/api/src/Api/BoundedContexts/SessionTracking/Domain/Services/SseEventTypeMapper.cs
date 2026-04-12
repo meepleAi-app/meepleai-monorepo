@@ -70,6 +70,13 @@ public static class SseEventTypeMapper
         // Widget state → session:toolkit (P2-1: Widget State SSE Broadcast)
         [typeof(WidgetStateUpdatedEvent)] = "session:toolkit",
 
+        // Timer events → session:timer (Issue #3345)
+        [typeof(TimerStartedEvent)] = "session:timer",
+        [typeof(TimerPausedEvent)] = "session:timer",
+        [typeof(TimerResumedEvent)] = "session:timer",
+        [typeof(TimerResetEvent)] = "session:timer",
+        [typeof(TimerCompletedEvent)] = "session:timer",
+
         // Game Night diary → session:gamenight
         [typeof(GameNightEvents.GameStartedInNightEvent)] = "session:gamenight",
         [typeof(GameNightEvents.GameCompletedInNightEvent)] = "session:gamenight",

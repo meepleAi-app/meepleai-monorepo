@@ -19,7 +19,22 @@ import {
 } from 'lucide-react';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
-import type { HandCard } from '@/stores/use-card-hand';
+
+/**
+ * Local copy of HandCard shape — kept for PLACEHOLDER_ACTION_CARDS and
+ * ALL_DEFAULT_CARDS until those are removed in the Task 5/6 cleanup.
+ * @deprecated Will be removed when the card-hand UI is deleted.
+ */
+interface HandCard {
+  id: string;
+  entity: MeepleEntityType;
+  title: string;
+  href: string;
+  subtitle?: string;
+  imageUrl?: string;
+  isPlaceholder?: boolean;
+  placeholderAction?: string;
+}
 
 import type { LucideIcon } from 'lucide-react';
 

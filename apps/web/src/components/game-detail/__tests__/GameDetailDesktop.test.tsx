@@ -22,6 +22,17 @@ vi.mock('@/components/ui/data-display/meeple-card/MeepleCard', () => ({
   ),
 }));
 
+vi.mock('@/hooks/useConnectionBarNav', () => ({
+  useConnectionBarNav: () => ({ handlePipClick: vi.fn() }),
+}));
+
+vi.mock('@/components/ui/data-display/connection-bar', () => ({
+  ConnectionBar: ({ connections }: { connections: Array<{ count: number }> }) =>
+    connections.length > 0 ? <div data-testid="connection-bar" /> : null,
+  buildGameConnections: (counts: Record<string, number>) =>
+    Object.values(counts).some(v => v > 0) ? [{ count: 1 }] : [],
+}));
+
 const GAME_ID = '00000000-0000-4000-8000-000000000001';
 
 function createGame(overrides: Partial<LibraryGameDetail> = {}): LibraryGameDetail {
@@ -82,6 +93,12 @@ describe('GameDetailDesktop', () => {
     render(<GameDetailDesktop gameId={GAME_ID} />);
     expect(screen.getByTestId('meeple-card')).toHaveTextContent('Catan');
     expect(screen.getByRole('tablist', { name: /dettagli gioco/i })).toBeInTheDocument();
+  });
+
+  it('renders connection-bar with session pip when game has sessions played', () => {
+    mockHookState.data = createGame({ timesPlayed: 3 });
+    render(<GameDetailDesktop gameId={GAME_ID} />);
+    expect(screen.getByTestId('connection-bar')).toBeInTheDocument();
   });
 
   it('renders with fallback title when game is not in library', () => {

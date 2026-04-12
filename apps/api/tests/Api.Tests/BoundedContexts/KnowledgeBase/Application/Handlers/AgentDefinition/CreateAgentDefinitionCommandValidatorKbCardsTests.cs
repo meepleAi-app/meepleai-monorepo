@@ -119,7 +119,7 @@ public sealed class CreateAgentDefinitionCommandValidatorKbCardsTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.KbCardIds)
-            .WithErrorMessage("L'agent deve avere almeno 1 KB card del game associato.");
+            .WithErrorMessage("The agent must have at least 1 KB card associated with the game.");
     }
 
     [Fact]

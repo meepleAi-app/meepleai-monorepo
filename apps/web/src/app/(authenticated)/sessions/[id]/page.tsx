@@ -1,8 +1,14 @@
 /**
- * Scoreboard Tab — /sessions/[id] (default route)
+ * Session Detail Page — /sessions/[id] (default route)
  *
- * Renders SessionHeader + LiveIndicator + Scoreboard with real-time SSE updates.
- * Also renders RelatedEntitiesSection for entity link connections on this session.
+ * Renders SessionHeader + LiveIndicator + Participants (with turn order) +
+ * Scoreboard + Quick Actions + Diary Timeline, all with real-time SSE updates.
+ * Also renders RelatedEntitiesSection for entity link connections.
+ *
+ * Enhanced in Plan 2 Task 4 — Session Flow v2.1:
+ * - Participants list with turn-order highlight
+ * - Quick actions bar (dice roll, score update, turn advance)
+ * - Diary timeline panel (session events chronology)
  *
  * Issue #5041 — Sessions Redesign Phase 2
  */
@@ -13,9 +19,21 @@ import { useCallback, use } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
-import { LiveIndicator, Scoreboard, SessionHeader } from '@/components/session';
+import {
+  LiveIndicator,
+  Scoreboard,
+  SessionHeader,
+  SessionParticipantsList,
+  SessionDiaryTimeline,
+  SessionQuickActions,
+} from '@/components/session';
 import { toScoreboardData, toSession } from '@/components/session/adapters';
+import {
+  ConnectionBar,
+  buildSessionConnections,
+} from '@/components/ui/data-display/connection-bar';
 import { RelatedEntitiesSection } from '@/components/ui/data-display/entity-link/related-entities-section';
+import { useConnectionBarNav } from '@/hooks/useConnectionBarNav';
 import type { LiveSessionStatus } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/session-store';
@@ -63,6 +81,8 @@ export default function SessionScoreboardPage({ params }: SessionPageProps) {
     }
   }, [handleSessionUpdate]);
 
+  const { handlePipClick } = useConnectionBarNav(id);
+
   // Connect SSE
   const { isConnected } = useSessionSync({
     sessionId: id,
@@ -107,9 +127,37 @@ export default function SessionScoreboardPage({ params }: SessionPageProps) {
     }
   };
 
+  // Map players for the participants list and quick actions
+  const participantsForList = activeSession.players.map(p => ({
+    id: p.id,
+    displayName: p.displayName,
+    color: p.color,
+    role: p.role,
+    totalScore: p.totalScore,
+    currentRank: p.currentRank,
+    isActive: p.isActive,
+  }));
+
+  const participantsForActions = activeSession.players.map(p => ({
+    id: p.id,
+    displayName: p.displayName,
+  }));
+
+  const isActiveOrPaused =
+    activeSession.status === 'InProgress' || activeSession.status === 'Paused';
+
   return (
-    <div className="max-w-[1200px] mx-auto px-4 py-6 pb-32 lg:pb-24">
+    <div className="max-w-[1200px] mx-auto px-4 py-6 pb-32 lg:pb-24 space-y-6">
       <SessionHeader session={session} onPause={handlePause} onFinalize={completeSession} />
+      <ConnectionBar
+        connections={buildSessionConnections({
+          gameCount: activeSession.gameId ? 1 : 0,
+          playerCount: activeSession.players.length,
+          toolCount: 0,
+          agentCount: 0,
+        })}
+        onPipClick={handlePipClick}
+      />
 
       <LiveIndicator
         startedAt={activeSession.startedAt}
@@ -117,7 +165,26 @@ export default function SessionScoreboardPage({ params }: SessionPageProps) {
         isConnected={isConnected}
       />
 
+      {/* Participants with turn-order highlight */}
+      <SessionParticipantsList
+        participants={participantsForList}
+        currentTurnPlayerId={activeSession.currentTurnPlayerId}
+      />
+
+      {/* Scoreboard */}
       <Scoreboard data={scoreboardData} variant="full" isRealTime />
+
+      {/* Quick actions — only for active/paused sessions */}
+      {isActiveOrPaused && (
+        <SessionQuickActions
+          sessionId={id}
+          participants={participantsForActions}
+          currentTurnPlayerId={activeSession.currentTurnPlayerId}
+        />
+      )}
+
+      {/* Diary timeline */}
+      <SessionDiaryTimeline sessionId={id} />
 
       <RelatedEntitiesSection entityType="Session" entityId={id} />
     </div>

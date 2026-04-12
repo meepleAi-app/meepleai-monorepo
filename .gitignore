@@ -232,3 +232,16 @@ docs/pages/manifest.json
 # These are seed data for RAG embedding pipeline only
 data/rulebook/
 data/pdfDocs/
+
+# MeepleDev fast dev loop
+infra/.env.dev.local
+infra/.dev-fast.pids
+infra/dev-fast.log
+infra/dotnet-watch.log
+
+# Seed snapshot artifacts — see docs/development/snapshot-seed-workflow.md
+# Dump files are large (~150MB) and stored on seed blob bucket, not git.
+# .meta.json sidecars are intentionally NOT ignored (committable log history).
+data/snapshots/*.dump
+data/snapshots/*.dump.sha256
+data/snapshots/.latest

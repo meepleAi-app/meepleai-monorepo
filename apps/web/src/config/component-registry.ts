@@ -3719,56 +3719,43 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
       { name: 'With unread', props: { hasUnread: true } },
     ],
   },
+  // ─── Desktop UX Redesign — Shell Containers ───────────────────────────────
+
   {
-    id: 'hand-rail-item',
-    name: 'HandRailItem',
-    importPath: '@/components/layout/UserShell/HandRailItem',
+    id: 'top-bar',
+    name: 'TopBar',
+    importPath: '@/components/layout/UserShell/TopBar',
     category: 'Layout',
     areas: ['shared'],
     tier: 'static',
-    description: 'Single card entry on the DesktopHandRail left-edge strip.',
-    tags: ['redesign', 'hand-rail', 'card'],
-    mockProps: {
-      card: { id: 'card-1', entity: 'game', title: 'Wingspan', href: '/library/wingspan' },
-      isActive: false,
-    },
-    mockVariants: [
-      {
-        name: 'Active',
-        props: {
-          card: { id: 'card-active', entity: 'game', title: 'Azul', href: '/library/azul' },
-          isActive: true,
-        },
-      },
-      {
-        name: 'Session card',
-        props: {
-          card: {
-            id: 'card-session',
-            entity: 'session',
-            title: 'Catan · Turno 4',
-            href: '/sessions/catan',
-          },
-          isActive: false,
-        },
-      },
-    ],
+    description:
+      '64px sticky top navigation bar. Composes Logo + NavLinks + SearchPill + ChatButton + Notifications + UserMenu.',
+    tags: ['redesign', 'shell', 'top-bar', 'container'],
+    mockProps: { onOpenChat: () => {}, onOpenSearch: () => {} },
   },
   {
-    id: 'hand-rail-toolbar',
-    name: 'HandRailToolbar',
-    importPath: '@/components/layout/UserShell/HandRailToolbar',
+    id: 'mini-nav-slot',
+    name: 'MiniNavSlot',
+    importPath: '@/components/layout/UserShell/MiniNavSlot',
     category: 'Layout',
     areas: ['shared'],
     tier: 'static',
-    description: 'Pin / expand toolbar at the bottom of the DesktopHandRail.',
-    tags: ['redesign', 'hand-rail', 'toolbar'],
-    mockProps: {
-      isPinned: false,
-      isExpanded: false,
-      onTogglePin: () => {},
-      onToggleExpand: () => {},
-    },
+    description:
+      '48px secondary nav bar rendered below TopBar. Displays tabs registered by the current page via useMiniNavConfigStore. Returns null when no config is active.',
+    tags: ['redesign', 'shell', 'mini-nav', 'container'],
+    mockProps: {},
+  },
+  {
+    id: 'desktop-shell',
+    name: 'DesktopShell',
+    importPath: '@/components/layout/UserShell/DesktopShell',
+    category: 'Layout',
+    areas: ['shared'],
+    tier: 'static',
+    description:
+      'Full desktop layout wrapper: TopBar (64px) + MiniNavSlot (48px, optional) + main content area + ChatSlideOverPanel.',
+    tags: ['redesign', 'shell', 'layout', 'container'],
+    mockProps: {},
   },
 
   // ─── Desktop UX Redesign — Dashboard Sections ─────────────────────────────
@@ -3943,6 +3930,33 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     mockProps: { games: [] },
   },
 
+  // ─── Desktop UX Redesign — Page Containers ────────────────────────────────
+
+  {
+    id: 'library-hub',
+    name: 'LibraryHub',
+    importPath: '@/app/(authenticated)/library/LibraryHub',
+    category: 'Layout',
+    areas: ['library'],
+    tier: 'static',
+    description:
+      'Library page container. Composes LibraryHeader + LibraryFilterBar + ContinuePlaying + PersonalLibrary + Catalog + Wishlist sections. Reads from useLibrary and useLibraryStats.',
+    tags: ['redesign', 'library', 'container', 'page'],
+    mockProps: {},
+  },
+  {
+    id: 'dashboard-client',
+    name: 'DashboardClient',
+    importPath: '@/app/(authenticated)/dashboard/DashboardClient',
+    category: 'Layout',
+    areas: ['shared'],
+    tier: 'static',
+    description:
+      'Gaming Hub dashboard container. Composes GreetingRow + HeroLiveSession + KpiStrip + ContinueCarousel + ChatRecentCards + FriendsRow.',
+    tags: ['redesign', 'dashboard', 'container', 'page'],
+    mockProps: {},
+  },
+
   // ─── Desktop UX Redesign — Chat Slide-Over Panel Atomics ──────────────────
 
   {
@@ -4108,6 +4122,18 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
       ],
       onSend: () => {},
     },
+  },
+  {
+    id: 'chat-slide-over-panel',
+    name: 'ChatSlideOverPanel',
+    importPath: '@/components/chat/panel/ChatSlideOverPanel',
+    category: 'Overlays',
+    areas: ['shared'],
+    tier: 'static',
+    description:
+      'Global chat slide-over panel. Opens from TopBar chat button. Composes ChatPanelHeader + ChatContextSwitcher + ChatSidebar + ChatMainArea. Reads from useChatPanel store.',
+    tags: ['redesign', 'chat-panel', 'container', 'overlay'],
+    mockProps: {},
   },
 ];
 

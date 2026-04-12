@@ -6,12 +6,6 @@ import type { ComponentType } from 'react';
 
 // ─── Data Display ─────────────────────────────────────────────────────────────
 
-import { ChatRecentCards } from '@/app/(authenticated)/dashboard/sections/ChatRecentCards';
-import { ContinueCarousel } from '@/app/(authenticated)/dashboard/sections/ContinueCarousel';
-import { FriendsRow } from '@/app/(authenticated)/dashboard/sections/FriendsRow';
-import { GreetingRow } from '@/app/(authenticated)/dashboard/sections/GreetingRow';
-import { HeroLiveSession } from '@/app/(authenticated)/dashboard/sections/HeroLiveSession';
-import { KpiStrip } from '@/app/(authenticated)/dashboard/sections/KpiStrip';
 import { CatalogCarouselSection } from '@/app/(authenticated)/library/sections/CatalogCarouselSection';
 import { ContinuePlayingSection } from '@/app/(authenticated)/library/sections/ContinuePlayingSection';
 import { LibraryFilterBar } from '@/app/(authenticated)/library/sections/LibraryFilterBar';
@@ -130,8 +124,6 @@ import { ChatMainArea } from '@/components/chat/panel/ChatMainArea';
 import { ChatMessageBubble } from '@/components/chat/panel/ChatMessageBubble';
 import { ChatPanelHeader } from '@/components/chat/panel/ChatPanelHeader';
 import { ChatSidebar } from '@/components/chat/panel/ChatSidebar';
-import { HandRailItem } from '@/components/layout/UserShell/HandRailItem';
-import { HandRailToolbar } from '@/components/layout/UserShell/HandRailToolbar';
 import { TopBarChatButton } from '@/components/layout/UserShell/TopBarChatButton';
 import { TopBarLogo } from '@/components/layout/UserShell/TopBarLogo';
 import { TopBarSearchPill } from '@/components/layout/UserShell/TopBarSearchPill';
@@ -347,7 +339,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   command: Command,
   'dropdown-menu': DropdownMenu,
   'focused-card-area': FocusedCardArea,
-  // 'hand-stack': removed — component no longer exists
   separator: Separator,
   sheet: Sheet,
   tabs: Tabs,
@@ -368,7 +359,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
 
   // Animations
   'fade-in': FadeIn,
-  // 'modal-animations': skipped — exports animation variant objects, not a React component
   'stagger-children': StaggerChildren,
 
   // Tags
@@ -397,9 +387,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'background-texture': BackgroundTexture,
 
   // Admin — Layout
-  // 'admin-top-nav': removed — component no longer exists
-  // 'admin-mobile-nav': removed — component no longer exists
-
   'admin-hub-tab-bar': AdminHubTabBar,
   'admin-hub-quick-link': AdminHubQuickLink,
   'admin-hub-empty-state': AdminHubEmptyState,
@@ -537,16 +524,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'top-bar-logo': TopBarLogo,
   'top-bar-search-pill': TopBarSearchPill,
   'top-bar-chat-button': TopBarChatButton,
-  'hand-rail-item': HandRailItem,
-  'hand-rail-toolbar': HandRailToolbar,
-
-  // Desktop UX Redesign — Dashboard sections
-  'greeting-row': GreetingRow,
-  'hero-live-session': HeroLiveSession,
-  'kpi-strip': KpiStrip,
-  'continue-carousel': ContinueCarousel,
-  'chat-recent-cards': ChatRecentCards,
-  'friends-row': FriendsRow,
 
   // Desktop UX Redesign — Library Hub sections
   'library-header': LibraryHeader,

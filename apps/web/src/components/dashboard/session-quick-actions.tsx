@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 
 import { SESSION_QUICK_ACTIONS } from '@/config/entity-actions';
-import { useCardHand } from '@/stores/use-card-hand';
+import { useRecentsStore } from '@/stores/use-recents';
 
 interface SessionQuickActionsProps {
   gameId: string;
@@ -11,12 +11,11 @@ interface SessionQuickActionsProps {
 }
 
 export function SessionQuickActions({ gameId, sessionId: _sessionId }: SessionQuickActionsProps) {
-  const { drawCard } = useCardHand();
   const router = useRouter();
 
   function handleTap(actionId: string, route?: string) {
     if (actionId === 'ask-ai') {
-      drawCard({
+      useRecentsStore.getState().push({
         id: `agent-${gameId}`,
         entity: 'agent',
         title: 'AI Assistant',
@@ -27,7 +26,7 @@ export function SessionQuickActions({ gameId, sessionId: _sessionId }: SessionQu
     }
     if (route) {
       const label = SESSION_QUICK_ACTIONS.find(a => a.id === actionId)?.label ?? actionId;
-      drawCard({
+      useRecentsStore.getState().push({
         id: `${actionId}-${gameId}`,
         entity: 'kb',
         title: label,

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MeepleAI — Dashboard New User Empty State Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--
+  Static design mockup for internal use only.
+  Spec: US-XX Dashboard New User Experience
+  Scenario: utente nuovo, nessun gioco in libreria, seed catalogo presente.
+
+  Logica priorità KB:
+  - Badge "KB ✓" → regolamento indicizzato (vettori presenti)
+  - Badge "KB –" → gioco nel catalogo, nessun vettore
+  - CTA primaria per ogni game: "＋ Aggiungi"
+  - CTA sezioni vuote: Sessioni → "Crea sessione", Agenti → "Avvia chat"
+  - Toolkit: carousel 3 strumenti (dado, clessidra, scoreboard)
+-->
+<style>
+:root {
+  --bg:#faf8f5; --bg-card:rgba(255,255,255,0.92); --bg-muted:#f1ede8;
+  --text:#1a1a2e; --text-sec:#64748b; --text-muted:#94a3b8;
+  --border:rgba(0,0,0,0.07); --border-light:rgba(0,0,0,0.04);
+  --shadow-sm:0 1px 3px rgba(180,130,80,0.06),0 1px 2px rgba(180,130,80,0.04);
+  --shadow-md:0 4px 12px rgba(180,130,80,0.08),0 2px 4px rgba(180,130,80,0.04);
+  --shadow-lg:0 10px 30px rgba(180,130,80,0.12),0 4px 8px rgba(180,130,80,0.06);
+  --shadow-xl:0 20px 50px rgba(180,130,80,0.16),0 8px 16px rgba(180,130,80,0.08);
+  --amber:hsl(25,95%,45%);
+  --amber-light:hsl(25,95%,92%);
+  --phone-w:390px; --phone-h:844px;
+  --kb-yes:#22c55e; --kb-no:#94a3b8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Nunito',sans-serif;background:#e8e4df;color:var(--text);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+h1,h2,h3,h4,h5{font-family:'Quicksand',sans-serif}
+
+.pg-title{text-align:center;margin-bottom:8px}
+.pg-title h1{font-size:1.3rem;color:var(--text)}
+.pg-title p{color:var(--text-sec);font-size:0.78rem;margin-top:3px;max-width:780px}
+
+.legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;
+  background:rgba(255,255,255,.6);padding:8px 16px;border-radius:12px;border:1px solid var(--border)}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-sec);font-weight:700}
+.leg-badge{padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800}
+
+.mockup-row{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.mockup-col{display:flex;flex-direction:column;align-items:center;gap:8px}
+.mockup-label{font-family:'Quicksand',sans-serif;font-weight:700;font-size:0.72rem;
+  color:var(--text-sec);text-transform:uppercase;letter-spacing:.08em}
+.mockup-sublabel{font-size:0.68rem;color:var(--text-muted);max-width:var(--phone-w);text-align:center}
+
+/* ── Phone frame ─────────────────────────────────────── */
+.phone{
+  width:var(--phone-w);height:var(--phone-h);
+  background:var(--bg);border-radius:40px;
+  border:3px solid #c8c0b5;
+  box-shadow:0 30px 80px rgba(0,0,0,.15),0 8px 24px rgba(0,0,0,.1),
+             inset 0 0 0 1px rgba(255,255,255,.4);
+  overflow:hidden;position:relative;display:flex;flex-direction:column}
+
+/* ── Status bar ───────────────────────────────────────── */
+.sbar{height:44px;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 28px 6px;font-size:11px;font-weight:600;flex-shrink:0}
+.sbar .t{font-weight:700}.sbar .i{display:flex;gap:3px;font-size:10px}
+
+/* ── TopBar ──────────────────────────────────────────── */
+.topbar{height:48px;display:flex;align-items:center;padding:0 14px;
+  background:var(--bg-card);backdrop-filter:blur(12px) saturate(180%);
+  border-bottom:1px solid var(--border);flex-shrink:0;gap:8px}
+.topbar .logo{font-family:'Quicksand',sans-serif;font-weight:800;font-size:.9rem;
+  color:var(--amber);display:flex;align-items:center;gap:5px}
+.topbar .logo .dice{width:24px;height:24px;background:var(--amber);border-radius:5px;
+  display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:800}
+.topbar .spacer{flex:1}
+.topbar .tb-btn{width:30px;height:30px;border-radius:50%;background:var(--bg-muted);
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:var(--text-sec)}
+.topbar .avatar{width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,60%,35%));
+  color:white;display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;font-family:'Quicksand',sans-serif;border:2px solid white}
+
+/* ── MiniNav ──────────────────────────────────────────── */
+.mininav{height:40px;display:flex;align-items:center;gap:2px;padding:0 14px;
+  border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0}
+.mininav .breadcrumb{color:var(--text-muted);font-weight:600;margin-right:8px;
+  font-size:10px;white-space:nowrap}
+.mininav .mn-tab{padding:4px 8px;border-radius:8px;font-weight:700;color:var(--text-muted);
+  font-family:'Quicksand',sans-serif;font-size:10px;position:relative;white-space:nowrap}
+.mininav .mn-tab.active{color:var(--text)}
+.mininav .mn-tab.active::after{content:'';position:absolute;bottom:-8px;left:6px;right:6px;
+  height:2px;background:var(--amber);border-radius:1px}
+
+/* ── Page scroll area ─────────────────────────────────── */
+.pgc{flex:1;overflow-y:auto;scrollbar-width:none;padding-bottom:68px}
+.pgc::-webkit-scrollbar{display:none}
+
+/* ── Greeting ─────────────────────────────────────────── */
+.greeting{padding:14px 16px 6px}
+.greeting h2{font-family:'Quicksand',sans-serif;font-weight:800;font-size:1.2rem;color:var(--text)}
+.greeting p{font-size:.75rem;color:var(--text-sec);margin-top:2px}
+
+/* ── Hub block ────────────────────────────────────────── */
+.hub-block{padding:10px 14px 4px}
+.hub-title{font-family:'Quicksand',sans-serif;font-size:.72rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:.07em;color:var(--text-sec);margin-bottom:6px;
+  display:flex;align-items:center;gap:5px}
+
+/* ── HubLayout toolbar ────────────────────────────────── */
+.hub-toolbar{display:flex;align-items:center;gap:5px;margin-bottom:7px}
+.hub-search{flex:1;height:30px;display:flex;align-items:center;gap:5px;
+  background:var(--bg-card);border:1px solid var(--border);border-radius:20px;
+  padding:0 10px;font-size:10px;color:var(--text-muted)}
+.hub-search span{flex:1;font-size:10px}
+.filter-chips{display:flex;gap:4px;margin-bottom:6px;overflow-x:auto;scrollbar-width:none}
+.filter-chips::-webkit-scrollbar{display:none}
+.f-chip{padding:3px 10px;border-radius:14px;font-family:'Quicksand',sans-serif;
+  font-size:10px;font-weight:700;border:1px solid var(--border);
+  background:var(--bg-card);color:var(--text-sec);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.f-chip.active{background:var(--text);color:white;border-color:transparent}
+
+/* ── Games grid — catalog cards for new user ──────────── */
+.catalog-hint{display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text-muted);
+  background:var(--amber-light);border:1px solid rgba(180,130,80,.18);border-radius:8px;
+  padding:5px 10px;margin-bottom:6px;font-weight:600}
+.catalog-hint .hint-icon{font-size:11px}
+
+.games-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.game-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column;
+  transition:box-shadow .2s}
+.game-thumb{height:68px;display:flex;align-items:center;justify-content:center;
+  font-size:32px;position:relative;background:linear-gradient(135deg,#fdf0e0,#fce8cc)}
+.game-thumb.dark{background:linear-gradient(135deg,#1e1914,#2d2520)}
+.game-thumb .kb-badge{position:absolute;top:5px;right:5px;
+  padding:2px 5px;border-radius:6px;font-size:8px;font-weight:800;
+  font-family:'Quicksand',sans-serif;color:white;letter-spacing:.02em}
+.kb-yes{background:var(--kb-yes)}.kb-no{background:var(--kb-no)}
+.game-info{padding:5px 7px 6px;flex:1}
+.game-info .g-title{font-family:'Quicksand',sans-serif;font-size:.73rem;font-weight:700;
+  line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical}
+.game-info .g-pub{font-size:.62rem;color:var(--text-sec);margin-top:1px}
+.game-add-btn{margin:0 6px 6px;display:flex;align-items:center;justify-content:center;
+  gap:3px;height:22px;border-radius:8px;font-family:'Quicksand',sans-serif;
+  font-size:10px;font-weight:700;cursor:pointer;
+  background:var(--amber);color:white;border:none}
+.game-add-btn span{font-size:12px;line-height:1}
+
+/* ── Empty state (sessions/agents) ───────────────────── */
+.empty-cta{display:flex;flex-direction:column;align-items:center;gap:7px;
+  padding:18px 16px;text-align:center;
+  background:var(--bg-card);border:1.5px dashed rgba(180,130,80,.25);
+  border-radius:14px}
+.empty-cta .ec-icon{font-size:28px}
+.empty-cta .ec-title{font-family:'Quicksand',sans-serif;font-size:.8rem;font-weight:700;color:var(--text)}
+.empty-cta .ec-sub{font-size:.7rem;color:var(--text-muted);max-width:230px;line-height:1.4}
+.cta-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 16px;border-radius:14px;
+  font-family:'Quicksand',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;
+  border:none;color:white;background:var(--amber);box-shadow:0 2px 8px rgba(180,100,20,.25)}
+.cta-btn.outline{background:transparent;color:var(--amber);
+  border:1.5px solid var(--amber);box-shadow:none}
+
+/* ── Toolkit carousel ─────────────────────────────────── */
+.toolkit-carousel{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.toolkit-carousel::-webkit-scrollbar{display:none}
+.tk-card{flex-shrink:0;width:100px;background:var(--bg-card);
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow-sm);padding:10px 8px;display:flex;flex-direction:column;
+  align-items:center;gap:5px;cursor:pointer;transition:box-shadow .2s}
+.tk-card:hover{box-shadow:var(--shadow-md)}
+.tk-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:20px}
+.tk-name{font-family:'Quicksand',sans-serif;font-size:.67rem;font-weight:700;
+  text-align:center;color:var(--text);line-height:1.2}
+.tk-desc{font-size:.58rem;color:var(--text-muted);text-align:center;line-height:1.3}
+
+/* ── Bottom bar ───────────────────────────────────────── */
+.bbar{height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-around;
+  padding:0 12px 10px;background:var(--bg-card);
+  backdrop-filter:blur(16px) saturate(180%);border-top:1px solid var(--border)}
+.bb-item{display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;
+  font-size:16px;min-width:44px}
+.bb-item .bl{font-size:8px;font-weight:700;color:var(--text-sec);font-family:'Quicksand',sans-serif}
+.bb-item.active .bl{color:var(--amber)}
+
+/* ── Annotations (sticky callouts beside phone) ─────── */
+.anno-wrap{display:flex;gap:20px;align-items:flex-start}
+.anno-list{display:flex;flex-direction:column;gap:10px;padding-top:120px;max-width:180px}
+.anno{display:flex;gap:8px;align-items:flex-start}
+.anno .a-num{width:18px;height:18px;border-radius:50%;background:var(--amber);color:white;
+  font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.anno p{font-size:10px;color:var(--text-sec);line-height:1.4;font-weight:600}
+.anno strong{color:var(--text)}
+</style>
+</head>
+<body>
+
+<div class="pg-title">
+  <h1>Dashboard — New User Empty State</h1>
+  <p>
+    Scenario: primo avvio, libreria vuota, catalogo seeded.
+    Giochi con <strong style="color:#22c55e">KB ✓</strong> hanno regolamento indicizzato.
+    Giochi con <strong style="color:#94a3b8">KB –</strong> sono nel catalogo ma senza vettori.
+    CTA contestuali per sessioni, agenti e toolkit.
+  </p>
+</div>
+
+<div class="legend">
+  <div class="leg-item">
+    <div class="leg-badge" style="background:#22c55e;color:white">KB ✓</div>
+    Regolamento indicizzato — AI pronta
+  </div>
+  <div class="leg-item">
+    <div class="leg-badge" style="background:#94a3b8;color:white">KB –</div>
+    Senza regolamento — funzioni AI limitate
+  </div>
+  <div class="leg-item">
+    <div class="leg-badge" style="background:hsl(25,95%,45%);color:white">＋ Aggiungi</div>
+    Aggiunge alla libreria personale
+  </div>
+</div>
+
+<div class="mockup-row">
+
+  <!-- ─── PHONE 1: Games section (new user, catalog top games) ─── -->
+  <div class="anno-wrap">
+    <div class="anno-list">
+      <div class="anno">
+        <div class="a-num">1</div>
+        <p><strong>Games block</strong> — libreria vuota: mostra top giochi dal catalogo, ordinati per KB completeness</p>
+      </div>
+      <div class="anno">
+        <div class="a-num">2</div>
+        <p><strong>Badge KB</strong> — verde se vettori indicizzati, grigio se assenti</p>
+      </div>
+      <div class="anno">
+        <div class="a-num">3</div>
+        <p><strong>Hint banner</strong> — spiega la logica di visualizzazione al nuovo utente</p>
+      </div>
+      <div class="anno">
+        <div class="a-num">4</div>
+        <p><strong>CTA ＋ Aggiungi</strong> — aggiunge direttamente il gioco alla libreria</p>
+      </div>
+    </div>
+
+    <div class="mockup-col">
+      <div class="mockup-label">Games Block</div>
+      <div class="mockup-sublabel">Libreria vuota → top catalog con KB priority</div>
+      <div class="phone">
+        <!-- Status bar -->
+        <div class="sbar">
+          <span class="t">9:41</span>
+          <div class="i"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+        </div>
+        <!-- TopBar -->
+        <div class="topbar">
+          <div class="logo"><div class="dice">🎲</div>MeepleAI</div>
+          <div class="spacer"></div>
+          <div class="tb-btn">🔔</div>
+          <div class="tb-btn">💬</div>
+          <div class="avatar">AA</div>
+        </div>
+        <!-- MiniNav -->
+        <div class="mininav">
+          <span class="breadcrumb">Home /</span>
+          <span class="mn-tab active">Overview</span>
+        </div>
+        <!-- Page content -->
+        <div class="pgc">
+          <div class="greeting">
+            <h2>Ciao, Aaron 👋</h2>
+            <p>La tua tavola da gioco</p>
+          </div>
+
+          <!-- Games block -->
+          <div class="hub-block">
+            <div class="hub-title">🎲 Giochi</div>
+            <div class="hub-toolbar">
+              <div class="hub-search">
+                <span>🔍</span><span style="color:var(--text-muted)">Cerca giochi…</span>
+              </div>
+            </div>
+            <div class="filter-chips">
+              <div class="f-chip active">Tutti</div>
+              <div class="f-chip">Recenti</div>
+            </div>
+
+            <!-- Catalog hint banner -->
+            <div class="catalog-hint">
+              <span class="hint-icon">💡</span>
+              Libreria vuota — ecco i top giochi dal catalogo. Aggiungili per iniziare!
+            </div>
+
+            <!-- 2×3 grid: 6 catalog games, KB-prioritized -->
+            <div class="games-grid">
+
+              <!-- 1. Puerto Rico — KB ✓ -->
+              <div class="game-card">
+                <div class="game-thumb">
+                  🌴
+                  <div class="kb-badge kb-yes">KB ✓</div>
+                </div>
+                <div class="game-info">
+                  <div class="g-title">Puerto Rico</div>
+                  <div class="g-pub">Alea</div>
+                </div>
+                <button class="game-add-btn"><span>＋</span> Aggiungi</button>
+              </div>
+
+              <!-- 2. Mage Knight — KB ✓ -->
+              <div class="game-card">
+                <div class="game-thumb dark">
+                  🧙
+                  <div class="kb-badge kb-yes">KB ✓</div>
+                </div>
+                <div class="game-info">
+                  <div class="g-title">Mage Knight</div>
+                  <div class="g-pub">WizKids</div>
+                </div>
+                <button class="game-add-btn"><span>＋</span> Aggiungi</button>
+              </div>
+
+              <!-- 3. Dominion — KB ✓ -->
+              <div class="game-card">
+                <div class="game-thumb" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)">
+                  👑
+                  <div class="kb-badge kb-yes">KB ✓</div>
+                </div>
+                <div class="game-info">
+                  <div class="g-title">Dominion</div>
+                  <div class="g-pub">Rio Grande</div>
+                </div>
+                <button class="game-add-btn"><span>＋</span> Aggiungi</button>
+              </div>
+
+              <!-- 4. Barrage — KB ✓ -->
+              <div class="game-card">
+                <div class="game-thumb" style="background:linear-gradient(135deg,#e3f2fd,#bbdefb)">
+                  🌊
+                  <div class="kb-badge kb-yes">KB ✓</div>
+                </div>
+                <div class="game-info">
+                  <div class="g-title">Barrage</div>
+                  <div class="g-pub">Cranio</div>
+                </div>
+                <button class="game-add-btn"><span>＋</span> Aggiungi</button>
+              </div>
+
+              <!-- 5. Paleo — KB – -->
+              <div class="game-card">
+                <div class="game-thumb" style="background:linear-gradient(135deg,#fff8e1,#ffecb3)">
+                  🦣
+                  <div class="kb-badge kb-no">KB –</div>
+                </div>
+                <div class="game-info">
+                  <div class="g-title">Paleo</div>
+                  <div class="g-pub">Hans im Glück</div>
+                </div>
+                <button class="game-add-btn"><span>＋</span> Aggiungi</button>
+              </div>
+
+              <!-- 6. Marvel Champions — KB – -->
+              <div class="game-card">
+                <div class="game-thumb" style="background:linear-gradient(135deg,#ffebee,#ffcdd2)">
+                  🦸
+                  <div class="kb-badge kb-no">KB –</div>
+                </div>
+                <div class="game-info">
+                  <div class="g-title">Marvel Champions</div>
+                  <div class="g-pub">Fantasy Flight</div>
+                </div>
+                <button class="game-add-btn"><span>＋</span> Aggiungi</button>
+              </div>
+
+            </div><!-- /games-grid -->
+          </div><!-- /hub-block games -->
+        </div><!-- /pgc -->
+
+        <!-- Bottom bar -->
+        <div class="bbar">
+          <div class="bb-item active"><span>🏠</span><span class="bl">Home</span></div>
+          <div class="bb-item"><span>🎲</span><span class="bl">Giochi</span></div>
+          <div class="bb-item"><span>🎯</span><span class="bl">Sessioni</span></div>
+          <div class="bb-item"><span>🤖</span><span class="bl">Agenti</span></div>
+          <div class="bb-item"><span>🛠️</span><span class="bl">Toolkit</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── PHONE 2: Sessions + Agents empty CTA ─── -->
+  <div class="anno-wrap">
+    <div class="mockup-col">
+      <div class="mockup-label">Sessions &amp; Agents CTAs</div>
+      <div class="mockup-sublabel">Sezioni vuote con azione contestuale</div>
+      <div class="phone">
+        <div class="sbar">
+          <span class="t">9:41</span>
+          <div class="i"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+        </div>
+        <div class="topbar">
+          <div class="logo"><div class="dice">🎲</div>MeepleAI</div>
+          <div class="spacer"></div>
+          <div class="tb-btn">🔔</div>
+          <div class="tb-btn">💬</div>
+          <div class="avatar">AA</div>
+        </div>
+        <div class="mininav">
+          <span class="breadcrumb">Home /</span>
+          <span class="mn-tab active">Overview</span>
+        </div>
+        <div class="pgc">
+          <div class="greeting">
+            <h2>Ciao, Aaron 👋</h2>
+            <p>La tua tavola da gioco</p>
+          </div>
+
+          <!-- Sessions block — empty CTA -->
+          <div class="hub-block">
+            <div class="hub-title">🎯 Sessioni</div>
+            <div class="hub-toolbar">
+              <div class="hub-search">
+                <span>🔍</span><span style="color:var(--text-muted)">Filtra per stato…</span>
+              </div>
+            </div>
+            <div class="filter-chips">
+              <div class="f-chip active">Tutte</div>
+              <div class="f-chip">Attive</div>
+              <div class="f-chip">Recenti</div>
+            </div>
+            <div class="empty-cta">
+              <div class="ec-icon">🎯</div>
+              <div class="ec-title">Nessuna sessione</div>
+              <div class="ec-sub">Inizia una nuova partita e traccia i tuoi progressi in tempo reale.</div>
+              <button class="cta-btn">＋ Crea sessione</button>
+            </div>
+          </div>
+
+          <!-- Agents block — empty CTA -->
+          <div class="hub-block" style="margin-top:10px">
+            <div class="hub-title">🤖 Agenti AI</div>
+            <div class="hub-toolbar">
+              <div class="hub-search">
+                <span>🔍</span><span style="color:var(--text-muted)">Cerca agenti…</span>
+              </div>
+            </div>
+            <div class="filter-chips">
+              <div class="f-chip active">Tutti</div>
+              <div class="f-chip">Attivi</div>
+            </div>
+            <div class="empty-cta">
+              <div class="ec-icon">🤖</div>
+              <div class="ec-title">Nessun agente attivo</div>
+              <div class="ec-sub">Avvia una chat con un agente AI per ricevere aiuto durante la partita.</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+                <button class="cta-btn">💬 Avvia chat</button>
+                <button class="cta-btn outline">＋ Crea agente</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bbar">
+          <div class="bb-item active"><span>🏠</span><span class="bl">Home</span></div>
+          <div class="bb-item"><span>🎲</span><span class="bl">Giochi</span></div>
+          <div class="bb-item"><span>🎯</span><span class="bl">Sessioni</span></div>
+          <div class="bb-item"><span>🤖</span><span class="bl">Agenti</span></div>
+          <div class="bb-item"><span>🛠️</span><span class="bl">Toolkit</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="anno-list" style="padding-top:80px">
+      <div class="anno">
+        <div class="a-num">5</div>
+        <p><strong>Sessions empty</strong> — CTA singola "Crea sessione" con icona e testo motivazionale</p>
+      </div>
+      <div class="anno">
+        <div class="a-num">6</div>
+        <p><strong>Agents empty</strong> — doppia CTA: "Avvia chat" (primaria) + "Crea agente" (outline)</p>
+      </div>
+      <div class="anno">
+        <div class="a-num">7</div>
+        <p>Il blocco ha sempre <strong>HubLayout toolbar</strong> (search + chips) anche se vuoto — consistency</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── PHONE 3: Toolkit carousel ─── -->
+  <div class="anno-wrap">
+    <div class="anno-list" style="padding-top:100px">
+      <div class="anno">
+        <div class="a-num">8</div>
+        <p><strong>Toolkit carousel</strong> — 3 strumenti base sempre disponibili, scroll orizzontale</p>
+      </div>
+      <div class="anno">
+        <div class="a-num">9</div>
+        <p><strong>Dado</strong> — roller con configurazione facce e gruppi</p>
+      </div>
+      <div class="anno">
+        <div class="a-num">10</div>
+        <p><strong>Clessidra</strong> — timer configurabile per turni</p>
+      </div>
+      <div class="anno">
+        <div class="a-num">11</div>
+        <p><strong>Scoreboard</strong> — tracker punteggi multi-giocatore</p>
+      </div>
+    </div>
+
+    <div class="mockup-col">
+      <div class="mockup-label">Toolkit Carousel</div>
+      <div class="mockup-sublabel">Sempre disponibili — non richiede libreria</div>
+      <div class="phone">
+        <div class="sbar">
+          <span class="t">9:41</span>
+          <div class="i"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+        </div>
+        <div class="topbar">
+          <div class="logo"><div class="dice">🎲</div>MeepleAI</div>
+          <div class="spacer"></div>
+          <div class="tb-btn">🔔</div>
+          <div class="tb-btn">💬</div>
+          <div class="avatar">AA</div>
+        </div>
+        <div class="mininav">
+          <span class="breadcrumb">Home /</span>
+          <span class="mn-tab active">Overview</span>
+        </div>
+        <div class="pgc">
+          <div class="greeting">
+            <h2>Ciao, Aaron 👋</h2>
+            <p>La tua tavola da gioco</p>
+          </div>
+
+          <!-- Games block (minimal) -->
+          <div class="hub-block">
+            <div class="hub-title">🎲 Giochi</div>
+            <div style="font-size:10px;color:var(--text-muted);padding:8px 0 4px;text-align:center">
+              ↑ scorrere su per top giochi dal catalogo
+            </div>
+          </div>
+
+          <!-- Sessions (minimal) -->
+          <div class="hub-block">
+            <div class="hub-title">🎯 Sessioni</div>
+            <div style="font-size:10px;color:var(--text-muted);padding:8px 0 4px;text-align:center">
+              ↑ CTA "Crea sessione"
+            </div>
+          </div>
+
+          <!-- Agents (minimal) -->
+          <div class="hub-block">
+            <div class="hub-title">🤖 Agenti AI</div>
+            <div style="font-size:10px;color:var(--text-muted);padding:8px 0 4px;text-align:center">
+              ↑ CTA "Avvia chat" + "Crea agente"
+            </div>
+          </div>
+
+          <!-- Toolkit block — carousel -->
+          <div class="hub-block" style="margin-top:6px">
+            <div class="hub-title">🛠️ Toolkit</div>
+            <div style="font-size:9px;color:var(--text-muted);margin-bottom:8px;font-weight:600">
+              Strumenti disponibili subito, senza libreria
+            </div>
+            <div class="toolkit-carousel">
+
+              <!-- Dado -->
+              <div class="tk-card">
+                <div class="tk-icon" style="background:hsl(25,95%,92%)">🎲</div>
+                <div class="tk-name">Dado</div>
+                <div class="tk-desc">Lancia d4–d20, gruppi multipli</div>
+              </div>
+
+              <!-- Clessidra -->
+              <div class="tk-card">
+                <div class="tk-icon" style="background:hsl(210,80%,92%)">⏳</div>
+                <div class="tk-name">Clessidra</div>
+                <div class="tk-desc">Timer per turno, avvisi sonori</div>
+              </div>
+
+              <!-- Scoreboard -->
+              <div class="tk-card">
+                <div class="tk-icon" style="background:hsl(262,70%,92%)">📊</div>
+                <div class="tk-name">Scoreboard</div>
+                <div class="tk-desc">Punteggi multi-giocatore</div>
+              </div>
+
+              <!-- Token counter (bonus) -->
+              <div class="tk-card">
+                <div class="tk-icon" style="background:hsl(140,60%,90%)">🪙</div>
+                <div class="tk-name">Token</div>
+                <div class="tk-desc">Contatori risorse e punti</div>
+              </div>
+
+            </div><!-- /toolkit-carousel -->
+          </div>
+
+        </div>
+        <div class="bbar">
+          <div class="bb-item active"><span>🏠</span><span class="bl">Home</span></div>
+          <div class="bb-item"><span>🎲</span><span class="bl">Giochi</span></div>
+          <div class="bb-item"><span>🎯</span><span class="bl">Sessioni</span></div>
+          <div class="bb-item"><span>🤖</span><span class="bl">Agenti</span></div>
+          <div class="bb-item"><span>🛠️</span><span class="bl">Toolkit</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /mockup-row -->
+
+<!-- ─── Implementation notes ─── -->
+<div style="margin-top:36px;max-width:860px;background:rgba(255,255,255,.7);
+  border:1px solid var(--border);border-radius:14px;padding:18px 22px">
+  <h3 style="font-size:.9rem;margin-bottom:12px;color:var(--text)">📐 Note di implementazione per DashboardClient.tsx</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:.73rem;color:var(--text-sec);line-height:1.5">
+    <div>
+      <strong style="color:var(--text);display:block;margin-bottom:4px">Logica "new user" per Games</strong>
+      <code style="font-size:.68rem;background:#f1ede8;padding:2px 5px;border-radius:4px;display:block;margin-bottom:3px">const isNewUser = !libraryLoading && gameItems.length === 0</code>
+      Se <code>isNewUser</code>: mostra CatalogTopGames (da <code>useGames</code>, ordinati per rating,
+      prioritizzati se <code>hasKbVectors</code>). Altrimenti: mostra libreria normale.
+    </div>
+    <div>
+      <strong style="color:var(--text);display:block;margin-bottom:4px">Badge KB su MeepleCard</strong>
+      Serve un nuovo prop <code>kbStatus: 'indexed' | 'empty' | undefined</code> su MeepleCard,
+      oppure gestire il badge fuori dalla card, wrappando con un overlay relativo.
+      Preferire overlay esterno per non modificare MeepleCard.
+    </div>
+    <div>
+      <strong style="color:var(--text);display:block;margin-bottom:4px">Empty CTA per Sessions/Agents</strong>
+      Creare <code>EmptyCTA</code> component con props: <code>icon, title, sub, actions[]</code>.
+      Sostituisce l'attuale <code>EmptyState</code> quando si è in dashboard (non in hub page).
+    </div>
+    <div>
+      <strong style="color:var(--text);display:block;margin-bottom:4px">Toolkit carousel</strong>
+      Dati statici (non da API). Array <code>TOOLKIT_TOOLS</code> con id/icon/name/desc.
+      Ogni card è un Link a <code>/toolkit?tool=dado</code> etc.
+      Non serve HubLayout wrapper per il toolkit nel dashboard.
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

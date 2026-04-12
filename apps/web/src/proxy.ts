@@ -351,9 +351,11 @@ export async function proxy(request: NextRequest) {
     sessionCookieValue
   ) {
     isAuthenticated = true;
-  } else if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true' && sessionCookieValue) {
-    // In mock mode, the MSW handler sets a fake session cookie on login.
-    // Trust its presence without backend validation (no real backend in this mode).
+  } else if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true') {
+    // In mock mode there is no real backend. Trust the session cookie if present
+    // (set by MSW on login), or bypass auth entirely so devs can navigate freely
+    // without having to log in first. Role is read from the cookie or from the
+    // NEXT_PUBLIC_DEV_AS_ROLE env var set in .env.local.
     isAuthenticated = true;
   } else if (sessionCookieValue) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
@@ -361,8 +363,20 @@ export async function proxy(request: NextRequest) {
 
   // Check user role (only trusted when we know the session is valid)
   const userRoleCookie = request.cookies.get(USER_ROLE_COOKIE);
-  const userRole = isAuthenticated ? userRoleCookie?.value || 'user' : 'user';
+  const userRole = isAuthenticated
+    ? userRoleCookie?.value ||
+      (process.env.NEXT_PUBLIC_MOCK_MODE === 'true'
+        ? (process.env.NEXT_PUBLIC_DEV_AS_ROLE ?? 'user')
+        : 'user')
+    : 'user';
   const isAdmin = isAuthenticated && isAdminRole(userRole);
+
+  // Read view mode cookie — admin users can switch to 'user' shell via toggle.
+  // When view mode is 'user', treat the admin as a regular user for redirect
+  // purposes (home → /library instead of /admin) to prevent redirect loops when
+  // the layout guard detects view_mode=user and sends the user back to '/'.
+  const viewModeCookie = request.cookies.get('meepleai_view_mode');
+  const isAdminViewMode = isAdmin && viewModeCookie?.value !== 'user';
 
   // Check if the current route is protected or public auth route
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
@@ -390,7 +404,7 @@ export async function proxy(request: NextRequest) {
   if (isPublicAuthRoute && isAuthenticated) {
     // Check if there's a 'from' parameter to redirect back to
     const fromParam = request.nextUrl.searchParams.get('from');
-    const defaultDest = isAdmin ? '/admin' : '/library';
+    const defaultDest = isAdminViewMode ? '/admin' : '/library';
     const redirectUrl =
       fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
         ? new URL(fromParam, request.url)
@@ -399,10 +413,16 @@ export async function proxy(request: NextRequest) {
     return addSecurityHeaders(response, requestOrigin);
   }
 
-  // Redirect authenticated users from homepage to dashboard
-  if (isHomePage && isAuthenticated) {
-    const defaultDest = isAdmin ? '/admin' : '/library';
-    const response = NextResponse.redirect(new URL(defaultDest, request.url));
+  // Redirect authenticated users from homepage to dashboard.
+  // Skip if admin has switched to 'user' view mode — the layout guard already
+  // sent them here and we must not bounce them back to /admin.
+  if (isHomePage && isAuthenticated && isAdminViewMode) {
+    const response = NextResponse.redirect(new URL('/admin', request.url));
+    return addSecurityHeaders(response, requestOrigin);
+  }
+
+  if (isHomePage && isAuthenticated && !isAdmin) {
+    const response = NextResponse.redirect(new URL('/library', request.url));
     return addSecurityHeaders(response, requestOrigin);
   }
 
@@ -453,7 +473,8 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith('/api/') ||
       pathname.startsWith('/health') ||
       pathname.startsWith('/offline') ||
-      pathname.startsWith('/_next/');
+      pathname.startsWith('/_next/') ||
+      pathname === '/mockServiceWorker.js'; // MSW SW must never be redirected
 
     if (!isAlphaRoute && !isAuthRoute && !isPublicRoute) {
       const response = NextResponse.redirect(new URL('/dashboard', request.url));

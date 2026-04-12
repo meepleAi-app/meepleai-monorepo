@@ -26,6 +26,7 @@ internal static class UserLibraryServiceExtensions
         services.AddScoped<IWishlistRepository, WishlistRepository>(); // Issue #3917: Wishlist management
         services.AddScoped<IUserCollectionRepository, UserCollectionRepository>(); // Issue #4263: Generic user collections
         services.AddScoped<IGameSuggestionRepository, GameSuggestionRepository>(); // Admin Invitation Flow: game suggestions
+        services.AddScoped<IUserHandRepository, UserHandRepository>(); // La Mia Mano: hand slots
 
         // Register domain services
         services.AddScoped<IGameLibraryQuotaService, GameLibraryQuotaService>();

@@ -87,6 +87,68 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Creates an ad-hoc game night that skips the scheduling/RSVP flow.
+    /// Used when a user spontaneously starts playing and later adds more games during the same evening.
+    /// Status is set directly to InProgress.
+    /// </summary>
+    public static GameNightEvent CreateAdHoc(Guid organizerId, string title, Guid firstGameId)
+    {
+        if (firstGameId == Guid.Empty)
+            throw new ArgumentException("FirstGameId cannot be empty.", nameof(firstGameId));
+
+        var night = new GameNightEvent(
+            id: Guid.NewGuid(),
+            organizerId: organizerId,
+            title: title,
+            scheduledAt: DateTimeOffset.UtcNow,
+            description: null,
+            location: null,
+            maxPlayers: null,
+            gameIds: new List<Guid> { firstGameId });
+
+        night.Status = GameNightStatus.InProgress;
+        return night;
+    }
+
+    /// <summary>
+    /// Completes an in-progress ad-hoc night. Transition: InProgress → Completed.
+    /// Unlike <see cref="Complete"/> (Published → Completed), this handles the ad-hoc
+    /// lifecycle where the night skipped scheduling and went straight to InProgress.
+    /// </summary>
+    public void CompleteAdHoc()
+    {
+        ThrowIfCorrupted();
+
+        if (Status != GameNightStatus.InProgress)
+            throw new InvalidOperationException(
+                $"Cannot complete a {Status} game night via ad-hoc completion. Only InProgress nights can be completed via this method.");
+
+        Status = GameNightStatus.Completed;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Adds a game to an in-progress ad-hoc night. Idempotent for duplicates.
+    /// </summary>
+    public void AttachAdditionalGame(Guid gameId)
+    {
+        ThrowIfCorrupted();
+
+        if (Status != GameNightStatus.InProgress)
+            throw new InvalidOperationException(
+                $"Cannot attach game to a {Status} game night. Only InProgress nights accept dynamic games.");
+
+        if (gameId == Guid.Empty)
+            throw new ArgumentException("GameId cannot be empty.", nameof(gameId));
+
+        if (!GameIds.Contains(gameId))
+        {
+            GameIds.Add(gameId);
+            UpdatedAt = DateTimeOffset.UtcNow;
+        }
+    }
+
+    /// <summary>
     /// Updates the game night event details. Cannot update cancelled or completed events.
     /// </summary>
     public void Update(string title, string? description, DateTimeOffset scheduledAt, string? location, int? maxPlayers, List<Guid>? gameIds)

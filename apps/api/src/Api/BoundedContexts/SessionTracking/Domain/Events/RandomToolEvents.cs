@@ -1,6 +1,8 @@
 // SSE events for random tools (Issue #3345).
 // These events are broadcast to all session participants.
 
+using MediatR;
+
 namespace Api.BoundedContexts.SessionTracking.Domain.Events;
 
 // ============================================================================
@@ -17,7 +19,7 @@ public sealed record TimerStartedEvent(
     Guid StartedBy,
     string StartedByName,
     DateTime StartedAt
-);
+) : INotification;
 
 /// <summary>
 /// Event when a timer is paused.
@@ -27,7 +29,7 @@ public sealed record TimerPausedEvent(
     Guid TimerId,
     int RemainingSeconds,
     DateTime PausedAt
-);
+) : INotification;
 
 /// <summary>
 /// Event when a timer is resumed.
@@ -37,7 +39,7 @@ public sealed record TimerResumedEvent(
     Guid TimerId,
     int RemainingSeconds,
     DateTime ResumedAt
-);
+) : INotification;
 
 /// <summary>
 /// Event when a timer completes.
@@ -46,7 +48,7 @@ public sealed record TimerCompletedEvent(
     Guid SessionId,
     Guid TimerId,
     DateTime CompletedAt
-);
+) : INotification;
 
 /// <summary>
 /// Event when a timer is reset.
@@ -55,7 +57,7 @@ public sealed record TimerResetEvent(
     Guid SessionId,
     Guid TimerId,
     DateTime ResetAt
-);
+) : INotification;
 
 // ============================================================================
 // Coin Flip Events

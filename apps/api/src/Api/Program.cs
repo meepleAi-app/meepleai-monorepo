@@ -461,7 +461,22 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, Api.Hubs.SessionParticipantIdProvider>();
 builder.Services.AddSignalR();
 
+#if DEBUG
+if (builder.Environment.IsDevelopment())
+{
+    Api.DevTools.DevToolsServiceCollectionExtensions.AddMeepleDevTools(builder.Services);
+}
+#endif
+
 var app = builder.Build();
+
+#if DEBUG
+if (app.Environment.IsDevelopment())
+{
+    Api.DevTools.DevToolsServiceCollectionExtensions.UseMeepleDevTools(app);
+    Api.DevTools.Http.DevToolsEndpointsExtensions.MapMeepleDevTools(app);
+}
+#endif
 
 using (var scope = app.Services.CreateScope())
 {
@@ -666,6 +681,7 @@ v1Api.MapAdminSharedGameContentEndpoints(); // Issue #236: Admin shared game con
 // Infrastructure
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapSessionEndpoints();           // Session management
+v1Api.MapSessionFlowEndpoints();       // Session Flow v2.1 (T9): KB readiness, pause/resume, turn-order, score+diary, diary reads
 
 // ═══ NON-ALPHA: Extended endpoints (gated behind ALPHA_MODE) ═══
 if (!isAlphaMode)
@@ -767,6 +783,7 @@ if (!isAlphaMode)
     v1Api.MapEntityLinkUserEndpoints();    // Entity link user endpoints (Issue #5137)
     v1Api.MapEntityLinkAdminEndpoints();   // Entity link admin endpoints (Issue #5138)
     v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
+    v1Api.MapUserHandEndpoints();          // My Hand quick-access slots (La Mia Mano)
     v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
 
     // Audit & Analytics

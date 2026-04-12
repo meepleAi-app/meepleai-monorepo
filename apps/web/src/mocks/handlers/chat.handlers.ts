@@ -9,6 +9,7 @@
 
 import { http, HttpResponse } from 'msw';
 
+import { guardScenarioSwitching } from './_shared';
 import {
   createMockChat,
   createMockChatMessage,
@@ -42,6 +43,8 @@ let chats = [
 export const chatHandlers = [
   // GET /api/v1/chat/threads - List chat threads
   http.get(`${API_BASE}/api/v1/chat/threads`, () => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
     return HttpResponse.json(chats, {
       headers: {
         'X-Correlation-Id': `test-correlation-${Date.now()}`,
@@ -140,6 +143,14 @@ export const chatHandlers = [
     const sseOptions: SSEOptions = { eventDelay: 10 };
 
     return createSSEResponse(events, sseOptions);
+  }),
+
+  // GET /api/v1/users/:userId/chat-sessions/recent — used by useRecentChatSessions
+  // Returns ChatSessionSummaryDto[] (plain array, not paginated)
+  http.get(`${API_BASE}/api/v1/users/:userId/chat-sessions/recent`, () => {
+    const guard = guardScenarioSwitching();
+    if (guard) return guard;
+    return HttpResponse.json([]);
   }),
 
   // GET /api/v1/agents - List agents

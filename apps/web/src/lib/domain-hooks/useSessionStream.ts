@@ -21,7 +21,8 @@ export type SessionSSEEventType =
   | 'session:score'
   | 'session:conflict'
   | 'session:toolkit'
-  | 'session:chat';
+  | 'session:chat'
+  | 'session:timer';
 
 export type ConnectionStatus =
   | 'disconnected'
@@ -79,6 +80,32 @@ export interface SessionStatePayload {
   status: string;
 }
 
+// ============ Timer Event Payloads ============
+
+/**
+ * Union of all timer SSE event shapes (all arrive as 'session:timer').
+ * Detect event type by field presence:
+ *  - has durationSeconds → TimerStarted
+ *  - has pausedAt        → TimerPaused
+ *  - has resumedAt       → TimerResumed
+ *  - has resetAt         → TimerReset
+ */
+export interface TimerEventPayload {
+  sessionId: string;
+  timerId: string;
+  // TimerStarted
+  durationSeconds?: number;
+  startedBy?: string;
+  startedByName?: string;
+  startedAt?: string;
+  // TimerPaused / TimerResumed
+  remainingSeconds?: number;
+  pausedAt?: string;
+  resumedAt?: string;
+  // TimerReset
+  resetAt?: string;
+}
+
 // ============ Hook Options ============
 
 export interface UseSessionStreamOptions {
@@ -90,6 +117,7 @@ export interface UseSessionStreamOptions {
   onSessionStateChanged?: (payload: SessionStatePayload) => void;
   onToolkitEvent?: (payload: unknown) => void;
   onChatMessage?: (payload: unknown) => void;
+  onTimerEvent?: (payload: TimerEventPayload) => void;
   onError?: (error: Error) => void;
   enabled?: boolean;
   maxReconnectAttempts?: number;
@@ -155,6 +183,9 @@ export function useSessionStream(
         case 'session:chat':
           cbs.onChatMessage?.(parsed.data);
           break;
+        case 'session:timer':
+          cbs.onTimerEvent?.(parsed.data as TimerEventPayload);
+          break;
         case 'session:conflict':
           // Conflict events handled via state update
           cbs.onSessionStateChanged?.(parsed.data as SessionStatePayload);
@@ -199,6 +230,7 @@ export function useSessionStream(
       es.addEventListener('session:score', handleMessage as EventListener);
       es.addEventListener('session:toolkit', handleMessage as EventListener);
       es.addEventListener('session:chat', handleMessage as EventListener);
+      es.addEventListener('session:timer', handleMessage as EventListener);
       es.addEventListener('session:conflict', handleMessage as EventListener);
 
       es.onerror = () => {

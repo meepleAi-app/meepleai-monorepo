@@ -18,10 +18,6 @@ export interface NavigationLinks {
   libraryGames: string; // personal games (default, was libraryPrivate)
   libraryCollection: string; // shared catalog games
   libraryWishlist: string;
-  /** @deprecated use libraryGames instead */
-  libraryPrivate: string;
-  /** @deprecated use /library?action=add instead */
-  libraryPrivateAdd: string;
   libraryProposals: string;
   libraryPropose: string;
   libraryGame: (gameId: string) => string;
@@ -98,11 +94,9 @@ export function getNavigationLinks(): NavigationLinks {
 
     // ── Library ─────────────────────────────────────────────────────────────
     library: '/library',
-    libraryGames: '/library', // @deprecated → use library (all games live on the Hub)
-    libraryCollection: '/library', // @deprecated → use library (shared catalog merged into Hub)
+    libraryGames: '/library',
+    libraryCollection: '/library',
     libraryWishlist: '/library/wishlist',
-    libraryPrivate: '/library', // @deprecated → use libraryGames
-    libraryPrivateAdd: '/library?action=add', // @deprecated → use ?action=add drawer
     libraryProposals: '/discover?tab=proposals',
     libraryPropose: '/discover/propose',
     libraryGame: (gameId: string) => `/library/${gameId}`,

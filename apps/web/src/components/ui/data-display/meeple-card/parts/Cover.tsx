@@ -17,6 +17,7 @@ const aspectRatioClass: Record<MeepleCardVariant, string> = {
   compact: 'aspect-square',
   featured: 'aspect-video',
   hero: 'aspect-video',
+  focus: 'aspect-[7/10]',
 };
 
 export function Cover({ entity, variant, imageUrl, alt }: CoverProps) {

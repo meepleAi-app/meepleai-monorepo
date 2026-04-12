@@ -13,7 +13,9 @@ import {
   Scoreboard,
   type SyncStatus,
 } from '@/components/session';
+import type { ScoreboardData } from '@/components/session/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { getGameTemplateByName } from '@/lib/config/game-templates';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/session-store';
@@ -39,20 +41,47 @@ export default function GameSpecificSessionPage() {
 
   const {
     activeSession,
-    scoreboard,
-    participants,
+    scores,
     loadSession,
-    updateScore,
+    recordScore,
     pauseSession,
     resumeSession: _resumeSession,
-    finalizeSession,
-    addScoreFromSSE,
+    completeSession,
+    handleScoreUpdate,
     isLoading,
     error,
   } = useSessionStore();
 
+  const { data: currentUser } = useCurrentUser();
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [gameName, setGameName] = useState<string>('');
+
+  // ── Derived data ──────────────────────────────────────────────────────────
+
+  const participants = (activeSession?.players ?? []).map(p => ({
+    id: p.id,
+    displayName: p.displayName,
+    isOwner: p.role === 'Host',
+    isCurrentUser: p.userId !== null && p.userId === currentUser?.id,
+    avatarColor: p.color,
+    totalScore: p.totalScore,
+    rank: p.currentRank,
+  }));
+
+  const derivedScoreboard: ScoreboardData = {
+    participants,
+    scores: scores.map(s => ({
+      id: `${s.playerId}-${s.round}-${s.dimension}`,
+      participantId: s.playerId,
+      roundNumber: s.round,
+      category: s.dimension,
+      scoreValue: s.value,
+      timestamp: new Date(s.recordedAt),
+      createdBy: s.playerId,
+    })),
+    rounds: [...new Set(scores.map(s => s.round))].sort((a, b) => a - b),
+    categories: [...new Set(scores.map(s => s.dimension))],
+  };
 
   // Load session details
   useEffect(() => {
@@ -86,7 +115,14 @@ export default function GameSpecificSessionPage() {
   const { isConnected, error: sseError } = useSessionSync({
     sessionId,
     onScoreUpdate: scoreEntry => {
-      addScoreFromSSE(scoreEntry);
+      handleScoreUpdate({
+        playerId: scoreEntry.participantId,
+        round: scoreEntry.roundNumber ?? 1,
+        dimension: scoreEntry.category ?? 'score',
+        value: scoreEntry.scoreValue,
+        unit: null,
+        recordedAt: scoreEntry.timestamp.toISOString(),
+      });
 
       const participant = participants.find(p => p.id === scoreEntry.participantId);
       if (participant) {
@@ -123,7 +159,12 @@ export default function GameSpecificSessionPage() {
     setSyncStatus('saving');
 
     try {
-      await updateScore(data);
+      await recordScore({
+        playerId: data.participantId,
+        round: data.roundNumber ?? 1,
+        dimension: data.category ?? 'score',
+        value: data.scoreValue,
+      });
       setSyncStatus('synced');
       setTimeout(() => setSyncStatus('idle'), 2000);
     } catch (err) {
@@ -147,23 +188,15 @@ export default function GameSpecificSessionPage() {
    * Handle finalize
    */
   const handleFinalize = async () => {
-    if (!scoreboard) return;
-
-    const rankedParticipants = [...participants].sort((a, b) => b.totalScore - a.totalScore);
-    const ranks: Record<string, number> = {};
-    rankedParticipants.forEach((p, index) => {
-      ranks[p.id] = index + 1;
-    });
-
     try {
-      await finalizeSession({ ranks });
+      await completeSession();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to finalize session');
     }
   };
 
   // Loading state
-  if (isLoading || !activeSession || !scoreboard) {
+  if (isLoading || !activeSession) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -219,7 +252,7 @@ export default function GameSpecificSessionPage() {
 
           {/* Right: Scoreboard */}
           <div className="lg:col-span-2">
-            <Scoreboard data={scoreboard} isRealTime={isConnected} />
+            <Scoreboard data={derivedScoreboard} isRealTime={isConnected} />
           </div>
         </div>
       </div>
@@ -229,8 +262,8 @@ export default function GameSpecificSessionPage() {
         <div className="container mx-auto px-4 py-4">
           <ScoreInput
             participants={participants}
-            rounds={template?.rounds || scoreboard.rounds}
-            categories={template?.categories || scoreboard.categories}
+            rounds={template?.rounds || derivedScoreboard.rounds}
+            categories={template?.categories || derivedScoreboard.categories}
             onSubmit={handleScoreSubmit}
             syncStatus={syncStatus}
           />

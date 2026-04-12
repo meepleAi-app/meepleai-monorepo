@@ -70,6 +70,16 @@ export { ActivityFeedInputBar } from './ActivityFeedInputBar';
 export { MobileScorebar } from './MobileScorebar';
 export { TurnSummaryButton } from './TurnSummaryButton';
 export type { TurnSummaryButtonProps } from './TurnSummaryButton';
+export { SessionParticipantsList } from './SessionParticipantsList';
+export type { SessionParticipantsListProps } from './SessionParticipantsList';
+export { SessionDiaryTimeline } from './SessionDiaryTimeline';
+export type { SessionDiaryTimelineProps } from './SessionDiaryTimeline';
+export { SessionQuickActions } from './SessionQuickActions';
+export type { SessionQuickActionsProps } from './SessionQuickActions';
+export { GamePickerDialog } from './GamePickerDialog';
+export type { GamePickerDialogProps } from './GamePickerDialog';
+export { GamePickerItem } from './GamePickerItem';
+export type { GamePickerGame } from './GamePickerItem';
 
 export type {
   Participant,

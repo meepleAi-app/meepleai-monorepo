@@ -1,7 +1,12 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { useMiniNavConfigStore } from '@/lib/stores/mini-nav-config-store';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => '/',
+}));
 
 import { MiniNavSlot } from '../MiniNavSlot';
 

@@ -9,7 +9,7 @@
  * Game is pre-selected (passed as prop). Navigates to /sessions/live/{id} on start.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { GripVertical, Plus, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -81,15 +81,20 @@ export function StartSessionSheet({
 
   // Drag state for step 2
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const usedColors = players.map(p => p.color);
-  const nextColor =
-    COLOR_OPTIONS.find(c => !usedColors.includes(c.value))?.value ?? COLOR_OPTIONS[0].value;
+  // Cleanup close-animation timer on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
 
   const handleClose = () => {
     onOpenChange(false);
     // Reset after close animation
-    setTimeout(() => {
+    if (closeTimerRef.current !== null) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => {
       setStep('players');
       setPlayers([{ id: `p-${Date.now()}`, name: 'Giocatore 1', color: 'Red' }]);
       setNewName('');
@@ -102,9 +107,15 @@ export function StartSessionSheet({
   const addPlayer = useCallback(() => {
     const trimmed = newName.trim();
     if (!trimmed) return;
-    setPlayers(prev => [...prev, { id: `p-${Date.now()}`, name: trimmed, color: nextColor }]);
+    setPlayers(prev => {
+      // Derive nextColor from current snapshot to avoid stale closure on rapid add
+      const usedInPrev = prev.map(p => p.color);
+      const color =
+        COLOR_OPTIONS.find(c => !usedInPrev.includes(c.value))?.value ?? COLOR_OPTIONS[0].value;
+      return [...prev, { id: `p-${Date.now()}`, name: trimmed, color }];
+    });
     setNewName('');
-  }, [newName, nextColor]);
+  }, [newName]);
 
   const removePlayer = (id: string) => setPlayers(prev => prev.filter(p => p.id !== id));
 
@@ -140,15 +151,38 @@ export function StartSessionSheet({
         gameId,
       });
 
+      // Add players in turn order; collect the server-assigned IDs
+      const addedPlayerIds: string[] = [];
+      let failCount = 0;
       for (const player of players) {
         try {
-          await api.liveSessions.addPlayer(sessionId, {
+          const playerId = await api.liveSessions.addPlayer(sessionId, {
             displayName: player.name,
             color: player.color,
           });
+          addedPlayerIds.push(playerId);
         } catch {
-          // Non-blocking — continue with remaining players
+          failCount++;
         }
+      }
+
+      if (addedPlayerIds.length === 0) {
+        setError('Impossibile aggiungere i giocatori. Riprova.');
+        setIsCreating(false);
+        return;
+      }
+
+      // Persist the dragged turn order
+      try {
+        await api.liveSessions.updateTurnOrder(sessionId, { playerIds: addedPlayerIds });
+      } catch {
+        // Non-blocking — session is still playable without persisted order
+      }
+
+      if (failCount > 0) {
+        // Partial failure: show warning but still navigate
+        setError(`${failCount} giocatore/i non aggiunto/i. Continuo…`);
+        await new Promise(r => setTimeout(r, 1500));
       }
 
       router.push(`/sessions/live/${sessionId}`);

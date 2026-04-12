@@ -506,12 +506,14 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
           </p>
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={() => setShowEndConfirm(false)}
               className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-medium hover:bg-white/20"
             >
               Annulla
             </button>
             <button
+              type="button"
               onClick={handleEndSession}
               className="flex-1 rounded-xl bg-red-500 py-3 text-sm font-medium text-white hover:bg-red-600"
             >

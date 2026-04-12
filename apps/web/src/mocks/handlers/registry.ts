@@ -10,6 +10,7 @@
  */
 
 import { adminHandlers } from './admin.handlers';
+import { agentsHandlers } from './agents.handlers';
 import { authHandlers } from './auth.handlers';
 import { badgesHandlers } from './badges.handlers';
 import { catalogHandlers } from './catalog.handlers';
@@ -19,6 +20,7 @@ import { gameNightsHandlers } from './game-nights.handlers';
 import { gamesHandlers } from './games.handlers';
 import { libraryHandlers } from './library.handlers';
 import { notificationsHandlers } from './notifications.handlers';
+import { playRecordsHandlers } from './play-records.handlers';
 import { playersHandlers } from './players.handlers';
 import { sessionsHandlers } from './sessions.handlers';
 import { sharedGamesHandlers } from './shared-games.handlers';
@@ -42,6 +44,7 @@ export interface HandlerGroupBase {
 export const HANDLER_GROUPS: HandlerGroupBase[] = [
   { name: 'auth', handlers: authHandlers },
   { name: 'games', handlers: gamesHandlers },
+  { name: 'agents', handlers: agentsHandlers },
   { name: 'chat', handlers: chatHandlers },
   { name: 'documents', handlers: documentsHandlers },
   { name: 'library', handlers: libraryHandlers },
@@ -51,6 +54,7 @@ export const HANDLER_GROUPS: HandlerGroupBase[] = [
   { name: 'sessions', handlers: sessionsHandlers },
   { name: 'game-nights', handlers: gameNightsHandlers },
   { name: 'players', handlers: playersHandlers },
+  { name: 'play-records', handlers: playRecordsHandlers },
   { name: 'notifications', handlers: notificationsHandlers },
   { name: 'badges', handlers: badgesHandlers },
 ];

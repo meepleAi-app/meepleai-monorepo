@@ -106,4 +106,14 @@ describe('useSessionInlineChat', () => {
     });
     expect(result.current.isStreaming).toBe(false);
   });
+
+  it('imposta error quando createThread fallisce', async () => {
+    mockApi.chat.createThread.mockRejectedValueOnce(new Error('network error'));
+    const { result } = renderHook(() => useSessionInlineChat('game-abc'));
+    await act(async () => {
+      result.current.send('Ciao');
+    });
+    expect(result.current.error).toBeTruthy();
+    expect(result.current.isStreaming).toBe(false);
+  });
 });

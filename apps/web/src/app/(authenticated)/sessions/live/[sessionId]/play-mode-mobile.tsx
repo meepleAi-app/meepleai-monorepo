@@ -91,6 +91,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
   const {
     messages: chatMessages,
     isStreaming: chatStreaming,
+    error: chatError,
     send: sendChat,
   } = useSessionInlineChat(session?.gameId);
   const [sessionEnded, setSessionEnded] = useState(false);
@@ -374,7 +375,12 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
 
         {/* ——— Tab: Chiedi ——— */}
         {activeTab === 'chat' && (
-          <div className="p-4">
+          <div className="p-4 space-y-2">
+            {chatError && (
+              <p className="text-xs text-red-400 text-center" role="alert">
+                {chatError}
+              </p>
+            )}
             <SessionChatWidget
               messages={chatMessages}
               isStreaming={chatStreaming}

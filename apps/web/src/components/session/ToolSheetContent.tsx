@@ -10,12 +10,19 @@ import { cn } from '@/lib/utils';
 function DadoTool() {
   const [value, setValue] = useState<number | null>(null);
   const [rolling, setRolling] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const FACE = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'] as const;
 
   const roll = () => {
     setRolling(true);
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       setValue(Math.floor(Math.random() * 6) + 1);
       setRolling(false);
     }, 400);
@@ -49,10 +56,17 @@ function DadoTool() {
 function MonetaTool() {
   const [result, setResult] = useState<'testa' | 'croce' | null>(null);
   const [flipping, setFlipping] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const flip = () => {
     setFlipping(true);
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       setResult(Math.random() < 0.5 ? 'testa' : 'croce');
       setFlipping(false);
     }, 400);

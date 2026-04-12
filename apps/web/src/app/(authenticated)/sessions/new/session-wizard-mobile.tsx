@@ -1,24 +1,39 @@
 /**
- * SessionWizardMobile — 4-step mobile wizard for creating a game session
+ * SessionWizardMobile — 5-step mobile wizard for creating a game session
  *
  * Phase 5: Game Night — Task 3
  * Game Session Flow v2.0 — Task 14 (added phases step)
+ * S1/S2 Wizard Prefill — Task 4/5/6 (prefill, turn order step, updateTurnOrder)
  *
  * Steps:
- * 1. Choose Game — pick from library games
+ * 1. Choose Game — pick from library games (skipped if prefilledGameId)
  * 2. Add Players — name + color
- * 3. Configure Phases — pre-loaded templates, optional
- * 4. Ready — summary + start
+ * 3. Turn Order — reorder players before game starts
+ * 4. Configure Phases — pre-loaded templates, optional
+ * 5. Ready — summary + start
  *
  * API flow:
- *   createSession → addPlayer (per player) → configurePhases (if any) → navigate to /sessions/live/{id}
+ *   createSession → addPlayer (per player) → updateTurnOrder → configurePhases (if any) → navigate to /sessions/live/{id}
  */
 
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 
-import { Search, Check, Plus, Trash2, Gamepad2, Users, Rocket, Layers, X } from 'lucide-react';
+import {
+  Search,
+  Check,
+  Plus,
+  Trash2,
+  Gamepad2,
+  Users,
+  Rocket,
+  Layers,
+  X,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { GradientButton } from '@/components/ui/buttons/GradientButton';
@@ -43,7 +58,14 @@ interface WizardPhase {
   phaseName: string;
 }
 
-type WizardStep = 1 | 2 | 3 | 4;
+type WizardStep = 1 | 2 | 3 | 4 | 5;
+
+// ========== Props ==========
+
+interface SessionWizardMobileProps {
+  prefilledGameId?: string;
+  prefilledGameName?: string;
+}
 
 // ========== Constants ==========
 
@@ -59,26 +81,20 @@ const COLOR_PALETTE: { value: PlayerColor; label: string; hex: string; className
 const STEP_ICONS: Record<WizardStep, React.ElementType> = {
   1: Gamepad2,
   2: Users,
-  3: Layers,
-  4: Rocket,
+  3: ArrowUpDown,
+  4: Layers,
+  5: Rocket,
 };
 
-// ========== Component ==========
-
-interface SessionWizardMobileProps {
-  prefilledGameId?: string;
-  prefilledGameName?: string;
-}
-
 export function SessionWizardMobile({
-  prefilledGameId: _prefilledGameId,
-  prefilledGameName: _prefilledGameName,
+  prefilledGameId,
+  prefilledGameName,
 }: SessionWizardMobileProps = {}) {
   const router = useRouter();
-  const [step, setStep] = useState<WizardStep>(1);
+  const [step, setStep] = useState<WizardStep>(prefilledGameId ? 2 : 1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [selectedGameName, setSelectedGameName] = useState('');
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(prefilledGameId ?? null);
+  const [selectedGameName, setSelectedGameName] = useState(prefilledGameName ?? '');
   const [players, setPlayers] = useState<WizardPlayer[]>([
     { id: `p-${Date.now()}`, displayName: 'Giocatore 1', color: 'Red' },
   ]);
@@ -149,6 +165,26 @@ export function SessionWizardMobile({
     setPlayers(prev => prev.map(p => (p.id === id ? { ...p, color } : p)));
   }, []);
 
+  const movePlayerUp = useCallback((id: string) => {
+    setPlayers(prev => {
+      const idx = prev.findIndex(p => p.id === id);
+      if (idx <= 0) return prev;
+      const next = [...prev];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      return next;
+    });
+  }, []);
+
+  const movePlayerDown = useCallback((id: string) => {
+    setPlayers(prev => {
+      const idx = prev.findIndex(p => p.id === id);
+      if (idx >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      return next;
+    });
+  }, []);
+
   // Phase management
   const addPhase = useCallback(() => {
     setPhases(prev => [...prev, { localId: `new-${Date.now()}`, phaseName: '' }]);
@@ -176,21 +212,21 @@ export function SessionWizardMobile({
         gameId: selectedGameId ?? undefined,
       });
 
-      // 2. Add all players with error recovery
-      const addedPlayers: string[] = [];
+      // 2. Add all players in turn order — collect returned playerIds
+      const addedPlayerIds: string[] = [];
       for (const player of players) {
         try {
-          await api.liveSessions.addPlayer(sessionId, {
+          const playerId = await api.liveSessions.addPlayer(sessionId, {
             displayName: player.displayName,
             color: player.color,
           });
-          addedPlayers.push(player.displayName);
+          addedPlayerIds.push(playerId);
         } catch (playerErr) {
           const failedName = player.displayName;
-          const remaining = players.length - addedPlayers.length;
+          const remaining = players.length - addedPlayerIds.length;
           const msg = playerErr instanceof Error ? playerErr.message : 'Errore aggiunta giocatore';
           setError(
-            `Errore aggiungendo "${failedName}" (${addedPlayers.length}/${players.length} aggiunti). ${msg}. ` +
+            `Errore aggiungendo "${failedName}" (${addedPlayerIds.length}/${players.length} aggiunti). ${msg}. ` +
               (remaining > 1 ? `${remaining - 1} giocatori restanti non aggiunti.` : '')
           );
           router.push(`/sessions/live/${sessionId}`);
@@ -198,7 +234,16 @@ export function SessionWizardMobile({
         }
       }
 
-      // 3. Configure phases if any selected
+      // 3. Set turn order — order of addedPlayerIds matches user-defined order from step 3
+      if (addedPlayerIds.length > 1) {
+        try {
+          await api.liveSessions.updateTurnOrder(sessionId, { playerIds: addedPlayerIds });
+        } catch {
+          // Non-blocking — session proceeds with default order
+        }
+      }
+
+      // 4. Configure phases if any defined
       const validPhases = phases.filter(p => p.phaseName.trim().length > 0);
       if (validPhases.length > 0) {
         try {
@@ -206,11 +251,11 @@ export function SessionWizardMobile({
             phaseNames: validPhases.map(p => p.phaseName.trim()),
           });
         } catch {
-          // Non-blocking — session can still be played without phases
+          // Non-blocking
         }
       }
 
-      // 4. Navigate to live session
+      // 5. Navigate to live session
       router.push(`/sessions/live/${sessionId}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Errore nella creazione della sessione';
@@ -228,26 +273,28 @@ export function SessionWizardMobile({
     <div className="flex flex-col min-h-[60vh]">
       {/* Progress dots */}
       <div className="flex items-center justify-center gap-3 py-4">
-        {([1, 2, 3, 4] as WizardStep[]).map(s => {
+        {([1, 2, 3, 4, 5] as WizardStep[]).map(s => {
           const Icon = STEP_ICONS[s];
           const isActive = s === step;
-          const isDone = s < step;
+          const isDone = s < step || (s === 1 && !!prefilledGameId);
           return (
             <button
               key={s}
               onClick={() => {
+                if (s === 1 && !!prefilledGameId) return;
                 if (s < step) setStep(s);
               }}
               disabled={s > step}
               className={cn(
                 'flex items-center justify-center h-10 w-10 rounded-full transition-all',
                 isActive && 'bg-amber-500 text-white shadow-md scale-110',
-                isDone && 'bg-amber-500/20 text-amber-600',
-                !isActive && !isDone && 'bg-slate-200 dark:bg-slate-700 text-slate-400'
+                isDone && !isActive && 'bg-amber-500/20 text-amber-600',
+                !isActive && !isDone && 'bg-slate-200 dark:bg-slate-700 text-slate-400',
+                s === 1 && !!prefilledGameId && 'opacity-50'
               )}
               aria-label={`Passo ${s}`}
             >
-              {isDone ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+              {isDone && !isActive ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
             </button>
           );
         })}
@@ -347,6 +394,19 @@ export function SessionWizardMobile({
               </p>
             </div>
 
+            {/* Context pill — gioco pre-selezionato */}
+            {prefilledGameId && selectedGameName && (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 py-2">
+                <Gamepad2 className="h-4 w-4 text-amber-500 shrink-0" />
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                    Gioco selezionato
+                  </p>
+                  <p className="text-sm font-semibold text-amber-400">{selectedGameName}</p>
+                </div>
+              </div>
+            )}
+
             {/* Player list */}
             <div className="space-y-2" role="list" aria-label="Lista giocatori">
               {players.map(player => {
@@ -440,8 +500,104 @@ export function SessionWizardMobile({
           </div>
         )}
 
-        {/* ——— Step 3: Configure Phases ——— */}
+        {/* ——— Step 3: Ordine Turni ——— */}
         {step === 3 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-bold font-quicksand">Ordine turni</h2>
+              <p className="text-sm text-muted-foreground">
+                Chi gioca per primo? Usa le frecce per riordinare.
+              </p>
+            </div>
+
+            <div className="space-y-2" role="list" aria-label="Ordine dei turni">
+              {players.map((player, index) => {
+                const colorInfo = COLOR_PALETTE.find(c => c.value === player.color);
+                const isFirst = index === 0;
+                const isLast = index === players.length - 1;
+                return (
+                  <div
+                    key={player.id}
+                    role="listitem"
+                    className={cn(
+                      'flex items-center gap-3 rounded-xl border p-3 transition-colors',
+                      isFirst ? 'border-amber-500/40 bg-amber-500/5' : 'border-border bg-card'
+                    )}
+                  >
+                    {/* Position badge */}
+                    <span className="text-xs font-bold text-amber-500 w-5 shrink-0 text-center">
+                      {index + 1}°
+                    </span>
+
+                    {/* Color dot */}
+                    <div
+                      className={cn(
+                        'h-7 w-7 rounded-full shrink-0',
+                        colorInfo?.className ?? 'bg-gray-400'
+                      )}
+                    />
+
+                    {/* Name */}
+                    <span className="flex-1 font-medium text-sm truncate">
+                      {player.displayName}
+                    </span>
+
+                    {/* Reorder buttons */}
+                    <div className="flex flex-col gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        disabled={isFirst}
+                        onClick={() => movePlayerUp(player.id)}
+                        aria-label={`Sposta in alto ${player.displayName}`}
+                        className={cn(
+                          'p-1 rounded transition-colors',
+                          isFirst
+                            ? 'opacity-20 cursor-not-allowed text-muted-foreground'
+                            : 'text-muted-foreground hover:bg-white/10 hover:text-white'
+                        )}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isLast}
+                        onClick={() => movePlayerDown(player.id)}
+                        aria-label={`Sposta in basso ${player.displayName}`}
+                        className={cn(
+                          'p-1 rounded transition-colors',
+                          isLast
+                            ? 'opacity-20 cursor-not-allowed text-muted-foreground'
+                            : 'text-muted-foreground hover:bg-white/10 hover:text-white'
+                        )}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {players.length === 1 && (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                Un solo giocatore — ordine non applicabile.
+              </p>
+            )}
+
+            {/* Navigation */}
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
+                Indietro
+              </Button>
+              <GradientButton fullWidth size="lg" onClick={() => setStep(4)} className="flex-1">
+                Avanti
+              </GradientButton>
+            </div>
+          </div>
+        )}
+
+        {/* ——— Step 4: Configure Phases ——— */}
+        {step === 4 && (
           <div className="space-y-4">
             <div>
               <h2 className="text-lg font-bold font-quicksand">Configura le fasi</h2>
@@ -504,18 +660,18 @@ export function SessionWizardMobile({
 
             {/* Navigation */}
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
+              <Button variant="outline" className="flex-1" onClick={() => setStep(3)}>
                 Indietro
               </Button>
-              <GradientButton fullWidth size="lg" onClick={() => setStep(4)} className="flex-1">
+              <GradientButton fullWidth size="lg" onClick={() => setStep(5)} className="flex-1">
                 {phases.filter(p => p.phaseName.trim()).length > 0 ? 'Avanti' : 'Salta'}
               </GradientButton>
             </div>
           </div>
         )}
 
-        {/* ——— Step 4: Ready ——— */}
-        {step === 4 && (
+        {/* ——— Step 5: Ready ——— */}
+        {step === 5 && (
           <div className="space-y-6">
             <div>
               <h2 className="text-lg font-bold font-quicksand">Tutto pronto!</h2>
@@ -559,6 +715,33 @@ export function SessionWizardMobile({
                 </div>
               </div>
 
+              {/* Turn order summary */}
+              {players.length > 1 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Ordine turni</p>
+                  <div className="flex flex-wrap gap-2">
+                    {players.map((player, index) => {
+                      const colorInfo = COLOR_PALETTE.find(c => c.value === player.color);
+                      return (
+                        <div
+                          key={player.id}
+                          className="flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1"
+                        >
+                          <span className="text-[10px] font-bold text-amber-500">{index + 1}°</span>
+                          <div
+                            className={cn(
+                              'h-2.5 w-2.5 rounded-full',
+                              colorInfo?.className ?? 'bg-gray-400'
+                            )}
+                          />
+                          <span className="text-xs font-medium">{player.displayName}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Phases (if any) */}
               {phases.filter(p => p.phaseName.trim()).length > 0 && (
                 <div>
@@ -590,7 +773,7 @@ export function SessionWizardMobile({
 
             {/* Actions */}
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(3)}>
+              <Button variant="outline" className="flex-1" onClick={() => setStep(4)}>
                 Indietro
               </Button>
               <GradientButton

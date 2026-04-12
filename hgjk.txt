@@ -1,0 +1,108 @@
+❯ 
+/superpowers:using-superpowers ultrathink /sc:spec-panel Dopo aver avviato l'applicazione sul mio smartphone, voglio avviare
+una "game night", io e i miei 2 amici vogliamo giocare a una serie di giochi e usare l'applicazione per:
+1) Tenere il punteggio, le fasi, i turni del boardgame che stiamo facendo. Capita che si fanno delle pause durante il gioco e 
+ci si dimentica dello stato della partita.La complessita' dello stato della partita dipende dal boardgame: per alcuni giochi 
+si richiede di registrare l'informazione "giocatore di turno", altri lo stato del giocatore (risorse, scheda personaggio,mappa 
+partita)
+2) Avere un agente per il gioco a cui chiedere "Come eseguire il setup del gioco?" "Spiegami le regole del gioco" o eseguire
+dispute tra giocatori (chi ha ragione?)
+3) Avere dei strumenti digitali al posto degli elementi del gioco (Dadi,carte,carta e penna,etc..) e poterli usare (tirare 
+dadi, pescare carte, etc...)
+4) Avere un registro automatico , un diario della game night e la possibilita' di associare foto.
+
+Selezioniamo un gioco che abbia un pdf indicizzato e avviamo la game night (sessione) con quel gioco.
+
+
+❯ /superpowers:using-superpowers ultrathink /sc:spec-panel Dopo aver avviato l'applicazione sul mio smartphone, scorro tra i 
+ giochi della mia libreria. Ogni schermata e' una MeepleCard, a colpo d'occhio con i ManaPips, le icone e altre informazioni 
+ della MeepleCard caspico in quanti giocatori si puo' giocare, le meccaniche del gioco, la difficolta'/complessita',la       
+durata e il punteggio del gioco. In basso alla MeepleCard riesco a capire dai ManaPips a cosa e' collegata la MeepleCard. Se 
+ vedo il ManaPip di tipo KnowledgeBase, significa che almeno un pdf di regole e' stato indicizzato, quindi posso usare un    
+agente per fargli delle domande. Clicco sul manapip KB e vedo i regolamenti associati. Decido di aggiungere un gioco alla    
+mia libreria e cerco tra i shared games. Come per la libreria, scorro tra le MeepleCard shared game e aggiungo un gioco alla 
+ mia libreria. Dopo averlo aggiunto, atterro sulla mia libreria e sulla MeepleCard del gioco appena aggiunto. Da qua, avvio  
+una chat con un agente che usa le KB di questa MeepleCard come rag. Se il gioco ha piu' KB card collegate, l'agente potra'   
+utilizzare una KB di tipo regole (selezionando la versione, nel caso di regolamenti multipli) e selezionare le altre KB
+
+ /superpowers:using-superpowers ultrathink /sc:spec-panel
+ abbiamo una lista di board game,
+ Town folks Tussle
+ Blueprint
+ Massive Darkness
+ Iss Vanguards
+ Mage Knight
+ Nanolith
+ DarkSoul
+ Rone invasion
+ Frost Punk
+ Rise of sovereigns
+ Street Fighter 5
+ BattleStar galactica e espansione Exodus
+ Dominion
+ Marvel Champion
+ Paleo
+ Leviatan Winds
+ Marvel United
+ Barrage
+ Master of the universe - Fields
+ Possiedo questi giochi, avvio l'app per la prima volta.
+ L'app e' stata seedata.
+ 
+ Quali di questi giochi ha i vettori indicizzati dopo il seed?
+ Aggiungo tutti i giochi che trovo alla mia collection
+
+
+Questi sono i giochi che possiedo,se presenti li aggiungo
+alla mia libreria. posso avere accesso completo ai pdf privatamente (sono il SuperAdmin).
+
+ Per ogniuno cerca il regolamento in inglese o in italiano , i metadati e crea un SharedGame.
+ Per ogniuno scarica il regolamento pdf e salvalo in data/rulebooks. 
+ Per ogni regolamento scaricato, avvia l'embeeding e indicizzazione.
+ Assicurati di ricevere notifica quano un pdf ha finito di indicizzarsi in-app.
+ Al termine crea crea sessione "game night" con un gioco con KB indicizzato.
+
+  
+
+  I seguenti scenari richiedono verifica manuale:
+
+  1. Wizard game selector mostra badge AI pronto (verde) / Solo manuale (grigio)
+  2. Selezione gioco non indicizzato → warning amber inline visible, button "Continua" enabled
+  3. Navigazione a /sessions/live/<id>/photos, scatta foto via file picker mobile
+  4. Refresh pagina → foto ancora presente (IndexedDB persistence)
+  5. Delete foto → rimossa da grid
+  6. Cambio sessionId → foto precedenti non in memoria (URL revocati)
+
+  Azione consigliata: Testare manualmente in Chrome DevTools mobile mode dopo il merge della PR nel branch di dev. Tutto il
+  comportamento è coperto da test automatici, quindi il rischio di regressione visuale è limitato a styling/layout non
+  coperto dagli unit test.
+
+/superpowers:using-superpowers ultrathink /sc:spec-panel 
+Voglio definire le pagine dell'app per un utente. Il lavoro e' terminato quando il risultato 
+e' lo stesso dei mock che vengono richiamati in seguito
+- la actionbar (in basso), ha Dashboard (home), Collection, Agent chat, Session e Toolkit. 
+Nel mobile sono rappresentati da iconta.
+- La dashboard ha 4 sezioni: Collection Game Card, Session Card, Shared Game Card e Chat Card, dove 
+di mostrano le ultime card aggiunte/create/visitate (dipende dal tipo) e si possono visualizzare
+in griglia, lista o carosello
+- La ricerca c'e' in tutte le pagine (dashboard,collection,agent,session,toolkit), ma in dashboard
+ricerca ovunque.Collection mostra la propria collezzione e i shared game
+- ogni tipo di entita' ha una pagina, si visualizzano in
+ /admin-mockups/meeple-card-drawer-tabs-mockup.html.
+- la pagina di una entita' E' definita in /admin-mockups/mobile-card-layout-mockup.html ,
+una MeepleCard centrale (la tipologia dipende dalla risoluzione del device,
+ Featured/carousel view, Grid View - Full MeepleCard Feature o 
+ /admin-mockups/mobile-card-entity-types.html)
+- i colori che definiscono dettagli delle icone, delle pagine sono definite in
+ /admin-mockups/meeple-card-summary-render.html
+- ogni tipi di entita' ha un drawer definito in 
+/admin-mockups/meeple-card-drawer-tabs-mockup.html
+
+
+/superpowers:using-superpowers ultrathink /sc:spec-panel basandoti sul wireframe layou
+ attuale e gli elementi ui definiti nei file in @admin-mockups testiamo la UX user su desktop.
+  Usa le reali pagine ma con risposte mock, cosi' da avere un test piu' realistico possibile, 
+  in ambiente dev. Definisci le pagine raggiungibili da un utente, mostra un mock, dopo mia
+   conferma implementalo, esegui screenshot per validare mock = implementazione
+
+   

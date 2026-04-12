@@ -3,12 +3,11 @@
 import {
   BarChart3,
   ChevronLeft,
+  Dices,
   Home,
   Library,
   MessageCircle,
   MoreHorizontal,
-  Search,
-  User,
   Wrench,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -20,10 +19,10 @@ import { cn } from '@/lib/utils';
 
 const NORMAL_TABS = [
   { href: '/dashboard', icon: Home, label: 'Home' },
-  { href: '/discover', icon: Search, label: 'Cerca' },
-  { href: '/library', icon: Library, label: 'Libreria' },
-  { href: '/chat', icon: MessageCircle, label: 'Chat' },
-  { href: '/profile', icon: User, label: 'Profilo' },
+  { href: '/library', icon: Library, label: 'Collection' },
+  { href: '/agents', icon: MessageCircle, label: 'Agent Chat' },
+  { href: '/sessions', icon: Dices, label: 'Sessions' },
+  { href: '/toolkit', icon: Wrench, label: 'Toolkit' },
 ] as const;
 
 export function MobileBottomBar() {

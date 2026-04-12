@@ -24,8 +24,8 @@ describe('MobileBottomBar', () => {
     } as never);
     render(<MobileBottomBar />);
     expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Libreria')).toBeInTheDocument();
-    expect(screen.getByText('Chat')).toBeInTheDocument();
+    expect(screen.getByText('Collection')).toBeInTheDocument();
+    expect(screen.getByText('Sessions')).toBeInTheDocument();
   });
 
   it('renders session mode when session is active', () => {
@@ -35,6 +35,6 @@ describe('MobileBottomBar', () => {
     } as never);
     render(<MobileBottomBar />);
     expect(screen.getByText('Classifica')).toBeInTheDocument();
-    expect(screen.queryByText('Libreria')).not.toBeInTheDocument();
+    expect(screen.queryByText('Collection')).not.toBeInTheDocument();
   });
 });

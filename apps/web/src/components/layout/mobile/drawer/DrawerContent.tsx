@@ -1,24 +1,36 @@
-'use client';
-
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
+
+import { AgentDrawerContent } from './AgentDrawerContent';
+import { ChatDrawerContent } from './ChatDrawerContent';
+import { GameDrawerContent } from './GameDrawerContent';
+import { KbDrawerContent } from './KbDrawerContent';
+import { PlayerDrawerContent } from './PlayerDrawerContent';
+import { SessionDrawerContent } from './SessionDrawerContent';
 
 interface DrawerContentProps {
   entityType: MeepleEntityType;
   entityId: string;
   activeTab?: string;
-  onNavigate?: () => void;
+  onNavigate: () => void;
 }
 
-/**
- * DrawerContent renders entity-specific content inside HandDrawer.
- * Fully implemented in Task 3 — this is the base stub.
- */
 export function DrawerContent({ entityType, entityId, activeTab, onNavigate }: DrawerContentProps) {
-  return (
-    <div className="flex-1 overflow-y-auto p-4">
-      <p className="text-white/40 text-sm">
-        {entityType} — {entityId}
-      </p>
-    </div>
-  );
+  const props = { entityId, activeTab, onNavigate };
+
+  switch (entityType) {
+    case 'game':
+      return <GameDrawerContent {...props} />;
+    case 'player':
+      return <PlayerDrawerContent {...props} />;
+    case 'session':
+      return <SessionDrawerContent {...props} />;
+    case 'agent':
+      return <AgentDrawerContent {...props} />;
+    case 'kb':
+      return <KbDrawerContent {...props} />;
+    case 'chat':
+      return <ChatDrawerContent {...props} />;
+    default:
+      return null;
+  }
 }

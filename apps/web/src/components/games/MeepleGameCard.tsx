@@ -77,6 +77,7 @@ export function MeepleGameCard({
   const entityActions = useEntityActions({
     entity: 'game',
     id: game.id,
+    entityName: game.title,
     onCreateAgent: handleCreateAgent,
     onAddToCollection: handleAddToCollection,
   });

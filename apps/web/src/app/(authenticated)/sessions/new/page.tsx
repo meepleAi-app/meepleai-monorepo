@@ -7,11 +7,11 @@
  * Issue #123 — Game Night Quick Start Wizard entry point
  * Phase 5: Game Night — Task 3 (SessionWizardMobile on mobile)
  *
- * Shows "Serata di Gioco" quick start option + existing 4-step wizard.
+ * Shows "Serata di Gioco" quick start option + existing 5-step wizard.
  * On mobile (<lg), renders the simplified SessionWizardMobile instead.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, Suspense } from 'react';
 
 import { PartyPopper } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -22,12 +22,18 @@ import { Button } from '@/components/ui/primitives/button';
 
 import { SessionWizardMobile } from './session-wizard-mobile';
 
-export default function NewSessionPage() {
-  const [showWizard, setShowWizard] = useState(false);
-  const router = useRouter();
+function MobileWizardSection() {
   const searchParams = useSearchParams();
   const prefilledGameId = searchParams.get('gameId') ?? undefined;
   const prefilledGameName = searchParams.get('gameName') ?? undefined;
+  return (
+    <SessionWizardMobile prefilledGameId={prefilledGameId} prefilledGameName={prefilledGameName} />
+  );
+}
+
+export default function NewSessionPage() {
+  const [showWizard, setShowWizard] = useState(false);
+  const router = useRouter();
 
   const handleWizardComplete = useCallback(
     (sessionId: string) => {
@@ -38,12 +44,11 @@ export default function NewSessionPage() {
 
   return (
     <>
-      {/* Mobile: simplified 3-step wizard */}
+      {/* Mobile: simplified 5-step wizard */}
       <div className="lg:hidden container mx-auto px-4 py-6">
-        <SessionWizardMobile
-          prefilledGameId={prefilledGameId}
-          prefilledGameName={prefilledGameName}
-        />
+        <Suspense fallback={null}>
+          <MobileWizardSection />
+        </Suspense>
       </div>
 
       {/* Desktop: full wizard */}

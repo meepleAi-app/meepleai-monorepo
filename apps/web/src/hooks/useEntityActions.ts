@@ -96,7 +96,7 @@ export interface EntityActions {
 export function useEntityActions({
   entity,
   id,
-  entityName: _entityName,
+  entityName,
   userId,
   userRole = 'user',
   data,
@@ -188,7 +188,9 @@ export function useEntityActions({
               label: 'Avvia Sessione',
               onClick: () =>
                 isAuthenticated
-                  ? router.push(`/sessions/new?gameId=${id}`)
+                  ? router.push(
+                      `/sessions/new?gameId=${encodeURIComponent(id)}${entityName ? `&gameName=${encodeURIComponent(entityName)}` : ''}`
+                    )
                   : router.push('/login?reason=session'),
             },
             {

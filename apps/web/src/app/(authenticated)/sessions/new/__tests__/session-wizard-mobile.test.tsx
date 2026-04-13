@@ -112,6 +112,12 @@ describe('SessionWizardMobile — S2: step ordine turni', () => {
 
   it('la summary mostra la sezione ordine turni con badge numerati', () => {
     render(<SessionWizardMobile prefilledGameId="game-abc" prefilledGameName="Catan" />);
+
+    // Aggiungi secondo giocatore (la sezione ordine turni in summary richiede players.length > 1)
+    const nameInput = screen.getByLabelText('Nome nuovo giocatore');
+    fireEvent.change(nameInput, { target: { value: 'Bob' } });
+    fireEvent.click(screen.getByText('Aggiungi'));
+
     // step 2 → Avanti (step 3)
     fireEvent.click(screen.getByText('Avanti'));
     // step 3 → Avanti (step 4 — fasi)

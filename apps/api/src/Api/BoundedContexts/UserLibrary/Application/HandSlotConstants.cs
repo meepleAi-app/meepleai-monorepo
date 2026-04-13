@@ -12,9 +12,9 @@ internal static class HandSlotConstants
         new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
             ["toolkit"] = ["toolkit"],
-            ["game"]    = ["game"],
+            ["game"] = ["game"],
             ["session"] = ["session"],
-            ["ai"]      = ["agent"]
+            ["ai"] = ["agent"]
         };
 
     /// <summary>All valid slot types in display order.</summary>

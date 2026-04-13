@@ -24,14 +24,7 @@
 
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useCallback,
-  useMemo,
-  useReducer,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useCallback, useMemo, useReducer, type ReactNode } from 'react';
 
 import { useResponsive } from '@/hooks/useResponsive';
 import type {
@@ -252,10 +245,7 @@ interface LayoutProviderProps {
  * Wraps the application to provide layout state management.
  * Must be placed within the component tree where layout state is needed.
  */
-export function LayoutProvider({
-  children,
-  initialContext = 'default',
-}: LayoutProviderProps) {
+export function LayoutProvider({ children, initialContext = 'default' }: LayoutProviderProps) {
   // Get responsive state from hook
   const responsive = useResponsive();
 
@@ -370,11 +360,7 @@ export function LayoutProvider({
     ]
   );
 
-  return (
-    <LayoutReactContext.Provider value={contextValue}>
-      {children}
-    </LayoutReactContext.Provider>
-  );
+  return <LayoutReactContext.Provider value={contextValue}>{children}</LayoutReactContext.Provider>;
 }
 
 /**
@@ -451,24 +437,4 @@ export function useLayoutMultiSelect() {
     clearSelection,
     selectAll,
   };
-}
-
-/**
- * Hook to set layout context on mount
- *
- * @param context - Layout context to set
- *
- * @example
- * ```tsx
- * // In a page component
- * useLayoutContext('library');
- * ```
- */
-export function useLayoutContext(context: LayoutContext) {
-  const { setContext } = useLayout();
-
-  // Set context on mount
-  useMemo(() => {
-    setContext(context);
-  }, [context, setContext]);
 }

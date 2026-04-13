@@ -15,6 +15,8 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Handler for SeedBadswormUserCommand.
 /// Creates demo user (badsworm@alice.it) with password from SEED_BADSWORM_PASSWORD secret.
 /// Idempotent: Only executes if user doesn't exist.
+/// Runs in all environments (Dev, Staging, Prod) when SEED_BADSWORM_PASSWORD secret is present.
+/// Remove or leave the secret absent in environments where this account should not exist.
 /// </summary>
 internal sealed class SeedBadswormUserCommandHandler : ICommandHandler<SeedBadswormUserCommand>
 {
@@ -69,7 +71,7 @@ internal sealed class SeedBadswormUserCommandHandler : ICommandHandler<SeedBadsw
             passwordHash: PasswordHash.Create(password),
             role: Role.User
         );
-        user.VerifyEmail();
+        user.VerifyEmail(); // Developer account: pre-verified, no email flow required
 
         await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

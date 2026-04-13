@@ -66,10 +66,10 @@ fi
 echo "🔨 Verifying frontend builds..."
 
 if [ -d "apps/web" ]; then
-  (cd apps/web && pnpm build) || {
+  (cd apps/web && NODE_OPTIONS='--max-old-space-size=4096' pnpm build) || {
     # Retry after cleaning stale lock
     rm -f apps/web/.next/lock
-    (cd apps/web && pnpm build) || {
+    (cd apps/web && NODE_OPTIONS='--max-old-space-size=4096' pnpm build) || {
       echo ""
       echo "❌ Frontend build failed. Please fix build errors before pushing."
       echo ""

@@ -73,8 +73,28 @@ do_start() {
         exit 1
     fi
 
-    echo "  PostgreSQL container IP: $POSTGRES_IP"
-    echo "  Redis container IP:      $REDIS_IP"
+    # AI services also run inside Docker without host port-binding — resolve their IPs too
+    EMBEDDING_IP=$(resolve_container_ip meepleai-embedding)
+    RERANKER_IP=$(resolve_container_ip meepleai-reranker)
+    UNSTRUCTURED_IP=$(resolve_container_ip meepleai-unstructured)
+    SMOLDOCLING_IP=$(resolve_container_ip meepleai-smoldocling)
+    OLLAMA_IP=$(resolve_container_ip meepleai-ollama)
+    N8N_IP=$(resolve_container_ip meepleai-n8n)
+    GRAFANA_IP=$(resolve_container_ip meepleai-grafana)
+    PROMETHEUS_IP=$(resolve_container_ip meepleai-prometheus)
+    ORCHESTRATOR_IP=$(resolve_container_ip meepleai-orchestrator)
+
+    echo "  PostgreSQL container IP:  $POSTGRES_IP"
+    echo "  Redis container IP:       $REDIS_IP"
+    echo "  Embedding container IP:   ${EMBEDDING_IP:-NOT FOUND}"
+    echo "  Reranker container IP:    ${RERANKER_IP:-NOT FOUND}"
+    echo "  Unstructured container IP:${UNSTRUCTURED_IP:-NOT FOUND}"
+    echo "  SmolDocling container IP: ${SMOLDOCLING_IP:-NOT FOUND}"
+    echo "  Ollama container IP:      ${OLLAMA_IP:-NOT FOUND}"
+    echo "  N8N container IP:         ${N8N_IP:-NOT FOUND}"
+    echo "  Grafana container IP:     ${GRAFANA_IP:-NOT FOUND}"
+    echo "  Prometheus container IP:  ${PROMETHEUS_IP:-NOT FOUND}"
+    echo "  Orchestrator container IP:${ORCHESTRATOR_IP:-NOT FOUND}"
     echo ""
     echo "Opening SSH tunnels to staging..."
 
@@ -88,15 +108,15 @@ do_start() {
       -i "$SSH_KEY" \
       -L 25432:${POSTGRES_IP}:5432 \
       -L 26379:${REDIS_IP}:6379 \
-      -L 18000:localhost:8000 \
-      -L 18001:localhost:8001 \
-      -L 18002:localhost:8002 \
-      -L 18003:localhost:8003 \
-      -L 21434:localhost:11434 \
-      -L 15678:localhost:5678 \
-      -L 13001:localhost:3001 \
-      -L 19090:localhost:9090 \
-      -L 18004:localhost:8004 \
+      -L 18000:${EMBEDDING_IP:-localhost}:8000 \
+      -L 18001:${UNSTRUCTURED_IP:-localhost}:8001 \
+      -L 18002:${SMOLDOCLING_IP:-localhost}:8002 \
+      -L 18003:${RERANKER_IP:-localhost}:8003 \
+      -L 21434:${OLLAMA_IP:-localhost}:11434 \
+      -L 15678:${N8N_IP:-localhost}:5678 \
+      -L 13001:${GRAFANA_IP:-localhost}:3000 \
+      -L 19090:${PROMETHEUS_IP:-localhost}:9090 \
+      -L 18004:${ORCHESTRATOR_IP:-localhost}:8004 \
       "$STAGING_HOST"
 
     echo "Tunnels established:"

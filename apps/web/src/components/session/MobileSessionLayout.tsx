@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 
+import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
+
 import { ActivityFeed } from './ActivityFeed';
 import { ActivityFeedInputBar } from './ActivityFeedInputBar';
-import { BottomSheet } from './BottomSheet';
 import { MobileScorebar } from './MobileScorebar';
 import { MobileStatusBar } from './MobileStatusBar';
 
@@ -47,13 +48,13 @@ export function MobileSessionLayout({
         onAIClick={() => setAISheetOpen(true)}
       />
 
-      <BottomSheet isOpen={diceSheetOpen} onClose={() => setDiceSheetOpen(false)} title="Dadi">
+      <BottomSheet open={diceSheetOpen} onOpenChange={setDiceSheetOpen} title="Dadi">
         <p className="text-sm text-muted-foreground p-4">Lancio dadi in arrivo</p>
       </BottomSheet>
-      <BottomSheet isOpen={cameraSheetOpen} onClose={() => setCameraSheetOpen(false)} title="Foto">
+      <BottomSheet open={cameraSheetOpen} onOpenChange={setCameraSheetOpen} title="Foto">
         <p className="text-sm text-muted-foreground p-4">Fotocamera in arrivo</p>
       </BottomSheet>
-      <BottomSheet isOpen={aiSheetOpen} onClose={() => setAISheetOpen(false)} title="AI Assistente">
+      <BottomSheet open={aiSheetOpen} onOpenChange={setAISheetOpen} title="AI Assistente">
         <p className="text-sm text-muted-foreground p-4">Assistente AI in arrivo</p>
       </BottomSheet>
     </div>

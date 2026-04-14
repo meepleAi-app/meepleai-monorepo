@@ -437,5 +437,6 @@ export function useEntityActions({
     removeFromGenericCollection,
     onCreateAgent,
     onAddToCollection,
+    entityName,
   ]);
 }

@@ -91,6 +91,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const voicePrefs = useVoicePreferencesStore();
   const lastMessageWasVoiceRef = useRef(false);
   const handleSendRef = useRef<((content?: string) => void) | undefined>(undefined);
+  const qaAbortRef = useRef<AbortController | null>(null);
 
   const {
     state: voiceState,
@@ -174,6 +175,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamState.currentAnswer, scrollToBottom]);
+
+  // Abort QA stream on unmount
+  useEffect(
+    () => () => {
+      qaAbortRef.current?.abort();
+    },
+    []
+  );
 
   // Load thread data
   useEffect(() => {
@@ -294,6 +303,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         setMessages(prev => [...prev, assistantMessage]);
 
         const abortController = new AbortController();
+        qaAbortRef.current = abortController;
         let finalAnswer = '';
         let citations: unknown[] = [];
         let followUpQuestions: string[] = [];
@@ -343,7 +353,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 // Error
                 const data = event.data as { message?: string };
                 setError(data?.message ?? 'Errore nella risposta AI');
-                break;
+                abortController.abort();
+                return;
               }
               case 0: // StateUpdate — ignore for now
               default:

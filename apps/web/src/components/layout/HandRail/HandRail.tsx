@@ -25,19 +25,19 @@ export function HandRail() {
       className={cn(
         'hidden md:flex flex-col flex-shrink-0',
         'h-[calc(100dvh-56px)] sticky top-[56px]',
-        'bg-[hsl(220,15%,11%)] border-r border-white/5',
+        'bg-[var(--bg-base)]/95 border-r border-[var(--border-glass)]',
         'transition-[width] duration-200 ease-out overflow-hidden',
         expanded ? 'w-[200px]' : 'w-[64px]'
       )}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >
-      <div className="flex flex-col gap-1 p-[5px] flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex flex-col gap-1 p-2 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {pinned.length > 0 && (
           <>
             <span
               className={cn(
-                'text-[7.5px] font-[800] tracking-[0.1em] uppercase text-white/28 px-[3px] mt-1',
+                'text-[7.5px] font-[800] tracking-[0.1em] uppercase text-[var(--text-tertiary)] px-[3px] mt-1',
                 'transition-opacity duration-150',
                 expanded ? 'opacity-100' : 'opacity-0'
               )}
@@ -52,7 +52,7 @@ export function HandRail() {
                 active={pathname === card.href || pathname.startsWith(card.href + '/')}
               />
             ))}
-            <div className="h-px bg-white/5 my-1" />
+            <div className="h-px bg-[var(--border-glass)] my-1" />
           </>
         )}
 
@@ -60,7 +60,7 @@ export function HandRail() {
           <>
             <span
               className={cn(
-                'text-[7.5px] font-[800] tracking-[0.1em] uppercase text-white/28 px-[3px]',
+                'text-[7.5px] font-[800] tracking-[0.1em] uppercase text-[var(--text-tertiary)] px-[3px]',
                 'transition-opacity duration-150',
                 expanded ? 'opacity-100' : 'opacity-0'
               )}

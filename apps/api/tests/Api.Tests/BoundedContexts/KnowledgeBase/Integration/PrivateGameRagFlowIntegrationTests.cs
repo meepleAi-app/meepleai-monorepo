@@ -115,7 +115,8 @@ public sealed class PrivateGameRagFlowIntegrationTests : IDisposable
             .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        var handler = new CreateChatThreadCommandHandler(mockRepo.Object, mockUow.Object);
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var handler = new CreateChatThreadCommandHandler(mockRepo.Object, mockUow.Object, db);
         var command = new CreateChatThreadCommand(
             UserId: userId,
             PrivateGameId: privateGameId,

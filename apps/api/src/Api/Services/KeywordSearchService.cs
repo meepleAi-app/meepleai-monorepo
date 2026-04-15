@@ -50,6 +50,7 @@ internal class KeywordSearchService : IKeywordSearchService
         bool phraseSearch = false,
         List<string>? boostTerms = null,
         string language = "it",
+        double minScore = 0.0,
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation
@@ -83,19 +84,24 @@ internal class KeywordSearchService : IKeywordSearchService
 
             // Execute PostgreSQL full-text search with ts_rank_cd scoring
             // Using FromSqlRaw for complex tsvector queries (EF Core limitation with tsvector operators)
+            // Issue #423: Add minScore filter to exclude low-relevance keyword matches (e.g., ToC entries)
+            // Perf: subquery avoids double ts_rank_cd evaluation (computed once in inner SELECT, filtered in outer WHERE)
             var sql = @"
-                SELECT
-                    ""Id"",
-                    ""Content"",
-                    ""PdfDocumentId"",
-                    ""GameId"",
-                    ""ChunkIndex"",
-                    ""PageNumber"",
-                    ts_rank_cd(search_vector, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
-                FROM text_chunks
-                WHERE
-                    ""GameId"" = @gameId::uuid
-                    AND search_vector @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
+                SELECT * FROM (
+                    SELECT
+                        ""Id"",
+                        ""Content"",
+                        ""PdfDocumentId"",
+                        ""GameId"",
+                        ""ChunkIndex"",
+                        ""PageNumber"",
+                        ts_rank_cd(search_vector, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
+                    FROM text_chunks
+                    WHERE
+                        ""GameId"" = @gameId::uuid
+                        AND search_vector @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
+                ) ranked
+                WHERE ""RelevanceScore"" >= @minScore
                 ORDER BY ""RelevanceScore"" DESC
                 LIMIT @limit";
 
@@ -110,6 +116,7 @@ internal class KeywordSearchService : IKeywordSearchService
                     new NpgsqlParameter("@tsQuery", tsQuery),
                     new NpgsqlParameter("@normalization", DefaultNormalization),
                     new NpgsqlParameter("@gameId", gameIdString),
+                    new NpgsqlParameter("@minScore", minScore),
                     new NpgsqlParameter("@limit", safeLimit)) // Use capped limit
                 .AsNoTracking()
                 .ToListAsync(cancellationToken).ConfigureAwait(false);

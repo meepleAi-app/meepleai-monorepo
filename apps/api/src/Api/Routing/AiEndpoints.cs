@@ -43,6 +43,8 @@ internal static class AiEndpoints
 
         MapPlayerModeSuggestionEndpoint(group);
 
+        MapUserAgentSlotsEndpoint(group);
+
         // UI-01: Chat management endpoints
         return group;
     }
@@ -997,5 +999,33 @@ internal static class AiEndpoints
             await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
             await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
         }
+    }
+
+    // ─── Agent Slots ─────────────────────────────────────────────────────
+
+    private static void MapUserAgentSlotsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/user/agent-slots", HandleGetUserAgentSlots)
+            .WithName("GetUserAgentSlots")
+            .WithDescription("Get user's agent slot allocation and usage (Issue #4771)")
+            .WithTags("AI Agents")
+            .Produces<UserAgentSlotsDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireSession();
+    }
+
+    private static async Task<IResult> HandleGetUserAgentSlots(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
+        var userTier = session.User!.Tier;
+        var userRole = session.User!.Role;
+
+        var query = new GetUserAgentSlotsQuery(userId, userTier, userRole);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 }

@@ -27,33 +27,37 @@ internal class RrfFusionDomainService
         if (rrfK <= 0)
             throw new ArgumentException("RRF K must be positive", nameof(rrfK));
 
-        // Build dictionary of document ID -> RRF score
-        var rrfScores = new Dictionary<Guid, double>();
+        // Build dictionary of chunk key -> RRF score
+        // Key is composite (documentId:page:contentHash) so each unique chunk is ranked independently.
+        // Chunks from vector AND keyword search that share the same content fuse together correctly.
+        var rrfScores = new Dictionary<string, double>(StringComparer.Ordinal);
 
         // Add scores from vector results
         foreach (var result in vectorResults)
         {
+            var key = GetChunkKey(result);
             var score = 1.0 / (rrfK + result.Rank);
-            if (!rrfScores.TryGetValue(result.VectorDocumentId, out var existingScore))
-                rrfScores[result.VectorDocumentId] = score;
+            if (!rrfScores.TryGetValue(key, out var existingScore))
+                rrfScores[key] = score;
             else
-                rrfScores[result.VectorDocumentId] = existingScore + score;
+                rrfScores[key] = existingScore + score;
         }
 
         // Add scores from keyword results
         foreach (var result in keywordResults)
         {
+            var key = GetChunkKey(result);
             var score = 1.0 / (rrfK + result.Rank);
-            if (!rrfScores.TryGetValue(result.VectorDocumentId, out var existingScore))
-                rrfScores[result.VectorDocumentId] = score;
+            if (!rrfScores.TryGetValue(key, out var existingScore))
+                rrfScores[key] = score;
             else
-                rrfScores[result.VectorDocumentId] = existingScore + score;
+                rrfScores[key] = existingScore + score;
         }
 
         // Combine all results and re-rank by RRF score
         var allResults = vectorResults.Concat(keywordResults)
-            .GroupBy(r => r.VectorDocumentId)
-            .Select(g => g.First()) // Take first occurrence of each document
+            .GroupBy(r => GetChunkKey(r), StringComparer.Ordinal)
+            .Select(g => g.First()) // Take first occurrence of each unique chunk
             .ToList();
 
         // First, calculate RRF scores and sort by score
@@ -61,8 +65,8 @@ internal class RrfFusionDomainService
             .Select(result => new
             {
                 Result = result,
-                RrfScore = rrfScores[result.VectorDocumentId],
-                NormalizedScore = NormalizeRrfScore(rrfScores[result.VectorDocumentId])
+                RrfScore = rrfScores[GetChunkKey(result)],
+                NormalizedScore = NormalizeRrfScore(rrfScores[GetChunkKey(result)])
             })
             .OrderByDescending(x => x.NormalizedScore)
             .ToList();
@@ -81,6 +85,18 @@ internal class RrfFusionDomainService
             .ToList();
 
         return fusedResults;
+    }
+
+    /// <summary>
+    /// Generates a stable, chunk-level key for RRF fusion.
+    /// Uses a composite of VectorDocumentId + PageNumber + TextContent hash so that:
+    /// - the same chunk returned by both vector and keyword search fuses into one entry,
+    /// - different chunks from the same document (same VectorDocumentId) remain separate.
+    /// </summary>
+    private static string GetChunkKey(SearchResult result)
+    {
+        // Unique per chunk: same content from vector and keyword search should fuse
+        return $"{result.VectorDocumentId}:{result.PageNumber}:{result.TextContent.GetHashCode(StringComparison.Ordinal)}";
     }
 
     /// <summary>

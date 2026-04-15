@@ -27,7 +27,7 @@ export function AdminShell({ children }: AdminShellProps) {
   }, [setNavbarHeight]);
 
   return (
-    <div className="flex h-dvh bg-background">
+    <div className="flex h-dvh bg-[var(--bg-base)]">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:px-4 focus:py-2 focus:bg-background focus:text-foreground focus:rounded-md"
@@ -39,7 +39,7 @@ export function AdminShell({ children }: AdminShellProps) {
       <div className="flex flex-col flex-1 min-w-0">
         <header
           role="banner"
-          className="sticky top-0 z-40 h-[52px] flex items-center gap-3 px-4 border-b bg-background/95 backdrop-blur-md shrink-0"
+          className="sticky top-0 z-40 h-[52px] flex items-center gap-3 px-4 border-b border-[var(--border-glass)] bg-[var(--bg-elevated)]/95 backdrop-blur-[16px] shrink-0"
         >
           <button
             aria-label="Apri menu"

@@ -35,7 +35,6 @@ export { ScoreInput } from './ScoreInput';
 export { Scoreboard } from './Scoreboard';
 export { SessionDetailModal } from './SessionDetailModal';
 export { DiceRoller } from './DiceRoller';
-export { CardDeck } from './CardDeck';
 export { PrivateNotes } from './PrivateNotes';
 export { CountdownTimer } from './CountdownTimer';
 export { CoinFlip } from './CoinFlip';

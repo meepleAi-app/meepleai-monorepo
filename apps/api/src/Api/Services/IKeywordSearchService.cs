@@ -19,6 +19,7 @@ internal interface IKeywordSearchService
     /// <param name="phraseSearch">Enable exact phrase matching with proximity operators</param>
     /// <param name="boostTerms">Optional list of terms to boost in ranking (e.g., game-specific terminology)</param>
     /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
+    /// <param name="minScore">Minimum ts_rank_cd score threshold to filter low-relevance results (default: 0.0, no filtering)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of keyword search results with BM25-style relevance scores</returns>
     Task<List<KeywordSearchResult>> SearchAsync(
@@ -28,6 +29,7 @@ internal interface IKeywordSearchService
         bool phraseSearch = false,
         List<string>? boostTerms = null,
         string language = "it",
+        double minScore = 0.0,
         CancellationToken cancellationToken = default);
 
     /// <summary>

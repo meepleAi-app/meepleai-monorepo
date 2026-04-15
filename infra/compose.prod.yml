@@ -61,6 +61,7 @@ services:
       - ./secrets/prod/jwt.secret
       - ./secrets/prod/admin.secret
       - ./secrets/prod/openrouter.secret
+      - ./secrets/prod/deepseek.secret
       - ./secrets/prod/oauth.secret
       - ./secrets/prod/redis.secret
       - ./secrets/prod/embedding-service.secret

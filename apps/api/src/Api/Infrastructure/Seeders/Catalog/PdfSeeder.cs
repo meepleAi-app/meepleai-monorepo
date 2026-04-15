@@ -153,11 +153,20 @@ internal static class PdfSeeder
                     continue;
                 }
 
+                // Look up SharedGameId from the Games table
+                var sharedGameId = await db.Games
+                    .AsNoTracking()
+                    .Where(g => g.Id == gameId)
+                    .Select(g => g.SharedGameId)
+                    .FirstOrDefaultAsync(ct)
+                    .ConfigureAwait(false);
+
                 // Create PdfDocumentEntity in Pending state
                 var pdfEntity = new PdfDocumentEntity
                 {
                     Id = Guid.NewGuid(),
                     GameId = gameId,
+                    SharedGameId = sharedGameId,
                     FileName = fileName,
                     FilePath = result.FilePath ?? string.Empty,
                     FileSizeBytes = result.FileSizeBytes,

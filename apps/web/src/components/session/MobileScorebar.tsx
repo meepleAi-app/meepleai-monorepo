@@ -20,7 +20,7 @@ export function MobileScorebar({ players }: MobileScorebarProps) {
       {players.map(p => (
         <div
           key={p.id}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border shrink-0"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-btn)] bg-[var(--bg-glass)] border border-[var(--border-glass)] shrink-0"
         >
           <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold">
             {p.name[0]}

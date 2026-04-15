@@ -9,7 +9,6 @@ export {
   useLayoutFAB,
   useLayoutActionBar,
   useLayoutMultiSelect,
-  useLayoutContext,
 } from './LayoutProvider';
 export { Layout, PageHeader, PageContent, EmptyState, LoadingState } from './Layout';
 

@@ -117,6 +117,16 @@ internal static class SecretsHelper
     }
 
     /// <summary>
+    /// Resolve badsworm user password from SEED_BADSWORM_PASSWORD secret or env var.
+    /// Used by SeedBadswormUserCommandHandler.
+    /// </summary>
+    public static string? GetSeedBadswormPassword(IConfiguration config, ILogger? logger = null)
+    {
+        return GetSecretOrValue(config, "SEED_BADSWORM_PASSWORD", logger, required: false)
+            ?? Environment.GetEnvironmentVariable("SEED_BADSWORM_PASSWORD");
+    }
+
+    /// <summary>
     /// Builds a PostgreSQL connection string using password from secret file or config.
     /// </summary>
     /// <param name="config">Configuration instance</param>

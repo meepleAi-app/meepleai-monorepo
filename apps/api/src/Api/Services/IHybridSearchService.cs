@@ -20,6 +20,7 @@ internal interface IHybridSearchService
     /// <param name="documentIds">Optional document IDs to filter sources (Issue #2051)</param>
     /// <param name="vectorWeight">Weight for vector search scores (default: 0.7)</param>
     /// <param name="keywordWeight">Weight for keyword search scores (default: 0.3)</param>
+    /// <param name="keywordMinScore">Minimum ts_rank_cd score for keyword results to filter low-relevance matches like ToC entries (default: 0.0)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Hybrid search results with RRF-fused scores</returns>
     Task<List<HybridSearchResult>> SearchAsync(
@@ -30,6 +31,7 @@ internal interface IHybridSearchService
         List<Guid>? documentIds = null,
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
+        double keywordMinScore = 0.0,
         CancellationToken cancellationToken = default);
 }
 

@@ -95,16 +95,11 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * @param gameId Game UUID
      */
     async getUserAgentsForGame(gameId: string): Promise<AgentDto[]> {
-      const params = new URLSearchParams({
-        gameId,
-        userOwned: 'true',
-        activeOnly: 'true',
-      });
       const response = await httpClient.get<{
         success: boolean;
         agents: AgentDto[];
         count: number;
-      }>(`/api/v1/agents?${params.toString()}`, GetAllAgentsResponseSchema);
+      }>(`/api/v1/games/${gameId}/agents`, GetAllAgentsResponseSchema);
       return response?.agents ?? [];
     },
 

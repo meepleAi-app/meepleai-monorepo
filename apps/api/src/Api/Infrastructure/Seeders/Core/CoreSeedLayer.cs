@@ -76,7 +76,7 @@ internal sealed class CoreSeedLayer : ISeedLayer
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "[Core] Seeder '{Name}' failed — continuing", name);
+            logger.LogError(ex, "[Core] Seeder '{Name}' failed — continuing", name);
         }
     }
 }

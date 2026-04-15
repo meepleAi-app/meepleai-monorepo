@@ -484,7 +484,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
         var gameId = Guid.NewGuid();
 
         // Act
-        var response = await _client.GetAsync($"/api/v1/library/games/{gameId}/agent");
+        var response = await _client.GetAsync($"/api/v1/library/games/{gameId}/agent-config");
 
         // Assert - May return MethodNotAllowed, NotFound, or Unauthorized
         (response.StatusCode == HttpStatusCode.Unauthorized ||

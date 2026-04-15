@@ -22,6 +22,7 @@ import {
   Star,
   Users,
   Clock,
+  Sparkles,
   SlidersHorizontal,
   ChevronDown,
   Search,
@@ -106,6 +107,7 @@ function countActiveFilters(sp: URLSearchParams): number {
   if (sp.get('maxPlayingTime')) count++;
   if (sp.get('minComplexity') || sp.get('maxComplexity')) count++;
   if (sp.get('sortBy')) count++;
+  if (sp.get('hasKb')) count++;
   return count;
 }
 
@@ -127,6 +129,7 @@ function isQuickFilterActive(
     'maxComplexity',
     'categoryIds',
     'mechanicIds',
+    'hasKb',
   ];
 
   for (const key of keys) {
@@ -267,6 +270,7 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
   const [maxComplexity, setMaxComplexity] = useState(searchParams.get('maxComplexity') ?? '');
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') ?? '');
   const [sortDesc, setSortDesc] = useState(searchParams.get('sortDesc') === 'true');
+  const [hasKb, setHasKb] = useState(searchParams.get('hasKb') === 'true');
 
   // Re-sync local state when URL changes (e.g., quick filter navigation)
   useEffect(() => {
@@ -283,6 +287,7 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
     setMaxComplexity(searchParams.get('maxComplexity') ?? '');
     setSortBy(searchParams.get('sortBy') ?? '');
     setSortDesc(searchParams.get('sortDesc') === 'true');
+    setHasKb(searchParams.get('hasKb') === 'true');
   }, [searchParams]);
 
   // Fetch categories & mechanics when advanced panel first opens
@@ -345,6 +350,9 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
     sortBy: 'CreatedAt',
     sortDesc: 'true',
   });
+  const isAiReady = isQuickFilterActive(searchParams, {
+    hasKb: 'true',
+  });
 
   // Toggle helpers for checkbox lists
   const toggleCategory = useCallback((id: string) => {
@@ -405,6 +413,9 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
       if (sortDesc) params.set('sortDesc', 'true');
     }
 
+    // AI Ready (Knowledge Base)
+    if (hasKb) params.set('hasKb', 'true');
+
     const qs = params.toString();
     router.push(qs ? `/games?${qs}` : '/games');
   }, [
@@ -418,6 +429,7 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
     maxComplexity,
     sortBy,
     sortDesc,
+    hasKb,
     router,
   ]);
 
@@ -513,6 +525,13 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
         icon={Clock}
         label="Aggiunti di recente"
         isActive={isRecent}
+        isCollapsed={isCollapsed}
+      />
+      <FilterLink
+        href="/library?hasKb=true"
+        icon={Sparkles}
+        label="AI Ready"
+        isActive={isAiReady}
         isCollapsed={isCollapsed}
       />
 
@@ -654,6 +673,27 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
                   { value: '4-5', label: 'Molto pesante (4-5)' },
                 ]}
               />
+
+              {/* AI Ready toggle */}
+              <div className="space-y-1">
+                <Label className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                  Knowledge Base
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="filter-has-kb"
+                    checked={hasKb}
+                    onCheckedChange={checked => setHasKb(checked === true)}
+                    className="h-3.5 w-3.5"
+                  />
+                  <Label
+                    htmlFor="filter-has-kb"
+                    className="text-xs font-normal cursor-pointer text-sidebar-foreground/80 leading-tight"
+                  >
+                    Solo giochi con AI
+                  </Label>
+                </div>
+              </div>
 
               {/* Sort */}
               <FilterSelect

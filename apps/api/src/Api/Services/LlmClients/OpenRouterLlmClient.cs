@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -12,7 +11,6 @@ using Api.Infrastructure;
 using Api.Infrastructure.Security;
 using Api.Models;
 
-#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Services.LlmClients;
 
 /// <summary>
@@ -206,7 +204,7 @@ internal class OpenRouterLlmClient : ILlmClient
             return LlmCompletionResult.CreateFailure($"OpenRouter API error: {statusCode} ({response.StatusCode})");
         }
 
-        var chatResponse = JsonSerializer.Deserialize<OpenRouterChatResponse>(responseBody);
+        var chatResponse = JsonSerializer.Deserialize<OpenAiChatResponse>(responseBody);
 
         if (chatResponse?.Choices == null || chatResponse.Choices.Count == 0)
         {
@@ -419,10 +417,10 @@ internal class OpenRouterLlmClient : ILlmClient
                         break;
                     }
 
-                    OpenRouterStreamChunk? chunk = null;
+                    OpenAiStreamChunk? chunk = null;
                     try
                     {
-                        chunk = JsonSerializer.Deserialize<OpenRouterStreamChunk>(data);
+                        chunk = JsonSerializer.Deserialize<OpenAiStreamChunk>(data);
                     }
                     catch (JsonException ex)
                     {
@@ -486,90 +484,4 @@ internal class OpenRouterLlmClient : ILlmClient
             }
         }
     }
-}
-
-// OpenRouter API response models (reused from existing LlmService.cs)
-internal record OpenRouterChatResponse
-{
-    [JsonPropertyName("id")]
-    public string Id { get; init; } = string.Empty;
-
-    [JsonPropertyName("choices")]
-    public List<ChatChoice> Choices { get; init; } = new();
-
-    [JsonPropertyName("model")]
-    public string Model { get; init; } = string.Empty;
-
-    [JsonPropertyName("usage")]
-    public ChatUsage? Usage { get; init; }
-}
-
-internal record ChatChoice
-{
-    [JsonPropertyName("message")]
-    public ChatMessage? Message { get; init; }
-
-    [JsonPropertyName("finish_reason")]
-    public string FinishReason { get; init; } = string.Empty;
-}
-
-internal record ChatMessage
-{
-    [JsonPropertyName("role")]
-    public string Role { get; init; } = string.Empty;
-
-    [JsonPropertyName("content")]
-    public string Content { get; init; } = string.Empty;
-}
-
-internal record ChatUsage
-{
-    [JsonPropertyName("prompt_tokens")]
-    public int PromptTokens { get; init; }
-
-    [JsonPropertyName("completion_tokens")]
-    public int CompletionTokens { get; init; }
-
-    [JsonPropertyName("total_tokens")]
-    public int TotalTokens { get; init; }
-}
-
-// Streaming response models
-internal record OpenRouterStreamChunk
-{
-    [JsonPropertyName("id")]
-    public string Id { get; init; } = string.Empty;
-
-    [JsonPropertyName("choices")]
-    public List<StreamChoice>? Choices { get; init; }
-
-    [JsonPropertyName("model")]
-    public string Model { get; init; } = string.Empty;
-
-    /// <summary>
-    /// ISSUE-1725: Usage metadata in final SSE chunk (when usage.include=true)
-    /// </summary>
-    [JsonPropertyName("usage")]
-    public ChatUsage? Usage { get; init; }
-}
-
-internal record StreamChoice
-{
-    [JsonPropertyName("delta")]
-    public StreamDelta? Delta { get; init; }
-
-    [JsonPropertyName("finish_reason")]
-    public string? FinishReason { get; init; }
-
-    [JsonPropertyName("index")]
-    public int Index { get; init; }
-}
-
-internal record StreamDelta
-{
-    [JsonPropertyName("role")]
-    public string? Role { get; init; }
-
-    [JsonPropertyName("content")]
-    public string? Content { get; init; }
 }

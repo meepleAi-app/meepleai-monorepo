@@ -100,8 +100,7 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         // Game Nights
         yield return ["GET", "/api/v1/game-nights"];
 
-        // Contact (public endpoint — expects 200 or 400, not 404)
-        yield return ["POST", "/api/v1/contact"];
+        // Contact: REMOVED — MapContactEndpoints defined but never called in routing setup.
     }
 
     // -----------------------------------------------------------------------
@@ -124,6 +123,9 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["PUT",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/configure",                "configure agent"];
         yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration",            "get agent config"];
         yield return ["PATCH", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration",           "update agent config"];
+
+        // Contact — MapContactEndpoints defined but never wired in endpoint registration
+        yield return ["POST", "/api/v1/contact",                                                              "contact form (not wired)"];
     }
 
     [Theory]

@@ -174,6 +174,8 @@
     --bg-glass: var(--gaming-bg-glass);
     --border-glass: var(--gaming-border-glass);
     --border-glass-hover: var(--gaming-border-glass-hover);
+    --bg-glass-hover: rgba(255, 255, 255, 0.08);
+    --border-glass-strong: rgba(255, 255, 255, 0.18);
     --text-primary: var(--gaming-text-primary);
     --text-secondary: var(--gaming-text-secondary);
     --text-tertiary: var(--gaming-text-tertiary);
@@ -599,6 +601,8 @@
     --bg-glass: rgba(160, 120, 60, 0.04);
     --border-glass: rgba(160, 120, 60, 0.08);
     --border-glass-hover: rgba(160, 120, 60, 0.14);
+    --bg-glass-hover: rgba(160, 120, 60, 0.07);
+    --border-glass-strong: rgba(160, 120, 60, 0.22);
     --text-primary: #1a1a1a;
     --text-secondary: #5a4a35;
     --text-tertiary: #8a7a65;

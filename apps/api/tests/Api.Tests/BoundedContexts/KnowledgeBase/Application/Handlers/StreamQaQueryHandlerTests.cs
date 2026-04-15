@@ -248,7 +248,7 @@ public class StreamQaQueryHandlerTests
 
         // Should NOT call search or LLM
         _hybridSearchServiceMock.Verify(
-            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()),
+            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
         _llmServiceMock.Verify(
@@ -446,7 +446,7 @@ public class StreamQaQueryHandlerTests
             });
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>()); // Empty results
 
         // Act
@@ -613,7 +613,7 @@ public class StreamQaQueryHandlerTests
             .Returns(new List<DomainSearchResult> { lowScoreResult });
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), SearchMode.Keyword, It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), SearchMode.Keyword, It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
         _rrfFusionServiceMock
@@ -714,7 +714,7 @@ public class StreamQaQueryHandlerTests
             .Returns(highQualityResults);
 
         _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), SearchMode.Keyword, It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), SearchMode.Keyword, It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
         _rrfFusionServiceMock
@@ -820,6 +820,7 @@ public class StreamQaQueryHandlerTests
                 ),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()
             ),
             Times.Once,
@@ -987,6 +988,7 @@ public class StreamQaQueryHandlerTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(keywordSearchResults);
 

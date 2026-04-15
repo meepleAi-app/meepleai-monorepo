@@ -62,6 +62,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Implements GetAllAgentsQuery from backend
      * @param activeOnly If true, only return active agents
      * @param type Optional agent type filter
+     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents. Returns empty array via fallback. See: endpoint audit 2026-04-15
      */
     async getAll(activeOnly?: boolean, type?: string): Promise<AgentDto[]> {
       const params = new URLSearchParams();
@@ -95,16 +96,11 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * @param gameId Game UUID
      */
     async getUserAgentsForGame(gameId: string): Promise<AgentDto[]> {
-      const params = new URLSearchParams({
-        gameId,
-        userOwned: 'true',
-        activeOnly: 'true',
-      });
       const response = await httpClient.get<{
         success: boolean;
         agents: AgentDto[];
         count: number;
-      }>(`/api/v1/agents?${params.toString()}`, GetAllAgentsResponseSchema);
+      }>(`/api/v1/games/${gameId}/agents`, GetAllAgentsResponseSchema);
       return response?.agents ?? [];
     },
 
@@ -112,6 +108,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Get agent by ID
      * Implements GetAgentByIdQuery from backend
      * @param id Agent ID (GUID format)
+     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/{id}. Returns null via fallback. See: endpoint audit 2026-04-15
      */
     async getById(id: string): Promise<AgentDto | null> {
       return httpClient.get(`/api/v1/agents/${encodeURIComponent(id)}`, AgentDtoSchema);
@@ -121,6 +118,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Get agent chat readiness status
      * Validates KB populated and RAG initialized
      * @param id Agent ID (GUID format)
+     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/{id}/status. Throws on null response. See: endpoint audit 2026-04-15
      */
     async getStatus(id: string): Promise<{
       agentId: string;
@@ -156,6 +154,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Get approved agent typologies (authenticated endpoint)
      * Issue #3186 (AGT-012): Agent Config Modal
      * @param status Filter by status (default: 'Approved')
+     * @todo BACKEND MISSING: No route registered for GET /api/v1/agent-typologies. Returns empty array via fallback. See: endpoint audit 2026-04-15
      */
     async getTypologies(status: 'Approved' = 'Approved'): Promise<Typology[]> {
       const params = new URLSearchParams();
@@ -181,6 +180,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     /**
      * Get recent agents for dashboard widget
      * Issue #4126: API Integration
+     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/recent. Returns empty array via fallback. See: endpoint audit 2026-04-15
      */
     async getRecent(limit: number = 10): Promise<AgentDto[]> {
       const response = await httpClient.get<AgentDto[]>(
@@ -197,6 +197,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Implements InvokeAgentCommand from backend
      * @param id Agent ID (GUID format)
      * @param request Invocation request with query and optional context
+     * @todo BACKEND MISSING: No route registered for POST /api/v1/agents/{id}/invoke. Throws on null response. See: endpoint audit 2026-04-15
      */
     async invoke(id: string, request: InvokeAgentRequest): Promise<AgentResponseDto> {
       const response = await httpClient.post<AgentResponseDto>(
@@ -216,6 +217,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Create a new agent (Admin only)
      * Implements CreateAgentCommand from backend
      * @param request Agent creation request
+     * @todo BACKEND MISSING: No route registered for POST /api/v1/agents. Throws on null response. See: endpoint audit 2026-04-15
      */
     async create(request: CreateAgentRequest): Promise<AgentDto> {
       const response = await httpClient.post<AgentDto>('/api/v1/agents', request, AgentDtoSchema);
@@ -232,6 +234,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Implements ConfigureAgentCommand from backend
      * @param id Agent ID (GUID format)
      * @param request Configuration request
+     * @todo BACKEND MISSING: No route registered for PUT /api/v1/agents/{id}/configure. Throws on null response. See: endpoint audit 2026-04-15
      */
     async configure(id: string, request: ConfigureAgentRequest): Promise<ConfigureAgentResponse> {
       const response = await httpClient.put<ConfigureAgentResponse>(
@@ -390,6 +393,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Create a user-owned agent with tier-aware configuration
      * Issue #4683: User Agent CRUD Endpoints
      * @param request Agent creation params (gameId, agentType, name, etc.)
+     * @todo BACKEND MISSING: No route registered for POST /api/v1/agents/user. Throws on null response. See: endpoint audit 2026-04-15
      */
     async createUserAgent(request: {
       gameId: string;
@@ -417,6 +421,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     /**
      * Get user's agent slot allocation and usage
      * Issue #4771: Agent Slots Endpoint + Quota System
+     * Issue #417: Backend route registered in AiEndpoints.cs (GET /api/v1/user/agent-slots)
      */
     async getSlots(): Promise<{
       total: number;
@@ -453,6 +458,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     /**
      * Orchestrated agent creation with auto-setup
      * Issue #4772: Agent Creation Orchestration Flow
+     * @todo BACKEND MISSING: No route registered for POST /api/v1/agents/create-with-setup. Throws on null response. See: endpoint audit 2026-04-15
      */
     async createWithSetup(request: {
       gameId: string;
@@ -517,6 +523,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Update a user-owned agent (name, strategy)
      * PUT /api/v1/agents/{id}/user
      * Issue #4683: User Agent CRUD Endpoints
+     * @todo BACKEND MISSING: No route registered for PUT /api/v1/agents/{id}/user. Throws on null response. See: endpoint audit 2026-04-15
      */
     async updateUserAgent(
       agentId: string,
@@ -628,7 +635,10 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return response?.models ?? [];
     },
 
-    /** Get current LLM configuration for an agent */
+    /**
+     * Get current LLM configuration for an agent
+     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/{id}/configuration. Throws on null response. See: endpoint audit 2026-04-15
+     */
     async getAgentConfiguration(agentId: string): Promise<BackendAgentConfigurationDto> {
       const response = await httpClient.get<BackendAgentConfigurationDto>(
         `/api/v1/agents/${agentId}/configuration`
@@ -639,7 +649,10 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return response;
     },
 
-    /** Patch LLM configuration for an agent (partial update) */
+    /**
+     * Patch LLM configuration for an agent (partial update)
+     * @todo BACKEND MISSING: No route registered for PATCH /api/v1/agents/{id}/configuration. Throws on null response. See: endpoint audit 2026-04-15
+     */
     async updateAgentConfiguration(
       agentId: string,
       config: UpdateAgentConfigurationRequest
@@ -677,6 +690,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * POST /api/v1/agents/quick-create
      * @param gameId - Game UUID
      * @param sharedGameId - Optional shared game UUID for catalog-linked games
+     * @todo BACKEND MISSING: No route registered for POST /api/v1/agents/quick-create. Throws on null response. See: endpoint audit 2026-04-15
      */
     async quickCreateTutor(gameId: string, sharedGameId?: string): Promise<QuickCreateResult> {
       const body: { gameId: string; sharedGameId?: string } = { gameId };

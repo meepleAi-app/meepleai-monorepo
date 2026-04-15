@@ -154,6 +154,7 @@ public class HybridSearchEngineTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(hybridResults);
 
@@ -196,6 +197,7 @@ public class HybridSearchEngineTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
@@ -233,6 +235,7 @@ public class HybridSearchEngineTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Test error"));
 
@@ -285,9 +288,10 @@ public class HybridSearchEngineTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, Guid, SearchMode, int, List<Guid>?, float, float, CancellationToken>(
-                (q, g, m, l, d, vw, kw, ct) =>
+            .Callback<string, Guid, SearchMode, int, List<Guid>?, float, float, double, CancellationToken>(
+                (q, g, m, l, d, vw, kw, ms, ct) =>
                 {
                     capturedVectorWeight = vw;
                     capturedKeywordWeight = kw;
@@ -334,9 +338,10 @@ public class HybridSearchEngineTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, Guid, SearchMode, int, List<Guid>?, float, float, CancellationToken>(
-                (q, g, m, l, d, vw, kw, ct) => capturedVectorWeight = vw)
+            .Callback<string, Guid, SearchMode, int, List<Guid>?, float, float, double, CancellationToken>(
+                (q, g, m, l, d, vw, kw, ms, ct) => capturedVectorWeight = vw)
             .ReturnsAsync(new List<HybridSearchResult>());
 
         var engine = new HybridSearchEngine(
@@ -371,6 +376,7 @@ public class HybridSearchEngineTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {

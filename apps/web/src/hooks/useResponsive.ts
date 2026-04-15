@@ -95,18 +95,21 @@ export function useResponsive(): ResponsiveState {
     return 'mobile';
   }, [isHydrated, isMediumScreen, isLargeScreen]);
 
-  // Return SSR-safe initial state during hydration
-  if (!isHydrated) {
-    return INITIAL_STATE;
-  }
+  const isMobile = isSmallScreen || (!isSmallScreen && !isMediumScreen && !isLargeScreen);
 
-  return {
-    deviceType,
-    isMobile: isSmallScreen || (!isSmallScreen && !isMediumScreen && !isLargeScreen),
-    isTablet: isMediumScreen,
-    isDesktop: isLargeScreen,
-    viewportWidth,
-  };
+  // Memoize return value to prevent cascading re-renders via LayoutProvider context
+  return useMemo<ResponsiveState>(() => {
+    if (!isHydrated) {
+      return INITIAL_STATE;
+    }
+    return {
+      deviceType,
+      isMobile,
+      isTablet: isMediumScreen,
+      isDesktop: isLargeScreen,
+      viewportWidth,
+    };
+  }, [isHydrated, deviceType, isMobile, isMediumScreen, isLargeScreen, viewportWidth]);
 }
 
 /**

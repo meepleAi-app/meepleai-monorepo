@@ -35,18 +35,18 @@ print_ports() {
     echo "  PostgreSQL    localhost:25432 -> staging postgres (Docker IP)"
     echo "  Redis         localhost:26379 -> staging redis (Docker IP)"
     echo ""
-    echo "  -- AI Services -----------------------------"
-    echo "  Embedding     localhost:18000 -> staging:8000"
-    echo "  Reranker      localhost:18003 -> staging:8003"
-    echo "  Unstructured  localhost:18001 -> staging:8001"
-    echo "  SmolDocling   localhost:18002 -> staging:8002"
-    echo "  Ollama        localhost:21434 -> staging:11434"
-    echo "  Orchestrator  localhost:18004 -> staging:8004"
+    echo "  -- AI Services (Docker IP) ----------------"
+    echo "  Embedding     localhost:18000 -> container:8000"
+    echo "  Reranker      localhost:18003 -> container:8003"
+    echo "  Unstructured  localhost:18001 -> container:8001"
+    echo "  SmolDocling   localhost:18002 -> container:8002"
+    echo "  Ollama        localhost:21434 -> container:11434"
+    echo "  Orchestrator  localhost:18004 -> container:8004"
     echo ""
-    echo "  -- Monitoring & Automation -----------------"
-    echo "  n8n           localhost:15678 -> staging:5678"
-    echo "  Grafana       localhost:13001 -> staging:3001"
-    echo "  Prometheus    localhost:19090 -> staging:9090"
+    echo "  -- Monitoring & Automation (Docker IP) ----"
+    echo "  n8n           localhost:15678 -> container:5678"
+    echo "  Grafana       localhost:13001 -> container:3000"
+    echo "  Prometheus    localhost:19090 -> container:9090"
     echo ""
 }
 
@@ -73,8 +73,28 @@ do_start() {
         exit 1
     fi
 
-    echo "  PostgreSQL container IP: $POSTGRES_IP"
-    echo "  Redis container IP:      $REDIS_IP"
+    # AI services also run inside Docker without host port-binding — resolve their IPs too
+    EMBEDDING_IP=$(resolve_container_ip meepleai-embedding)
+    RERANKER_IP=$(resolve_container_ip meepleai-reranker)
+    UNSTRUCTURED_IP=$(resolve_container_ip meepleai-unstructured)
+    SMOLDOCLING_IP=$(resolve_container_ip meepleai-smoldocling)
+    OLLAMA_IP=$(resolve_container_ip meepleai-ollama)
+    N8N_IP=$(resolve_container_ip meepleai-n8n)
+    GRAFANA_IP=$(resolve_container_ip meepleai-grafana)
+    PROMETHEUS_IP=$(resolve_container_ip meepleai-prometheus)
+    ORCHESTRATOR_IP=$(resolve_container_ip meepleai-orchestrator)
+
+    echo "  PostgreSQL container IP:  $POSTGRES_IP"
+    echo "  Redis container IP:       $REDIS_IP"
+    echo "  Embedding container IP:   ${EMBEDDING_IP:-NOT FOUND}"
+    echo "  Reranker container IP:    ${RERANKER_IP:-NOT FOUND}"
+    echo "  Unstructured container IP:${UNSTRUCTURED_IP:-NOT FOUND}"
+    echo "  SmolDocling container IP: ${SMOLDOCLING_IP:-NOT FOUND}"
+    echo "  Ollama container IP:      ${OLLAMA_IP:-NOT FOUND}"
+    echo "  N8N container IP:         ${N8N_IP:-NOT FOUND}"
+    echo "  Grafana container IP:     ${GRAFANA_IP:-NOT FOUND}"
+    echo "  Prometheus container IP:  ${PROMETHEUS_IP:-NOT FOUND}"
+    echo "  Orchestrator container IP:${ORCHESTRATOR_IP:-NOT FOUND}"
     echo ""
     echo "Opening SSH tunnels to staging..."
 
@@ -88,15 +108,15 @@ do_start() {
       -i "$SSH_KEY" \
       -L 25432:${POSTGRES_IP}:5432 \
       -L 26379:${REDIS_IP}:6379 \
-      -L 18000:localhost:8000 \
-      -L 18001:localhost:8001 \
-      -L 18002:localhost:8002 \
-      -L 18003:localhost:8003 \
-      -L 21434:localhost:11434 \
-      -L 15678:localhost:5678 \
-      -L 13001:localhost:3001 \
-      -L 19090:localhost:9090 \
-      -L 18004:localhost:8004 \
+      -L 18000:${EMBEDDING_IP:-localhost}:8000 \
+      -L 18001:${UNSTRUCTURED_IP:-localhost}:8001 \
+      -L 18002:${SMOLDOCLING_IP:-localhost}:8002 \
+      -L 18003:${RERANKER_IP:-localhost}:8003 \
+      -L 21434:${OLLAMA_IP:-localhost}:11434 \
+      -L 15678:${N8N_IP:-localhost}:5678 \
+      -L 13001:${GRAFANA_IP:-localhost}:3000 \
+      -L 19090:${PROMETHEUS_IP:-localhost}:9090 \
+      -L 18004:${ORCHESTRATOR_IP:-localhost}:8004 \
       "$STAGING_HOST"
 
     echo "Tunnels established:"

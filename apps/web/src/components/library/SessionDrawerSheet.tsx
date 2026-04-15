@@ -49,7 +49,7 @@ export function SessionDrawerSheet({
 
   const handleNewSession = () => {
     onOpenChange(false);
-    window.location.href = `/sessions/new?game=${gameId}`;
+    window.location.href = `/sessions/new?gameId=${encodeURIComponent(gameId)}&gameName=${encodeURIComponent(gameTitle)}`;
   };
 
   const handleOpenSession = (sessionId: string) => {

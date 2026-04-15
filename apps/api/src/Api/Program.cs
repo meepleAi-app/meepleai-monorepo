@@ -778,6 +778,7 @@ if (!isAlphaMode)
     v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
     v1Api.MapSlackIntegrationEndpoints();        // Slack OAuth connect/disconnect/status
     v1Api.MapUnsubscribeEndpoints();       // Issue #38: GDPR-compliant email unsubscribe
+    v1Api.MapContactEndpoints();           // Public contact form (no auth required)
 
     // Library extended
     v1Api.MapEntityLinkUserEndpoints();    // Entity link user endpoints (Issue #5137)

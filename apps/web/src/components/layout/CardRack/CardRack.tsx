@@ -54,8 +54,8 @@ export function CardRack({ className }: CardRackProps) {
         'fixed left-0 z-40',
         'top-[var(--top-bar-height,48px)]',
         'h-[calc(100vh-var(--top-bar-height,48px))]',
-        'bg-sidebar text-sidebar-foreground',
-        'border-r border-sidebar-border',
+        'bg-[var(--bg-base)] text-[var(--text-primary)]',
+        'border-r border-[var(--border-glass)]',
         'transition-[width] duration-200 ease-in-out motion-reduce:transition-none',
         isExpanded ? 'w-[var(--card-rack-hover-width,240px)]' : 'w-[var(--card-rack-width,64px)]',
         className
@@ -74,7 +74,7 @@ export function CardRack({ className }: CardRackProps) {
         ))}
       </div>
 
-      <hr className="mx-3 border-sidebar-border" />
+      <hr className="mx-3 border-[var(--border-glass)]" />
 
       <div className="flex flex-col gap-0.5 px-2 py-3">
         {BOTTOM_ITEMS.map(item => (

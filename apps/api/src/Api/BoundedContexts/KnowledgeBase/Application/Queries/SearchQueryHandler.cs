@@ -178,12 +178,16 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
 
         // Keyword search (use HybridSearchService with Keyword mode)
+        // Issue #423: Pass keywordMinScore to filter low-relevance keyword matches (e.g., ToC entries)
+        // ts_rank_cd scores are typically 0-0.3; threshold of 0.01 filters noise while keeping real matches
+        const double KeywordMinScore = 0.01;
         var hybridSearchResults = await _hybridSearchService.SearchAsync(
             query,
             gameId,
             SearchMode.Keyword,
             topK,
             documentIds?.ToList(), // Issue #2051: Pass document filter
+            keywordMinScore: KeywordMinScore,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Map keyword results to domain entities

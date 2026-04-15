@@ -38,7 +38,7 @@ internal static class UserLibraryCoreEndpoints
 
         // Agent configuration endpoints
         MapGetGameAgentConfigEndpoint(group);
-        MapConfigureGameAgentEndpoint(group);
+        MapUpdateAgentConfigEndpoint(group);
         MapResetGameAgentEndpoint(group);
         MapSaveAgentConfigEndpoint(group);
         MapCreateGameAgentEndpoint(group);
@@ -415,9 +415,9 @@ internal static class UserLibraryCoreEndpoints
         .WithOpenApi();
     }
 
-    private static void MapConfigureGameAgentEndpoint(RouteGroupBuilder group)
+    private static void MapUpdateAgentConfigEndpoint(RouteGroupBuilder group)
     {
-        group.MapPut("/library/games/{gameId:guid}/agent", async (
+        group.MapPut("/library/games/{gameId:guid}/agent-config", async (
             Guid gameId,
             [FromBody] AgentConfigDto agentConfig,
             IMediator mediator,
@@ -449,8 +449,8 @@ internal static class UserLibraryCoreEndpoints
         .Produces(401)
         .Produces(404)
         .WithTags("Library")
-        .WithSummary("Configure custom AI agent")
-        .WithDescription("Configures a custom AI agent for a game in user's library. Replaces any existing configuration.")
+        .WithSummary("Update AI agent configuration")
+        .WithDescription("Updates the custom AI agent configuration for a game in user's library. Replaces any existing configuration.")
         .WithOpenApi();
     }
 

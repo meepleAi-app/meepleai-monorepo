@@ -36,7 +36,7 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
 
         var (headerEmoji, headerText) = sr.Status.ToLowerInvariant() switch
         {
-            "created"  => ("\ud83d\udce5", "Nuova Share Request"),
+            "created" => ("\ud83d\udce5", "Nuova Share Request"),
             "approved" => ("\u2705", "Approvata"),
             "rejected" => ("\u274c", "Rifiutata"),
             var unknown => throw new ArgumentException(

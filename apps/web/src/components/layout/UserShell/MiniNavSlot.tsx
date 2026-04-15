@@ -18,9 +18,9 @@ export function MiniNavSlot() {
   return (
     <div
       data-testid="mini-nav-slot"
-      className="h-12 flex items-center gap-1 px-7 pl-[104px] border-b border-[var(--nh-border-default)] bg-[var(--nh-bg-base)]"
+      className="h-12 flex items-center gap-1 px-7 pl-[104px] border-b border-[var(--border-glass)] bg-[var(--bg-base)]"
     >
-      <div className="text-xs font-semibold text-[var(--nh-text-muted)] mr-5">
+      <div className="text-xs font-semibold text-[var(--text-tertiary)] mr-5">
         <span aria-hidden>›</span> {config.breadcrumb}
       </div>
       {config.tabs.map(tab => {
@@ -33,13 +33,13 @@ export function MiniNavSlot() {
             className={cn(
               'relative px-3.5 py-2 rounded-lg text-[0.78rem] font-bold flex items-center gap-1.5 transition-colors',
               active
-                ? 'text-[var(--nh-text-primary)]'
-                : 'text-[var(--nh-text-secondary)] hover:bg-[var(--nh-bg-surface)]'
+                ? 'text-[var(--text-primary)]'
+                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]'
             )}
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[rgba(160,120,60,0.1)] text-[var(--nh-text-secondary)]">
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[var(--bg-glass)] text-[var(--text-secondary)]">
                 {tab.count}
               </span>
             )}

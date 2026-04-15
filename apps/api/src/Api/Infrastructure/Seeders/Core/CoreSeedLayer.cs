@@ -34,6 +34,10 @@ internal sealed class CoreSeedLayer : ISeedLayer
         await SafeExecute("staging demo user",
             () => mediator.Send(new SeedStagingDemoUserCommand(), cancellationToken), logger).ConfigureAwait(false);
 
+        // Non-fatal: badsworm demo user (requires SEED_BADSWORM_PASSWORD secret — runs in all envs)
+        await SafeExecute("badsworm user",
+            () => mediator.Send(new SeedBadswormUserCommand(), cancellationToken), logger).ConfigureAwait(false);
+
         // Non-fatal: log + continue on failure
         await SafeExecute("AI models",
             () => mediator.Send(new SeedAiModelsCommand(), cancellationToken), logger).ConfigureAwait(false);
@@ -72,7 +76,7 @@ internal sealed class CoreSeedLayer : ISeedLayer
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "[Core] Seeder '{Name}' failed — continuing", name);
+            logger.LogError(ex, "[Core] Seeder '{Name}' failed — continuing", name);
         }
     }
 }

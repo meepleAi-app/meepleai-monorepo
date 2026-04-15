@@ -33,8 +33,8 @@ export function TopBar({ onOpenChat, onOpenSearch }: TopBarProps) {
   return (
     <header
       data-testid="top-bar"
-      className="sticky top-0 z-40 h-16 flex items-center gap-4 px-6 border-b border-[var(--nh-border-default)] backdrop-blur-md"
-      style={{ background: 'rgba(255, 252, 248, 0.85)' }}
+      className="sticky top-0 z-40 h-16 flex items-center gap-4 px-6 border-b border-[var(--border-glass)] backdrop-blur-[16px]"
+      style={{ background: 'color-mix(in srgb, var(--bg-elevated) 95%, transparent)' }}
     >
       <TopBarLogo />
       <TopBarNavLinks />

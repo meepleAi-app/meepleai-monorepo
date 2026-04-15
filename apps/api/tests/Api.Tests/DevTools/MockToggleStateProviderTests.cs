@@ -146,7 +146,7 @@ public class MockToggleStateProviderTests
         await Task.WhenAll(tasks).ConfigureAwait(true);
 
         var final = provider.IsMocked("llm");
-        Assert.True(final == true || final == false);
+        Assert.True(final || !final);
     }
 
     [Fact]

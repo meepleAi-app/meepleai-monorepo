@@ -1,53 +1,38 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { ChatSlideOverPanel } from '@/components/chat/panel/ChatSlideOverPanel';
-import { ActionPill } from '@/components/layout/ActionPill';
-import { HandRail } from '@/components/layout/HandRail';
-import { ActionBar } from '@/components/layout/mobile/ActionBar';
-import { HandDrawer } from '@/components/layout/mobile/HandDrawer';
+import { MobileCTAPill } from '@/components/layout/MobileCTAPill';
+import { SearchOverlay } from '@/components/layout/SearchOverlay';
+import { SideDrawer } from '@/components/layout/SideDrawer/SideDrawer';
 
-import { MiniNavSlot } from './MiniNavSlot';
 import { SessionBanner } from './SessionBanner';
-import { TopBar } from './TopBar';
+import { TopBarV2 } from './TopBarV2';
 
 interface DesktopShellProps {
   children: ReactNode;
 }
 
-/**
- * DesktopShell — Hand-First layout.
- *
- * Layout:
- *   ┌─────────────────────────────────────────────┐
- *   │ TopBar (56px sticky)                        │
- *   ├──────────────┬──────────────────────────────┤
- *   │ HandRail     │ MiniNavSlot (48px, optional) │
- *   │ (64→200px,   ├──────────────────────────────┤
- *   │  hidden mob) │ SessionBanner (32px, session) │
- *   │              ├──────────────────────────────┤
- *   │              │ main content                  │
- *   │              │      [ActionPill floating]    │
- *   └──────────────┴──────────────────────────────┘
- *   Mobile: ActionBar (bottom nav) + HandDrawer (bottom sheet)
- */
 export function DesktopShell({ children }: DesktopShellProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
   return (
     <div className="min-h-dvh flex flex-col bg-[var(--bg-base)]">
-      <TopBar />
-      <div className="flex flex-1 min-h-0">
-        <HandRail />
-        <div className="flex flex-col flex-1 min-w-0">
-          <MiniNavSlot />
-          <SessionBanner />
-          <main className="flex-1 min-w-0 overflow-y-auto">{children}</main>
-          <ActionPill />
-        </div>
-      </div>
+      <TopBarV2
+        onHamburgerClick={() => setDrawerOpen(true)}
+        onSearchClick={() => setSearchOpen(true)}
+      />
+
+      <SessionBanner />
+
+      <main className="flex-1 overflow-y-auto">{children}</main>
+
+      <MobileCTAPill />
       <ChatSlideOverPanel />
-      <ActionBar />
-      <HandDrawer />
+      <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }

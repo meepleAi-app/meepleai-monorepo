@@ -1,6 +1,6 @@
+export { DesktopShell } from './DesktopShell';
 export { UserShell } from './UserShell';
 export { UserShellClient } from './UserShellClient';
-export { DesktopShell } from './DesktopShell';
 export { TopBar } from './TopBar';
 export { TopBarLogo } from './TopBarLogo';
 export { TopBarNavLinks } from './TopBarNavLinks';

@@ -2,8 +2,11 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -16,17 +19,19 @@ public sealed class CreateChatThreadCommandHandlerTests
 {
     private readonly Mock<IChatThreadRepository> _mockRepo;
     private readonly Mock<IUnitOfWork> _mockUow;
+    private readonly MeepleAiDbContext _db;
     private readonly CreateChatThreadCommandHandler _handler;
 
     public CreateChatThreadCommandHandlerTests()
     {
         _mockRepo = new Mock<IChatThreadRepository>();
         _mockUow = new Mock<IUnitOfWork>();
+        _db = TestDbContextFactory.CreateInMemoryDbContext();
         _mockRepo.Setup(r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         _mockUow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
-        _handler = new CreateChatThreadCommandHandler(_mockRepo.Object, _mockUow.Object);
+        _handler = new CreateChatThreadCommandHandler(_mockRepo.Object, _mockUow.Object, _db);
     }
 
     [Fact]
@@ -109,5 +114,67 @@ public sealed class CreateChatThreadCommandHandlerTests
         _mockRepo.Verify(r => r.AddAsync(
             It.Is<ChatThread>(t => t.GetSelectedKnowledgeBaseIds() != null && t.GetSelectedKnowledgeBaseIds()!.Count == 2),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithSharedGameId_ResolvesToActualGameId()
+    {
+        // Arrange: game exists with a SharedGameId link
+        var actualGameId = Guid.NewGuid();
+        var sharedGameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        _db.Games.Add(new GameEntity { Id = actualGameId, Name = "Puerto Rico", SharedGameId = sharedGameId });
+        await _db.SaveChangesAsync();
+
+        // Frontend passes sharedGameId (from user_library_entries.shared_game_id)
+        var command = new CreateChatThreadCommand(UserId: userId, GameId: sharedGameId, Title: "Chat about Puerto Rico");
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert: the thread should use the actual games.Id, not the sharedGameId
+        result.Should().NotBeNull();
+        result.GameId.Should().Be(actualGameId);
+        _mockRepo.Verify(r => r.AddAsync(
+            It.Is<ChatThread>(t => t.GameId == actualGameId),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithDirectGameId_DoesNotResolve()
+    {
+        // Arrange: game exists by its direct Id
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        _db.Games.Add(new GameEntity { Id = gameId, Name = "Catan" });
+        await _db.SaveChangesAsync();
+
+        var command = new CreateChatThreadCommand(UserId: userId, GameId: gameId, Title: "Chat about Catan");
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert: the thread should keep the same gameId (no resolution needed)
+        result.Should().NotBeNull();
+        result.GameId.Should().Be(gameId);
+    }
+
+    [Fact]
+    public async Task Handle_WithUnknownGameId_KeepsOriginalId()
+    {
+        // Arrange: no game matches either by Id or SharedGameId
+        var unknownId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var command = new CreateChatThreadCommand(UserId: userId, GameId: unknownId, Title: "Unknown game");
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert: the thread keeps the original Id (will fail FK at DB level, but handler doesn't enforce)
+        result.Should().NotBeNull();
+        result.GameId.Should().Be(unknownId);
     }
 }

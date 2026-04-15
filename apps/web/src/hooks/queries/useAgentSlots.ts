@@ -30,8 +30,15 @@ export type AgentSlotsData = {
 export function useAgentSlots(enabled: boolean = true) {
   return useQuery({
     queryKey: agentSlotsKeys.user(),
-    queryFn: () => api.agents.getSlots(),
+    queryFn: async () => {
+      try {
+        return await api.agents.getSlots();
+      } catch {
+        return { total: 5, used: 0, available: 5, slots: [] };
+      }
+    },
     enabled,
+    retry: false,
     staleTime: 30_000, // 30 seconds - slots change rarely
   });
 }

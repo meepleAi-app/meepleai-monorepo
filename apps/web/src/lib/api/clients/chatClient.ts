@@ -344,3 +344,84 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
 
   return client;
 }
+
+// ============================================================================
+// QA Stream - SSE streaming for system agents (no agentId)
+// ============================================================================
+
+export interface QaStreamRequest {
+  gameId: string;
+  query: string;
+  chatId?: string;
+}
+
+export interface QaStreamEvent {
+  type: number;
+  data: unknown;
+}
+
+/**
+ * Async generator that streams QA responses from POST /api/v1/agents/qa/stream.
+ * Yields parsed SSE events with { type, data } structure.
+ *
+ * StreamingEventType reference:
+ *  0 = StateUpdate  (status, chatThreadId)
+ *  4 = Complete     (answer, snippets, totalTokens, followUpQuestions)
+ *  5 = Error        (message)
+ *  7 = Token        (string token)
+ */
+export async function* qaStream(
+  request: QaStreamRequest,
+  signal?: AbortSignal
+): AsyncGenerator<QaStreamEvent> {
+  const baseUrl = getApiBase();
+  const response = await fetch(`${baseUrl}/api/v1/agents/qa/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    credentials: 'include',
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`QA stream failed: HTTP ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() || '';
+
+      for (const part of parts) {
+        if (!part.trim()) continue;
+
+        const dataMatch = part.match(/data:\s*([\s\S]+)/);
+        if (!dataMatch) continue;
+
+        const raw = dataMatch[1].trim();
+        if (raw === '[DONE]') return;
+
+        try {
+          const event = JSON.parse(raw) as { type: number; data: unknown; timestamp?: string };
+          yield { type: event.type, data: event.data };
+        } catch {
+          // Skip malformed JSON
+          continue;
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

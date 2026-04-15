@@ -27,6 +27,7 @@ import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatS
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { api } from '@/lib/api';
+import { qaStream } from '@/lib/api/clients/chatClient';
 import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/stores/voice/store';
 import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
@@ -281,7 +282,115 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         return; // onComplete/onError callbacks handle the rest
       }
 
-      // REST fallback: standard API call
+      // QA stream path: system agents (no agentId) with game context (#415)
+      if (thread?.gameId) {
+        const assistantMsgId = `assistant-${Date.now()}`;
+        const assistantMessage: ChatMessageItem = {
+          id: assistantMsgId,
+          role: 'assistant',
+          content: '',
+          timestamp: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+
+        const abortController = new AbortController();
+        let finalAnswer = '';
+        let citations: unknown[] = [];
+        let followUpQuestions: string[] = [];
+
+        try {
+          // Save user message via REST first
+          await api.chat.addMessage(threadId, {
+            content: messageContent,
+            role: 'user',
+          });
+
+          // Stream AI response via QA endpoint
+          for await (const event of qaStream(
+            { gameId: thread.gameId, query: messageContent, chatId: threadId },
+            abortController.signal
+          )) {
+            switch (event.type) {
+              case 7: {
+                // Token
+                const token =
+                  typeof event.data === 'string'
+                    ? event.data
+                    : ((event.data as { token?: string })?.token ?? '');
+                if (token) {
+                  finalAnswer += token;
+                  const currentContent = finalAnswer;
+                  setMessages(prev =>
+                    prev.map(m => (m.id === assistantMsgId ? { ...m, content: currentContent } : m))
+                  );
+                }
+                break;
+              }
+              case 4: {
+                // Complete
+                const data = event.data as {
+                  answer?: string;
+                  snippets?: unknown[];
+                  totalTokens?: number;
+                  followUpQuestions?: string[];
+                };
+                if (data.answer) finalAnswer = data.answer;
+                citations = data.snippets ?? [];
+                followUpQuestions = data.followUpQuestions ?? [];
+                break;
+              }
+              case 5: {
+                // Error
+                const data = event.data as { message?: string };
+                setError(data?.message ?? 'Errore nella risposta AI');
+                break;
+              }
+              case 0: // StateUpdate — ignore for now
+              default:
+                break;
+            }
+          }
+
+          // Update assistant message with final data (citations + followUpQuestions)
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === assistantMsgId
+                ? {
+                    ...m,
+                    content: finalAnswer,
+                    citations: citations as import('@/types').Citation[],
+                    followUpQuestions,
+                  }
+                : m
+            )
+          );
+
+          // Persist assistant message to backend
+          if (finalAnswer) {
+            await api.chat.addMessage(threadId, {
+              content: finalAnswer,
+              role: 'assistant',
+            });
+          }
+
+          // TTS: auto-speak response when last message was voice-initiated
+          if (voicePrefs.ttsEnabled && lastMessageWasVoiceRef.current && finalAnswer) {
+            speak(finalAnswer);
+            lastMessageWasVoiceRef.current = false;
+          }
+        } catch (err) {
+          if ((err as Error).name !== 'AbortError') {
+            setError("Errore nell'invio del messaggio");
+            // Remove optimistic assistant message on error
+            setMessages(prev => prev.filter(m => m.id !== assistantMsgId));
+          }
+        } finally {
+          setIsSending(false);
+        }
+        return;
+      }
+
+      // REST fallback: no game context — just save message
       try {
         const response = await api.chat.addMessage(threadId, {
           content: messageContent,
@@ -308,7 +417,18 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         setIsSending(false);
       }
     },
-    [inputValue, isSending, threadId, thread?.agentId, thread?.agentTypology, game, sendViaSSE]
+    [
+      inputValue,
+      isSending,
+      threadId,
+      thread?.agentId,
+      thread?.agentTypology,
+      thread?.gameId,
+      game,
+      sendViaSSE,
+      voicePrefs.ttsEnabled,
+      speak,
+    ]
   );
 
   // Keep ref in sync for voice onTranscript callback

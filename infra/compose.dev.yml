@@ -36,6 +36,7 @@ services:
       - ./secrets/redis.secret
       - ./secrets/jwt.secret
       - ./secrets/openrouter.secret
+      - ./secrets/deepseek.secret
       - ./secrets/admin.secret
       - ./secrets/embedding-service.secret
       - ./secrets/unstructured-service.secret

@@ -22,6 +22,7 @@ const LIBRARY_FILTERS: FilterChip[] = [
 const CATALOG_FILTERS: FilterChip[] = [
   { id: 'all', label: 'Tutti' },
   { id: 'top', label: 'Top Rated' },
+  { id: 'ai-ready', label: 'AI Ready' },
 ];
 
 const KB_FILTERS: FilterChip[] = [{ id: 'all', label: 'Tutti' }];
@@ -125,6 +126,9 @@ function GamesHubContent() {
       .filter(game => {
         if (activeFilter === 'top') {
           return (game.averageRating ?? 0) > 7;
+        }
+        if (activeFilter === 'ai-ready') {
+          return game.hasKnowledgeBase === true;
         }
         return true;
       })

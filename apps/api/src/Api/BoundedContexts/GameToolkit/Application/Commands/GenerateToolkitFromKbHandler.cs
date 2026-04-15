@@ -79,6 +79,7 @@ internal class GenerateToolkitFromKbHandler
             _hybridSearchService.SearchAsync(
                 q, command.GameId, SearchMode.Hybrid, MaxChunksPerQuery,
                 accessibleCardIds, vectorWeight: 0.7f, keywordWeight: 0.3f,
+                keywordMinScore: 0.01,
                 cancellationToken: cancellationToken));
 
         var allResults = await Task.WhenAll(searchTasks).ConfigureAwait(false);

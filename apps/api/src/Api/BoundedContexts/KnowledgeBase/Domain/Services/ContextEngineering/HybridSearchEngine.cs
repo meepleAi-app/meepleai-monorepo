@@ -85,6 +85,7 @@ internal sealed class HybridSearchEngine : IHybridSearchEngine
                 documentIds: request.DocumentIds,
                 vectorWeight: vectorWeight,
                 keywordWeight: keywordWeight,
+                keywordMinScore: 0.01,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             searchStopwatch.Stop();

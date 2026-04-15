@@ -55,21 +55,21 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         // Auth
         yield return ["POST", "/api/v1/auth/login"];
         yield return ["POST", "/api/v1/auth/register"];
-        yield return ["GET",  "/api/v1/auth/me"];
-        yield return ["GET",  "/api/v1/auth/session/status"];
+        yield return ["GET", "/api/v1/auth/me"];
+        yield return ["GET", "/api/v1/auth/session/status"];
 
         // Library
-        yield return ["GET",  "/api/v1/library"];
-        yield return ["GET",  "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
-        yield return ["PUT",  "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
+        yield return ["GET", "/api/v1/library"];
+        yield return ["GET", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
+        yield return ["PUT", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
         yield return ["POST", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
 
         // PDF / ingest
-        yield return ["GET",  "/api/v1/pdfs/00000000-0000-0000-0000-000000000001/progress"];
+        yield return ["GET", "/api/v1/pdfs/00000000-0000-0000-0000-000000000001/progress"];
         yield return ["POST", "/api/v1/ingest/pdf"];
 
         // Knowledge Base
-        yield return ["GET",  "/api/v1/knowledge-base/00000000-0000-0000-0000-000000000001/status"];
+        yield return ["GET", "/api/v1/knowledge-base/00000000-0000-0000-0000-000000000001/status"];
         yield return ["POST", "/api/v1/knowledge-base/search"];
 
         // Sessions
@@ -112,18 +112,18 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
     public static IEnumerable<object[]> PendingBackendRoutes()
     {
         // Agent CRUD — agentsClient.ts marks these as BACKEND MISSING (audit 2026-04-15).
-        yield return ["GET",  "/api/v1/agents",                                                                "agent listing"];
-        yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001",                          "agent by id"];
-        yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/status",                   "agent status"];
-        yield return ["GET",  "/api/v1/agent-typologies",                                                     "typology listing"];
-        yield return ["GET",  "/api/v1/agents/recent?limit=10",                                               "recent agents"];
-        yield return ["POST", "/api/v1/agents/user",                                                          "create user agent"];
-        yield return ["GET",  "/api/v1/user/agent-slots",                                                     "agent slots"];
-        yield return ["POST", "/api/v1/agents/create-with-setup",                                             "create with setup"];
-        yield return ["POST", "/api/v1/agents/quick-create",                                                  "quick create tutor"];
-        yield return ["PUT",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/configure",                "configure agent"];
-        yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration",            "get agent config"];
-        yield return ["PATCH", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration",           "update agent config"];
+        yield return ["GET", "/api/v1/agents", "agent listing"];
+        yield return ["GET", "/api/v1/agents/00000000-0000-0000-0000-000000000001", "agent by id"];
+        yield return ["GET", "/api/v1/agents/00000000-0000-0000-0000-000000000001/status", "agent status"];
+        yield return ["GET", "/api/v1/agent-typologies", "typology listing"];
+        yield return ["GET", "/api/v1/agents/recent?limit=10", "recent agents"];
+        yield return ["POST", "/api/v1/agents/user", "create user agent"];
+        yield return ["GET", "/api/v1/user/agent-slots", "agent slots"];
+        yield return ["POST", "/api/v1/agents/create-with-setup", "create with setup"];
+        yield return ["POST", "/api/v1/agents/quick-create", "quick create tutor"];
+        yield return ["PUT", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configure", "configure agent"];
+        yield return ["GET", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration", "get agent config"];
+        yield return ["PATCH", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration", "update agent config"];
 
     }
 
@@ -192,35 +192,35 @@ public sealed class RouteContractTestFactory : WebApplicationFactory<Program>
             {
                 // Use SQLite InMemory — no external DB required
                 ["ConnectionStrings:DefaultConnection"] = "DataSource=:memory:",
-                ["ConnectionStrings:Postgres"]          = "DataSource=:memory:",
+                ["ConnectionStrings:Postgres"] = "DataSource=:memory:",
                 // JWT (required so auth middleware can start)
-                ["Jwt:Secret"]    = "contract-test-secret-key-minimum-32-characters-long",
-                ["Jwt:Issuer"]    = "MeepleAI-ContractTest",
-                ["Jwt:Audience"]  = "MeepleAI-ContractTest",
+                ["Jwt:Secret"] = "contract-test-secret-key-minimum-32-characters-long",
+                ["Jwt:Issuer"] = "MeepleAI-ContractTest",
+                ["Jwt:Audience"] = "MeepleAI-ContractTest",
                 // OpenRouter placeholder
-                ["OpenRouter:ApiKey"]  = "contract-test-key",
+                ["OpenRouter:ApiKey"] = "contract-test-key",
                 ["OpenRouter:BaseUrl"] = "https://test.local",
                 // Disable all external services
                 ["BoardGameGeek:Enabled"] = "false",
-                ["Embedding:Enabled"]     = "false",
-                ["Embedding:Url"]         = "http://localhost:8000",
-                ["Qdrant:Enabled"]        = "false",
-                ["Qdrant:Host"]           = "localhost",
-                ["Qdrant:Port"]           = "6333",
-                ["Redis:Enabled"]         = "false",
+                ["Embedding:Enabled"] = "false",
+                ["Embedding:Url"] = "http://localhost:8000",
+                ["Qdrant:Enabled"] = "false",
+                ["Qdrant:Host"] = "localhost",
+                ["Qdrant:Port"] = "6333",
+                ["Redis:Enabled"] = "false",
                 ["Redis:ConnectionString"] = "localhost:6379",
                 // Session config
                 ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
                 // Admin seed (skipped because hosted services are removed)
-                ["Admin:Email"]       = "admin@test.local",
-                ["Admin:Password"]    = "TestAdmin123!",
+                ["Admin:Email"] = "admin@test.local",
+                ["Admin:Password"] = "TestAdmin123!",
                 ["Admin:DisplayName"] = "Test Admin",
-                ["INITIAL_ADMIN_EMAIL"]        = "admin@test.local",
-                ["INITIAL_ADMIN_PASSWORD"]     = "TestAdmin123!",
+                ["INITIAL_ADMIN_EMAIL"] = "admin@test.local",
+                ["INITIAL_ADMIN_PASSWORD"] = "TestAdmin123!",
                 ["INITIAL_ADMIN_DISPLAY_NAME"] = "Test Admin",
                 // Observability off
-                ["Observability:Enabled"]          = "false",
-                ["OTEL_EXPORTER_OTLP_ENDPOINT"]    = "",
+                ["Observability:Enabled"] = "false",
+                ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "",
                 // Rate limiting off
                 ["RateLimiting:Enabled"] = "false",
                 // CORS

@@ -348,6 +348,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(dummyResults);
     }

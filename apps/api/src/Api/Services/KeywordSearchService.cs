@@ -50,6 +50,7 @@ internal class KeywordSearchService : IKeywordSearchService
         bool phraseSearch = false,
         List<string>? boostTerms = null,
         string language = "it",
+        double minScore = 0.0,
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation
@@ -83,6 +84,7 @@ internal class KeywordSearchService : IKeywordSearchService
 
             // Execute PostgreSQL full-text search with ts_rank_cd scoring
             // Using FromSqlRaw for complex tsvector queries (EF Core limitation with tsvector operators)
+            // Issue #423: Add minScore filter to exclude low-relevance keyword matches (e.g., ToC entries)
             var sql = @"
                 SELECT
                     ""Id"",
@@ -96,6 +98,7 @@ internal class KeywordSearchService : IKeywordSearchService
                 WHERE
                     ""GameId"" = @gameId::uuid
                     AND search_vector @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
+                    AND ts_rank_cd(search_vector, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) >= @minScore
                 ORDER BY ""RelevanceScore"" DESC
                 LIMIT @limit";
 
@@ -110,6 +113,7 @@ internal class KeywordSearchService : IKeywordSearchService
                     new NpgsqlParameter("@tsQuery", tsQuery),
                     new NpgsqlParameter("@normalization", DefaultNormalization),
                     new NpgsqlParameter("@gameId", gameIdString),
+                    new NpgsqlParameter("@minScore", minScore),
                     new NpgsqlParameter("@limit", safeLimit)) // Use capped limit
                 .AsNoTracking()
                 .ToListAsync(cancellationToken).ConfigureAwait(false);

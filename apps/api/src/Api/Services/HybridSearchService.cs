@@ -48,6 +48,7 @@ internal class HybridSearchService : IHybridSearchService
         List<Guid>? documentIds = null,
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
+        double keywordMinScore = 0.0,
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation
@@ -74,10 +75,10 @@ internal class HybridSearchService : IHybridSearchService
                     return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentIds, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Keyword:
-                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentIds, cancellationToken).ConfigureAwait(false);
+                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentIds, keywordMinScore, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Hybrid:
-                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentIds, cancellationToken).ConfigureAwait(false);
+                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentIds, keywordMinScore, cancellationToken).ConfigureAwait(false);
 
                 default:
                     throw new ArgumentException($"Unsupported search mode: {mode}", nameof(mode));
@@ -136,6 +137,7 @@ internal class HybridSearchService : IHybridSearchService
         Guid gameId,
         int limit,
         List<Guid>? documentIds,
+        double keywordMinScore,
         CancellationToken cancellationToken)
     {
         var keywordResults = await _keywordSearchService.SearchAsync(
@@ -144,6 +146,7 @@ internal class HybridSearchService : IHybridSearchService
             limit,
             phraseSearch: query.Contains('"'), // Enable phrase search if query has quotes
             boostTerms: _config.BoostTerms,
+            minScore: keywordMinScore,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Issue #2051: Filter by document IDs if specified
@@ -184,6 +187,7 @@ internal class HybridSearchService : IHybridSearchService
         float vectorWeight,
         float keywordWeight,
         List<Guid>? documentIds,
+        double keywordMinScore,
         CancellationToken cancellationToken)
     {
         var fetchLimit = Math.Max(limit * 2, 20);
@@ -198,6 +202,7 @@ internal class HybridSearchService : IHybridSearchService
             fetchLimit,
             phraseSearch: query.Contains('"'),
             boostTerms: _config.BoostTerms,
+            minScore: keywordMinScore,
             cancellationToken: cancellationToken);
 
         await Task.WhenAll(vectorTask, keywordTask).ConfigureAwait(false);

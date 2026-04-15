@@ -3,10 +3,9 @@
  *
  * Game Night Improvvisata — Task 15 / Task 17
  *
- * Wraps live session pages with session-specific MiniNav tabs:
+ * Wraps live session pages with session-specific PageHeader tabs:
  * Partita · Chat AI · Punteggi · Foto · Giocatori
  *
- * Includes a back button to return to the dashboard/play tab.
  * Context bar callbacks are wired to the overlay store (Task 17).
  */
 
@@ -14,11 +13,10 @@
 
 import { type ReactNode, use } from 'react';
 
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import { ContextBarRegistrar } from '@/components/layout/ContextBar';
-import { SessionNavConfig } from '@/components/session/live/SessionNavConfig';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { LiveSessionContextBarConnected } from '@/components/session/LiveSessionContextBarConnected';
 import { OverlayHybrid } from '@/components/ui/overlays';
 
@@ -27,25 +25,39 @@ interface LiveSessionLayoutProps {
   params: Promise<{ sessionId: string }>;
 }
 
+function getActiveTabId(pathname: string, sessionId: string): string {
+  if (pathname.endsWith('/agent')) return 'agent';
+  if (pathname.endsWith('/scores')) return 'scores';
+  if (pathname.endsWith('/photos')) return 'photos';
+  if (pathname.endsWith('/players')) return 'players';
+  return 'partita';
+}
+
 export default function LiveSessionLayout({ children, params }: LiveSessionLayoutProps) {
   const { sessionId } = use(params);
+  const pathname = usePathname();
+  const activeTabId = getActiveTabId(pathname, sessionId);
 
   return (
     <>
       <ContextBarRegistrar alwaysVisible>
         <LiveSessionContextBarConnected sessionId={sessionId} />
       </ContextBarRegistrar>
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40">
-        <Link
-          href="/library"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Torna alla dashboard"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Torna al Play</span>
-        </Link>
+      <div className="px-4 py-4">
+        <PageHeader
+          title="Partita"
+          parentHref="/sessions"
+          parentLabel="Sessioni"
+          tabs={[
+            { id: 'partita', label: 'Partita', href: `/sessions/live/${sessionId}` },
+            { id: 'agent', label: 'Chat AI', href: `/sessions/live/${sessionId}/agent` },
+            { id: 'scores', label: 'Punteggi', href: `/sessions/live/${sessionId}/scores` },
+            { id: 'photos', label: 'Foto', href: `/sessions/live/${sessionId}/photos` },
+            { id: 'players', label: 'Giocatori', href: `/sessions/live/${sessionId}/players` },
+          ]}
+          activeTabId={activeTabId}
+        />
       </div>
-      <SessionNavConfig sessionId={sessionId} />
       {children}
 
       <OverlayHybrid enableDeepLink>

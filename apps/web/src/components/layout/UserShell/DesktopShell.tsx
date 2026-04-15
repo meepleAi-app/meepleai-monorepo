@@ -34,7 +34,7 @@ interface DesktopShellProps {
  */
 export function DesktopShell({ children }: DesktopShellProps) {
   return (
-    <div className="min-h-dvh flex flex-col bg-[var(--nh-bg-base)]">
+    <div className="min-h-dvh flex flex-col bg-[var(--bg-base)]">
       <TopBar />
       <div className="flex flex-1 min-h-0">
         <HandRail />

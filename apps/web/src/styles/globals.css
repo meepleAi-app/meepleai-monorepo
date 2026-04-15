@@ -175,14 +175,16 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply antialiased;
     font-family: var(--font-nunito, var(--font-sans));
     position: relative;
+    background: var(--bg-base);
+    color: var(--text-primary);
   }
 
   /* MeepleAI Background Texture System - Issue #2905 */
-  /* Subtle Wood/Paper Texture */
-  body::before {
+  /* Subtle Wood/Paper Texture — light mode only */
+  .light body::before {
     content: '';
     position: fixed;
     inset: 0;
@@ -194,8 +196,8 @@
     opacity: 0.6;
   }
 
-  /* Subtle warm gradient overlay */
-  body::after {
+  /* Subtle warm gradient overlay — light mode only */
+  .light body::after {
     content: '';
     position: fixed;
     inset: 0;
@@ -560,17 +562,16 @@
   --color-neutral-400: hsl(30 12% 72%);
   --color-neutral-600: hsl(30 12% 45%);
 
-  --bg-primary: hsl(var(--background));
+  /* NOTE: --bg-base, --bg-elevated, --text-primary, --text-secondary, --text-tertiary
+     are now unified tokens defined in design-tokens.css (dark-first).
+     Do NOT redefine them here. Use the unified tokens directly. */
+  --bg-primary: var(--bg-base);
   --bg-secondary: hsl(30 20% 94%);
   --bg-tertiary: hsl(30 18% 90%);
-  --bg-elevated: hsl(var(--card));
 
   --border-primary: hsl(var(--border));
   --border-secondary: hsl(30 12% 75%);
 
-  --text-primary: hsl(var(--foreground));
-  --text-secondary: hsl(var(--muted-foreground));
-  --text-tertiary: hsl(30 10% 55%);
   --text-inverse: hsl(var(--primary-foreground));
 
   --font-display: var(--font-quicksand, var(--font-sans));
@@ -644,17 +645,15 @@
   --color-neutral-400: hsl(0 0% 34%);
   --color-neutral-600: hsl(0 0% 46%);
 
-  --bg-primary: hsl(var(--background));       /* #1a1a1a */
-  --bg-secondary: hsl(0 0% 15%);              /* Slightly lighter than bg */
-  --bg-tertiary: hsl(0 0% 20%);               /* Lighter variant */
-  --bg-elevated: hsl(var(--card));            /* #2d2d2d */
+  /* NOTE: --bg-base, --bg-elevated, --text-primary, --text-secondary, --text-tertiary
+     are unified tokens from design-tokens.css. Do NOT redefine here. */
+  --bg-primary: var(--bg-base);
+  --bg-secondary: hsl(0 0% 15%);
+  --bg-tertiary: hsl(0 0% 20%);
 
   --border-primary: hsl(var(--border));
-  --border-secondary: hsl(0 0% 30%);          /* Lighter border variant */
+  --border-secondary: hsl(0 0% 30%);
 
-  --text-primary: hsl(var(--foreground));     /* #e8e4d8 */
-  --text-secondary: hsl(0 0% 60%);            /* #999999 - Muted text */
-  --text-tertiary: hsl(0 0% 50%);             /* Dimmer text */
   --text-inverse: hsl(var(--primary-foreground));
 
   --font-display: var(--font-quicksand, var(--font-sans));

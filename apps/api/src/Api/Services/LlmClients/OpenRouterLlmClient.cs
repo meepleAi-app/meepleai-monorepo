@@ -293,55 +293,91 @@ internal class OpenRouterLlmClient : ILlmClient
             yield break;
         }
 
-        using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: true);
-
         _logger.LogInformation("Starting OpenRouter streaming completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
             model, temperature, maxTokens);
 
+        // Retry loop for transient 429 (TooManyRequests) errors from OpenRouter free models.
+        // The retry wraps only the HTTP send + status check; yield return stays outside try-catch
+        // to satisfy the C# async-iterator constraint.
+        const int maxRetries = 3;
+        int[] retryDelaysMs = [3000, 5000, 10000];
         HttpResponseMessage? response = null;
 
-        try
+        for (var attempt = 0; attempt <= maxRetries; attempt++)
         {
-            response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+            using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: true);
+            response = null;
 
-            if (!response.IsSuccessStatusCode)
+            try
             {
+                response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    break; // success — proceed to streaming below
+                }
+
                 // CodeQL: cs/cleartext-storage-of-sensitive-information — error body is masked before logging
                 var errorBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger.LogError("OpenRouter streaming API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(errorBody));
+
+                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxRetries)
+                {
+                    var delay = retryDelaysMs[Math.Min(attempt, retryDelaysMs.Length - 1)];
+                    _logger.LogWarning("Rate limited (429), retrying in {Delay}ms (attempt {Next}/{Total})",
+                        delay, attempt + 2, maxRetries + 1);
+                    response.Dispose();
+                    response = null;
+                    await Task.Delay(delay, ct).ConfigureAwait(false);
+                    continue;
+                }
+
+                // Non-retryable error or final attempt — give up
                 response.Dispose();
+                response = null;
                 yield break;
             }
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "HTTP request failed initiating OpenRouter streaming");
-            response?.Dispose();
-            yield break;
-        }
-        catch (TaskCanceledException ex)
-        {
-            _logger.LogError(ex, "OpenRouter streaming request timed out");
-            response?.Dispose();
-            yield break;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation initiating OpenRouter streaming");
-            response?.Dispose();
-            yield break;
-        }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP request failed initiating OpenRouter streaming");
+                response?.Dispose();
+                response = null;
+                yield break;
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "OpenRouter streaming request timed out");
+                response?.Dispose();
+                response = null;
+                yield break;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Invalid operation initiating OpenRouter streaming");
+                response?.Dispose();
+                response = null;
+                yield break;
+            }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
-        // SERVICE BOUNDARY: Streaming generator boundary - must handle all errors gracefully
+            // SERVICE BOUNDARY: Streaming generator boundary - must handle all errors gracefully
 #pragma warning restore S125
-        catch (Exception ex)
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error initiating OpenRouter streaming");
+                response?.Dispose();
+                response = null;
+                yield break;
+            }
+#pragma warning restore CA1031
+        }
+
+        if (response == null || !response.IsSuccessStatusCode)
         {
-            _logger.LogError(ex, "Unexpected error initiating OpenRouter streaming");
+            _logger.LogError("All {MaxRetries} streaming retry attempts exhausted for 429 rate limit", maxRetries + 1);
             response?.Dispose();
             yield break;
         }
-#pragma warning restore CA1031
 
         await foreach (var chunk in ProcessStreamResponseAsync(response, model, ct).ConfigureAwait(false))
         {

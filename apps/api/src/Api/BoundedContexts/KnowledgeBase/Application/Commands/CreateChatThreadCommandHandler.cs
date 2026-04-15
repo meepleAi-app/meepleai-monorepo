@@ -44,23 +44,16 @@ internal sealed class CreateChatThreadCommandHandler : ICommandHandler<CreateCha
         // instead of the actual games.Id (which is the FK target for ChatThreads.GameId).
         if (effectiveGameId.HasValue)
         {
-            var existsById = await _db.Games
-                .AnyAsync(g => g.Id == effectiveGameId.Value, cancellationToken)
+            // Single query: direct match preferred, then SharedGameId fallback
+            var resolvedId = await _db.Games
+                .Where(g => g.Id == effectiveGameId.Value || g.SharedGameId == effectiveGameId.Value)
+                .OrderByDescending(g => g.Id == effectiveGameId.Value)
+                .Select(g => g.Id)
+                .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-            if (!existsById)
-            {
-                var resolvedGameId = await _db.Games
-                    .Where(g => g.SharedGameId == effectiveGameId.Value)
-                    .Select(g => (Guid?)g.Id)
-                    .FirstOrDefaultAsync(cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (resolvedGameId.HasValue)
-                {
-                    effectiveGameId = resolvedGameId.Value;
-                }
-            }
+            if (resolvedId != Guid.Empty)
+                effectiveGameId = resolvedId;
         }
 
         var thread = new ChatThread(

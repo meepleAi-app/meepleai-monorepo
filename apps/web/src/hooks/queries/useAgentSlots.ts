@@ -33,8 +33,11 @@ export function useAgentSlots(enabled: boolean = true) {
     queryFn: async () => {
       try {
         return await api.agents.getSlots();
-      } catch {
-        return { total: 5, used: 0, available: 5, slots: [] };
+      } catch (err) {
+        if ((err as { status?: number }).status === 404) {
+          return { total: 5, used: 0, available: 5, slots: [] };
+        }
+        throw err;
       }
     },
     enabled,

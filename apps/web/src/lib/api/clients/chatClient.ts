@@ -406,10 +406,12 @@ export async function* qaStream(
       for (const part of parts) {
         if (!part.trim()) continue;
 
-        const dataMatch = part.match(/data:\s*([\s\S]+)/);
-        if (!dataMatch) continue;
-
-        const raw = dataMatch[1].trim();
+        const lines = part.split('\n');
+        const dataLines = lines
+          .filter((l: string) => l.startsWith('data:'))
+          .map((l: string) => l.slice(5).trim());
+        if (!dataLines.length) continue;
+        const raw = dataLines.join('\n');
         if (raw === '[DONE]') return;
 
         try {

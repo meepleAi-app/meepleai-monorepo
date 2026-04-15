@@ -187,6 +187,7 @@ internal static class KnowledgeBaseServiceExtensions
         // Infrastructure - LLM Clients (Singleton - stateless HTTP clients)
         services.AddSingleton<ILlmClient, OllamaLlmClient>();
         services.AddSingleton<ILlmClient, OpenRouterLlmClient>();
+        services.AddSingleton<ILlmClient, DeepSeekLlmClient>();
 
         // ISSUE-2391 Sprint 2: LLM Provider Factory
         services.AddSingleton<LlmProviderFactory>();

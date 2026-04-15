@@ -21,7 +21,7 @@ if [ -z "$working_head" ]; then
     # Le migration EF sono nominate YYYYMMDDHHMMSS_Name.cs ed EF genera una
     # coppia <Name>.cs + <Name>.Designer.cs per ogni migration — escludi
     # i Designer, altrimenti sort -r li ordina prima del file canonico.
-    working_head=$(find apps/api/src/Api -name '[0-9]*_*.cs' -not -name '*.Designer.cs' -path '*/Migrations/*' 2>/dev/null \
+    working_head=$(find ../apps/api/src/Api apps/api/src/Api -name '[0-9]*_*.cs' -not -name '*.Designer.cs' -path '*/Migrations/*' 2>/dev/null \
         | xargs -I{} basename {} .cs \
         | grep -E '^[0-9]{14}_[A-Za-z0-9_]+$' \
         | sort -r | head -1 || echo "")
@@ -42,8 +42,18 @@ fi
 # 2. Embedding model
 expected_model=$(jq -r '.embedding_model' "$META")
 current_model=${EXPECTED_EMBEDDING_MODEL:-}
-if [ -z "$current_model" ] && [ -f infra/secrets/embedding.secret ]; then
-    current_model=$(grep -E '^EMBEDDING_MODEL=' infra/secrets/embedding.secret | cut -d= -f2- || echo "")
+if [ -z "$current_model" ]; then
+    for f in infra/secrets/embedding-service.secret secrets/embedding-service.secret \
+             infra/secrets/embedding.secret secrets/embedding.secret; do
+        [ -f "$f" ] && current_model=$(grep -E '^EMBEDDING_MODEL=' "$f" | cut -d= -f2- || echo "")
+        [ -n "$current_model" ] && break
+    done
+fi
+if [ -z "$current_model" ]; then
+    for f in compose.dev.yml ../infra/compose.dev.yml; do
+        [ -f "$f" ] && current_model=$(grep -oP 'EMBEDDING_MODEL:\s*\K\S+' "$f" | head -1 || echo "")
+        [ -n "$current_model" ] && break
+    done
 fi
 
 if [ "$expected_model" != "$current_model" ]; then
@@ -59,8 +69,18 @@ fi
 # 3. Embedding dim
 expected_dim=$(jq -r '.embedding_dim' "$META")
 current_dim=${EXPECTED_EMBEDDING_DIM:-}
-if [ -z "$current_dim" ] && [ -f infra/secrets/embedding.secret ]; then
-    current_dim=$(grep -E '^EMBEDDING_DIM=' infra/secrets/embedding.secret | cut -d= -f2- || echo "")
+if [ -z "$current_dim" ]; then
+    for f in infra/secrets/embedding-service.secret secrets/embedding-service.secret \
+             infra/secrets/embedding.secret secrets/embedding.secret; do
+        [ -f "$f" ] && current_dim=$(grep -E '^EMBEDDING_DIM=' "$f" | cut -d= -f2- || echo "")
+        [ -n "$current_dim" ] && break
+    done
+fi
+if [ -z "$current_dim" ]; then
+    for f in compose.dev.yml ../infra/compose.dev.yml; do
+        [ -f "$f" ] && current_dim=$(grep -oP 'EMBEDDING_DIM(ENSIONS)?:\s*\K\S+' "$f" | head -1 || echo "")
+        [ -n "$current_dim" ] && break
+    done
 fi
 
 if [ "$expected_dim" != "$current_dim" ]; then

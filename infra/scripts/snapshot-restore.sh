@@ -24,12 +24,16 @@ META="$OUT_DIR/$BASENAME.meta.json"
 [ -f "$META" ] || fail "meta mancante: $META"
 
 # Resolve target DB credentials
-if [ -f infra/secrets/database.secret ]; then
-    # shellcheck disable=SC1091
-    set -a; source infra/secrets/database.secret; set +a
-fi
+for _dbsecret in infra/secrets/database.secret secrets/database.secret; do
+    if [ -f "$_dbsecret" ]; then
+        # shellcheck disable=SC1090
+        set -a; source "$_dbsecret"; set +a
+        break
+    fi
+done
 PG_USER="${POSTGRES_USER:-meepleai}"
 PG_DB="${POSTGRES_DB:-meepleai_staging}"
+PG_PASSWORD="${POSTGRES_PASSWORD:-}"
 log "target: user=$PG_USER db=$PG_DB"
 
 # Guard: DB non deve contenere tabelle application
@@ -48,7 +52,9 @@ fi
 
 # Step 1: Schema dal working tree
 log "applico migrations dal working tree"
-( cd apps/api/src/Api && dotnet ef database update )
+( cd ../apps/api/src/Api 2>/dev/null || cd apps/api/src/Api
+  export CONNECTIONSTRINGS__POSTGRES="Host=localhost;Port=5432;Database=$PG_DB;Username=$PG_USER;Password=$PG_PASSWORD"
+  dotnet ef database update )
 
 # Step 2: Main data restore (tabelle SENZA generated columns)
 # Errori su tabelle non-EF (n8n, insights) vengono ignorati (exit code ≠ 0 è atteso).

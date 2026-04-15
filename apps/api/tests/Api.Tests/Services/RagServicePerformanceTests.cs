@@ -298,8 +298,9 @@ public sealed class RagServicePerformanceTests : IDisposable
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(async (string query, Guid gameId, SearchMode mode, int limit, List<Guid>? documentIds, float vw, float kw, CancellationToken ct) =>
+            .Returns(async (string query, Guid gameId, SearchMode mode, int limit, List<Guid>? documentIds, float vw, float kw, double minScore, CancellationToken ct) =>
             {
                 // Simulate test-optimized hybrid search latency: 30-80ms
                 // (Reduced from 150-250ms to ensure P95 <3000ms target)

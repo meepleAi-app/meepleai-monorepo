@@ -81,6 +81,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -139,6 +140,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
@@ -175,6 +177,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -212,6 +215,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -254,6 +258,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -324,6 +329,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
@@ -393,6 +399,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
@@ -416,6 +423,7 @@ public class ResilientRetrievalServiceTests
                 It.IsAny<List<Guid>?>(),
                 It.IsAny<float>(),
                 It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

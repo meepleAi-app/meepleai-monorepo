@@ -184,6 +184,7 @@ public class GenerateToolkitFromKbHandlerTests
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), GameId, SearchMode.Hybrid, It.IsAny<int>(),
                 It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(chunks);
 
@@ -225,6 +226,7 @@ public class GenerateToolkitFromKbHandlerTests
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), GameId, SearchMode.Hybrid, It.IsAny<int>(),
                 It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
+                It.IsAny<double>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult> { chunk });
     }

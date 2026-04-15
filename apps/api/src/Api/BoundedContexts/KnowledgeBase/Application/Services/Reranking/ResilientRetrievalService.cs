@@ -131,6 +131,7 @@ internal sealed class ResilientRetrievalService : IRerankedRetrievalService, IDi
             request.GameId,
             mode,
             candidateCount,
+            keywordMinScore: 0.01,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 

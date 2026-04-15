@@ -450,7 +450,7 @@ public sealed class PlaygroundChatCommandHandlerTests
         _mockHybridSearchService
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), gameId, SearchMode.Hybrid, 5,
-                null, 0.7f, 0.3f, It.IsAny<CancellationToken>()))
+                null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 new()
@@ -516,7 +516,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(),
                 It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(),
-                It.IsAny<float>(), It.IsAny<CancellationToken>()),
+                It.IsAny<float>(), It.IsAny<double>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

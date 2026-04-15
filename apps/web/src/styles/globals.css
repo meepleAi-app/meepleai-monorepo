@@ -175,14 +175,16 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply antialiased;
     font-family: var(--font-nunito, var(--font-sans));
     position: relative;
+    background: var(--bg-base);
+    color: var(--text-primary);
   }
 
   /* MeepleAI Background Texture System - Issue #2905 */
-  /* Subtle Wood/Paper Texture */
-  body::before {
+  /* Subtle Wood/Paper Texture — light mode only */
+  .light body::before {
     content: '';
     position: fixed;
     inset: 0;
@@ -194,8 +196,8 @@
     opacity: 0.6;
   }
 
-  /* Subtle warm gradient overlay */
-  body::after {
+  /* Subtle warm gradient overlay — light mode only */
+  .light body::after {
     content: '';
     position: fixed;
     inset: 0;

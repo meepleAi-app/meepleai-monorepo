@@ -280,18 +280,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // SSE path: stream via agent endpoint when agentId is available
-      if (thread?.agentId) {
-        // Issue #4780: Build proxy game context for OpenRouter proxy (if enabled)
-        const proxyCtx: ProxyGameContext | undefined =
-          game && thread.agentTypology
-            ? { gameName: game.title, agentTypology: thread.agentTypology }
-            : undefined;
-        sendViaSSE(thread.agentId, messageContent, threadId, proxyCtx);
-        return; // onComplete/onError callbacks handle the rest
-      }
-
-      // QA stream path: system agents (no agentId) with game context (#415)
+      // QA stream path: game context available → use RAG QA streaming (#415)
+      // Priority: gameId check FIRST because POST /agents/{id}/chat does not exist
+      // in the backend — the correct SSE endpoint is POST /agents/qa/stream which
+      // takes gameId+query and internally selects the right agent/strategy.
       if (thread?.gameId) {
         const assistantMsgId = `assistant-${Date.now()}`;
         const assistantMessage: ChatMessageItem = {
@@ -401,7 +393,18 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         return;
       }
 
-      // REST fallback: no game context — just save message
+      // SSE agent path: for future per-agent chat endpoints (POST /agents/{id}/chat)
+      // Currently no backend route exists — kept as fallback for when it's implemented.
+      if (thread?.agentId && !thread?.gameId) {
+        const proxyCtx: ProxyGameContext | undefined =
+          game && thread.agentTypology
+            ? { gameName: game.title, agentTypology: thread.agentTypology }
+            : undefined;
+        sendViaSSE(thread.agentId, messageContent, threadId, proxyCtx);
+        return;
+      }
+
+      // REST fallback: no game context and no agent — just save message
       try {
         const response = await api.chat.addMessage(threadId, {
           content: messageContent,

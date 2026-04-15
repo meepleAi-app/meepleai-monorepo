@@ -20,7 +20,7 @@ export function MobileStatusBar({ gameName, currentPlayer }: MobileStatusBarProp
       className={cn(
         'flex items-center justify-between px-3 lg:hidden',
         'h-[var(--mobile-status-bar-height,36px)]',
-        'bg-card border-b border-border text-sm'
+        'bg-[var(--bg-glass)] border-b border-[var(--border-glass)] text-sm text-[var(--text-primary)]'
       )}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -41,11 +41,11 @@ export function MobileStatusBar({ gameName, currentPlayer }: MobileStatusBarProp
           </span>
         )}
         <span className="font-medium truncate">{gameName}</span>
-        <span className="text-xs text-muted-foreground truncate">· {currentPlayer}</span>
+        <span className="text-xs text-[var(--text-secondary)] truncate">· {currentPlayer}</span>
       </div>
 
       <div className="flex items-center gap-3 shrink-0">
-        <span className="text-xs text-muted-foreground">Turno {currentTurn}</span>
+        <span className="text-xs text-[var(--text-secondary)]">Turno {currentTurn}</span>
         {isLive && (
           <button
             onClick={togglePause}

@@ -40,17 +40,17 @@ export function ContextualHandSidebar() {
       aria-label="La mia mano"
       className={cn(
         'hidden md:flex flex-col shrink-0 sticky top-0 h-dvh z-30',
-        'border-l border-[var(--nh-border-default)] bg-[var(--nh-bg-base)]',
+        'border-l border-[var(--border-glass)] bg-[var(--bg-base)]',
         'transition-[width] duration-200 ease-out',
         isCollapsed ? 'w-[52px]' : 'w-[280px]'
       )}
     >
       {/* ── Header ───────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-[var(--nh-border-default)] px-2 py-2.5">
+      <div className="flex items-center gap-2 border-b border-[var(--border-glass)] px-2 py-2.5">
         {!isCollapsed && (
           <>
             <Hand className="h-4 w-4 text-primary" />
-            <span className="font-quicksand text-sm font-semibold text-[var(--nh-text-default)]">
+            <span className="font-quicksand text-sm font-semibold text-[var(--text-primary)]">
               La Mia Mano
             </span>
           </>

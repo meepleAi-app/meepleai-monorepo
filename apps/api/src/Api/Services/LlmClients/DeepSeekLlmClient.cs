@@ -3,69 +3,75 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Security;
-using Api.Models;
 
 namespace Api.Services.LlmClients;
 
 /// <summary>
-/// LLM client for OpenRouter API (https://openrouter.ai)
-/// ISSUE-958: Hybrid LLM architecture - OpenRouter provider for high-quality inference
+/// LLM client for DeepSeek API (https://api.deepseek.com)
+/// ISSUE-419: Direct DeepSeek provider for cost-effective high-quality inference
 /// </summary>
 /// <remarks>
-/// OpenRouter provides access to multiple LLM providers (OpenAI, Anthropic, Google, etc.)
-/// through a unified API. Used for authenticated/premium users requiring high-quality responses.
-/// Models: openai/gpt-4o-mini, anthropic/claude-3.5-sonnet, deepseek/deepseek-chat-v3.1, etc.
+/// DeepSeek provides an OpenAI-compatible API for their models (deepseek-chat, deepseek-reasoner, etc.)
+/// Used as an alternative to routing through OpenRouter for DeepSeek models.
+/// Includes usage metadata in streaming responses by default (no explicit usage.include needed).
 /// </remarks>
-internal class OpenRouterLlmClient : ILlmClient
+internal class DeepSeekLlmClient : ILlmClient
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<OpenRouterLlmClient> _logger;
+    private readonly ILogger<DeepSeekLlmClient> _logger;
     private readonly ILlmCostCalculator _costCalculator;
+    private readonly bool _isConfigured;
 
     // Hardcoded defaults
     private const int DefaultTimeoutSeconds = 60;
 
-    public string ProviderName => "OpenRouter";
+    public string ProviderName => "DeepSeek";
 
-    public OpenRouterLlmClient(
+    public DeepSeekLlmClient(
         IHttpClientFactory httpClientFactory,
         IConfiguration config,
         ILlmCostCalculator costCalculator,
-        ILogger<OpenRouterLlmClient> logger)
+        ILogger<DeepSeekLlmClient> logger)
     {
-        _httpClient = httpClientFactory.CreateClient("OpenRouter");
+        _httpClient = httpClientFactory.CreateClient("DeepSeek");
         _logger = logger;
         _costCalculator = costCalculator;
 
-        // S1075: OpenRouter API endpoint (official public endpoint)
+        // S1075: DeepSeek API endpoint (official public endpoint)
 #pragma warning disable S1075 // URIs should not be hardcoded - Official API endpoint
-        const string OpenRouterApiBaseUrl = "https://openrouter.ai/api/v1/";
+        const string DeepSeekApiBaseUrl = "https://api.deepseek.com/";
 #pragma warning restore S1075
 
-        // SEC-708: Read API key from Docker Secret file or direct config (S1450: local scope)
-        var apiKey = SecretsHelper.GetSecretOrValue(config, "OPENROUTER_API_KEY", logger, required: true)
-            ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured");
+        // Read API key from Docker Secret file or direct config — optional provider
+        var apiKey = SecretsHelper.GetSecretOrValue(config, "DEEPSEEK_API_KEY", logger, required: false);
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            _logger.LogWarning("DEEPSEEK_API_KEY not configured — DeepSeek provider will be unavailable");
+            _isConfigured = false;
+            return;
+        }
+
+        _isConfigured = true;
 
         // Configure HttpClient
-        _httpClient.BaseAddress = new Uri(OpenRouterApiBaseUrl);
+        _httpClient.BaseAddress = new Uri(DeepSeekApiBaseUrl);
         _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-        _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://meepleai.app");
         _httpClient.Timeout = TimeSpan.FromSeconds(DefaultTimeoutSeconds);
 
-        _logger.LogInformation("OpenRouterLlmClient initialized with cost tracking");
+        _logger.LogInformation("DeepSeekLlmClient initialized with cost tracking");
     }
 
     /// <inheritdoc/>
     public bool SupportsModel(string modelId)
     {
-        // OpenRouter models have provider prefix (e.g., "openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet")
-        return modelId.Contains('/');
+        // DeepSeek models: deepseek-chat, deepseek-reasoner, etc.
+        return modelId.StartsWith("deepseek-", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc/>
@@ -77,6 +83,11 @@ internal class OpenRouterLlmClient : ILlmClient
         int maxTokens,
         CancellationToken ct = default)
     {
+        if (!_isConfigured)
+        {
+            return LlmCompletionResult.CreateFailure("DeepSeek provider is not configured (missing API key)");
+        }
+
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
             return LlmCompletionResult.CreateFailure("No user prompt provided");
@@ -86,7 +97,7 @@ internal class OpenRouterLlmClient : ILlmClient
         {
             using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: false);
 
-            _logger.LogInformation("Generating OpenRouter completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
+            _logger.LogInformation("Generating DeepSeek completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
                 model, temperature, maxTokens);
 
             using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
@@ -94,31 +105,31 @@ internal class OpenRouterLlmClient : ILlmClient
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogError(ex, "OpenRouter completion timed out");
+            _logger.LogError(ex, "DeepSeek completion timed out");
             return LlmCompletionResult.CreateFailure("Request timed out");
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP request failed during OpenRouter completion");
+            _logger.LogError(ex, "HTTP request failed during DeepSeek completion");
             return LlmCompletionResult.CreateFailure($"HTTP error: {ex.Message}");
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Failed to deserialize OpenRouter response");
+            _logger.LogError(ex, "Failed to deserialize DeepSeek response");
             return LlmCompletionResult.CreateFailure("Invalid response format");
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Invalid operation during OpenRouter completion");
+            _logger.LogError(ex, "Invalid operation during DeepSeek completion");
             return LlmCompletionResult.CreateFailure($"Configuration error: {ex.Message}");
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
-        // SERVICE BOUNDARY: Wraps unexpected OpenRouter API errors into domain-friendly LlmCompletionResult
+        // SERVICE BOUNDARY: Wraps unexpected DeepSeek API errors into domain-friendly LlmCompletionResult
 #pragma warning restore S125
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during OpenRouter completion");
+            _logger.LogError(ex, "Unexpected error during DeepSeek completion");
             return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
         }
 #pragma warning restore CA1031
@@ -141,8 +152,8 @@ internal class OpenRouterLlmClient : ILlmClient
 
         messages.Add(new { role = "user", content = userPrompt });
 
-        // Issue #3231: Use Dictionary to conditionally include 'usage' field
-        // OpenRouter rejects "usage": null, so omit field entirely when not streaming
+        // DeepSeek uses standard OpenAI format — no 'usage' field needed for streaming
+        // (DeepSeek includes usage metadata in the final SSE chunk by default)
         var requestPayload = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             ["model"] = model,
@@ -151,11 +162,6 @@ internal class OpenRouterLlmClient : ILlmClient
             ["max_tokens"] = maxTokens,
             ["stream"] = stream
         };
-
-        if (stream)
-        {
-            requestPayload["usage"] = new { include = true };
-        }
 
         var json = JsonSerializer.Serialize(requestPayload);
         return new HttpRequestMessage(HttpMethod.Post, "chat/completions")
@@ -176,39 +182,15 @@ internal class OpenRouterLlmClient : ILlmClient
         if (!response.IsSuccessStatusCode)
         {
             var statusCode = (int)response.StatusCode;
-            _logger.LogError("OpenRouter API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
-
-            // Issue #5087: Parse 429/402 rate limit errors to surface metadata for fallback routing
-            var rateLimitError = OpenRouterErrorParser.TryParseRateLimitError(responseBody, statusCode);
-            if (rateLimitError != null)
-            {
-                var rlMetadata = new Dictionary<string, string>(StringComparer.Ordinal)
-                {
-                    ["rate_limit_type"] = rateLimitError.ErrorType.ToString().ToLowerInvariant()
-                };
-                if (rateLimitError.ResetTimestampMs.HasValue)
-                    rlMetadata["rate_limit_reset_ms"] = rateLimitError.ResetTimestampMs.Value.ToString(CultureInfo.InvariantCulture);
-                if (!string.IsNullOrEmpty(rateLimitError.ModelId))
-                    rlMetadata["rate_limit_model"] = rateLimitError.ModelId;
-
-                _logger.LogWarning(
-                    "OpenRouter rate limit: {ErrorType} for {Model} (resetMs={ResetMs})",
-                    rateLimitError.ErrorType, rateLimitError.ModelId, rateLimitError.ResetTimestampMs);
-
-                return LlmCompletionResult.CreateFailure(
-                    $"OpenRouter rate limit: {rateLimitError.ErrorType} ({statusCode})")
-                    with
-                { Metadata = rlMetadata };
-            }
-
-            return LlmCompletionResult.CreateFailure($"OpenRouter API error: {statusCode} ({response.StatusCode})");
+            _logger.LogError("DeepSeek API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
+            return LlmCompletionResult.CreateFailure($"DeepSeek API error: {statusCode} ({response.StatusCode})");
         }
 
         var chatResponse = JsonSerializer.Deserialize<OpenAiChatResponse>(responseBody);
 
         if (chatResponse?.Choices == null || chatResponse.Choices.Count == 0)
         {
-            return LlmCompletionResult.CreateFailure("No response returned from OpenRouter");
+            return LlmCompletionResult.CreateFailure("No response returned from DeepSeek");
         }
 
         var assistantMessage = chatResponse.Choices[0].Message?.Content ?? string.Empty;
@@ -236,7 +218,7 @@ internal class OpenRouterLlmClient : ILlmClient
 
         var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["provider"] = "OpenRouter",
+            ["provider"] = "DeepSeek",
             ["cost_usd"] = cost.TotalCost.ToString("F6", CultureInfo.InvariantCulture)
         };
 
@@ -256,7 +238,7 @@ internal class OpenRouterLlmClient : ILlmClient
             metadata["finish_reason"] = finishReason;
         }
 
-        _logger.LogInformation("Successfully generated OpenRouter completion (cost: ${Cost:F6})", cost.TotalCost);
+        _logger.LogInformation("Successfully generated DeepSeek completion (cost: ${Cost:F6})", cost.TotalCost);
 
         return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
     }
@@ -264,6 +246,11 @@ internal class OpenRouterLlmClient : ILlmClient
     /// <inheritdoc/>
     public async Task<bool> CheckHealthAsync(CancellationToken ct = default)
     {
+        if (!_isConfigured)
+        {
+            return false;
+        }
+
         try
         {
             using var response = await _httpClient.GetAsync("models", ct).ConfigureAwait(false);
@@ -271,7 +258,7 @@ internal class OpenRouterLlmClient : ILlmClient
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "OpenRouter health check failed");
+            _logger.LogDebug(ex, "DeepSeek health check failed");
             return false;
         }
     }
@@ -285,16 +272,22 @@ internal class OpenRouterLlmClient : ILlmClient
         int maxTokens,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(userPrompt))
+        if (!_isConfigured)
         {
-            _logger.LogWarning("Empty user prompt provided for OpenRouter streaming");
+            _logger.LogWarning("DeepSeek provider is not configured — streaming unavailable");
             yield break;
         }
 
-        _logger.LogInformation("Starting OpenRouter streaming completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
+        if (string.IsNullOrWhiteSpace(userPrompt))
+        {
+            _logger.LogWarning("Empty user prompt provided for DeepSeek streaming");
+            yield break;
+        }
+
+        _logger.LogInformation("Starting DeepSeek streaming completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
             model, temperature, maxTokens);
 
-        // Retry loop for transient 429 (TooManyRequests) errors from OpenRouter free models.
+        // Retry loop for transient 429 (TooManyRequests) errors.
         // The retry wraps only the HTTP send + status check; yield return stays outside try-catch
         // to satisfy the C# async-iterator constraint.
         const int maxRetries = 3;
@@ -317,7 +310,7 @@ internal class OpenRouterLlmClient : ILlmClient
 
                 // CodeQL: cs/cleartext-storage-of-sensitive-information — error body is masked before logging
                 var errorBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-                _logger.LogError("OpenRouter streaming API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(errorBody));
+                _logger.LogError("DeepSeek streaming API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(errorBody));
 
                 if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxRetries)
                 {
@@ -337,21 +330,21 @@ internal class OpenRouterLlmClient : ILlmClient
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP request failed initiating OpenRouter streaming");
+                _logger.LogError(ex, "HTTP request failed initiating DeepSeek streaming");
                 response?.Dispose();
                 response = null;
                 yield break;
             }
             catch (TaskCanceledException ex)
             {
-                _logger.LogError(ex, "OpenRouter streaming request timed out");
+                _logger.LogError(ex, "DeepSeek streaming request timed out");
                 response?.Dispose();
                 response = null;
                 yield break;
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogError(ex, "Invalid operation initiating OpenRouter streaming");
+                _logger.LogError(ex, "Invalid operation initiating DeepSeek streaming");
                 response?.Dispose();
                 response = null;
                 yield break;
@@ -362,7 +355,7 @@ internal class OpenRouterLlmClient : ILlmClient
 #pragma warning restore S125
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error initiating OpenRouter streaming");
+                _logger.LogError(ex, "Unexpected error initiating DeepSeek streaming");
                 response?.Dispose();
                 response = null;
                 yield break;
@@ -410,10 +403,10 @@ internal class OpenRouterLlmClient : ILlmClient
                 {
                     var data = line.Substring(6).Trim();
 
-                    // OpenRouter sends "[DONE]" when stream is complete
+                    // DeepSeek sends "[DONE]" when stream is complete
                     if (string.Equals(data, "[DONE]", StringComparison.Ordinal))
                     {
-                        _logger.LogInformation("OpenRouter streaming finished");
+                        _logger.LogInformation("DeepSeek streaming finished");
                         break;
                     }
 
@@ -424,7 +417,7 @@ internal class OpenRouterLlmClient : ILlmClient
                     }
                     catch (JsonException ex)
                     {
-                        _logger.LogWarning(ex, "Failed to parse OpenRouter streaming chunk: {Data}", LogSanitizer.Sanitize(data));
+                        _logger.LogWarning(ex, "Failed to parse DeepSeek streaming chunk: {Data}", LogSanitizer.Sanitize(data));
                         continue;
                     }
 
@@ -432,7 +425,7 @@ internal class OpenRouterLlmClient : ILlmClient
                     var delta = chunk?.Choices?[0]?.Delta?.Content;
                     var hasContent = !string.IsNullOrEmpty(delta);
 
-                    // ISSUE-1725: Check for usage metadata in chunk (final chunk)
+                    // Check for usage metadata in chunk (final chunk — DeepSeek includes by default)
                     var hasUsage = chunk?.Usage != null;
 
                     if (hasContent && !hasUsage)
@@ -470,7 +463,7 @@ internal class OpenRouterLlmClient : ILlmClient
                         };
 
                         _logger.LogInformation(
-                            "OpenRouter streaming usage: {PromptTokens}p + {CompletionTokens}c = {TotalTokens}t (${TotalCost:F6})",
+                            "DeepSeek streaming usage: {PromptTokens}p + {CompletionTokens}c = {TotalTokens}t (${TotalCost:F6})",
                             usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, llmCost.TotalCost);
 
                         yield return new StreamChunk(

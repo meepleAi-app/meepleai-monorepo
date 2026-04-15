@@ -421,7 +421,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     /**
      * Get user's agent slot allocation and usage
      * Issue #4771: Agent Slots Endpoint + Quota System
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/user/agent-slots. Throws on null response. See: endpoint audit 2026-04-15
+     * Issue #417: Backend route registered in AiEndpoints.cs (GET /api/v1/user/agent-slots)
      */
     async getSlots(): Promise<{
       total: number;

@@ -163,10 +163,29 @@
     --texture-parchment: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
 
     /* ============================================================================
-     * HYBRID WARM-MODERN PALETTE
-     * Warm-neutral visual identity (spec: 2026-03-25-library-visual-redesign)
-     * Light mode values (default); dark overrides in .dark {} block below
+     * UNIFIED THEME TOKENS
+     * Dark mode (default) — matches mobile Premium Gaming theme
+     * Light overrides via .light class on <html>
      * ============================================================================ */
+
+    /* Unified tokens (dark = default, consumed by all components) */
+    --bg-base: var(--gaming-bg-base);
+    --bg-elevated: var(--gaming-bg-elevated);
+    --bg-glass: var(--gaming-bg-glass);
+    --border-glass: var(--gaming-border-glass);
+    --border-glass-hover: var(--gaming-border-glass-hover);
+    --text-primary: var(--gaming-text-primary);
+    --text-secondary: var(--gaming-text-secondary);
+    --text-tertiary: var(--gaming-text-tertiary);
+    --text-accent: var(--gaming-text-accent);
+
+    /* Border-radius hierarchy */
+    --radius-sheet: 1.25rem;   /* 20px — sheets/drawers top-only */
+    --radius-card: 1rem;       /* 16px — cards */
+    --radius-btn: 0.75rem;     /* 12px — buttons/inputs */
+    --radius-pill: 3.125rem;   /* 50px — chips/pills */
+
+    /* Legacy aliases (backwards compat — remove after full migration) */
     --nh-bg-base: #faf8f5;
     --nh-bg-surface: #fffcf8;
     --nh-bg-surface-end: #f5f0e8;
@@ -571,6 +590,19 @@
     --mc-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.15);
     --mc-shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.30), 0 8px 16px rgba(0, 0, 0, 0.18);
     --mc-shadow-2xl: 0 25px 60px rgba(0, 0, 0, 0.35), 0 12px 24px rgba(0, 0, 0, 0.22);
+  }
+
+  /* Light mode overrides — apply via class="light" on <html> */
+  .light {
+    --bg-base: #faf8f5;
+    --bg-elevated: #fffcf8;
+    --bg-glass: rgba(160, 120, 60, 0.04);
+    --border-glass: rgba(160, 120, 60, 0.08);
+    --border-glass-hover: rgba(160, 120, 60, 0.14);
+    --text-primary: #1a1a1a;
+    --text-secondary: #5a4a35;
+    --text-tertiary: #8a7a65;
+    --text-accent: hsl(25, 95%, 38%);
   }
 }
 

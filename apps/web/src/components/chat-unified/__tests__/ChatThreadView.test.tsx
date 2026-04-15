@@ -336,7 +336,8 @@ describe('ChatThreadView', () => {
     expect(mockSendViaSSE).not.toHaveBeenCalled();
   });
 
-  it('sends message via SSE when agentId is present', async () => {
+  it('sends message via QA stream when gameId is present (even with agentId)', async () => {
+    // #415: gameId takes priority over agentId — QA stream fires, not SSE agent path
     const user = userEvent.setup();
     await renderView();
 
@@ -349,11 +350,12 @@ describe('ChatThreadView', () => {
     await user.click(screen.getByTestId('send-btn'));
 
     await waitFor(() => {
-      // 4th arg is proxyGameContext (undefined when agentTypology not set)
-      expect(mockSendViaSSE).toHaveBeenCalledWith('agent-1', 'SSE message', 'thread-1', undefined);
+      // With gameId present, message is saved via REST (QA stream path)
+      expect(apiMock.chat.addMessage).toHaveBeenCalled();
     });
 
-    expect(apiMock.chat.addMessage).not.toHaveBeenCalled();
+    // SSE agent path should NOT be called when gameId is available
+    expect(mockSendViaSSE).not.toHaveBeenCalled();
   });
 
   it('disables send button when input empty', async () => {
@@ -542,7 +544,8 @@ describe('ChatThreadView', () => {
   // Proxy Game Context (Issue #4780)
   // --------------------------------------------------------------------------
 
-  it('passes proxy game context when agentTypology is set', async () => {
+  it('uses QA stream (not SSE) when agentTypology is set but gameId is present', async () => {
+    // #415: gameId takes priority — QA stream handles game-context AI responses
     (apiMock.chat.getThreadById as Mock).mockResolvedValue({
       ...mockThread,
       agentType: 'Tutor',
@@ -560,11 +563,12 @@ describe('ChatThreadView', () => {
     await user.click(screen.getByTestId('send-btn'));
 
     await waitFor(() => {
-      expect(mockSendViaSSE).toHaveBeenCalledWith('agent-1', 'Help with rules', 'thread-1', {
-        gameName: 'Catan',
-        agentTypology: 'Tutor',
-      });
+      // QA stream path saves message via REST first
+      expect(apiMock.chat.addMessage).toHaveBeenCalled();
     });
+
+    // SSE agent path should NOT be called when gameId is available
+    expect(mockSendViaSSE).not.toHaveBeenCalled();
   });
 
   // --------------------------------------------------------------------------

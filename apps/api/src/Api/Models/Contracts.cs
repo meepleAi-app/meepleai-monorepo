@@ -83,7 +83,10 @@ internal enum StreamingEventType
     DebugAdaptiveRouting = 23,    // Adaptive RAG query complexity classification
     DebugCragEvaluation = 24,     // CRAG retrieval relevance evaluation
     DebugRagFusion = 25,          // RAG-Fusion query expansion results
-    DebugContextWindow = 26       // Context window usage and history compression
+    DebugContextWindow = 26,      // Context window usage and history compression
+
+    // Copyright leak guard event (#447)
+    CopyrightSanitized = 27       // Response body was sanitized due to verbatim copyright leak
 }
 
 internal record RagStreamingEvent(
@@ -128,6 +131,11 @@ internal record StreamingModelDowngrade(
     string Reason,
     bool IsLocalFallback,
     string? UpgradeMessage);
+
+// #447: Copyright leak guard sanitization event
+internal record StreamingCopyrightSanitized(
+    string SanitizedBody,
+    int MatchCount);
 
 // Admin Debug Chat: data records for debug streaming events
 internal record DebugAgentRouterData(

@@ -11,11 +11,16 @@
 
 import { useState, useEffect } from 'react';
 
-import { ArrowLeft, FileText, Save } from 'lucide-react';
-import Link from 'next/link';
+import { FileText, Save } from 'lucide-react';
 import { useParams } from 'next/navigation';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
@@ -37,13 +42,13 @@ export default function SessionNotesPage() {
     setLoading(true);
     api.sessions
       .getById(id)
-      .then((data) => {
+      .then(data => {
         setSession(data);
         // Load personal note from localStorage
         const stored = localStorage.getItem(`${STORAGE_KEY_PREFIX}${id}`);
         if (stored) setPersonalNote(stored);
       })
-      .catch((err) => {
+      .catch(err => {
         setError(err instanceof Error ? err.message : 'Failed to load session');
       })
       .finally(() => setLoading(false));
@@ -69,11 +74,6 @@ export default function SessionNotesPage() {
     return (
       <div className="container mx-auto py-8 px-4 max-w-3xl">
         <p className="text-destructive mb-4">{error ?? 'Session not found'}</p>
-        <Button asChild variant="ghost">
-          <Link href={`/sessions/${id}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Session
-          </Link>
-        </Button>
       </div>
     );
   }
@@ -82,11 +82,6 @@ export default function SessionNotesPage() {
     <div className="container mx-auto py-8 px-4 max-w-3xl">
       {/* Header */}
       <div className="mb-6">
-        <Button asChild variant="ghost" className="mb-4 font-nunito">
-          <Link href={`/sessions/${id}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Session
-          </Link>
-        </Button>
         <div className="flex items-center gap-3">
           <FileText className="h-6 w-6 text-primary" />
           <h1 className="text-3xl font-bold font-quicksand">Session Notes</h1>
@@ -106,7 +101,9 @@ export default function SessionNotesPage() {
             {session.notes ? (
               <p className="text-foreground whitespace-pre-wrap">{session.notes}</p>
             ) : (
-              <p className="text-muted-foreground italic">No official notes recorded for this session.</p>
+              <p className="text-muted-foreground italic">
+                No official notes recorded for this session.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -122,7 +119,7 @@ export default function SessionNotesPage() {
           <CardContent className="space-y-3">
             <Textarea
               value={personalNote}
-              onChange={(e) => {
+              onChange={e => {
                 setPersonalNote(e.target.value);
                 setSaved(false);
               }}

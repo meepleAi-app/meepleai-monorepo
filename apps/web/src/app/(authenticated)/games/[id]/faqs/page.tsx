@@ -11,10 +11,10 @@
 
 import { useEffect, useState } from 'react';
 
-import { ArrowLeft, ChevronDown, ChevronRight, HelpCircle, ThumbsUp } from 'lucide-react';
-import Link from 'next/link';
+import { ChevronDown, ChevronRight, HelpCircle, ThumbsUp } from 'lucide-react';
 import { useParams } from 'next/navigation';
 
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -83,23 +83,12 @@ export default function GameFaqsPage() {
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="container mx-auto max-w-4xl">
-        {/* Back Button */}
-        <Button asChild variant="ghost" className="mb-6 font-nunito">
-          <Link href={`/library/games/${gameId}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Game
-          </Link>
-        </Button>
-
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <HelpCircle className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold font-quicksand">FAQs</h1>
-            <p className="text-muted-foreground font-nunito text-sm">
-              Frequently asked questions about this game
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="FAQ"
+          parentHref={`/library/${gameId}`}
+          parentLabel="Gioco"
+          className="mb-8"
+        />
 
         {/* Loading */}
         {isLoading && (

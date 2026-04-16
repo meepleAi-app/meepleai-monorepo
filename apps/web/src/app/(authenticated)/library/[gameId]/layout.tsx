@@ -5,47 +5,53 @@
  * Canonical route: /library/[gameId]
  * (replaces /library/games/[gameId] — permanent redirect in next.config.js)
  *
- * Registers contextual MiniNav (Dettagli · Agente · Toolkit · FAQ)
- * and FloatingActionBar (Chat · Carica PDF · Avvia Sessione) for the game hub.
- * The gameId is dynamic — read from URL params so hrefs are always correct.
+ * Renders PageHeader with contextual tabs (Dettagli · Agente · Toolkit · FAQ)
+ * and a primary action for chat. The gameId is dynamic — read from URL params.
  */
 
 'use client';
 
-import { type ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 
-import { useParams, usePathname, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
-import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
+import { PageHeader } from '@/components/layout/PageHeader';
 
-export default function LibraryGameDetailLayout({ children }: { children: ReactNode }) {
+function LibraryGameHeader() {
   const { gameId } = useParams<{ gameId: string }>();
   const router = useRouter();
-  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = searchParams?.get('tab');
 
-  const activeTabId = pathname?.includes('tab=faq')
-    ? 'faq'
-    : pathname?.includes('tab=toolkit')
-      ? 'toolkit'
-      : pathname?.includes('tab=agent')
-        ? 'agent'
-        : 'details';
+  const activeTabId = tab ?? 'details';
 
-  useMiniNavConfig({
-    breadcrumb: 'Gioco',
-    tabs: [
-      { id: 'details', label: 'Dettagli', href: `/library/${gameId}` },
-      { id: 'agent', label: 'Agente', href: `/library/${gameId}?tab=agent` },
-      { id: 'toolkit', label: 'Toolkit', href: `/library/${gameId}?tab=toolkit` },
-      { id: 'faq', label: 'FAQ', href: `/library/${gameId}?tab=faq` },
-    ],
-    activeTabId,
-    primaryAction: {
-      label: 'Chat con Agente',
-      icon: '💬',
-      onClick: () => router.push(`/chat/new?gameId=${gameId}`),
-    },
-  });
+  return (
+    <PageHeader
+      title="Gioco"
+      parentHref="/library"
+      parentLabel="Libreria"
+      tabs={[
+        { id: 'details', label: 'Dettagli', href: `/library/${gameId}` },
+        { id: 'agent', label: 'Agente', href: `/library/${gameId}?tab=agent` },
+        { id: 'toolkit', label: 'Toolkit', href: `/library/${gameId}?tab=toolkit` },
+        { id: 'faq', label: 'FAQ', href: `/library/${gameId}?tab=faq` },
+      ]}
+      activeTabId={activeTabId}
+      primaryAction={{
+        label: 'Chat con Agente',
+        onClick: () => router.push(`/chat/new?gameId=${gameId}`),
+      }}
+    />
+  );
+}
 
-  return <>{children}</>;
+export default function LibraryGameDetailLayout({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <Suspense fallback={<div className="h-14" />}>
+        <LibraryGameHeader />
+      </Suspense>
+      {children}
+    </>
+  );
 }

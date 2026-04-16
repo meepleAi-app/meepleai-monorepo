@@ -2,7 +2,7 @@
  * Active Session Layout — /sessions/[id]
  *
  * Responsibilities:
- * 1. Override MiniNav with session-specific tabs (Punteggi, Strumenti, Chat, Note)
+ * 1. Render PageHeader with session-specific tabs (Punteggi, Strumenti, Chat, Note)
  * 2. Load session data on mount
  * 3. Own LiveScoreSheet state
  *
@@ -15,8 +15,8 @@ import { type ReactNode, useEffect, useState, use } from 'react';
 
 import { usePathname } from 'next/navigation';
 
+import { PageHeader } from '@/components/layout/PageHeader';
 import { LiveScoreSheet } from '@/components/session';
-import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import { useSessionStore } from '@/lib/stores/session-store';
 
 interface SessionLayoutProps {
@@ -40,29 +40,13 @@ export default function SessionDetailLayout({ children, params }: SessionLayoutP
     });
   }, [id, loadSession]);
 
-  const activeTabId = pathname?.includes('/notes')
-    ? 'notes'
-    : pathname?.includes('/chat')
-      ? 'chat'
-      : pathname?.includes('/tools')
-        ? 'tools'
-        : 'scores';
-
-  useMiniNavConfig({
-    breadcrumb: 'Sessione',
-    tabs: [
-      { id: 'scores', label: 'Punteggi', href: `/sessions/${id}` },
-      { id: 'tools', label: 'Strumenti', href: `/sessions/${id}/tools` },
-      { id: 'chat', label: 'Chat', href: `/sessions/${id}/chat` },
-      { id: 'notes', label: 'Note', href: `/sessions/${id}/notes` },
-    ],
-    activeTabId,
-    primaryAction: {
-      label: 'Aggiungi Punteggio',
-      icon: '＋',
-      onClick: () => setScoreSheetOpen(true),
-    },
-  });
+  // Derive active tab from pathname
+  const deriveActiveTab = (): string => {
+    if (pathname?.endsWith('/tools')) return 'tools';
+    if (pathname?.endsWith('/chat')) return 'chat';
+    if (pathname?.endsWith('/notes')) return 'notes';
+    return 'scores';
+  };
 
   // Derive scoring context from store (same source as page.tsx for consistency)
   const players = activeSession?.players ?? [];
@@ -72,6 +56,22 @@ export default function SessionDetailLayout({ children, params }: SessionLayoutP
 
   return (
     <>
+      <PageHeader
+        title={activeSession?.gameName ?? 'Sessione'}
+        parentHref="/sessions"
+        parentLabel="Sessioni"
+        tabs={[
+          { id: 'scores', label: 'Punteggi', href: `/sessions/${id}` },
+          { id: 'tools', label: 'Strumenti', href: `/sessions/${id}/tools` },
+          { id: 'chat', label: 'Chat', href: `/sessions/${id}/chat` },
+          { id: 'notes', label: 'Note', href: `/sessions/${id}/notes` },
+        ]}
+        activeTabId={deriveActiveTab()}
+        primaryAction={{
+          label: 'Aggiungi Punteggio',
+          onClick: () => setScoreSheetOpen(true),
+        }}
+      />
       {children}
 
       <LiveScoreSheet

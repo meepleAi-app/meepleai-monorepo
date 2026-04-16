@@ -70,6 +70,10 @@ services:
       Authentication__SessionCookie__SameSite: "Lax"
       # Ollama disabled in staging — all LLM traffic goes to OpenRouter
       AI__Providers__Ollama__Enabled: "false"
+      # Unused optional AI services — PDF extraction uses local Docnet (Provider: Docnet).
+      # Empty URL makes health checks return Degraded instead of Unhealthy.
+      PdfProcessing__Extractor__SmolDocling__ApiUrl: ""
+      PdfProcessing__Extractor__Unstructured__ApiUrl: ""
     volumes:
       - ./secrets:/app/infra/secrets:ro
     labels:
@@ -158,7 +162,10 @@ services:
       - "traefik.http.middlewares.strip-services-reranker.stripprefix.prefixes=/services/reranker"
       - "traefik.http.services.reranker.loadbalancer.server.port=8003"
 
+  # Disabled in staging — PDF extraction uses local Docnet (see api.environment).
+  # Re-enable with profile 'pdf-cloud-extractors' if switching Extractor:Provider.
   unstructured-service:
+    profiles: [pdf-cloud-extractors]
     restart: always
     deploy:
       resources:
@@ -178,6 +185,7 @@ services:
       - "traefik.http.services.unstructured.loadbalancer.server.port=8001"
 
   smoldocling-service:
+    profiles: [pdf-cloud-extractors]
     restart: always
     deploy:
       resources:

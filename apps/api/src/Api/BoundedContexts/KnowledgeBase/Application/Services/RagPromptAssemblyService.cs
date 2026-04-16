@@ -820,4 +820,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         // Rough estimate: ~4 characters per token (GPT-style)
         return (int)Math.Ceiling(text.Length / 4.0);
     }
+
+    /// <summary>
+    /// Test seam: invokes BuildSystemPrompt with explicit parameters.
+    /// Not intended for production use.
+    /// </summary>
+    internal static string BuildSystemPromptForTest(
+        string agentTypology, string gameTitle, GameState? gameState, string ragContext,
+        bool hasExpansions, bool hasProtectedCitations, string agentLanguage)
+        => BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations, agentLanguage);
 }

@@ -709,6 +709,17 @@ public class RagPromptAssemblyServiceTests
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("userQuestion");
     }
 
+    [Fact]
+    public async Task AssemblePromptAsync_ThrowsArgumentNullException_WhenAgentLanguageIsNull()
+    {
+        var service = CreateService();
+
+        var act = () => service.AssemblePromptAsync(
+            "tutor", "Chess", null, "Question", TestGameId, null, null, null!, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("agentLanguage");
+    }
+
     #endregion
 
     #region Constructor Validation

@@ -489,7 +489,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     /// Normalizes AgentDefinition.ChatLanguage to a concrete ISO 639-1 code
     /// for downstream consumption. "auto" and empty values default to "it" (alpha default).
     /// </summary>
-    private static string NormalizeLanguage(string? chatLanguage) =>
+    internal static string NormalizeLanguage(string? chatLanguage) =>
         chatLanguage switch
         {
             null or "" or "auto" => "it",

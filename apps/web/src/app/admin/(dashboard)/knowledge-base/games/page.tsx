@@ -21,12 +21,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { GamesWithoutKbSection } from '@/components/admin/knowledge-base/games-without-kb-section';
+import { UploadForGameDrawer } from '@/components/admin/knowledge-base/upload-for-game-drawer';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
+import type { GameWithoutKbDto } from '@/lib/api/kb-games-without-kb-api';
 import type { GameKbStatusItem } from '@/lib/api/schemas/admin-knowledge-base.schemas';
 
 const httpClient = new HttpClient();
@@ -141,6 +144,7 @@ function GameKbRow({ item }: { item: GameKbStatusItem }) {
 export default function KbGamesPage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'complete' | 'partial' | 'none'>('all');
+  const [uploadTarget, setUploadTarget] = useState<GameWithoutKbDto | null>(null);
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['admin', 'kb-game-statuses'],
@@ -245,7 +249,11 @@ export default function KbGamesPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="px-2">
-          {isLoading ? (
+          {filter === 'none' ? (
+            <div className="p-2">
+              <GamesWithoutKbSection onUploadClick={setUploadTarget} />
+            </div>
+          ) : isLoading ? (
             <div className="space-y-1 p-2">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
@@ -273,6 +281,12 @@ export default function KbGamesPage() {
           )}
         </CardContent>
       </Card>
+
+      <UploadForGameDrawer
+        game={uploadTarget}
+        open={uploadTarget !== null}
+        onClose={() => setUploadTarget(null)}
+      />
     </div>
   );
 }

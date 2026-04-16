@@ -25,6 +25,16 @@ public class UnstructuredHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
+        // Skip active probe if this extractor is not the selected provider — avoids
+        // false Unhealthy for optional services that are intentionally not deployed.
+        var provider = _configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";
+        var usesUnstructured = provider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase) ||
+                               provider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase);
+        if (!usesUnstructured)
+        {
+            return HealthCheckResult.Degraded($"Unstructured not in use (Provider={provider})");
+        }
+
         var unstructuredUrl = _configuration["PdfProcessing:Extractor:Unstructured:ApiUrl"];
         if (string.IsNullOrWhiteSpace(unstructuredUrl))
         {

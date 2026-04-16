@@ -8,7 +8,6 @@ import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
-import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
 // ========== Filter chips ==========
 
@@ -51,11 +50,7 @@ export default function SessionsHubPage() {
   // Fetch active sessions (limit 20)
   const { data, isLoading } = useActiveSessions(20);
 
-  useMiniNavConfig({
-    breadcrumb: 'Sessioni',
-    tabs: [{ id: 'all', label: 'Sessioni', href: '/sessions' }],
-    activeTabId: 'all',
-  });
+  // Tabs/breadcrumb are now owned by `sessions/layout.tsx` via PageHeader.
 
   const items = useMemo(() => {
     const sessions = data?.sessions ?? [];

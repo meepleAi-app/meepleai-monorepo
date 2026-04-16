@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Models;
@@ -23,4 +24,13 @@ internal sealed record ChunkCitation(
     string SnippetPreview,
     CopyrightTier CopyrightTier = CopyrightTier.Protected,
     string? ParaphrasedSnippet = null,
-    bool IsPublic = false);
+    bool IsPublic = false)
+{
+    /// <summary>
+    /// Full chunk text used by the copyright leak guard (#447).
+    /// In-memory only during request lifecycle — NOT persisted in CitationsJson
+    /// (marked [JsonIgnore]). Null when rehydrated from storage (older messages).
+    /// </summary>
+    [JsonIgnore]
+    public string? FullText { get; init; }
+}

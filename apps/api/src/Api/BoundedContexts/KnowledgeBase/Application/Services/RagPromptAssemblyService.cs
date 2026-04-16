@@ -121,6 +121,11 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
         // Step 2: Build system prompt (persona + RAG chunks + expansion priority + copyright instruction)
         var hasProtectedCitations = citations.Any(c => c.CopyrightTier == CopyrightTier.Protected);
+
+        MeepleAiMetrics.CopyrightInstructionInjected.Add(1,
+            new KeyValuePair<string, object?>("has_protected", hasProtectedCitations),
+            new KeyValuePair<string, object?>("agent_language", agentLanguage));
+
         var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations, agentLanguage);
 
         // Step 3: Build user prompt (chat history + current question)
@@ -378,7 +383,10 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     DocumentId: chunk.PdfId,
                     PageNumber: chunk.Page,
                     RelevanceScore: chunk.Score,
-                    SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text);
+                    SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text)
+                {
+                    FullText = chunk.Text  // #447: preserve full text for copyright leak guard
+                };
 
                 sb.AppendLine(FormatChunkForPrompt(citation, chunk.Text));
                 citations.Add(citation);

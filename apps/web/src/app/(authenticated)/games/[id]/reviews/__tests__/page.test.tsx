@@ -38,14 +38,15 @@ describe('GameReviewsPage', () => {
 
   it('shows page heading', async () => {
     renderWithQuery(<GameReviewsPage />);
-    expect(screen.getByText('Reviews')).toBeInTheDocument();
+    expect(screen.getByText('Recensioni')).toBeInTheDocument();
   });
 
   it('shows back navigation link', async () => {
     renderWithQuery(<GameReviewsPage />);
-    const backLink = screen.getByRole('link', { name: /Back to Game/i });
+    // PageHeader renders the parentLabel as a link to `parentHref`
+    const backLink = screen.getByRole('link', { name: /Gioco/i });
     expect(backLink).toBeInTheDocument();
-    expect(backLink).toHaveAttribute('href', '/library/games/game-123');
+    expect(backLink).toHaveAttribute('href', '/library/game-123');
   });
 
   it('shows loading skeletons initially', async () => {

@@ -15,6 +15,7 @@ interface TopBarV2Props {
 export function TopBarV2({ onHamburgerClick, onSearchClick, adminMode }: TopBarV2Props) {
   return (
     <header
+      data-testid="top-bar"
       className="sticky top-0 z-40 h-12 flex items-center justify-between px-3"
       style={{
         backdropFilter: 'blur(16px)',

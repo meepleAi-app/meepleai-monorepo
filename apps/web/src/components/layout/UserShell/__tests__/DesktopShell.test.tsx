@@ -14,26 +14,26 @@ vi.mock('@/components/layout/UserMenuDropdown', () => ({
   UserMenuDropdown: () => <button aria-label="User menu">MR</button>,
 }));
 
-vi.mock('@/components/layout/ContextualHand', () => ({
-  ContextualHandSidebar: () => null,
-}));
-
 vi.mock('@/components/chat/panel/ChatSlideOverPanel', () => ({
   ChatSlideOverPanel: () => null,
 }));
 
-vi.mock('@/components/layout/mobile/ActionBar', () => ({
-  ActionBar: () => null,
+vi.mock('@/components/layout/SideDrawer/SideDrawer', () => ({
+  SideDrawer: () => null,
 }));
 
-vi.mock('@/components/layout/mobile/HandDrawer', () => ({
-  HandDrawer: () => null,
+vi.mock('@/components/layout/SearchOverlay', () => ({
+  SearchOverlay: () => null,
+}));
+
+vi.mock('@/components/layout/MobileCTAPill', () => ({
+  MobileCTAPill: () => null,
 }));
 
 import { DesktopShell } from '../DesktopShell';
 
 describe('DesktopShell', () => {
-  it('renders top bar, mini-nav slot and children', () => {
+  it('renders top bar and children', () => {
     render(
       <DesktopShell>
         <div data-testid="content">hello</div>

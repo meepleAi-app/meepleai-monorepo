@@ -71,7 +71,7 @@ export function NavFooter({ items, size = 'sm' }: NavFooterProps) {
                   e.stopPropagation();
                   item.onPlusClick?.();
                 }}
-                className="absolute -bottom-0.5 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-extrabold text-white shadow-sm"
+                className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-extrabold text-white shadow-sm"
                 style={{ background: color }}
                 aria-label={`Aggiungi ${item.label}`}
               >

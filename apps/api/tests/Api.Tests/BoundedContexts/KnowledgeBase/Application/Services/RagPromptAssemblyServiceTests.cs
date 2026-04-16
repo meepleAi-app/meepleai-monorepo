@@ -155,7 +155,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert — No chunks pass the 0.55 threshold with FTS-only RRF scores
         result.Should().NotBeNull();
@@ -179,7 +179,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pieces move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert — No citations because FTS-only RRF scores are below 0.55
         result.Citations.Should().BeEmpty();
@@ -200,7 +200,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Chess", null, "What is en passant?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -221,7 +221,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -250,7 +250,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "Can they capture?",
-            TestGameId, thread, null, CancellationToken.None);
+            TestGameId, thread, null, "it", CancellationToken.None);
 
         // Assert
         result.UserPrompt.Should().Contain("Conversation History");
@@ -284,7 +284,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "Final question",
-            TestGameId, thread, null, CancellationToken.None);
+            TestGameId, thread, null, "it", CancellationToken.None);
 
         // Assert
         result.UserPrompt.Should().Contain("[Previous conversation summary]");
@@ -306,7 +306,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert
         result.UserPrompt.Should().NotContain("Conversation History");
@@ -330,7 +330,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -356,7 +356,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -378,7 +378,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert - graceful degradation, no exception thrown
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -414,7 +414,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pieces move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert — FTS-only RRF scores are below threshold, so no results regardless of reranker
         result.Citations.Should().BeEmpty();
@@ -445,7 +445,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "stratega", "Chess", gameState, "What should I do?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("Current Game State");
@@ -470,7 +470,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Catan", null, "Is this legal?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("arbitro");
@@ -589,7 +589,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert - embedding called for original + 2 expansions = 3 times
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
@@ -615,7 +615,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert - should still work with original query only
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -663,7 +663,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "Question",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert — Duplicate RRF entries boost doc1:0 score above threshold (~0.97),
         // while doc1:1 with single entry stays below threshold (~0.48).
@@ -682,7 +682,7 @@ public class RagPromptAssemblyServiceTests
         var service = CreateService();
 
         var act = () => service.AssemblePromptAsync(
-            null!, "Chess", null, "Question", TestGameId, null, null, CancellationToken.None);
+            null!, "Chess", null, "Question", TestGameId, null, null, "it", CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("agentTypology");
     }
@@ -693,7 +693,7 @@ public class RagPromptAssemblyServiceTests
         var service = CreateService();
 
         var act = () => service.AssemblePromptAsync(
-            "tutor", null!, null, "Question", TestGameId, null, null, CancellationToken.None);
+            "tutor", null!, null, "Question", TestGameId, null, null, "it", CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("gameTitle");
     }
@@ -704,7 +704,7 @@ public class RagPromptAssemblyServiceTests
         var service = CreateService();
 
         var act = () => service.AssemblePromptAsync(
-            "tutor", "Chess", null, null!, TestGameId, null, null, CancellationToken.None);
+            "tutor", "Chess", null, null!, TestGameId, null, null, "it", CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("userQuestion");
     }
@@ -839,7 +839,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "A question about rules",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert - should have a reasonable token estimate (roughly length/4)
         result.EstimatedTokens.Should().BeGreaterThan(0);
@@ -931,7 +931,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Catan", null, "How do cities work?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert — FTS is called for the base game ID
         _textSearchMock.Verify(t => t.FullTextSearchAsync(
@@ -956,7 +956,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Catan", null, "Is this legal?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("Expansion Priority");
@@ -976,7 +976,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Catan", null, "Is this legal?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().NotContain("Expansion Priority");
@@ -999,7 +999,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Catan", null, "Question?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert — After Qdrant removal, FTS-only RRF scores are below threshold
         result.Citations.Should().BeEmpty();

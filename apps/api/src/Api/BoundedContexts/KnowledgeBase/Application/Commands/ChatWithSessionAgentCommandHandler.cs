@@ -211,6 +211,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             new StreamingStateUpdate("Retrieving game rules and building context...", thread.Id));
 
         // Assemble prompt with RAG context + chat history
+        var agentLanguage = NormalizeLanguage(definition.ChatLanguage);
         var assembled = await _ragPromptService.AssemblePromptAsync(
             definition.Name,
             gameTitle,
@@ -219,6 +220,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             agentSession.GameId,
             thread,
             userTier: null,
+            agentLanguage: agentLanguage,
             cancellationToken).ConfigureAwait(false);
 
         _logger.LogDebug(
@@ -482,4 +484,16 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     {
         return new RagStreamingEvent(type, data, DateTime.UtcNow);
     }
+
+    /// <summary>
+    /// Normalizes AgentDefinition.ChatLanguage to a concrete ISO 639-1 code
+    /// for downstream consumption. "auto" and empty values default to "it" (alpha default).
+    /// </summary>
+    private static string NormalizeLanguage(string? chatLanguage) =>
+        chatLanguage switch
+        {
+            null or "" or "auto" => "it",
+            var lang when lang.Length == 2 => lang.ToLowerInvariant(),
+            _ => "it"
+        };
 }

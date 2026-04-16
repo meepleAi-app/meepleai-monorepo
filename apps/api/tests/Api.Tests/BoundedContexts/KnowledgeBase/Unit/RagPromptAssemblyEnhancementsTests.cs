@@ -151,7 +151,7 @@ public class RagPromptAssemblyEnhancementsTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "Hello!",
-            TestGameId, null, tier, CancellationToken.None);
+            TestGameId, null, tier, "it", CancellationToken.None);
 
         // Assert: Search services should NOT be called when adaptive routing skips retrieval
         _embeddingMock.Verify(
@@ -199,7 +199,7 @@ public class RagPromptAssemblyEnhancementsTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How does castling work?",
-            TestGameId, null, tier, CancellationToken.None);
+            TestGameId, null, tier, "it", CancellationToken.None);
 
         // Assert: CRAG evaluation should be called with the initial chunks
         _relevanceEvaluatorMock.Verify(
@@ -241,7 +241,7 @@ public class RagPromptAssemblyEnhancementsTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, tier, CancellationToken.None);
+            TestGameId, null, tier, "it", CancellationToken.None);
 
         // Assert: IQueryExpander should be used (not the default LLM-based expansion)
         _queryExpanderMock.Verify(
@@ -303,7 +303,7 @@ public class RagPromptAssemblyEnhancementsTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, tier, CancellationToken.None);
+            TestGameId, null, tier, "it", CancellationToken.None);
 
         // Assert: RAPTOR search should be called
         _textSearchMock.Verify(
@@ -333,7 +333,7 @@ public class RagPromptAssemblyEnhancementsTests
         // Act
         await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, tier, CancellationToken.None);
+            TestGameId, null, tier, "it", CancellationToken.None);
 
         // Assert: RAPTOR search should NOT be called
         _textSearchMock.Verify(
@@ -363,7 +363,7 @@ public class RagPromptAssemblyEnhancementsTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, tier, CancellationToken.None);
+            TestGameId, null, tier, "it", CancellationToken.None);
 
         // Assert: Enhancement services should NOT be called
         _complexityClassifierMock.Verify(
@@ -396,7 +396,7 @@ public class RagPromptAssemblyEnhancementsTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, null, CancellationToken.None);
+            TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert: Enhancement service should NOT be called when tier is null
         _ragEnhancementMock.Verify(

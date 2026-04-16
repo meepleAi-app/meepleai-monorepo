@@ -102,12 +102,14 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         Guid gameId,
         ChatThread? chatThread,
         UserTier? userTier,
+        string agentLanguage,
         CancellationToken ct,
         IRagDebugEventCollector? debugCollector = null)
     {
         ArgumentNullException.ThrowIfNull(agentTypology);
         ArgumentNullException.ThrowIfNull(gameTitle);
         ArgumentNullException.ThrowIfNull(userQuestion);
+        ArgumentNullException.ThrowIfNull(agentLanguage);
 
         // Step 0: Resolve expansion game IDs once (Issue #5588)
         var expansionGameIds = await _expansionResolver
@@ -119,7 +121,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
         // Step 2: Build system prompt (persona + RAG chunks + expansion priority + copyright instruction)
         var hasProtectedCitations = citations.Any(c => c.CopyrightTier == CopyrightTier.Protected);
-        var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations);
+        var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations, agentLanguage);
 
         // Step 3: Build user prompt (chat history + current question)
         var userPrompt = BuildUserPrompt(userQuestion, chatThread);
@@ -653,7 +655,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
     private static string BuildSystemPrompt(
         string agentTypology, string gameTitle, GameState? gameState, string ragContext,
-        bool hasExpansions = false, bool hasProtectedCitations = false)
+        bool hasExpansions = false, bool hasProtectedCitations = false,
+        string agentLanguage = "it")
     {
         var sb = new StringBuilder();
 
@@ -697,7 +700,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         if (hasProtectedCitations)
         {
             sb.AppendLine("## Copyright Notice");
-            sb.AppendLine(GetCopyrightInstruction("it"));
+            sb.AppendLine(GetCopyrightInstruction(agentLanguage));
             sb.AppendLine();
         }
 

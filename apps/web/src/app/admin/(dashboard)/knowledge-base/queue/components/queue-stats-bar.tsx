@@ -2,9 +2,10 @@
 
 import type { ComponentType } from 'react';
 
-import { ClockIcon, LoaderIcon, CheckCircle2Icon, XCircleIcon } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { CheckCircle2Icon, ClockIcon, LoaderIcon, TimerIcon, XCircleIcon } from 'lucide-react';
 
-import { useQueueStats } from '../lib/queue-api';
+import { fetchBatchETA, useQueueStats } from '../lib/queue-api';
 
 interface StatItem {
   label: string;
@@ -49,12 +50,19 @@ const STAT_CONFIG: {
 export function QueueStatsBar() {
   const results = useQueueStats();
 
+  const { data: etaData } = useQuery({
+    queryKey: ['admin', 'queue', 'eta'],
+    queryFn: fetchBatchETA,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+
   const isLoading = results.some(r => r.isLoading);
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
             className="h-16 bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse"
@@ -69,8 +77,12 @@ export function QueueStatsBar() {
     value: results[i]?.data?.total ?? 0,
   }));
 
+  const etaMinutes = etaData?.totalDrainTimeMinutes;
+  const hasEta = etaMinutes != null && etaMinutes > 0;
+  const etaLabel = hasEta ? `~${Math.round(etaMinutes)} min` : '—';
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
       {stats.map(stat => {
         const Icon = stat.icon;
         return (
@@ -88,6 +100,19 @@ export function QueueStatsBar() {
           </div>
         );
       })}
+
+      <div
+        className="flex items-center gap-3 px-4 py-3 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-zinc-700/50"
+        aria-label="ETA totale per svuotare la coda"
+      >
+        <div className="p-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/20">
+          <TimerIcon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+        </div>
+        <div>
+          <div className="text-lg font-semibold text-foreground tabular-nums">{etaLabel}</div>
+          <div className="text-xs text-muted-foreground">ETA totale</div>
+        </div>
+      </div>
     </div>
   );
 }

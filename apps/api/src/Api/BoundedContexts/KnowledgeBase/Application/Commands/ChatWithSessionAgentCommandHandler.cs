@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
@@ -10,11 +12,13 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.Models;
+using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Runtime.CompilerServices;
 using System.Globalization;
 
@@ -44,6 +48,9 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly ICircuitBreakerRegistry _circuitBreakerRegistry;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChatWithSessionAgentCommandHandler> _logger;
+    private readonly ICopyrightLeakGuard _copyrightLeakGuard;
+    private readonly ICopyrightFallbackMessageProvider _fallbackMessageProvider;
+    private readonly IOptions<CopyrightLeakGuardOptions> _copyrightOptions;
 
     // Summary generation thresholds
     private const int SummaryThreshold = 10;
@@ -68,7 +75,10 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         IUserBudgetService userBudgetService,
         ICircuitBreakerRegistry circuitBreakerRegistry,
         IServiceScopeFactory scopeFactory,
-        ILogger<ChatWithSessionAgentCommandHandler> logger)
+        ILogger<ChatWithSessionAgentCommandHandler> logger,
+        ICopyrightLeakGuard copyrightLeakGuard,
+        ICopyrightFallbackMessageProvider fallbackMessageProvider,
+        IOptions<CopyrightLeakGuardOptions> copyrightOptions)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _definitionRepository = definitionRepository ?? throw new ArgumentNullException(nameof(definitionRepository));
@@ -84,6 +94,9 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _circuitBreakerRegistry = circuitBreakerRegistry ?? throw new ArgumentNullException(nameof(circuitBreakerRegistry));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _copyrightLeakGuard = copyrightLeakGuard ?? throw new ArgumentNullException(nameof(copyrightLeakGuard));
+        _fallbackMessageProvider = fallbackMessageProvider ?? throw new ArgumentNullException(nameof(fallbackMessageProvider));
+        _copyrightOptions = copyrightOptions ?? throw new ArgumentNullException(nameof(copyrightOptions));
     }
 
     /// <summary>
@@ -379,6 +392,62 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
 
         var responseText = fullResponse.ToString();
         var totalTokens = finalUsage?.TotalTokens ?? 0;
+
+        // #447: Copyright leak guard (fail-open)
+        var protectedCitations = resolvedCitations
+            .Where(c => c.CopyrightTier == CopyrightTier.Protected)
+            .ToList();
+
+        CopyrightLeakResult? leakResult = null;
+
+        if (protectedCitations.Count > 0)
+        {
+            try
+            {
+                using var scanCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                scanCts.CancelAfter(TimeSpan.FromMilliseconds(_copyrightOptions.Value.ScanTimeoutMs));
+
+                var scanSw = Stopwatch.StartNew();
+                leakResult = await _copyrightLeakGuard
+                    .ScanAsync(responseText, protectedCitations, scanCts.Token)
+                    .ConfigureAwait(false);
+                scanSw.Stop();
+
+                MeepleAiMetrics.CopyrightScanDurationMs.Record(scanSw.ElapsedMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                MeepleAiMetrics.CopyrightScanErrors.Add(1,
+                    new KeyValuePair<string, object?>("error_type", ex.GetType().Name));
+                _logger.LogError(ex,
+                    "Copyright leak guard failed for session {SessionId}, allowing response (fail-open)",
+                    command.AgentSessionId);
+                leakResult = null;  // fail-open
+            }
+        }
+
+        // Emit SSE event and apply recovery OUTSIDE try-catch (yield return restriction)
+        if (leakResult?.HasLeak == true)
+        {
+            foreach (var match in leakResult.Matches)
+            {
+                MeepleAiMetrics.CopyrightVerbatimDetected.Add(1,
+                    new KeyValuePair<string, object?>("run_length", match.RunLength),
+                    new KeyValuePair<string, object?>("document_id", match.DocumentId));
+            }
+
+            _logger.LogWarning(
+                "Copyright leak detected in session {SessionId}: {MatchCount} matches, sanitizing response",
+                command.AgentSessionId, leakResult.Matches.Count);
+
+            var fallbackMessage = _fallbackMessageProvider.GetMessage(agentLanguage);
+
+            yield return CreateEvent(
+                StreamingEventType.CopyrightSanitized,
+                new StreamingCopyrightSanitized(fallbackMessage, leakResult.Matches.Count));
+
+            responseText = fallbackMessage;
+        }
 
         // Extract paraphrased snippets for Protected-tier citations
         var finalCitations = resolvedCitations.Select(c =>

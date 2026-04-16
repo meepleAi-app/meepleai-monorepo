@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWithoutKb;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
 using MediatR;
@@ -88,6 +89,27 @@ internal static class AdminKnowledgeBaseEndpoints
         .WithSummary("Estimate token cost before starting a RAG chat session")
         .WithDescription("Calculates estimated cost per query based on document chunks, model pricing, and retrieval strategy.")
         .Produces<AgentCostEstimateDto>();
+
+        // GET /api/v1/admin/kb/games/without-kb - Admin RAG onboarding: games missing a KB
+        kbGroup.MapGet("/games/without-kb", async (
+            IMediator mediator,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            [FromQuery] string? search,
+            CancellationToken cancellationToken) =>
+        {
+            var query = new GetGamesWithoutKbQuery(
+                Page: page ?? 1,
+                PageSize: pageSize ?? 20,
+                Search: search);
+
+            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetGamesWithoutKb")
+        .WithSummary("List shared games with no active Knowledge Base (admin RAG onboarding)")
+        .WithDescription("Returns SharedGames where HasKnowledgeBase = false. Supports pagination and search on Title.")
+        .Produces<GamesWithoutKbPagedResponse>();
 
         // GET /api/v1/admin/shared-games (extended for admin - #4654, #4785)
         var gamesGroup = group.MapGroup("/admin/shared-games")

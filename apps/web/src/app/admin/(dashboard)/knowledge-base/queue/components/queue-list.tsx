@@ -19,7 +19,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -28,7 +28,7 @@ import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { useToast } from '@/hooks/useToast';
 
 import { QueueItem } from './queue-item';
-import { reorderQueue } from '../lib/queue-api';
+import { fetchBatchETA, reorderQueue } from '../lib/queue-api';
 
 import type { PaginatedQueueResponse, QueueFilters, ProcessingJobDto } from '../lib/queue-api';
 
@@ -108,6 +108,25 @@ export function QueueList({
 
   const jobs = useMemo(() => data?.jobs ?? [], [data?.jobs]);
 
+  // Per-job ETA (refreshed every 30s) — surfaces Queued/Processing remaining time
+  const { data: etaData } = useQuery({
+    queryKey: ['admin', 'queue', 'eta'],
+    queryFn: fetchBatchETA,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+
+  const etaSecondsByJobId = useMemo(() => {
+    const map = new Map<string, number | null>();
+    for (const eta of etaData?.jobs ?? []) {
+      map.set(
+        eta.jobId,
+        eta.estimatedMinutesRemaining != null ? eta.estimatedMinutesRemaining * 60 : null
+      );
+    }
+    return map;
+  }, [etaData]);
+
   // Separate queued (draggable) and non-queued items
   const queuedJobs = useMemo(() => jobs.filter(j => j.status === 'Queued'), [jobs]);
   const sortableIds = useMemo(() => queuedJobs.map(j => j.id), [queuedJobs]);
@@ -180,6 +199,7 @@ export function QueueList({
                   job={job}
                   isSelected={selectedJobId === job.id}
                   onSelect={onSelectJob}
+                  etaSeconds={etaSecondsByJobId.get(job.id) ?? null}
                 />
               ))}
             </div>

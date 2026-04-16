@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 
-import { Settings, Shield, LogOut, UserIcon, User, FileEdit } from 'lucide-react';
+import { Bell, Settings, Shield, LogOut, UserIcon, User, FileEdit } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -19,12 +19,14 @@ import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
 import { Button } from '@/components/ui/primitives/button';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useNavigationItems } from '@/hooks/useNavigationItems';
+import { useNotificationStore, selectUnreadCount } from '@/stores/notification/store';
 
 export function UserMenuDropdown() {
   const router = useRouter();
   const { isAuthLoading, isAuthenticated } = useNavigationItems();
   const { data: user } = useCurrentUser();
   const [isLoggingOut, startTransition] = useTransition();
+  const unreadCount = useNotificationStore(selectUnreadCount);
 
   const isAdmin =
     user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'superadmin';
@@ -81,6 +83,23 @@ export function UserMenuDropdown() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+
+        <DropdownMenuItem asChild data-testid="notifications-menu-item">
+          <Link
+            href="/notifications"
+            className="flex items-center justify-between w-full cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              <span>Notifiche</span>
+            </span>
+            {unreadCount > 0 && (
+              <span className="text-xs bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </Link>
+        </DropdownMenuItem>
 
         <DropdownMenuItem asChild data-testid="profile-menu-item">
           <Link href="/profile" className="flex items-center gap-2 cursor-pointer">

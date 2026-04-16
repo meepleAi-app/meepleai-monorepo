@@ -18,11 +18,7 @@ export { ActivityFeed, type ActivityFeedProps } from './ActivityFeed';
 export type { ActivityEvent } from './utils/activityUtils';
 
 // Issue #881: Modular admin layout components (AdminHeader/AdminSidebar/AdminLayout removed — replaced by UserShell)
-export {
-  AdminBreadcrumbs,
-  type AdminBreadcrumbsProps,
-  type BreadcrumbItem,
-} from './AdminBreadcrumbs';
+// AdminBreadcrumbs removed in nav-simplification (replaced by PageHeader)
 export { AdminAuthGuard } from './AdminAuthGuard';
 export { QuickActions, type QuickActionsProps, type QuickAction } from './QuickActions';
 export { SystemStatus, type SystemStatusProps, type ServiceStatus } from './SystemStatus';

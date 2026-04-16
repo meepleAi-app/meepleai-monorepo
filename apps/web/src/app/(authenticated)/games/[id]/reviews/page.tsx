@@ -10,10 +10,10 @@
 
 import { useEffect, useState } from 'react';
 
-import { ArrowLeft, MessageSquare, Pencil, Star, User } from 'lucide-react';
-import Link from 'next/link';
+import { MessageSquare, Pencil, Star, User } from 'lucide-react';
 import { useParams } from 'next/navigation';
 
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -216,23 +216,12 @@ export default function GameReviewsPage() {
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="container mx-auto max-w-4xl">
-        {/* Back Button */}
-        <Button asChild variant="ghost" className="mb-6 font-nunito">
-          <Link href={`/library/games/${gameId}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Game
-          </Link>
-        </Button>
-
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <MessageSquare className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold font-quicksand">Reviews</h1>
-            <p className="text-muted-foreground font-nunito text-sm">
-              Community ratings and written reviews
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Recensioni"
+          parentHref={`/library/${gameId}`}
+          parentLabel="Gioco"
+          className="mb-8"
+        />
 
         {/* Loading */}
         {isLoading && (

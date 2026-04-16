@@ -73,7 +73,7 @@ describe('GameRulesPage', () => {
     renderWithQuery(<GameRulesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Rules')).toBeInTheDocument();
+      expect(screen.getByText('Regolamento')).toBeInTheDocument();
     });
   });
 

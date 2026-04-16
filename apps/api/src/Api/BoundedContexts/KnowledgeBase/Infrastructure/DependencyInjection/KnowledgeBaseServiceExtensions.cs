@@ -55,6 +55,18 @@ internal static class KnowledgeBaseServiceExtensions
         AddCachingServices(services, configuration);
         AddBackgroundJobServices(services, configuration);
 
+        // #447: Copyright leak guard
+        var copyrightOptionsBuilder = services.AddOptions<CopyrightLeakGuardOptions>()
+            .Validate(opts => opts.VerbatimRunThreshold >= 3, "Copyright:VerbatimRunThreshold must be >= 3")
+            .Validate(opts => opts.ScanTimeoutMs > 0, "Copyright:ScanTimeoutMs must be > 0");
+        if (configuration != null)
+        {
+            copyrightOptionsBuilder.Bind(configuration.GetSection("Copyright"));
+        }
+        copyrightOptionsBuilder.ValidateOnStart();
+        services.AddSingleton<ICopyrightLeakGuard, NgramCopyrightLeakGuard>();
+        services.AddSingleton<ICopyrightFallbackMessageProvider, DefaultCopyrightFallbackMessageProvider>();
+
         return services;
     }
 

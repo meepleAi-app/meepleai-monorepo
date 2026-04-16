@@ -21,7 +21,14 @@ internal class GetGameByIdQueryHandler : IQueryHandler<GetGameByIdQuery, GameDto
     public async Task<GameDto?> Handle(GetGameByIdQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var game = await _gameRepository.GetByIdAsync(query.GameId, cancellationToken).ConfigureAwait(false);
+
+        // Resolve against BOTH Game.Id and Game.SharedGameId — the frontend
+        // library flow exposes the SharedGameId as user-facing gameId, which
+        // otherwise produces a spurious 404 on /games/{id}/agents and siblings.
+        // See IGameRepository.GetByIdOrSharedGameIdAsync for rationale.
+        var game = await _gameRepository
+            .GetByIdOrSharedGameIdAsync(query.GameId, cancellationToken)
+            .ConfigureAwait(false);
 
         return game != null ? MapToDto(game) : null;
     }

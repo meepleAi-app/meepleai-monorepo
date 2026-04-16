@@ -131,6 +131,24 @@ internal class GameRepository : RepositoryBase, IGameRepository
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<Game?> GetByIdOrSharedGameIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        // Single query: match on PK preferred, then SharedGameId bridge FK.
+        // OrderByDescending(g.Id == id) promotes the direct PK match to index 0
+        // in the rare case where a Game's SharedGameId collides with another
+        // Game's Id (unlikely in practice but correctness-safe).
+        var gameEntity = await DbContext.Games
+            .AsNoTracking()
+            .Where(g => g.Id == id || g.SharedGameId == id)
+            .OrderByDescending(g => g.Id == id)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return gameEntity != null ? MapToDomain(gameEntity) : null;
+    }
+
     /// <summary>
     /// Maps persistence entity to domain entity (reconstitution — no side effects).
     /// Restores all persisted properties including publication workflow fields (spec-panel C-1).

@@ -102,12 +102,14 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         Guid gameId,
         ChatThread? chatThread,
         UserTier? userTier,
+        string agentLanguage,
         CancellationToken ct,
         IRagDebugEventCollector? debugCollector = null)
     {
         ArgumentNullException.ThrowIfNull(agentTypology);
         ArgumentNullException.ThrowIfNull(gameTitle);
         ArgumentNullException.ThrowIfNull(userQuestion);
+        ArgumentNullException.ThrowIfNull(agentLanguage);
 
         // Step 0: Resolve expansion game IDs once (Issue #5588)
         var expansionGameIds = await _expansionResolver
@@ -119,7 +121,12 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
         // Step 2: Build system prompt (persona + RAG chunks + expansion priority + copyright instruction)
         var hasProtectedCitations = citations.Any(c => c.CopyrightTier == CopyrightTier.Protected);
-        var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations);
+
+        MeepleAiMetrics.CopyrightInstructionInjected.Add(1,
+            new KeyValuePair<string, object?>("has_protected", hasProtectedCitations),
+            new KeyValuePair<string, object?>("agent_language", agentLanguage));
+
+        var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations, agentLanguage);
 
         // Step 3: Build user prompt (chat history + current question)
         var userPrompt = BuildUserPrompt(userQuestion, chatThread);
@@ -376,7 +383,10 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     DocumentId: chunk.PdfId,
                     PageNumber: chunk.Page,
                     RelevanceScore: chunk.Score,
-                    SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text);
+                    SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text)
+                {
+                    FullText = chunk.Text  // #447: preserve full text for copyright leak guard
+                };
 
                 sb.AppendLine(FormatChunkForPrompt(citation, chunk.Text));
                 citations.Add(citation);
@@ -653,7 +663,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
     private static string BuildSystemPrompt(
         string agentTypology, string gameTitle, GameState? gameState, string ragContext,
-        bool hasExpansions = false, bool hasProtectedCitations = false)
+        bool hasExpansions = false, bool hasProtectedCitations = false,
+        string agentLanguage = "it")
     {
         var sb = new StringBuilder();
 
@@ -697,7 +708,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         if (hasProtectedCitations)
         {
             sb.AppendLine("## Copyright Notice");
-            sb.AppendLine(GetCopyrightInstruction("it"));
+            sb.AppendLine(GetCopyrightInstruction(agentLanguage));
             sb.AppendLine();
         }
 
@@ -817,4 +828,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         // Rough estimate: ~4 characters per token (GPT-style)
         return (int)Math.Ceiling(text.Length / 4.0);
     }
+
+    /// <summary>
+    /// Test seam: invokes BuildSystemPrompt with explicit parameters.
+    /// Not intended for production use.
+    /// </summary>
+    internal static string BuildSystemPromptForTest(
+        string agentTypology, string gameTitle, GameState? gameState, string ragContext,
+        bool hasExpansions, bool hasProtectedCitations, string agentLanguage)
+        => BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations, agentLanguage);
 }

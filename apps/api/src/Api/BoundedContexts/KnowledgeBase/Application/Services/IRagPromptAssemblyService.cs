@@ -23,6 +23,7 @@ internal interface IRagPromptAssemblyService
     /// <param name="gameId">Game ID for scoping Qdrant search</param>
     /// <param name="chatThread">Chat thread for history inclusion (nullable for first message)</param>
     /// <param name="userTier">User subscription tier for RAG enhancement routing (nullable for backward compatibility)</param>
+    /// <param name="agentLanguage">Normalized ISO 639-1 language code for the agent (e.g., "it", "en"). Drives copyright instruction localization.</param>
     /// <param name="ct">Cancellation token</param>
     /// <param name="debugCollector">Optional collector for RAG debug events (null = no debug emission)</param>
     /// <returns>Assembled prompt ready for LLM consumption</returns>
@@ -34,6 +35,7 @@ internal interface IRagPromptAssemblyService
         Guid gameId,
         ChatThread? chatThread,
         UserTier? userTier,
+        string agentLanguage,
         CancellationToken ct,
         IRagDebugEventCollector? debugCollector = null);
 }

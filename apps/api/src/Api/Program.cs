@@ -567,20 +567,56 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
     ResponseWriter = async (context, report) =>
     {
         context.Response.ContentType = "application/json";
-        var result = System.Text.Json.JsonSerializer.Serialize(new
+
+        // Defensive serialization: isolate any single check's serialization failure
+        // to avoid crashing the whole /health endpoint with empty 500 body.
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("HealthCheck");
+        var checks = new List<object>(capacity: report.Entries.Count);
+        foreach (var entry in report.Entries)
         {
-            status = report.Status.ToString(),
-            checks = report.Entries.Select(e => new
+            try
             {
-                name = e.Key,
-                status = e.Value.Status.ToString(),
-                description = e.Value.Description,
-                duration = e.Value.Duration.TotalMilliseconds,
-                tags = e.Value.Tags
-            }),
-            totalDuration = report.TotalDuration.TotalMilliseconds
-        });
-        await context.Response.WriteAsync(result).ConfigureAwait(false);
+                checks.Add(new
+                {
+                    name = entry.Key,
+                    status = entry.Value.Status.ToString(),
+                    description = entry.Value.Description,
+                    duration = entry.Value.Duration.TotalMilliseconds,
+                    tags = entry.Value.Tags
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to serialize health check entry {Name}", entry.Key);
+                checks.Add(new
+                {
+                    name = entry.Key,
+                    status = "SerializationError",
+                    description = ex.Message,
+                    duration = 0.0,
+                    tags = Array.Empty<string>()
+                });
+            }
+        }
+
+        try
+        {
+            var result = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                status = report.Status.ToString(),
+                checks,
+                totalDuration = report.TotalDuration.TotalMilliseconds
+            });
+            await context.Response.WriteAsync(result).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to serialize /health response (entries: {Count})", checks.Count);
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsync(
+                $"{{\"status\":\"SerializationError\",\"error\":\"{ex.GetType().Name}: {ex.Message}\"}}")
+                .ConfigureAwait(false);
+        }
     }
 });
 

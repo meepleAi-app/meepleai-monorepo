@@ -163,11 +163,14 @@ internal sealed class OpenRouterUsageService : BackgroundService, IOpenRouterUsa
                 return;
             }
 
+            // Null limit means unlimited (paid tier); null usage defaults to 0. Balance only meaningful when limit is set.
+            var limit = apiResponse.Data.LimitUsd ?? 0m;
+            var usage = apiResponse.Data.Usage ?? 0m;
             var status = new OpenRouterAccountStatus
             {
-                BalanceUsd = apiResponse.Data.LimitUsd - apiResponse.Data.Usage,
-                LimitUsd = apiResponse.Data.LimitUsd,
-                UsageUsd = apiResponse.Data.Usage,
+                BalanceUsd = limit > 0 ? limit - usage : 0m,
+                LimitUsd = limit,
+                UsageUsd = usage,
                 IsFreeTier = apiResponse.Data.IsFreeTier,
                 RateLimitRequests = apiResponse.Data.RateLimit?.Requests ?? 0,
                 RateLimitInterval = apiResponse.Data.RateLimit?.Interval ?? string.Empty,
@@ -204,9 +207,9 @@ internal sealed class OpenRouterUsageService : BackgroundService, IOpenRouterUsa
     private sealed record AuthKeyApiResponse(AuthKeyData? Data);
 
     private sealed record AuthKeyData(
-        // OpenRouter returns "limit" (not "limit_usd")
-        [property: JsonPropertyName("limit")] decimal LimitUsd,
-        decimal Usage,
+        // OpenRouter returns "limit" (not "limit_usd"). Nullable: unlimited accounts return null.
+        [property: JsonPropertyName("limit")] decimal? LimitUsd,
+        decimal? Usage,
         [property: JsonPropertyName("is_free_tier")] bool IsFreeTier,
         [property: JsonPropertyName("rate_limit")] RateLimitInfo? RateLimit);
 

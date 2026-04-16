@@ -586,4 +586,107 @@ public sealed class GameRepositoryIntegrationTests : IAsyncLifetime
     }
 
     #endregion
+
+    #region GetByIdOrSharedGameIdAsync
+
+    [Fact]
+    public async Task GetByIdOrSharedGameIdAsync_WithDirectPkMatch_ReturnsGame()
+    {
+        var existing = await _dbContext.Games.FirstAsync();
+
+        var result = await _repository.GetByIdOrSharedGameIdAsync(existing.Id);
+
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(existing.Id);
+    }
+
+    [Fact]
+    public async Task GetByIdOrSharedGameIdAsync_WithSharedGameIdOnly_ResolvesThroughBridge()
+    {
+        // Arrange: seed a SharedGameEntity (FK target) and a Game whose
+        // SharedGameId points to it — reproduces the staging-production
+        // scenario where library exposes SharedGameId as the user-facing id.
+        var sharedGameId = Guid.NewGuid();
+        var gamePk = Guid.NewGuid();
+        _dbContext.SharedGames.Add(CreateMinimalSharedGame(sharedGameId, "Agricola"));
+        _dbContext.Games.Add(new GameEntity
+        {
+            Id = gamePk,
+            Name = "Agricola (Shared-bridged)",
+            SharedGameId = sharedGameId,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _dbContext.SaveChangesAsync();
+
+        // Act: caller passes the SharedGameId (not the PK)
+        var result = await _repository.GetByIdOrSharedGameIdAsync(sharedGameId);
+
+        // Assert: the repo resolves to the Game record via the bridge
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(gamePk);
+        result.SharedGameId.Should().Be(sharedGameId);
+    }
+
+    [Fact]
+    public async Task GetByIdOrSharedGameIdAsync_PrefersDirectPkWhenBothMatch()
+    {
+        // Arrange: pathological collision — Game A has id == collisionId, and
+        // Game B has SharedGameId == collisionId. Direct PK match must win.
+        var collisionId = Guid.NewGuid();
+        var pkOnlyGameId = Guid.NewGuid();
+        _dbContext.SharedGames.Add(CreateMinimalSharedGame(collisionId, "Collision Shared"));
+        _dbContext.Games.AddRange(
+            new GameEntity
+            {
+                Id = collisionId,
+                Name = "Direct PK Game",
+                CreatedAt = DateTime.UtcNow,
+            },
+            new GameEntity
+            {
+                Id = pkOnlyGameId,
+                Name = "Shared-bridged Game",
+                SharedGameId = collisionId,
+                CreatedAt = DateTime.UtcNow,
+            });
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _repository.GetByIdOrSharedGameIdAsync(collisionId);
+
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(collisionId);
+        result.Title.Value.Should().Be("Direct PK Game");
+    }
+
+    private static Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity CreateMinimalSharedGame(
+        Guid id,
+        string title)
+        => new()
+        {
+            Id = id,
+            Title = title,
+            Description = string.Empty,
+            ImageUrl = string.Empty,
+            ThumbnailUrl = string.Empty,
+            YearPublished = 2024,
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            MinAge = 8,
+            Status = 1,
+            CreatedBy = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+        };
+
+    [Fact]
+    public async Task GetByIdOrSharedGameIdAsync_WithNoMatch_ReturnsNull()
+    {
+        var unknownId = Guid.NewGuid();
+
+        var result = await _repository.GetByIdOrSharedGameIdAsync(unknownId);
+
+        result.Should().BeNull();
+    }
+
+    #endregion
 }

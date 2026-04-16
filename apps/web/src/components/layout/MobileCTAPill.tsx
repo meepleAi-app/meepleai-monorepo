@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
+import { useContextualHandStore, selectContext, selectIsLoading } from '@/stores/contextual-hand';
 
 const CTA_MAP: Record<string, { label: string; href: string }> = {
   '/library': { label: '+ Aggiungi gioco', href: '/library?action=add' },
@@ -23,6 +24,13 @@ const CTA_MAP: Record<string, { label: string; href: string }> = {
 export function MobileCTAPill() {
   const pathname = usePathname();
   const cta = CTA_MAP[pathname];
+
+  // Hide when `ContextualHandBottomBar` is visible to avoid z-index overlap
+  // (the bar is mobile-only and already occupies the bottom 64px when an
+  // active session exists — see ContextualHandBottomBar render gate).
+  const contextualHandContext = useContextualHandStore(selectContext);
+  const contextualHandLoading = useContextualHandStore(selectIsLoading);
+  const contextualHandActive = contextualHandContext !== 'idle' && !contextualHandLoading;
 
   const [visible, setVisible] = useState(true);
   const lastScrollY = useRef(0);
@@ -42,6 +50,7 @@ export function MobileCTAPill() {
   }, []);
 
   if (!cta) return null;
+  if (contextualHandActive) return null;
 
   return (
     <div

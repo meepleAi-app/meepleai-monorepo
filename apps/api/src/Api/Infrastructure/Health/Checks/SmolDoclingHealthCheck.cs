@@ -25,6 +25,16 @@ public class SmolDoclingHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
+        // Skip active probe if this extractor is not the selected provider — avoids
+        // false Unhealthy for optional services that are intentionally not deployed.
+        var provider = _configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";
+        var usesSmolDocling = provider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase) ||
+                              provider.Equals("SmolDocling", StringComparison.OrdinalIgnoreCase);
+        if (!usesSmolDocling)
+        {
+            return HealthCheckResult.Degraded($"SmolDocling not in use (Provider={provider})");
+        }
+
         var smoldoclingUrl = _configuration["PdfProcessing:Extractor:SmolDocling:ApiUrl"];
         if (string.IsNullOrWhiteSpace(smoldoclingUrl))
         {

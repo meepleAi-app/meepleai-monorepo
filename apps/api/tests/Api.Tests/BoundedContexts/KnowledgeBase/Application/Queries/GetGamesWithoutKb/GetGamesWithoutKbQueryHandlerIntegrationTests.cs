@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWithoutKb;
 using Api.Infrastructure;
+using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
@@ -164,10 +165,12 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
     [Fact(Timeout = 30000)]
     public async Task Handle_PdfCountAndFailedFlag_AreCorrect()
     {
-        // Arrange: a game with 2 PDFs, 1 failed
+        // Arrange: a game with 2 PDFs, 1 failed — seed uploader user first (FK constraint)
         var adminUserId = Guid.NewGuid();
+        _dbContext!.Users.Add(CreateTestUser(adminUserId));
+
         var game = CreateGame("Root", hasKb: false);
-        _dbContext!.SharedGames.Add(game);
+        _dbContext.SharedGames.Add(game);
 
         _dbContext.PdfDocuments.AddRange(
             new PdfDocumentEntity
@@ -244,6 +247,19 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
         result.Total.Should().Be(0);
         result.TotalPages.Should().Be(0);
     }
+
+    private static UserEntity CreateTestUser(Guid userId)
+        => new()
+        {
+            Id = userId,
+            Email = $"test-{userId}@example.com",
+            DisplayName = "Test Admin",
+            PasswordHash = "hashed_password",
+            Role = "admin",
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow,
+            IsTwoFactorEnabled = false
+        };
 
     private static SharedGameEntity CreateGame(string title, bool hasKb, bool isDeleted = false)
         => new()

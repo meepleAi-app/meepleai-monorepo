@@ -16,7 +16,7 @@ export interface GameWithoutKbDto {
   imageUrl: string | null;
   playerCountLabel: string;
   pdfCount: number;
-  hasFailedPdfs: boolean;
+  failedPdfCount: number;
 }
 
 export interface GamesWithoutKbPagedResponse {

@@ -9,6 +9,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWithoutK
 /// <summary>
 /// Returns SharedGames where HasKnowledgeBase = false (admin RAG onboarding flow).
 /// Uses the denormalized flag for O(1) filtering without joining VectorDocuments.
+/// Aggregates PDF counts in a single batched query to avoid N+1 correlated subqueries.
 /// </summary>
 internal sealed class GetGamesWithoutKbQueryHandler
     : IQueryHandler<GetGamesWithoutKbQuery, GamesWithoutKbPagedResponse>
@@ -48,6 +49,7 @@ internal sealed class GetGamesWithoutKbQueryHandler
 
         var total = await baseQuery.CountAsync(cancellationToken).ConfigureAwait(false);
 
+        // Project the page of games (without PDF stats to avoid correlated subqueries).
         var games = await baseQuery
             .OrderBy(sg => sg.Title)
             .Skip((page - 1) * pageSize)
@@ -60,23 +62,43 @@ internal sealed class GetGamesWithoutKbQueryHandler
                 sg.MinPlayers,
                 sg.MaxPlayers,
                 Publishers = sg.Publishers.Select(p => p.Name).ToList(),
-                PdfCount = _dbContext.PdfDocuments
-                    .Count(pd => pd.SharedGameId == sg.Id),
-                HasFailedPdfs = _dbContext.PdfDocuments
-                    .Any(pd => pd.SharedGameId == sg.Id && pd.ProcessingState == FailedState)
             })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var items = games.Select(g => new GameWithoutKbDto(
-            GameId: g.Id,
-            Title: g.Title,
-            Publisher: g.Publishers.FirstOrDefault(),
-            ImageUrl: string.IsNullOrWhiteSpace(g.ImageUrl) ? null : g.ImageUrl,
-            PlayerCountLabel: FormatPlayerCount(g.MinPlayers, g.MaxPlayers),
-            PdfCount: g.PdfCount,
-            HasFailedPdfs: g.HasFailedPdfs
-        )).ToList();
+        var gameIds = games.Select(g => g.Id).ToArray();
+
+        // One batched aggregation query across all games in the page (avoids N+1).
+        var pdfStats = gameIds.Length == 0
+            ? new Dictionary<Guid, (int PdfCount, int FailedPdfCount)>()
+            : await _dbContext.PdfDocuments
+                .AsNoTracking()
+                .Where(pd => pd.SharedGameId != null && gameIds.Contains(pd.SharedGameId!.Value))
+                .GroupBy(pd => pd.SharedGameId!.Value)
+                .Select(g => new
+                {
+                    GameId = g.Key,
+                    PdfCount = g.Count(),
+                    FailedPdfCount = g.Count(pd => pd.ProcessingState == FailedState),
+                })
+                .ToDictionaryAsync(
+                    x => x.GameId,
+                    x => (x.PdfCount, x.FailedPdfCount),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var items = games.Select(g =>
+        {
+            var stats = pdfStats.TryGetValue(g.Id, out var s) ? s : (PdfCount: 0, FailedPdfCount: 0);
+            return new GameWithoutKbDto(
+                GameId: g.Id,
+                Title: g.Title,
+                Publisher: g.Publishers.FirstOrDefault(),
+                ImageUrl: string.IsNullOrWhiteSpace(g.ImageUrl) ? null : g.ImageUrl,
+                PlayerCountLabel: FormatPlayerCount(g.MinPlayers, g.MaxPlayers),
+                PdfCount: stats.PdfCount,
+                FailedPdfCount: stats.FailedPdfCount);
+        }).ToList();
 
         var totalPages = total > 0 ? (int)Math.Ceiling((double)total / pageSize) : 0;
 

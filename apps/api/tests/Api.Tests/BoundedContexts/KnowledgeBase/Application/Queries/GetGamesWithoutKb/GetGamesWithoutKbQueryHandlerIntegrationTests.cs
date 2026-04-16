@@ -163,9 +163,10 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
     }
 
     [Fact(Timeout = 30000)]
-    public async Task Handle_PdfCountAndFailedFlag_AreCorrect()
+    public async Task Handle_PdfCountAndFailedCount_AreAccuratelySeparate()
     {
-        // Arrange: a game with 2 PDFs, 1 failed — seed uploader user first (FK constraint)
+        // Arrange: a game with 3 PDFs, only 1 failed — verifies that the failed
+        // count is distinct from the total PdfCount (regression for H3).
         var adminUserId = Guid.NewGuid();
         _dbContext!.Users.Add(CreateTestUser(adminUserId));
 
@@ -180,6 +181,17 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
                 FileName = "root.pdf",
                 FilePath = "/root.pdf",
                 FileSizeBytes = 1000,
+                ProcessingState = "Ready",
+                UploadedByUserId = adminUserId,
+                UploadedAt = DateTime.UtcNow
+            },
+            new PdfDocumentEntity
+            {
+                Id = Guid.NewGuid(),
+                SharedGameId = game.Id,
+                FileName = "root-supplement.pdf",
+                FilePath = "/root-supplement.pdf",
+                FileSizeBytes = 750,
                 ProcessingState = "Ready",
                 UploadedByUserId = adminUserId,
                 UploadedAt = DateTime.UtcNow
@@ -203,10 +215,28 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
             new GetGamesWithoutKbQuery(Search: "Root"),
             TestCancellationToken);
 
+        // Assert — total PdfCount (3) vs failed-only count (1) are distinct values
+        var item = result.Items.Should().ContainSingle().Subject;
+        item.PdfCount.Should().Be(3);
+        item.FailedPdfCount.Should().Be(1);
+    }
+
+    [Fact(Timeout = 30000)]
+    public async Task Handle_ReturnsZeroStats_WhenGameHasNoPdfs()
+    {
+        // Arrange
+        _dbContext!.SharedGames.Add(CreateGame("BareGame", hasKb: false));
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Act
+        var result = await _handler!.Handle(
+            new GetGamesWithoutKbQuery(Search: "BareGame"),
+            TestCancellationToken);
+
         // Assert
         var item = result.Items.Should().ContainSingle().Subject;
-        item.PdfCount.Should().Be(2);
-        item.HasFailedPdfs.Should().BeTrue();
+        item.PdfCount.Should().Be(0);
+        item.FailedPdfCount.Should().Be(0);
     }
 
     [Fact(Timeout = 30000)]

@@ -11,7 +11,7 @@ internal sealed record GameWithoutKbDto(
     string? ImageUrl,
     string PlayerCountLabel,
     int PdfCount,
-    bool HasFailedPdfs
+    int FailedPdfCount
 );
 
 internal sealed record GamesWithoutKbPagedResponse(

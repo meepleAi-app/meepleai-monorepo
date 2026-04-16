@@ -13,7 +13,7 @@ const mockGame: GameWithoutKbDto = {
   imageUrl: null,
   playerCountLabel: '1–5 giocatori',
   pdfCount: 0,
-  hasFailedPdfs: false,
+  failedPdfCount: 0,
 };
 
 describe('UploadForGameDrawer', () => {
@@ -44,10 +44,22 @@ describe('UploadForGameDrawer', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('shows drop zone with max file info', () => {
+  it('shows CTA linking to upload page with gameId pre-filled', () => {
     render(<UploadForGameDrawer game={mockGame} open={true} onClose={vi.fn()} />);
 
-    expect(screen.getByText(/trascina i pdf qui/i)).toBeInTheDocument();
-    expect(screen.getByText(/max 5 file/i)).toBeInTheDocument();
+    const cta = screen.getByRole('link', { name: /apri flusso di upload/i });
+    expect(cta).toHaveAttribute('href', '/admin/knowledge-base/upload?gameId=aaa-111');
+  });
+
+  it('surfaces failedPdfCount in metadata when > 0', () => {
+    const failed: GameWithoutKbDto = {
+      ...mockGame,
+      pdfCount: 3,
+      failedPdfCount: 2,
+    };
+    render(<UploadForGameDrawer game={failed} open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByText('PDF falliti')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
   });
 });

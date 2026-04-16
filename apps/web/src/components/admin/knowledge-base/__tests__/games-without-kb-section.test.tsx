@@ -18,7 +18,7 @@ const mockGames = [
     imageUrl: null,
     playerCountLabel: '3–4 giocatori',
     pdfCount: 0,
-    hasFailedPdfs: false,
+    failedPdfCount: 0,
   },
   {
     gameId: 'bbb-222',
@@ -26,8 +26,8 @@ const mockGames = [
     publisher: null,
     imageUrl: null,
     playerCountLabel: '2–4 giocatori',
-    pdfCount: 1,
-    hasFailedPdfs: true,
+    pdfCount: 3,
+    failedPdfCount: 2,
   },
 ];
 
@@ -48,7 +48,40 @@ describe('GamesWithoutKbSection', () => {
     expect(screen.getByText('Pandemic')).toBeInTheDocument();
   });
 
-  it('shows failed badge for games with failed PDFs', () => {
+  it('shows failed badge with plural form when multiple PDFs failed', () => {
+    // Pandemic has pdfCount=3, failedPdfCount=2 — badge must reflect the failed
+    // count (2), NOT the total, and use plural form "falliti" (regression for H3+M3).
+    const onUpload = vi.fn();
+    render(<GamesWithoutKbSection onUploadClick={onUpload} />);
+
+    expect(screen.getByText('2 falliti')).toBeInTheDocument();
+    expect(screen.queryByText('3 fallito')).not.toBeInTheDocument();
+    expect(screen.queryByText('3 falliti')).not.toBeInTheDocument();
+  });
+
+  it('uses singular form when exactly 1 PDF failed', () => {
+    vi.mocked(useGamesWithoutKb).mockReturnValue({
+      data: {
+        items: [
+          {
+            gameId: 'ccc-333',
+            title: 'Root',
+            publisher: null,
+            imageUrl: null,
+            playerCountLabel: '2–4 giocatori',
+            pdfCount: 1,
+            failedPdfCount: 1,
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+      },
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGamesWithoutKb>);
+
     const onUpload = vi.fn();
     render(<GamesWithoutKbSection onUploadClick={onUpload} />);
 

@@ -69,13 +69,17 @@ export function GamesWithoutKbSection({ onUploadClick }: GamesWithoutKbSectionPr
             {items.map(game => (
               <div key={game.gameId} className="flex flex-col gap-2">
                 <MeepleCard
-                  entity="kb"
+                  entity="game"
                   variant="grid"
                   title={game.title}
                   subtitle={game.publisher ?? undefined}
                   imageUrl={game.imageUrl ?? undefined}
-                  status={game.hasFailedPdfs ? 'failed' : 'idle'}
-                  badge={game.hasFailedPdfs ? `${game.pdfCount} fallito` : 'Nessuna KB'}
+                  status={game.failedPdfCount > 0 ? 'failed' : 'idle'}
+                  badge={
+                    game.failedPdfCount > 0
+                      ? `${game.failedPdfCount} ${game.failedPdfCount === 1 ? 'fallito' : 'falliti'}`
+                      : 'Nessuna KB'
+                  }
                   metadata={[
                     { label: 'Giocatori', value: game.playerCountLabel },
                     ...(game.pdfCount > 0
@@ -89,7 +93,7 @@ export function GamesWithoutKbSection({ onUploadClick }: GamesWithoutKbSectionPr
                   className="flex items-center justify-center gap-2 rounded-md bg-orange-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-orange-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
                   aria-label={`Aggiungi PDF per ${game.title}`}
                 >
-                  {game.hasFailedPdfs ? (
+                  {game.failedPdfCount > 0 ? (
                     <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
                   ) : (
                     <Upload className="h-3.5 w-3.5" aria-hidden="true" />

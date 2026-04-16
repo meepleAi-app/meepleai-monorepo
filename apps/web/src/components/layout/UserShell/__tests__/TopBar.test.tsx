@@ -30,11 +30,17 @@ describe('TopBar', () => {
   it('renders logo, nav links, search, chat button, and user menu', () => {
     render(<TopBar />);
     expect(screen.getByRole('link', { name: /meepleai home/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+    // Desktop NavLinks + mobile drawer both render the same labels (media-query hidden, still in DOM)
+    expect(screen.getAllByRole('link', { name: 'Home' }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /chat agente/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /notifications/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /user menu/i })).toBeInTheDocument();
+  });
+
+  it('renders mobile hamburger menu button', () => {
+    render(<TopBar />);
+    expect(screen.getByRole('button', { name: /apri menu/i })).toBeInTheDocument();
   });
 
   it('is 64px tall and sticky', () => {

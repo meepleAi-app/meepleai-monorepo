@@ -57,7 +57,7 @@ export function AdminShell({ children }: AdminShellProps) {
         <AdminMobileDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
 
         <DashboardEngineProvider>
-          <main id="main-content" className="flex-1 overflow-y-auto">
+          <main id="main-content" className="flex-1 overflow-y-auto overflow-x-clip">
             {children}
           </main>
         </DashboardEngineProvider>

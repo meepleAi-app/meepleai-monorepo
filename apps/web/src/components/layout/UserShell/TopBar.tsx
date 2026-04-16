@@ -6,6 +6,7 @@ import { useChatPanel } from '@/hooks/useChatPanel';
 
 import { TopBarChatButton } from './TopBarChatButton';
 import { TopBarLogo } from './TopBarLogo';
+import { TopBarMobileMenu } from './TopBarMobileMenu';
 import { TopBarNavLinks } from './TopBarNavLinks';
 import { TopBarSearchPill } from './TopBarSearchPill';
 
@@ -33,13 +34,14 @@ export function TopBar({ onOpenChat, onOpenSearch }: TopBarProps) {
   return (
     <header
       data-testid="top-bar"
-      className="sticky top-0 z-40 h-16 flex items-center gap-4 px-6 border-b border-[var(--border-glass)] backdrop-blur-[16px]"
+      className="sticky top-0 z-40 h-16 flex items-center gap-2 md:gap-4 px-3 md:px-6 border-b border-[var(--border-glass)] backdrop-blur-[16px]"
       style={{ background: 'color-mix(in srgb, var(--bg-elevated) 95%, transparent)' }}
     >
+      <TopBarMobileMenu />
       <TopBarLogo />
       <TopBarNavLinks />
       <TopBarSearchPill onOpen={onOpenSearch} />
-      <div className="flex items-center gap-2.5 shrink-0">
+      <div className="flex items-center gap-1.5 md:gap-2.5 shrink-0">
         {onOpenChat ? <TopBarChatButton onOpen={onOpenChat} /> : <TopBarChatButtonConnected />}
         <NotificationBell />
         <UserMenuDropdown />

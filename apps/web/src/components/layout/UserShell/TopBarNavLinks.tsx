@@ -33,7 +33,7 @@ export function TopBarNavLinks() {
   const pathname = usePathname() ?? '';
 
   return (
-    <nav className="flex items-center gap-1 ml-3 shrink-0" aria-label="Primary">
+    <nav className="hidden md:flex items-center gap-1 ml-3 shrink-0" aria-label="Primary">
       {LINKS.map(link => {
         const active = link.isActive(pathname);
         return (

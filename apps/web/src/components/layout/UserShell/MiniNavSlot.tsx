@@ -18,9 +18,9 @@ export function MiniNavSlot() {
   return (
     <div
       data-testid="mini-nav-slot"
-      className="h-12 flex items-center gap-1 px-7 pl-[104px] border-b border-[var(--border-glass)] bg-[var(--bg-base)]"
+      className="h-12 flex items-center gap-1 px-3 md:px-7 md:pl-[104px] border-b border-[var(--border-glass)] bg-[var(--bg-base)] overflow-x-auto md:overflow-x-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <div className="text-xs font-semibold text-[var(--text-tertiary)] mr-5">
+      <div className="text-xs font-semibold text-[var(--text-tertiary)] mr-3 md:mr-5 shrink-0">
         <span aria-hidden>›</span> {config.breadcrumb}
       </div>
       {config.tabs.map(tab => {

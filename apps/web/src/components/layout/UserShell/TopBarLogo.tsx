@@ -19,8 +19,8 @@ export function TopBarLogo() {
       >
         ◆
       </span>
-      <span className="text-[var(--text-primary)]">Meeple</span>
-      <span className="-ml-2.5" style={{ color: 'hsl(25 95% 42%)' }}>
+      <span className="hidden sm:inline text-[var(--text-primary)]">Meeple</span>
+      <span className="hidden sm:inline -ml-2.5" style={{ color: 'hsl(25 95% 42%)' }}>
         Ai
       </span>
     </Link>

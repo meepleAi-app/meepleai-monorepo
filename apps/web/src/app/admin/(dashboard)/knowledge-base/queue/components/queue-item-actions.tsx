@@ -9,6 +9,7 @@ import {
   XCircleIcon,
   FileTextIcon,
   RefreshCwIcon,
+  Trash2Icon,
 } from 'lucide-react';
 
 import {
@@ -32,7 +33,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/useToast';
 
 import { ExtractedTextPreviewModal } from './extracted-text-preview-modal';
-import { setPriority, cancelJob, retryJob } from '../lib/queue-api';
+import { setPriority, cancelJob, retryJob, removeJob } from '../lib/queue-api';
 
 import type { ProcessingJobDto, ProcessingPriority } from '../lib/queue-api';
 
@@ -44,6 +45,7 @@ export function QueueItemActions({ job }: QueueItemActionsProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [textPreviewOpen, setTextPreviewOpen] = useState(false);
 
   const invalidate = useCallback(() => {
@@ -84,9 +86,26 @@ export function QueueItemActions({ job }: QueueItemActionsProps) {
     },
   });
 
+  const removeMutation = useMutation({
+    mutationFn: () => removeJob(job.id),
+    onSuccess: () => {
+      invalidate();
+      setRemoveDialogOpen(false);
+      toast({ title: 'Job rimosso dalla coda' });
+    },
+    onError: () => {
+      toast({
+        title: 'Errore',
+        description: 'Impossibile rimuovere il job.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const canBump = job.status === 'Queued';
   const canCancel = job.status === 'Queued' || job.status === 'Processing';
   const canRetry = job.status === 'Failed' && job.canRetry;
+  const canRemove = job.status === 'Queued';
 
   return (
     <>
@@ -128,6 +147,19 @@ export function QueueItemActions({ job }: QueueItemActionsProps) {
             </DropdownMenuItem>
           )}
 
+          {canRemove && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setRemoveDialogOpen(true)}
+                className="text-orange-600 dark:text-orange-400"
+              >
+                <Trash2Icon className="h-4 w-4 mr-2" />
+                Rimuovi dalla coda
+              </DropdownMenuItem>
+            </>
+          )}
+
           {canCancel && (
             <>
               <DropdownMenuSeparator />
@@ -156,6 +188,28 @@ export function QueueItemActions({ job }: QueueItemActionsProps) {
             <AlertDialogCancel>Keep</AlertDialogCancel>
             <AlertDialogAction onClick={() => cancelMutation.mutate()}>
               Cancel Job
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove confirmation dialog */}
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent onClick={e => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rimuovere dalla coda?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rimuove &quot;{job.pdfFileName}&quot; dalla coda. Il file non verrà eliminato. Potrai
+              accodarlo di nuovo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => removeMutation.mutate()}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              Rimuovi dalla coda
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

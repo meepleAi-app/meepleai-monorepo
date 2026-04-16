@@ -38,4 +38,22 @@ internal interface IGameRepository : IRepository<Game, Guid>
     Task<IReadOnlyList<Game>> GetBySharedGameIdAsync(
         Guid sharedGameId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resolves a caller-supplied game identifier against BOTH the primary key
+    /// <c>Game.Id</c> and the bridge FK <c>Game.SharedGameId</c>, preferring a
+    /// direct PK match.
+    ///
+    /// <para>
+    /// Rationale: public surfaces (e.g. <c>GET /api/v1/library</c>) expose the
+    /// <c>SharedGameId</c> as the user-facing <c>gameId</c>, while write/read
+    /// paths like <c>/games/{id}/agents</c> target the <c>games</c> table PK.
+    /// Without this fallback the frontend hits a spurious 404 when the two
+    /// identifiers diverge (which they do in production, though seeders happen
+    /// to align them in dev).
+    /// </para>
+    ///
+    /// Same resolution pattern as <c>CreateChatThreadCommandHandler</c> (PR #414).
+    /// </summary>
+    Task<Game?> GetByIdOrSharedGameIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

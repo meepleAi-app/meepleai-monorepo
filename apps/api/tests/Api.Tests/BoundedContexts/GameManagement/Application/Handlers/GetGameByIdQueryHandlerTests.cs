@@ -40,7 +40,7 @@ public class GetGameByIdQueryHandlerTests
             .Build();
 
         _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
         var query = new GetGameByIdQuery(gameId);
@@ -60,7 +60,7 @@ public class GetGameByIdQueryHandlerTests
         result.MaxPlayTimeMinutes.Should().Be(120);
 
         _gameRepositoryMock.Verify(
-            r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()),
+            r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -75,7 +75,7 @@ public class GetGameByIdQueryHandlerTests
             .Build();
 
         _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
         var query = new GetGameByIdQuery(gameId);
@@ -108,7 +108,7 @@ public class GetGameByIdQueryHandlerTests
             .Build();
 
         _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
         var query = new GetGameByIdQuery(gameId);
@@ -134,7 +134,7 @@ public class GetGameByIdQueryHandlerTests
             .Build();
 
         _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
         var query = new GetGameByIdQuery(gameId);
@@ -159,7 +159,7 @@ public class GetGameByIdQueryHandlerTests
         var gameId = Guid.NewGuid();
 
         _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Game?)null);
 
         var query = new GetGameByIdQuery(gameId);
@@ -171,7 +171,7 @@ public class GetGameByIdQueryHandlerTests
         result.Should().BeNull();
 
         _gameRepositoryMock.Verify(
-            r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()),
+            r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -182,7 +182,7 @@ public class GetGameByIdQueryHandlerTests
         var gameId = Guid.Empty;
 
         _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Game?)null);
 
         var query = new GetGameByIdQuery(gameId);
@@ -207,7 +207,7 @@ public class GetGameByIdQueryHandlerTests
         var cancellationToken = cts.Token;
 
         _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, cancellationToken))
+            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, cancellationToken))
             .ReturnsAsync(game);
 
         var query = new GetGameByIdQuery(gameId);
@@ -218,7 +218,7 @@ public class GetGameByIdQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         _gameRepositoryMock.Verify(
-            r => r.GetByIdAsync(gameId, cancellationToken),
+            r => r.GetByIdOrSharedGameIdAsync(gameId, cancellationToken),
             Times.Once);
     }
     [Fact]
@@ -233,7 +233,7 @@ public class GetGameByIdQueryHandlerTests
             .Build();
 
         _gameRepositoryMock
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
         var query = new GetGameByIdQuery(gameId);
@@ -245,6 +245,38 @@ public class GetGameByIdQueryHandlerTests
         result.Should().NotBeNull();
         result.CreatedAt.Should().NotBe(default(DateTime));
         result.CreatedAt.Should().Be(game.CreatedAt);
+    }
+
+    [Fact]
+    public async Task Handle_LooksUpBySharedGameIdWhenDirectIdMisses()
+    {
+        // Regression for chat-panel 404 bug: the frontend library exposes
+        // SharedGameId as user-facing gameId. The handler must delegate to
+        // GetByIdOrSharedGameIdAsync so the repository can resolve either
+        // identifier. Previously the handler called GetByIdAsync (PK only)
+        // which returned null and caused /games/{id}/agents to 404.
+        var sharedGameId = Guid.NewGuid();
+        var resolvedGameId = Guid.NewGuid();
+        var game = new GameBuilder()
+            .WithId(resolvedGameId)
+            .WithTitle("Agricola")
+            .Build();
+
+        _gameRepositoryMock
+            .Setup(r => r.GetByIdOrSharedGameIdAsync(sharedGameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        var query = new GetGameByIdQuery(sharedGameId);
+
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result.Id.Should().Be(resolvedGameId);
+        result.Title.Should().Be("Agricola");
+
+        _gameRepositoryMock.Verify(
+            r => r.GetByIdOrSharedGameIdAsync(sharedGameId, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
 

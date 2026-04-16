@@ -31,7 +31,6 @@ import { AgentDrawerSheet } from './AgentDrawerSheet';
 import { ChatDrawerSheet } from './ChatDrawerSheet';
 import { DeclareOwnershipButton } from './DeclareOwnershipButton';
 import { KbDrawerSheet } from './KbDrawerSheet';
-import { RagAccessBadge } from './RagAccessBadge';
 import { SessionDrawerSheet } from './SessionDrawerSheet';
 
 // ============================================================================
@@ -72,8 +71,10 @@ export interface MeepleLibraryGameCardProps {
 // ============================================================================
 
 function mapGameStateToStatus(state: GameStateType | null | undefined): CardStatus | undefined {
-  if (!state) return undefined;
-  if (state === 'Owned' || state === 'Nuovo') return 'owned';
+  // "Posseduto" overlay only when the user has declared ownership.
+  // Drives copyright-safe citation rendering: owners see verbatim PDF quotes,
+  // non-owners get paraphrased snippets. 'Nuovo' = added but not yet declared.
+  if (state === 'Owned') return 'owned';
   if (state === 'Wishlist') return 'wishlist';
   return undefined;
 }
@@ -201,7 +202,6 @@ export function MeepleLibraryGameCard({
 
   const mappedStatus = mapGameStateToStatus(game.currentState);
   const badge = game.isFavorite ? '❤️ Preferito' : undefined;
-  const showRagBadge = game.hasKb || game.currentState === 'Owned';
 
   const navItems = useMemo(
     () =>
@@ -257,8 +257,8 @@ export function MeepleLibraryGameCard({
         data-testid={`library-game-card-${game.gameId}`}
       />
 
-      {/* Ownership + RAG Access indicators */}
-      {(game.currentState === 'Nuovo' || showRagBadge) && (
+      {/* Ownership declaration CTA (RAG access is now shown as status overlay on the card) */}
+      {game.currentState === 'Nuovo' && (
         <div className="flex items-center gap-2 mt-1 px-1">
           <DeclareOwnershipButton
             gameId={game.gameId}
@@ -266,7 +266,6 @@ export function MeepleLibraryGameCard({
             gameState={game.currentState}
             onOwnershipDeclared={handleOwnershipDeclared}
           />
-          {showRagBadge && <RagAccessBadge hasRagAccess={game.hasRagAccess} isRagPublic={false} />}
         </div>
       )}
 

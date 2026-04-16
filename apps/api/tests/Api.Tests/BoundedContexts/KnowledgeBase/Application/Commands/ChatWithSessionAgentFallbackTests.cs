@@ -12,6 +12,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -141,6 +142,9 @@ public class ChatWithSessionAgentFallbackTests
             userBudgetService: Mock.Of<IUserBudgetService>(),
             circuitBreakerRegistry: registry,
             scopeFactory: Mock.Of<IServiceScopeFactory>(),
-            logger: NullLogger<ChatWithSessionAgentCommandHandler>.Instance);
+            logger: NullLogger<ChatWithSessionAgentCommandHandler>.Instance,
+            copyrightLeakGuard: Mock.Of<ICopyrightLeakGuard>(),
+            fallbackMessageProvider: Mock.Of<ICopyrightFallbackMessageProvider>(),
+            copyrightOptions: Options.Create(new CopyrightLeakGuardOptions()));
     }
 }

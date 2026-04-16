@@ -206,4 +206,43 @@ internal static partial class MeepleAiMetrics
             HybridSearchRrfScore.Record(rrfScore.Value);
         }
     }
+
+    /// <summary>
+    /// Counter for system prompts that include the Copyright Notice instruction.
+    /// #447 observability.
+    /// Tags: has_protected (bool), agent_language (string ISO 639-1).
+    /// </summary>
+    public static readonly Counter<long> CopyrightInstructionInjected = Meter.CreateCounter<long>(
+        name: "meepleai.rag.copyright.instruction.injected",
+        unit: "prompts",
+        description: "Count of system prompts that include the copyright paraphrase instruction");
+
+    /// <summary>
+    /// Counter for detected verbatim runs exceeding the configured threshold.
+    /// #447 observability — drives false-positive calibration.
+    /// Tags: run_length (int), document_id (string).
+    /// </summary>
+    public static readonly Counter<long> CopyrightVerbatimDetected = Meter.CreateCounter<long>(
+        name: "meepleai.rag.copyright.verbatim_run.detected",
+        unit: "detections",
+        description: "Count of detected verbatim runs against Protected chunks");
+
+    /// <summary>
+    /// Counter for copyright guard scan errors (excluding cancellation).
+    /// #447 observability — fail-open posture.
+    /// Tags: error_type (string exception name).
+    /// </summary>
+    public static readonly Counter<long> CopyrightScanErrors = Meter.CreateCounter<long>(
+        name: "meepleai.rag.copyright.guard.scan_errors",
+        unit: "errors",
+        description: "Count of scan errors caught by fail-open guard");
+
+    /// <summary>
+    /// Histogram for copyright guard scan duration.
+    /// #447 observability — performance budget is 50ms p99.
+    /// </summary>
+    public static readonly Histogram<long> CopyrightScanDurationMs = Meter.CreateHistogram<long>(
+        name: "meepleai.rag.copyright.guard.scan_duration",
+        unit: "ms",
+        description: "Duration of copyright leak guard scans in milliseconds");
 }

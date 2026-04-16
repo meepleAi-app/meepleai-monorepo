@@ -180,6 +180,8 @@
     position: relative;
     background: var(--bg-base);
     color: var(--text-primary);
+    /* Safety net: prevent horizontal page scroll on mobile viewports */
+    overflow-x: clip;
   }
 
   /* MeepleAI Background Texture System - Issue #2905 */

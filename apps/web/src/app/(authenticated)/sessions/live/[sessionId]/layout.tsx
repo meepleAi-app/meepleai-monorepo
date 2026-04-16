@@ -25,7 +25,7 @@ interface LiveSessionLayoutProps {
   params: Promise<{ sessionId: string }>;
 }
 
-function getActiveTabId(pathname: string, sessionId: string): string {
+function getActiveTabId(pathname: string): string {
   if (pathname.endsWith('/agent')) return 'agent';
   if (pathname.endsWith('/scores')) return 'scores';
   if (pathname.endsWith('/photos')) return 'photos';
@@ -36,7 +36,7 @@ function getActiveTabId(pathname: string, sessionId: string): string {
 export default function LiveSessionLayout({ children, params }: LiveSessionLayoutProps) {
   const { sessionId } = use(params);
   const pathname = usePathname();
-  const activeTabId = getActiveTabId(pathname, sessionId);
+  const activeTabId = getActiveTabId(pathname);
 
   return (
     <>

@@ -80,9 +80,7 @@ export function KbSelectionStep({
                 role="listitem"
                 className={cn(
                   'flex items-center gap-3 rounded-xl border p-3 transition-colors',
-                  isSelected
-                    ? 'border-amber-500/40 bg-amber-500/5'
-                    : 'border-border bg-card'
+                  isSelected ? 'border-amber-500/40 bg-amber-500/5' : 'border-border bg-card'
                 )}
               >
                 {/* Icon */}

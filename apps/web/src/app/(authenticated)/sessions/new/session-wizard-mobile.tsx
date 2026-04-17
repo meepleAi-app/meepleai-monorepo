@@ -39,13 +39,14 @@ import { useRouter } from 'next/navigation';
 import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useKbGameDocuments } from '@/hooks/queries/useGameDocuments';
+import { useLibrary } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
-import { KbSelectionStep } from './KbSelectionStep';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 import { cn } from '@/lib/utils';
+
+import { KbSelectionStep } from './KbSelectionStep';
 
 // ========== Types ==========
 

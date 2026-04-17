@@ -97,7 +97,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         UserTier? userTier,
         string agentLanguage,
         CancellationToken ct,
-        IRagDebugEventCollector? debugCollector = null)
+        IRagDebugEventCollector? debugCollector = null,
+        RetrievalProfile? profileOverride = null)
     {
         ArgumentNullException.ThrowIfNull(agentTypology);
         ArgumentNullException.ThrowIfNull(gameTitle);
@@ -110,7 +111,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         var hasExpansions = expansionGameIds.Count > 0;
 
         // Step 1: Retrieve RAG context (includes expansion boost), passing pre-resolved expansion IDs
-        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector).ConfigureAwait(false);
+        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector, profileOverride).ConfigureAwait(false);
 
         // Step 2: Build system prompt (persona + RAG chunks + expansion priority + copyright instruction)
         var hasProtectedCitations = citations.Any(c => c.CopyrightTier == CopyrightTier.Protected);
@@ -159,7 +160,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
     private async Task<(string ragContext, List<ChunkCitation> citations)> RetrieveRagContextAsync(
         string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, UserTier? userTier, CancellationToken ct,
-        IRagDebugEventCollector? debugCollector = null)
+        IRagDebugEventCollector? debugCollector = null,
+        RetrievalProfile? profileOverride = null)
     {
         var citations = new List<ChunkCitation>();
 
@@ -209,6 +211,15 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     _logger.LogInformation("Adaptive RAG: skipping retrieval for simple query");
                     return (string.Empty, citations);
                 }
+            }
+
+            // Apply debug override if provided (Issue #461)
+            if (profileOverride != null)
+            {
+                _logger.LogInformation(
+                    "Retrieval profile overridden: TopK={TopK}, MinScore={MinScore:F2} (was TopK={OrigTopK}, MinScore={OrigMinScore:F2})",
+                    profileOverride.TopK, profileOverride.MinScore, profile.TopK, profile.MinScore);
+                profile = profileOverride;
             }
 
             // === RAG-FUSION or standard query expansion ===

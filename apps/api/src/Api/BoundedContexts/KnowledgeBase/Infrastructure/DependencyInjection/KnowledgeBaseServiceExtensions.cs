@@ -32,6 +32,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.Infrastructure.Seeders.Catalog.SeedBlob;
 using Api.Services;
+using Api.Services.ImageProcessing;
 using Api.Services.LlmClients;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Quartz;
@@ -218,6 +219,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Issue #27: User region detection from Accept-Language header (Scoped - uses IHttpContextAccessor)
         services.AddScoped<IUserRegionDetector, UserRegionDetector>();
+
+        // Image preprocessing for vision-capable LLM models
+        services.AddSingleton<IImagePreprocessor, SkiaImagePreprocessor>();
 
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService

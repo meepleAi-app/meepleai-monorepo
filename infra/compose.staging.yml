@@ -70,10 +70,10 @@ services:
       Authentication__SessionCookie__SameSite: "Lax"
       # Ollama disabled in staging — all LLM traffic goes to OpenRouter
       AI__Providers__Ollama__Enabled: "false"
-      # Unused optional AI services — PDF extraction uses local Docnet (Provider: Docnet).
-      # Empty URL makes health checks return Degraded instead of Unhealthy.
-      PdfProcessing__Extractor__SmolDocling__ApiUrl: ""
-      PdfProcessing__Extractor__Unstructured__ApiUrl: ""
+      # AI extraction services — URLs must be valid for startup validation.
+      # Services may not be running in minimal profile, but URLs must pass validation.
+      PdfProcessing__Extractor__SmolDocling__ApiUrl: "http://smoldocling-service:8002"
+      PdfProcessing__Extractor__Unstructured__ApiUrl: "http://unstructured-service:8001"
     volumes:
       - ./secrets:/app/infra/secrets:ro
     labels:

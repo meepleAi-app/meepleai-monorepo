@@ -34,6 +34,7 @@ internal static class SessionTrackingServiceExtensions
         services.AddScoped<IToolkitSessionStateRepository, ToolkitSessionStateRepository>(); // ISSUE-5148: Epic B5
         services.AddScoped<ISessionEventRepository, SessionEventRepository>(); // ISSUE-276: Session Diary / Timeline
         services.AddScoped<ISessionCheckpointRepository, SessionCheckpointRepository>(); // ISSUE-278: Session Checkpoint / Deep Save
+        services.AddScoped<IVisionSnapshotRepository, VisionSnapshotRepository>(); // Session Vision AI
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -61,6 +62,9 @@ internal static class SessionTrackingServiceExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IAutoSaveHealthTracker, AutoSaveHealthTracker>();
         services.AddHostedService<AutoSaveHealthLoggerService>();
+
+        // Session Vision AI
+        services.AddScoped<IGameStateExtractor, GameStateExtractor>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

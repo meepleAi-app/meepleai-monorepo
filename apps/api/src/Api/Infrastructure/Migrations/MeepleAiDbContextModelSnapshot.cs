@@ -1984,6 +1984,107 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("toolkit_session_states", "session_tracking");
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Caption")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("caption");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("ExtractedGameState")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("extracted_game_state");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<int>("TurnNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("turn_number");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("ix_vision_snapshots_is_deleted");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_vision_snapshots_session_id");
+
+                    b.HasIndex("SessionId", "TurnNumber")
+                        .HasDatabaseName("ix_vision_snapshots_session_turn");
+
+                    b.ToTable("vision_snapshots", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshotImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("integer")
+                        .HasColumnName("height");
+
+                    b.Property<string>("MediaType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("media_type");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("order_index");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<Guid>("VisionSnapshotId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vision_snapshot_id");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("integer")
+                        .HasColumnName("width");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VisionSnapshotId")
+                        .HasDatabaseName("ix_vision_snapshot_images_snapshot_id");
+
+                    b.ToTable("vision_snapshot_images", (string)null);
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -12766,6 +12867,15 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshotImage", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshot", null)
+                        .WithMany("Images")
+                        .HasForeignKey("VisionSnapshotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition", b =>
                 {
                     b.OwnsOne("Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects.TierLimits", "Limits", b1 =>
@@ -14509,6 +14619,11 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestSession", b =>
                 {
                     b.Navigation("Variants");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshot", b =>
+                {
+                    b.Navigation("Images");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AdminReportEntity", b =>

@@ -26,6 +26,7 @@ internal interface IRagPromptAssemblyService
     /// <param name="agentLanguage">Normalized ISO 639-1 language code for the agent (e.g., "it", "en"). Drives copyright instruction localization.</param>
     /// <param name="ct">Cancellation token</param>
     /// <param name="debugCollector">Optional collector for RAG debug events (null = no debug emission)</param>
+    /// <param name="profileOverride">Optional retrieval profile override for debug/admin scenarios (null = use adaptive routing)</param>
     /// <returns>Assembled prompt ready for LLM consumption</returns>
     Task<AssembledPrompt> AssemblePromptAsync(
         string agentTypology,
@@ -37,5 +38,6 @@ internal interface IRagPromptAssemblyService
         UserTier? userTier,
         string agentLanguage,
         CancellationToken ct,
-        IRagDebugEventCollector? debugCollector = null);
+        IRagDebugEventCollector? debugCollector = null,
+        RetrievalProfile? profileOverride = null);
 }

@@ -244,6 +244,220 @@ internal class DeepSeekLlmClient : ILlmClient
     }
 
     /// <inheritdoc/>
+    public bool SupportsVision => true;
+
+    /// <inheritdoc/>
+    public async Task<LlmCompletionResult> GenerateCompletionAsync(
+        string model,
+        IReadOnlyList<LlmMessage> messages,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default)
+    {
+        if (!_isConfigured)
+        {
+            return LlmCompletionResult.CreateFailure("DeepSeek provider is not configured (missing API key)");
+        }
+
+        if (messages == null || messages.Count == 0)
+        {
+            return LlmCompletionResult.CreateFailure("No messages provided");
+        }
+
+        try
+        {
+            using var httpRequest = CreateMultimodalChatRequest(model, messages, temperature, maxTokens, stream: false);
+
+            _logger.LogInformation("Generating DeepSeek multimodal completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
+                model, temperature, maxTokens);
+
+            using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
+            return await HandleCompletionResponseAsync(response, model, ct).ConfigureAwait(false);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "DeepSeek multimodal completion timed out");
+            return LlmCompletionResult.CreateFailure("Request timed out");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during DeepSeek multimodal completion");
+            return LlmCompletionResult.CreateFailure($"HTTP error: {ex.Message}");
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize DeepSeek multimodal response");
+            return LlmCompletionResult.CreateFailure("Invalid response format");
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Wraps unexpected DeepSeek API errors into domain-friendly LlmCompletionResult
+#pragma warning restore S125
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during DeepSeek multimodal completion");
+            return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
+        }
+#pragma warning restore CA1031
+    }
+
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
+        string model,
+        IReadOnlyList<LlmMessage> messages,
+        double temperature,
+        int maxTokens,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        if (!_isConfigured)
+        {
+            _logger.LogWarning("DeepSeek provider is not configured — multimodal streaming unavailable");
+            yield break;
+        }
+
+        if (messages == null || messages.Count == 0)
+        {
+            _logger.LogWarning("No messages provided for DeepSeek multimodal streaming");
+            yield break;
+        }
+
+        _logger.LogInformation("Starting DeepSeek multimodal streaming using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
+            model, temperature, maxTokens);
+
+        const int maxRetries = 3;
+        int[] retryDelaysMs = [3000, 5000, 10000];
+        HttpResponseMessage? response = null;
+
+        for (var attempt = 0; attempt <= maxRetries; attempt++)
+        {
+            using var httpRequest = CreateMultimodalChatRequest(model, messages, temperature, maxTokens, stream: true);
+            response = null;
+
+            try
+            {
+                response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    break;
+                }
+
+                var errorBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                _logger.LogError("DeepSeek multimodal streaming API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(errorBody));
+
+                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxRetries)
+                {
+                    var delay = retryDelaysMs[Math.Min(attempt, retryDelaysMs.Length - 1)];
+                    _logger.LogWarning("Rate limited (429), retrying in {Delay}ms (attempt {Next}/{Total})",
+                        delay, attempt + 2, maxRetries + 1);
+                    response.Dispose();
+                    response = null;
+                    await Task.Delay(delay, ct).ConfigureAwait(false);
+                    continue;
+                }
+
+                response.Dispose();
+                response = null;
+                yield break;
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP request failed initiating DeepSeek multimodal streaming");
+                response?.Dispose();
+                response = null;
+                yield break;
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "DeepSeek multimodal streaming request timed out");
+                response?.Dispose();
+                response = null;
+                yield break;
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+            // SERVICE BOUNDARY: Streaming generator boundary - must handle all errors gracefully
+#pragma warning restore S125
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error initiating DeepSeek multimodal streaming");
+                response?.Dispose();
+                response = null;
+                yield break;
+            }
+#pragma warning restore CA1031
+        }
+
+        if (response == null || !response.IsSuccessStatusCode)
+        {
+            _logger.LogError("All {MaxRetries} multimodal streaming retry attempts exhausted", maxRetries + 1);
+            response?.Dispose();
+            yield break;
+        }
+
+        await foreach (var chunk in ProcessStreamResponseAsync(response, model, ct).ConfigureAwait(false))
+        {
+            yield return chunk;
+        }
+    }
+
+    private HttpRequestMessage CreateMultimodalChatRequest(
+        string model,
+        IReadOnlyList<LlmMessage> messages,
+        double temperature,
+        int maxTokens,
+        bool stream)
+    {
+        var apiMessages = new List<object>();
+
+        foreach (var message in messages)
+        {
+            if (!message.HasImages)
+            {
+                // Text-only message — use simple string content format
+                var textContent = string.Join("\n", message.Content.OfType<TextContentPart>().Select(t => t.Text));
+                apiMessages.Add(new { role = message.Role, content = textContent });
+            }
+            else
+            {
+                // Multimodal message — use content array format
+                var contentParts = new List<object>();
+                foreach (var part in message.Content)
+                {
+                    if (part is TextContentPart textPart)
+                    {
+                        contentParts.Add(new { type = "text", text = textPart.Text });
+                    }
+                    else if (part is ImageContentPart imagePart)
+                    {
+                        contentParts.Add(new
+                        {
+                            type = "image_url",
+                            image_url = new { url = imagePart.ToDataUri() }
+                        });
+                    }
+                }
+                apiMessages.Add(new { role = message.Role, content = contentParts });
+            }
+        }
+
+        var requestPayload = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["model"] = model,
+            ["messages"] = apiMessages,
+            ["temperature"] = temperature,
+            ["max_tokens"] = maxTokens,
+            ["stream"] = stream
+        };
+
+        var json = JsonSerializer.Serialize(requestPayload);
+        return new HttpRequestMessage(HttpMethod.Post, "chat/completions")
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> CheckHealthAsync(CancellationToken ct = default)
     {
         if (!_isConfigured)

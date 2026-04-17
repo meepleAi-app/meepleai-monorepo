@@ -38,7 +38,7 @@ export function ManaPips({ pips, size = 'md' }: ManaPipsProps) {
 
   return (
     <div className="flex items-center gap-1 px-3 pb-2 pt-0.5">
-      {visible.map((pip, i) => (
+      {visible.map(pip => (
         <PipRenderer key={pip.entityType} pip={pip} size={size} dotSize={dotSize} />
       ))}
       {overflow > 0 && (

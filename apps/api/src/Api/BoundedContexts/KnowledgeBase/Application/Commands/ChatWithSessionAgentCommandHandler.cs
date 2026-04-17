@@ -426,7 +426,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             }
         }
 
-        // Emit SSE event and apply recovery OUTSIDE try-catch (yield return restriction)
+        // #447: Leak detection result handling (placed here due to C# iterator method constraints)
         if (leakResult?.HasLeak == true)
         {
             foreach (var match in leakResult.Matches)

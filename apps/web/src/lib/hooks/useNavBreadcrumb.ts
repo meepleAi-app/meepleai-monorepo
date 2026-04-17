@@ -4,13 +4,18 @@ import { usePathname } from 'next/navigation';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import { entityHsl } from '@/components/ui/data-display/meeple-card/tokens';
-import { useCardHand } from '@/lib/stores/card-hand-store';
-
 export interface BreadcrumbSegment {
   label: string;
   href: string;
   entityType?: MeepleEntityType;
   color?: string;
+}
+
+/** @deprecated card-hand-store removed — this hook is dead code, slated for removal */
+interface CardHandEntry {
+  href: string;
+  label: string;
+  entityType: MeepleEntityType;
 }
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -24,7 +29,7 @@ const ROUTE_LABELS: Record<string, string> = {
 
 export function useNavBreadcrumb(): BreadcrumbSegment[] {
   const pathname = usePathname();
-  const cards = useCardHand(s => s.cards);
+  const cards: CardHandEntry[] = [];
 
   const segments: BreadcrumbSegment[] = [];
   const parts = pathname.split('/').filter(Boolean);

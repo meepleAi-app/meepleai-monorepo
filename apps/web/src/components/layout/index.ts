@@ -24,5 +24,3 @@ export { CommandPalette } from './CommandPalette';
 // v0app layout system (3-tier)
 export { ContextMiniNav } from './ContextMiniNav';
 export type { MiniNavTab } from './ContextMiniNav';
-export { FloatingActionPill } from './FloatingActionPill';
-export type { FabPage, FloatingActionPillProps } from './FloatingActionPill';

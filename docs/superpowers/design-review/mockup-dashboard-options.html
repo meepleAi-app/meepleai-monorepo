@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleAI — Dashboard Redesign Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ─── Reset & Base ─── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange-primary: hsl(25, 95%, 45%);
+    --orange-light: hsl(25, 95%, 55%);
+    --orange-dark: hsl(25, 95%, 38%);
+    --orange-glow: hsl(25, 100%, 65%);
+    --bg-warm: #faf8f5;
+    --bg-card: rgba(255,255,255,0.85);
+    --bg-card-hover: rgba(255,255,255,0.95);
+    --text-primary: #1a1612;
+    --text-secondary: #5a4a35;
+    --text-muted: #94a3b8;
+    --border-glass: rgba(200,180,160,0.25);
+    --shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.06), 0 1px 2px rgba(180,130,80,0.04);
+    --shadow-warm-md: 0 4px 12px rgba(180,130,80,0.08), 0 2px 4px rgba(180,130,80,0.04);
+    --shadow-warm-lg: 0 10px 30px rgba(180,130,80,0.12), 0 4px 8px rgba(180,130,80,0.06);
+    --shadow-warm-xl: 0 20px 50px rgba(180,130,80,0.16), 0 8px 16px rgba(180,130,80,0.08);
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-3xl: 2rem;
+
+    /* entity colors */
+    --e-game: hsl(25, 95%, 45%);
+    --e-session: hsl(240, 60%, 55%);
+    --e-agent: hsl(38, 92%, 50%);
+    --e-toolkit: hsl(142, 70%, 45%);
+    --e-player: hsl(262, 83%, 58%);
+    --e-kb: hsl(210, 40%, 55%);
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    color: var(--text-primary);
+    background: #f0ebe4;
+    line-height: 1.5;
+  }
+
+  /* ─── Option Switcher ─── */
+  .switcher {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 32px;
+    background: rgba(15,10,26,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-family: 'Sora', sans-serif;
+  }
+  .switcher h2 {
+    color: #f8fafc;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-right: 8px;
+  }
+  .switcher-btn {
+    padding: 8px 20px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .switcher-btn:hover {
+    border-color: var(--orange-primary);
+    color: var(--orange-light);
+  }
+  .switcher-btn.active {
+    background: var(--orange-primary);
+    border-color: var(--orange-primary);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(210,105,30,0.35);
+  }
+  .switcher .annotation {
+    margin-left: auto;
+    color: rgba(255,255,255,0.35);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ─── Option panels ─── */
+  .option-panel { display: none; }
+  .option-panel.visible { display: block; }
+
+  /* ─── Analysis text ─── */
+  .analysis-panel {
+    max-width: 960px;
+    margin: 40px auto;
+    padding: 0 24px;
+  }
+  .analysis-panel h1 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+  .analysis-panel .subtitle {
+    color: var(--text-secondary);
+    font-size: 15px;
+    margin-bottom: 32px;
+  }
+  .issue-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .issue-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-xl);
+    padding: 20px;
+    box-shadow: var(--shadow-warm-sm);
+  }
+  .issue-card .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .tag.critical { background: hsl(0,80%,92%); color: hsl(0,70%,40%); }
+  .tag.major { background: hsl(38,90%,90%); color: hsl(38,80%,35%); }
+  .tag.minor { background: hsl(210,40%,92%); color: hsl(210,40%,40%); }
+  .issue-card h3 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .issue-card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     OPTION A — "Tavolo Editoriale" (Editorial Game Table)
+     Magazine-style asymmetric layout with warm textures
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  .option-a {
+    background: #faf8f5;
+    min-height: 100vh;
+  }
+  .option-a .topbar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    border-bottom: 1px solid var(--border-glass);
+    backdrop-filter: blur(16px);
+    background: color-mix(in srgb, #faf8f5 95%, transparent);
+    position: sticky;
+    top: 64px; /* account for switcher */
+    z-index: 50;
+  }
+  .option-a .logo {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--orange-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .option-a .logo .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--orange-primary);
+    border-radius: 50%;
+    animation: pulse-dot 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+  .option-a .nav-links {
+    display: flex;
+    gap: 6px;
+    margin-left: 24px;
+  }
+  .option-a .nav-link {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .option-a .nav-link:hover { background: rgba(0,0,0,0.04); }
+  .option-a .nav-link.active {
+    background: var(--orange-primary);
+    color: #fff;
+  }
+  .option-a .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .option-a .search-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border-glass);
+    background: rgba(255,255,255,0.6);
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .search-pill:hover { border-color: var(--orange-primary); }
+  .option-a .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background 0.15s;
+  }
+  .option-a .icon-btn:hover { background: rgba(0,0,0,0.05); }
+  .option-a .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--orange-primary), var(--e-player));
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+  }
+
+  /* Dashboard content - Editorial layout */
+  .option-a .dash-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  .option-a .greeting-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid var(--border-glass);
+  }
+  .option-a .greeting h1 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .option-a .greeting p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  .option-a .date-badge {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Editorial 2-column asymmetric grid */
+  .option-a .editorial-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  .option-a .section-label {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .option-a .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-glass);
+  }
+
+  /* Featured game - large editorial card */
+  .option-a .featured-game {
+    border-radius: var(--radius-2xl);
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    box-shadow: var(--shadow-warm-md);
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+  .option-a .featured-game:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-warm-xl);
+  }
+  .option-a .featured-game .image-area {
+    height: 220px;
+    background: linear-gradient(135deg, hsl(25,40%,88%), hsl(30,35%,82%));
+    position: relative;
+    overflow: hidden;
+  }
+  .option-a .featured-game .image-area::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(26,22,18,0.6));
+  }
+  .option-a .featured-game .game-emoji {
+    position: absolute;
+    font-size: 80px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+    z-index: 1;
+  }
+  .option-a .featured-game .entity-badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 2;
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: var(--e-game);
+    color: #fff;
+  }
+  .option-a .featured-game .card-body {
+    padding: 20px 24px;
+  }
+  .option-a .featured-game .card-body h3 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .option-a .featured-game .card-body .meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .option-a .featured-game .rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--e-agent);
+    font-weight: 700;
+    font-size: 14px;
+  }
+  /* Mana pips row */
+  .option-a .mana-pips {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .mana-pip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .mana-pip.sessions {
+    background: hsl(240,60%,96%);
+    color: var(--e-session);
+    border-color: hsl(240,60%,88%);
+  }
+  .mana-pip.kb {
+    background: hsl(210,40%,94%);
+    color: var(--e-kb);
+    border-color: hsl(210,40%,85%);
+  }
+  .mana-pip.agents {
+    background: hsl(38,92%,93%);
+    color: hsl(38,80%,40%);
+    border-color: hsl(38,90%,80%);
+  }
+
+  /* Side column - stacked cards */
+  .option-a .side-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .option-a .mini-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: var(--radius-xl);
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    box-shadow: var(--shadow-warm-sm);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+  .option-a .mini-card:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-warm-md);
+  }
+  .option-a .mini-card .card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-lg);
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .option-a .mini-card .card-info h4 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .option-a .mini-card .card-info p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .option-a .mini-card .accent-bar {
+    width: 3px;
+    height: 28px;
+    border-radius: 999px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* Sessions horizontal scroll */
+  .option-a .scroll-row {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-glass) transparent;
+  }
+  .option-a .session-card {
+    flex-shrink: 0;
+    width: 220px;
+    padding: 18px;
+    border-radius: var(--radius-xl);
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-left: 3px solid var(--e-session);
+    box-shadow: var(--shadow-warm-sm);
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .option-a .session-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-warm-md);
+  }
+  .option-a .session-card .session-game {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .option-a .session-card .session-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .option-a .session-card .session-status {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .session-status.active { background: hsl(142,70%,92%); color: hsl(142,70%,30%); }
+  .session-status.paused { background: hsl(38,90%,92%); color: hsl(38,80%,35%); }
+
+  /* Toolkit row */
+  .option-a .toolkit-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .option-a .tool-card {
+    padding: 18px 14px;
+    border-radius: var(--radius-xl);
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    box-shadow: var(--shadow-warm-sm);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .option-a .tool-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-warm-md);
+    border-color: var(--e-toolkit);
+  }
+  .option-a .tool-card .tool-icon {
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+  .option-a .tool-card .tool-name {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .option-a .tool-card .tool-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     OPTION B — "Tavolo Scuro" (Dark Gaming Table)
+     Immersive dark theme with neon entity accents
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  .option-b {
+    background: #0f0a1a;
+    min-height: 100vh;
+    color: #f0ece8;
+  }
+  .option-b .topbar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(20px);
+    background: rgba(15,10,26,0.85);
+    position: sticky;
+    top: 64px;
+    z-index: 50;
+  }
+  .option-b .logo {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    background: linear-gradient(135deg, var(--orange-glow), #fbbf24);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .option-b .nav-links {
+    display: flex;
+    gap: 4px;
+    margin-left: 24px;
+  }
+  .option-b .nav-link {
+    padding: 6px 14px;
+    border-radius: var(--radius-lg);
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .option-b .nav-link:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.05); }
+  .option-b .nav-link.active {
+    color: var(--orange-glow);
+    background: rgba(210,105,30,0.12);
+    border: 1px solid rgba(210,105,30,0.2);
+  }
+  .option-b .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .option-b .search-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.4);
+    font-size: 13px;
+  }
+  .option-b .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    font-size: 18px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .option-b .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--orange-primary), #fbbf24);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+  }
+
+  /* Dashboard dark */
+  .option-b .dash-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  .option-b .greeting h1 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #f0ece8;
+    margin-bottom: 4px;
+  }
+  .option-b .greeting p {
+    color: rgba(255,255,255,0.4);
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  /* Bento grid layout */
+  .option-b .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: minmax(120px, auto);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .option-b .bento-cell {
+    border-radius: var(--radius-2xl);
+    background: rgba(30,24,50,0.6);
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(8px);
+    padding: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .option-b .bento-cell:hover {
+    border-color: rgba(255,255,255,0.12);
+    box-shadow: 0 0 40px rgba(0,0,0,0.3);
+  }
+  .option-b .bento-cell::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  }
+  .option-b .bento-cell.game::before { background: linear-gradient(90deg, var(--e-game), transparent); }
+  .option-b .bento-cell.session::before { background: linear-gradient(90deg, var(--e-session), transparent); }
+  .option-b .bento-cell.agent::before { background: linear-gradient(90deg, var(--e-agent), transparent); }
+  .option-b .bento-cell.toolkit::before { background: linear-gradient(90deg, var(--e-toolkit), transparent); }
+  .option-b .bento-cell.stat::before { background: linear-gradient(90deg, var(--e-player), transparent); }
+
+  .option-b .cell-label {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 14px;
+  }
+
+  /* Featured game dark */
+  .option-b .feat-game-dark {
+    grid-column: span 7;
+    grid-row: span 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background-image: linear-gradient(135deg, hsl(25,30%,18%), hsl(25,20%,12%));
+    cursor: pointer;
+  }
+  .option-b .feat-game-dark:hover {
+    box-shadow: 0 0 60px rgba(210,105,30,0.12);
+    border-color: rgba(210,105,30,0.2);
+  }
+  .option-b .feat-game-dark .game-emoji {
+    font-size: 72px;
+    position: absolute;
+    top: 28px;
+    right: 28px;
+    filter: drop-shadow(0 0 30px rgba(210,105,30,0.3));
+    opacity: 0.85;
+  }
+  .option-b .feat-game-dark h3 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #f0ece8;
+    margin-bottom: 4px;
+  }
+  .option-b .feat-game-dark .meta {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .option-b .feat-game-dark .dark-mana-pips {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .option-b .dark-pip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .dark-pip.sessions {
+    background: rgba(100,100,220,0.1);
+    color: hsl(240,70%,72%);
+    border-color: rgba(100,100,220,0.2);
+  }
+  .dark-pip.kb {
+    background: rgba(100,150,200,0.1);
+    color: hsl(210,50%,65%);
+    border-color: rgba(100,150,200,0.2);
+  }
+  .dark-pip.agents {
+    background: rgba(220,170,50,0.1);
+    color: hsl(38,90%,60%);
+    border-color: rgba(220,170,50,0.2);
+  }
+
+  /* Stat cells */
+  .option-b .stat-cell {
+    grid-column: span 5;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 16px;
+  }
+  .option-b .stat-item {
+    text-align: center;
+  }
+  .option-b .stat-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 32px;
+    font-weight: 300;
+    color: #f0ece8;
+    line-height: 1.1;
+  }
+  .option-b .stat-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 2px;
+  }
+
+  /* Session list dark */
+  .option-b .session-list-dark {
+    grid-column: span 5;
+    grid-row: span 2;
+  }
+  .option-b .dark-session-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .option-b .dark-session-item:last-child { border-bottom: none; }
+  .option-b .ds-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .ds-dot.active { background: hsl(142,70%,50%); box-shadow: 0 0 8px hsl(142,70%,50%,.4); }
+  .ds-dot.paused { background: hsl(38,90%,55%); }
+  .option-b .ds-info h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+  }
+  .option-b .ds-info p {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+  }
+
+  /* Toolkit dark - icon row */
+  .option-b .toolkit-dark {
+    grid-column: span 7;
+  }
+  .option-b .tool-row {
+    display: flex;
+    gap: 12px;
+  }
+  .option-b .tool-item {
+    flex: 1;
+    padding: 16px 12px;
+    border-radius: var(--radius-xl);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .option-b .tool-item:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: var(--e-toolkit);
+    box-shadow: 0 0 20px rgba(100,200,100,0.08);
+  }
+  .option-b .tool-item .tool-icon { font-size: 24px; margin-bottom: 4px; }
+  .option-b .tool-item .tool-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     OPTION C — "Tavolo Ibrido" (Hybrid - Best of Both)
+     Light base with entity-colored sections and depth
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  .option-c {
+    background: #faf8f5;
+    min-height: 100vh;
+  }
+  .option-c .topbar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    border-bottom: 1px solid var(--border-glass);
+    backdrop-filter: blur(16px);
+    background: color-mix(in srgb, #faf8f5 95%, transparent);
+    position: sticky;
+    top: 64px;
+    z-index: 50;
+  }
+  .option-c .logo {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--orange-primary);
+  }
+  .option-c .nav-links {
+    display: flex;
+    gap: 4px;
+    margin-left: 24px;
+  }
+  .option-c .nav-link {
+    padding: 7px 16px;
+    border-radius: var(--radius-lg);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .option-c .nav-link:hover { background: rgba(0,0,0,0.03); }
+  .option-c .nav-link.active {
+    background: hsl(25,95%,96%);
+    color: var(--orange-dark);
+    border-color: hsl(25,95%,88%);
+  }
+  .option-c .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .option-c .search-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 18px;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-glass);
+    background: rgba(255,255,255,0.6);
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .option-c .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .option-c .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--orange-primary), var(--e-player));
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+  }
+
+  /* Dashboard - Hybrid approach with entity zones */
+  .option-c .dash-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 80px;
+  }
+  .option-c .greeting-strip {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 28px;
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(135deg, hsl(25,40%,94%), hsl(30,35%,91%));
+    border: 1px solid hsl(25,40%,85%);
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .option-c .greeting-strip::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: -20px;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(210,105,30,0.08), transparent);
+    border-radius: 50%;
+  }
+  .option-c .greeting-strip .avatar-lg {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-xl);
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-light));
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+  .option-c .greeting-strip h1 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .option-c .greeting-strip p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  .option-c .greeting-strip .quick-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+  .option-c .quick-action-btn {
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border-glass);
+    background: rgba(255,255,255,0.7);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .option-c .quick-action-btn:hover {
+    background: #fff;
+    box-shadow: var(--shadow-warm-sm);
+  }
+  .option-c .quick-action-btn.primary {
+    background: var(--orange-primary);
+    color: #fff;
+    border-color: var(--orange-primary);
+  }
+  .option-c .quick-action-btn.primary:hover {
+    background: var(--orange-dark);
+  }
+
+  /* Entity zone sections with colored accent */
+  .option-c .entity-zone {
+    margin-bottom: 28px;
+  }
+  .option-c .zone-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .option-c .zone-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .option-c .zone-title {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+  }
+  .option-c .zone-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: 4px;
+  }
+  .option-c .zone-action {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--orange-primary);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .option-c .zone-action:hover { text-decoration: underline; }
+
+  /* Game cards - 3 column grid with accent border */
+  .option-c .game-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .option-c .game-card-c {
+    border-radius: var(--radius-xl);
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-left: 3px solid var(--e-game);
+    box-shadow: var(--shadow-warm-sm);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .option-c .game-card-c:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-warm-lg);
+  }
+  .option-c .game-card-c .img-area {
+    height: 130px;
+    background: linear-gradient(135deg, hsl(25,40%,90%), hsl(30,35%,85%));
+    display: grid;
+    place-items: center;
+    font-size: 48px;
+    position: relative;
+  }
+  .option-c .game-card-c .card-body {
+    padding: 14px 16px;
+  }
+  .option-c .game-card-c h4 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .option-c .game-card-c .meta-row {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Session cards horizontal */
+  .option-c .session-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+  }
+  .option-c .session-card-c {
+    flex-shrink: 0;
+    width: 240px;
+    padding: 16px;
+    border-radius: var(--radius-xl);
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-top: 3px solid var(--e-session);
+    box-shadow: var(--shadow-warm-sm);
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .option-c .session-card-c:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-warm-md);
+  }
+  .option-c .session-card-c h4 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .option-c .session-card-c .session-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .option-c .session-card-c .status-chip {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .status-chip.active { background: hsl(142,70%,92%); color: hsl(142,70%,30%); }
+  .status-chip.paused { background: hsl(38,90%,92%); color: hsl(38,80%,35%); }
+
+  /* Toolkit hybrid */
+  .option-c .toolkit-hybrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .option-c .tool-hybrid {
+    padding: 16px;
+    border-radius: var(--radius-xl);
+    background: hsl(142,30%,96%);
+    border: 1px solid hsl(142,30%,88%);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .option-c .tool-hybrid:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(100,180,100,0.1);
+    border-color: var(--e-toolkit);
+  }
+  .option-c .tool-hybrid .tool-icon { font-size: 28px; margin-bottom: 4px; }
+  .option-c .tool-hybrid .tool-name {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: hsl(142,50%,30%);
+  }
+  .option-c .tool-hybrid .tool-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 768px) {
+    .option-a .editorial-grid { grid-template-columns: 1fr; }
+    .option-a .toolkit-grid { grid-template-columns: repeat(2, 1fr); }
+    .option-b .bento-grid { grid-template-columns: 1fr; }
+    .option-b .bento-cell { grid-column: span 1 !important; grid-row: span 1 !important; }
+    .option-b .stat-cell { grid-template-columns: repeat(4, 1fr); }
+    .option-c .game-grid { grid-template-columns: 1fr 1fr; }
+    .option-c .toolkit-hybrid { grid-template-columns: repeat(2, 1fr); }
+    .switcher { padding: 12px 16px; flex-wrap: wrap; }
+    .switcher-btn { padding: 6px 14px; font-size: 12px; }
+    .switcher .annotation { display: none; }
+    .analysis-panel h1 { font-size: 22px; }
+  }
+
+  /* ─── Annotations & callouts ─── */
+  .design-note {
+    position: relative;
+    margin: 20px 0;
+    padding: 16px 20px;
+    border-radius: var(--radius-xl);
+    background: hsl(210,60%,97%);
+    border: 1px solid hsl(210,40%,88%);
+    font-size: 13px;
+    color: hsl(210,40%,30%);
+    line-height: 1.7;
+  }
+  .design-note strong {
+    font-family: 'Quicksand', sans-serif;
+  }
+  .design-note::before {
+    content: '💡';
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    font-size: 18px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ Option Switcher ═══ -->
+<div class="switcher">
+  <h2>Dashboard Redesign</h2>
+  <button class="switcher-btn active" onclick="showOption('analysis')">🔍 Analisi</button>
+  <button class="switcher-btn" onclick="showOption('a')">A · Editoriale</button>
+  <button class="switcher-btn" onclick="showOption('b')">B · Tavolo Scuro</button>
+  <button class="switcher-btn" onclick="showOption('c')">C · Ibrido</button>
+  <span class="annotation">Clicca per confrontare le opzioni</span>
+</div>
+
+<!-- ═══ ANALYSIS ═══ -->
+<div id="panel-analysis" class="option-panel visible">
+<div class="analysis-panel">
+  <h1>Analisi del Design Attuale</h1>
+  <p class="subtitle">Problemi identificati e aree di miglioramento nel frontend MeepleAI</p>
+
+  <div class="issue-grid">
+    <div class="issue-card">
+      <span class="tag critical">Critico</span>
+      <h3>CSS Variables Inline Chaos</h3>
+      <p>Dashboard usa <code>text-[var(--nh-text-primary,#1a1a1a)]</code> 50+ volte con fallback hardcoded. Mescola namespace <code>--nh-</code> (non-standard) con i token semantici Tailwind.</p>
+    </div>
+    <div class="issue-card">
+      <span class="tag critical">Critico</span>
+      <h3>Gerarchia Visiva Piatta</h3>
+      <p>Dashboard mostra 4 sezioni (Games, Sessions, Agents, Toolkit) tutte con lo stesso peso visivo. Nessun contenuto "featured" cattura l'attenzione. L'utente non sa dove guardare prima.</p>
+    </div>
+    <div class="issue-card">
+      <span class="tag major">Importante</span>
+      <h3>Layout Grid Monotono</h3>
+      <p>Tutte le sezioni usano lo stesso <code>grid-cols-2 md:3 lg:4 gap-3</code>. Nessuna variazione ritmica — sessioni, giochi, toolkit hanno lo stesso aspect ratio e spacing.</p>
+    </div>
+    <div class="issue-card">
+      <span class="tag major">Importante</span>
+      <h3>Greeting Header Debole</h3>
+      <p>"Ciao, [nome] 👋" con "La tua tavola da gioco" — generico e senza contesto. Non mostra statistiche utili, sessioni attive, o azioni rapide personalizzate.</p>
+    </div>
+    <div class="issue-card">
+      <span class="tag major">Importante</span>
+      <h3>Entity Colors Sottoutilizzati</h3>
+      <p>9 colori entity definiti in tokens.ts ma il dashboard li usa solo come accent border. Potenziale enorme per zone visive colorate che aiutano la navigazione cognitiva.</p>
+    </div>
+    <div class="issue-card">
+      <span class="tag minor">Minore</span>
+      <h3>Toolkit Statico come Carousel</h3>
+      <p>4 tool statici in carousel orizzontale (<code>overflow-x-auto</code>) — ma sono solo 4 item. Un carousel è inutile, meglio una griglia fissa che mostra tutto.</p>
+    </div>
+    <div class="issue-card">
+      <span class="tag minor">Minore</span>
+      <h3>Animazioni Non Orchestrate</h3>
+      <p>20+ keyframe definiti ma usati sporadicamente. Manca un'entrata orchestrata (staggered reveal) che guidi lo sguardo nella gerarchia della pagina.</p>
+    </div>
+    <div class="issue-card">
+      <span class="tag minor">Minore</span>
+      <h3>Mobile CTA Pill Limitato</h3>
+      <p>MobileCTAPill mostra una sola CTA per pagina. Dashboard non ha nessun CTA mapping — l'azione primaria su mobile è invisibile.</p>
+    </div>
+  </div>
+
+  <div class="design-note">
+    <strong>Strategia proposta:</strong> Tre opzioni di redesign della dashboard che mantengono il design system esistente (Quicksand/Nunito, warm palette, glass morphism, entity colors) ma risolvono i problemi di gerarchia, ritmo e interattività. Ogni opzione ha un diverso equilibrio tra "conservativo" e "innovativo".
+  </div>
+</div>
+</div>
+
+<!-- ═══ OPTION A — Editorial Game Table ═══ -->
+<div id="panel-a" class="option-panel">
+<div class="option-a">
+
+  <div class="design-note" style="margin: 20px 24px;">
+    <strong>Opzione A — "Tavolo Editoriale":</strong> Layout asimmetrico ispirato ai magazine. Il gioco più recente/giocato diventa l'hero in formato editoriale grande, con sessioni e tool come companion content. <em>Impatto minimo sul codice — riorganizza i componenti esistenti.</em>
+  </div>
+
+  <div class="topbar">
+    <div class="logo"><span class="dot"></span> MeepleAI</div>
+    <nav class="nav-links">
+      <a class="nav-link active" href="#">Dashboard</a>
+      <a class="nav-link" href="#">Giochi</a>
+      <a class="nav-link" href="#">Sessioni</a>
+      <a class="nav-link" href="#">Chat</a>
+    </nav>
+    <div class="topbar-right">
+      <div class="search-pill">🔍 Cerca...</div>
+      <button class="icon-btn">💬</button>
+      <button class="icon-btn">🔔</button>
+      <div class="avatar">A</div>
+    </div>
+  </div>
+
+  <div class="dash-content">
+    <div class="greeting-row">
+      <div class="greeting">
+        <h1>Ciao, Aaron 👋</h1>
+        <p>La tua tavola da gioco</p>
+      </div>
+      <div class="date-badge">Giovedì 17 Aprile 2026</div>
+    </div>
+
+    <!-- Editorial 2-column: featured game + side stack -->
+    <div class="section-label">🎲 Il tuo gioco in evidenza</div>
+    <div class="editorial-grid">
+      <div class="featured-game">
+        <div class="image-area">
+          <span class="entity-badge">Gioco</span>
+          <span class="game-emoji">♟️</span>
+        </div>
+        <div class="card-body">
+          <h3>Brass: Birmingham</h3>
+          <div class="meta">
+            <span>Roxley Games · 2018</span>
+            <span class="rating">★ 8.6</span>
+          </div>
+          <div class="mana-pips">
+            <span class="mana-pip sessions">📋 3 sessioni</span>
+            <span class="mana-pip kb">📚 2 KB</span>
+            <span class="mana-pip agents">🤖 1 agente</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-stack">
+        <a class="mini-card" href="#">
+          <div class="card-icon" style="background: hsl(25,95%,93%);">🎯</div>
+          <div class="card-info">
+            <h4>Gloomhaven</h4>
+            <p>Cephalofair · ★ 8.7</p>
+          </div>
+          <div class="accent-bar" style="background: var(--e-game);"></div>
+        </a>
+        <a class="mini-card" href="#">
+          <div class="card-icon" style="background: hsl(25,95%,93%);">🏰</div>
+          <div class="card-info">
+            <h4>Terraforming Mars</h4>
+            <p>FryxGames · ★ 8.4</p>
+          </div>
+          <div class="accent-bar" style="background: var(--e-game);"></div>
+        </a>
+        <a class="mini-card" href="#">
+          <div class="card-icon" style="background: hsl(25,95%,93%);">⚔️</div>
+          <div class="card-info">
+            <h4>Spirit Island</h4>
+            <p>Greater Than Games · ★ 8.3</p>
+          </div>
+          <div class="accent-bar" style="background: var(--e-game);"></div>
+        </a>
+        <a class="mini-card" href="#">
+          <div class="card-icon" style="background: hsl(25,95%,93%);">🐉</div>
+          <div class="card-info">
+            <h4>Everdell</h4>
+            <p>Starling Games · ★ 8.0</p>
+          </div>
+          <div class="accent-bar" style="background: var(--e-game);"></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Sessions as horizontal scroll -->
+    <div class="section-label" style="margin-top: 8px;">📋 Sessioni recenti</div>
+    <div class="scroll-row">
+      <div class="session-card">
+        <div class="session-game">Brass: Birmingham</div>
+        <div class="session-meta">17 Apr · 3 giocatori</div>
+        <span class="session-status active">In corso</span>
+      </div>
+      <div class="session-card">
+        <div class="session-game">Gloomhaven #12</div>
+        <div class="session-meta">15 Apr · 4 giocatori</div>
+        <span class="session-status paused">In pausa</span>
+      </div>
+      <div class="session-card">
+        <div class="session-game">Terraforming Mars</div>
+        <div class="session-meta">12 Apr · 2 giocatori</div>
+        <span class="session-status paused">In pausa</span>
+      </div>
+      <div class="session-card">
+        <div class="session-game">Spirit Island</div>
+        <div class="session-meta">10 Apr · 2 giocatori</div>
+        <span class="session-status active">In corso</span>
+      </div>
+    </div>
+
+    <!-- Toolkit as grid -->
+    <div class="section-label" style="margin-top: 28px;">🧰 Strumenti</div>
+    <div class="toolkit-grid">
+      <div class="tool-card">
+        <div class="tool-icon">🎲</div>
+        <div class="tool-name">Dado</div>
+        <div class="tool-desc">Lancia d4–d20</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">⏳</div>
+        <div class="tool-name">Clessidra</div>
+        <div class="tool-desc">Timer per turno</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">📊</div>
+        <div class="tool-name">Scoreboard</div>
+        <div class="tool-desc">Punteggi multi-player</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">🪙</div>
+        <div class="tool-name">Token</div>
+        <div class="tool-desc">Contatori risorse</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ OPTION B — Dark Gaming Table ═══ -->
+<div id="panel-b" class="option-panel">
+<div class="option-b">
+
+  <div class="design-note" style="margin: 20px 24px; background: rgba(100,100,220,0.08); border-color: rgba(100,100,220,0.2); color: rgba(255,255,255,0.8);">
+    <strong>Opzione B — "Tavolo Scuro":</strong> Bento grid immersivo con glow neon per entity. Ideale per sessioni serali. Le statistiche aggregate in evidenza danno contesto immediato. <em>Richiede più lavoro sul dark mode ma sfrutta i token premium-gaming.css già presenti.</em>
+  </div>
+
+  <div class="topbar">
+    <div class="logo">MeepleAI</div>
+    <nav class="nav-links">
+      <a class="nav-link active" href="#">Dashboard</a>
+      <a class="nav-link" href="#">Giochi</a>
+      <a class="nav-link" href="#">Sessioni</a>
+      <a class="nav-link" href="#">Chat</a>
+    </nav>
+    <div class="topbar-right">
+      <div class="search-pill">🔍 Cerca...</div>
+      <button class="icon-btn">💬</button>
+      <button class="icon-btn">🔔</button>
+      <div class="avatar">A</div>
+    </div>
+  </div>
+
+  <div class="dash-content">
+    <div class="greeting">
+      <h1>Ciao, Aaron 👋</h1>
+      <p>La tua tavola da gioco</p>
+    </div>
+
+    <div class="bento-grid">
+      <!-- Featured game (large) -->
+      <div class="bento-cell game feat-game-dark">
+        <div class="cell-label">🎲 In evidenza</div>
+        <span class="game-emoji">♟️</span>
+        <h3>Brass: Birmingham</h3>
+        <div class="meta">
+          <span>Roxley Games · 2018</span>
+          <span style="color: hsl(38,90%,60%);">★ 8.6</span>
+        </div>
+        <div class="dark-mana-pips">
+          <span class="dark-pip sessions">📋 3</span>
+          <span class="dark-pip kb">📚 2</span>
+          <span class="dark-pip agents">🤖 1</span>
+        </div>
+      </div>
+
+      <!-- Stats overview -->
+      <div class="bento-cell stat stat-cell">
+        <div style="grid-column: span 2;"><div class="cell-label">📊 Panoramica</div></div>
+        <div class="stat-item">
+          <div class="stat-value" style="color: var(--e-game);">12</div>
+          <div class="stat-label">Giochi</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" style="color: var(--e-session);">8</div>
+          <div class="stat-label">Sessioni</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" style="color: var(--e-agent);">4</div>
+          <div class="stat-label">Agenti AI</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" style="color: var(--e-kb);">6</div>
+          <div class="stat-label">Knowledge Base</div>
+        </div>
+      </div>
+
+      <!-- Sessions -->
+      <div class="bento-cell session session-list-dark" style="grid-column: span 5; grid-row: span 2;">
+        <div class="cell-label">📋 Sessioni attive</div>
+        <div class="dark-session-item">
+          <span class="ds-dot active"></span>
+          <div class="ds-info">
+            <h4>Brass: Birmingham</h4>
+            <p>17 Apr · 3 giocatori · In corso</p>
+          </div>
+        </div>
+        <div class="dark-session-item">
+          <span class="ds-dot active"></span>
+          <div class="ds-info">
+            <h4>Spirit Island</h4>
+            <p>10 Apr · 2 giocatori · In corso</p>
+          </div>
+        </div>
+        <div class="dark-session-item">
+          <span class="ds-dot paused"></span>
+          <div class="ds-info">
+            <h4>Gloomhaven #12</h4>
+            <p>15 Apr · 4 giocatori · In pausa</p>
+          </div>
+        </div>
+        <div class="dark-session-item">
+          <span class="ds-dot paused"></span>
+          <div class="ds-info">
+            <h4>Terraforming Mars</h4>
+            <p>12 Apr · 2 giocatori · In pausa</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolkit -->
+      <div class="bento-cell toolkit toolkit-dark" style="grid-column: span 7;">
+        <div class="cell-label">🧰 Strumenti rapidi</div>
+        <div class="tool-row">
+          <div class="tool-item">
+            <div class="tool-icon">🎲</div>
+            <div class="tool-name">Dado</div>
+          </div>
+          <div class="tool-item">
+            <div class="tool-icon">⏳</div>
+            <div class="tool-name">Clessidra</div>
+          </div>
+          <div class="tool-item">
+            <div class="tool-icon">📊</div>
+            <div class="tool-name">Scoreboard</div>
+          </div>
+          <div class="tool-item">
+            <div class="tool-icon">🪙</div>
+            <div class="tool-name">Token</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ OPTION C — Hybrid ═══ -->
+<div id="panel-c" class="option-panel">
+<div class="option-c">
+
+  <div class="design-note" style="margin: 20px 24px;">
+    <strong>Opzione C — "Tavolo Ibrido" (Raccomandata):</strong> Mantiene il light mode attuale ma aggiunge: greeting strip con quick actions, entity zones con colori distinti per sezione, layout variato per tipo. <em>Miglior rapporto costo/beneficio — risolve tutti i problemi critici con cambiamenti incrementali.</em>
+  </div>
+
+  <div class="topbar">
+    <div class="logo">MeepleAI</div>
+    <nav class="nav-links">
+      <a class="nav-link active" href="#">Dashboard</a>
+      <a class="nav-link" href="#">Giochi</a>
+      <a class="nav-link" href="#">Sessioni</a>
+      <a class="nav-link" href="#">Chat</a>
+    </nav>
+    <div class="topbar-right">
+      <div class="search-pill">🔍 Cerca...</div>
+      <button class="icon-btn">💬</button>
+      <button class="icon-btn">🔔</button>
+      <div class="avatar">A</div>
+    </div>
+  </div>
+
+  <div class="dash-content">
+    <!-- Greeting strip with avatar and quick actions -->
+    <div class="greeting-strip">
+      <div class="avatar-lg">A</div>
+      <div>
+        <h1>Ciao, Aaron 👋</h1>
+        <p>La tua tavola da gioco · 12 giochi · 8 sessioni</p>
+      </div>
+      <div class="quick-actions">
+        <button class="quick-action-btn">📋 Nuova sessione</button>
+        <button class="quick-action-btn primary">+ Aggiungi gioco</button>
+      </div>
+    </div>
+
+    <!-- Games zone (orange accent) -->
+    <div class="entity-zone">
+      <div class="zone-header">
+        <div class="zone-dot" style="background: var(--e-game);"></div>
+        <span class="zone-title">Giochi</span>
+        <span class="zone-count">12 in libreria</span>
+        <a class="zone-action">Vedi tutti →</a>
+      </div>
+      <div class="game-grid">
+        <div class="game-card-c">
+          <div class="img-area">♟️</div>
+          <div class="card-body">
+            <h4>Brass: Birmingham</h4>
+            <div class="meta-row">
+              <span>Roxley Games</span>
+              <span style="color: var(--e-agent);">★ 8.6</span>
+            </div>
+          </div>
+        </div>
+        <div class="game-card-c">
+          <div class="img-area">🎯</div>
+          <div class="card-body">
+            <h4>Gloomhaven</h4>
+            <div class="meta-row">
+              <span>Cephalofair</span>
+              <span style="color: var(--e-agent);">★ 8.7</span>
+            </div>
+          </div>
+        </div>
+        <div class="game-card-c">
+          <div class="img-area">🏰</div>
+          <div class="card-body">
+            <h4>Terraforming Mars</h4>
+            <div class="meta-row">
+              <span>FryxGames</span>
+              <span style="color: var(--e-agent);">★ 8.4</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sessions zone (indigo accent) -->
+    <div class="entity-zone">
+      <div class="zone-header">
+        <div class="zone-dot" style="background: var(--e-session);"></div>
+        <span class="zone-title">Sessioni</span>
+        <span class="zone-count">2 attive</span>
+        <a class="zone-action">Vedi tutte →</a>
+      </div>
+      <div class="session-scroll">
+        <div class="session-card-c">
+          <h4>Brass: Birmingham</h4>
+          <div class="session-meta">17 Apr · 3 giocatori</div>
+          <span class="status-chip active">In corso</span>
+        </div>
+        <div class="session-card-c">
+          <h4>Spirit Island</h4>
+          <div class="session-meta">10 Apr · 2 giocatori</div>
+          <span class="status-chip active">In corso</span>
+        </div>
+        <div class="session-card-c">
+          <h4>Gloomhaven #12</h4>
+          <div class="session-meta">15 Apr · 4 giocatori</div>
+          <span class="status-chip paused">In pausa</span>
+        </div>
+        <div class="session-card-c">
+          <h4>Terraforming Mars</h4>
+          <div class="session-meta">12 Apr · 2 giocatori</div>
+          <span class="status-chip paused">In pausa</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolkit zone (green accent) -->
+    <div class="entity-zone">
+      <div class="zone-header">
+        <div class="zone-dot" style="background: var(--e-toolkit);"></div>
+        <span class="zone-title">Strumenti</span>
+        <span class="zone-count">4 disponibili</span>
+      </div>
+      <div class="toolkit-hybrid">
+        <div class="tool-hybrid">
+          <div class="tool-icon">🎲</div>
+          <div class="tool-name">Dado</div>
+          <div class="tool-desc">Lancia d4–d20</div>
+        </div>
+        <div class="tool-hybrid">
+          <div class="tool-icon">⏳</div>
+          <div class="tool-name">Clessidra</div>
+          <div class="tool-desc">Timer per turno</div>
+        </div>
+        <div class="tool-hybrid">
+          <div class="tool-icon">📊</div>
+          <div class="tool-name">Scoreboard</div>
+          <div class="tool-desc">Punteggi multi-player</div>
+        </div>
+        <div class="tool-hybrid">
+          <div class="tool-icon">🪙</div>
+          <div class="tool-name">Token</div>
+          <div class="tool-desc">Contatori risorse</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+  function showOption(opt) {
+    document.querySelectorAll('.option-panel').forEach(p => p.classList.remove('visible'));
+    document.querySelectorAll('.switcher-btn').forEach(b => b.classList.remove('active'));
+
+    const panel = document.getElementById('panel-' + opt);
+    if (panel) panel.classList.add('visible');
+
+    const btns = document.querySelectorAll('.switcher-btn');
+    const map = { 'analysis': 0, 'a': 1, 'b': 2, 'c': 3 };
+    if (btns[map[opt]]) btns[map[opt]].classList.add('active');
+  }
+</script>
+
+</body>
+</html>

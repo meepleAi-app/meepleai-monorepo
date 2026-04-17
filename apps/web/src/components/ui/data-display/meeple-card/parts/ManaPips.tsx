@@ -2,15 +2,24 @@ import { entityHsl } from '../tokens';
 
 import type { MeepleEntityType } from '../types';
 
+export interface ManaPipItem {
+  id: string;
+  label: string;
+  href: string;
+}
+
 export interface ManaPip {
   entityType: MeepleEntityType;
   count?: number;
+  items?: ManaPipItem[];
+  onCreate?: () => void;
+  createLabel?: string;
 }
 
 interface ManaPipsProps {
   pips: ManaPip[];
-  /** sm = 6px pip no badge (compact); md = 8px pip with count badge (grid) */
-  size?: 'sm' | 'md';
+  /** sm = 6px pip no badge (compact); md = 8px pip with count badge (grid); lg = 12px pip with label (hero) */
+  size?: 'sm' | 'md' | 'lg';
 }
 
 const MAX_VISIBLE = 3;
@@ -20,7 +29,7 @@ export function ManaPips({ pips, size = 'md' }: ManaPipsProps) {
 
   const visible = pips.slice(0, MAX_VISIBLE);
   const overflow = pips.length - MAX_VISIBLE;
-  const dotSize = size === 'md' ? 8 : 6;
+  const dotSize = size === 'lg' ? 12 : size === 'md' ? 8 : 6;
 
   return (
     <div className="flex items-center gap-1 px-3 pb-2 pt-0.5">
@@ -39,7 +48,7 @@ export function ManaPips({ pips, size = 'md' }: ManaPipsProps) {
               flexShrink: 0,
             }}
           >
-            {size === 'md' && pip.count !== undefined && pip.count > 0 && (
+            {size !== 'sm' && pip.count !== undefined && pip.count > 0 && (
               <span
                 className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-1 text-[7px] font-bold text-white"
                 style={{ background: color, lineHeight: '10px', minWidth: 12, textAlign: 'center' }}

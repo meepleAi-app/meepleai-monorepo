@@ -37,12 +37,19 @@ describe('ManaPips — interactive button rendering', () => {
       expect(onCreate).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onCreate when count>0 and pip is clicked', async () => {
+    it('does NOT call onCreate directly when count>0 (opens popover instead)', async () => {
       const onCreate = vi.fn();
-      const pips: ManaPip[] = [{ entityType: 'session', count: 3, onCreate }];
+      const pips: ManaPip[] = [
+        {
+          entityType: 'session',
+          count: 3,
+          onCreate,
+          items: [{ id: '1', label: 'Session 1', href: '/sessions/1' }],
+        },
+      ];
       render(<ManaPips pips={pips} />);
       await userEvent.click(screen.getByRole('button', { name: 'session' }));
-      expect(onCreate).toHaveBeenCalledTimes(1);
+      expect(onCreate).not.toHaveBeenCalled();
     });
 
     it('calls onCreate when count is undefined and pip is clicked', async () => {

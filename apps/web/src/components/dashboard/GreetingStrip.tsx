@@ -14,7 +14,7 @@ interface GreetingStripProps {
 }
 
 export function GreetingStrip({ displayName, stats }: GreetingStripProps) {
-  const initial = displayName.charAt(0).toUpperCase();
+  const initial = (displayName || '?').charAt(0).toUpperCase();
   const statsSummary = [
     stats.games > 0 ? `${stats.games} giochi` : null,
     stats.sessions > 0 ? `${stats.sessions} sessioni` : null,

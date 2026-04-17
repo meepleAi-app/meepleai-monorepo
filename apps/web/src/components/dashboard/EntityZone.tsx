@@ -32,7 +32,7 @@ export function EntityZone({ entity, title, count, viewAllHref, children }: Enti
         {viewAllHref && (
           <Link
             href={viewAllHref}
-            className="ml-auto text-xs font-semibold text-[hsl(25,95%,45%)] hover:underline"
+            className="ml-auto text-xs font-semibold text-[hsl(25,95%,45%)] hover:underline dark:text-[hsl(25,95%,65%)]"
           >
             Vedi tutti →
           </Link>

@@ -48,16 +48,10 @@ const AGENTS_FILTERS: FilterChip[] = [
 // ---------------------------------------------------------------------------
 
 const TOOLKIT_TOOLS = [
-  { id: 'dice', icon: '🎲', name: 'Dado', desc: 'Lancia d4–d20', iconBg: 'bg-amber-100' },
-  { id: 'timer', icon: '⏳', name: 'Clessidra', desc: 'Timer per turno', iconBg: 'bg-sky-100' },
-  {
-    id: 'score',
-    icon: '📊',
-    name: 'Scoreboard',
-    desc: 'Punteggi multi-player',
-    iconBg: 'bg-purple-100',
-  },
-  { id: 'token', icon: '🪙', name: 'Token', desc: 'Contatori risorse', iconBg: 'bg-green-100' },
+  { id: 'dice', icon: '🎲', name: 'Dado', desc: 'Lancia d4–d20' },
+  { id: 'timer', icon: '⏳', name: 'Clessidra', desc: 'Timer per turno' },
+  { id: 'score', icon: '📊', name: 'Scoreboard', desc: 'Punteggi multi-player' },
+  { id: 'token', icon: '🪙', name: 'Token', desc: 'Contatori risorse' },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -95,7 +89,7 @@ function EmptyCTA({
   return (
     <div
       className="flex flex-col items-center gap-3 py-6 px-4 text-center
-                 rounded-xl border border-dashed border-[rgba(180,130,80,0.25)]
+                 rounded-xl border border-dashed border-[rgba(180,130,80,0.25)] dark:border-[rgba(180,130,80,0.4)]
                  bg-card"
     >
       <span className="text-3xl">{icon}</span>
@@ -220,7 +214,7 @@ function CatalogGameCard({
           inLibrary
             ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-muted text-muted-foreground/60 cursor-default'
             : adding
-              ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/20 text-white cursor-wait'
+              ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/20 dark:bg-white/20 text-white cursor-wait'
               : 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-amber-600 text-white hover:opacity-90 active:scale-95 transition-transform'
         }
       >
@@ -576,7 +570,12 @@ export function DashboardClient() {
               actions={[{ label: '＋ Crea sessione', href: '/sessions/new', primary: true }]}
             />
           ) : (
-            <div className="flex gap-3.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
+            <div
+              role="region"
+              aria-label="Sessioni recenti"
+              tabIndex={0}
+              className="flex gap-3.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg"
+            >
               {filteredSessionItems.map(item => (
                 <div key={item.id ?? item.title} className="w-[260px] shrink-0">
                   <MeepleCard {...item} />

@@ -194,4 +194,80 @@ public class QueryComplexityClassifierTests
 
         result.Should().BeNull();
     }
+
+    // --- Italian heuristics: Simple ---
+
+    [Theory]
+    [InlineData("cos'è Catan?")]
+    [InlineData("quanti giocatori?")]
+    [InlineData("quando esce?")]
+    [InlineData("dove si compra?")]
+    [InlineData("chi è l'autore?")]
+    public async Task ClassifyAsync_ItalianShortSimpleQuery_ShouldReturnSimple(string query)
+    {
+        var result = await _sut.ClassifyAsync(query);
+        result.Level.Should().Be(QueryComplexityLevel.Simple);
+        (result.Confidence >= 0.9f).Should().BeTrue();
+        _llmServiceMock.VerifyNoOtherCalls();
+    }
+
+    // --- Italian heuristics: Complex (interaction patterns) ---
+
+    [Theory]
+    [InlineData("se gioco una carta e si attiva un effetto durante il mio turno, come si risolve l'interazione?")]
+    [InlineData("confronta le strategie e dimmi quale conviene se ho poche risorse")]
+    [InlineData("quando pesco una carta che innesca un effetto combinato con il turno extra, in che ordine si risolvono?")]
+    public async Task ClassifyAsync_ItalianComplexInteraction_ShouldReturnComplex(string query)
+    {
+        var result = await _sut.ClassifyAsync(query);
+        result.Level.Should().Be(QueryComplexityLevel.Complex);
+        (result.Confidence >= 0.8f).Should().BeTrue();
+        _llmServiceMock.VerifyNoOtherCalls();
+    }
+
+    // --- English interaction patterns (new) ---
+
+    [Theory]
+    [InlineData("if I play a card that triggers an effect during combat, how does the interaction resolve with sustain damage?")]
+    [InlineData("when I activate this ability and it triggers another effect simultaneously, what is the resolution order?")]
+    public async Task ClassifyAsync_EnglishInteractionPatterns_ShouldReturnComplex(string query)
+    {
+        var result = await _sut.ClassifyAsync(query);
+        result.Level.Should().Be(QueryComplexityLevel.Complex);
+        (result.Confidence >= 0.8f).Should().BeTrue();
+        _llmServiceMock.VerifyNoOtherCalls();
+    }
+
+    // --- Structural complexity (language-agnostic) ---
+
+    [Theory]
+    [InlineData("Se uso la carta azione, pesco 2 carte, una innesca un effetto immediato che modifica i punti, e nel frattempo il turno extra si attiva, come funziona tutto?")]
+    [InlineData("If I use the action card, draw 2 cards, one triggers an immediate effect that modifies points, and meanwhile the extra turn activates, how does everything work?")]
+    public async Task ClassifyAsync_LongMultiClauseQuery_ShouldReturnComplex(string query)
+    {
+        var result = await _sut.ClassifyAsync(query);
+        result.Level.Should().Be(QueryComplexityLevel.Complex);
+        _llmServiceMock.VerifyNoOtherCalls();
+    }
+
+    // --- Multilingual LLM prompt verification ---
+
+    [Fact]
+    public async Task ClassifyAsync_ItalianAmbiguousQuery_ShouldCallLlmWithMultilingualPrompt()
+    {
+        _llmServiceMock
+            .Setup(x => x.GenerateJsonAsync<ComplexityClassification>(
+                It.Is<string>(s => s.Contains("any language", StringComparison.OrdinalIgnoreCase)),
+                It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ComplexityClassification("Complex", 0.85f, "Multi-step rule interaction"));
+
+        var result = await _sut.ClassifyAsync("Come funziona il punteggio con l'espansione attiva?");
+
+        result.Level.Should().Be(QueryComplexityLevel.Complex);
+        _llmServiceMock.Verify(
+            x => x.GenerateJsonAsync<ComplexityClassification>(
+                It.Is<string>(s => s.Contains("any language", StringComparison.OrdinalIgnoreCase)),
+                It.IsAny<string>(), RequestSource.RagClassification, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

@@ -4,6 +4,7 @@ import { Menu, Search } from 'lucide-react';
 import Link from 'next/link';
 
 import { UserMenuDropdown } from '@/components/layout/UserMenuDropdown';
+import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
 import { Button } from '@/components/ui/primitives/button';
 
 interface TopBarV2Props {
@@ -54,6 +55,8 @@ export function TopBarV2({ onHamburgerClick, onSearchClick, adminMode }: TopBarV
         <Button variant="ghost" size="icon" aria-label="Cerca" onClick={onSearchClick}>
           <Search className="h-5 w-5" />
         </Button>
+
+        <ThemeToggle size="sm" />
 
         <UserMenuDropdown />
       </div>

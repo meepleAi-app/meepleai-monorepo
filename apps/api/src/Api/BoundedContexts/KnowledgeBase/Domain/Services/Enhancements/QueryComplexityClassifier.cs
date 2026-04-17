@@ -15,16 +15,34 @@ internal sealed class QueryComplexityClassifier : IQueryComplexityClassifier
 
     private static readonly string[] SimplePatterns =
     [
+        // English
         "what is", "what's", "define", "who is", "who's",
-        "how many", "when was", "when did", "where is", "where's"
+        "how many", "when was", "when did", "where is", "where's",
+        // Italian
+        "cos'è", "che cos'è", "quanti", "quante", "quando",
+        "dove", "chi è", "chi ha"
     ];
 
     private static readonly string[] ComplexIndicators =
     [
-        "compare", "after", "before", "if", "should i",
-        "can i", "expansion", "strategy", "versus", "vs",
-        "difference between", "pros and cons", "better than",
-        "recommend", "best way"
+        // English — strategy/comparison
+        "compare", "versus", "vs", "difference between",
+        "pros and cons", "better than", "recommend", "best way",
+        "expansion", "strategy",
+        // English — rule interactions
+        "interaction", "triggers", "resolve", "resolution order",
+        "in combination with", "simultaneously", "at the same time",
+        "sequence of", "priority", "override", "conflict between",
+        // Italian — strategy/comparison
+        "confronta", "differenza tra", "meglio", "consiglia",
+        "pro e contro", "rispetto a", "espansione",
+        // Italian — rule interactions
+        "interazione", "innesca", "si attiva", "si risolve",
+        "in combinazione con", "contemporaneamente", "nello stesso momento",
+        "in che ordine", "priorità", "sovrascrive", "conflitto tra",
+        // Shared conditional patterns (both languages)
+        "if ", "should i", "can i", "after", "before",
+        " se ", "posso", "devo", "durante"
     ];
 
     public QueryComplexityClassifier(ILlmService llmService, ILogger<QueryComplexityClassifier> logger)
@@ -61,6 +79,18 @@ internal sealed class QueryComplexityClassifier : IQueryComplexityClassifier
         if (complexCount >= 2)
             return QueryComplexity.Complex($"Multiple complex indicators ({complexCount})", 0.85f);
 
+        // Structural complexity: long multi-clause queries (language-agnostic)
+        var commaCount = normalized.Count(c => c == ',');
+        var hasConditional = normalized.Contains(" se ", StringComparison.Ordinal)
+                          || normalized.StartsWith("se ", StringComparison.Ordinal)
+                          || normalized.Contains("if ", StringComparison.Ordinal);
+
+        if (wordCount >= 25 && commaCount >= 3 && hasConditional)
+            return QueryComplexity.Complex("Long multi-clause conditional query", 0.80f);
+
+        if (wordCount >= 20 && complexCount >= 1 && commaCount >= 2)
+            return QueryComplexity.Complex("Structural complexity with interaction indicator", 0.80f);
+
         // No strong signal -> null means fall through to LLM
         return null;
     }
@@ -69,10 +99,12 @@ internal sealed class QueryComplexityClassifier : IQueryComplexityClassifier
     {
         const string systemPrompt = """
             Classify the complexity of the following board-game question.
+            The question may be in any language (Italian, English, or others). Classify regardless of language.
             Respond with JSON: {"Level":"Simple|Moderate|Complex","Confidence":0.0-1.0,"Reason":"brief reason"}
-            - Simple: single-fact lookup (e.g. "What is the max player count?")
-            - Moderate: needs context retrieval from rules (e.g. "How does scoring work?")
-            - Complex: multi-step reasoning, comparisons, or strategy advice
+            - Simple: single-fact lookup (e.g. "What is the max player count?" / "Quanti giocatori al massimo?")
+            - Moderate: needs context retrieval from rules (e.g. "How does scoring work?" / "Come funziona il punteggio?")
+            - Complex: multi-step reasoning, rule interactions, comparisons, or strategy advice
+              (e.g. "If I play card X and it triggers effect Y during combat, how does it resolve with Z?")
             """;
 
         try

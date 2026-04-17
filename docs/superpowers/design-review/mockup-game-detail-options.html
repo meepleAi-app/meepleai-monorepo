@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleAI — Game Detail & Navigation Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange: hsl(25, 95%, 45%);
+    --orange-light: hsl(25, 95%, 55%);
+    --orange-dark: hsl(25, 95%, 38%);
+    --bg-warm: #faf8f5;
+    --bg-card: rgba(255,255,255,0.85);
+    --text-primary: #1a1612;
+    --text-secondary: #5a4a35;
+    --text-muted: #94a3b8;
+    --border-glass: rgba(200,180,160,0.25);
+    --shadow-sm: 0 1px 3px rgba(180,130,80,0.06), 0 1px 2px rgba(180,130,80,0.04);
+    --shadow-md: 0 4px 12px rgba(180,130,80,0.08), 0 2px 4px rgba(180,130,80,0.04);
+    --shadow-lg: 0 10px 30px rgba(180,130,80,0.12), 0 4px 8px rgba(180,130,80,0.06);
+    --shadow-xl: 0 20px 50px rgba(180,130,80,0.16), 0 8px 16px rgba(180,130,80,0.08);
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-3xl: 2rem;
+
+    --e-game: hsl(25, 95%, 45%);
+    --e-session: hsl(240, 60%, 55%);
+    --e-agent: hsl(38, 92%, 50%);
+    --e-kb: hsl(210, 40%, 55%);
+    --e-toolkit: hsl(142, 70%, 45%);
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    color: var(--text-primary);
+    background: #f0ebe4;
+    line-height: 1.5;
+  }
+
+  /* ─── Switcher ─── */
+  .switcher {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 32px;
+    background: rgba(15,10,26,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-family: 'Outfit', sans-serif;
+  }
+  .switcher h2 {
+    color: #f8fafc;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-right: 8px;
+  }
+  .switcher-btn {
+    padding: 8px 20px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .switcher-btn:hover { border-color: var(--orange); color: var(--orange-light); }
+  .switcher-btn.active {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(210,105,30,0.35);
+  }
+
+  .option-panel { display: none; }
+  .option-panel.visible { display: block; }
+
+  .design-note {
+    position: relative;
+    margin: 20px 24px;
+    padding: 16px 20px;
+    border-radius: var(--radius-xl);
+    background: hsl(210,60%,97%);
+    border: 1px solid hsl(210,40%,88%);
+    font-size: 13px;
+    color: hsl(210,40%,30%);
+    line-height: 1.7;
+  }
+  .design-note strong { font-family: 'Quicksand', sans-serif; }
+  .design-note::before {
+    content: '💡';
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    font-size: 18px;
+  }
+
+  /* ═══ CURRENT STATE ═══ */
+
+  .current-state {
+    background: var(--bg-warm);
+    min-height: 100vh;
+  }
+  .current-state .topbar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    border-bottom: 1px solid var(--border-glass);
+    backdrop-filter: blur(16px);
+    background: color-mix(in srgb, #faf8f5 95%, transparent);
+    position: sticky;
+    top: 64px;
+    z-index: 50;
+  }
+  .topbar .logo {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--orange);
+  }
+  .topbar .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Current game detail page */
+  .current-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-lg);
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    margin-bottom: 24px;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  /* Current hero card (centered, isolated) */
+  .current-hero {
+    max-width: 600px;
+    margin: 0 auto 28px;
+    border-radius: var(--radius-3xl);
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    box-shadow: var(--shadow-lg);
+  }
+  .current-hero .hero-img {
+    height: 280px;
+    background: linear-gradient(135deg, hsl(25,40%,88%), hsl(30,35%,82%));
+    display: grid;
+    place-items: center;
+    font-size: 90px;
+    position: relative;
+  }
+  .current-hero .hero-body {
+    padding: 24px;
+    text-align: center;
+  }
+  .current-hero h1 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .current-hero .hero-meta {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+  .current-hero .pips-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+  .pip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .pip.sessions { background: hsl(240,60%,96%); color: var(--e-session); border-color: hsl(240,60%,88%); }
+  .pip.kb { background: hsl(210,40%,94%); color: var(--e-kb); border-color: hsl(210,40%,85%); }
+  .pip.agents { background: hsl(38,92%,93%); color: hsl(38,80%,40%); border-color: hsl(38,90%,80%); }
+
+  /* Current tab nav */
+  .current-tabs {
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-glass);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    display: flex;
+  }
+  .current-tabs a {
+    flex: 1;
+    padding: 14px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    color: var(--text-muted);
+    border-right: 1px solid var(--border-glass);
+    transition: all 0.2s;
+  }
+  .current-tabs a:last-child { border-right: none; }
+  .current-tabs a.active {
+    background: hsl(38,90%,95%);
+    color: hsl(38,80%,35%);
+    font-weight: 600;
+  }
+
+  /* Issue callouts */
+  .issue-callout {
+    position: relative;
+    margin: 12px 0;
+    padding: 10px 14px;
+    border-radius: var(--radius-lg);
+    background: hsl(0,80%,97%);
+    border: 1px solid hsl(0,60%,88%);
+    font-size: 12px;
+    color: hsl(0,60%,35%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .issue-callout::before { content: '⚠️'; }
+
+  /* ═══ REDESIGN OPTION ═══ */
+
+  .redesign {
+    background: var(--bg-warm);
+    min-height: 100vh;
+  }
+  .redesign .page-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 24px 80px;
+  }
+
+  /* Breadcrumb with entity color */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+  .breadcrumb a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .breadcrumb a:hover { color: var(--orange); }
+  .breadcrumb .current { color: var(--orange); font-weight: 600; }
+
+  /* Split hero layout */
+  .hero-split {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 28px;
+    margin-bottom: 32px;
+  }
+
+  /* Left: game image */
+  .hero-image-panel {
+    border-radius: var(--radius-2xl);
+    overflow: hidden;
+    background: linear-gradient(135deg, hsl(25,40%,88%), hsl(30,35%,82%));
+    aspect-ratio: 4/5;
+    display: grid;
+    place-items: center;
+    font-size: 100px;
+    position: relative;
+    box-shadow: var(--shadow-lg);
+  }
+  .hero-image-panel .entity-badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: var(--e-game);
+    color: #fff;
+  }
+  .hero-image-panel .rating-badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    padding: 4px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Right: game info */
+  .hero-info-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+  }
+  .hero-info-panel h1 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .hero-info-panel .publisher-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    color: var(--text-secondary);
+  }
+  .hero-info-panel .publisher-line .sep {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  /* ManaPips enhanced */
+  .mana-strip {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .mana-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-xl);
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mana-chip:hover { transform: translateY(-1px); }
+  .mana-chip .chip-icon { font-size: 16px; }
+  .mana-chip .chip-count {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .mana-chip.sessions {
+    background: hsl(240,60%,97%);
+    color: var(--e-session);
+    border-color: hsl(240,60%,90%);
+  }
+  .mana-chip.sessions:hover { box-shadow: 0 4px 16px hsl(240,60%,55%,.12); }
+  .mana-chip.kb {
+    background: hsl(210,40%,96%);
+    color: var(--e-kb);
+    border-color: hsl(210,40%,88%);
+  }
+  .mana-chip.kb:hover { box-shadow: 0 4px 16px hsl(210,40%,55%,.12); }
+  .mana-chip.agents {
+    background: hsl(38,92%,95%);
+    color: hsl(38,80%,40%);
+    border-color: hsl(38,90%,82%);
+  }
+  .mana-chip.agents:hover { box-shadow: 0 4px 16px hsl(38,92%,50%,.12); }
+
+  /* Action buttons */
+  .action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .action-btn {
+    padding: 10px 22px;
+    border-radius: var(--radius-xl);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Nunito', sans-serif;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .action-btn.primary {
+    background: var(--orange);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(210,105,30,0.25);
+  }
+  .action-btn.primary:hover {
+    background: var(--orange-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(210,105,30,0.3);
+  }
+  .action-btn.secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-glass);
+  }
+  .action-btn.secondary:hover {
+    background: rgba(0,0,0,0.03);
+  }
+
+  /* Game metadata cards */
+  .meta-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border-glass);
+    border-bottom: 1px solid var(--border-glass);
+  }
+  .meta-card {
+    text-align: center;
+    padding: 10px;
+  }
+  .meta-card .mc-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .meta-card .mc-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Redesigned tab navigation */
+  .tab-nav-redesign {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: rgba(0,0,0,0.03);
+    border-radius: var(--radius-xl);
+    margin-bottom: 24px;
+  }
+  .tab-nav-redesign a {
+    flex: 1;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-muted);
+    border-radius: var(--radius-lg);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .tab-nav-redesign a:hover {
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.5);
+  }
+  .tab-nav-redesign a.active {
+    background: #fff;
+    color: var(--orange);
+    box-shadow: var(--shadow-sm);
+  }
+  .tab-nav-redesign .tab-icon { font-size: 16px; }
+
+  /* Tab content placeholder */
+  .tab-content-placeholder {
+    border-radius: var(--radius-2xl);
+    border: 2px dashed var(--border-glass);
+    padding: 48px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  /* ═══ MOBILE COMPARISON ═══ */
+
+  .mobile-section {
+    max-width: 960px;
+    margin: 40px auto;
+    padding: 0 24px;
+  }
+  .mobile-section h2 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+  .mobile-section .subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .mobile-comparison {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .phone-frame {
+    width: 320px;
+    border-radius: 32px;
+    border: 3px solid #222;
+    background: var(--bg-warm);
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    position: relative;
+  }
+  .phone-frame .phone-label {
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+  .phone-notch {
+    height: 36px;
+    background: #222;
+    border-radius: 0 0 16px 16px;
+    width: 140px;
+    margin: 0 auto;
+  }
+  .phone-content { padding: 12px 16px 24px; }
+
+  /* Mobile current state */
+  .mob-hero-current {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 12px;
+  }
+  .mob-hero-current .mob-img {
+    height: 160px;
+    background: linear-gradient(135deg, hsl(25,40%,88%), hsl(30,35%,82%));
+    display: grid;
+    place-items: center;
+    font-size: 60px;
+  }
+  .mob-hero-current .mob-body {
+    padding: 14px;
+    text-align: center;
+  }
+  .mob-hero-current h3 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .mob-hero-current p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .mob-tabs {
+    display: flex;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-glass);
+    background: #fff;
+    overflow: hidden;
+  }
+  .mob-tabs span {
+    flex: 1;
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    border-right: 1px solid var(--border-glass);
+  }
+  .mob-tabs span:last-child { border-right: none; }
+  .mob-tabs span.active {
+    background: hsl(38,90%,95%);
+    color: hsl(38,80%,35%);
+    font-weight: 700;
+  }
+
+  /* Mobile redesign */
+  .mob-hero-new {
+    margin-bottom: 12px;
+  }
+  .mob-img-new {
+    height: 200px;
+    border-radius: var(--radius-xl);
+    background: linear-gradient(135deg, hsl(25,40%,88%), hsl(30,35%,82%));
+    display: grid;
+    place-items: center;
+    font-size: 70px;
+    position: relative;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 14px;
+  }
+  .mob-img-new .mob-rating {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    color: #fff;
+  }
+  .mob-info-new h3 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .mob-info-new .pub { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
+  .mob-mana-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .mob-mana-item {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .mob-mana-item.sessions { background: hsl(240,60%,96%); color: var(--e-session); border-color: hsl(240,60%,88%); }
+  .mob-mana-item.kb { background: hsl(210,40%,94%); color: var(--e-kb); border-color: hsl(210,40%,85%); }
+  .mob-mana-item.agents { background: hsl(38,92%,93%); color: hsl(38,80%,40%); border-color: hsl(38,90%,80%); }
+
+  .mob-action-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .mob-action {
+    flex: 1;
+    padding: 10px;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+  }
+  .mob-action.primary { background: var(--orange); color: #fff; }
+  .mob-action.secondary { background: transparent; border: 1px solid var(--border-glass); color: var(--text-secondary); }
+
+  .mob-tabs-new {
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    background: rgba(0,0,0,0.03);
+    border-radius: var(--radius-lg);
+  }
+  .mob-tabs-new span {
+    flex: 1;
+    padding: 9px 4px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+  .mob-tabs-new span.active {
+    background: #fff;
+    color: var(--orange);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Mobile CTA pill comparison */
+  .mob-cta-pill {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 24px;
+    border-radius: 999px;
+    background: var(--orange);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 4px 20px rgba(210,105,30,0.35);
+    white-space: nowrap;
+  }
+
+  .mob-cta-pill-new {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    padding: 6px;
+    border-radius: 999px;
+    background: rgba(26,22,18,0.85);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .mob-cta-pill-new .pill-btn {
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+  }
+  .mob-cta-pill-new .pill-btn.primary { background: var(--orange); color: #fff; }
+  .mob-cta-pill-new .pill-btn.ghost { background: transparent; color: rgba(255,255,255,0.7); }
+
+  /* ═══ Responsive ═══ */
+  @media (max-width: 768px) {
+    .hero-split { grid-template-columns: 1fr; }
+    .meta-cards { grid-template-columns: repeat(2, 1fr); }
+    .mobile-comparison { flex-direction: column; align-items: center; }
+    .switcher { flex-wrap: wrap; padding: 12px 16px; }
+    .switcher-btn { padding: 6px 14px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Switcher -->
+<div class="switcher">
+  <h2>Game Detail</h2>
+  <button class="switcher-btn active" onclick="showOption('current')">Attuale</button>
+  <button class="switcher-btn" onclick="showOption('redesign')">Redesign</button>
+  <button class="switcher-btn" onclick="showOption('mobile')">Mobile</button>
+</div>
+
+<!-- ═══ CURRENT STATE ═══ -->
+<div id="panel-current" class="option-panel visible">
+<div class="current-state">
+
+  <div class="design-note">
+    <strong>Stato attuale — Game Detail Page:</strong> Hero MeepleCard centrato + tab navigation. Problemi: layout verticale monotono, nessuna azione CTA visibile, tab navigation troppo compatta senza icone, metadata assente (n. giocatori, durata, complessità).
+  </div>
+
+  <div class="topbar">
+    <div class="logo">MeepleAI</div>
+    <div class="topbar-right" style="color: var(--text-muted); font-size: 13px;">
+      🔍 💬 🔔 &nbsp;
+      <span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--orange),hsl(262,83%,58%));display:inline-grid;place-items:center;color:#fff;font-size:14px;font-weight:700;">A</span>
+    </div>
+  </div>
+
+  <div class="current-page">
+    <button class="back-btn">← Torna al Catalogo</button>
+
+    <div class="issue-callout">Hero MeepleCard centrato senza contesto — nessuna metadata (giocatori, durata, complessità)</div>
+
+    <div class="current-hero">
+      <div class="hero-img">♟️</div>
+      <div class="hero-body">
+        <h1>Brass: Birmingham</h1>
+        <div class="hero-meta">Roxley Games · 2018</div>
+        <div class="pips-row">
+          <span class="pip sessions">📋 3 sessioni</span>
+          <span class="pip kb">📚 2 KB</span>
+          <span class="pip agents">🤖 1 agente</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="issue-callout">Tab senza icone, nessun contesto visivo per il contenuto di ogni tab</div>
+
+    <div class="current-tabs">
+      <a class="active" href="#">Regole</a>
+      <a href="#">FAQ</a>
+      <a href="#">Sessioni</a>
+      <a href="#">Strategie</a>
+    </div>
+
+    <div class="issue-callout" style="margin-top: 20px;">Nessun pulsante CTA visibile — l'utente non può avviare una sessione o chattare con l'agente direttamente da qui</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ REDESIGN ═══ -->
+<div id="panel-redesign" class="option-panel">
+<div class="redesign">
+
+  <div class="design-note">
+    <strong>Proposta Redesign — Game Detail:</strong> Layout split-hero (immagine a sinistra, info a destra), CTA buttons prominenti, metadata cards (giocatori, durata, peso), tab navigation con icone e pill-style segmented control. ManaPips interattivi e cliccabili.
+  </div>
+
+  <div class="topbar" style="position: sticky; top: 64px; z-index: 50; border-bottom: 1px solid var(--border-glass); backdrop-filter: blur(16px); background: color-mix(in srgb, #faf8f5 95%, transparent);">
+    <div class="logo">MeepleAI</div>
+    <div class="topbar-right" style="color: var(--text-muted); font-size: 13px;">
+      🔍 💬 🔔 &nbsp;
+      <span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--orange),hsl(262,83%,58%));display:inline-grid;place-items:center;color:#fff;font-size:14px;font-weight:700;">A</span>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <a href="#">Dashboard</a>
+      <span>›</span>
+      <a href="#">Giochi</a>
+      <span>›</span>
+      <span class="current">Brass: Birmingham</span>
+    </nav>
+
+    <!-- Split Hero -->
+    <div class="hero-split">
+      <div class="hero-image-panel">
+        <span class="entity-badge">Gioco</span>
+        <span class="rating-badge">★ 8.6</span>
+        ♟️
+      </div>
+
+      <div class="hero-info-panel">
+        <div>
+          <h1>Brass: Birmingham</h1>
+          <div class="publisher-line">
+            <span>Roxley Games</span>
+            <span class="sep"></span>
+            <span>2018</span>
+            <span class="sep"></span>
+            <span>Strategico</span>
+          </div>
+        </div>
+
+        <!-- ManaPips enhanced -->
+        <div class="mana-strip">
+          <div class="mana-chip sessions">
+            <span class="chip-icon">📋</span>
+            <span class="chip-count">3</span>
+            <span>sessioni</span>
+          </div>
+          <div class="mana-chip kb">
+            <span class="chip-icon">📚</span>
+            <span class="chip-count">2</span>
+            <span>knowledge base</span>
+          </div>
+          <div class="mana-chip agents">
+            <span class="chip-icon">🤖</span>
+            <span class="chip-count">1</span>
+            <span>agente AI</span>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="action-row">
+          <button class="action-btn primary">📋 Nuova sessione</button>
+          <button class="action-btn secondary">💬 Chiedi all'agente</button>
+          <button class="action-btn secondary">📤 Carica PDF</button>
+        </div>
+
+        <!-- Metadata cards -->
+        <div class="meta-cards">
+          <div class="meta-card">
+            <div class="mc-value">2–4</div>
+            <div class="mc-label">Giocatori</div>
+          </div>
+          <div class="meta-card">
+            <div class="mc-value">120'</div>
+            <div class="mc-label">Durata</div>
+          </div>
+          <div class="meta-card">
+            <div class="mc-value">3.9</div>
+            <div class="mc-label">Peso</div>
+          </div>
+          <div class="meta-card">
+            <div class="mc-value">14+</div>
+            <div class="mc-label">Età</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Redesigned Tab Navigation (pill/segmented) -->
+    <nav class="tab-nav-redesign">
+      <a class="active" href="#">
+        <span class="tab-icon">📖</span> Regole
+      </a>
+      <a href="#">
+        <span class="tab-icon">❓</span> FAQ
+      </a>
+      <a href="#">
+        <span class="tab-icon">📋</span> Sessioni
+      </a>
+      <a href="#">
+        <span class="tab-icon">🧠</span> Strategie
+      </a>
+    </nav>
+
+    <div class="tab-content-placeholder">
+      Contenuto della tab "Regole" — qui verranno mostrate le regole estratte dal PDF caricato
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ MOBILE COMPARISON ═══ -->
+<div id="panel-mobile" class="option-panel">
+<div class="mobile-section" style="padding-top: 40px;">
+  <h2>Confronto Mobile</h2>
+  <p class="subtitle">Game Detail page su dispositivi mobili — stato attuale vs redesign</p>
+
+  <div class="mobile-comparison">
+    <!-- CURRENT MOBILE -->
+    <div style="position: relative; padding-top: 36px;">
+      <div class="phone-frame" style="height: 640px;">
+        <div class="phone-label">Attuale</div>
+        <div class="phone-notch"></div>
+        <div class="phone-content">
+          <button class="back-btn" style="font-size: 12px; padding: 4px 10px; margin-bottom: 12px;">← Catalogo</button>
+
+          <div class="mob-hero-current">
+            <div class="mob-img">♟️</div>
+            <div class="mob-body">
+              <h3>Brass: Birmingham</h3>
+              <p>Roxley Games · 2018</p>
+              <div style="display: flex; justify-content: center; gap: 4px; margin-top: 8px;">
+                <span class="pip sessions" style="font-size: 9px; padding: 2px 6px;">📋 3</span>
+                <span class="pip kb" style="font-size: 9px; padding: 2px 6px;">📚 2</span>
+                <span class="pip agents" style="font-size: 9px; padding: 2px 6px;">🤖 1</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mob-tabs">
+            <span class="active">Regole</span>
+            <span>FAQ</span>
+            <span>Sessioni</span>
+            <span>Strategie</span>
+          </div>
+        </div>
+
+        <div class="mob-cta-pill">+ Nuova sessione</div>
+      </div>
+    </div>
+
+    <!-- REDESIGN MOBILE -->
+    <div style="position: relative; padding-top: 36px;">
+      <div class="phone-frame" style="height: 640px;">
+        <div class="phone-label">Redesign</div>
+        <div class="phone-notch"></div>
+        <div class="phone-content">
+          <nav class="breadcrumb" style="font-size: 11px; margin-bottom: 12px;">
+            <a href="#">Giochi</a>
+            <span>›</span>
+            <span class="current">Brass: Birmingham</span>
+          </nav>
+
+          <div class="mob-hero-new">
+            <div class="mob-img-new">
+              ♟️
+              <span class="mob-rating">★ 8.6</span>
+            </div>
+            <div class="mob-info-new">
+              <h3>Brass: Birmingham</h3>
+              <div class="pub">Roxley Games · 2018 · Strategico</div>
+
+              <div class="mob-mana-row">
+                <span class="mob-mana-item sessions">📋 3 sessioni</span>
+                <span class="mob-mana-item kb">📚 2 KB</span>
+                <span class="mob-mana-item agents">🤖 1 AI</span>
+              </div>
+
+              <div class="mob-action-row">
+                <button class="mob-action primary">📋 Nuova sessione</button>
+                <button class="mob-action secondary">💬 Agente</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mob-tabs-new">
+            <span class="active">📖 Regole</span>
+            <span>❓ FAQ</span>
+            <span>📋 Sessioni</span>
+            <span>🧠 Strategie</span>
+          </div>
+        </div>
+
+        <div class="mob-cta-pill-new">
+          <button class="pill-btn ghost">💬 Chat</button>
+          <button class="pill-btn primary">📋 Sessione</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="design-note" style="margin-top: 40px;">
+    <strong>Differenze chiave nel redesign mobile:</strong><br>
+    1. <strong>Breadcrumb</strong> al posto del back button generico — contesto di navigazione<br>
+    2. <strong>Immagine separata</strong> dal card body — più spazio per la cover del gioco<br>
+    3. <strong>CTA buttons inline</strong> — "Nuova sessione" e "Agente" sempre visibili, non nascosti<br>
+    4. <strong>Tab con icone</strong> — scansionabilità istantanea del contenuto<br>
+    5. <strong>Multi-action pill</strong> — la floating pill offre 2 azioni (Chat + Sessione) invece di una sola<br>
+    6. <strong>Rating sovrapposto</strong> all'immagine — usa lo spazio verticale meglio
+  </div>
+</div>
+</div>
+
+<script>
+  function showOption(opt) {
+    document.querySelectorAll('.option-panel').forEach(p => p.classList.remove('visible'));
+    document.querySelectorAll('.switcher-btn').forEach(b => b.classList.remove('active'));
+
+    const panel = document.getElementById('panel-' + opt);
+    if (panel) panel.classList.add('visible');
+
+    const btns = document.querySelectorAll('.switcher-btn');
+    const map = { 'current': 0, 'redesign': 1, 'mobile': 2 };
+    if (btns[map[opt]]) btns[map[opt]].classList.add('active');
+  }
+</script>
+
+</body>
+</html>

@@ -10,6 +10,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Observability;
 using Api.Services;
+using Api.SharedKernel.Domain.Enums;
 using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
@@ -35,10 +36,6 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private readonly IGraphRetrievalService _graphRetrievalService;
     private readonly ILogger<RagPromptAssemblyService> _logger;
 
-    // RAG search parameters
-    private const int RerankedTopK = 5;  // Final chunk count after reranking
-    private const float DefaultMinScore = 0.55f;
-
     // Issue #5588: Expansion priority boost factor
     internal const float ExpansionBoostFactor = 1.3f;
 
@@ -55,11 +52,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         "not certain", "it might", "it could"
     ];
 
-    // Sentence window
-    private const int SentenceWindowRadius = 1; // ±1 adjacent chunks
-
     // Hybrid search (RRF)
-    private const int FtsTopK = 10; // Full-text search results to feed into RRF
     private const int RrfK = 60;    // Standard RRF constant
 
     // Query expansion
@@ -173,6 +166,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         try
         {
             // === ADAPTIVE RAG ===
+            var profile = RetrievalProfile.Default;
             var activeEnhancements = RagEnhancement.None;
             if (userTier != null)
             {
@@ -192,9 +186,16 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 _logger.LogInformation("Adaptive RAG: {Level} (confidence: {Confidence:F2})",
                     complexity.Level, complexity.Confidence);
 
+                // Resolve dynamic retrieval profile from complexity × tier
+                profile = RetrievalProfileResolver.Resolve(complexity, MapToLlmUserTier(userTier));
+                _logger.LogInformation("Retrieval profile: TopK={TopK}, MinScore={MinScore:F2}, FtsTopK={FtsTopK} (complexity={Level}, tier={Tier})",
+                    profile.TopK, profile.MinScore, profile.FtsTopK, complexity.Level, userTier?.Value ?? "anonymous");
+
                 MeepleAiMetrics.RagAdaptiveRoutingDecisions.Add(1,
                     new KeyValuePair<string, object?>("level", complexity.Level.ToString()),
-                    new KeyValuePair<string, object?>("skipped_retrieval", (!complexity.RequiresRetrieval).ToString()));
+                    new KeyValuePair<string, object?>("skipped_retrieval", (!complexity.RequiresRetrieval).ToString()),
+                    new KeyValuePair<string, object?>("topk", profile.TopK.ToString(CultureInfo.InvariantCulture)),
+                    new KeyValuePair<string, object?>("min_score", profile.MinScore.ToString("F2", CultureInfo.InvariantCulture)));
 
                 debugCollector?.Add(StreamingEventType.DebugAdaptiveRouting,
                     new DebugAdaptiveRoutingData(
@@ -253,13 +254,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             }
 
             // Step 2b: Hybrid search — PostgreSQL FTS + RRF fusion (graceful degradation)
-            allChunks = await TryHybridSearchAsync(userQuestion, gameId, allChunks, ct).ConfigureAwait(false);
+            allChunks = await TryHybridSearchAsync(userQuestion, gameId, allChunks, profile, ct).ConfigureAwait(false);
 
             // Deduplicate by PdfId+ChunkIndex, keep highest score
             var filteredChunks = allChunks
                 .GroupBy(r => $"{r.PdfId}:{r.ChunkIndex}", StringComparer.Ordinal)
                 .Select(g => g.OrderByDescending(r => r.Score).First())
-                .Where(r => r.Score >= DefaultMinScore)
+                .Where(r => r.Score >= profile.MinScore)
                 .OrderByDescending(r => r.Score)
                 .ToList();
 
@@ -271,7 +272,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
             if (filteredChunks.Count == 0)
             {
-                _logger.LogInformation("No chunks above minScore {MinScore} for game {GameId}", DefaultMinScore, gameId);
+                _logger.LogInformation("No chunks above minScore {MinScore} for game {GameId}", profile.MinScore, gameId);
                 return (string.Empty, citations);
             }
 
@@ -281,7 +282,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 filteredChunks[0].Score);
 
             // Step 3: Rerank if available (graceful degradation)
-            filteredChunks = await TryRerankAsync(userQuestion, filteredChunks, ct).ConfigureAwait(false);
+            filteredChunks = await TryRerankAsync(userQuestion, filteredChunks, profile, ct).ConfigureAwait(false);
 
             // === CRAG: Evaluate retrieval relevance ===
             if (activeEnhancements.HasFlag(RagEnhancement.CragEvaluation) && filteredChunks.Count > 0)
@@ -305,7 +306,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     var expandedQuery = await ExpandQueryAsync(userQuestion, ct).ConfigureAwait(false);
                     var expandedChunks = await TryHybridSearchAsync(
                         expandedQuery.FirstOrDefault() ?? userQuestion,
-                        gameId, new List<SearchResultItem>(), ct).ConfigureAwait(false);
+                        gameId, new List<SearchResultItem>(), profile, ct).ConfigureAwait(false);
 
                     if (evaluation.UseRetrievedDocuments)
                     {
@@ -315,21 +316,21 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                             .GroupBy(c => $"{c.PdfId}:{c.ChunkIndex}", StringComparer.Ordinal)
                             .Select(g => g.OrderByDescending(c => c.Score).First())
                             .OrderByDescending(c => c.Score)
-                            .Take(RerankedTopK * 2)
+                            .Take(profile.TopK * 2)
                             .ToList();
                     }
                     else
                     {
                         // Incorrect: replace with expanded results
                         filteredChunks = expandedChunks
-                            .Where(c => c.Score >= DefaultMinScore)
+                            .Where(c => c.Score >= profile.MinScore)
                             .OrderByDescending(c => c.Score)
-                            .Take(RerankedTopK)
+                            .Take(profile.TopK)
                             .ToList();
                     }
 
                     // Re-rerank the merged results
-                    filteredChunks = await TryRerankAsync(userQuestion, filteredChunks, ct)
+                    filteredChunks = await TryRerankAsync(userQuestion, filteredChunks, profile, ct)
                         .ConfigureAwait(false);
                 }
 
@@ -365,7 +366,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
                     filteredChunks = filteredChunks
                         .OrderByDescending(c => c.Score)
-                        .Take(RerankedTopK + 2) // Allow slightly more chunks when RAPTOR active
+                        .Take(profile.TopK + 2) // Allow slightly more chunks when RAPTOR active
                         .ToList();
 
                     _logger.LogInformation("RAPTOR: added {Count} summary chunks to context", raptorChunks.Count);
@@ -373,7 +374,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             }
 
             // Step 4: Sentence window expansion — include adjacent chunks for more context
-            filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, ct).ConfigureAwait(false);
+            filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, profile, ct).ConfigureAwait(false);
 
             // Format chunks and track citations (with copyright annotation)
             var sb = new StringBuilder();
@@ -448,10 +449,10 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     }
 
     private async Task<List<SearchResultItem>> TryRerankAsync(
-        string userQuestion, List<SearchResultItem> chunks, CancellationToken ct)
+        string userQuestion, List<SearchResultItem> chunks, RetrievalProfile profile, CancellationToken ct)
     {
-        if (chunks.Count <= RerankedTopK)
-            return chunks.Take(RerankedTopK).ToList();
+        if (chunks.Count <= profile.TopK)
+            return chunks.Take(profile.TopK).ToList();
 
         try
         {
@@ -461,7 +462,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 OriginalScore: c.Score
             )).ToList();
 
-            var result = await _reranker.RerankAsync(userQuestion, rerankChunks, RerankedTopK, ct).ConfigureAwait(false);
+            var result = await _reranker.RerankAsync(userQuestion, rerankChunks, profile.TopK, ct).ConfigureAwait(false);
 
             _logger.LogInformation("Reranked {Input} → {Output} chunks in {TimeMs:F1}ms",
                 chunks.Count, result.Chunks.Count, result.ProcessingTimeMs);
@@ -475,17 +476,17 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Reranker failed, using raw Qdrant scores (top {TopK})", RerankedTopK);
-            return chunks.Take(RerankedTopK).ToList();
+            _logger.LogWarning(ex, "Reranker failed, using raw scores (top {TopK})", profile.TopK);
+            return chunks.Take(profile.TopK).ToList();
         }
     }
 
     private async Task<List<SearchResultItem>> TryHybridSearchAsync(
-        string userQuestion, Guid gameId, List<SearchResultItem> vectorChunks, CancellationToken ct)
+        string userQuestion, Guid gameId, List<SearchResultItem> vectorChunks, RetrievalProfile profile, CancellationToken ct)
     {
         try
         {
-            var ftsResults = await _textSearch.FullTextSearchAsync(gameId, userQuestion, FtsTopK, ct).ConfigureAwait(false);
+            var ftsResults = await _textSearch.FullTextSearchAsync(gameId, userQuestion, profile.FtsTopK, ct).ConfigureAwait(false);
             if (ftsResults.Count == 0)
                 return vectorChunks;
 
@@ -549,7 +550,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     }
 
     private async Task<List<SearchResultItem>> TrySentenceWindowExpansionAsync(
-        List<SearchResultItem> chunks, CancellationToken ct)
+        List<SearchResultItem> chunks, RetrievalProfile profile, CancellationToken ct)
     {
         if (chunks.Count == 0)
             return chunks;
@@ -567,7 +568,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     continue;
 
                 var adjacent = await _textSearch.GetAdjacentChunksAsync(
-                    pdfDocumentId, chunk.ChunkIndex, SentenceWindowRadius, ct).ConfigureAwait(false);
+                    pdfDocumentId, chunk.ChunkIndex, profile.WindowRadius, ct).ConfigureAwait(false);
 
                 foreach (var adj in adjacent)
                 {
@@ -837,4 +838,14 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         string agentTypology, string gameTitle, GameState? gameState, string ragContext,
         bool hasExpansions, bool hasProtectedCitations, string agentLanguage)
         => BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations, agentLanguage);
+
+    private static LlmUserTier MapToLlmUserTier(UserTier? userTier) => userTier?.Value switch
+    {
+        "free" => LlmUserTier.Anonymous,
+        "normal" => LlmUserTier.User,
+        "premium" or "pro" => LlmUserTier.Premium,
+        "enterprise" => LlmUserTier.Admin,
+        null => LlmUserTier.Anonymous,
+        _ => LlmUserTier.User
+    };
 }

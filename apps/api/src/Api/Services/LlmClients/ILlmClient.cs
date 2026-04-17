@@ -62,4 +62,29 @@ internal interface ILlmClient
     /// Ollama: GET /api/tags — OpenRouter: GET /api/v1/models
     /// </summary>
     Task<bool> CheckHealthAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Whether this provider supports vision (image) content in messages.
+    /// </summary>
+    bool SupportsVision { get; }
+
+    /// <summary>
+    /// Generate a chat completion from multimodal messages (text + images).
+    /// </summary>
+    Task<LlmCompletionResult> GenerateCompletionAsync(
+        string model,
+        IReadOnlyList<LlmMessage> messages,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Generate a streaming chat completion from multimodal messages (text + images).
+    /// </summary>
+    IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
+        string model,
+        IReadOnlyList<LlmMessage> messages,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default);
 }

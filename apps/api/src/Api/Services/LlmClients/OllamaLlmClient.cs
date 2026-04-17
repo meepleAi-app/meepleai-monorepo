@@ -384,6 +384,31 @@ internal class OllamaLlmClient : ILlmClient
     }
 
     /// <inheritdoc/>
+    public bool SupportsVision => false;
+
+    /// <inheritdoc/>
+    public Task<LlmCompletionResult> GenerateCompletionAsync(
+        string model,
+        IReadOnlyList<LlmMessage> messages,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default)
+    {
+        throw new NotSupportedException("Ollama provider does not support multimodal (vision) messages");
+    }
+
+    /// <inheritdoc/>
+    public IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
+        string model,
+        IReadOnlyList<LlmMessage> messages,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default)
+    {
+        throw new NotSupportedException("Ollama provider does not support multimodal (vision) streaming");
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> CheckHealthAsync(CancellationToken ct = default)
     {
         try

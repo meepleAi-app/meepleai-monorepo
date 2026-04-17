@@ -9,7 +9,7 @@
  * 1. Choose Game — pick from library games (skipped if prefilledGameId)
  * 2. Add Players — name + color
  * 3. Turn Order — reorder players before game starts
- * 4. Configure Phases — pre-loaded templates, optional
+ * 4. Configure Phases — KB selection (if ≥2 docs) + pre-loaded templates, optional
  * 5. Ready — summary + start
  *
  * API flow:
@@ -39,11 +39,14 @@ import { useRouter } from 'next/navigation';
 import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { useKbGameDocuments } from '@/hooks/queries/useGameDocuments';
 import { useLibrary } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 import { cn } from '@/lib/utils';
+
+import { KbSelectionStep } from './KbSelectionStep';
 
 // ========== Types ==========
 
@@ -106,6 +109,11 @@ export function SessionWizardMobile({
   const [phaseTemplates, setPhaseTemplates] = useState<PhaseTemplateDto[]>([]);
   const [phases, setPhases] = useState<WizardPhase[]>([]);
   const [isLoadingPhases, setIsLoadingPhases] = useState(false);
+
+  // KB document selection
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const { data: kbDocuments = [] } = useKbGameDocuments(selectedGameId ?? undefined);
+  const showKbStep = kbDocuments.length >= 2;
 
   // Load phase templates when game is selected
   useEffect(() => {
@@ -598,9 +606,21 @@ export function SessionWizardMobile({
           </div>
         )}
 
-        {/* ——— Step 4: Configure Phases ——— */}
+        {/* ——— Step 4: Configure Phases (+ optional KB selection) ——— */}
         {step === 4 && (
           <div className="space-y-4">
+            {/* KB selection — shown only when game has ≥2 indexed documents */}
+            {showKbStep && selectedGameId && (
+              <>
+                <KbSelectionStep
+                  gameId={selectedGameId}
+                  selectedDocIds={selectedDocIds}
+                  onSelectionChange={setSelectedDocIds}
+                />
+                <hr className="border-border" />
+              </>
+            )}
+
             <div>
               <h2 className="text-lg font-bold font-quicksand">Configura le fasi</h2>
               <p className="text-sm text-muted-foreground">

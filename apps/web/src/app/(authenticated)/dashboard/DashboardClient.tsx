@@ -3,8 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/components/auth/AuthProvider';
+import { EntityZone } from '@/components/dashboard/EntityZone';
+import { GreetingStrip } from '@/components/dashboard/GreetingStrip';
+import { OwnershipConfirmDialog } from '@/components/dialogs/OwnershipConfirmDialog';
 import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardProps, MeepleEntityType } from '@/components/ui/data-display/meeple-card';
@@ -44,54 +48,21 @@ const AGENTS_FILTERS: FilterChip[] = [
 // ---------------------------------------------------------------------------
 
 const TOOLKIT_TOOLS = [
-  { id: 'dice', icon: '🎲', name: 'Dado', desc: 'Lancia d4–d20', iconBg: 'bg-amber-100' },
-  { id: 'timer', icon: '⏳', name: 'Clessidra', desc: 'Timer per turno', iconBg: 'bg-sky-100' },
-  {
-    id: 'score',
-    icon: '📊',
-    name: 'Scoreboard',
-    desc: 'Punteggi multi-player',
-    iconBg: 'bg-purple-100',
-  },
-  { id: 'token', icon: '🪙', name: 'Token', desc: 'Contatori risorse', iconBg: 'bg-green-100' },
+  { id: 'dice', icon: '🎲', name: 'Dado', desc: 'Lancia d4–d20' },
+  { id: 'timer', icon: '⏳', name: 'Clessidra', desc: 'Timer per turno' },
+  { id: 'score', icon: '📊', name: 'Scoreboard', desc: 'Punteggi multi-player' },
+  { id: 'token', icon: '🪙', name: 'Token', desc: 'Contatori risorse' },
 ] as const;
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function GreetingHeader({ displayName }: { displayName: string }) {
-  return (
-    <div className="pt-2 pb-1">
-      <h2 className="font-[Quicksand] font-bold text-2xl text-[var(--nh-text-primary,#1a1a1a)]">
-        Ciao, {displayName} 👋
-      </h2>
-      <p className="text-sm text-[var(--nh-text-secondary,#5a4a35)] mt-0.5">
-        La tua tavola da gioco
-      </p>
-    </div>
-  );
-}
-
-function HubBlock({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section>
-      <h3
-        className="font-[Quicksand] font-bold text-sm uppercase tracking-wide
-                   text-[var(--nh-text-secondary,#5a4a35)] mb-2"
-      >
-        {title}
-      </h3>
-      {children}
-    </section>
-  );
-}
-
 function LoadingSkeleton({ count }: { count: number }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="h-40 rounded-xl bg-black/5 animate-pulse" />
+        <div key={i} className="h-40 rounded-xl bg-muted animate-pulse" />
       ))}
     </div>
   );
@@ -118,15 +89,13 @@ function EmptyCTA({
   return (
     <div
       className="flex flex-col items-center gap-3 py-6 px-4 text-center
-                 rounded-xl border border-dashed border-[rgba(180,130,80,0.25)]
-                 bg-[var(--nh-bg-card,white)]"
+                 rounded-xl border border-dashed border-[rgba(180,130,80,0.25)] dark:border-[rgba(180,130,80,0.4)]
+                 bg-card"
     >
       <span className="text-3xl">{icon}</span>
       <div>
-        <p className="font-[Quicksand] font-bold text-sm text-[var(--nh-text-primary,#1a1a1a)]">
-          {title}
-        </p>
-        <p className="text-xs text-[var(--nh-text-muted,#94a3b8)] mt-1 max-w-[240px] mx-auto leading-relaxed">
+        <p className="font-[Quicksand] font-bold text-sm text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground/60 mt-1 max-w-[240px] mx-auto leading-relaxed">
           {sub}
         </p>
       </div>
@@ -162,7 +131,7 @@ function MeepleCardGrid({
   if (items.length === 0) {
     if (emptyNode) return <>{emptyNode}</>;
     return (
-      <div className="flex flex-col items-center gap-2 py-8 text-[var(--nh-text-muted,#94a3b8)]">
+      <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground/60">
         <p className="text-sm font-medium">Nessun elemento.</p>
       </div>
     );
@@ -201,11 +170,11 @@ function CatalogGameCard({
 }) {
   return (
     <div
-      className="bg-[var(--nh-bg-card,white)] border border-[var(--nh-border,rgba(0,0,0,0.07))]
+      className="bg-card border border-border
                  rounded-xl shadow-sm overflow-hidden flex flex-col"
     >
       {/* Thumbnail */}
-      <div className="relative h-[68px] flex items-center justify-center bg-gradient-to-br from-[#fdf0e0] to-[#fce8cc] overflow-hidden flex-shrink-0">
+      <div className="relative h-[68px] flex items-center justify-center bg-gradient-to-br from-[#fdf0e0] to-[#fce8cc] dark:from-[hsl(25,20%,18%)] dark:to-[hsl(30,15%,15%)] overflow-hidden flex-shrink-0">
         {game.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={game.imageUrl} alt={game.title} className="w-full h-full object-cover" />
@@ -214,7 +183,7 @@ function CatalogGameCard({
         )}
         {hasKb !== undefined && (
           <span
-            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] text-white leading-none ${hasKb ? 'bg-green-500' : 'bg-[var(--nh-text-muted,#94a3b8)]'}`}
+            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] text-white leading-none ${hasKb ? 'bg-green-500' : 'bg-muted-foreground/60'}`}
           >
             {hasKb ? 'KB ✓' : 'KB –'}
           </span>
@@ -225,14 +194,12 @@ function CatalogGameCard({
       <div className="px-2 pt-1.5 pb-1 flex-1 min-h-0">
         <p
           className="font-[Quicksand] font-bold text-[11px] leading-tight
-                     overflow-hidden line-clamp-2 text-[var(--nh-text-primary,#1a1a2e)]"
+                     overflow-hidden line-clamp-2 text-foreground"
         >
           {game.title}
         </p>
         {game.publisher && (
-          <p className="text-[10px] text-[var(--nh-text-secondary,#64748b)] mt-0.5 truncate">
-            {game.publisher}
-          </p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{game.publisher}</p>
         )}
       </div>
 
@@ -245,9 +212,9 @@ function CatalogGameCard({
         }
         className={
           inLibrary
-            ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/5 text-[var(--nh-text-muted,#94a3b8)] cursor-default'
+            ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-muted text-muted-foreground/60 cursor-default'
             : adding
-              ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/20 text-white cursor-wait'
+              ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/20 dark:bg-white/20 text-white cursor-wait'
               : 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-amber-600 text-white hover:opacity-90 active:scale-95 transition-transform'
         }
       >
@@ -290,18 +257,39 @@ function NewUserGamesBlock({
 
   const addMutation = useAddGameToLibrary();
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
+  const [confirmGame, setConfirmGame] = useState<{ id: string; title: string } | null>(null);
+  const router = useRouter();
 
-  const handleAdd = async (gameId: string) => {
-    setAddingIds(prev => new Set(prev).add(gameId));
-    try {
-      await addMutation.mutateAsync({ gameId });
-    } finally {
-      setAddingIds(prev => {
-        const next = new Set(prev);
-        next.delete(gameId);
-        return next;
-      });
-    }
+  const handleAdd = (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+    setConfirmGame({ id: game.id, title: game.title });
+  };
+
+  const handleConfirmOwnership = () => {
+    if (!confirmGame) return;
+    setAddingIds(prev => new Set(prev).add(confirmGame.id));
+    addMutation.mutate(
+      { gameId: confirmGame.id },
+      {
+        onSuccess: () => {
+          setAddingIds(prev => {
+            const next = new Set(prev);
+            next.delete(confirmGame.id);
+            return next;
+          });
+          setConfirmGame(null);
+          router.push(`/games/${confirmGame.id}`);
+        },
+        onError: () => {
+          setAddingIds(prev => {
+            const next = new Set(prev);
+            next.delete(confirmGame.id);
+            return next;
+          });
+        },
+      }
+    );
   };
 
   const filtered = useMemo(() => {
@@ -325,7 +313,7 @@ function NewUserGamesBlock({
         <LoadingSkeleton count={6} />
       ) : (
         <>
-          <p className="text-xs text-[var(--nh-text-muted,#94a3b8)] bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3 font-medium">
+          <p className="text-xs text-muted-foreground/60 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-lg px-3 py-2 mb-3 font-medium">
             💡 Libreria vuota — ecco i top giochi dal catalogo. Aggiungili per iniziare!
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -346,45 +334,36 @@ function NewUserGamesBlock({
           </div>
         </>
       )}
+      <OwnershipConfirmDialog
+        open={!!confirmGame}
+        onOpenChange={open => {
+          if (!open) setConfirmGame(null);
+        }}
+        gameTitle={confirmGame?.title ?? ''}
+        onConfirm={handleConfirmOwnership}
+        confirming={addMutation.isPending}
+      />
     </HubLayout>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Toolkit carousel (always shown, static data)
-// ---------------------------------------------------------------------------
-
-function ToolkitCarousel() {
+function ToolkitGrid() {
   return (
-    <>
-      <p className="text-[10px] text-[var(--nh-text-muted,#94a3b8)] font-semibold mb-2">
-        Strumenti disponibili subito, senza libreria
-      </p>
-      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
-        {TOOLKIT_TOOLS.map(tool => (
-          <Link
-            key={tool.id}
-            href={`/toolkit?tool=${tool.id}`}
-            className="flex-shrink-0 w-[100px] bg-[var(--nh-bg-card,white)]
-                       border border-[var(--nh-border,rgba(0,0,0,0.07))]
-                       rounded-xl p-2.5 flex flex-col items-center gap-1.5
-                       hover:shadow-md transition-shadow"
-          >
-            <span
-              className={`w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-xl ${tool.iconBg}`}
-            >
-              {tool.icon}
-            </span>
-            <span className="font-[Quicksand] font-bold text-[11px] text-center leading-tight text-[var(--nh-text-primary,#1a1a1a)]">
-              {tool.name}
-            </span>
-            <span className="text-[9px] text-[var(--nh-text-muted,#94a3b8)] text-center leading-tight">
-              {tool.desc}
-            </span>
-          </Link>
-        ))}
-      </div>
-    </>
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {TOOLKIT_TOOLS.map(tool => (
+        <Link
+          key={tool.id}
+          href={`/toolkit?tool=${tool.id}`}
+          className="flex flex-col items-center gap-1.5 rounded-xl border border-[hsl(142,30%,88%)] bg-[hsl(142,30%,96%)] p-4 text-center transition-all hover:-translate-y-0.5 hover:border-[hsl(142,70%,45%)] hover:shadow-md dark:border-[hsl(142,30%,25%)] dark:bg-[hsl(142,20%,12%)] dark:hover:border-[hsl(142,70%,40%)]"
+        >
+          <span className="text-[28px]">{tool.icon}</span>
+          <span className="font-quicksand text-[13px] font-bold text-[hsl(142,50%,30%)] dark:text-[hsl(142,50%,65%)]">
+            {tool.name}
+          </span>
+          <span className="text-[11px] text-muted-foreground">{tool.desc}</span>
+        </Link>
+      ))}
+    </div>
   );
 }
 
@@ -532,12 +511,19 @@ export function DashboardClient() {
   // Render
   // ---------------------------------------------------------------------------
 
-  return (
-    <div className="flex flex-col gap-6 px-4 pb-24 pt-4 max-w-[1440px] mx-auto">
-      <GreetingHeader displayName={displayName} />
+  // Build stats for greeting strip
+  const stats = {
+    games: gameItems.length,
+    sessions: sessionItems.length,
+    agents: agentItems.length,
+  };
 
-      {/* Block 1: Games */}
-      <HubBlock title="🎲 Giochi">
+  return (
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-7 px-4 pb-24 pt-4">
+      <GreetingStrip displayName={displayName} stats={stats} />
+
+      {/* Games zone (orange) */}
+      <EntityZone entity="game" title="Giochi" count={gameItems.length} viewAllHref="/games">
         {isNewUser ? (
           <NewUserGamesBlock
             search={gamesSearch}
@@ -557,10 +543,15 @@ export function DashboardClient() {
             <MeepleCardGrid items={filteredGameItems} isLoading={libraryLoading} />
           </HubLayout>
         )}
-      </HubBlock>
+      </EntityZone>
 
-      {/* Block 2: Sessions */}
-      <HubBlock title="🎯 Sessioni">
+      {/* Sessions zone (indigo) — horizontal scroll */}
+      <EntityZone
+        entity="session"
+        title="Sessioni"
+        count={sessionItems.length}
+        viewAllHref="/sessions"
+      >
         <HubLayout
           searchPlaceholder="Filtra per stato..."
           searchValue={sessionsSearch}
@@ -569,23 +560,34 @@ export function DashboardClient() {
           activeFilterId={sessionsFilter}
           onFilterChange={setSessionsFilter}
         >
-          <MeepleCardGrid
-            items={filteredSessionItems}
-            isLoading={sessionsLoading}
-            emptyNode={
-              <EmptyCTA
-                icon="🎯"
-                title="Nessuna sessione"
-                sub="Inizia una nuova partita e traccia i tuoi progressi in tempo reale."
-                actions={[{ label: '＋ Crea sessione', href: '/sessions/new', primary: true }]}
-              />
-            }
-          />
+          {sessionsLoading ? (
+            <LoadingSkeleton count={4} />
+          ) : filteredSessionItems.length === 0 ? (
+            <EmptyCTA
+              icon="🎯"
+              title="Nessuna sessione"
+              sub="Inizia una nuova partita e traccia i tuoi progressi in tempo reale."
+              actions={[{ label: '＋ Crea sessione', href: '/sessions/new', primary: true }]}
+            />
+          ) : (
+            <div
+              role="region"
+              aria-label="Sessioni recenti"
+              tabIndex={0}
+              className="flex gap-3.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg"
+            >
+              {filteredSessionItems.map(item => (
+                <div key={item.id ?? item.title} className="w-[260px] shrink-0">
+                  <MeepleCard {...item} />
+                </div>
+              ))}
+            </div>
+          )}
         </HubLayout>
-      </HubBlock>
+      </EntityZone>
 
-      {/* Block 3: Agents */}
-      <HubBlock title="🤖 Agenti AI">
+      {/* Agents zone (amber) */}
+      <EntityZone entity="agent" title="Agenti AI" count={agentItems.length} viewAllHref="/agents">
         <HubLayout
           searchPlaceholder="Cerca agenti..."
           searchValue={agentsSearch}
@@ -610,12 +612,12 @@ export function DashboardClient() {
             }
           />
         </HubLayout>
-      </HubBlock>
+      </EntityZone>
 
-      {/* Block 4: Toolkit */}
-      <HubBlock title="🛠️ Toolkit">
-        <ToolkitCarousel />
-      </HubBlock>
+      {/* Toolkit zone (green) */}
+      <EntityZone entity="toolkit" title="Strumenti" count={TOOLKIT_TOOLS.length}>
+        <ToolkitGrid />
+      </EntityZone>
     </div>
   );
 }

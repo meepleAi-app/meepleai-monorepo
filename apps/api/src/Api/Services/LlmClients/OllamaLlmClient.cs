@@ -394,18 +394,19 @@ internal class OllamaLlmClient : ILlmClient
         int maxTokens,
         CancellationToken ct = default)
     {
-        throw new NotSupportedException("Ollama provider does not support multimodal (vision) messages");
+        return Task.FromResult(LlmCompletionResult.CreateFailure("Ollama provider does not support multimodal (vision) messages"));
     }
 
     /// <inheritdoc/>
-    public IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
+    public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string model,
         IReadOnlyList<LlmMessage> messages,
         double temperature,
         int maxTokens,
-        CancellationToken ct = default)
+        [EnumeratorCancellation] CancellationToken ct = default)
     {
-        throw new NotSupportedException("Ollama provider does not support multimodal (vision) streaming");
+        yield return new StreamChunk(null, Usage: LlmUsage.Empty, IsFinal: true);
+        await Task.CompletedTask.ConfigureAwait(false); // Ollama does not support vision streaming
     }
 
     /// <inheritdoc/>

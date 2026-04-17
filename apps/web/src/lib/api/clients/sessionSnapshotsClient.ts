@@ -41,16 +41,19 @@ export interface CreateSnapshotResult {
 export function createSessionSnapshotsClient() {
   return {
     async getSnapshots(sessionId: string): Promise<SessionSnapshotDto[]> {
-      const res = await fetch(`/api/v1/live-sessions/${encodeURIComponent(sessionId)}/snapshots`, {
-        credentials: 'include',
-      });
+      const res = await fetch(
+        `/api/v1/live-sessions/${encodeURIComponent(sessionId)}/vision-snapshots`,
+        {
+          credentials: 'include',
+        }
+      );
       if (!res.ok) throw new Error(`Failed to fetch snapshots: ${res.status}`);
       return res.json();
     },
 
     async getGameState(sessionId: string): Promise<GameStateResult | null> {
       const res = await fetch(
-        `/api/v1/live-sessions/${encodeURIComponent(sessionId)}/snapshots/game-state`,
+        `/api/v1/live-sessions/${encodeURIComponent(sessionId)}/vision-snapshots/game-state`,
         { credentials: 'include' }
       );
       if (res.status === 204) return null;
@@ -71,11 +74,14 @@ export function createSessionSnapshotsClient() {
       if (caption) fd.append('caption', caption);
       images.forEach(img => fd.append('images', img));
 
-      const res = await fetch(`/api/v1/live-sessions/${encodeURIComponent(sessionId)}/snapshots`, {
-        method: 'POST',
-        credentials: 'include',
-        body: fd,
-      });
+      const res = await fetch(
+        `/api/v1/live-sessions/${encodeURIComponent(sessionId)}/vision-snapshots`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        }
+      );
       if (!res.ok) throw new Error(`Failed to create snapshot: ${res.status}`);
       return res.json();
     },

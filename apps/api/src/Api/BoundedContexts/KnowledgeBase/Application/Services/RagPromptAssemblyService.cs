@@ -839,13 +839,12 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         bool hasExpansions, bool hasProtectedCitations, string agentLanguage)
         => BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations, agentLanguage);
 
-    private static LlmUserTier MapToLlmUserTier(UserTier? userTier) => userTier?.Value?.ToLowerInvariant() switch
+    private static LlmUserTier MapToLlmUserTier(UserTier? userTier) => userTier?.Value switch
     {
-        "anonymous" => LlmUserTier.Anonymous,
-        "user" => LlmUserTier.User,
-        "editor" => LlmUserTier.Editor,
-        "admin" => LlmUserTier.Admin,
-        "premium" => LlmUserTier.Premium,
+        "free" => LlmUserTier.Anonymous,
+        "normal" => LlmUserTier.User,
+        "premium" or "pro" => LlmUserTier.Premium,
+        "enterprise" => LlmUserTier.Admin,
         null => LlmUserTier.Anonymous,
         _ => LlmUserTier.User
     };

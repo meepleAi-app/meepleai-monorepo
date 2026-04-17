@@ -10,6 +10,8 @@ internal sealed record RetrievalProfile(
     int FtsTopK,
     int WindowRadius)
 {
+    private static readonly RetrievalProfile _default = new(TopK: 5, MinScore: 0.55f, FtsTopK: 10, WindowRadius: 1);
+
     /// <summary>Baseline profile matching the original hardcoded constants.</summary>
-    public static RetrievalProfile Default => new(TopK: 5, MinScore: 0.55f, FtsTopK: 10, WindowRadius: 1);
+    public static RetrievalProfile Default => _default;
 }

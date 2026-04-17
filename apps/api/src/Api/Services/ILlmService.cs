@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Api.Services.LlmClients;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
@@ -58,6 +59,24 @@ internal interface ILlmService
         string userPrompt,
         RequestSource source = RequestSource.Manual,
         CancellationToken ct = default) where T : class;
+
+    /// <summary>
+    /// Generate a multimodal (text + images) completion response.
+    /// Falls back to text-only if no vision-capable provider is available.
+    /// </summary>
+    Task<LlmCompletionResult> GenerateMultimodalCompletionAsync(
+        IReadOnlyList<LlmMessage> messages,
+        RequestSource source = RequestSource.Manual,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Generate a streaming multimodal (text + images) completion response.
+    /// Falls back to text-only if no vision-capable provider is available.
+    /// </summary>
+    IAsyncEnumerable<StreamChunk> GenerateMultimodalCompletionStreamAsync(
+        IReadOnlyList<LlmMessage> messages,
+        RequestSource source = RequestSource.Manual,
+        CancellationToken ct = default);
 
     /// <summary>
     /// Issue #4332: Generate completion with explicit model (bypassing routing strategy).

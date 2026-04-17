@@ -225,6 +225,14 @@ export { useKbGameDocuments, kbGameDocumentKeys } from './useGameDocuments';
 
 // Next Session queries (Library Hero Banner)
 
+// Session Vision AI — Snapshots & Game State
+export {
+  useSessionVisionSnapshots,
+  useLatestGameState,
+  useCreateSnapshot,
+  snapshotKeys,
+} from './useSessionSnapshots';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

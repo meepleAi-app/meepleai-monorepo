@@ -26,13 +26,20 @@ public record SendSystemEventCommand(
 ) : IRequest<SendChatMessageResult>;
 
 /// <summary>
+/// Image attachment for the ask-agent command (multipart upload).
+/// </summary>
+public record ChatImageAttachment(byte[] Data, string MediaType, string? FileName);
+
+/// <summary>
 /// Command to ask the RAG agent a question in session context.
+/// Supports optional image attachments for vision-based game state analysis.
 /// </summary>
 public record AskSessionAgentCommand(
     Guid SessionId,
     Guid SenderId,
     string Question,
-    int? TurnNumber
+    int? TurnNumber,
+    List<ChatImageAttachment>? Images = null
 ) : IRequest<AskSessionAgentResult>;
 
 public record AskSessionAgentResult(

@@ -426,6 +426,151 @@ internal class HybridLlmService : ILlmService
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<LlmCompletionResult> GenerateMultimodalCompletionAsync(
+        IReadOnlyList<LlmMessage> messages,
+        RequestSource source = RequestSource.Manual,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(messages);
+        if (messages.Count == 0)
+        {
+            return LlmCompletionResult.CreateFailure("No messages provided");
+        }
+
+        var needsVision = messages.Any(m => m.HasImages);
+
+        // Try to find a vision-capable provider first
+        if (needsVision)
+        {
+            var visionClient = _clients.FirstOrDefault(c => c.SupportsVision);
+            if (visionClient != null)
+            {
+                var selection = await _providerSelector.SelectProviderAsync(
+                    LlmUserContext.Anonymous, RagStrategy.Balanced, source, ct).ConfigureAwait(false);
+                var decision = selection.Decision;
+
+                // Prefer the routed provider if it supports vision, else use first vision provider
+                var client = selection.Client?.SupportsVision == true ? selection.Client : visionClient;
+
+                _logger.LogInformation(
+                    "Generating multimodal completion via {Provider} ({Model})",
+                    client.ProviderName, decision.ModelId);
+
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                try
+                {
+                    var result = await client.GenerateCompletionAsync(
+                        decision.ModelId, messages, DefaultTemperature, DefaultMaxTokens, ct).ConfigureAwait(false);
+
+                    stopwatch.Stop();
+
+                    if (result.Success)
+                    {
+                        _providerSelector.RecordSuccess(client.ProviderName, decision.ModelId, stopwatch.ElapsedMilliseconds, result);
+                        await _costService.LogSuccessAsync(result, LlmUserContext.Anonymous, stopwatch.ElapsedMilliseconds, source, ct).ConfigureAwait(false);
+                        return result;
+                    }
+
+                    _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, stopwatch.ElapsedMilliseconds, result);
+                }
+                catch (Exception ex)
+                {
+                    stopwatch.Stop();
+                    _logger.LogError(ex, "Error generating multimodal completion with {Provider}", client.ProviderName);
+                    _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, stopwatch.ElapsedMilliseconds);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("No vision-capable provider available, falling back to text-only");
+            }
+        }
+
+        // Fallback: extract text from messages and use standard text-only completion
+        var systemParts = messages.Where(m => string.Equals(m.Role, "system", StringComparison.Ordinal))
+            .SelectMany(m => m.Content.OfType<TextContentPart>().Select(t => t.Text));
+        var userParts = messages.Where(m => string.Equals(m.Role, "user", StringComparison.Ordinal))
+            .SelectMany(m => m.Content.OfType<TextContentPart>().Select(t => t.Text));
+
+        var systemPrompt = string.Join("\n", systemParts);
+        var userPrompt = string.Join("\n", userParts);
+
+        if (string.IsNullOrWhiteSpace(userPrompt))
+        {
+            return LlmCompletionResult.CreateFailure("No text content found in messages");
+        }
+
+        return await GenerateCompletionAsync(systemPrompt, userPrompt, source, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+#pragma warning disable S3400 // Methods should not return constants - async iterator pattern requires this signature
+#pragma warning disable S4456 // Parameter validation on async iterator - validated before yield
+    public async IAsyncEnumerable<StreamChunk> GenerateMultimodalCompletionStreamAsync(
+        IReadOnlyList<LlmMessage> messages,
+        RequestSource source = RequestSource.Manual,
+        [EnumeratorCancellation] CancellationToken ct = default)
+#pragma warning restore S4456
+#pragma warning restore S3400
+    {
+        ArgumentNullException.ThrowIfNull(messages);
+        if (messages.Count == 0)
+        {
+            _logger.LogWarning("No messages provided for multimodal streaming");
+            yield break;
+        }
+
+        var needsVision = messages.Any(m => m.HasImages);
+
+        if (needsVision)
+        {
+            var visionClient = _clients.FirstOrDefault(c => c.SupportsVision);
+            if (visionClient != null)
+            {
+                var selection = await _providerSelector.SelectProviderAsync(
+                    LlmUserContext.Anonymous, RagStrategy.Balanced, source, ct).ConfigureAwait(false);
+                var decision = selection.Decision;
+
+                var client = selection.Client?.SupportsVision == true ? selection.Client : visionClient;
+
+                _logger.LogInformation(
+                    "Starting multimodal streaming via {Provider} ({Model})",
+                    client.ProviderName, decision.ModelId);
+
+                await foreach (var chunk in client.GenerateCompletionStreamAsync(
+                    decision.ModelId, messages, DefaultTemperature, DefaultMaxTokens, ct).ConfigureAwait(false))
+                {
+                    yield return chunk;
+                }
+
+                yield break;
+            }
+
+            _logger.LogWarning("No vision-capable provider available for streaming, falling back to text-only");
+        }
+
+        // Fallback: extract text and use standard streaming
+        var systemParts = messages.Where(m => string.Equals(m.Role, "system", StringComparison.Ordinal))
+            .SelectMany(m => m.Content.OfType<TextContentPart>().Select(t => t.Text));
+        var userParts = messages.Where(m => string.Equals(m.Role, "user", StringComparison.Ordinal))
+            .SelectMany(m => m.Content.OfType<TextContentPart>().Select(t => t.Text));
+
+        var systemPrompt = string.Join("\n", systemParts);
+        var userPrompt = string.Join("\n", userParts);
+
+        if (string.IsNullOrWhiteSpace(userPrompt))
+        {
+            _logger.LogWarning("No text content found in messages for streaming");
+            yield break;
+        }
+
+        await foreach (var chunk in GenerateCompletionStreamAsync(systemPrompt, userPrompt, source, ct).ConfigureAwait(false))
+        {
+            yield return chunk;
+        }
+    }
+
     private void AddRoutingMetadata(
         LlmCompletionResult result,
         LlmRoutingDecision decision,

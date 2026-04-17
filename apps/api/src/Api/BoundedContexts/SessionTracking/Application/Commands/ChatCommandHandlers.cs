@@ -1,10 +1,13 @@
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.Services.ImageProcessing;
+using Api.Services.LlmClients;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -96,6 +99,7 @@ public class SendSystemEventCommandHandler : IRequestHandler<SendSystemEventComm
 /// <summary>
 /// Handler for asking the RAG agent a question in session context.
 /// Issue #5313: Wired to real HybridLlmService for LLM completions.
+/// Supports optional image attachments for vision-based game state analysis.
 /// </summary>
 internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCommand, AskSessionAgentResult>
 {
@@ -103,6 +107,8 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
     private readonly ISessionChatRepository _chatRepository;
     private readonly IMediator _mediator;
     private readonly ILlmService _llmService;
+    private readonly IImagePreprocessor _imagePreprocessor;
+    private readonly IGameStateExtractor _gameStateExtractor;
     private readonly ILogger<AskSessionAgentCommandHandler> _logger;
 
     public AskSessionAgentCommandHandler(
@@ -110,12 +116,16 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         ISessionChatRepository chatRepository,
         IMediator mediator,
         ILlmService llmService,
+        IImagePreprocessor imagePreprocessor,
+        IGameStateExtractor gameStateExtractor,
         ILogger<AskSessionAgentCommandHandler> logger)
     {
         _sessionRepository = sessionRepository;
         _chatRepository = chatRepository;
         _mediator = mediator;
         _llmService = llmService;
+        _imagePreprocessor = imagePreprocessor;
+        _gameStateExtractor = gameStateExtractor;
         _logger = logger;
     }
 
@@ -139,32 +149,88 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         await _chatRepository.AddAsync(userMessage, cancellationToken).ConfigureAwait(false);
         await _chatRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Call LLM for real response
+        // Extract game state from latest vision snapshot (non-blocking, returns cached if available)
+        var gameState = await _gameStateExtractor.ExtractIfNeededAsync(
+            request.SessionId, null, cancellationToken).ConfigureAwait(false);
+
+        // Build system prompt with optional game state context
         var agentType = "tutor";
         var systemPrompt = $"You are a helpful board game tutor assisting during a game session (Game ID: {session.GameId}). " +
                            "Answer questions about rules, strategy, and gameplay concisely.";
 
+        if (!string.IsNullOrWhiteSpace(gameState))
+        {
+            systemPrompt += $"\n\nCurrent game state from board analysis:\n{gameState}";
+        }
+
         string answer;
         float? confidence;
+        var hasImages = request.Images is { Count: > 0 };
 
         try
         {
-            var result = await _llmService.GenerateCompletionAsync(
-                systemPrompt,
-                request.Question,
-                RequestSource.AgentTask,
-                cancellationToken).ConfigureAwait(false);
-
-            if (result.Success)
+            if (hasImages)
             {
-                answer = result.Response;
-                confidence = 0.85f;
+                // Vision path: process images and build multimodal messages
+                var contentParts = new List<ContentPart>();
+
+                foreach (var img in request.Images!)
+                {
+                    var processed = await _imagePreprocessor.ProcessAsync(
+                        img.Data, img.MediaType).ConfigureAwait(false);
+                    var base64 = Convert.ToBase64String(processed.Data);
+                    contentParts.Add(new ImageContentPart(base64, processed.MediaType));
+                }
+
+                contentParts.Add(new TextContentPart(request.Question));
+
+                var messages = new List<LlmMessage>
+                {
+                    LlmMessage.FromText("system", systemPrompt),
+                    new("user", contentParts)
+                };
+
+                var result = await _llmService.GenerateMultimodalCompletionAsync(
+                    (IReadOnlyList<LlmMessage>)messages,
+                    RequestSource.AgentTask,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (result.Success)
+                {
+                    answer = result.Response;
+                    confidence = 0.85f;
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Multimodal LLM completion failed for session {SessionId}: {Error}",
+                        request.SessionId, result.ErrorMessage);
+                    answer = "I'm sorry, I couldn't analyze the image right now. Please try again.";
+                    confidence = null;
+                }
             }
             else
             {
-                _logger.LogWarning("LLM completion failed for session {SessionId}: {Error}", request.SessionId, result.ErrorMessage);
-                answer = "I'm sorry, I couldn't process your question right now. Please try again.";
-                confidence = null;
+                // Text-only path (existing behavior)
+                var result = await _llmService.GenerateCompletionAsync(
+                    systemPrompt,
+                    request.Question,
+                    RequestSource.AgentTask,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (result.Success)
+                {
+                    answer = result.Response;
+                    confidence = 0.85f;
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "LLM completion failed for session {SessionId}: {Error}",
+                        request.SessionId, result.ErrorMessage);
+                    answer = "I'm sorry, I couldn't process your question right now. Please try again.";
+                    confidence = null;
+                }
             }
         }
         catch (Exception ex)

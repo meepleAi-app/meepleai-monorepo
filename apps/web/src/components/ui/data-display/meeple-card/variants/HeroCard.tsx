@@ -1,5 +1,6 @@
 'use client';
 
+import { ManaPips } from '../parts/ManaPips';
 import { entityHsl, entityIcon } from '../tokens';
 
 import type { MeepleCardProps } from '../types';
@@ -13,6 +14,7 @@ export function HeroCard(props: MeepleCardProps) {
     rating,
     ratingMax,
     badge,
+    manaPips,
     onClick,
     className = '',
   } = props;
@@ -65,6 +67,11 @@ export function HeroCard(props: MeepleCardProps) {
             <span>★</span>
             <span className="text-sm font-bold text-white">{rating.toFixed(1)}</span>
             {ratingMax && <span className="text-xs text-white/60">/ {ratingMax}</span>}
+          </div>
+        )}
+        {manaPips && (
+          <div className="mt-3">
+            <ManaPips pips={manaPips} size="lg" />
           </div>
         )}
       </div>

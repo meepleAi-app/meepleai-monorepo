@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/components/auth/AuthProvider';
+import { OwnershipConfirmDialog } from '@/components/dialogs/OwnershipConfirmDialog';
 import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardProps, MeepleEntityType } from '@/components/ui/data-display/meeple-card';
@@ -290,18 +292,39 @@ function NewUserGamesBlock({
 
   const addMutation = useAddGameToLibrary();
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
+  const [confirmGame, setConfirmGame] = useState<{ id: string; title: string } | null>(null);
+  const router = useRouter();
 
-  const handleAdd = async (gameId: string) => {
-    setAddingIds(prev => new Set(prev).add(gameId));
-    try {
-      await addMutation.mutateAsync({ gameId });
-    } finally {
-      setAddingIds(prev => {
-        const next = new Set(prev);
-        next.delete(gameId);
-        return next;
-      });
-    }
+  const handleAdd = (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+    setConfirmGame({ id: game.id, title: game.title });
+  };
+
+  const handleConfirmOwnership = () => {
+    if (!confirmGame) return;
+    setAddingIds(prev => new Set(prev).add(confirmGame.id));
+    addMutation.mutate(
+      { gameId: confirmGame.id },
+      {
+        onSuccess: () => {
+          setAddingIds(prev => {
+            const next = new Set(prev);
+            next.delete(confirmGame.id);
+            return next;
+          });
+          setConfirmGame(null);
+          router.push(`/games/${confirmGame.id}`);
+        },
+        onError: () => {
+          setAddingIds(prev => {
+            const next = new Set(prev);
+            next.delete(confirmGame.id);
+            return next;
+          });
+        },
+      }
+    );
   };
 
   const filtered = useMemo(() => {
@@ -346,6 +369,15 @@ function NewUserGamesBlock({
           </div>
         </>
       )}
+      <OwnershipConfirmDialog
+        open={!!confirmGame}
+        onOpenChange={open => {
+          if (!open) setConfirmGame(null);
+        }}
+        gameTitle={confirmGame?.title ?? ''}
+        onConfirm={handleConfirmOwnership}
+        confirming={addMutation.isPending}
+      />
     </HubLayout>
   );
 }

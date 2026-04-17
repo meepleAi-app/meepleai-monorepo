@@ -68,7 +68,7 @@ describe('DashboardClient', () => {
     expect(screen.getAllByText(/Giochi/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Sessioni/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Agenti/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Toolkit/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Strumenti/i).length).toBeGreaterThan(0);
   });
 
   it('shows catalog hint for new user with empty library', () => {

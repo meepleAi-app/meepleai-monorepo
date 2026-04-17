@@ -9,6 +9,7 @@ interface ChatMessageBubbleProps {
   content: string;
   authorName: string;
   timestamp: string;
+  imageUrls?: string[];
 }
 
 function initials(name: string): string {
@@ -25,6 +26,7 @@ export function ChatMessageBubble({
   content,
   authorName,
   timestamp,
+  imageUrls,
 }: ChatMessageBubbleProps) {
   const isUser = role === 'user';
 
@@ -75,6 +77,19 @@ export function ChatMessageBubble({
               : undefined
           }
         >
+          {imageUrls && imageUrls.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {imageUrls.map((url, idx) => (
+                <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block">
+                  <img
+                    src={url}
+                    alt={`Immagine ${idx + 1}`}
+                    className="h-15 w-20 cursor-pointer rounded-md border border-white/10 object-cover transition-opacity hover:opacity-80"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
           <p className="whitespace-pre-wrap">{content}</p>
         </div>
       </div>

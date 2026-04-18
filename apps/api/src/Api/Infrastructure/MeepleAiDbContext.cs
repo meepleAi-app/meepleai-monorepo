@@ -211,6 +211,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity> GroupMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity>(); // AgentMemory: play group memory
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity> PlayerMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity>(); // AgentMemory: player statistics
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity> SessionChatMessages => Set<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>(); // ISSUE-4760
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshot> VisionSnapshots => Set<BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshot>(); // Session Vision AI
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshotImage> VisionSnapshotImages => Set<BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshotImage>(); // Session Vision AI
 
     // Issue #4220: Notification preferences
     public DbSet<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity> NotificationPreferences => Set<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity>();

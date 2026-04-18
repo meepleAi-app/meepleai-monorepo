@@ -368,7 +368,8 @@ internal class OllamaLlmClient : ILlmClient
                             Content: null,
                             Usage: usage,
                             Cost: llmCost,
-                            IsFinal: true);
+                            IsFinal: true,
+                            FinishReason: "stop");
                     }
                     else
                     {
@@ -381,6 +382,32 @@ internal class OllamaLlmClient : ILlmClient
                 }
             }
         }
+    }
+
+    /// <inheritdoc/>
+    public bool SupportsVision => false;
+
+    /// <inheritdoc/>
+    public Task<LlmCompletionResult> GenerateCompletionAsync(
+        string model,
+        IReadOnlyList<LlmMessage> messages,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default)
+    {
+        return Task.FromResult(LlmCompletionResult.CreateFailure("Ollama provider does not support multimodal (vision) messages"));
+    }
+
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
+        string model,
+        IReadOnlyList<LlmMessage> messages,
+        double temperature,
+        int maxTokens,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        yield return new StreamChunk(null, Usage: LlmUsage.Empty, IsFinal: true);
+        await Task.CompletedTask.ConfigureAwait(false); // Ollama does not support vision streaming
     }
 
     /// <inheritdoc/>

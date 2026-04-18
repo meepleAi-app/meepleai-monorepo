@@ -11,7 +11,9 @@ import { use, useRef, useState, useCallback, useEffect } from 'react';
 
 import { Camera, Image as ImageIcon, Trash2 } from 'lucide-react';
 
+import { SessionSnapshotPanel } from '@/components/session/SessionSnapshotPanel';
 import { Button } from '@/components/ui/primitives/button';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { addPhoto, listPhotos, deletePhoto, type StoredPhoto } from '@/lib/storage/photo-store';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -77,6 +79,7 @@ function toDisplay(stored: StoredPhoto): DisplayPhoto {
 
 export default function PhotosPage({ params }: PhotosPageProps) {
   const { sessionId } = use(params);
+  const { data: currentUser } = useCurrentUser();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<DisplayPhoto[]>([]);
@@ -193,6 +196,15 @@ export default function PhotosPage({ params }: PhotosPageProps) {
           ))}
         </div>
       )}
+
+      {/* Vision AI Snapshots */}
+      <div className="mt-6 border-t border-[var(--nh-border-default)] pt-6">
+        <SessionSnapshotPanel
+          sessionId={sessionId}
+          userId={currentUser?.id ?? ''}
+          currentTurn={1}
+        />
+      </div>
     </div>
   );
 }

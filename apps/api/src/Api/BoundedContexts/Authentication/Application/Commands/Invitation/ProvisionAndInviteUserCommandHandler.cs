@@ -130,10 +130,10 @@ internal sealed class ProvisionAndInviteUserCommandHandler : ICommandHandler<Pro
 #pragma warning restore CA1031
 
         // 9. Return InvitationDto with EmailSent status
-        return MapToDto(invitation, emailSent);
+        return MapToDto(invitation, emailSent, rawToken);
     }
 
-    private static InvitationDto MapToDto(InvitationToken invitation, bool emailSent)
+    private static InvitationDto MapToDto(InvitationToken invitation, bool emailSent, string? rawToken = null)
     {
         var gameSuggestions = invitation.GameSuggestions
             .Select(gs => new GameSuggestionDto(gs.GameId, gs.Type.ToString()))
@@ -149,6 +149,7 @@ internal sealed class ProvisionAndInviteUserCommandHandler : ICommandHandler<Pro
             AcceptedAt: invitation.AcceptedAt,
             InvitedByUserId: invitation.InvitedByUserId,
             EmailSent: emailSent,
-            GameSuggestions: gameSuggestions);
+            GameSuggestions: gameSuggestions,
+            Token: rawToken);
     }
 }

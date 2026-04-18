@@ -10,7 +10,17 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { toast } from 'sonner';
 import { useAgentChatStream } from '../useAgentChatStream';
+
+// Mock sonner toast
+vi.mock('sonner', () => ({
+  toast: {
+    info: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -64,6 +74,7 @@ describe('useAgentChatStream', () => {
   beforeEach(() => {
     fetchMock = vi.fn();
     globalThis.fetch = fetchMock;
+    vi.mocked(toast.info).mockClear();
   });
 
   afterEach(() => {
@@ -503,6 +514,157 @@ describe('useAgentChatStream', () => {
     expect(result.current.state.modelDowngrade).not.toBeNull();
     expect(result.current.state.modelDowngrade!.isLocalFallback).toBe(false);
     expect(result.current.state.modelDowngrade!.upgradeMessage).toBeNull();
+  });
+
+  // ─── Task 3: Model Downgrade Toast ───────────────────────
+
+  it('shows rate_limited toast when ModelDowngrade reason is rate_limited', async () => {
+    const events = [
+      sseEvent(EventType.ModelDowngrade, {
+        originalModel: 'meta-llama/llama-3.3-70b-instruct:free',
+        fallbackModel: 'llama3:8b',
+        reason: 'rate_limited',
+        isLocalFallback: true,
+        upgradeMessage: null,
+      }),
+      sseEvent(EventType.Complete, { totalTokens: 5 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(toast.info).toHaveBeenCalledWith(
+      'Modello temporaneamente cambiato per limiti di utilizzo',
+      { duration: 5000 }
+    );
+  });
+
+  it('shows generic downgrade toast when ModelDowngrade reason is not rate_limited', async () => {
+    const events = [
+      sseEvent(EventType.ModelDowngrade, {
+        originalModel: 'anthropic/claude-3.5-haiku',
+        fallbackModel: 'openai/gpt-4o-mini',
+        reason: 'provider_unavailable',
+        isLocalFallback: false,
+        upgradeMessage: null,
+      }),
+      sseEvent(EventType.Complete, { totalTokens: 10 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(toast.info).toHaveBeenCalledWith(
+      'Modello alternativo in uso per garantire la risposta',
+      { duration: 5000 }
+    );
+  });
+
+  // ─── Task 4: Rate Limit User-Friendly Error Messages ─────
+
+  it('shows Italian rate_limited message for errorCode rate_limited', async () => {
+    const events = [
+      sseEvent(EventType.Error, {
+        errorMessage: 'Rate limit exceeded',
+        errorCode: 'rate_limited',
+      }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const onError = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onError }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe(
+      'Hai raggiunto il limite di messaggi. Riprova tra qualche minuto.'
+    );
+    expect(onError).toHaveBeenCalledWith(
+      'Hai raggiunto il limite di messaggi. Riprova tra qualche minuto.'
+    );
+  });
+
+  it('shows Italian provider_unavailable message for errorCode provider_unavailable', async () => {
+    const events = [
+      sseEvent(EventType.Error, {
+        errorMessage: 'Provider temporarily unavailable',
+        errorCode: 'provider_unavailable',
+      }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const onError = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onError }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe(
+      'Il servizio AI è temporaneamente non disponibile. Riprova tra poco.'
+    );
+    expect(onError).toHaveBeenCalledWith(
+      'Il servizio AI è temporaneamente non disponibile. Riprova tra poco.'
+    );
+  });
+
+  it('falls back to errorMessage for unknown errorCode', async () => {
+    const events = [
+      sseEvent(EventType.Error, {
+        errorMessage: 'Agent not found',
+        errorCode: 'AGENT_NOT_FOUND',
+      }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe('Agent not found');
+  });
+
+  it('uses generic Italian fallback when no errorMessage and unknown errorCode', async () => {
+    const events = [sseEvent(EventType.Error, { errorCode: 'SOME_UNKNOWN' })];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe('Si è verificato un errore. Riprova.');
   });
 
   it('resets modelDowngrade on new message send', async () => {

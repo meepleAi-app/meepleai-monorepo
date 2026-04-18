@@ -34,6 +34,8 @@ export const InvitationDtoSchema = z.object({
   createdAt: z.string(),
   acceptedAt: z.string().nullable(),
   invitedByUserId: z.string().uuid(),
+  // Only present in the creation response. Not stored in the DB (hash only).
+  token: z.string().optional().nullable(),
 });
 
 export const InvitationStatsSchema = z.object({

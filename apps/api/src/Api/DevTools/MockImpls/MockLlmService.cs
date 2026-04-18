@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Api.DevTools.Scenarios;
 using Api.Services;
+using Api.Services.LlmClients;
 
 namespace Api.DevTools.MockImpls;
 
@@ -74,6 +75,40 @@ internal sealed class MockLlmService : ILlmService
         catch
         {
             return Task.FromResult<T?>(null);
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<LlmCompletionResult> GenerateMultimodalCompletionAsync(
+        IReadOnlyList<LlmMessage> messages,
+        RequestSource source = RequestSource.Manual,
+        CancellationToken ct = default)
+    {
+        // Extract text from messages for mock response
+        var userText = string.Join(" ", messages
+            .Where(m => string.Equals(m.Role, "user", System.StringComparison.Ordinal))
+            .SelectMany(m => m.Content.OfType<TextContentPart>().Select(t => t.Text)));
+        var systemText = string.Join(" ", messages
+            .Where(m => string.Equals(m.Role, "system", System.StringComparison.Ordinal))
+            .SelectMany(m => m.Content.OfType<TextContentPart>().Select(t => t.Text)));
+        return GenerateCompletionAsync(systemText, userText, source, ct);
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<StreamChunk> GenerateMultimodalCompletionStreamAsync(
+        IReadOnlyList<LlmMessage> messages,
+        RequestSource source = RequestSource.Manual,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var userText = string.Join(" ", messages
+            .Where(m => string.Equals(m.Role, "user", System.StringComparison.Ordinal))
+            .SelectMany(m => m.Content.OfType<TextContentPart>().Select(t => t.Text)));
+        var systemText = string.Join(" ", messages
+            .Where(m => string.Equals(m.Role, "system", System.StringComparison.Ordinal))
+            .SelectMany(m => m.Content.OfType<TextContentPart>().Select(t => t.Text)));
+        await foreach (var chunk in GenerateCompletionStreamAsync(systemText, userText, source, ct).ConfigureAwait(false))
+        {
+            yield return chunk;
         }
     }
 

@@ -13,6 +13,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
+import { AddToLibraryButton } from '@/components/library/AddToLibraryButton';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -147,6 +148,13 @@ export default function GameDetailPage() {
             manaPips={manaPips}
           />
         </section>
+
+        {/* Library Action */}
+        {!libraryStatus?.inLibrary && (
+          <div className="mb-6 flex justify-center" data-testid="add-to-library-section">
+            <AddToLibraryButton gameId={id} gameTitle={game.title} size="lg" />
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <GameTabNav gameId={id} />

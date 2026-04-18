@@ -54,6 +54,7 @@ services:
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
       EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      Embedding__Model: intfloat/multilingual-e5-base
       EMBEDDING_DIMENSIONS: 768
       Embedding__Dimensions: 768
       LOCAL_EMBEDDING_URL: https://meepleai.app/services/embedding

@@ -27,6 +27,15 @@ internal static class AiEndpoints
 {
     private static readonly string[] ParagraphSeparators = { "\n\n", "\n" };
 
+    /// <summary>
+    /// SSE events must use camelCase to match frontend qaStream parser expectations.
+    /// ConfigureHttpJsonOptions sets camelCase for Results.Ok() but not for manual JsonSerializer.Serialize().
+    /// </summary>
+    private static readonly System.Text.Json.JsonSerializerOptions SseJsonOptions = new()
+    {
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+    };
+
     public static RouteGroupBuilder MapAiEndpoints(this RouteGroupBuilder group)
     {
         MapQaEndpoint(group);
@@ -189,7 +198,7 @@ internal static class AiEndpoints
                     StreamingEventType.Error,
                     new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
                     DateTime.UtcNow);
-                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions);
                 await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
                 await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
             }
@@ -223,11 +232,31 @@ internal static class AiEndpoints
         // CHAT-02: Follow-up question generation (fire-and-forget after Complete event)
         Task<IReadOnlyList<string>>? followUpTask = null;
 
-        var query = new StreamQaQuery(req.gameId, req.query, req.chatId, req.documentIds); // Issue #2051
+        // Decode continuation token if present
+        string? continuationContext = null;
+        if (!string.IsNullOrWhiteSpace(req.continuationToken))
+        {
+            try
+            {
+                var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(req.continuationToken));
+                var continuationData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(decoded);
+                if (continuationData.TryGetProperty("partialAnswer", out var partialAnswer))
+                {
+                    continuationContext = partialAnswer.GetString();
+                }
+            }
+            catch (Exception ex) when (ex is FormatException or System.Text.Json.JsonException)
+            {
+                logger.LogWarning(ex, "Failed to decode continuation token, ignoring");
+            }
+        }
+
+        var responseStyle = !string.IsNullOrWhiteSpace(req.continuationToken) ? "continuation" : req.responseStyle;
+        var query = new StreamQaQuery(req.gameId, req.query, req.chatId, req.documentIds, responseStyle, continuationContext); // Issue #2051
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
             // Serialize event as JSON
-            var json = System.Text.Json.JsonSerializer.Serialize(evt);
+            var json = System.Text.Json.JsonSerializer.Serialize(evt, SseJsonOptions);
 
             // Write SSE format: "data: {json}\n\n"
             await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
@@ -545,7 +574,7 @@ internal static class AiEndpoints
                     StreamingEventType.Error,
                     new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
                     DateTime.UtcNow);
-                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions);
                 await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
                 await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
             }
@@ -680,7 +709,7 @@ internal static class AiEndpoints
                     StreamingEventType.Error,
                     new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
                     DateTime.UtcNow);
-                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions);
                 await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
                 await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
             }
@@ -902,7 +931,7 @@ internal static class AiEndpoints
                 StreamingEventType.FollowUpQuestions,
                 new StreamingFollowUpQuestions(followUpQuestions),
                 DateTime.UtcNow);
-            var followUpJson = System.Text.Json.JsonSerializer.Serialize(followUpEvent);
+            var followUpJson = System.Text.Json.JsonSerializer.Serialize(followUpEvent, SseJsonOptions);
             await context.Response.WriteAsync($"data: {followUpJson}\n\n", ct).ConfigureAwait(false);
             await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
 
@@ -921,7 +950,7 @@ internal static class AiEndpoints
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
             // Serialize event as JSON
-            var json = System.Text.Json.JsonSerializer.Serialize(evt);
+            var json = System.Text.Json.JsonSerializer.Serialize(evt, SseJsonOptions);
 
             // Write SSE format: "data: {json}\n\n"
             await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
@@ -995,7 +1024,7 @@ internal static class AiEndpoints
     {
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(evt);
+            var json = System.Text.Json.JsonSerializer.Serialize(evt, SseJsonOptions);
             await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
             await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
         }

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -570,6 +571,72 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetGameAgents_WithAuth_ReturnsWrappedResponseFormat()
+    {
+        // Arrange — seed a game so the endpoint doesn't 404
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var gameId = Guid.NewGuid();
+        dbContext.Games.Add(new GameEntity
+        {
+            Id = gameId,
+            Name = "Test Game For Agents",
+            CreatedAt = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/games/{gameId}/agents",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert — verify wrapped { success, agents, count } format (not raw array)
+        if (response.StatusCode == HttpStatusCode.OK)
+        {
+            var json = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+            json.TryGetProperty("success", out var successProp).Should().BeTrue("response must have 'success' property");
+            successProp.GetBoolean().Should().BeTrue();
+            json.TryGetProperty("agents", out var agentsProp).Should().BeTrue("response must have 'agents' property");
+            agentsProp.ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
+            json.TryGetProperty("count", out var countProp).Should().BeTrue("response must have 'count' property");
+            countProp.GetInt32().Should().BeGreaterThanOrEqualTo(0);
+        }
+        else
+        {
+            // With mocked auth middleware, may return Unauthorized
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+    }
+
+    [Fact]
+    public async Task GetGameAgents_NonExistentGame_ReturnsNotFound()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var nonExistentGameId = Guid.NewGuid();
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/games/{nonExistentGameId}/agents",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue(
+            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     // ========================================

@@ -744,6 +744,7 @@ if (!isAlphaMode)
     v1Api.MapGameNightEndpoints(); // Issue #46: Game Night Event endpoints
     v1Api.MapGameNightImprovvisataEndpoints(); // Game Night Improvvisata: E1-2 BGG import
     v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
+    v1Api.MapVisionSnapshotEndpoints(); // Session Vision AI: board photo snapshots + game state extraction
     v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
     v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
     v1Api.MapProposalMigrationEndpoints(); // Proposal migrations (Issue #3666)

@@ -571,10 +571,56 @@ internal static class SessionPlayerActionsEndpoints
     {
         group.MapPost("/game-sessions/{sessionId:guid}/chat/ask-agent", async (
             Guid sessionId,
-            AskSessionAgentCommand command,
+            HttpRequest httpRequest,
             IMediator mediator,
             CancellationToken ct) =>
         {
+            AskSessionAgentCommand command;
+
+            if (httpRequest.HasFormContentType)
+            {
+                // Multipart form: supports image attachments
+                var form = await httpRequest.ReadFormAsync(ct).ConfigureAwait(false);
+
+                var questionStr = form["question"].ToString();
+                if (string.IsNullOrWhiteSpace(questionStr))
+                    return Results.BadRequest(new { error = "Question is required" });
+
+                if (!Guid.TryParse(form["senderId"].ToString(), out var senderId))
+                    return Results.BadRequest(new { error = "Valid senderId is required" });
+
+                int? turnNumber = int.TryParse(form["turnNumber"].ToString(), System.Globalization.CultureInfo.InvariantCulture, out var tn) ? tn : null;
+
+                var images = new List<ChatImageAttachment>();
+                foreach (var file in form.Files)
+                {
+                    if (file.Length == 0) continue;
+                    using var ms = new MemoryStream();
+                    await file.CopyToAsync(ms, ct).ConfigureAwait(false);
+                    images.Add(new ChatImageAttachment(
+                        ms.ToArray(),
+                        file.ContentType ?? "image/jpeg",
+                        file.FileName));
+                }
+
+                command = new AskSessionAgentCommand(
+                    sessionId,
+                    senderId,
+                    questionStr,
+                    turnNumber,
+                    images.Count > 0 ? images : null);
+            }
+            else
+            {
+                // JSON body: backward-compatible text-only path
+                var jsonCommand = await httpRequest.ReadFromJsonAsync<AskSessionAgentCommand>(ct)
+                    .ConfigureAwait(false);
+                if (jsonCommand is null)
+                    return Results.BadRequest(new { error = "Invalid request body" });
+
+                command = jsonCommand;
+            }
+
             if (sessionId != command.SessionId)
             {
                 return Results.BadRequest(new { error = "Session ID mismatch" });
@@ -584,10 +630,11 @@ internal static class SessionPlayerActionsEndpoints
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
+        .DisableAntiforgery()
         .WithName("AskSessionAgent")
         .WithTags("SessionTracking", "Chat", "AI")
-        .WithSummary("Ask the RAG agent a question in session context [STUB]")
-        .WithDescription("Sends a question to the AI agent which answers using the game's knowledge base and session context. Currently returns a stub response pending RAG pipeline integration.")
+        .WithSummary("Ask the RAG agent a question in session context")
+        .WithDescription("Sends a question to the AI agent which answers using the game's knowledge base and session context. Supports multipart form with image attachments for vision analysis, or JSON body for text-only questions.")
         .Produces(200)
         .Produces(400)
         .Produces(401)

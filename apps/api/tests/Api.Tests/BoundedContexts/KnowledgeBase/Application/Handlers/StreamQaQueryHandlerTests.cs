@@ -90,6 +90,7 @@ public class StreamQaQueryHandlerTests
             _llmServiceMock.Object,
             _cacheMock.Object,
             _promptTemplateServiceMock.Object,
+            new InlineCitationMatcherService(),
             _loggerMock.Object,
             _fakeTimeProvider
         );

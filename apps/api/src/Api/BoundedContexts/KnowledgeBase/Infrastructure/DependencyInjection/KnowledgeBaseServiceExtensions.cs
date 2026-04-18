@@ -32,6 +32,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.Infrastructure.Seeders.Catalog.SeedBlob;
 using Api.Services;
+using Api.Services.ImageProcessing;
 using Api.Services.LlmClients;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Quartz;
@@ -77,6 +78,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<RrfFusionDomainService>();
         services.AddSingleton<QualityTrackingDomainService>();
         services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
+        services.AddSingleton<InlineCitationMatcherService>(); // Inline citation matching for QA stream
         services.AddScoped<IConversationQueryRewriter, Application.Services.ConversationQueryRewriter>(); // Issue #5258: Query rewriting for multi-turn RAG
         services.AddScoped<IConversationSummarizer, Application.Services.ConversationSummarizer>(); // Issue #5259: Progressive conversation summarization
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
@@ -218,6 +220,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Issue #27: User region detection from Accept-Language header (Scoped - uses IHttpContextAccessor)
         services.AddScoped<IUserRegionDetector, UserRegionDetector>();
+
+        // Image preprocessing for vision-capable LLM models
+        services.AddSingleton<IImagePreprocessor, SkiaImagePreprocessor>();
 
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService

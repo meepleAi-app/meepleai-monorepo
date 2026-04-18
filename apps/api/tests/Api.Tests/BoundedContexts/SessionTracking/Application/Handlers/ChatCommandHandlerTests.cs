@@ -4,6 +4,8 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.BoundedContexts.SessionTracking.Application.Services;
+using Api.Services.ImageProcessing;
 using Api.Tests.Constants;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -175,6 +177,8 @@ public class AskSessionAgentCommandHandlerTests
             _mockChatRepo.Object,
             _mockMediator.Object,
             _mockLlmService.Object,
+            new Mock<IImagePreprocessor>().Object,
+            new Mock<IGameStateExtractor>().Object,
             new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
     }
 

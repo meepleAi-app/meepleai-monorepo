@@ -96,6 +96,6 @@ internal sealed class ResendInvitationCommandHandler : ICommandHandler<ResendInv
         }
 #pragma warning restore CA1031
 
-        return SendInvitationCommandHandler.MapToDto(newInvitation);
+        return SendInvitationCommandHandler.MapToDto(newInvitation, rawToken);
     }
 }

@@ -19,12 +19,15 @@ export function useChatImageAttachments(maxImages: number = 5) {
       if (!SUPPORTED_TYPES.includes(file.type))
         return 'Formato non supportato. Usa JPEG, PNG o WebP.';
       if (file.size > MAX_FILE_SIZE) return 'Immagine troppo grande. Massimo 10MB.';
-      if (images.length >= maxImages) return `Massimo ${maxImages} immagini per messaggio.`;
+      let rejected = false;
       setImages(prev => {
-        if (prev.length >= maxImages) return prev;
+        if (prev.length >= maxImages) {
+          rejected = true;
+          return prev;
+        }
         return [...prev, { file, previewUrl: URL.createObjectURL(file), mediaType: file.type }];
       });
-      return null;
+      return rejected ? `Massimo ${maxImages} immagini per messaggio.` : null;
     },
     [maxImages]
   );

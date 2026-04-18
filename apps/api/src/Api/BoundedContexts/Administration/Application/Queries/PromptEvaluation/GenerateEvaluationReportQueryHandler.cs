@@ -1,3 +1,4 @@
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.Services;
 
@@ -34,7 +35,7 @@ internal sealed class GenerateEvaluationReportQueryHandler : IQueryHandler<Gener
 
         if (result == null)
         {
-            throw new InvalidOperationException($"Evaluation {query.EvaluationId} not found");
+            throw new NotFoundException("Evaluation", query.EvaluationId);
         }
 
         // Delegate to infrastructure service for report formatting

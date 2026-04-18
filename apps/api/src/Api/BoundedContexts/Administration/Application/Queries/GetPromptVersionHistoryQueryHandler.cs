@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,7 @@ internal class GetPromptVersionHistoryQueryHandler : IQueryHandler<GetPromptVers
 
         if (template == null)
         {
-            throw new InvalidOperationException($"Template not found: {request.TemplateId}");
+            throw new NotFoundException("Template", request.TemplateId);
         }
 
         var versions = await _db.PromptVersions

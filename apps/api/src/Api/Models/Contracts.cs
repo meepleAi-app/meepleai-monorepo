@@ -15,7 +15,9 @@ internal record QaRequest(
     string query,
     Guid? chatId = null,
     SearchMode searchMode = SearchMode.Hybrid, // AI-14: Default to hybrid search
-    IReadOnlyList<Guid>? documentIds = null); // Issue #2051: Filter by document IDs (null = all)
+    IReadOnlyList<Guid>? documentIds = null, // Issue #2051: Filter by document IDs (null = all)
+    string responseStyle = "concise",
+    string? continuationToken = null);
 internal record QaResponse(
     string answer,
     IReadOnlyList<Snippet> snippets,
@@ -86,7 +88,11 @@ internal enum StreamingEventType
     DebugContextWindow = 26,      // Context window usage and history compression
 
     // Copyright leak guard event (#447)
-    CopyrightSanitized = 27       // Response body was sanitized due to verbatim copyright leak
+    CopyrightSanitized = 27,       // Response body was sanitized due to verbatim copyright leak
+
+    // Inline citation and continuation events
+    InlineCitation = 28,            // Positioned snippet matches within response text
+    ContinuationAvailable = 29      // Response truncated, continuation available
 }
 
 internal record RagStreamingEvent(
@@ -136,6 +142,22 @@ internal record StreamingModelDowngrade(
 internal record StreamingCopyrightSanitized(
     string SanitizedBody,
     int MatchCount);
+
+// Inline citation and continuation records
+internal record InlineCitationMatch(
+    int StartOffset,
+    int EndOffset,
+    int SnippetIndex,
+    int PageNumber,
+    string PdfDocumentId,
+    double Confidence);
+
+internal record StreamingInlineCitations(
+    IReadOnlyList<InlineCitationMatch> Citations);
+
+internal record StreamingContinuation(
+    string ContinuationToken,
+    string Reason);
 
 // Admin Debug Chat: data records for debug streaming events
 internal record DebugAgentRouterData(

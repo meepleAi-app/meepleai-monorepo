@@ -679,11 +679,14 @@ internal class OpenRouterLlmClient : ILlmClient
                             "OpenRouter streaming usage: {PromptTokens}p + {CompletionTokens}c = {TotalTokens}t (${TotalCost:F6})",
                             usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, llmCost.TotalCost);
 
+                        var finishReason = chunk.Choices?[0]?.FinishReason;
+
                         yield return new StreamChunk(
                             Content: null,
                             Usage: usage,
                             Cost: llmCost,
-                            IsFinal: true);
+                            IsFinal: true,
+                            FinishReason: finishReason);
                         break; // Usage signals end of stream
                     }
                 }

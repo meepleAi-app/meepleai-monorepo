@@ -20,6 +20,9 @@ import type { FeedbackValue } from '@/components/ui/meeple/feedback-buttons';
 import type { AgentChatStreamState } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
 
+import { CitationBlock } from './CitationBlock';
+import { ContinueButton } from './ContinueButton';
+import { InlineCitationText } from './InlineCitationText';
 import { ResponseMetaBadge } from './ResponseMetaBadge';
 import { RuleSourceCard } from './RuleSourceCard';
 import { TechnicalDetailsPanel } from './TechnicalDetailsPanel';
@@ -38,6 +41,9 @@ export interface ChatMessageItem {
   timestamp?: string;
   citations?: import('@/types').Citation[];
   followUpQuestions?: string[];
+  inlineCitations?: import('@/lib/api/clients/chatClient').InlineCitationMatch[];
+  snippets?: Array<{ text: string; source: string; page: number; line: number; score: number }>;
+  continuationToken?: string;
 }
 
 export type StreamStateForMessages = Pick<
@@ -67,6 +73,10 @@ export interface ChatMessageListProps {
   isSpeaking: boolean;
   onSpeak: (text: string) => void;
   onStopSpeaking: () => void;
+  /** Continuation handler for "continue" button */
+  onContinue?: (continuationToken: string) => void;
+  /** Whether a send/continuation is in progress */
+  isSending?: boolean;
   /** Ref for auto-scroll */
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
@@ -93,6 +103,8 @@ export function ChatMessageList({
   isTtsSupported,
   ttsEnabled,
   isSpeaking,
+  onContinue,
+  isSending,
   onSpeak,
   onStopSpeaking,
   messagesEndRef,
@@ -205,6 +217,33 @@ export function ChatMessageList({
                     ChatMessage's local Citation type) */}
                 {msg.citations && msg.citations.length > 0 && (
                   <RuleSourceCard citations={msg.citations} gameTitle={gameTitle} />
+                )}
+
+                {/* Inline citation text overlay — replaces plain text when inline citations exist */}
+                {msg.role === 'assistant' && msg.inlineCitations && msg.inlineCitations.length > 0 && (
+                  <div className="mt-1">
+                    <InlineCitationText
+                      text={msg.content}
+                      citations={msg.inlineCitations}
+                      snippets={msg.snippets ?? []}
+                    />
+                  </div>
+                )}
+
+                {/* Citation block for non-inline snippets */}
+                {msg.role === 'assistant' && msg.snippets && msg.snippets.length > 0 && (
+                  <CitationBlock
+                    snippets={msg.snippets}
+                    excludeIndices={new Set(msg.inlineCitations?.map(c => c.snippetIndex) ?? [])}
+                  />
+                )}
+
+                {/* Continue button — when backend signals truncated response */}
+                {msg.role === 'assistant' && msg.continuationToken && onContinue && (
+                  <ContinueButton
+                    onContinue={() => onContinue(msg.continuationToken!)}
+                    isLoading={isSending ?? false}
+                  />
                 )}
 
                 {/* Strategy tier badge — only on last assistant message, not streaming */}

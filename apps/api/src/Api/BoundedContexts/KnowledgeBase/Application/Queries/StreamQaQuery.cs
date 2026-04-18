@@ -13,9 +13,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <param name="Query">The user's question</param>
 /// <param name="ThreadId">Optional chat thread ID for context</param>
 /// <param name="DocumentIds">Optional document IDs to filter sources (null = all documents)</param>
+/// <param name="ResponseStyle">Response style: "concise" (default), "detailed", or "continuation"</param>
+/// <param name="ContinuationContext">Partial answer text from a previous truncated response</param>
 internal record StreamQaQuery(
     string GameId,
     string Query,
     Guid? ThreadId = null,
-    IReadOnlyList<Guid>? DocumentIds = null
+    IReadOnlyList<Guid>? DocumentIds = null,
+    string? ResponseStyle = null,
+    string? ContinuationContext = null
 ) : IStreamingQuery<RagStreamingEvent>;

@@ -16,9 +16,13 @@ import { useRouter } from 'next/navigation';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
+import { qaStream, QA_EVENT_TYPES, type InlineCitationMatch, type ContinuationData } from '@/lib/api/clients/chatClient';
 import type { ChatThreadDto, ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
 import { cn } from '@/lib/utils';
 
+import { CitationBlock } from './CitationBlock';
+import { ContinueButton } from './ContinueButton';
+import { InlineCitationText } from './InlineCitationText';
 import { QuickPromptChips } from './QuickPromptChips';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -30,6 +34,9 @@ interface LocalMessage {
   timestamp: string;
   citations?: CitationItem[];
   followUpQuestions?: string[];
+  inlineCitations?: InlineCitationMatch[];
+  snippets?: Array<{ text: string; source: string; page: number; line: number; score: number }>;
+  continuationToken?: string;
 }
 
 interface CitationItem {
@@ -53,7 +60,15 @@ function CitationChip({ citation }: { citation: CitationItem }) {
 
 // ─── Message Bubble ─────────────────────────────────────────────────────────
 
-function MessageBubble({ message }: { message: LocalMessage }) {
+function MessageBubble({
+  message,
+  onContinue,
+  isSending,
+}: {
+  message: LocalMessage;
+  onContinue?: (token: string) => void;
+  isSending?: boolean;
+}) {
   const isUser = message.role === 'user';
 
   return (
@@ -66,14 +81,36 @@ function MessageBubble({ message }: { message: LocalMessage }) {
             : 'bg-[var(--gaming-bg-glass)] backdrop-blur-sm border border-[var(--gaming-border-glass)] text-[var(--gaming-text-primary)] rounded-bl-md'
         )}
       >
-        <p className="whitespace-pre-wrap break-words">{message.content}</p>
-        {/* Citations */}
+        {!isUser && message.inlineCitations && message.inlineCitations.length > 0 ? (
+          <InlineCitationText
+            text={message.content}
+            citations={message.inlineCitations}
+            snippets={message.snippets ?? []}
+          />
+        ) : (
+          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+        )}
+        {/* Legacy citation chips */}
         {message.citations && message.citations.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {message.citations.map((c, i) => (
               <CitationChip key={i} citation={c} />
             ))}
           </div>
+        )}
+        {/* Citation block for non-inline snippets */}
+        {!isUser && message.snippets && message.snippets.length > 0 && (
+          <CitationBlock
+            snippets={message.snippets}
+            excludeIndices={new Set(message.inlineCitations?.map(c => c.snippetIndex) ?? [])}
+          />
+        )}
+        {/* Continue button */}
+        {!isUser && message.continuationToken && onContinue && (
+          <ContinueButton
+            onContinue={() => onContinue(message.continuationToken!)}
+            isLoading={isSending ?? false}
+          />
         )}
       </div>
     </div>
@@ -130,6 +167,8 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const qaAbortRef = useRef<AbortController | null>(null);
 
   // SSE Streaming
   const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
@@ -169,6 +208,13 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
     scrollToBottom();
   }, [messages, streamState.currentAnswer, scrollToBottom]);
 
+  // Abort QA stream on unmount
+  useEffect(() => {
+    return () => {
+      qaAbortRef.current?.abort();
+    };
+  }, []);
+
   // Load thread
   useEffect(() => {
     async function loadThread() {
@@ -203,11 +249,48 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
     void loadThread();
   }, [threadId]);
 
-  // Send message
+  // Handle continuation — append more content to the last assistant message
+  const handleContinue = useCallback(
+    (continuationToken: string) => {
+      void (async () => {
+        setIsSending(true);
+        const abortController = new AbortController();
+        qaAbortRef.current = abortController;
+        try {
+          const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+          if (!lastAssistant || !thread?.gameId) return;
+          let appendedContent = lastAssistant.content;
+
+          for await (const event of qaStream(
+            { gameId: thread.gameId, query: '', continuationToken },
+            abortController.signal
+          )) {
+            if (event.type === QA_EVENT_TYPES.TOKEN) {
+              const token = typeof event.data === 'string' ? event.data : ((event.data as { token?: string })?.token ?? '');
+              if (token) {
+                appendedContent += token;
+                const content = appendedContent;
+                setMessages(prev =>
+                  prev.map(m => m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m)
+                );
+              }
+            }
+          }
+        } catch { /* handled */ }
+        finally {
+          setIsSending(false);
+          qaAbortRef.current = null;
+        }
+      })();
+    },
+    [messages, thread?.gameId]
+  );
+
+  // Send message — SSE streaming when agentId or gameId available, REST fallback otherwise
   const handleSend = useCallback(
     (content?: string) => {
       const text = (content || inputValue).trim();
-      if (!text || streamState.isStreaming) return;
+      if (!text || streamState.isStreaming || isSending) return;
 
       setInputValue('');
 
@@ -220,13 +303,146 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // SSE path
+      // SSE path: agent-specific streaming
       if (agentId) {
         sendViaSSE(agentId, text, threadId);
         return;
       }
 
-      // REST fallback
+      // QA stream path: game context available → use RAG QA streaming
+      if (thread?.gameId) {
+        setIsSending(true);
+        const assistantMsgId = `assistant-${Date.now()}`;
+        setMessages(prev => [
+          ...prev,
+          {
+            id: assistantMsgId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+
+        const abortController = new AbortController();
+        qaAbortRef.current = abortController;
+
+        void (async () => {
+          let finalAnswer = '';
+          let followUps: string[] = [];
+          try {
+            await api.chat.addMessage(threadId, { content: text, role: 'user' });
+
+            for await (const event of qaStream(
+              { gameId: thread.gameId!, query: text, chatId: threadId, responseStyle: 'concise' },
+              abortController.signal
+            )) {
+              switch (event.type) {
+                case QA_EVENT_TYPES.INLINE_CITATION: {
+                  const data = event.data as { citations: InlineCitationMatch[] };
+                  if (data.citations) {
+                    setMessages(prev =>
+                      prev.map(m => m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m)
+                    );
+                  }
+                  break;
+                }
+                case QA_EVENT_TYPES.CONTINUATION_AVAILABLE: {
+                  const data = event.data as ContinuationData;
+                  if (data.continuationToken) {
+                    setMessages(prev =>
+                      prev.map(m => m.id === assistantMsgId ? { ...m, continuationToken: data.continuationToken } : m)
+                    );
+                  }
+                  break;
+                }
+                case QA_EVENT_TYPES.CITATIONS: {
+                  const data = event.data as { citations?: Array<{ text: string; source: string; page: number; line: number; score: number }> };
+                  if (data.citations) {
+                    setMessages(prev =>
+                      prev.map(m => m.id === assistantMsgId ? { ...m, snippets: data.citations } : m)
+                    );
+                  }
+                  break;
+                }
+                case 7: {
+                  const token =
+                    typeof event.data === 'string'
+                      ? event.data
+                      : ((event.data as { token?: string })?.token ?? '');
+                  if (token) {
+                    finalAnswer += token;
+                    const currentContent = finalAnswer;
+                    setMessages(prev =>
+                      prev.map(m =>
+                        m.id === assistantMsgId ? { ...m, content: currentContent } : m
+                      )
+                    );
+                  }
+                  break;
+                }
+                case 4: {
+                  const data = event.data as {
+                    answer?: string;
+                    followUpQuestions?: string[];
+                  };
+                  if (data.answer) finalAnswer = data.answer;
+                  if (data.followUpQuestions) followUps = data.followUpQuestions;
+                  break;
+                }
+                case 6: {
+                  const citations = (event.data as { snippets?: CitationItem[] })?.snippets;
+                  if (citations) {
+                    setMessages(prev =>
+                      prev.map(m => (m.id === assistantMsgId ? { ...m, citations } : m))
+                    );
+                  }
+                  break;
+                }
+                case QA_EVENT_TYPES.ERROR: {
+                  const errData = event.data as { message?: string };
+                  setMessages(prev =>
+                    prev.map(m =>
+                      m.id === assistantMsgId
+                        ? { ...m, content: errData?.message ?? 'Errore nella risposta' }
+                        : m
+                    )
+                  );
+                  break;
+                }
+              }
+            }
+
+            // Finalize
+            setMessages(prev =>
+              prev.map(m =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: finalAnswer,
+                      followUpQuestions: followUps.length > 0 ? followUps : undefined,
+                    }
+                  : m
+              )
+            );
+          } catch {
+            if (!abortController.signal.aborted) {
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === assistantMsgId
+                    ? { ...m, content: finalAnswer || 'Errore nella generazione della risposta' }
+                    : m
+                )
+              );
+            }
+          } finally {
+            setIsSending(false);
+            qaAbortRef.current = null;
+          }
+        })();
+        return;
+      }
+
+      // REST fallback (no game, no agent)
       void (async () => {
         try {
           const response = await api.chat.addMessage(threadId, {
@@ -244,12 +460,11 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             );
           }
         } catch {
-          // Remove optimistic message on error
           setMessages(prev => prev.filter(m => m.id !== userMessage.id));
         }
       })();
     },
-    [inputValue, streamState.isStreaming, agentId, threadId, sendViaSSE]
+    [inputValue, streamState.isStreaming, isSending, agentId, thread?.gameId, threadId, sendViaSSE]
   );
 
   // Key handler
@@ -312,7 +527,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         )}
 
         {messages.map(msg => (
-          <MessageBubble key={msg.id} message={msg} />
+          <MessageBubble key={msg.id} message={msg} onContinue={handleContinue} isSending={isSending} />
         ))}
 
         {/* Streaming states */}

@@ -35,7 +35,7 @@ internal class HybridLlmService : ILlmService
 
     // Default LLM parameters
     private const double DefaultTemperature = 0.3;
-    private const int DefaultMaxTokens = 500;
+    private const int DefaultMaxTokens = 1500;
 
     // CA1869: Cache JsonSerializerOptions for better performance
     private static readonly System.Text.Json.JsonSerializerOptions s_jsonOptions = new()

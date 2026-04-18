@@ -39,15 +39,11 @@ export function useGameStateSignalR({
 
     const setupConnection = async () => {
       try {
-        // TODO: Replace with actual SignalR hub URL from environment
         const hubUrl = `${process.env.NEXT_PUBLIC_API_URL}/hubs/gamestate`;
 
         const connection = new signalR.HubConnectionBuilder()
           .withUrl(hubUrl, {
-            accessTokenFactory: async () => {
-              // TODO: Get auth token from your auth system
-              return 'your-auth-token';
-            },
+            withCredentials: true,
           })
           .withAutomaticReconnect({
             nextRetryDelayInMilliseconds: retryContext => {

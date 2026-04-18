@@ -1,4 +1,4 @@
-# ADR-007: Hybrid LLM Architecture - Ollama + OpenRouter
+# ADR-007: Hybrid LLM Architecture - Ollama + OpenRouter + DeepSeek
 
 **Status**: Accepted
 **Date**: 2025-11-12
@@ -32,6 +32,7 @@ Original plan: OpenRouter only (paid). User requirement: eliminate/minimize cost
 ILlmClient (abstraction)
 ├── OllamaLlmClient (local Docker: llama3:8b)
 ├── OpenRouterLlmClient (paid: GPT-4o-mini, Claude Haiku, free tier: Llama 3.3 70B)
+├── DeepSeekLlmClient (OpenAI-compatible: deepseek-chat, $0.14/M tokens)
 └── HybridLlmService (coordinates clients via ILlmRoutingStrategy)
     └── HybridAdaptiveRoutingStrategy (user-tier + traffic split)
 ```
@@ -222,6 +223,15 @@ services.AddScoped<ILlmService, HybridLlmService>();
 - **Test Results**: 377/377 pass (+3 performance tests)
 - **Baseline Established**: Production-ready performance validated
 
+### DeepSeek Provider (PR#421) - ✅ Completed 2026-04-15
+- **Provider**: DeepSeek (`deepseek-chat`) via OpenAI-compatible API
+- **Cost**: $0.14/M input tokens, $0.28/M output tokens (significantly cheaper than OpenRouter paid models)
+- **Integration**: `DeepSeekLlmClient` shares base with `OpenRouterLlmClient` (OpenAI SDK compatible)
+- **Secret**: `infra/secrets/deepseek.secret` with `DEEPSEEK_API_KEY`
+- **Routing Chain**: OpenRouter → DeepSeek → Ollama (fallback order)
+- **DI Registration**: Added alongside existing clients in `KnowledgeBaseServiceExtensions.cs`
+- **Common debugging**: "0 tokens" response indicates missing API key or provider not registered — see `feedback_llm_routing_chain.md`
+
 ## Future Enhancements
 
 1. **Dynamic Routing**: Quality-based fallback (Ollama fails → OpenRouter)
@@ -241,7 +251,7 @@ services.AddScoped<ILlmService, HybridLlmService>();
 
 ---
 
-**Version**: 3.0
-**Last Updated**: 2025-12-13T10:59:23.970Z
+**Version**: 4.0
+**Last Updated**: 2026-04-18
 **Owner**: Engineering Lead
 

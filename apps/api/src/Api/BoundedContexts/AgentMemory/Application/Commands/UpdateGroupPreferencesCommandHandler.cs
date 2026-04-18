@@ -41,7 +41,7 @@ internal sealed class UpdateGroupPreferencesCommandHandler : ICommandHandler<Upd
             .ConfigureAwait(false);
 
         if (!isEnabled)
-            throw new InvalidOperationException("Feature AgentMemory.Enabled is disabled");
+            throw new ConflictException("Feature AgentMemory.Enabled is disabled");
 
         var group = await _groupRepo.GetByIdAsync(command.GroupId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Group memory {command.GroupId} not found");

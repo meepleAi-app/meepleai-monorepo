@@ -56,7 +56,7 @@ internal class InitializeGameStateCommandHandler : ICommandHandler<InitializeGam
             .ConfigureAwait(false);
 
         if (existingState != null)
-            throw new InvalidOperationException($"GameSession {command.GameSessionId} already has state initialized");
+            throw new ConflictException($"GameSession {command.GameSessionId} already has state initialized");
 
         // Get initial state from command or use empty object
         var initialState = command.InitialState ?? JsonDocument.Parse("{}");

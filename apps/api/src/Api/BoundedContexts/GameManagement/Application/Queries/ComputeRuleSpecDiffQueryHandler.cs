@@ -2,6 +2,7 @@ using System.Globalization;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +36,7 @@ internal class ComputeRuleSpecDiffQueryHandler : IRequestHandler<ComputeRuleSpec
             .Include(r => r.Atoms)
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.GameId == query.GameId && r.Version == query.FromVersion, cancellationToken)
-.ConfigureAwait(false) ?? throw new InvalidOperationException($"RuleSpec version {query.FromVersion} not found for game {query.GameId}");
+.ConfigureAwait(false) ?? throw new NotFoundException("RuleSpec", $"{query.GameId}/{query.FromVersion}");
 
         var fromRuleSpec = new RuleSpec(
             gameId: fromEntity.GameId.ToString(),
@@ -55,7 +56,7 @@ internal class ComputeRuleSpecDiffQueryHandler : IRequestHandler<ComputeRuleSpec
             .Include(r => r.Atoms)
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.GameId == query.GameId && r.Version == query.ToVersion, cancellationToken)
-.ConfigureAwait(false) ?? throw new InvalidOperationException($"RuleSpec version {query.ToVersion} not found for game {query.GameId}");
+.ConfigureAwait(false) ?? throw new NotFoundException("RuleSpec", $"{query.GameId}/{query.ToVersion}");
 
         var toRuleSpec = new RuleSpec(
             gameId: toEntity.GameId.ToString(),

@@ -40,7 +40,7 @@ internal sealed class ClaimGuestPlayerCommandHandler : ICommandHandler<ClaimGues
             .ConfigureAwait(false);
 
         if (!isEnabled)
-            throw new InvalidOperationException("Feature AgentMemory.GuestClaim is disabled");
+            throw new ConflictException("Feature AgentMemory.GuestClaim is disabled");
 
         var playerMemory = await _playerRepo
             .GetByIdAsync(command.PlayerMemoryId, cancellationToken)

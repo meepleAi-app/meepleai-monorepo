@@ -353,6 +353,33 @@ export interface QaStreamRequest {
   gameId: string;
   query: string;
   chatId?: string;
+  responseStyle?: 'concise' | 'detailed';
+  continuationToken?: string;
+}
+
+export const QA_EVENT_TYPES = {
+  STATE_UPDATE: 0,
+  CITATIONS: 1,
+  COMPLETE: 4,
+  TOKEN: 7,
+  FOLLOW_UP: 8,
+  ERROR: 5,
+  INLINE_CITATION: 28,
+  CONTINUATION_AVAILABLE: 29,
+} as const;
+
+export interface InlineCitationMatch {
+  startOffset: number;
+  endOffset: number;
+  snippetIndex: number;
+  pageNumber: number;
+  pdfDocumentId: string;
+  confidence: number;
+}
+
+export interface ContinuationData {
+  continuationToken: string;
+  reason: string;
 }
 
 export interface QaStreamEvent {

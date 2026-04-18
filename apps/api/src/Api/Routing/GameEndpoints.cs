@@ -411,7 +411,7 @@ internal static class GameEndpoints
             }
         }
 
-        return Results.Ok(agentList);
+        return Results.Ok(new { success = true, agents = agentList, count = agentList.Count });
     }
 
     private static async Task<IResult> HandleCreateGame(

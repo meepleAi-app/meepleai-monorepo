@@ -37,6 +37,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
     private readonly ILlmService _llmService;
     private readonly IAiResponseCacheService _cache;
     private readonly IPromptTemplateService _promptTemplateService;
+    private readonly InlineCitationMatcherService _citationMatcher;
     private readonly ILogger<StreamQaQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -50,6 +51,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         ILlmService llmService,
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
+        InlineCitationMatcherService citationMatcher,
         ILogger<StreamQaQueryHandler> logger,
         TimeProvider? timeProvider = null)
     {
@@ -62,6 +64,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
+        _citationMatcher = citationMatcher ?? throw new ArgumentNullException(nameof(citationMatcher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -71,12 +74,16 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Issue #1445: Use centralized query validation
-        var queryError = QueryValidator.ValidateQuery(query.Query);
-        if (queryError != null)
+        // Skip query validation for continuation requests (query may be empty)
+        if (string.IsNullOrWhiteSpace(query.ContinuationContext))
         {
-            yield return CreateEvent(StreamingEventType.Error,
-                new StreamingError(queryError, "INVALID_QUERY"));
-            yield break;
+            var queryError = QueryValidator.ValidateQuery(query.Query);
+            if (queryError != null)
+            {
+                yield return CreateEvent(StreamingEventType.Error,
+                    new StreamingError(queryError, "INVALID_QUERY"));
+                yield break;
+            }
         }
 
         _logger.LogInformation("Starting streaming QA for game {GameId}, query: {Query}",
@@ -182,13 +189,15 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             new StreamingStateUpdate("Generating answer..."));
 
         var (systemPrompt, userPrompt) = await BuildLlmPromptsAsync(
-            query.GameId, query.Query, snippets!, chatHistoryContext).ConfigureAwait(false);
+            query.GameId, query.Query, snippets!, chatHistoryContext,
+            query.ResponseStyle, query.ContinuationContext).ConfigureAwait(false);
 
         // Step 4: Stream tokens from LLM
         var answerBuilder = new StringBuilder();
         var tokenCount = 0;
         LlmUsage? llmUsage = null;
         LlmCost? llmCost = null;
+        string? llmFinishReason = null;
 
         await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(systemPrompt, userPrompt, RequestSource.Manual, cancellationToken).ConfigureAwait(false))
         {
@@ -199,11 +208,17 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             {
                 llmUsage = chunk.Usage;
                 llmCost = chunk.Cost;
+                if (!string.IsNullOrEmpty(chunk.FinishReason))
+                    llmFinishReason = chunk.FinishReason;
                 _logger.LogInformation(
-                    "Streaming usage received: {PromptTokens}p + {CompletionTokens}c = {TotalTokens}t (${Cost:F6})",
-                    llmUsage.PromptTokens, llmUsage.CompletionTokens, llmUsage.TotalTokens, llmCost.TotalCost);
+                    "Streaming usage received: {PromptTokens}p + {CompletionTokens}c = {TotalTokens}t (${Cost:F6}), FinishReason: {FinishReason}",
+                    llmUsage.PromptTokens, llmUsage.CompletionTokens, llmUsage.TotalTokens, llmCost.TotalCost, llmFinishReason);
                 continue;
             }
+
+            // Capture finish reason from any chunk that has it
+            if (chunk.IsFinal && !string.IsNullOrEmpty(chunk.FinishReason))
+                llmFinishReason = chunk.FinishReason;
 
             // Regular content chunk
             if (!string.IsNullOrEmpty(chunk.Content))
@@ -223,6 +238,19 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
 
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value));
+
+        // Emit inline citation matches
+        var inlineCitations = _citationMatcher.Match(answerBuilder.ToString(), snippets!);
+        if (inlineCitations.Count > 0)
+            yield return CreateEvent(StreamingEventType.InlineCitation, new StreamingInlineCitations(inlineCitations));
+
+        // Emit continuation token if response was truncated
+        if (string.Equals(llmFinishReason, "length", StringComparison.Ordinal))
+        {
+            var continuationToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(
+                System.Text.Json.JsonSerializer.Serialize(new { gameId = query.GameId, originalQuery = query.Query, partialAnswer = answerBuilder.ToString(), threadId = query.ThreadId })));
+            yield return CreateEvent(StreamingEventType.ContinuationAvailable, new StreamingContinuation(continuationToken, "max_tokens_reached"));
+        }
 
         // Record metrics
         var duration = (_timeProvider.GetUtcNow() - startTime).TotalMilliseconds;
@@ -330,9 +358,9 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         string gameId,
         string queryText,
         List<Snippet> snippets,
-        string chatHistoryContext
-        )
-
+        string chatHistoryContext,
+        string? responseStyle = null,
+        string? continuationContext = null)
     {
         var context = string.Join("\n\n", snippets.Select(s =>
             $"[Page {s.page}] {s.text}"));
@@ -343,7 +371,17 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType).ConfigureAwait(false);
 
         var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
+
+        // Append response style instruction
+        systemPrompt += PromptTemplateService.GetResponseStyleInstruction(responseStyle ?? "concise");
+
         var baseUserPrompt = _promptTemplateService.RenderUserPrompt(template, context, queryText);
+
+        // Prepend continuation context if available
+        if (!string.IsNullOrWhiteSpace(continuationContext))
+        {
+            baseUserPrompt = $"PREVIOUS PARTIAL ANSWER (continue from here):\n{continuationContext}\n\n{baseUserPrompt}";
+        }
 
         // Enrich with chat history if available
         var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
@@ -351,8 +389,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             : baseUserPrompt;
 
         _logger.LogDebug(
-            "Using prompt template for game {GameId}, question type {QuestionType}",
-            gameId, questionType);
+            "Using prompt template for game {GameId}, question type {QuestionType}, responseStyle {ResponseStyle}",
+            gameId, questionType, responseStyle ?? "concise");
 
         return (systemPrompt, userPrompt);
     }

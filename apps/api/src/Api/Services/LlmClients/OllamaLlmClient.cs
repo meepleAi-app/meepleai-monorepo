@@ -368,7 +368,8 @@ internal class OllamaLlmClient : ILlmClient
                             Content: null,
                             Usage: usage,
                             Cost: llmCost,
-                            IsFinal: true);
+                            IsFinal: true,
+                            FinishReason: "stop");
                     }
                     else
                     {

@@ -8,6 +8,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 
+import { toast } from 'sonner';
+
 // StreamingEventType enum values from backend
 const StreamingEventType = {
   StateUpdate: 0,
@@ -360,7 +362,15 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
 
                 case StreamingEventType.Error: {
                   const data = event.data as { errorMessage?: string; errorCode?: string };
-                  const errorMsg = data?.errorMessage || 'Unknown error';
+                  let errorMsg: string;
+                  if (data?.errorCode === 'rate_limited') {
+                    errorMsg = 'Hai raggiunto il limite di messaggi. Riprova tra qualche minuto.';
+                  } else if (data?.errorCode === 'provider_unavailable') {
+                    errorMsg =
+                      'Il servizio AI è temporaneamente non disponibile. Riprova tra poco.';
+                  } else {
+                    errorMsg = data?.errorMessage || 'Si è verificato un errore. Riprova.';
+                  }
                   setState(prev => ({
                     ...prev,
                     error: errorMsg,
@@ -393,6 +403,11 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
                       upgradeMessage: data?.upgradeMessage ?? null,
                     },
                   }));
+                  const toastMessage =
+                    data?.reason === 'rate_limited'
+                      ? 'Modello temporaneamente cambiato per limiti di utilizzo'
+                      : 'Modello alternativo in uso per garantire la risposta';
+                  toast.info(toastMessage, { duration: 5000 });
                   break;
                 }
 

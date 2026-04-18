@@ -15,7 +15,8 @@ internal record StreamChunk(
     string? Content,
     LlmUsage? Usage = null,
     LlmCost? Cost = null,
-    bool IsFinal = false);
+    bool IsFinal = false,
+    string? FinishReason = null);
 
 /// <summary>
 /// Interface for LLM chat completion services

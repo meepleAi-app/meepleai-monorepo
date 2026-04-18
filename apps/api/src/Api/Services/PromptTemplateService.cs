@@ -265,6 +265,20 @@ ANSWER:",
         };
     }
     /// <summary>
+    /// Returns a response style instruction to append to the system prompt.
+    /// Supports "detailed", "continuation", and default "concise" styles.
+    /// </summary>
+    internal static string GetResponseStyleInstruction(string responseStyle)
+    {
+        return responseStyle switch
+        {
+            "detailed" => "\n\nIMPORTANT RESPONSE STYLE: Rispondi in modo completo e approfondito. Spiega ogni aspetto rilevante con esempi dal regolamento. Usa sottosezioni se necessario.",
+            "continuation" => "\n\nIMPORTANT: Continua la risposta precedente da dove ti eri fermato. Non ripetere ciò che hai già detto. Prosegui direttamente.",
+            _ => "\n\nIMPORTANT RESPONSE STYLE: Rispondi in modo sintetico e strutturato (max 200 parole). Concentrati sul rispondere alla domanda, non riscrivere il regolamento. Usa elenchi puntati. Non citare le pagine nel testo — le citazioni vengono gestite automaticamente dal sistema."
+        };
+    }
+
+    /// <summary>
     /// ADMIN-01: Gets active prompt from cache-first architecture
     /// Flow: Redis cache → PostgreSQL → Configuration fallback
     /// </summary>

@@ -14,4 +14,7 @@ public sealed record InvitationDto(
     DateTime? AcceptedAt,
     Guid InvitedByUserId,
     bool EmailSent = true,
-    List<GameSuggestionDto>? GameSuggestions = null);
+    List<GameSuggestionDto>? GameSuggestions = null,
+    // Raw token only populated on creation; not stored in DB (only hash persisted).
+    // Use to construct the accept-invite URL immediately after sending.
+    string? Token = null);

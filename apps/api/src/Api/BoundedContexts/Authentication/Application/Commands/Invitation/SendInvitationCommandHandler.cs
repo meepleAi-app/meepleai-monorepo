@@ -92,10 +92,10 @@ internal sealed class SendInvitationCommandHandler : ICommandHandler<SendInvitat
         }
 #pragma warning restore CA1031
 
-        return MapToDto(invitation);
+        return MapToDto(invitation, rawToken);
     }
 
-    internal static InvitationDto MapToDto(InvitationToken invitation)
+    internal static InvitationDto MapToDto(InvitationToken invitation, string? rawToken = null)
     {
         return new InvitationDto(
             Id: invitation.Id,
@@ -105,6 +105,7 @@ internal sealed class SendInvitationCommandHandler : ICommandHandler<SendInvitat
             ExpiresAt: invitation.ExpiresAt,
             CreatedAt: invitation.CreatedAt,
             AcceptedAt: invitation.AcceptedAt,
-            InvitedByUserId: invitation.InvitedByUserId);
+            InvitedByUserId: invitation.InvitedByUserId,
+            Token: rawToken);
     }
 }

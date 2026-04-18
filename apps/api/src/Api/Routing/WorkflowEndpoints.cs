@@ -305,8 +305,7 @@ internal static class WorkflowEndpoints
         })
         .WithName("LogWorkflowError")
         .WithTags("N8N")
-        .WithDescription("Webhook endpoint for n8n to log workflow errors")
-        .RequireAuthorization()
+        .WithDescription("Webhook endpoint for n8n to log workflow errors (internal network only)")
         .Produces(StatusCodes.Status200OK)
         .Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
     }

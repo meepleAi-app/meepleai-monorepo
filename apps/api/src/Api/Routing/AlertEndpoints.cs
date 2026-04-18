@@ -24,12 +24,11 @@ internal static class AlertEndpoints
 
     private static void MapPrometheusWebhookEndpoint(RouteGroupBuilder group)
     {
-        // Prometheus AlertManager webhook endpoint
+        // Prometheus AlertManager webhook endpoint (no session auth — server-to-server call)
         group.MapPost("/alerts/prometheus", ProcessPrometheusWebhookAsync)
         .WithName("PrometheusAlertWebhook")
         .WithTags("Alerting")
-        .WithDescription("Webhook endpoint for Prometheus AlertManager")
-        .RequireAuthorization()
+        .WithDescription("Webhook endpoint for Prometheus AlertManager (internal network only)")
         .Produces(StatusCodes.Status200OK);
     }
 

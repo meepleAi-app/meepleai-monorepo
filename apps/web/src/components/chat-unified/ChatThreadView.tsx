@@ -27,7 +27,7 @@ import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatS
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { api } from '@/lib/api';
-import { qaStream } from '@/lib/api/clients/chatClient';
+import { qaStream, QA_EVENT_TYPES, type InlineCitationMatch, type ContinuationData } from '@/lib/api/clients/chatClient';
 import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/stores/voice/store';
 import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
@@ -261,6 +261,43 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     void loadThread();
   }, [threadId]);
 
+  // Handle continuation — append more content to the last assistant message
+  const handleContinue = useCallback(
+    (continuationToken: string) => {
+      void (async () => {
+        setIsSending(true);
+        const abortController = new AbortController();
+        qaAbortRef.current = abortController;
+        try {
+          const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+          if (!lastAssistant || !thread?.gameId) return;
+          let appendedContent = lastAssistant.content;
+
+          for await (const event of qaStream(
+            { gameId: thread.gameId, query: '', continuationToken },
+            abortController.signal
+          )) {
+            if (event.type === QA_EVENT_TYPES.TOKEN) {
+              const token = typeof event.data === 'string' ? event.data : ((event.data as { token?: string })?.token ?? '');
+              if (token) {
+                appendedContent += token;
+                const content = appendedContent;
+                setMessages(prev =>
+                  prev.map(m => m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m)
+                );
+              }
+            }
+          }
+        } catch { /* handled */ }
+        finally {
+          setIsSending(false);
+          qaAbortRef.current = null;
+        }
+      })();
+    },
+    [messages, thread?.gameId]
+  );
+
   // Send message - SSE streaming when agentId available, REST fallback otherwise
   const handleSendMessage = useCallback(
     async (content?: string) => {
@@ -309,10 +346,37 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
           // Stream AI response via QA endpoint
           for await (const event of qaStream(
-            { gameId: thread.gameId, query: messageContent, chatId: threadId },
+            { gameId: thread.gameId, query: messageContent, chatId: threadId, responseStyle: 'concise' },
             abortController.signal
           )) {
             switch (event.type) {
+              case QA_EVENT_TYPES.INLINE_CITATION: {
+                const data = event.data as { citations: InlineCitationMatch[] };
+                if (data.citations) {
+                  setMessages(prev =>
+                    prev.map(m => m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m)
+                  );
+                }
+                break;
+              }
+              case QA_EVENT_TYPES.CONTINUATION_AVAILABLE: {
+                const data = event.data as ContinuationData;
+                if (data.continuationToken) {
+                  setMessages(prev =>
+                    prev.map(m => m.id === assistantMsgId ? { ...m, continuationToken: data.continuationToken } : m)
+                  );
+                }
+                break;
+              }
+              case QA_EVENT_TYPES.CITATIONS: {
+                const data = event.data as { snippets?: Array<{ text: string; source: string; page: number; line: number; score: number }> };
+                if (data.snippets) {
+                  setMessages(prev =>
+                    prev.map(m => m.id === assistantMsgId ? { ...m, snippets: data.snippets } : m)
+                  );
+                }
+                break;
+              }
               case 7: {
                 // Token
                 const token =
@@ -739,6 +803,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 isSpeaking={isSpeaking}
                 onSpeak={speak}
                 onStopSpeaking={stopSpeaking}
+                onContinue={handleContinue}
+                isSending={isSending}
                 messagesEndRef={messagesEndRef}
               />
             </div>

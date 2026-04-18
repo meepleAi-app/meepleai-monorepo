@@ -363,7 +363,7 @@ export const QA_EVENT_TYPES = {
   COMPLETE: 4,
   TOKEN: 7,
   FOLLOW_UP: 8,
-  ERROR: 9,
+  ERROR: 5,
   INLINE_CITATION: 28,
   CONTINUATION_AVAILABLE: 29,
 } as const;

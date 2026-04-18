@@ -369,10 +369,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 break;
               }
               case QA_EVENT_TYPES.CITATIONS: {
-                const data = event.data as { snippets?: Array<{ text: string; source: string; page: number; line: number; score: number }> };
-                if (data.snippets) {
+                const data = event.data as { citations?: Array<{ text: string; source: string; page: number; line: number; score: number }> };
+                if (data.citations) {
                   setMessages(prev =>
-                    prev.map(m => m.id === assistantMsgId ? { ...m, snippets: data.snippets } : m)
+                    prev.map(m => m.id === assistantMsgId ? { ...m, snippets: data.citations } : m)
                   );
                 }
                 break;

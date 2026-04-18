@@ -74,12 +74,16 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Issue #1445: Use centralized query validation
-        var queryError = QueryValidator.ValidateQuery(query.Query);
-        if (queryError != null)
+        // Skip query validation for continuation requests (query may be empty)
+        if (string.IsNullOrWhiteSpace(query.ContinuationContext))
         {
-            yield return CreateEvent(StreamingEventType.Error,
-                new StreamingError(queryError, "INVALID_QUERY"));
-            yield break;
+            var queryError = QueryValidator.ValidateQuery(query.Query);
+            if (queryError != null)
+            {
+                yield return CreateEvent(StreamingEventType.Error,
+                    new StreamingError(queryError, "INVALID_QUERY"));
+                yield break;
+            }
         }
 
         _logger.LogInformation("Starting streaming QA for game {GameId}, query: {Query}",

@@ -42,7 +42,7 @@ internal sealed class GetInvitationsQueryHandler
             totalCount = await _invitationRepo.CountAllAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        var items = invitations.Select(SendInvitationCommandHandler.MapToDto).ToList();
+        var items = invitations.Select(inv => SendInvitationCommandHandler.MapToDto(inv)).ToList();
 
         return new GetInvitationsResponse(items, totalCount, query.Page, query.PageSize);
     }

@@ -232,7 +232,27 @@ internal static class AiEndpoints
         // CHAT-02: Follow-up question generation (fire-and-forget after Complete event)
         Task<IReadOnlyList<string>>? followUpTask = null;
 
-        var query = new StreamQaQuery(req.gameId, req.query, req.chatId, req.documentIds); // Issue #2051
+        // Decode continuation token if present
+        string? continuationContext = null;
+        if (!string.IsNullOrWhiteSpace(req.continuationToken))
+        {
+            try
+            {
+                var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(req.continuationToken));
+                var continuationData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(decoded);
+                if (continuationData.TryGetProperty("partialAnswer", out var partialAnswer))
+                {
+                    continuationContext = partialAnswer.GetString();
+                }
+            }
+            catch (Exception ex) when (ex is FormatException or System.Text.Json.JsonException)
+            {
+                logger.LogWarning(ex, "Failed to decode continuation token, ignoring");
+            }
+        }
+
+        var responseStyle = !string.IsNullOrWhiteSpace(req.continuationToken) ? "continuation" : req.responseStyle;
+        var query = new StreamQaQuery(req.gameId, req.query, req.chatId, req.documentIds, responseStyle, continuationContext); // Issue #2051
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
             // Serialize event as JSON

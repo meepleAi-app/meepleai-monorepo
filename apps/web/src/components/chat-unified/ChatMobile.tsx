@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
+import { qaStream } from '@/lib/api/clients/chatClient';
 import type { ChatThreadDto, ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
 import { cn } from '@/lib/utils';
 
@@ -130,6 +131,8 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const qaAbortRef = useRef<AbortController | null>(null);
 
   // SSE Streaming
   const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
@@ -169,6 +172,13 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
     scrollToBottom();
   }, [messages, streamState.currentAnswer, scrollToBottom]);
 
+  // Abort QA stream on unmount
+  useEffect(() => {
+    return () => {
+      qaAbortRef.current?.abort();
+    };
+  }, []);
+
   // Load thread
   useEffect(() => {
     async function loadThread() {
@@ -203,11 +213,11 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
     void loadThread();
   }, [threadId]);
 
-  // Send message
+  // Send message — SSE streaming when agentId or gameId available, REST fallback otherwise
   const handleSend = useCallback(
     (content?: string) => {
       const text = (content || inputValue).trim();
-      if (!text || streamState.isStreaming) return;
+      if (!text || streamState.isStreaming || isSending) return;
 
       setInputValue('');
 
@@ -220,13 +230,119 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // SSE path
+      // SSE path: agent-specific streaming
       if (agentId) {
         sendViaSSE(agentId, text, threadId);
         return;
       }
 
-      // REST fallback
+      // QA stream path: game context available → use RAG QA streaming
+      if (thread?.gameId) {
+        setIsSending(true);
+        const assistantMsgId = `assistant-${Date.now()}`;
+        setMessages(prev => [
+          ...prev,
+          {
+            id: assistantMsgId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+
+        const abortController = new AbortController();
+        qaAbortRef.current = abortController;
+
+        void (async () => {
+          let finalAnswer = '';
+          let followUps: string[] = [];
+          try {
+            await api.chat.addMessage(threadId, { content: text, role: 'user' });
+
+            for await (const event of qaStream(
+              { gameId: thread.gameId!, query: text, chatId: threadId },
+              abortController.signal
+            )) {
+              switch (event.type) {
+                case 7: {
+                  const token =
+                    typeof event.data === 'string'
+                      ? event.data
+                      : ((event.data as { token?: string })?.token ?? '');
+                  if (token) {
+                    finalAnswer += token;
+                    const currentContent = finalAnswer;
+                    setMessages(prev =>
+                      prev.map(m =>
+                        m.id === assistantMsgId ? { ...m, content: currentContent } : m
+                      )
+                    );
+                  }
+                  break;
+                }
+                case 4: {
+                  const data = event.data as {
+                    answer?: string;
+                    followUpQuestions?: string[];
+                  };
+                  if (data.answer) finalAnswer = data.answer;
+                  if (data.followUpQuestions) followUps = data.followUpQuestions;
+                  break;
+                }
+                case 6: {
+                  const citations = (event.data as { snippets?: CitationItem[] })?.snippets;
+                  if (citations) {
+                    setMessages(prev =>
+                      prev.map(m => (m.id === assistantMsgId ? { ...m, citations } : m))
+                    );
+                  }
+                  break;
+                }
+                case 9: {
+                  const errData = event.data as { message?: string };
+                  setMessages(prev =>
+                    prev.map(m =>
+                      m.id === assistantMsgId
+                        ? { ...m, content: errData?.message ?? 'Errore nella risposta' }
+                        : m
+                    )
+                  );
+                  break;
+                }
+              }
+            }
+
+            // Finalize
+            setMessages(prev =>
+              prev.map(m =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: finalAnswer,
+                      followUpQuestions: followUps.length > 0 ? followUps : undefined,
+                    }
+                  : m
+              )
+            );
+          } catch {
+            if (!abortController.signal.aborted) {
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === assistantMsgId
+                    ? { ...m, content: finalAnswer || 'Errore nella generazione della risposta' }
+                    : m
+                )
+              );
+            }
+          } finally {
+            setIsSending(false);
+            qaAbortRef.current = null;
+          }
+        })();
+        return;
+      }
+
+      // REST fallback (no game, no agent)
       void (async () => {
         try {
           const response = await api.chat.addMessage(threadId, {
@@ -244,12 +360,11 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             );
           }
         } catch {
-          // Remove optimistic message on error
           setMessages(prev => prev.filter(m => m.id !== userMessage.id));
         }
       })();
     },
-    [inputValue, streamState.isStreaming, agentId, threadId, sendViaSSE]
+    [inputValue, streamState.isStreaming, isSending, agentId, thread?.gameId, threadId, sendViaSSE]
   );
 
   // Key handler

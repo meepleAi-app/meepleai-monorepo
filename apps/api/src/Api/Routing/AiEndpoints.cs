@@ -27,6 +27,15 @@ internal static class AiEndpoints
 {
     private static readonly string[] ParagraphSeparators = { "\n\n", "\n" };
 
+    /// <summary>
+    /// SSE events must use camelCase to match frontend qaStream parser expectations.
+    /// ConfigureHttpJsonOptions sets camelCase for Results.Ok() but not for manual JsonSerializer.Serialize().
+    /// </summary>
+    private static readonly System.Text.Json.JsonSerializerOptions SseJsonOptions = new()
+    {
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+    };
+
     public static RouteGroupBuilder MapAiEndpoints(this RouteGroupBuilder group)
     {
         MapQaEndpoint(group);
@@ -189,7 +198,7 @@ internal static class AiEndpoints
                     StreamingEventType.Error,
                     new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
                     DateTime.UtcNow);
-                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions);
                 await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
                 await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
             }
@@ -227,7 +236,7 @@ internal static class AiEndpoints
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
             // Serialize event as JSON
-            var json = System.Text.Json.JsonSerializer.Serialize(evt);
+            var json = System.Text.Json.JsonSerializer.Serialize(evt, SseJsonOptions);
 
             // Write SSE format: "data: {json}\n\n"
             await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
@@ -545,7 +554,7 @@ internal static class AiEndpoints
                     StreamingEventType.Error,
                     new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
                     DateTime.UtcNow);
-                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions);
                 await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
                 await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
             }
@@ -680,7 +689,7 @@ internal static class AiEndpoints
                     StreamingEventType.Error,
                     new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
                     DateTime.UtcNow);
-                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions);
                 await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
                 await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
             }
@@ -902,7 +911,7 @@ internal static class AiEndpoints
                 StreamingEventType.FollowUpQuestions,
                 new StreamingFollowUpQuestions(followUpQuestions),
                 DateTime.UtcNow);
-            var followUpJson = System.Text.Json.JsonSerializer.Serialize(followUpEvent);
+            var followUpJson = System.Text.Json.JsonSerializer.Serialize(followUpEvent, SseJsonOptions);
             await context.Response.WriteAsync($"data: {followUpJson}\n\n", ct).ConfigureAwait(false);
             await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
 
@@ -921,7 +930,7 @@ internal static class AiEndpoints
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
             // Serialize event as JSON
-            var json = System.Text.Json.JsonSerializer.Serialize(evt);
+            var json = System.Text.Json.JsonSerializer.Serialize(evt, SseJsonOptions);
 
             // Write SSE format: "data: {json}\n\n"
             await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
@@ -995,7 +1004,7 @@ internal static class AiEndpoints
     {
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(evt);
+            var json = System.Text.Json.JsonSerializer.Serialize(evt, SseJsonOptions);
             await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
             await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
         }

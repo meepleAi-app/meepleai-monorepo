@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
@@ -178,8 +179,9 @@ internal partial class UploadPdfCommandHandler
 
         var extractionStopwatch = Stopwatch.StartNew();
         // E2E fix: Use blob storage service instead of direct filesystem access (supports S3/R2)
-        var gameIdForStorage = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
-        var fileStream = await _blobStorageService.RetrieveAsync(pdfId, gameIdForStorage, cancellationToken).ConfigureAwait(false);
+        // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
+        var bucketKey = PdfStorageKey.ForPdf(pdfDoc.Id);
+        var fileStream = await _blobStorageService.RetrieveAsync(pdfId, bucketKey, cancellationToken).ConfigureAwait(false);
         if (fileStream == null)
         {
             // Fallback to local filesystem for backward compatibility

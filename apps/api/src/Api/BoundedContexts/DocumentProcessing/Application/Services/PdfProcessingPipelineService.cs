@@ -326,9 +326,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         CancellationToken cancellationToken)
     {
         // Issue #501: Use blob storage with correct GUID format (no hyphens) to match StoreAsync key format
-        var fileId = pdfDoc.Id.ToString("N"); // "N" = no hyphens, matches S3BlobStorageService.StoreAsync
-        var gameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
-        var fileStream = await _blobStorageService.RetrieveAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
+        // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
+        var fileId = PdfStorageKey.ForPdf(pdfDoc.Id);
+        var fileStream = await _blobStorageService.RetrieveAsync(fileId, fileId, cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)
         {

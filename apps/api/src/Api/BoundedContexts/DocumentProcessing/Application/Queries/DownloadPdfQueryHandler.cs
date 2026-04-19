@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services.Pdf;
@@ -75,8 +76,10 @@ internal class DownloadPdfQueryHandler : IQueryHandler<DownloadPdfQuery, PdfDown
         }
 
         // Step 3: Retrieve file stream from blob storage
+        // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
+        var bucketKey = PdfStorageKey.ForPdf(pdf.Id);
         var fileStream = await _blobStorageService
-            .RetrieveAsync(pdf.Id.ToString("N"), (pdf.PrivateGameId ?? pdf.GameId)?.ToString() ?? string.Empty, cancellationToken)
+            .RetrieveAsync(bucketKey, bucketKey, cancellationToken)
             .ConfigureAwait(false);
 
         if (fileStream == null)

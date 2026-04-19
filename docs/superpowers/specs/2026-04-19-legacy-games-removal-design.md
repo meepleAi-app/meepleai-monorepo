@@ -273,3 +273,10 @@ Lista entità: PdfDocumentEntity (in #1), ChatEntity, ChatSessionEntity, ChatThr
 ```
 
 **Interpretation**: `apps/api/src/Api/storage/pdfs/` directory does not exist (or is empty). No local PDF blobs to rebucket in Task 4. Storage is likely on S3/R2 in this environment.
+
+### Storage Rebucket (sub-project #1, C2=B)
+
+- Bucket key: `{pdf.Id}.ToString("N")` (disaccoppiato da game)
+- Script local: `scripts/rebucket-pdfs.ps1`
+- Script S3: `scripts/rebucket-pdfs-s3.sh`
+- **Run order**: apply migration → run rebucket script → verify count → deploy app

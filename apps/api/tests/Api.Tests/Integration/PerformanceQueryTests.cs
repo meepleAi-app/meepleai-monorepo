@@ -111,7 +111,7 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
             pdfs.Add(new PdfDocumentEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = games[i % games.Count].Id,
+                SharedGameId = games[i % games.Count].Id,
                 FileName = $"document{i:D4}.pdf",
                 FilePath = $"/path/document{i:D4}.pdf",
                 FileSizeBytes = 1000000 + (i * 5000),
@@ -233,7 +233,7 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
         // Act - Lazy load Game for each PDF (N+1 problem simulation)
         // Note: EF Core doesn't support lazy loading by default without proxies,
         // so we simulate by querying games separately
-        var gameIds = pdfs.Select(p => p.GameId).Distinct().ToList();
+        var gameIds = pdfs.Select(p => p.SharedGameId).Where(id => id != null).Select(id => id!.Value).Distinct().ToList();
         var games = await _dbContext.Games
             .Where(g => gameIds.Contains(g.Id))
             .AsNoTracking()

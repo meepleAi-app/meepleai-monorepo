@@ -1088,7 +1088,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc!.FileName.Should().Be("db_persistence_test.pdf");
         doc.FileSizeBytes.Should().Be(pdfBytes.Length);
         doc.ContentType.Should().Be("application/pdf");
-        doc.GameId.Should().Be(testGame.Id);
+        doc.SharedGameId.Should().Be(testGame.Id);
         doc.UploadedByUserId.Should().Be(testUser.Id);
         doc.ProcessingState.ToString().Should().Be("Pending");
         doc.UploadedAt.Should().BeCloseTo(DateTime.UtcNow, TestConstants.Timing.AssertionTolerance);
@@ -1292,7 +1292,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         // Verify all expected properties set correctly
         doc!.Id.Should().Be(docId);
-        doc.GameId.Should().Be(testGame.Id);
+        doc.SharedGameId.Should().Be(testGame.Id);
         doc.UploadedByUserId.Should().Be(testUser.Id);
         doc.FileName.Should().Be("result_validation.pdf");
         doc.FileSizeBytes.Should().Be(pdfBytes.Length);

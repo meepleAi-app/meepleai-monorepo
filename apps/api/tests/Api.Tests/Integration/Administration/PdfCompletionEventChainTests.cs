@@ -110,7 +110,7 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = GameId,
+            SharedGameId = GameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/uploads/gloomhaven.pdf",
             UploadedByUserId = UserId,

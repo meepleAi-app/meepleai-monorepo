@@ -369,7 +369,7 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         var pdf = new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "scope_test.pdf",
             FilePath = "/path/scope_test.pdf",
             FileSizeBytes = 1000000,

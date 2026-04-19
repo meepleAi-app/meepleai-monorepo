@@ -1,6 +1,11 @@
 'use client';
 
+import { useCallback, useMemo } from 'react';
+
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import type { ManaPip } from '@/components/ui/data-display/meeple-card/parts/ManaPips';
+import { getKbPipColor } from '@/components/ui/data-display/meeple-card/parts/ManaPips';
+import { useChatPanel, type ChatGameContext } from '@/hooks/useChatPanel';
 
 import { LibraryHubCarousel } from './LibraryHubCarousel';
 
@@ -10,6 +15,10 @@ export interface PersonalLibraryGame {
   subtitle?: string;
   imageUrl?: string;
   rating?: number;
+  /** KB fields from UserLibraryEntry */
+  kbIndexedCount?: number;
+  kbProcessingCount?: number;
+  kbCardCount?: number;
 }
 
 interface PersonalLibrarySectionProps {
@@ -23,6 +32,49 @@ export function PersonalLibrarySection({
   totalCount,
   onAddGame,
 }: PersonalLibrarySectionProps) {
+  const { open } = useChatPanel();
+
+  const openChat = useCallback(
+    (ctx: ChatGameContext) => {
+      open(ctx);
+    },
+    [open]
+  );
+
+  const buildLibraryPips = useCallback(
+    (game: PersonalLibraryGame): ManaPip[] => {
+      const indexed = game.kbIndexedCount ?? 0;
+      const processing = game.kbProcessingCount ?? 0;
+
+      return [
+        {
+          entityType: 'kb' as const,
+          count: game.kbCardCount ?? 0,
+          colorOverride: getKbPipColor({ kbIndexedCount: indexed, kbProcessingCount: processing }),
+          ...(indexed > 0
+            ? {
+                onCreate: () =>
+                  openChat({
+                    id: game.id,
+                    name: game.title,
+                    pdfCount: game.kbCardCount ?? 0,
+                    kbStatus: 'ready',
+                    imageUrl: game.imageUrl,
+                  }),
+                createLabel: 'Chatta con AI',
+              }
+            : {}),
+        },
+      ];
+    },
+    [openChat]
+  );
+
+  const pipsMap = useMemo(
+    () => new Map(games.map(g => [g.id, buildLibraryPips(g)])),
+    [games, buildLibraryPips]
+  );
+
   return (
     <LibraryHubCarousel title="Libreria personale" count={totalCount} entity="game">
       {games.map(game => (
@@ -35,6 +87,7 @@ export function PersonalLibrarySection({
             imageUrl={game.imageUrl}
             rating={game.rating}
             ratingMax={10}
+            manaPips={pipsMap.get(game.id)}
           />
         </div>
       ))}

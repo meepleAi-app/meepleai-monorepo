@@ -8,6 +8,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import type { ManaPip, ManaPipItem } from '@/components/ui/data-display/meeple-card/parts/ManaPips';
+import { getKbPipColor } from '@/components/ui/data-display/meeple-card/parts/ManaPips';
 import { api } from '@/lib/api';
 
 // ========== Query Key Factory ==========
@@ -22,6 +23,8 @@ export const gameManaPipsKeys = {
 export interface GameManaPipsBucket {
   count: number;
   items: ManaPipItem[];
+  indexedCount?: number;
+  processingCount?: number;
 }
 
 export interface GameManaPipsData {
@@ -34,6 +37,8 @@ export interface GameManaPipsActions {
   onCreateSession?: () => void;
   onCreateKb?: () => void;
   onCreateAgent?: () => void;
+  /** Open the chat panel with this game pre-selected (when KB is indexed). */
+  onKbClick?: () => void;
 }
 
 // ========== Hook ==========
@@ -87,7 +92,12 @@ export function useGameManaPips(gameId: string | null | undefined) {
 
       return {
         sessions: { count: sessionItems.length, items: sessionItems },
-        kbs: { count: kbItems.length, items: kbItems },
+        kbs: {
+          count: kbItems.length,
+          items: kbItems,
+          indexedCount: kbDocs.filter(d => d.status === 'indexed').length,
+          processingCount: kbDocs.filter(d => d.status === 'processing').length,
+        },
         agents: { count: agentItems.length, items: agentItems },
       };
     },
@@ -128,10 +138,15 @@ export function buildGameManaPips(
       entityType: 'kb',
       count: data.kbs.count,
       items: data.kbs.items,
-      ...(actions.onCreateKb && {
-        onCreate: actions.onCreateKb,
-        createLabel: 'Carica documento',
+      colorOverride: getKbPipColor({
+        kbIndexedCount: data.kbs.indexedCount ?? 0,
+        kbProcessingCount: data.kbs.processingCount ?? 0,
       }),
+      ...((data.kbs.indexedCount ?? 0) > 0 && actions.onKbClick
+        ? { onCreate: actions.onKbClick, createLabel: 'Chatta con AI' }
+        : actions.onCreateKb
+          ? { onCreate: actions.onCreateKb, createLabel: 'Carica PDF' }
+          : {}),
     },
     {
       entityType: 'agent',

@@ -22,12 +22,18 @@ import { useRouter } from 'next/navigation';
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
 import { AgentSettingsDrawer } from '@/components/agent/settings';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { PageViewerPanel } from '@/components/chat/viewer/PageViewerPanel';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
 import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { api } from '@/lib/api';
-import { qaStream, QA_EVENT_TYPES, type InlineCitationMatch, type ContinuationData } from '@/lib/api/clients/chatClient';
+import {
+  qaStream,
+  QA_EVENT_TYPES,
+  type InlineCitationMatch,
+  type ContinuationData,
+} from '@/lib/api/clients/chatClient';
 import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/stores/voice/store';
 import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
@@ -86,6 +92,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
   // Derived state for info panel
   const [game, setGame] = useState<{ id: string; title: string } | null>(null);
+
+  // Page viewer panel state (Task 9: Side Panel Citation Viewer)
+  const [viewerState, setViewerState] = useState<{ pdfId: string; pageNumber: number } | null>(
+    null
+  );
 
   // Voice input/output
   const voicePrefs = useVoicePreferencesStore();
@@ -278,18 +289,24 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             abortController.signal
           )) {
             if (event.type === QA_EVENT_TYPES.TOKEN) {
-              const token = typeof event.data === 'string' ? event.data : ((event.data as { token?: string })?.token ?? '');
+              const token =
+                typeof event.data === 'string'
+                  ? event.data
+                  : ((event.data as { token?: string })?.token ?? '');
               if (token) {
                 appendedContent += token;
                 const content = appendedContent;
                 setMessages(prev =>
-                  prev.map(m => m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m)
+                  prev.map(m =>
+                    m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m
+                  )
                 );
               }
             }
           }
-        } catch { /* handled */ }
-        finally {
+        } catch {
+          /* handled */
+        } finally {
           setIsSending(false);
           qaAbortRef.current = null;
         }
@@ -346,7 +363,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
           // Stream AI response via QA endpoint
           for await (const event of qaStream(
-            { gameId: thread.gameId, query: messageContent, chatId: threadId, responseStyle: 'concise' },
+            {
+              gameId: thread.gameId,
+              query: messageContent,
+              chatId: threadId,
+              responseStyle: 'concise',
+            },
             abortController.signal
           )) {
             switch (event.type) {
@@ -354,7 +376,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 const data = event.data as { citations: InlineCitationMatch[] };
                 if (data.citations) {
                   setMessages(prev =>
-                    prev.map(m => m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m)
+                    prev.map(m =>
+                      m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m
+                    )
                   );
                 }
                 break;
@@ -363,16 +387,30 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 const data = event.data as ContinuationData;
                 if (data.continuationToken) {
                   setMessages(prev =>
-                    prev.map(m => m.id === assistantMsgId ? { ...m, continuationToken: data.continuationToken } : m)
+                    prev.map(m =>
+                      m.id === assistantMsgId
+                        ? { ...m, continuationToken: data.continuationToken }
+                        : m
+                    )
                   );
                 }
                 break;
               }
               case QA_EVENT_TYPES.CITATIONS: {
-                const data = event.data as { citations?: Array<{ text: string; source: string; page: number; line: number; score: number }> };
+                const data = event.data as {
+                  citations?: Array<{
+                    text: string;
+                    source: string;
+                    page: number;
+                    line: number;
+                    score: number;
+                  }>;
+                };
                 if (data.citations) {
                   setMessages(prev =>
-                    prev.map(m => m.id === assistantMsgId ? { ...m, snippets: data.citations } : m)
+                    prev.map(m =>
+                      m.id === assistantMsgId ? { ...m, snippets: data.citations } : m
+                    )
                   );
                 }
                 break;
@@ -854,6 +892,16 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 : undefined
             }
             userTier={user ? 'premium' : 'free'}
+          />
+        )}
+
+        {/* Page Viewer Panel (right side, conditionally shown) */}
+        {viewerState && (
+          <PageViewerPanel
+            pdfId={viewerState.pdfId}
+            pageNumber={viewerState.pageNumber}
+            isOpen={!!viewerState}
+            onClose={() => setViewerState(null)}
           />
         )}
 

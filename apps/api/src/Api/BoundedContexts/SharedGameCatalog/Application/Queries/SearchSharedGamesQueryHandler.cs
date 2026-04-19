@@ -172,8 +172,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 : dbQuery.OrderBy(g => g.ComplexityRating).ThenBy(g => g.Title),
 
             _ => query.SortDescending
-                ? dbQuery.OrderByDescending(g => g.Title)
-                : dbQuery.OrderBy(g => g.Title)
+                ? dbQuery.OrderBy(g => g.HasKnowledgeBase ? 0 : 1).ThenByDescending(g => g.Title)
+                : dbQuery.OrderBy(g => g.HasKnowledgeBase ? 0 : 1).ThenBy(g => g.Title)
         };
 
         // Pagination

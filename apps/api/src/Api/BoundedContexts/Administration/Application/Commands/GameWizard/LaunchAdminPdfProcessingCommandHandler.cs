@@ -65,7 +65,7 @@ internal sealed class LaunchAdminPdfProcessingCommandHandler
         // Find the PDF document (verify it belongs to the resolved game)
         var pdfEntity = await _dbContext.PdfDocuments
             .FirstOrDefaultAsync(
-                p => p.Id == command.PdfDocumentId && p.GameId == resolvedGameId,
+                p => p.Id == command.PdfDocumentId && p.SharedGameId == resolvedGameId,
                 cancellationToken)
             .ConfigureAwait(false);
 

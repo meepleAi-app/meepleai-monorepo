@@ -168,7 +168,7 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                 var pdfDocument = new PdfDocumentEntity
                 {
                     Id = pdfDocumentId,
-                    GameId = game.Id,
+                    SharedGameId = game.SharedGameId,
                     FileName = docInfo.FileName,
                     FilePath = string.Empty,
                     FileSizeBytes = docInfo.FileSizeBytes ?? 0,

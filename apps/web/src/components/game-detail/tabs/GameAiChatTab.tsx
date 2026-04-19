@@ -47,6 +47,14 @@ export function GameAiChatTab({ gameId, variant, isNotInLibrary }: GameTabProps)
   const containerClass = cn('flex flex-col', variant === 'desktop' ? 'gap-4 p-6' : 'gap-3 p-4');
   const { open: openChatPanel } = useChatPanel();
 
+  // ---- Game title for chat panel ----
+  const { data: gameDetail } = useQuery({
+    queryKey: ['shared-game-detail', gameId],
+    queryFn: () => api.sharedGames.getById(gameId),
+    enabled: !!gameId && !isNotInLibrary,
+    staleTime: 5 * 60_000,
+  });
+
   // ---- KB documents for status ----
   const { data: kbDocs } = useQuery({
     queryKey: ['game-kb-docs', gameId],
@@ -112,7 +120,7 @@ export function GameAiChatTab({ gameId, variant, isNotInLibrary }: GameTabProps)
             onClick={() =>
               openChatPanel({
                 id: gameId,
-                name: '',
+                name: gameDetail?.title ?? '',
                 pdfCount: kbDocs?.length ?? 0,
                 kbStatus: 'ready',
               })

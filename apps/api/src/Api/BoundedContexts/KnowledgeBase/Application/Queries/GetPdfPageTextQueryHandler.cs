@@ -27,15 +27,27 @@ internal sealed class GetPdfPageTextQueryHandler : IRequestHandler<GetPdfPageTex
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // 1. Find the PdfDocument
+        // 1. Find the PdfDocument (include ownership fields for authorization)
         var pdfDocument = await _dbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.Id == request.PdfId)
-            .Select(p => new { p.Id, p.FileName, p.PageCount })
+            .Select(p => new { p.Id, p.FileName, p.PageCount, p.SharedGameId, p.UploadedByUserId })
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
         if (pdfDocument is null)
         {
+            throw new NotFoundException("PdfDocument", request.PdfId.ToString());
+        }
+
+        // 1b. Authorization: shared-game PDFs are public (citation viewer); private PDFs require ownership
+        var isSharedGamePdf = pdfDocument.SharedGameId.HasValue;
+        var isOwner = pdfDocument.UploadedByUserId == request.UserId;
+
+        if (!isSharedGamePdf && !isOwner)
+        {
+            _logger.LogWarning(
+                "User {UserId} denied access to PDF page text for {PdfId} (owner: {OwnerId})",
+                request.UserId, request.PdfId, pdfDocument.UploadedByUserId);
             throw new NotFoundException("PdfDocument", request.PdfId.ToString());
         }
 

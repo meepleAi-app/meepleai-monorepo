@@ -142,22 +142,24 @@ internal static class AdminGameWizardEndpoints
         httpContext.Response.Headers.Append("Connection", "keep-alive");
         httpContext.Response.Headers.Append("X-Accel-Buffering", "no");
 
-        // Resolve gameId: the wizard passes SharedGameId, but PdfDocuments reference games.Id
-        var resolvedGameId = gameId;
-        var gameExistsDirectly = await dbContext.Games
-            .AnyAsync(g => g.Id == gameId, cancellationToken)
+        // Resolve to SharedGameId: after the 2026-04-19 migration, PdfDocuments reference SharedGameId directly
+        // (no longer GameEntity.Id). The wizard may pass either a SharedGameId or a GameEntity.Id; normalise
+        // here so the PDF query below always filters by SharedGameId.
+        var resolvedSharedGameId = gameId;
+        var sharedGameExistsDirectly = await dbContext.SharedGames
+            .AnyAsync(sg => sg.Id == gameId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (!gameExistsDirectly)
+        if (!sharedGameExistsDirectly)
         {
             var game = await dbContext.Games
-                .FirstOrDefaultAsync(g => g.SharedGameId == gameId, cancellationToken)
+                .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (game is not null)
+            if (game?.SharedGameId is Guid sharedId)
             {
-                resolvedGameId = game.Id;
-                logger.LogInformation("SSE: Resolved SharedGameId {SharedGameId} to GameId {GameId}", gameId, resolvedGameId);
+                resolvedSharedGameId = sharedId;
+                logger.LogInformation("SSE: Resolved GameEntity {GameId} to SharedGameId {SharedGameId}", gameId, resolvedSharedGameId);
             }
         }
 
@@ -168,9 +170,9 @@ internal static class AdminGameWizardEndpoints
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                // Query the latest PDF for this game
+                // Query the latest PDF for this game (by SharedGameId since PdfDocumentEntity.GameId was dropped)
                 var pdfInfo = await dbContext.PdfDocuments
-                    .Where(p => p.GameId == resolvedGameId)
+                    .Where(p => p.SharedGameId == resolvedSharedGameId)
                     .OrderByDescending(p => p.UploadedAt)
                     .Select(p => new
                     {

@@ -188,17 +188,14 @@ internal static class AdminGameWizardEndpoints
                 var isComplete = string.Equals(pdfState, "Ready", StringComparison.Ordinal);
                 var isFailed = string.Equals(pdfState, "Failed", StringComparison.Ordinal);
 
-                // Agent system removed (Task 10: Agent cleanup)
-                var agentExists = false;
-
                 var progressEvent = new WizardProgressEvent
                 {
                     CurrentStep = pdfState,
                     PdfState = pdfState,
-                    AgentExists = agentExists,
-                    OverallPercent = MapStateToPercent(pdfState, agentExists),
-                    Message = BuildProgressMessage(pdfState, agentExists, pdfInfo?.FileName),
-                    IsComplete = isComplete && agentExists,
+                    AgentExists = false,
+                    OverallPercent = MapStateToPercent(pdfState),
+                    Message = BuildProgressMessage(pdfState, pdfInfo?.FileName),
+                    IsComplete = isComplete,
                     ErrorMessage = isFailed ? pdfInfo?.ProcessingError : null,
                     Priority = pdfInfo?.ProcessingPriority ?? "Normal",
                     Timestamp = DateTime.UtcNow
@@ -238,9 +235,9 @@ internal static class AdminGameWizardEndpoints
 
     /// <summary>
     /// Maps PDF processing state to overall wizard progress percentage.
-    /// Pending=0%, Uploading=10%, Extracting=25%, Chunking=45%, Embedding=65%, Indexing=80%, Ready=90%, AgentCreated=100%
+    /// Pending=0%, Uploading=10%, Extracting=25%, Chunking=45%, Embedding=65%, Indexing=80%, Ready=100%
     /// </summary>
-    private static int MapStateToPercent(string pdfState, bool agentExists)
+    private static int MapStateToPercent(string pdfState)
     {
         var basePercent = pdfState switch
         {
@@ -250,7 +247,7 @@ internal static class AdminGameWizardEndpoints
             "Chunking" => 45,
             "Embedding" => 65,
             "Indexing" => 80,
-            "Ready" => agentExists ? 100 : 90,
+            "Ready" => 100,
             "Failed" => 0,
             _ => 0
         };
@@ -258,7 +255,7 @@ internal static class AdminGameWizardEndpoints
         return basePercent;
     }
 
-    private static string BuildProgressMessage(string pdfState, bool agentExists, string? fileName)
+    private static string BuildProgressMessage(string pdfState, string? fileName)
     {
         return pdfState switch
         {
@@ -268,8 +265,7 @@ internal static class AdminGameWizardEndpoints
             "Chunking" => "Splitting content into semantic chunks...",
             "Embedding" => "Generating vector embeddings...",
             "Indexing" => "Indexing embeddings in vector database...",
-            "Ready" when agentExists => "Processing complete! Agent is ready.",
-            "Ready" => "PDF processed. Creating AI agent...",
+            "Ready" => "PDF processed successfully.",
             "Failed" => "Processing failed. Check error details.",
             _ => "Processing..."
         };

@@ -20,7 +20,7 @@ namespace Api.Infrastructure.Seeders.Catalog;
 /// only picks them up after 2 minutes of staleness and runs only once at boot, so they slip
 /// through the crack).
 ///
-/// Idempotent: skips PDFs where GameId + FileName already exists with matching hash.
+/// Idempotent: skips PDFs where SharedGameId + FileName already exists with matching hash.
 /// Hash drift: deletes old document cascade and reinserts when hash changes.
 /// </summary>
 internal static class PdfSeeder
@@ -124,7 +124,7 @@ internal static class PdfSeeder
                 var idempotencyKey = $"{sharedGameId}:{fileName}";
                 var gameIdStr = gameId.ToString("N");
 
-                // Idempotency: check if GameId + FileName pair already exists
+                // Idempotency: check if SharedGameId + FileName pair already exists
                 if (existingMap.TryGetValue(idempotencyKey, out var existing))
                 {
                     // Hash match → skip (no changes)

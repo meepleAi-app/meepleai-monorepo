@@ -46,7 +46,7 @@ internal class DownloadPdfQueryHandler : IQueryHandler<DownloadPdfQuery, PdfDown
             .Select(p => new
             {
                 p.Id,
-                p.GameId,
+                p.SharedGameId,
                 p.PrivateGameId,
                 p.FileName,
                 p.FilePath,
@@ -62,9 +62,9 @@ internal class DownloadPdfQueryHandler : IQueryHandler<DownloadPdfQuery, PdfDown
         }
 
         // Step 2: Authorization check
-        // SharedGame PDFs (GameId set, no PrivateGameId) are accessible to all authenticated users.
+        // SharedGame PDFs (SharedGameId set, no PrivateGameId) are accessible to all authenticated users.
         // PrivateGame PDFs are restricted to the owner or admin.
-        bool isSharedGamePdf = pdf.GameId != null && pdf.PrivateGameId == null;
+        bool isSharedGamePdf = pdf.SharedGameId != null && pdf.PrivateGameId == null;
         bool isOwner = pdf.UploadedByUserId == query.UserId;
 
         if (!query.IsAdmin && !isOwner && !isSharedGamePdf)

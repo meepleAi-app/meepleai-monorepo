@@ -50,13 +50,11 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
         var entities = await _db.PdfDocuments
             .AsNoTracking()
             .Where(p =>
-                // Direct match: p.GameId IS the requested games.Id (local/library upload path)
-                p.GameId == request.GameId ||
-                // JOIN match: p.GameId points to a games row whose SharedGameId == request.GameId
-                // (catches PDFs uploaded against any games row linked to the same shared catalog entry)
-                _db.Games.Any(g => g.Id == p.GameId && g.SharedGameId == request.GameId) ||
-                // Legacy direct shared link (older PDFs that wrote SharedGameId directly)
+                // Direct shared catalog link (request.GameId == SharedGames.Id)
                 p.SharedGameId == request.GameId ||
+                // Resolve via games: p.PrivateGameId points to a games row whose SharedGameId == request.GameId
+                // (catches PDFs uploaded against any games row linked to the same shared catalog entry)
+                _db.Games.Any(g => g.Id == p.PrivateGameId && g.SharedGameId == request.GameId) ||
                 // Owned private games
                 (ownedPrivateGameId != null && p.PrivateGameId == ownedPrivateGameId))
             .OrderByDescending(p => p.UploadedAt)

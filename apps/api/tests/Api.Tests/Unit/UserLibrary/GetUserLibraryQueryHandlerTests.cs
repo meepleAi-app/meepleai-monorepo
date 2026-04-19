@@ -85,11 +85,11 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         });
 
         // Add fully indexed PDF document (ProcessingState = "Ready") to DbContext
-        // PDF GameId references the game record ID (not SharedGameId)
+        // PDF SharedGameId references the shared-game record ID
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = gameRecordId,
+            SharedGameId = gameRecordId,
             FileName = "rules.pdf",
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,
@@ -226,11 +226,10 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             // SharedGameId = null (private game — GameId computed property returns Guid.Empty)
         });
 
-        // Add PDF for private game: GameId = PrivateGameId (placeholder), PrivateGameId = PrivateGameId
+        // Add PDF for private game: PrivateGameId set directly (GameId column dropped)
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = privateGameId,      // Private game PDFs use PrivateGameId as GameId placeholder
             PrivateGameId = privateGameId,
             FileName = "private-rules.pdf",
             FilePath = "/pdfs/private-rules.pdf",

@@ -1079,7 +1079,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Verify complete database record
         var documentId = result.Document!.Id;
         var doc = await _dbContext.PdfDocuments
-            .Include(d => d.Game)
             .Include(d => d.UploadedBy)
             .Where(d => d.Id == documentId)
             .FirstOrDefaultAsync(TestCancellationToken);
@@ -1093,9 +1092,10 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.ProcessingState.ToString().Should().Be("Pending");
         doc.UploadedAt.Should().BeCloseTo(DateTime.UtcNow, TestConstants.Timing.AssertionTolerance);
 
-        // Verify relationships loaded correctly
-        doc.Game.Should().NotBeNull();
-        doc.Game!.Name.Should().Be(testGame.Name);
+        // Verify relationships loaded correctly (Game loaded separately since .Game nav removed)
+        var linkedGame = await _dbContext.Games.FindAsync(new object[] { testGame.Id }, TestCancellationToken);
+        linkedGame.Should().NotBeNull();
+        linkedGame!.Name.Should().Be(testGame.Name);
         doc.UploadedBy.Should().NotBeNull();
         doc.UploadedBy!.Email.Should().Be(testUser.Email);
     }

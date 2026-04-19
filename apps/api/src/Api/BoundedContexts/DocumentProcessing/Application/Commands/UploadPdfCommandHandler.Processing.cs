@@ -506,7 +506,7 @@ internal partial class UploadPdfCommandHandler
             vectorDoc = new VectorDocumentEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = pdfDoc.GameId,
+                GameId = pdfDoc.SharedGameId,
                 SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfGuid,
                 IndexingStatus = "completed",
@@ -549,7 +549,7 @@ internal partial class UploadPdfCommandHandler
         }
 
         // Create TextChunkEntity for each document chunk (for FTS)
-        var textChunkGameId = pdfDoc.PrivateGameId ?? pdfDoc.GameId ?? Guid.Empty;
+        var textChunkGameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
         var textChunkEntities = allDocumentChunks
             .Select((chunk, index) => new TextChunkEntity
             {
@@ -585,7 +585,7 @@ internal partial class UploadPdfCommandHandler
         CancellationToken cancellationToken)
     {
         var pdfGuid = Guid.Parse(pdfId);
-        var gameId = pdfDoc.PrivateGameId ?? pdfDoc.GameId ?? Guid.Empty;
+        var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
         var language = pdfDoc.Language ?? "en";
 
         // Find VectorDocument for this PDF
@@ -674,7 +674,7 @@ internal partial class UploadPdfCommandHandler
                 CancellationToken.None).ConfigureAwait(false);
         }
 
-        var cacheKey = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
+        var cacheKey = (pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId)?.ToString() ?? string.Empty;
         await InvalidateCacheSafelyAsync(cacheKey, "PDF processing", cancellationToken).ConfigureAwait(false);
 
         // Two-Phase Quota (#1743): Confirm quota (Phase 2)

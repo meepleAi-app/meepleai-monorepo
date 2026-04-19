@@ -404,6 +404,9 @@ internal class AdminStatsService : IAdminStatsService
 
         if (!string.IsNullOrWhiteSpace(gameId) && Guid.TryParse(gameId, out var gameGuid))
         {
+            // OR-broadening is safe because SharedGameId and PrivateGameId are drawn from disjoint Guid spaces
+            // (both are random v4 UUIDs; collision probability is cryptographically negligible).
+            // Callers pass an opaque gameId without needing to disambiguate the kind.
             query = query.Where(pdf => pdf.SharedGameId == gameGuid || pdf.PrivateGameId == gameGuid);
         }
 

@@ -66,6 +66,9 @@ internal sealed class GetKbReadinessQueryHandler : IQueryHandler<GetKbReadinessQ
         }
 
         // Step 2: load all PDFs for that game (match PrivateGameId or SharedGameId).
+        // OR-broadening is safe because SharedGameId and PrivateGameId are drawn from disjoint Guid spaces
+        // (both are random v4 UUIDs; collision probability is cryptographically negligible).
+        // Callers pass an opaque gameId without needing to disambiguate the kind.
         var pdfs = await _db.PdfDocuments
             .AsNoTracking()
             .Where(p =>

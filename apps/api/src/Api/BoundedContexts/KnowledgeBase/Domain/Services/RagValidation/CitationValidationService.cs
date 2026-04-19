@@ -75,6 +75,9 @@ internal class CitationValidationService : ICitationValidationService
         }
 
         // Get all PDF documents for this game (single query for efficiency)
+        // OR-broadening is safe because SharedGameId and PrivateGameId are drawn from disjoint Guid spaces
+        // (both are random v4 UUIDs; collision probability is cryptographically negligible).
+        // Callers pass an opaque gameId without needing to disambiguate the kind.
         var pdfDocuments = await _dbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.SharedGameId == gameGuid || p.PrivateGameId == gameGuid)
@@ -129,6 +132,9 @@ internal class CitationValidationService : ICitationValidationService
             return false;
         }
 
+        // OR-broadening is safe because SharedGameId and PrivateGameId are drawn from disjoint Guid spaces
+        // (both are random v4 UUIDs; collision probability is cryptographically negligible).
+        // Callers pass an opaque gameId without needing to disambiguate the kind.
         var pdfDocuments = await _dbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.SharedGameId == gameGuid || p.PrivateGameId == gameGuid)

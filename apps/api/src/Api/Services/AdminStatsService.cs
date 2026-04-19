@@ -404,7 +404,7 @@ internal class AdminStatsService : IAdminStatsService
 
         if (!string.IsNullOrWhiteSpace(gameId) && Guid.TryParse(gameId, out var gameGuid))
         {
-            query = query.Where(pdf => pdf.GameId == gameGuid);
+            query = query.Where(pdf => pdf.SharedGameId == gameGuid || pdf.PrivateGameId == gameGuid);
         }
 
         var data = await query

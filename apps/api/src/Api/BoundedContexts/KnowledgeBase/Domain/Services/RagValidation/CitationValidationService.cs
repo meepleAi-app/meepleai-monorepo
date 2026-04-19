@@ -77,7 +77,7 @@ internal class CitationValidationService : ICitationValidationService
         // Get all PDF documents for this game (single query for efficiency)
         var pdfDocuments = await _dbContext.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.GameId == gameGuid)
+            .Where(p => p.SharedGameId == gameGuid || p.PrivateGameId == gameGuid)
             .Select(p => new { p.Id, p.PageCount })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -131,7 +131,7 @@ internal class CitationValidationService : ICitationValidationService
 
         var pdfDocuments = await _dbContext.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.GameId == gameGuid)
+            .Where(p => p.SharedGameId == gameGuid || p.PrivateGameId == gameGuid)
             .Select(p => new { p.Id, p.PageCount })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 

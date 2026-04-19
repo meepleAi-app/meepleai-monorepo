@@ -66,17 +66,26 @@ internal static class PdfSeeder
 
         logger.LogInformation("PdfSeeder: processing {Count} blob PDF entries from manifest", pdfEntries.Count);
 
-        // Load existing PDF documents for idempotency check (GameId + FileName → ContentHash)
+        // Build a lookup GameEntity.Id → SharedGameId so we can compute the idempotency key below
+        // (after 2026-04-19 migration, PdfDocumentEntity no longer stores GameId; it only stores SharedGameId/PrivateGameId).
+        var gameIdToSharedId = await db.Games
+            .AsNoTracking()
+            .Where(g => g.SharedGameId != null)
+            .Select(g => new { g.Id, g.SharedGameId })
+            .ToDictionaryAsync(g => g.Id, g => g.SharedGameId!.Value, ct)
+            .ConfigureAwait(false);
+
+        // Load existing PDF documents for idempotency check (SharedGameId + FileName → ContentHash)
         var existingPdfs = await db.PdfDocuments
             .AsNoTracking()
-            .Select(p => new { p.Id, p.GameId, p.FileName, p.ContentHash, p.FilePath })
+            .Select(p => new { p.Id, p.SharedGameId, p.FileName, p.ContentHash, p.FilePath })
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
         var existingMap = existingPdfs
-            .Where(p => p.GameId.HasValue)
+            .Where(p => p.SharedGameId.HasValue)
             .ToDictionary(
-                p => $"{p.GameId}:{p.FileName}",
+                p => $"{p.SharedGameId}:{p.FileName}",
                 p => new { p.Id, p.ContentHash, p.FilePath },
                 StringComparer.OrdinalIgnoreCase);
 
@@ -101,7 +110,18 @@ internal static class PdfSeeder
                     continue;
                 }
 
-                var idempotencyKey = $"{gameId}:{fileName}";
+                // Resolve the SharedGameId (community-catalog id). PdfDocumentEntity now stores SharedGameId directly
+                // after the 2026-04-19 migration, so this is the key field for both idempotency and persistence.
+                if (!gameIdToSharedId.TryGetValue(gameId, out var sharedGameId))
+                {
+                    logger.LogWarning(
+                        "PdfSeeder: no SharedGameId linked to GameEntity {GameId} ('{Title}'). Skipping blob PDF.",
+                        gameId, entry.Title);
+                    skipped++;
+                    continue;
+                }
+
+                var idempotencyKey = $"{sharedGameId}:{fileName}";
                 var gameIdStr = gameId.ToString("N");
 
                 // Idempotency: check if GameId + FileName pair already exists
@@ -153,19 +173,11 @@ internal static class PdfSeeder
                     continue;
                 }
 
-                // Look up SharedGameId from the Games table
-                var sharedGameId = await db.Games
-                    .AsNoTracking()
-                    .Where(g => g.Id == gameId)
-                    .Select(g => g.SharedGameId)
-                    .FirstOrDefaultAsync(ct)
-                    .ConfigureAwait(false);
-
                 // Create PdfDocumentEntity in Pending state
+                // Community-seeded PDFs are stored against SharedGameId (community catalog id).
                 var pdfEntity = new PdfDocumentEntity
                 {
                     Id = Guid.NewGuid(),
-                    GameId = gameId,
                     SharedGameId = sharedGameId,
                     FileName = fileName,
                     FilePath = result.FilePath ?? string.Empty,

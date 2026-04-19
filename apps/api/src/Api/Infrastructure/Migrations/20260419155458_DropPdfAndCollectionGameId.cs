@@ -48,7 +48,7 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "ix_pdf_documents_content_hash_shared_game_id",
                 table: "pdf_documents",
-                columns: new[] { "ContentHash", "SharedGameId" });
+                columns: new[] { "content_hash", "SharedGameId" });
 
             // ========= document_collections (C1) =========
 
@@ -89,11 +89,12 @@ namespace Api.Infrastructure.Migrations
                 table: "document_collections");
 
             // 2e. Make SharedGameId required (after backfill + orphan cleanup)
-            migrationBuilder.AlterColumn<Guid>(
-                name: "SharedGameId",
-                table: "document_collections",
-                type: "uuid",
-                nullable: false);
+            //     EF's AlterColumn doesn't emit SET NOT NULL for nullable→required transitions
+            //     on newly added columns (same migration). Use raw SQL to guarantee NOT NULL.
+            migrationBuilder.Sql(@"
+                ALTER TABLE document_collections
+                ALTER COLUMN ""SharedGameId"" SET NOT NULL;
+            ");
 
             // 2f. FK + index on SharedGameId (Cascade per spec Q5=A)
             migrationBuilder.CreateIndex(
@@ -172,7 +173,7 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "ix_pdf_documents_content_hash_game_id",
                 table: "pdf_documents",
-                columns: new[] { "ContentHash", "GameId" });
+                columns: new[] { "content_hash", "GameId" });
 
             migrationBuilder.AddForeignKey(
                 name: "FK_pdf_documents_games_GameId",

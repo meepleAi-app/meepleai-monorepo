@@ -43,7 +43,6 @@ public sealed class GetKnowledgeBaseStatusPrivateGameTests : IDisposable
         {
             Id = Guid.NewGuid(),
             PrivateGameId = PrivateGameId,
-            GameId = null,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             ProcessingState = "Ready",
@@ -78,7 +77,7 @@ public sealed class GetKnowledgeBaseStatusPrivateGameTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = PrivateGameId,
+            SharedGameId = PrivateGameId,
             PrivateGameId = null,
             FileName = "shared.pdf",
             FilePath = "/uploads/shared.pdf",
@@ -102,7 +101,7 @@ public sealed class GetKnowledgeBaseStatusPrivateGameTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = sharedGameId,
+            SharedGameId = sharedGameId,
             PrivateGameId = null,
             FileName = "shared.pdf",
             FilePath = "/uploads/shared.pdf",

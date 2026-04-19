@@ -461,18 +461,43 @@ builder.HasOne(e => e.SharedGame)
 builder.HasIndex(e => e.SharedGameId);
 ```
 
-- [ ] **Step 5: Build**
+- [ ] **Step 5: Sincronizzare `MeepleAiDbContextModelSnapshot.cs` (reconciliation di Task 2)**
+
+**Context:** Task 2 migration è stata hand-written — il ModelSnapshot NON è stato aggiornato. Qui si riconcilia.
+
+Approach:
+1. Run da `apps/api/src/Api/`: `dotnet ef migrations add _SnapshotSync --output-dir Infrastructure/Migrations`
+2. Il comando scaffolda una migration e rigenera lo snapshot. La migration `*_SnapshotSync.cs` conterrà le operazioni che EF crede necessarie (drop GameId, add SharedGameId FK…) — duplicate di Task 2.
+3. **Inspection**: aprire `*_SnapshotSync.cs`. Verificare che contenga SOLO drop `GameId` / add `SharedGameId` FK + indici su `pdf_documents` e `document_collections` (cioè le stesse operazioni di Task 2).
+4. **Delete** il file `*_SnapshotSync.cs` + `*_SnapshotSync.Designer.cs` — NON lo vogliamo eseguire perché Task 2 già copre queste operazioni.
+5. **Keep** il nuovo `MeepleAiDbContextModelSnapshot.cs` rigenerato — ora allineato con le entity post-cleanup.
+
+```bash
+# From apps/api/src/Api/
+dotnet ef migrations add _SnapshotSync --output-dir Infrastructure/Migrations
+# Inspect generated file — verify it only drops GameId + adds SharedGameId FK
+# Then delete the spurious migration:
+rm Infrastructure/Migrations/*_SnapshotSync.cs
+rm Infrastructure/Migrations/*_SnapshotSync.Designer.cs
+# Snapshot stays updated. Verify diff:
+git diff Infrastructure/Migrations/MeepleAiDbContextModelSnapshot.cs | head -60
+```
+
+Se il file `_SnapshotSync` contiene operazioni INASPETTATE (diverse da drop GameId / add SharedGameId), STOP e riportare — significa che c'è un disallineamento extra.
+
+- [ ] **Step 6: Build**
 
 Run: `dotnet build apps/api/src/Api`
-Expected: errori di compilazione in consumer (`collection.GameId`, `pdfDoc.GameId`) → fix sequenziale Task 4+.
+Expected: errori di compilazione in consumer (`collection.GameId`, `pdfDoc.GameId`) → fix sequenziale Task 4+. IL BUILD DELLE ENTITY + SNAPSHOT DEVE PASSARE — errori solo nei consumer.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/Api/Infrastructure/Entities/DocumentProcessing/PdfDocumentEntity.cs \
         apps/api/src/Api/Infrastructure/Entities/DocumentProcessing/DocumentCollectionEntity.cs \
         apps/api/src/Api/Infrastructure/EntityConfigurations/DocumentProcessing/PdfDocumentEntityConfiguration.cs \
-        apps/api/src/Api/Infrastructure/EntityConfigurations/DocumentProcessing/DocumentCollectionEntityConfiguration.cs
+        apps/api/src/Api/Infrastructure/EntityConfigurations/DocumentProcessing/DocumentCollectionEntityConfiguration.cs \
+        apps/api/src/Api/Infrastructure/Migrations/MeepleAiDbContextModelSnapshot.cs
 git commit -m "refactor(pdf): remove GameId from PdfDocument+DocumentCollection, add SharedGame FK with Cascade"
 ```
 

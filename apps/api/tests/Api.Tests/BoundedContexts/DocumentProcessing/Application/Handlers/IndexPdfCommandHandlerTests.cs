@@ -578,22 +578,14 @@ public class IndexPdfCommandHandlerTests
         return new PdfDocumentEntity
         {
             Id = id,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "test.pdf",
             FilePath = "/uploads/test.pdf",
             FileSizeBytes = 1024,
             UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
             ProcessingState = status == "completed" ? "Ready" : "Pending",
-            ExtractedText = extractedText,
-            Game = new GameEntity
-            {
-                Id = gameId,
-                Name = "Test Game",
-                MinPlayers = 2,
-                MaxPlayers = 4,
-                CreatedAt = DateTime.UtcNow
-            }
+            ExtractedText = extractedText
         };
     }
 
@@ -685,7 +677,6 @@ public class IndexPdfCommandHandlerTests
         var pdf = new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = null,
             PrivateGameId = null,
             SharedGameId = sharedGameId,
             FileName = "shared-game-rules.pdf",

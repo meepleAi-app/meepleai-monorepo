@@ -67,7 +67,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,
@@ -101,7 +101,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,
@@ -143,7 +143,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = actualGameId,   // PDF references actual Game.Id
+            SharedGameId = actualGameId,   // PDF references actual Game.Id
             FileName = "catan.pdf",
             FilePath = "/uploads/catan.pdf",
             UploadedByUserId = UserId,
@@ -204,7 +204,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = otherGameId,
+            SharedGameId = otherGameId,
             FileName = "other.pdf",
             FilePath = "/uploads/other.pdf",
             UploadedByUserId = UserId
@@ -258,7 +258,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "spirit-island.pdf",
             FilePath = "/uploads/spirit-island.pdf",
             UploadedByUserId = UserId
@@ -299,7 +299,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "everdell.pdf",
             FilePath = "/uploads/everdell.pdf",
             UploadedByUserId = UserId
@@ -355,7 +355,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "arkham.pdf",
             FilePath = "/uploads/arkham.pdf",
             UploadedByUserId = UserId

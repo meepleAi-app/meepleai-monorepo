@@ -2,7 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
-using Api.SharedKernel.Domain.Interfaces;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using MediatR;

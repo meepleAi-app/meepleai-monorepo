@@ -204,7 +204,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 try
                 {
                     var chunkTexts = chunks.Select(c => c.Text).ToList();
-                    var gameId = pdfDoc.GameId ?? Guid.Empty;
+                    var gameId = pdfDoc.SharedGameId ?? Guid.Empty;
                     var raptorResult = await _raptorIndexer.BuildTreeAsync(
                         pdfDoc.Id, gameId,
                         chunkTexts, maxLevels: 3, cancellationToken).ConfigureAwait(false);
@@ -240,7 +240,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 try
                 {
-                    var gameId = pdfDoc.GameId ?? Guid.Empty;
+                    var gameId = pdfDoc.SharedGameId ?? Guid.Empty;
                     var gameTitle = pdfDoc.FileName ?? "Unknown";
                     var extraction = await _entityExtractor.ExtractEntitiesAsync(
                         gameId, gameTitle,
@@ -511,7 +511,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             vectorDoc = new VectorDocumentEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = pdfDoc.GameId,
+                GameId = pdfDoc.SharedGameId,
                 SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfDoc.Id,
                 IndexingStatus = "completed",
@@ -535,7 +535,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         if (_vectorStore != null && embeddings.Count == translatedChunks.Count)
         {
             // GameId resolution: same strategy as IndexPdfCommandHandler.effectiveGameId
-            var gameId = pdfDoc.PrivateGameId ?? pdfDoc.GameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
+            var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
             if (gameId == Guid.Empty)
             {
                 _logger.LogWarning(
@@ -600,7 +600,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 Id = Guid.NewGuid(),
                 // GameId resolution: same strategy as IndexPdfCommandHandler.effectiveGameId
-                GameId = pdfDoc.PrivateGameId ?? pdfDoc.GameId ?? pdfDoc.SharedGameId,
+                GameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
                 SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfDoc.Id,
                 Content = chunk.Text,

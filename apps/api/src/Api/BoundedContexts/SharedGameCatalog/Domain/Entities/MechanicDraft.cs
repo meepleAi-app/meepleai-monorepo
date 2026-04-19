@@ -36,6 +36,10 @@ public sealed class MechanicDraft : Entity<Guid>
     private DateTime _lastModified;
     private MechanicDraftStatus _status;
 
+    private int _totalTokensUsed;
+    private decimal _estimatedCostUsd;
+    private readonly byte[] _rowVersion = Array.Empty<byte>();
+
     public new Guid Id => _id;
     public Guid SharedGameId => _sharedGameId;
     public Guid PdfDocumentId => _pdfDocumentId;
@@ -59,6 +63,10 @@ public sealed class MechanicDraft : Entity<Guid>
     public DateTime CreatedAt => _createdAt;
     public DateTime LastModified => _lastModified;
     public MechanicDraftStatus Status => _status;
+
+    public int TotalTokensUsed => _totalTokensUsed;
+    public decimal EstimatedCostUsd => _estimatedCostUsd;
+    public byte[] RowVersion => _rowVersion;
 
     /// <summary>
     /// Parameterless constructor for EF Core.
@@ -90,7 +98,10 @@ public sealed class MechanicDraft : Entity<Guid>
         string questionsDraft,
         DateTime createdAt,
         DateTime lastModified,
-        MechanicDraftStatus status) : base(id)
+        MechanicDraftStatus status,
+        int totalTokensUsed = 0,
+        decimal estimatedCostUsd = 0m,
+        byte[]? rowVersion = null) : base(id)
     {
         _id = id;
         _sharedGameId = sharedGameId;
@@ -112,6 +123,9 @@ public sealed class MechanicDraft : Entity<Guid>
         _createdAt = createdAt;
         _lastModified = lastModified;
         _status = status;
+        _totalTokensUsed = totalTokensUsed;
+        _estimatedCostUsd = estimatedCostUsd;
+        _rowVersion = rowVersion ?? Array.Empty<byte>();
     }
 
     /// <summary>
@@ -257,6 +271,21 @@ public sealed class MechanicDraft : Entity<Guid>
         _resourcesNotes = resourcesNotes ?? string.Empty;
         _phasesNotes = phasesNotes ?? string.Empty;
         _questionsNotes = questionsNotes ?? string.Empty;
+        _lastModified = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Tracks token usage from an AI assist call. Accumulates across calls.
+    /// </summary>
+    public void TrackTokenUsage(int tokensUsed, decimal costUsd)
+    {
+        if (tokensUsed < 0)
+            throw new ArgumentException("Token count cannot be negative", nameof(tokensUsed));
+        if (costUsd < 0)
+            throw new ArgumentException("Cost cannot be negative", nameof(costUsd));
+
+        _totalTokensUsed += tokensUsed;
+        _estimatedCostUsd += costUsd;
         _lastModified = DateTime.UtcNow;
     }
 }

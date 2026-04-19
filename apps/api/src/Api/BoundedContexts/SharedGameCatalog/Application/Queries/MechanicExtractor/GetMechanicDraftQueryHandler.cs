@@ -52,6 +52,8 @@ internal sealed class GetMechanicDraftQueryHandler
             draft.QuestionsDraft,
             draft.CreatedAt,
             draft.LastModified,
-            draft.Status.ToString());
+            draft.Status.ToString(),
+            draft.TotalTokensUsed,
+            draft.EstimatedCostUsd);
     }
 }

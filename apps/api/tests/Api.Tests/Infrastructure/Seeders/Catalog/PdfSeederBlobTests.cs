@@ -120,9 +120,11 @@ public sealed class PdfSeederBlobTests
         var gameMap = new Dictionary<int, Guid> { { 174430, gameId } };
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
 
-        // Seed required parent entities for navigation properties
+        // Seed required parent entities for navigation properties.
+        // Post-migration (2026-04-19): PdfSeeder resolves GameEntity.SharedGameId → PDF.SharedGameId.
+        // Use gameId as both GameEntity.Id and SharedGameId so assertions remain on a single Guid.
         db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
-        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven" });
+        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven", SharedGameId = gameId });
         await db.SaveChangesAsync();
 
         // Act
@@ -186,9 +188,10 @@ public sealed class PdfSeederBlobTests
         var gameMap = new Dictionary<int, Guid> { { 174430, gameId } };
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
 
-        // Pre-seed an existing document with matching hash
+        // Pre-seed an existing document with matching hash.
+        // Post-migration: GameEntity.SharedGameId drives PdfSeeder resolution.
         db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
-        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven" });
+        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven", SharedGameId = gameId });
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
@@ -236,9 +239,9 @@ public sealed class PdfSeederBlobTests
         var gameMap = new Dictionary<int, Guid> { { 174430, gameId } };
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
 
-        // Pre-seed with old hash
+        // Pre-seed with old hash. Post-migration: GameEntity.SharedGameId drives PdfSeeder resolution.
         db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
-        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven" });
+        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven", SharedGameId = gameId });
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = oldDocId,

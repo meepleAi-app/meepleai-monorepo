@@ -74,22 +74,12 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var gameId = sharedGame.Id;
         var libraryEntry = new UserLibraryEntry(entryId, userId, gameId);
 
-        // Seed a Games record that maps SharedGameId → game record ID
-        // The handler resolves SharedGameId → games.Id before querying PDFs
-        var gameRecordId = Guid.NewGuid();
-        _dbContext.Games.Add(new GameEntity
-        {
-            Id = gameRecordId,
-            Name = "Test Game",
-            SharedGameId = gameId
-        });
-
-        // Add fully indexed PDF document (ProcessingState = "Ready") to DbContext
-        // PDF SharedGameId references the shared-game record ID
+        // Post-migration (2026-04-19): PdfDocument.SharedGameId references SharedGame.Id directly,
+        // not the intermediate GameEntity.Id. The handler keys KB stats by p.SharedGameId == entry.GameId (= SharedGame.Id).
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = gameRecordId,
+            SharedGameId = gameId,
             FileName = "rules.pdf",
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,

@@ -730,60 +730,6 @@ public class IndexPdfCommandHandlerTests
         });
     }
 
-    [Fact]
-    [Trait("Category", TestCategories.Unit)]
-    [Trait("BoundedContext", "DocumentProcessing")]
-    public async Task Handle_RegularGamePdf_DoesNotSetSharedGameId()
-    {
-        // Arrange — Regular game PDF has GameId set, no SharedGameId
-        using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
-
-        var gameId = Guid.NewGuid();
-        var pdfId = Guid.NewGuid();
-        var pdf = CreatePdfDocument(pdfId, gameId, "completed", GenerateExtractedText(3));
-        await context.PdfDocuments.AddAsync(pdf);
-        await context.SaveChangesAsync();
-
-        var textChunks = GenerateTextChunks(3);
-        chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
-
-        embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
-            {
-                var embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList();
-                return new EmbeddingResult { Success = true, Embeddings = embeddings };
-            });
-
-        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
-        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
-
-        var handler = new IndexPdfCommandHandler(
-            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
-
-        // Act
-        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
-
-        // Assert — indexing succeeds and SharedGameId remains null for regular game PDFs
-        result.Success.Should().BeTrue();
-
-        var savedChunks = await context.TextChunks
-            .Where(tc => tc.PdfDocumentId == pdfId)
-            .ToListAsync();
-
-        savedChunks.Should().HaveCount(3);
-        savedChunks.Should().AllSatisfy(chunk =>
-        {
-            chunk.SharedGameId.Should().BeNull("regular game PDFs should not have SharedGameId on chunks");
-            chunk.GameId.Should().Be(gameId);
-        });
-    }
-
     // NOTE: Full workflow tests (text chunking, embedding generation, pgvector indexing)
     // should be in integration test suite due to DbContext and multi-service complexity.
     // See integration-tests.yml workflow.

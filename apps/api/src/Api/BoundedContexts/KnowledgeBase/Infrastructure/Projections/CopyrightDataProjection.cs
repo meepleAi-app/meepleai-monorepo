@@ -33,6 +33,9 @@ internal sealed class CopyrightDataProjection : ICopyrightDataProjection
         if (guidIds.Count == 0)
             return new Dictionary<string, PdfCopyrightInfo>(StringComparer.Ordinal);
 
+        // Task 8: PdfDocumentEntity.GameId removed — read SharedGameId directly.
+        // PdfCopyrightInfo.GameId field now carries the SharedGameId value
+        // (kept for backward-compat with consumers; semantically equivalent post-migration).
         var pdfs = await _db.PdfDocuments
             .AsNoTracking()
             .Where(p => guidIds.Contains(p.Id))
@@ -42,7 +45,7 @@ internal sealed class CopyrightDataProjection : ICopyrightDataProjection
                 p.LicenseType,
                 Category = p.DocumentCategory,
                 p.UploadedByUserId,
-                p.GameId,
+                p.SharedGameId,
                 p.PrivateGameId,
                 p.IsPublic
             })
@@ -62,7 +65,7 @@ internal sealed class CopyrightDataProjection : ICopyrightDataProjection
                     ? dc
                     : DocumentCategory.Other,
                 p.UploadedByUserId,
-                p.GameId,
+                p.SharedGameId,
                 p.PrivateGameId,
                 p.IsPublic),
             StringComparer.Ordinal);

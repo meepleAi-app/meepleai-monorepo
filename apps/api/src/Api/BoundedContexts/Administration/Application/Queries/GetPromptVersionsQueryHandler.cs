@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +31,7 @@ internal class GetPromptVersionsQueryHandler : IQueryHandler<GetPromptVersionsQu
 
         if (!templateExists)
         {
-            throw new InvalidOperationException($"Prompt template {query.TemplateId} not found");
+            throw new NotFoundException("PromptTemplate", query.TemplateId.ToString());
         }
 
         // Get versions

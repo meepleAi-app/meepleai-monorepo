@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -69,7 +70,7 @@ internal class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComm
 
         if (game is null)
         {
-            throw new InvalidOperationException($"Game {gameId} not found");
+            throw new NotFoundException("Game", gameId.ToString());
         }
 
         var userExists = await _dbContext.Users
@@ -77,7 +78,7 @@ internal class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComm
 
         if (!userExists)
         {
-            throw new InvalidOperationException($"User {userId} not found");
+            throw new NotFoundException("User", userId.ToString());
         }
     }
 
@@ -99,7 +100,7 @@ internal class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComm
             var currentETag = Convert.ToBase64String(latestSpec.RowVersion);
             if (!string.Equals(currentETag, expectedETag, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException(
+                throw new ConflictException(
                     $"Conflict detected: RuleSpec has been modified by another user. " +
                     $"Expected version ETag {expectedETag} but found {currentETag}. " +
                     $"Please refresh and try again.");
@@ -122,7 +123,7 @@ internal class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComm
         var duplicate = await _versioningService.VersionExistsAsync(command.GameId, version, cancellationToken).ConfigureAwait(false);
         if (duplicate)
         {
-            throw new InvalidOperationException($"Version {version} already exists for game {command.GameId}");
+            throw new ConflictException($"Version {version} already exists for game {command.GameId}");
         }
 
         return version;

@@ -19,11 +19,22 @@
 
 import { useMemo } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import { useDashboardData } from '@/hooks/queries/useDashboardData';
 import type { DashboardMetrics } from '@/lib/api';
 
-import { AIUsageDonut, AiUsageStats } from './AIUsageDonut';
-import { APIRequestsChart, ApiRequestByDay } from './APIRequestsChart';
+import type { AiUsageStats } from './AIUsageDonut';
+import type { ApiRequestByDay } from './APIRequestsChart';
+
+const AIUsageDonut = dynamic(() => import('./AIUsageDonut').then(m => m.AIUsageDonut), {
+  ssr: false,
+  loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" />,
+});
+const APIRequestsChart = dynamic(() => import('./APIRequestsChart').then(m => m.APIRequestsChart), {
+  ssr: false,
+  loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" />,
+});
 
 /**
  * Calculate AI usage breakdown from metrics
@@ -40,11 +51,7 @@ export function calculateAiUsageBreakdown(metrics: DashboardMetrics | null): AiU
     return [];
   }
 
-  const {
-    totalRagRequests,
-    totalChatMessages,
-    totalPdfDocuments,
-  } = metrics;
+  const { totalRagRequests, totalChatMessages, totalPdfDocuments } = metrics;
 
   // Approximate breakdown with realistic ratios
   const embeddingCalls = totalRagRequests + totalPdfDocuments;
@@ -63,7 +70,7 @@ export interface ChartsSectionProps {
   className?: string;
 }
 
-export function ChartsSection({ className }: ChartsSectionProps){
+export function ChartsSection({ className }: ChartsSectionProps) {
   // Use consolidated dashboard data hook (Issue #2792)
   const { trends, metrics, isLoading } = useDashboardData();
 
@@ -90,16 +97,10 @@ export function ChartsSection({ className }: ChartsSectionProps){
       {/* Issue #2850: Gap 1.5rem (6) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* API Requests Chart - Using real apiRequestTrend data */}
-        <APIRequestsChart
-          data={apiRequestsData}
-          isLoading={isLoading}
-        />
+        <APIRequestsChart data={apiRequestsData} isLoading={isLoading} />
 
         {/* AI Usage Chart - Calculated from metrics */}
-        <AIUsageDonut
-          data={aiUsageData}
-          isLoading={isLoading}
-        />
+        <AIUsageDonut data={aiUsageData} isLoading={isLoading} />
       </div>
     </section>
   );

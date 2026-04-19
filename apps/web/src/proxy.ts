@@ -123,11 +123,6 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
     // Metrics: Cache hit
     metrics.recordCacheHit();
 
-    // Debug logging for session validation (use warn which is allowed by ESLint)
-    // eslint-disable-next-line no-console
-    console.log(
-      `[proxy] Session validation CACHE HIT for ${cookieValue.substring(0, 10)}... valid=${cached.valid}`
-    );
     return cached.valid;
   }
 
@@ -136,8 +131,6 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
 
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) {
-    // eslint-disable-next-line no-console
-    console.log('[proxy] No cookie header found in request');
     cacheSessionValidation(cookieValue, false);
     return false;
   }
@@ -150,11 +143,6 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
     // Issue #3797: Add AbortController with 5s timeout to prevent indefinite hangs
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    // eslint-disable-next-line no-console
-    console.log(
-      `[proxy] Validating session at ${apiUrl} with cookie: ${cookieHeader.substring(0, 50)}...`
-    );
 
     try {
       const response = await fetch(apiUrl, {
@@ -175,8 +163,6 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
         metrics.recordValidationFailure();
       }
 
-      // eslint-disable-next-line no-console
-      console.log(`[proxy] Session validation response: ${response.status} ok=${response.ok}`);
       cacheSessionValidation(cookieValue, response.ok);
       return response.ok;
     } catch (fetchError) {

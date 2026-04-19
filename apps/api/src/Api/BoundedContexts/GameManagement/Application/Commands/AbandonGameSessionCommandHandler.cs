@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Mappers;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -29,7 +30,7 @@ internal class AbandonGameSessionCommandHandler : ICommandHandler<AbandonGameSes
         ArgumentNullException.ThrowIfNull(command);
         // Load session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
-.ConfigureAwait(false) ?? throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
+.ConfigureAwait(false) ?? throw new NotFoundException("GameSession", command.SessionId.ToString());
 
         // Abandon via domain method
         session.Abandon(command.Reason);

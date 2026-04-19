@@ -1,6 +1,6 @@
 # MeepleAI User Stories Tracking
 
-> **Last updated**: 2026-03-26
+> **Last updated**: 2026-04-18
 > **Product Spec**: [docs/architecture/overview/product-specification.md](../architecture/overview/product-specification.md)
 > **Alpha Scope**: [docs/alpha-zero-scope.md](../alpha-zero-scope.md)
 
@@ -103,7 +103,7 @@
 |----|-----------|--------|-----|-------------|
 | US-50 | Come utente, voglio avversari AI per giochi supportati | ⬜ Not Started | (nuovo) | 🔴 Alta |
 | US-51 | Come utente, voglio visualizzazione board 2D | ⬜ Not Started | (nuovo) | 🔴 Alta |
-| US-52 | Come utente, voglio allegare foto del tavolo alla chat | ⬜ Not Started | KnowledgeBase | 🟡 Media |
+| US-52 | Come utente, voglio allegare foto del tavolo alla chat | ✅ Complete | PR#466 — Session Vision AI (multimodal images) | 🟡 Media |
 | US-53 | Come utente, voglio house rules community | 🔵 Planned | AgentMemory | 🟢 Bassa |
 | US-54 | Come utente, voglio workflow agents (email, calendar) | ⬜ Not Started | WorkflowIntegration | 🟡 Media |
 | US-55 | Come utente, voglio ottimizzazione per italiano | ⬜ Not Started | KnowledgeBase | 🟡 Media |

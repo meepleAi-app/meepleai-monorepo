@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Commands.AlertRules;
@@ -16,7 +17,7 @@ internal class UpdateAlertRuleCommandHandler : IRequestHandler<UpdateAlertRuleCo
     {
         ArgumentNullException.ThrowIfNull(request);
         var rule = await _repository.GetByIdAsync(request.Id, cancellationToken).ConfigureAwait(false);
-        if (rule == null) throw new InvalidOperationException($"AlertRule {request.Id} not found");
+        if (rule == null) throw new NotFoundException("AlertRule", request.Id.ToString());
 
         var severity = AlertSeverityExtensions.FromString(request.Severity);
         var threshold = new AlertThreshold(request.ThresholdValue, request.ThresholdUnit);

@@ -285,7 +285,7 @@ internal static class WorkflowEndpoints
     {
         // N8N-05: Workflow error logging endpoints
 
-        // Webhook endpoint for n8n (no authentication required for simplicity)
+        // Webhook endpoint for n8n
         group.MapPost("/logs/workflow-error", async (
             IMediator mediator,
             LogWorkflowErrorRequest request,
@@ -305,7 +305,7 @@ internal static class WorkflowEndpoints
         })
         .WithName("LogWorkflowError")
         .WithTags("N8N")
-        .WithDescription("Webhook endpoint for n8n to log workflow errors (no auth required)")
+        .WithDescription("Webhook endpoint for n8n to log workflow errors (internal network only)")
         .Produces(StatusCodes.Status200OK)
         .Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
     }

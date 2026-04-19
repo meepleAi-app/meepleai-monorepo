@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Mappers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +38,7 @@ internal class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleComme
         var comment = await _dbContext.RuleSpecComments
             .Include(c => c.User)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
-.ConfigureAwait(false) ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
+.ConfigureAwait(false) ?? throw new NotFoundException("RuleComment", command.CommentId.ToString());
 
         // Verify ownership
         if (comment.UserId != command.UserId)

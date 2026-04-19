@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +38,7 @@ internal class GetPromptTemplateByIdQueryHandler : IQueryHandler<GetPromptTempla
 
         if (template.CreatedBy == null)
         {
-            throw new InvalidOperationException($"Template {query.TemplateId} has no creator information");
+            throw new NotFoundException("TemplateCreator", query.TemplateId.ToString());
         }
 
         return new PromptTemplateDto

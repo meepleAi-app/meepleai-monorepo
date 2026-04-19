@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Mappers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -33,7 +34,7 @@ internal class ResolveRuleCommentCommandHandler : IRequestHandler<ResolveRuleCom
         var comment = await _dbContext.RuleSpecComments
             .Include(c => c.Replies)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
-.ConfigureAwait(false) ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
+.ConfigureAwait(false) ?? throw new NotFoundException("RuleComment", command.CommentId.ToString());
 
         // Authorization: Only comment owner or admin can resolve
         if (comment.UserId != command.ResolvedByUserId && !command.IsAdmin)

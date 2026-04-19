@@ -113,7 +113,9 @@ public sealed class PdfSeederBlobTests
         _seedBlob.Setup(x => x.OpenReadAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
 
-        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", gameId.ToString("N"), It.IsAny<CancellationToken>()))
+        // Post-migration (2026-04-19): seeder stores under pdfs/{pdfId}/ bucket, not pdfs/{gameId}/.
+        // pdfId is generated inside the seeder, so match any bucket key here.
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, "file123", "/blobs/file123", 4));
 
         var manifest = CreateManifest(CreateBlobEntry());
@@ -230,7 +232,9 @@ public sealed class PdfSeederBlobTests
         _seedBlob.Setup(x => x.OpenReadAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
 
-        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", gameId.ToString("N"), It.IsAny<CancellationToken>()))
+        // Post-migration (2026-04-19): seeder stores under pdfs/{pdfId}/ bucket, not pdfs/{gameId}/.
+        // pdfId is generated inside the seeder, so match any bucket key here.
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, "newfile", "/blobs/newfile", 4));
         _primaryBlob.Setup(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);

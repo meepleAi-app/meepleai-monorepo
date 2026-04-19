@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.DocumentProcessing;
@@ -122,7 +123,6 @@ internal static class PdfSeeder
                 }
 
                 var idempotencyKey = $"{sharedGameId}:{fileName}";
-                var gameIdStr = gameId.ToString("N");
 
                 // Idempotency: check if SharedGameId + FileName pair already exists
                 if (existingMap.TryGetValue(idempotencyKey, out var existing))
@@ -143,7 +143,7 @@ internal static class PdfSeeder
                         "PdfSeeder: hash drift detected for '{FileName}' (game '{Title}'). Replacing.",
                         fileName, entry.Title);
 
-                    await DeletePdfCascadeAsync(db, primaryBlob, existing.Id, gameIdStr, existing.FilePath, logger, ct)
+                    await DeletePdfCascadeAsync(db, primaryBlob, existing.Id, PdfStorageKey.ForPdf(existing.Id), existing.FilePath, logger, ct)
                         .ConfigureAwait(false);
 
                     existingMap.Remove(idempotencyKey);
@@ -159,10 +159,16 @@ internal static class PdfSeeder
                     continue;
                 }
 
+                // Pre-generate pdfId so StoreAsync and PdfDocumentEntity share the same bucket key.
+                // Post-migration (2026-04-19) PDFs live under pdfs/{pdfId}/ — all reads use
+                // PdfStorageKey.ForPdf(pdf.Id), so the seeder must also write to the pdfId bucket
+                // or the pipeline (extract/download) will 404 on seeded files.
+                var pdfId = Guid.NewGuid();
+
                 // Stream from seed bucket → store into primary blob
                 var stream = await seedBlob.OpenReadAsync(blobKey, ct).ConfigureAwait(false);
                 await using var _ = stream.ConfigureAwait(false);
-                var result = await primaryBlob.StoreAsync(stream, fileName, gameIdStr, ct).ConfigureAwait(false);
+                var result = await primaryBlob.StoreAsync(stream, fileName, PdfStorageKey.ForPdf(pdfId), ct).ConfigureAwait(false);
 
                 if (!result.Success)
                 {
@@ -177,7 +183,7 @@ internal static class PdfSeeder
                 // Community-seeded PDFs are stored against SharedGameId (community catalog id).
                 var pdfEntity = new PdfDocumentEntity
                 {
-                    Id = Guid.NewGuid(),
+                    Id = pdfId,
                     SharedGameId = sharedGameId,
                     FileName = fileName,
                     FilePath = result.FilePath ?? string.Empty,

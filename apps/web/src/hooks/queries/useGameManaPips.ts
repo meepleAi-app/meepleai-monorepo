@@ -37,6 +37,8 @@ export interface GameManaPipsActions {
   onCreateSession?: () => void;
   onCreateKb?: () => void;
   onCreateAgent?: () => void;
+  /** Open the chat panel with this game pre-selected (when KB is indexed). */
+  onKbClick?: () => void;
 }
 
 // ========== Hook ==========
@@ -140,10 +142,11 @@ export function buildGameManaPips(
         kbIndexedCount: data.kbs.indexedCount ?? 0,
         kbProcessingCount: data.kbs.processingCount ?? 0,
       }),
-      ...(actions.onCreateKb && {
-        onCreate: actions.onCreateKb,
-        createLabel: 'Carica documento',
-      }),
+      ...((data.kbs.indexedCount ?? 0) > 0 && actions.onKbClick
+        ? { onCreate: actions.onKbClick, createLabel: 'Chatta con AI' }
+        : actions.onCreateKb
+          ? { onCreate: actions.onCreateKb, createLabel: 'Carica PDF' }
+          : {}),
     },
     {
       entityType: 'agent',

@@ -35,6 +35,9 @@ function entryToPersonalGame(e: UserLibraryEntry): PersonalLibraryGame {
     subtitle: e.gamePublisher ?? undefined,
     imageUrl: e.gameImageUrl ?? e.gameIconUrl ?? undefined,
     rating: e.averageRating ?? undefined,
+    kbIndexedCount: e.kbIndexedCount ?? 0,
+    kbProcessingCount: e.kbProcessingCount ?? 0,
+    kbCardCount: e.kbCardCount ?? 0,
   };
 }
 
@@ -45,6 +48,9 @@ function entryToCatalogGame(e: UserLibraryEntry): CatalogGame {
     subtitle: e.gamePublisher ?? undefined,
     imageUrl: e.gameImageUrl ?? e.gameIconUrl ?? undefined,
     rating: e.averageRating ?? undefined,
+    kbIndexedCount: e.kbIndexedCount ?? 0,
+    kbProcessingCount: e.kbProcessingCount ?? 0,
+    kbCardCount: e.kbCardCount ?? 0,
   };
 }
 

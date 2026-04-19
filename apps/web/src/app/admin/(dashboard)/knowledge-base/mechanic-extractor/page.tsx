@@ -94,7 +94,7 @@ export default function MechanicExtractorPage() {
     queryFn: () =>
       adminClient.getAllPdfs({
         gameId: selectedGameId,
-        status: 'Completed',
+        status: 'completed',
         page: 1,
         pageSize: 50,
       }),

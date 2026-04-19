@@ -134,7 +134,7 @@ public sealed class PdfSeederBlobTests
         docs.Should().HaveCount(1);
 
         var doc = docs[0];
-        doc.GameId.Should().Be(gameId);
+        doc.SharedGameId.Should().Be(gameId);
         doc.FileName.Should().Be("gloomhaven.pdf");
         doc.FilePath.Should().Be("/blobs/file123");
         doc.ContentHash.Should().Be("abc123hash");
@@ -192,7 +192,7 @@ public sealed class PdfSeederBlobTests
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/old/path",
             ContentHash = "samehash",
@@ -242,7 +242,7 @@ public sealed class PdfSeederBlobTests
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = oldDocId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/old/path",
             FileSizeBytes = 100,

@@ -998,7 +998,6 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         return new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
             SharedGameId = gameId,
             UploadedByUserId = uploadedBy,
             FileName = fileName,

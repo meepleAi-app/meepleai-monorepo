@@ -441,7 +441,7 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
         var pdfs = Enumerable.Range(1, 5).Select(i => new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = games[0].Id,
+            SharedGameId = games[0].Id,
             FileName = $"rulebook{i}.pdf",
             FilePath = $"path/rulebook{i}.pdf",
             FileSizeBytes = 1024 * 1024,

@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
+import { Btn } from '@/components/ui/v2/btn';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 
@@ -180,11 +181,18 @@ export default function ContactPage() {
                 </div>
 
                 {/* Submit Button */}
-                <Button type="submit" disabled={status === 'sending'} className="w-full">
+                <Btn
+                  type="submit"
+                  variant="primary"
+                  entity="game"
+                  size="lg"
+                  fullWidth
+                  disabled={status === 'sending'}
+                >
                   {status === 'sending'
                     ? t('pages.contact.form.sending')
                     : t('pages.contact.form.submit')}
-                </Button>
+                </Btn>
 
                 {/* Status Messages */}
                 {status === 'success' && (

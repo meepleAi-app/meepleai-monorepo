@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -86,7 +87,7 @@ public class CreatePromptTemplateCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithDuplicateName_ShouldThrowInvalidOperationException()
+    public async Task Handle_WithDuplicateName_ShouldThrowConflictException()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -125,7 +126,7 @@ public class CreatePromptTemplateCommandHandlerTests : IDisposable
         // Act & Assert
         var act = () =>
             _handler.Handle(command, CancellationToken.None);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().Contain("already exists");
 
@@ -135,7 +136,7 @@ public class CreatePromptTemplateCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentUser_ShouldThrowInvalidOperationException()
+    public async Task Handle_WithNonExistentUser_ShouldThrowNotFoundException()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -152,7 +153,7 @@ public class CreatePromptTemplateCommandHandlerTests : IDisposable
         // Act & Assert
         var act = () =>
             _handler.Handle(command, CancellationToken.None);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain("not found");
 

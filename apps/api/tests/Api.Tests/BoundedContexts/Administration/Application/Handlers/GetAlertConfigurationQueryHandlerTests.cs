@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands.AlertConfiguration
 using Api.BoundedContexts.Administration.Application.Queries.AlertConfiguration;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertConfigurations;
 using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
@@ -91,7 +92,7 @@ public class GetAlertConfigurationQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithEmptyCategory_ThrowsInvalidOperationException()
+    public async Task Handle_WithEmptyCategory_ThrowsNotFoundException()
     {
         // Arrange
         var query = new GetAlertConfigurationQuery("PagerDuty");
@@ -102,9 +103,8 @@ public class GetAlertConfigurationQueryHandlerTests
         // Act & Assert
         var act = () =>
             _handler.Handle(query, CancellationToken.None);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        exception.Message.Should().Contain("No configuration found");
         exception.Message.Should().Contain("PagerDuty");
 
         _mockRepository.Verify(r => r.GetByCategoryAsync(ConfigCategory.PagerDuty, It.IsAny<CancellationToken>()), Times.Once);

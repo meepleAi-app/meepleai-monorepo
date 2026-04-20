@@ -77,7 +77,7 @@ public class UpdateGroupPreferencesCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_FeatureDisabled_ThrowsInvalidOperationException()
+    public async Task Handle_FeatureDisabled_ThrowsConflictException()
     {
         // Arrange
         _featureFlagsMock
@@ -87,7 +87,7 @@ public class UpdateGroupPreferencesCommandHandlerTests
         var command = new UpdateGroupPreferencesCommand(Guid.NewGuid(), null, null, null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<ConflictException>(
             () => _handler.Handle(command, CancellationToken.None));
     }
 }

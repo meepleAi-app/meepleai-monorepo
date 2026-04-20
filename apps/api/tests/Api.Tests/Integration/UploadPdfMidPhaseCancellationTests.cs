@@ -631,13 +631,13 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             // Verify no FK violations
             var orphanedCount = await _dbContext.PdfDocuments
                 .Where(d => !_dbContext.Users.Any(u => u.Id == d.UploadedByUserId) ||
-                           !_dbContext.Games.Any(g => g.Id == d.GameId))
+                           (d.SharedGameId != null && !_dbContext.Games.Any(g => g.Id == d.SharedGameId)))
                 .CountAsync(TestContext.Current.CancellationToken);
             orphanedCount.Should().Be(0, $"no orphaned documents after cancellation at {delayMs}ms");
 
             // Clean up for next iteration
             var createdDocs = await _dbContext.PdfDocuments
-                .Where(d => d.GameId == testGame.Id)
+                .Where(d => d.SharedGameId == testGame.Id)
                 .ToListAsync(TestContext.Current.CancellationToken);
             _dbContext.PdfDocuments.RemoveRange(createdDocs);
             await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);

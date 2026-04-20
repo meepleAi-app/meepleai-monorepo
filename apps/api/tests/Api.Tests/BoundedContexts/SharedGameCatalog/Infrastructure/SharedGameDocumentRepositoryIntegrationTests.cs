@@ -281,7 +281,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var pdfDoc = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = sharedGameId, // FK to games table (same as shared_games ID)
+            SharedGameId = sharedGameId, // FK to shared_games
             FileName = $"test_{Guid.NewGuid():N}.pdf",
             FilePath = "/test/path.pdf",
             FileSizeBytes = 1024,

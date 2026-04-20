@@ -66,7 +66,7 @@ internal class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateR
 
         return new RuleSpecDto(
             Id: Guid.NewGuid(), // Temporary - will be assigned by DB
-            GameId: pdf.GameId ?? Guid.Empty,
+            GameId: pdf.PrivateGameId ?? pdf.SharedGameId ?? Guid.Empty,
             Version: version,
             CreatedAt: timestamp,
             CreatedByUserId: null,

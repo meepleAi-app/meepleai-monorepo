@@ -161,7 +161,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             var pdf = new PdfDocumentEntity
             {
                 Id = pdfIds[i],
-                GameId = gameId,
+                SharedGameId = gameId,
                 FileName = $"doc{i}.pdf",
                 FilePath = $"/test/doc{i}.pdf",
                 FileSizeBytes = 5000,
@@ -228,7 +228,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
                 var pdf = new PdfDocumentEntity
                 {
                     Id = id,
-                    GameId = gameId,
+                    SharedGameId = gameId,
                     FileName = $"d{i}.pdf",
                     FilePath = $"/d{i}.pdf",
                     FileSizeBytes = 5000,
@@ -292,7 +292,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         var pdfForOtherGame = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = differentGameId,
+            SharedGameId = differentGameId,
             FileName = "other.pdf",
             FilePath = "/other.pdf",
             FileSizeBytes = 5000,
@@ -359,7 +359,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             var pdf = new PdfDocumentEntity
             {
                 Id = pdfId,
-                GameId = TestGameId,
+                SharedGameId = TestGameId,
                 FileName = $"test-{pdfId}.pdf",
                 FilePath = $"/test/{pdfId}.pdf",
                 FileSizeBytes = 5000,

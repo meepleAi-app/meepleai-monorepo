@@ -23,6 +23,8 @@ export const MechanicDraftDtoSchema = z.object({
   createdAt: z.string(),
   lastModified: z.string(),
   status: z.string(),
+  totalTokensUsed: z.number().default(0),
+  estimatedCostUsd: z.number().default(0),
 });
 
 export type MechanicDraftDto = z.infer<typeof MechanicDraftDtoSchema>;
@@ -30,6 +32,8 @@ export type MechanicDraftDto = z.infer<typeof MechanicDraftDtoSchema>;
 export const AiAssistResultDtoSchema = z.object({
   section: z.string(),
   generatedDraft: z.string(),
+  tokensUsed: z.number().default(0),
+  costUsd: z.number().default(0),
 });
 
 export type AiAssistResultDto = z.infer<typeof AiAssistResultDtoSchema>;
@@ -74,4 +78,9 @@ export const MECHANIC_EXTRACTOR_ROUTES = {
   aiAssist: '/api/v1/admin/mechanic-extractor/ai-assist',
   acceptDraft: '/api/v1/admin/mechanic-extractor/accept-draft',
   finalize: '/api/v1/admin/mechanic-extractor/finalize',
+} as const;
+
+export const MECHANIC_EXTRACTOR_PAGES = {
+  editor: '/admin/knowledge-base/mechanic-extractor',
+  review: '/admin/knowledge-base/mechanic-extractor/review',
 } as const;

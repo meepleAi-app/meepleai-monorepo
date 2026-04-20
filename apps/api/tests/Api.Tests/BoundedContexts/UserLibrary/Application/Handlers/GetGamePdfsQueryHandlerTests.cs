@@ -64,7 +64,7 @@ public class GetGamePdfsQueryHandlerTests
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "TestRules.pdf",
             FilePath = "/test/path.pdf",
             FileSizeBytes = 1_000_000,
@@ -156,8 +156,7 @@ public class GetGamePdfsQueryHandlerTests
         _db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = olderGameId,
-            SharedGameId = null, // intentionally null — link is via games.SharedGameId
+            SharedGameId = sharedGameId, // now direct link via SharedGameId (games.GameId column dropped)
             FileName = "EnBaseRules.pdf",
             FilePath = "/tmp/en.pdf",
             FileSizeBytes = 100,
@@ -170,8 +169,7 @@ public class GetGamePdfsQueryHandlerTests
         _db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = newerGameId,
-            SharedGameId = null,
+            SharedGameId = sharedGameId,
             FileName = "ItExpansionRules.pdf",
             FilePath = "/tmp/it.pdf",
             FileSizeBytes = 200,

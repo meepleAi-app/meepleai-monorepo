@@ -339,6 +339,17 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     },
 
     /**
+     * Get extracted text for a specific page of a PDF document
+     * GET /api/v1/pdfs/{pdfId}/pages/{pageNumber}/text
+     * Used by CitationExpander for inline citation content
+     */
+    async getPageText(pdfId: string, pageNumber: number): Promise<PdfPageTextResponse | null> {
+      return httpClient.get<PdfPageTextResponse>(
+        `/api/v1/pdfs/${encodeURIComponent(pdfId)}/pages/${pageNumber}/text`
+      );
+    },
+
+    /**
      * Reindex a specific document (admin)
      */
     async reindexDocument(pdfId: string): Promise<void> {
@@ -367,6 +378,15 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
       return result ?? { orphanedChunks: 0, orphanedVectors: 0 };
     },
   };
+}
+
+// ========== Page Text Types ==========
+
+export interface PdfPageTextResponse {
+  pageNumber: number;
+  text: string;
+  documentTitle: string;
+  totalPages: number;
 }
 
 // ========== Admin PDF Types ==========

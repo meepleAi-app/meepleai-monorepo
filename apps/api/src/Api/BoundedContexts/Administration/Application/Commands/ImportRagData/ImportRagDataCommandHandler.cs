@@ -112,6 +112,20 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     continue;
                 }
 
+                // a.1. Precondition: PdfDocument requires a SharedGameId after the migration.
+                // GameEntity.SharedGameId is nullable (legacy rows may still be unlinked).
+                // Importing without SharedGameId would produce an orphaned PdfDocument
+                // (no SharedGameId and no PrivateGameId), which violates the new invariant.
+                if (game.SharedGameId is null)
+                {
+                    warnings.Add($"Game '{entry.GameSlug}' is not linked to a SharedGame — skipping document {entry.PdfDocumentId} to avoid orphaned import");
+                    _logger.LogWarning(
+                        "ImportRagData: skipping document {PdfDocumentId} — game '{GameSlug}' (Id={GameId}) has no SharedGameId",
+                        entry.PdfDocumentId, entry.GameSlug, game.Id);
+                    skipped++;
+                    continue;
+                }
+
                 // b. Read document metadata.json
                 var metadataPath = $"{entry.Path}/metadata.json";
                 var metadataBytes = await _storage.ReadFileAsync(metadataPath, cancellationToken).ConfigureAwait(false);
@@ -168,7 +182,8 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                 var pdfDocument = new PdfDocumentEntity
                 {
                     Id = pdfDocumentId,
-                    GameId = game.Id,
+                    // Guaranteed non-null by guard above (game.SharedGameId is not null).
+                    SharedGameId = game.SharedGameId,
                     FileName = docInfo.FileName,
                     FilePath = string.Empty,
                     FileSizeBytes = docInfo.FileSizeBytes ?? 0,

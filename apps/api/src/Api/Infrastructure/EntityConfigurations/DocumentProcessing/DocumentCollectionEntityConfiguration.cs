@@ -1,4 +1,5 @@
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,7 +17,7 @@ internal class DocumentCollectionEntityConfiguration : IEntityTypeConfiguration<
         builder.HasKey(e => e.Id);
 
         builder.Property(e => e.Id).HasMaxLength(64);
-        builder.Property(e => e.GameId).IsRequired().HasMaxLength(64);
+        builder.Property(e => e.SharedGameId).IsRequired().HasMaxLength(64);
         builder.Property(e => e.Name).IsRequired().HasMaxLength(200);
         builder.Property(e => e.Description).HasMaxLength(1000);
         builder.Property(e => e.CreatedByUserId).IsRequired().HasMaxLength(64);
@@ -25,9 +26,9 @@ internal class DocumentCollectionEntityConfiguration : IEntityTypeConfiguration<
         builder.Property(e => e.DocumentsJson).IsRequired().HasDefaultValue("[]");
 
         // Foreign keys
-        builder.HasOne(e => e.Game)
+        builder.HasOne(e => e.SharedGame)
             .WithMany()
-            .HasForeignKey(e => e.GameId)
+            .HasForeignKey(e => e.SharedGameId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(e => e.CreatedBy)
@@ -36,7 +37,7 @@ internal class DocumentCollectionEntityConfiguration : IEntityTypeConfiguration<
             .OnDelete(DeleteBehavior.Restrict);
 
         // Indexes
-        builder.HasIndex(e => e.GameId);
+        builder.HasIndex(e => e.SharedGameId);
         builder.HasIndex(e => new { e.CreatedByUserId, e.CreatedAt });
     }
 }

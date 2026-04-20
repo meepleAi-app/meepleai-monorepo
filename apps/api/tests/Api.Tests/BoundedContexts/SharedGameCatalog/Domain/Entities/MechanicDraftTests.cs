@@ -505,6 +505,64 @@ public sealed class MechanicDraftTests
 
     #endregion
 
+    #region TrackTokenUsage Tests
+
+    [Fact]
+    public void TrackTokenUsage_AccumulatesAcrossCalls()
+    {
+        // Arrange
+        var draft = CreateValidDraft();
+
+        // Act
+        draft.TrackTokenUsage(100, 0.05m);
+        draft.TrackTokenUsage(200, 0.10m);
+
+        // Assert
+        draft.TotalTokensUsed.Should().Be(300);
+        draft.EstimatedCostUsd.Should().Be(0.15m);
+    }
+
+    [Fact]
+    public void TrackTokenUsage_NegativeTokens_Throws()
+    {
+        // Arrange
+        var draft = CreateValidDraft();
+
+        // Act
+        var act = () => draft.TrackTokenUsage(-1, 0m);
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*negative*");
+    }
+
+    [Fact]
+    public void TrackTokenUsage_NegativeCost_Throws()
+    {
+        // Arrange
+        var draft = CreateValidDraft();
+
+        // Act
+        var act = () => draft.TrackTokenUsage(0, -0.01m);
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*negative*");
+    }
+
+    [Fact]
+    public void Create_InitializesTokenFieldsToZero()
+    {
+        // Act
+        var draft = CreateValidDraft();
+
+        // Assert
+        draft.TotalTokensUsed.Should().Be(0);
+        draft.EstimatedCostUsd.Should().Be(0m);
+    }
+
+    #endregion
+
     #region Helpers
 
     private static MechanicDraft CreateValidDraft()

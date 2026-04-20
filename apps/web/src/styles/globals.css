@@ -488,6 +488,8 @@
   --color-entity-kb:      hsl(var(--e-document));
   --color-entity-chat:    hsl(var(--e-chat));
   --color-entity-event:   hsl(var(--e-event));
+  --color-entity-toolkit: hsl(var(--e-toolkit));
+  --color-entity-tool:    hsl(var(--e-tool));
 
   /* Font family utilities */
   --font-heading: var(--font-quicksand), system-ui, sans-serif;
@@ -507,6 +509,8 @@
   --e-document: 210 40% 55%;
   --e-chat: 220 80% 55%;
   --e-event: 350 89% 60%;
+  --e-toolkit: 160 70% 45%;  /* Teal Green — Redesign V2 */
+  --e-tool: 195 80% 50%;     /* Sky Blue — Epic #412 */
 
   /* Base theme tokens - Opzione A: Playful Boardroom */
   --radius: 0.625rem;

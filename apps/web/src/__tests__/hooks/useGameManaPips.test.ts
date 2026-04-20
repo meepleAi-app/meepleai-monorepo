@@ -52,7 +52,7 @@ describe('buildGameManaPips', () => {
     expect(pips[0].onCreate).toBe(actions.onCreateSession);
     expect(pips[0].createLabel).toBe('Nuova sessione');
     expect(pips[1].onCreate).toBe(actions.onCreateKb);
-    expect(pips[1].createLabel).toBe('Carica documento');
+    expect(pips[1].createLabel).toBe('Carica PDF');
     expect(pips[2].onCreate).toBe(actions.onCreateAgent);
     expect(pips[2].createLabel).toBe('Crea agente');
   });

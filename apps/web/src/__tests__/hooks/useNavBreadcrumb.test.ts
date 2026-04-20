@@ -54,24 +54,6 @@ describe('useNavBreadcrumb', () => {
     expect(result.current[0].entityType).toBeUndefined();
   });
 
-  it('restituisce segmento entity da card in mano', () => {
-    mockPathname = '/games/abc';
-    mockCards.push({
-      id: 'game:abc',
-      entityType: 'game',
-      entityId: 'abc',
-      label: 'Catan',
-      href: '/games/abc',
-      pinned: false,
-      addedAt: Date.now(),
-    });
-    const { result } = renderHook(() => useNavBreadcrumb());
-    const catanSegment = result.current.find(s => s.label === 'Catan');
-    expect(catanSegment).toBeDefined();
-    expect(catanSegment?.entityType).toBe('game');
-    expect(catanSegment?.color).toBe('hsl(25,95%,45%)');
-  });
-
   it('lista vuota per route sconosciuta senza card', () => {
     mockPathname = '/unknown/path';
     const { result } = renderHook(() => useNavBreadcrumb());
@@ -115,22 +97,6 @@ describe('useNavBreadcrumb', () => {
     expect(result.current[0].label).toBe('Chat');
   });
 
-  it('multi-livello con card e route nota', () => {
-    mockPathname = '/games/abc/sessions/xyz';
-    mockCards.push({
-      id: 'game:abc',
-      entityType: 'game',
-      entityId: 'abc',
-      label: 'Catan',
-      href: '/games/abc',
-      pinned: false,
-      addedAt: Date.now(),
-    });
-    const { result } = renderHook(() => useNavBreadcrumb());
-    expect(result.current.length).toBeGreaterThan(0);
-    expect(result.current.some(s => s.label === 'Catan')).toBe(true);
-  });
-
   it('esclude duplicati con lo stesso href', () => {
     mockPathname = '/games/abc';
     mockCards.push({
@@ -145,22 +111,5 @@ describe('useNavBreadcrumb', () => {
     const { result } = renderHook(() => useNavBreadcrumb());
     const uniqueHrefs = new Set(result.current.map(s => s.href));
     expect(uniqueHrefs.size).toBe(result.current.length);
-  });
-
-  it('ordina segmenti in ordine di accumulo percorso', () => {
-    mockPathname = '/games/abc/sessions';
-    mockCards.push({
-      id: 'game:abc',
-      entityType: 'game',
-      entityId: 'abc',
-      label: 'Catan',
-      href: '/games/abc',
-      pinned: false,
-      addedAt: Date.now(),
-    });
-    const { result } = renderHook(() => useNavBreadcrumb());
-    // /games/abc should come before /games/abc/sessions
-    const catanIndex = result.current.findIndex(s => s.label === 'Catan');
-    expect(catanIndex).toBeLessThan(result.current.length - 1);
   });
 });

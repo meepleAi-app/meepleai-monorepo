@@ -3,6 +3,7 @@ using Api.BoundedContexts.AgentMemory.Application.Queries;
 using Api.BoundedContexts.AgentMemory.Domain.Entities;
 using Api.BoundedContexts.AgentMemory.Domain.Enums;
 using Api.BoundedContexts.AgentMemory.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -104,7 +105,7 @@ public class AddHouseRuleCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_FeatureDisabled_ThrowsInvalidOperationException()
+    public async Task Handle_FeatureDisabled_ThrowsConflictException()
     {
         // Arrange
         _featureFlagsMock
@@ -115,6 +116,6 @@ public class AddHouseRuleCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, CancellationToken.None);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<ConflictException>();
     }
 }

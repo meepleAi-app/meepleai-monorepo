@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -165,7 +166,7 @@ public class CreatePromptVersionCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentTemplate_ShouldThrowInvalidOperationException()
+    public async Task Handle_WithNonExistentTemplate_ShouldThrowNotFoundException()
     {
         // Arrange
         var templateId = Guid.NewGuid();
@@ -181,7 +182,7 @@ public class CreatePromptVersionCommandHandlerTests : IDisposable
         // Act & Assert
         var act = () =>
             _handler.Handle(command, CancellationToken.None);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain("not found");
 
@@ -191,7 +192,7 @@ public class CreatePromptVersionCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentUser_ShouldThrowInvalidOperationException()
+    public async Task Handle_WithNonExistentUser_ShouldThrowNotFoundException()
     {
         // Arrange
         var templateId = Guid.NewGuid();
@@ -232,7 +233,7 @@ public class CreatePromptVersionCommandHandlerTests : IDisposable
         // Act & Assert
         var act = () =>
             _handler.Handle(command, CancellationToken.None);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain("not found");
 

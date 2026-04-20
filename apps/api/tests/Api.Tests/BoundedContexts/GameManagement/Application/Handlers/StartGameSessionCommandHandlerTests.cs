@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
@@ -293,7 +294,7 @@ public class StartGameSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NonExistentGame_ThrowsInvalidOperationException()
+    public async Task Handle_NonExistentGame_ThrowsNotFoundException()
     {
         // Arrange
         var gameId = Guid.NewGuid();
@@ -312,9 +313,9 @@ public class StartGameSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        exception.Message.Should().ContainEquivalentOf($"Game with ID {gameId} not found");
+        exception.Message.Should().ContainEquivalentOf(gameId.ToString());
 
         // Verify session was NOT created
         _sessionRepositoryMock.Verify(

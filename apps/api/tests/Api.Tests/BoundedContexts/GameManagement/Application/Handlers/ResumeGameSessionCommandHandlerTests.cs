@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
@@ -178,7 +179,7 @@ public class ResumeGameSessionCommandHandlerTests
         result.Status.Should().Be("InProgress");
     }
     [Fact]
-    public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
+    public async Task Handle_NonExistentSession_ThrowsNotFoundException()
     {
         // Arrange
         var sessionId = Guid.NewGuid();
@@ -192,9 +193,9 @@ public class ResumeGameSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        exception.Message.Should().ContainEquivalentOf($"Session with ID {sessionId} not found");
+        exception.Message.Should().ContainEquivalentOf(sessionId.ToString());
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(

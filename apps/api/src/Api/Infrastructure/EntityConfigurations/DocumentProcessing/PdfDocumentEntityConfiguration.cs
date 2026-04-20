@@ -1,4 +1,5 @@
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,7 +12,6 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.ToTable("pdf_documents");
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasMaxLength(64);
-        builder.Property(e => e.GameId).IsRequired(false).HasMaxLength(64);
         builder.Property(e => e.FileName).IsRequired().HasMaxLength(256);
         builder.Property(e => e.FilePath).IsRequired().HasMaxLength(1024);
         builder.Property(e => e.FileSizeBytes).IsRequired();
@@ -48,16 +48,21 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.ExtractedTables).HasColumnType("text");
         builder.Property(e => e.ExtractedDiagrams).HasColumnType("text");
         builder.Property(e => e.AtomicRules).HasColumnType("text");
-        builder.HasOne(e => e.Game)
+        builder.Property(e => e.SharedGameId).IsRequired(false);
+
+        builder.HasOne<SharedGameEntity>()
             .WithMany()
-            .HasForeignKey(e => e.GameId)
+            .HasForeignKey(e => e.SharedGameId)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(e => new { e.SharedGameId, e.UploadedAt })
+            .HasDatabaseName("IX_pdf_documents_SharedGameId_UploadedAt");
+
         builder.HasOne(e => e.UploadedBy)
             .WithMany()
             .HasForeignKey(e => e.UploadedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(e => new { e.GameId, e.UploadedAt });
 
         // AI-14: Hybrid search - PostgreSQL GENERATED stored tsvector column
         // Computed from "ExtractedText" + "FileName" via migration AddSearchVectorColumns. Ignored by EF Core since it's DB-managed.
@@ -176,8 +181,8 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasColumnName("content_hash")
             .IsRequired(false);
 
-        builder.HasIndex(e => new { e.ContentHash, e.GameId })
-            .HasDatabaseName("ix_pdf_documents_content_hash_game_id");
+        builder.HasIndex(e => new { e.ContentHash, e.SharedGameId })
+            .HasDatabaseName("ix_pdf_documents_content_hash_shared_game_id");
 
         builder.HasIndex(e => new { e.ContentHash, e.PrivateGameId })
             .HasDatabaseName("ix_pdf_documents_content_hash_private_game_id");

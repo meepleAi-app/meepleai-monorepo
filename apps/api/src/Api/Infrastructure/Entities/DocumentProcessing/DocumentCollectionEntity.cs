@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 
 namespace Api.Infrastructure.Entities;
 
@@ -10,7 +11,7 @@ namespace Api.Infrastructure.Entities;
 public class DocumentCollectionEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid GameId { get; set; }
+    public Guid SharedGameId { get; set; }
     public string Name { get; set; } = default!;
     public string? Description { get; set; }
     public Guid CreatedByUserId { get; set; }
@@ -21,7 +22,7 @@ public class DocumentCollectionEntity
     public string DocumentsJson { get; set; } = "[]";
 
     // Navigation properties
-    public GameEntity Game { get; set; } = default!;
+    public SharedGameEntity SharedGame { get; set; } = default!;
     public UserEntity CreatedBy { get; set; } = default!;
 
     // One-to-many: Collection has many PDFs

@@ -113,16 +113,20 @@ public sealed class PdfSeederBlobTests
         _seedBlob.Setup(x => x.OpenReadAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
 
-        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", gameId.ToString("N"), It.IsAny<CancellationToken>()))
+        // Post-migration (2026-04-19): seeder stores under pdfs/{pdfId}/ bucket, not pdfs/{gameId}/.
+        // pdfId is generated inside the seeder, so match any bucket key here.
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, "file123", "/blobs/file123", 4));
 
         var manifest = CreateManifest(CreateBlobEntry());
         var gameMap = new Dictionary<int, Guid> { { 174430, gameId } };
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
 
-        // Seed required parent entities for navigation properties
+        // Seed required parent entities for navigation properties.
+        // Post-migration (2026-04-19): PdfSeeder resolves GameEntity.SharedGameId → PDF.SharedGameId.
+        // Use gameId as both GameEntity.Id and SharedGameId so assertions remain on a single Guid.
         db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
-        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven" });
+        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven", SharedGameId = gameId });
         await db.SaveChangesAsync();
 
         // Act
@@ -134,7 +138,7 @@ public sealed class PdfSeederBlobTests
         docs.Should().HaveCount(1);
 
         var doc = docs[0];
-        doc.GameId.Should().Be(gameId);
+        doc.SharedGameId.Should().Be(gameId);
         doc.FileName.Should().Be("gloomhaven.pdf");
         doc.FilePath.Should().Be("/blobs/file123");
         doc.ContentHash.Should().Be("abc123hash");
@@ -186,13 +190,14 @@ public sealed class PdfSeederBlobTests
         var gameMap = new Dictionary<int, Guid> { { 174430, gameId } };
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
 
-        // Pre-seed an existing document with matching hash
+        // Pre-seed an existing document with matching hash.
+        // Post-migration: GameEntity.SharedGameId drives PdfSeeder resolution.
         db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
-        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven" });
+        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven", SharedGameId = gameId });
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/old/path",
             ContentHash = "samehash",
@@ -227,7 +232,9 @@ public sealed class PdfSeederBlobTests
         _seedBlob.Setup(x => x.OpenReadAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
 
-        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", gameId.ToString("N"), It.IsAny<CancellationToken>()))
+        // Post-migration (2026-04-19): seeder stores under pdfs/{pdfId}/ bucket, not pdfs/{gameId}/.
+        // pdfId is generated inside the seeder, so match any bucket key here.
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, "newfile", "/blobs/newfile", 4));
         _primaryBlob.Setup(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -236,13 +243,13 @@ public sealed class PdfSeederBlobTests
         var gameMap = new Dictionary<int, Guid> { { 174430, gameId } };
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
 
-        // Pre-seed with old hash
+        // Pre-seed with old hash. Post-migration: GameEntity.SharedGameId drives PdfSeeder resolution.
         db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
-        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven" });
+        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven", SharedGameId = gameId });
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = oldDocId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/old/path",
             FileSizeBytes = 100,

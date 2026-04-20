@@ -84,7 +84,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // Step 3: Update VectorDocument status
             // For private PDFs GameId is null — fall back to PrivateGameId so vectors are scoped
             // to the correct private game rather than collapsed under Guid.Empty.
-            var effectiveGameId = pdf.PrivateGameId ?? pdf.GameId ?? pdf.SharedGameId ?? Guid.Empty;
+            var effectiveGameId = pdf.PrivateGameId ?? pdf.SharedGameId ?? Guid.Empty;
             var indexingSuccess = await IndexChunksInVectorStoreAsync(
                 pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)
@@ -163,7 +163,6 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         // Retrieve PDF document with tracking enabled (global NoTracking default must be overridden)
         var pdf = await _db.PdfDocuments
             .AsTracking()
-            .Include(p => p.Game)
             .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, cancellationToken).ConfigureAwait(false);
 
         if (pdf == null)
@@ -201,7 +200,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             existingVectorDoc = new VectorDocumentEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = pdf.GameId,
+                GameId = pdf.SharedGameId,
                 SharedGameId = pdf.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfGuid,
                 IndexingStatus = "processing",

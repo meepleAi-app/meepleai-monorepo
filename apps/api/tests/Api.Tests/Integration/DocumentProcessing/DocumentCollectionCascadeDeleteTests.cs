@@ -72,7 +72,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         var collection1 = new DocumentCollectionEntity
         {
             Id = collection1Id,
-            GameId = gameId,
+            SharedGameId = gameId,
             Name = "Catan Rules Collection",
             Description = "Official rules and expansions",
             CreatedByUserId = userId,
@@ -83,7 +83,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         var collection2 = new DocumentCollectionEntity
         {
             Id = collection2Id,
-            GameId = gameId,
+            SharedGameId = gameId,
             Name = "Catan FAQ Collection",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -98,7 +98,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
 
         // Assert - Collections are deleted via cascade
         var remainingCollections = await _dbContext.DocumentCollections
-            .Where(dc => dc.GameId == gameId)
+            .Where(dc => dc.SharedGameId == gameId)
             .ToListAsync(TestContext.Current.CancellationToken);
 
         remainingCollections.Should().BeEmpty();
@@ -135,7 +135,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            GameId = gameId,
+            SharedGameId = gameId,
             Name = "Wingspan Rules",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -212,7 +212,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            GameId = gameId,
+            SharedGameId = gameId,
             Name = "Azul Collection",
             CreatedByUserId = userId,
             DocumentsJson = "[]"

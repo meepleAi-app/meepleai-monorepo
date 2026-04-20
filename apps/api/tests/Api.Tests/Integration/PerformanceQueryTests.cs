@@ -111,7 +111,7 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
             pdfs.Add(new PdfDocumentEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = games[i % games.Count].Id,
+                SharedGameId = games[i % games.Count].Id,
                 FileName = $"document{i:D4}.pdf",
                 FilePath = $"/path/document{i:D4}.pdf",
                 FileSizeBytes = 1000000 + (i * 5000),
@@ -198,10 +198,15 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
 
         var stopwatch = Stopwatch.StartNew();
 
-        // Act - Load PDFs with Game navigation using Include (single query)
+        // Act - Load PDFs and their games via join (single query)
+        // Note: .Game navigation was removed in favor of SharedGameId/PrivateGameId FKs
         var pdfsWithGames = await _dbContext.PdfDocuments
             .Where(p => pdfIds.Contains(p.Id))
-            .Include(p => p.Game)
+            .Join(
+                _dbContext.Games,
+                p => p.SharedGameId,
+                g => g.Id,
+                (p, g) => new { Pdf = p, Game = g })
             .AsNoTracking()
             .ToListAsync(TestCancellationToken);
 
@@ -209,13 +214,13 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
 
         // Assert
         pdfsWithGames.Should().HaveCount(20);
-        pdfsWithGames.Should().AllSatisfy(pdf =>
+        pdfsWithGames.Should().AllSatisfy(pair =>
         {
-            pdf.Game.Should().NotBeNull("Game navigation should be loaded via Include");
-            pdf.Game.Name.Should().NotBeNullOrEmpty();
+            pair.Game.Should().NotBeNull("Game should be loaded via Join");
+            pair.Game.Name.Should().NotBeNullOrEmpty();
         });
 
-        stopwatch.ElapsedMilliseconds.Should().BeLessThan(500, "Include should prevent N+1 with single JOIN query");
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(500, "Join should prevent N+1 with single JOIN query");
     }
 
     [Fact]
@@ -233,7 +238,7 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
         // Act - Lazy load Game for each PDF (N+1 problem simulation)
         // Note: EF Core doesn't support lazy loading by default without proxies,
         // so we simulate by querying games separately
-        var gameIds = pdfs.Select(p => p.GameId).Distinct().ToList();
+        var gameIds = pdfs.Select(p => p.SharedGameId).Where(id => id != null).Select(id => id!.Value).Distinct().ToList();
         var games = await _dbContext.Games
             .Where(g => gameIds.Contains(g.Id))
             .AsNoTracking()

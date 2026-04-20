@@ -37,27 +37,27 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 
     public async Task<IReadOnlyList<PdfDocument>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
-        // Direct match on pdf_documents.GameId
+        // PDF -> SharedGame migration: pdf_documents.GameId removed.
+        // Match either SharedGameId directly, or via PrivateGameId -> games.SharedGameId.
         var entities = await DbContext.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.GameId == gameId)
+            .Where(p => p.SharedGameId == gameId)
             .OrderByDescending(p => p.UploadedAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-        // If no direct match, resolve via games.SharedGameId → games.Id → pdf_documents.GameId
         if (entities.Count == 0)
         {
-            var resolvedGameIds = await DbContext.Games
+            var resolvedPrivateGameIds = await DbContext.Games
                 .AsNoTracking()
                 .Where(g => g.SharedGameId == gameId)
                 .Select(g => g.Id)
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-            if (resolvedGameIds.Count > 0)
+            if (resolvedPrivateGameIds.Count > 0)
             {
                 entities = await DbContext.PdfDocuments
                     .AsNoTracking()
-                    .Where(p => p.GameId.HasValue && resolvedGameIds.Contains(p.GameId.Value))
+                    .Where(p => p.PrivateGameId.HasValue && resolvedPrivateGameIds.Contains(p.PrivateGameId.Value))
                     .OrderByDescending(p => p.UploadedAt)
                     .ToListAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -164,7 +164,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
     {
         return await DbContext.PdfDocuments.AnyAsync(p =>
             p.ContentHash == contentHash &&
-            ((gameId.HasValue && p.GameId == gameId) ||
+            ((gameId.HasValue && p.SharedGameId == gameId) ||
              (privateGameId.HasValue && p.PrivateGameId == privateGameId)),
             cancellationToken).ConfigureAwait(false);
     }
@@ -206,7 +206,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 
         return PdfDocument.Reconstitute(
             id: entity.Id,
-            gameId: entity.GameId ?? Guid.Empty,
+            gameId: entity.PrivateGameId ?? entity.SharedGameId ?? Guid.Empty,
             fileName: fileName,
             filePath: entity.FilePath,
             fileSize: fileSize,
@@ -253,7 +253,6 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return new Api.Infrastructure.Entities.PdfDocumentEntity
         {
             Id = domain.Id,
-            GameId = domain.GameId,
             FileName = domain.FileName.Value,
             FilePath = domain.FilePath,
             FileSizeBytes = domain.FileSize.Bytes,

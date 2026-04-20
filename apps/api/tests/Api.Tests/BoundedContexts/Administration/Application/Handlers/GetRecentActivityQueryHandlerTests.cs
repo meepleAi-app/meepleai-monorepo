@@ -106,7 +106,7 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = game.Id,
+            SharedGameId = game.Id,
             FileName = "Catan-Rules.pdf",
             FilePath = "/uploads/catan.pdf",
             FileSizeBytes = 2456789,
@@ -354,7 +354,7 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = game.Id,
+            SharedGameId = game.Id,
             FileName = "rules.pdf",
             FilePath = "/uploads/rules.pdf",
             FileSizeBytes = 1000000,

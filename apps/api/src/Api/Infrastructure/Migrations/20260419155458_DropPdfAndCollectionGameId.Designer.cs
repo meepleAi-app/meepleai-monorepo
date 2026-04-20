@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260419155458_DropPdfAndCollectionGameId")]
+    partial class DropPdfAndCollectionGameId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3517,7 +3520,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasDefaultValue("[]");
 
-                    b.Property<Guid>("SharedGameId")
+                    b.Property<Guid>("GameId")
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
@@ -3531,7 +3534,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SharedGameId");
+                    b.HasIndex("GameId");
 
                     b.HasIndex("CreatedByUserId", "CreatedAt");
 
@@ -7450,6 +7453,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<long>("FileSizeBytes")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("GameId")
+                        .HasMaxLength(64)
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("IndexingStartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("indexing_started_at");
@@ -7574,14 +7581,13 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("CollectionId", "SortOrder");
 
+                    b.HasIndex("ContentHash", "GameId")
+                        .HasDatabaseName("ix_pdf_documents_content_hash_game_id");
+
                     b.HasIndex("ContentHash", "PrivateGameId")
                         .HasDatabaseName("ix_pdf_documents_content_hash_private_game_id");
 
-                    b.HasIndex("ContentHash", "SharedGameId")
-                        .HasDatabaseName("ix_pdf_documents_content_hash_shared_game_id");
-
-                    b.HasIndex("SharedGameId", "UploadedAt")
-                        .HasDatabaseName("IX_pdf_documents_SharedGameId_UploadedAt");
+                    b.HasIndex("GameId", "UploadedAt");
 
                     b.ToTable("pdf_documents", (string)null);
                 });
@@ -13148,15 +13154,15 @@ namespace Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
                         .WithMany()
-                        .HasForeignKey("SharedGameId")
+                        .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("CreatedBy");
 
-                    b.Navigation("SharedGame");
+                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity", b =>
@@ -13715,9 +13721,9 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("CollectionId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", null)
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
                         .WithMany()
-                        .HasForeignKey("SharedGameId")
+                        .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "UploadedBy")
@@ -13729,6 +13735,8 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("BaseDocument");
 
                     b.Navigation("Collection");
+
+                    b.Navigation("Game");
 
                     b.Navigation("UploadedBy");
                 });

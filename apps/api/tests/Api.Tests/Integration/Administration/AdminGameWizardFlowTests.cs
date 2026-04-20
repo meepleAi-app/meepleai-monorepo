@@ -133,7 +133,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = $"{gameName.ToLowerInvariant()}.pdf",
             FilePath = $"/uploads/{gameName.ToLowerInvariant()}.pdf",
             UploadedByUserId = AdminUserId,
@@ -319,7 +319,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameBId,
+            SharedGameId = gameBId,
             FileName = "game-b.pdf",
             FilePath = "/uploads/game-b.pdf",
             UploadedByUserId = AdminUserId,

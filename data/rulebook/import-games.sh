@@ -8,7 +8,7 @@ set -euo pipefail
 
 # --- Config -----------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MANIFEST="${SCRIPT_DIR}/manifest.json"
+MANIFEST="${MANIFEST_OVERRIDE:-${SCRIPT_DIR}/manifest.json}"
 RULEBOOK_DIR="${SCRIPT_DIR}"
 COOKIES="${SCRIPT_DIR}/.cookies"
 API_BASE="${API_BASE:-http://localhost:8080/api/v1}"

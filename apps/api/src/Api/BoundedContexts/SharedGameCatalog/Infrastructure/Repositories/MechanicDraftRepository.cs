@@ -95,7 +95,10 @@ internal sealed class MechanicDraftRepository : RepositoryBase, IMechanicDraftRe
             entity.QuestionsDraft,
             entity.CreatedAt,
             entity.LastModified,
-            (MechanicDraftStatus)entity.Status);
+            (MechanicDraftStatus)entity.Status,
+            entity.TotalTokensUsed,
+            entity.EstimatedCostUsd,
+            entity.RowVersion);
     }
 
     private static MechanicDraftEntity MapToEntity(MechanicDraft draft)
@@ -121,7 +124,10 @@ internal sealed class MechanicDraftRepository : RepositoryBase, IMechanicDraftRe
             QuestionsDraft = draft.QuestionsDraft,
             CreatedAt = draft.CreatedAt,
             LastModified = draft.LastModified,
-            Status = (int)draft.Status
+            Status = (int)draft.Status,
+            TotalTokensUsed = draft.TotalTokensUsed,
+            EstimatedCostUsd = draft.EstimatedCostUsd,
+            RowVersion = draft.RowVersion
         };
     }
 }

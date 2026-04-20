@@ -417,6 +417,16 @@ export default function MechanicExtractorPage() {
                     )}
                   </div>
 
+                  {existingDraft && existingDraft.totalTokensUsed > 0 && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                      <SparklesIcon className="h-3 w-3" />
+                      <span>{existingDraft.totalTokensUsed} tokens used</span>
+                      {existingDraft.estimatedCostUsd > 0 && (
+                        <span>(${existingDraft.estimatedCostUsd.toFixed(4)})</span>
+                      )}
+                    </div>
+                  )}
+
                   {/* AI Result Preview */}
                   {aiResult && aiResult.section === activeSection && (
                     <div className="mb-3 rounded-lg border-2 border-amber-300 bg-amber-50/50 p-3 dark:border-amber-700 dark:bg-amber-950/20">
@@ -475,18 +485,28 @@ export default function MechanicExtractorPage() {
                   {/* Finalize Button */}
                   {canFinalize && (
                     <div className="mt-4 border-t border-slate-200 pt-4 dark:border-zinc-700">
-                      <Button
-                        onClick={() => finalizeMutation.mutate()}
-                        disabled={finalizeMutation.isPending}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        {finalizeMutation.isPending ? (
-                          <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <ShieldCheckIcon className="mr-2 h-4 w-4" />
-                        )}
-                        Activate in Knowledge Base
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1" asChild>
+                          <a
+                            href={`/admin/knowledge-base/mechanic-extractor/review?sharedGameId=${selectedGameId}&pdfDocumentId=${selectedPdfId}`}
+                          >
+                            <FileTextIcon className="mr-2 h-4 w-4" />
+                            Preview & Export
+                          </a>
+                        </Button>
+                        <Button
+                          onClick={() => finalizeMutation.mutate()}
+                          disabled={finalizeMutation.isPending}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          {finalizeMutation.isPending ? (
+                            <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <ShieldCheckIcon className="mr-2 h-4 w-4" />
+                          )}
+                          Activate in Knowledge Base
+                        </Button>
+                      </div>
                       <p className="mt-1 text-center text-xs text-muted-foreground">
                         Creates a RulebookAnalysis entry with GenerationSource.Manual
                       </p>

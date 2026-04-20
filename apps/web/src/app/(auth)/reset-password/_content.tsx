@@ -14,9 +14,11 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { AccessibleFormInput, AccessibleButton } from '@/components/accessible';
+import { AccessibleFormInput } from '@/components/accessible';
 import { AuthLayout } from '@/components/layouts';
 import { Button } from '@/components/ui/primitives/button';
+import { AuthCard } from '@/components/ui/v2/auth-card';
+import { Btn } from '@/components/ui/v2/btn';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 
@@ -296,15 +298,23 @@ export function ResetPasswordPageContent() {
   // Request Reset Mode
   if (mode === 'request' && !requestSuccess) {
     return (
-      <AuthLayout
+      <AuthCard
         title="Reset Password"
         subtitle="Enter your email address and we'll send you instructions to reset your password"
+        footerAction={
+          <Link
+            href="/"
+            className="text-primary hover:text-primary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+          >
+            ← Back to Login
+          </Link>
+        }
       >
         {errorMessage && (
           <div
             role="alert"
             aria-live="polite"
-            className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-4"
+            className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg mb-4 text-sm"
           >
             {errorMessage}
           </div>
@@ -322,27 +332,18 @@ export function ResetPasswordPageContent() {
             inputClassName="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-ring"
           />
 
-          <AccessibleButton
+          <Btn
             type="submit"
             variant="primary"
-            className="w-full mt-6"
-            isLoading={isLoading}
-            loadingText="Sending..."
+            fullWidth
+            className="mt-6"
+            loading={isLoading}
             disabled={!email.trim()}
           >
-            Send Reset Instructions
-          </AccessibleButton>
+            {isLoading ? 'Sending...' : 'Send Reset Instructions'}
+          </Btn>
         </form>
-
-        <div className="text-center mt-4">
-          <Link
-            href="/"
-            className="text-sm text-primary hover:text-primary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
-          >
-            ← Back to Login
-          </Link>
-        </div>
-      </AuthLayout>
+      </AuthCard>
     );
   }
 
@@ -417,12 +418,23 @@ export function ResetPasswordPageContent() {
   // Reset Password Mode - Valid Token
   if (mode === 'reset' && tokenValid === true && !resetSuccess) {
     return (
-      <AuthLayout title="Set New Password" subtitle="Choose a strong password for your account">
+      <AuthCard
+        title="Set New Password"
+        subtitle="Choose a strong password for your account"
+        footerAction={
+          <Link
+            href="/"
+            className="text-primary hover:text-primary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+          >
+            ← Back to Login
+          </Link>
+        }
+      >
         {errorMessage && (
           <div
             role="alert"
             aria-live="polite"
-            className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-4"
+            className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg mb-4 text-sm"
           >
             {errorMessage}
           </div>
@@ -503,31 +515,22 @@ export function ResetPasswordPageContent() {
             inputClassName="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-ring"
           />
 
-          <AccessibleButton
+          <Btn
             type="submit"
             variant="primary"
-            className="w-full mt-6"
-            isLoading={isLoading}
-            loadingText="Resetting..."
+            fullWidth
+            className="mt-6"
+            loading={isLoading}
             disabled={
               !passwordValidation.isValid ||
               newPassword !== confirmPassword ||
               !confirmPassword.trim()
             }
           >
-            Reset Password
-          </AccessibleButton>
+            {isLoading ? 'Resetting...' : 'Reset Password'}
+          </Btn>
         </form>
-
-        <div className="text-center mt-4">
-          <Link
-            href="/"
-            className="text-sm text-primary hover:text-primary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
-          >
-            ← Back to Login
-          </Link>
-        </div>
-      </AuthLayout>
+      </AuthCard>
     );
   }
 

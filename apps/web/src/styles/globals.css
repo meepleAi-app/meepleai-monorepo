@@ -506,10 +506,10 @@
   --e-player: 262 83% 58%;
   --e-session: 240 60% 55%;
   --e-agent: 38 92% 50%;
-  --e-document: 210 40% 55%;
+  --e-document: 174 60% 40%;  /* KB teal — aligned with Claude Design v1 mockup (--c-kb) */
   --e-chat: 220 80% 55%;
   --e-event: 350 89% 60%;
-  --e-toolkit: 160 70% 45%;  /* Teal Green — Redesign V2 */
+  --e-toolkit: 142 70% 45%;  /* Toolkit green — aligned with Claude Design v1 mockup (--c-toolkit) */
   --e-tool: 195 80% 50%;     /* Sky Blue — Epic #412 */
 
   /* Base theme tokens - Opzione A: Playful Boardroom */

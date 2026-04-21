@@ -437,7 +437,17 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Install dotnet-ef tool
-        run: dotnet tool install --global dotnet-ef --version 9.*
+        # Idempotent: use pre-installed tool if present (self-hosted runner may
+        # already have dotnet-ef from a newer SDK). `dotnet tool install` does
+        # not support downgrades, so skipping install when a compatible version
+        # exists avoids exit 1 on runners with ef 10.x already global.
+        run: |
+          if dotnet tool list --global | awk '{print $1}' | grep -qx 'dotnet-ef'; then
+            echo "dotnet-ef already installed globally — using existing version:"
+            dotnet tool list --global | grep '^dotnet-ef'
+          else
+            dotnet tool install --global dotnet-ef --version 9.*
+          fi
 
       - name: Restore and build API project
         working-directory: apps/api/src/Api

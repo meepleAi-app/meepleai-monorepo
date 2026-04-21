@@ -82,14 +82,16 @@ export default function MechanicExtractorPage() {
   const pdfUrl = selectedPdfId ? `/api/v1/pdfs/${selectedPdfId}/download` : '';
 
   // Fetch shared games for selection
-  const { data: gamesData } = useQuery({
+  const { data: gamesData, isLoading: isGamesLoading } = useQuery({
     queryKey: ['shared-games', 'all'],
     queryFn: () => gamesClient.getAll({ page: 1, pageSize: 100 }),
     staleTime: 60_000,
   });
 
   // Fetch all PDFs in Ready state to determine which games have a PDF available
-  const { data: readyPdfsData } = useQuery({
+  // NOTE: pageSize=500 is a deliberate cap; if exceeded the game filter will
+  // silently under-count eligible games. Raise or paginate if scale demands.
+  const { data: readyPdfsData, isLoading: isReadyPdfsLoading } = useQuery({
     queryKey: ['admin', 'pdfs', 'ready-all'],
     queryFn: () =>
       adminClient.getAllPdfs({
@@ -99,6 +101,8 @@ export default function MechanicExtractorPage() {
       }),
     staleTime: 60_000,
   });
+
+  const isGameSelectLoading = isGamesLoading || isReadyPdfsLoading;
 
   // Build set of gameIds that have at least one Ready PDF
   const gameIdsWithPdf = new Set(
@@ -273,10 +277,14 @@ export default function MechanicExtractorPage() {
                 Select Game
               </label>
               <Select value={selectedGameId} onValueChange={handleGameSelect}>
-                <SelectTrigger>
+                <SelectTrigger disabled={isGameSelectLoading}>
                   <SelectValue
                     placeholder={
-                      gamesWithPdf.length === 0 ? 'No games with PDF available' : 'Choose a game...'
+                      isGameSelectLoading
+                        ? 'Loading…'
+                        : gamesWithPdf.length === 0
+                          ? 'No games with PDF available'
+                          : 'Choose a game...'
                     }
                   />
                 </SelectTrigger>

@@ -78,8 +78,8 @@ export default function MechanicExtractorPage() {
   const [aiResult, setAiResult] = useState<AiAssistResultDto | null>(null);
   const [autoSaveTimer, setAutoSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
-  // PDF viewer ref
-  const pdfUrl = selectedPdfId ? `/api/v1/documents/${selectedPdfId}/download` : '';
+  // PDF viewer ref (endpoint: /api/v1/pdfs/{pdfId}/download — see PdfRetrievalEndpoints)
+  const pdfUrl = selectedPdfId ? `/api/v1/pdfs/${selectedPdfId}/download` : '';
 
   // Fetch shared games for selection
   const { data: gamesData } = useQuery({
@@ -88,13 +88,35 @@ export default function MechanicExtractorPage() {
     staleTime: 60_000,
   });
 
+  // Fetch all PDFs in Ready state to determine which games have a PDF available
+  const { data: readyPdfsData } = useQuery({
+    queryKey: ['admin', 'pdfs', 'ready-all'],
+    queryFn: () =>
+      adminClient.getAllPdfs({
+        state: 'Ready',
+        page: 1,
+        pageSize: 500,
+      }),
+    staleTime: 60_000,
+  });
+
+  // Build set of gameIds that have at least one Ready PDF
+  const gameIdsWithPdf = new Set(
+    (readyPdfsData?.items ?? []).map(p => p.gameId).filter((id): id is string => !!id)
+  );
+
+  // Filter games to those with at least one PDF available
+  const gamesWithPdf = (gamesData?.items ?? []).filter((g: { id: string }) =>
+    gameIdsWithPdf.has(g.id)
+  );
+
   // Fetch PDFs for selected game
   const { data: pdfsData } = useQuery({
     queryKey: ['admin', 'pdfs', { gameId: selectedGameId }],
     queryFn: () =>
       adminClient.getAllPdfs({
         gameId: selectedGameId,
-        status: 'completed',
+        state: 'Ready',
         page: 1,
         pageSize: 50,
       }),
@@ -210,7 +232,7 @@ export default function MechanicExtractorPage() {
   const handleGameSelect = (gameId: string) => {
     setSelectedGameId(gameId);
     setSelectedPdfId('');
-    const game = gamesData?.items?.find((g: { id: string; title: string }) => g.id === gameId);
+    const game = gamesWithPdf.find((g: { id: string; title: string }) => g.id === gameId);
     if (game) setGameTitle(game.title);
   };
 
@@ -252,10 +274,14 @@ export default function MechanicExtractorPage() {
               </label>
               <Select value={selectedGameId} onValueChange={handleGameSelect}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose a game..." />
+                  <SelectValue
+                    placeholder={
+                      gamesWithPdf.length === 0 ? 'No games with PDF available' : 'Choose a game...'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {gamesData?.items?.map((game: { id: string; title: string }) => (
+                  {gamesWithPdf.map((game: { id: string; title: string }) => (
                     <SelectItem key={game.id} value={game.id}>
                       {game.title}
                     </SelectItem>

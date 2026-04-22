@@ -25,7 +25,7 @@ import { useEffect, useState, useRef } from 'react';
 
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
+import { Btn } from '@/components/ui/v2/btn';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export interface VerificationSuccessProps {
@@ -144,14 +144,14 @@ export function VerificationSuccess({
 
       {/* Countdown or Redirect Button */}
       <div className="w-full space-y-3">
-        <Button
-          className="w-full"
+        <Btn
+          fullWidth
           onClick={handleManualRedirect}
           data-testid="continue-to-dashboard-button"
+          rightIcon={<ArrowRight className="w-4 h-4" aria-hidden="true" />}
         >
           {t('auth.emailVerification.success.continueButton')}
-          <ArrowRight className="w-4 h-4 ml-2" aria-hidden="true" />
-        </Button>
+        </Btn>
 
         {/* Countdown Message */}
         {countdown > 0 && autoRedirectSeconds > 0 && (

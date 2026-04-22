@@ -5,8 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { PartyPopper, ArrowRight, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Progress } from '@/components/ui/feedback/progress';
-import { Button } from '@/components/ui/primitives/button';
+import { Btn } from '@/components/ui/v2/btn';
 
 const REDIRECT_DELAY_MS = 2000;
 const PROGRESS_INTERVAL_MS = 50;
@@ -105,20 +104,37 @@ export function WelcomeContent() {
 
         {/* Progress Bar */}
         <div className="space-y-2" role="status" aria-live="polite">
-          <Progress value={progress} className="h-2 w-full" aria-label="Redirect progress" />
+          <div
+            role="progressbar"
+            aria-valuenow={Math.round(progress)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Redirect progress"
+            className="relative h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-75 motion-reduce:transition-none"
+              style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+            />
+          </div>
           <p className="text-xs text-slate-400 dark:text-slate-500">Reindirizzamento in corso...</p>
         </div>
 
         {/* Manual Redirect Button */}
-        <Button
+        <Btn
           onClick={handleRedirect}
           size="lg"
           className="group"
           data-testid="welcome-go-dashboard"
+          rightIcon={
+            <ArrowRight
+              className="h-4 w-4 transition-transform group-hover:translate-x-1"
+              aria-hidden="true"
+            />
+          }
         >
           Vai alla Dashboard
-          <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </Button>
+        </Btn>
 
         {/* Features Preview */}
         <div className="pt-4 border-t border-slate-200 dark:border-slate-700">

@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MeepleAI — Design System v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<style>
+  body { background: var(--bg); }
+  .hero {
+    padding: 80px 24px 48px; max-width: 1400px; margin: 0 auto;
+  }
+  .hero-kicker {
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .12em; margin-bottom: 12px;
+  }
+  .hero h1 {
+    font-size: clamp(40px, 7vw, 72px); line-height: 1.05; letter-spacing: -.02em;
+    margin-bottom: 16px;
+  }
+  .hero h1 .mark {
+    background: linear-gradient(120deg, hsl(var(--c-game)), hsl(var(--c-event)) 70%, hsl(var(--c-player)));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p.lead { font-size: 18px; color: var(--text-sec); max-width: 680px; line-height: 1.55; }
+
+  .stat-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    max-width: 1400px; margin: 0 auto 48px; padding: 0 24px;
+  }
+  .stat-row .st {
+    padding: 20px; border: 1px solid var(--border); border-radius: var(--r-xl);
+    background: var(--bg-card);
+  }
+  .stat-row .st .v { font-family: var(--f-display); font-size: 32px; font-weight: 800; letter-spacing: -.02em; }
+  .stat-row .st .l { font-size: 12px; color: var(--text-sec); margin-top: 4px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+
+  .cards {
+    max-width: 1400px; margin: 0 auto; padding: 24px 24px 80px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  .hub-card {
+    position: relative; overflow: hidden;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-2xl); padding: 24px;
+    display: flex; flex-direction: column; gap: 12px;
+    min-height: 240px; transition: all .3s var(--ease-out);
+    cursor: pointer;
+  }
+  .hub-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at top right, hsl(var(--e) / .12), transparent 60%);
+    pointer-events: none; opacity: .7; transition: opacity .3s;
+  }
+  .hub-card:hover {
+    transform: translateY(-4px); box-shadow: var(--shadow-lg);
+    border-color: hsl(var(--e) / .4);
+  }
+  .hub-card:hover::before { opacity: 1; }
+  .hub-card .num {
+    font-family: var(--f-mono); font-size: 11px; color: hsl(var(--e));
+    font-weight: 700; letter-spacing: .1em;
+  }
+  .hub-card h3 {
+    font-size: 22px; margin-top: 4px; line-height: 1.2;
+  }
+  .hub-card p { font-size: 13px; color: var(--text-sec); line-height: 1.5; margin: 0; }
+  .hub-card .tags {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto;
+  }
+  .hub-card .tag {
+    padding: 3px 8px; border-radius: var(--r-sm);
+    background: hsl(var(--e) / .1); color: hsl(var(--e));
+    font-size: 10px; font-weight: 700; font-family: var(--f-display);
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .hub-card .arrow {
+    position: absolute; top: 24px; right: 24px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: hsl(var(--e) / .12); color: hsl(var(--e));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: all .3s var(--ease-out);
+  }
+  .hub-card:hover .arrow { background: hsl(var(--e)); color: #fff; transform: translate(2px, -2px); }
+
+  /* Entity palette row */
+  .palette-row {
+    max-width: 1400px; margin: 48px auto 0; padding: 0 24px;
+  }
+  .palette-grid {
+    display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; margin-top: 16px;
+  }
+  .pal {
+    aspect-ratio: 1; border-radius: var(--r-lg);
+    background: hsl(var(--e));
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 12px; color: #fff;
+    font-family: var(--f-display); font-size: 11px; font-weight: 700;
+    position: relative; overflow: hidden;
+  }
+  .pal .pem { position: absolute; top: 10px; right: 10px; font-size: 18px; opacity: .85; }
+  @media (max-width: 800px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .palette-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<nav class="hub-nav">
+  <div class="brand"><span class="brand-mark">M</span><span>MeepleAI</span></div>
+  <span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--bg-muted);font-family:var(--f-mono);color:var(--text-muted);">Design System v1</span>
+  <div class="spacer"></div>
+  <a href="01-screens.html">Screens</a>
+  <a href="02-desktop-patterns.html">Desktop</a>
+  <a href="03-drawer-variants.html">Drawer</a>
+  <a href="04-design-system.html">Tokens</a>
+  <a href="05-dark-mode.html">Dark Mode</a>
+  <a href="auth-flow.html">Auth</a>
+  <a href="settings.html">Settings</a>
+  <a href="notifications.html">Notifications</a>
+  <a href="public.html">Public</a>
+  <a href="onboarding.html">Onboarding</a>
+</nav>
+
+<button class="theme-toggle" id="themeToggle">🌗 <span id="themeLabel">Light</span></button>
+
+<section class="hero">
+  <div class="hero-kicker">Internal design deliverable · Marzo 2026</div>
+  <h1>Un sistema per MeepleAI <span class="mark">che tiene insieme tutto.</span></h1>
+  <p class="lead">
+    9 entity types, 5 layout variants, 6 drawer patterns, 3 desktop layouts, 52+ screen.
+    Questo è l'hub: ogni sezione esplora un lato del sistema — dai tokens fino all'app completa interattiva.
+  </p>
+</section>
+
+<div class="stat-row">
+  <div class="st"><div class="v" style="color:hsl(var(--c-game));">9</div><div class="l">Entity types</div></div>
+  <div class="st"><div class="v" style="color:hsl(var(--c-session));">52</div><div class="l">Screen mobile</div></div>
+  <div class="st"><div class="v" style="color:hsl(var(--c-toolkit));">6</div><div class="l">Drawer variants</div></div>
+  <div class="st"><div class="v" style="color:hsl(var(--c-chat));">3</div><div class="l">Desktop layouts</div></div>
+</div>
+
+<div class="cards">
+  <a class="hub-card e-session" href="01-screens.html">
+    <div class="arrow">→</div>
+    <div class="num">01 · Priority</div>
+    <h3>Screen mobile interattivi</h3>
+    <p>Tutti gli screen mancanti: Home feed, Search, Library filtrabile, KB viewer, Events, Toolkit, lista Sessions/Chats. Navigazione vera tra entity: tap un connection pip → apre il drawer di quell'entity. Drag-to-dismiss, swipe between entities, session mode con bottom bar dedicato.</p>
+    <div class="tags"><span class="tag">24 screen</span><span class="tag">Drag &amp; swipe</span><span class="tag">Session mode</span></div>
+  </a>
+
+  <a class="hub-card e-chat" href="02-desktop-patterns.html">
+    <div class="arrow">→</div>
+    <div class="num">02 · Desktop</div>
+    <h3>3 pattern desktop</h3>
+    <p>Split view (Linear/Mail-style: lista sx + dettaglio dx), sidebar nav + main + drawer laterale (Notion-style), full-page con tab persistenti (Vercel-style). Stesso contenuto, 3 filosofie di navigazione a confronto.</p>
+    <div class="tags"><span class="tag">Split</span><span class="tag">Sidebar</span><span class="tag">Tabs</span></div>
+  </a>
+
+  <a class="hub-card e-toolkit" href="03-drawer-variants.html">
+    <div class="arrow">→</div>
+    <div class="num">03 · Drawer</div>
+    <h3>6 variazioni drawer</h3>
+    <p>Bottom sheet (base), peek &amp; expanded states, full-screen modal, side sheet, swipe-between-entities, split-drawer (dual-pane). Ogni variante mostra pro/contro e quando usarla.</p>
+    <div class="tags"><span class="tag">6 patterns</span><span class="tag">Drag</span><span class="tag">Compare</span></div>
+  </a>
+
+  <a class="hub-card e-kb" href="04-design-system.html">
+    <div class="arrow">→</div>
+    <div class="num">04 · Tokens</div>
+    <h3>Design system doc + playground</h3>
+    <p>Color tokens (9 entity + semantic), typography (Quicksand/Nunito), spacing (4px grid), radius, shadows, motion. Componenti live: Button, Card, Badge, TagStrip, ConnectionBar, Drawer — ognuno con varianti e codice.</p>
+    <div class="tags"><span class="tag">Tokens</span><span class="tag">Playground</span><span class="tag">Live demo</span></div>
+  </a>
+
+  <a class="hub-card e-player" href="05-dark-mode.html">
+    <div class="arrow">→</div>
+    <div class="num">05 · Dark</div>
+    <h3>Dark mode globale</h3>
+    <p>Switch tra light/dark su tutto il sistema. Entity colors riadattate per contrasto su bg scuro, warm dark palette (#14100a + tinted browns) per coerenza con l'identità board-game/legno.</p>
+    <div class="tags"><span class="tag">Contrast AAA</span><span class="tag">Warm dark</span><span class="tag">Auto</span></div>
+  </a>
+
+  <a class="hub-card e-game" href="auth-flow.html">
+    <div class="arrow">→</div>
+    <div class="num">06 · Auth</div>
+    <h3>Auth flow completo</h3>
+    <p>6 screen pre-autenticazione interattivi: Login, Registrazione, Recupero password, Reset, Verifica email, Setup 2FA. Validazione live, strength meter, PIN input, OAuth buttons, success states, dark mode.</p>
+    <div class="tags"><span class="tag">6 screen</span><span class="tag">Validazione</span><span class="tag">2FA · OAuth</span></div>
+  </a>
+
+  <a class="hub-card e-game" href="settings.html">
+    <div class="arrow">→</div>
+    <div class="num">07 · Settings</div>
+    <h3>Impostazioni utente</h3>
+    <p>7 pannelli: Hub, Profile, Account, Preferences, Notifications, API keys, Connected services. Sidebar+Drawer pattern desktop, lista→drawer mobile. Toggle entity-aware, destructive confirm modal, OAuth BGG/Google/Discord.</p>
+    <div class="tags"><span class="tag">7 pannelli</span><span class="tag">Sidebar+Drawer</span><span class="tag">OAuth</span></div>
+  </a>
+
+  <a class="hub-card e-event" href="notifications.html">
+    <div class="arrow">→</div>
+    <div class="num">08 · Notifications</div>
+    <h3>Feed notifiche cross-entity</h3>
+    <p>5 screen: Feed raggruppato per giorno, Detail drawer, Empty state, Filters bar, Settings quick-link. Border-left entity-colored per tipo (session/agent/event/kb/system). Swipe-to-archive mobile, split-view desktop, badge counter.</p>
+    <div class="tags"><span class="tag">5 screen</span><span class="tag">Swipe gestures</span><span class="tag">Cross-entity</span></div>
+  </a>
+
+  <a class="hub-card e-game" href="public.html">
+    <div class="arrow">→</div>
+    <div class="num">09 · Public</div>
+    <h3>Marketing pre-auth</h3>
+    <p>5 pagine desktop-first: Landing con hero gradient brand, Pricing 3-tier (Free/Pro/Team), About con timeline e team, Terms/Privacy long-form, Contact form. Hub nav sticky con CTA register, footer multi-column, hero gradient entity-mix (game→event→player).</p>
+    <div class="tags"><span class="tag">5 pagine</span><span class="tag">Desktop-first</span><span class="tag">Marketing</span></div>
+  </a>
+
+  <a class="hub-card e-game" href="onboarding.html">
+    <div class="arrow">→</div>
+    <div class="num">10 · Onboarding</div>
+    <h3>Tour post-registration</h3>
+    <p>5 screen post-registrazione: Welcome hero, Step 1 Choose games (--c-game), Step 2 Connect agents (--c-agent), Step 3 First session (--c-session), Complete con confetti. Progress bar entity-changing per step, skip link, back/next navigation, multi-entity flow.</p>
+    <div class="tags"><span class="tag">5 screen</span><span class="tag">Multi-entity</span><span class="tag">Progress</span></div>
+  </a>
+
+  <a class="hub-card e-game" href="../index.html">
+    <div class="arrow">↗</div>
+    <div class="num">00 · Codebase</div>
+    <h3>App React esistente</h3>
+    <p>L'app React desktop/mobile già in corso: Dashboard, Library, Detail, Graph, Chat, Session. Punto di partenza — il design system qui documentato la estende e raffina.</p>
+    <div class="tags"><span class="tag">React</span><span class="tag">Tweakable</span><span class="tag">Baseline</span></div>
+  </a>
+</div>
+
+<section class="palette-row">
+  <div style="font-family:var(--f-mono);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;">Entity palette</div>
+  <div class="palette-grid" id="palGrid"></div>
+</section>
+
+<footer style="max-width:1400px;margin:80px auto 48px;padding:32px 24px;border-top:1px solid var(--border);color:var(--text-muted);font-size:12px;">
+  MeepleAI Design System v1 — Marzo 2026 · Quicksand + Nunito · 4px grid · OKLCH-adjacent HSL entity palette
+</footer>
+
+<script src="data.js"></script>
+<script>
+  // Theme toggle
+  const root = document.documentElement;
+  const savedTheme = localStorage.getItem('mai-theme') || 'light';
+  root.setAttribute('data-theme', savedTheme);
+  document.getElementById('themeLabel').textContent = savedTheme === 'dark' ? 'Dark' : 'Light';
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme');
+    const next = cur === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('mai-theme', next);
+    document.getElementById('themeLabel').textContent = next === 'dark' ? 'Dark' : 'Light';
+  });
+
+  // Palette grid
+  const grid = document.getElementById('palGrid');
+  Object.entries(DS.EC).forEach(([k, v]) => {
+    const el = document.createElement('div');
+    el.className = 'pal e-' + k;
+    el.innerHTML = `<div class="pem">${v.em}</div><div>${v.lb.toUpperCase()}</div>`;
+    grid.appendChild(el);
+  });
+</script>
+
+</body>
+</html>

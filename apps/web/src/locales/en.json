@@ -4,9 +4,9 @@
     "addPrivateGame": "Private game",
     "year": "Year",
     "plays": "Plays",
+    "backToCollection": "Back to Collection",
     "addGameTitle": "Add Game to Collection",
-    "addGameSubtitle": "Search for a game or create a custom entry",
-    "backToCollection": "Back to Collection"
+    "addGameSubtitle": "Search for a game or create a custom entry"
   },
   "accessibility": {
     "close": "Close",
@@ -96,12 +96,24 @@
     "login": {
       "emailLabel": "Email",
       "emailPlaceholder": "you@example.com",
+      "forgotPassword": "Forgot password?",
+      "genericError": "Login failed. Please try again.",
       "loadingMessage": "Loading...",
       "loggingIn": "Logging in...",
       "loginButton": "Login",
+      "noAccount": "Don't have an account?",
       "passwordLabel": "Password",
       "passwordPlaceholder": "••••••••",
-      "signInTo": "Sign in to MeepleAI"
+      "registerCta": "Sign up",
+      "signInTo": "Sign in to MeepleAI",
+      "subtitle": "Welcome back to MeepleAI",
+      "title": "Sign in"
+    },
+    "modal": {
+      "loginTab": "Sign in",
+      "registerTab": "Register",
+      "tabsLabel": "Authentication mode",
+      "title": "Sign in or register"
     },
     "oauth": {
       "discord": "Continue with Discord",
@@ -119,25 +131,67 @@
       "displayNameOptional": "Display Name (Optional)",
       "displayNamePlaceholder": "John Doe",
       "email": "Email",
+      "emailLabel": "Email",
       "emailPlaceholder": "you@example.com",
       "error": "Registration failed. Please try again.",
+      "genericError": "Registration failed. Please try again.",
       "hasAccount": "Already have an account?",
+      "inviteOauthDisabled": "OAuth login is not available during alpha. Please request access below.",
+      "inviteOnlySubtitle": "Registration is currently invite-only",
+      "inviteOnlyTitle": "Request access",
+      "loginCta": "Sign in",
       "password": "Password",
       "passwordHelp": "Must contain uppercase, lowercase, and number (min 8 characters)",
+      "passwordLabel": "Password",
       "passwordPlaceholder": "••••••••",
+      "privacyLink": "Privacy Policy",
+      "registerButton": "Sign Up",
       "role": "Role",
       "selectRole": "Select a role",
       "signIn": "Login",
       "submit": "Sign Up",
+      "subtitle": "Join MeepleAI to get started",
       "success": "Registration complete! You can now login.",
+      "termsAnd": "and the",
+      "termsLink": "Terms of Service",
+      "termsPrefix": "I accept the",
+      "termsRequired": "You must accept the terms and conditions to continue",
       "title": "Sign Up"
     },
     "resetPassword": {
-      "email": "Email",
+      "backToLogin": "← Back to login",
+      "confirmCta": "Reset password",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmSubtitle": "Choose a strong password for your account",
+      "confirmTitle": "Set a new password",
+      "email": "Email address",
       "error": "Unable to send reset link. Please try again.",
+      "genericConfirmError": "Failed to reset password. Please try again.",
+      "genericRequestError": "Failed to send reset email. Please try again.",
+      "invalidLinkCta": "Request new link",
+      "invalidLinkSubtitle": "This password reset link is no longer valid",
+      "invalidLinkTitle": "Invalid or expired link",
+      "invalidToken": "Invalid reset token.",
+      "invalidTokenFromServer": "Invalid or expired reset token.",
+      "loadingTitle": "Loading...",
+      "passwordLabel": "New password",
+      "passwordRequirements": "Password does not meet all requirements.",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "placeholder": "you@example.com",
+      "resetting": "Resetting...",
+      "sending": "Sending...",
+      "sentBody": "We've sent password reset instructions to {email}. Check your spam folder if you don't see it.",
+      "sentTitle": "Check your email",
       "submit": "Send reset link",
+      "submitCta": "Send reset instructions",
+      "subtitle": "Enter your email address and we'll send you instructions to reset your password",
       "success": "Reset link sent! Check your email.",
-      "title": "Reset password"
+      "successBody": "Your password has been reset. Redirecting...",
+      "successTitle": "Password reset successful",
+      "title": "Reset password",
+      "tryAgain": "Try again",
+      "verifyingBody": "Verifying reset token...",
+      "verifyingTitle": "Verifying..."
     },
     "session": {
       "expired": "Your session has expired. Please login again.",
@@ -152,9 +206,11 @@
       "code": "Verification code",
       "error": "Invalid code. Please try again.",
       "submit": "Verify",
-      "title": "Two-Factor Authentication"
+      "title": "Two-Factor Authentication",
+      "verificationSubtitle": "Enter the code from your authenticator app to continue."
     },
     "emailVerification": {
+      "pageTitle": "Email verification",
       "verifying": "Verifying your email...",
       "pending": {
         "title": "Check your email",
@@ -207,6 +263,17 @@
           "description": "An error occurred while verifying your email. Please try again."
         }
       }
+    },
+    "meter": {
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong",
+      "prefix": "Password:"
+    },
+    "visibility": {
+      "show": "Show password",
+      "hide": "Hide password"
     }
   },
   "chat": {
@@ -1033,14 +1100,5 @@
     "adding": "Adding...",
     "addPrivateGame": "Add Private Game",
     "addFromBgg": "Add from catalog"
-  },
-  "collection": {
-    "addFromCatalog": "From catalog",
-    "addPrivateGame": "Private game",
-    "year": "Year",
-    "plays": "Plays",
-    "backToCollection": "Back to Collection",
-    "addGameTitle": "Add Game to Collection",
-    "addGameSubtitle": "Search for a game or create a custom entry"
   }
 }

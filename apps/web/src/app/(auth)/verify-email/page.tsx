@@ -7,9 +7,7 @@
 
 import { Suspense } from 'react';
 
-import { Loader2 } from 'lucide-react';
-
-import { AuthLayout } from '@/components/layouts';
+import { AuthCard } from '@/components/ui/v2/auth-card';
 
 import { VerifyEmailContent } from './_content';
 
@@ -17,12 +15,13 @@ export default function VerifyEmailPage() {
   return (
     <Suspense
       fallback={
-        <AuthLayout>
-          <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Verifying your email...</p>
+        <AuthCard title="Email verification">
+          <div className="text-center py-8">
+            <div className="animate-pulse text-muted-foreground text-sm">
+              Verifying your email...
+            </div>
           </div>
-        </AuthLayout>
+        </AuthCard>
       }
     >
       <VerifyEmailContent />

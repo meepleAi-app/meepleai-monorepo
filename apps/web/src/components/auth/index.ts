@@ -7,7 +7,8 @@
 export { AuthModal } from './AuthModal';
 export { LoginForm } from './LoginForm';
 export { RegisterForm } from './RegisterForm';
-export { default as OAuthButtons } from './OAuthButtons';
+export { buildOAuthUrl } from './oauth-url';
+export type { OAuthProvider } from './oauth-url';
 
 // Email Verification Components (Issue #3076)
 export { VerificationPending } from './VerificationPending';
@@ -26,7 +27,10 @@ export type { RegisterFormProps, RegisterFormData } from './RegisterForm';
 export type { VerificationPendingProps } from './VerificationPending';
 export type { VerificationSuccessProps } from './VerificationSuccess';
 export type { VerificationErrorProps } from './VerificationError';
-export type { TwoFactorVerificationProps, TwoFactorVerificationData } from './TwoFactorVerification';
+export type {
+  TwoFactorVerificationProps,
+  TwoFactorVerificationData,
+} from './TwoFactorVerification';
 export type { TwoFactorSetupProps, TwoFactorSetupData } from './TwoFactorSetup';
 export type { TwoFactorRecoveryCodesProps } from './TwoFactorRecoveryCodes';
 export type { TwoFactorDisableProps, TwoFactorDisableData } from './TwoFactorDisable';

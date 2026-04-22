@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
+import { HeroGradient } from '@/components/ui/v2/hero-gradient';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // Value keys for the values section (must match i18n keys in pages.about.values.*)
@@ -36,18 +37,13 @@ export default function AboutPage() {
   const { t, locale } = useTranslation();
 
   return (
-    <div className="min-h-dvh bg-background py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-foreground" data-testid="about-heading">
-            {t('pages.about.title')}
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl mx-auto">
-            {t('pages.about.description')}
-          </p>
-        </div>
-
+    <div className="min-h-dvh bg-background">
+      <HeroGradient
+        title={<span data-testid="about-heading">{t('pages.about.title')}</span>}
+        subtitle={t('pages.about.description')}
+        className="py-12 md:py-16"
+      />
+      <div className="max-w-4xl mx-auto py-8 px-4">
         {/* Mission Section */}
         <Card className="mb-6">
           <CardHeader>

@@ -3,11 +3,11 @@
  *
  * Displayed after registration to inform user to check their email.
  * Shows the email address (masked) and provides resend functionality.
+ *
+ * Task 12 (auth-flow-v2 migration): uses v2 AuthCard primitive via _content.tsx.
  */
 
 import { Suspense } from 'react';
-
-import { AuthLayout } from '@/components/layouts';
 
 import { VerificationPendingContent } from './_content';
 
@@ -15,11 +15,9 @@ export default function VerificationPendingPage() {
   return (
     <Suspense
       fallback={
-        <AuthLayout>
-          <div className="text-center py-8">
-            <div className="animate-pulse text-muted-foreground">Loading...</div>
-          </div>
-        </AuthLayout>
+        <div className="flex min-h-dvh items-center justify-center bg-background">
+          <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
+        </div>
       }
     >
       <VerificationPendingContent />

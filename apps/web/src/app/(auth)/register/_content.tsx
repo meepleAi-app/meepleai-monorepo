@@ -1,14 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { AuthModal } from '@/components/auth';
+import { buildOAuthUrl } from '@/components/auth/oauth-url';
+import { RegisterForm, type RegisterSubmitPayload } from '@/components/auth/RegisterForm';
 import { RequestAccessForm } from '@/components/auth/RequestAccessForm';
-import { AuthLayout } from '@/components/layouts';
+import { AuthCard } from '@/components/ui/v2/auth-card';
+import { Divider } from '@/components/ui/v2/divider';
+import { OAuthButton } from '@/components/ui/v2/oauth-buttons';
+import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
+import { trackSignUp } from '@/lib/analytics/flywheel-events';
 import { useApiClient } from '@/lib/api/context';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Types
@@ -34,92 +41,148 @@ export function RegisterFallback() {
 // ============================================================================
 
 export function RegisterPageContent() {
-  const [mounted, setMounted] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(true);
-  const [registrationMode, setRegistrationMode] = useState<RegistrationMode>('loading');
-  const [oauthEnabled, setOauthEnabled] = useState(false);
-
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { t } = useTranslation();
+  const { register } = useAuth();
   const api = useApiClient();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [registrationMode, setRegistrationMode] = useState<RegistrationMode>('loading');
+  const [oauthEnabled, setOauthEnabled] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [error, setError] = useState<string>('');
 
-  // Fetch registration mode on mount (after client hydration)
-  useEffect(() => {
-    if (!mounted) return;
+  const oauthDisabled = searchParams?.get('oauth_disabled') === 'true';
 
+  // Fetch registration mode on mount
+  useEffect(() => {
+    let cancelled = false;
     api.accessRequests
       .getRegistrationMode()
       .then(result => {
+        if (cancelled) return;
         setRegistrationMode(result.publicRegistrationEnabled ? 'public' : 'invite-only');
         setOauthEnabled(result.oauthEnabled ?? false);
       })
       .catch(() => {
+        if (cancelled) return;
         // Fail closed: default to invite-only if we cannot determine the mode
         setRegistrationMode('invite-only');
       });
-  }, [mounted, api]);
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
 
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const oauthDisabled = searchParams?.get('oauth_disabled') === 'true';
-  const finalDestination = searchParams?.get('from') ?? '/library';
-  // Redirect to welcome page first, which will then redirect to final destination
-  const redirectTo = `/welcome?redirectTo=${encodeURIComponent(finalDestination)}`;
+  const handleRegister = useCallback(
+    async (data: RegisterSubmitPayload) => {
+      // Bot protection: silently drop submissions that fill the honeypot
+      if (data.honeypot && data.honeypot.length > 0) {
+        return;
+      }
 
-  const handleClose = () => {
-    setShowAuthModal(false);
-    router.push('/');
-  };
+      setIsAuthenticating(true);
+      setError('');
+      try {
+        await register({
+          email: data.email,
+          password: data.password,
+        });
+        trackSignUp({ method: 'email' });
 
-  // Prevent SSR issues with TanStack Query
-  if (!mounted || registrationMode === 'loading') {
+        // Small delay to ensure session cookie is persisted before navigation
+        // (matches AuthModal.handleRegister behavior)
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        await router.push(`/verification-pending?email=${encodeURIComponent(data.email)}`);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : t('auth.register.genericError');
+        setError(errorMessage);
+        logger.error('Registration failed:', err);
+      } finally {
+        setIsAuthenticating(false);
+      }
+    },
+    [register, router, t]
+  );
+
+  const handleOAuthLogin = useCallback((provider: 'google' | 'discord' | 'github') => {
+    window.location.assign(buildOAuthUrl(provider));
+  }, []);
+
+  // Loading state
+  if (registrationMode === 'loading') {
     return (
-      <AuthLayout title="Loading...">
-        <div className="text-center py-8" data-testid="register-loading">
-          <div className="animate-pulse text-slate-500">Loading...</div>
-        </div>
-      </AuthLayout>
+      <div
+        className="min-h-dvh flex items-center justify-center bg-background text-muted-foreground"
+        data-testid="register-loading"
+      >
+        <div className="animate-pulse">{t('auth.register.loadingMessage')}</div>
+      </div>
     );
   }
 
   // Invite-only mode: show request access form
   if (registrationMode === 'invite-only') {
     return (
-      <AuthLayout
-        title="Request Access"
-        subtitle="Registration is currently by invitation only"
-        data-testid="register-page"
+      <AuthCard
+        title={t('auth.register.inviteOnlyTitle')}
+        subtitle={t('auth.register.inviteOnlySubtitle')}
       >
         {oauthDisabled && (
           <div
             role="alert"
-            className="text-sm text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/20 p-3 rounded-md mb-4"
+            className="mb-4 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3"
+            data-testid="invite-oauth-disabled-alert"
           >
-            OAuth login is not available during alpha. Please request access below.
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              {t('auth.register.inviteOauthDisabled')}
+            </p>
           </div>
         )}
         <RequestAccessForm />
-      </AuthLayout>
+      </AuthCard>
     );
   }
 
-  // Public mode: show the standard registration modal
+  // Public mode: standard registration with optional OAuth
+  const footerAction = (
+    <span>
+      {t('auth.register.hasAccount')}{' '}
+      <Link
+        href="/login"
+        className="font-medium text-foreground hover:underline"
+        data-testid="register-login-link"
+      >
+        {t('auth.register.loginCta')}
+      </Link>
+    </span>
+  );
+
   return (
-    <AuthLayout
-      title="Create Account"
-      subtitle="Join MeepleAI to get started"
-      data-testid="register-page"
+    <AuthCard
+      title={t('auth.register.title')}
+      subtitle={t('auth.register.subtitle')}
+      footerAction={footerAction}
     >
-      {/* Unified Auth Modal - Registration Mode */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={handleClose}
-        defaultMode="register"
-        redirectTo={redirectTo}
-        hideOAuth={!oauthEnabled}
+      <RegisterForm
+        onSubmit={handleRegister}
+        loading={isAuthenticating}
+        error={error}
+        onErrorDismiss={() => setError('')}
       />
-    </AuthLayout>
+
+      {oauthEnabled && (
+        <>
+          <Divider label={t('auth.oauth.separator')} />
+
+          <div className="flex flex-col gap-2">
+            <OAuthButton provider="google" onClick={() => handleOAuthLogin('google')} />
+            <OAuthButton provider="discord" onClick={() => handleOAuthLogin('discord')} />
+            <OAuthButton provider="github" onClick={() => handleOAuthLogin('github')} />
+          </div>
+        </>
+      )}
+    </AuthCard>
   );
 }

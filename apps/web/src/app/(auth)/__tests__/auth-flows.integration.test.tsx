@@ -112,17 +112,25 @@ describe('Auth Flows Integration Tests', () => {
     renderWithProviders(<LoginForm onSubmit={handleSubmit} />);
 
     // Step 1: Fill email input
-    const emailInput = screen.getByLabelText(/email/i);
+    // NOTE: `useTranslation` is mocked to return the i18n key as-is, so the
+    // label is literally "auth.login.emailLabel". We match that explicitly to
+    // avoid colliding with other labels that contain "email".
+    const emailInput = screen.getByLabelText('auth.login.emailLabel');
     await user.type(emailInput, 'test@example.com');
     expect(emailInput).toHaveValue('test@example.com');
 
     // Step 2: Fill password input
-    const passwordInput = screen.getByLabelText(/password/i);
+    // Exact match to avoid matching the PwdInput eye-toggle's aria-label
+    // ("Mostra password" / "Nascondi password").
+    const passwordInput = screen.getByLabelText('auth.login.passwordLabel');
     await user.type(passwordInput, 'SecurePass123!');
     expect(passwordInput).toHaveValue('SecurePass123!');
 
     // Step 3: Submit form
-    const submitButton = screen.getByTestId('login-submit');
+    // NOTE: v2 primitives (Btn) do not forward data-testid; use role-based query.
+    // In this test `useTranslation` is mocked to return the key, so the button
+    // label is literally "auth.login.loginButton".
+    const submitButton = screen.getByRole('button', { name: /auth\.login\.loginButton/i });
     await user.click(submitButton);
 
     // Step 4: Verify form submission and API call
@@ -146,7 +154,10 @@ describe('Auth Flows Integration Tests', () => {
 
     const handleSubmit = vi.fn(async data => {
       // Simulate API call
-      await api.auth.register(data);
+      await api.auth.register({
+        email: data.email,
+        password: data.password,
+      });
     });
 
     // Mock successful API response
@@ -160,43 +171,45 @@ describe('Auth Flows Integration Tests', () => {
     renderWithProviders(<RegisterForm onSubmit={handleSubmit} />);
 
     // Step 1: Fill email
-    const emailInput = screen.getByTestId('register-email');
+    // NOTE: v2 primitives (InputField/PwdInput) do not forward data-testid;
+    // `useTranslation` is mocked to return the key, so labels are literal keys.
+    const emailInput = screen.getByLabelText('auth.register.emailLabel');
     await user.type(emailInput, 'newuser@example.com');
     expect(emailInput).toHaveValue('newuser@example.com');
 
-    // Step 2: Fill display name
-    const displayNameInput = screen.getByTestId('register-display-name');
-    await user.type(displayNameInput, 'New User');
-    expect(displayNameInput).toHaveValue('New User');
-
-    // Step 3: Fill password (meets complexity requirements)
-    const passwordInput = screen.getByTestId('register-password');
+    // Step 2: Fill password (meets length requirement)
+    // Exact match avoids colliding with the PwdInput eye-toggle's aria-label.
+    const passwordInput = screen.getByLabelText('auth.register.passwordLabel');
     await user.type(passwordInput, 'SecurePass123!');
     expect(passwordInput).toHaveValue('SecurePass123!');
 
-    // Step 4: Fill confirm password
-    const confirmPasswordInput = screen.getByTestId('register-confirm-password');
-    await user.type(confirmPasswordInput, 'SecurePass123!');
-    expect(confirmPasswordInput).toHaveValue('SecurePass123!');
+    // Step 3: Accept terms & conditions (GDPR checkbox)
+    await user.click(screen.getByTestId('register-terms'));
 
-    // Step 5: Submit form
-    const submitButton = screen.getByTestId('register-submit');
+    // Step 4: Submit form
+    const submitButton = screen.getByRole('button', {
+      name: /auth\.register\.registerButton/i,
+    });
     await user.click(submitButton);
 
-    // Step 6: Verify form submission and API call
+    // Step 5: Verify form submission and API call
     await waitFor(() => {
-      expect(handleSubmit).toHaveBeenCalledWith({
-        email: 'newuser@example.com',
-        displayName: 'New User',
-        password: 'SecurePass123!',
-        role: 'User',
-      });
-      expect(api.auth.register).toHaveBeenCalledWith({
-        email: 'newuser@example.com',
-        displayName: 'New User',
-        password: 'SecurePass123!',
-        role: 'User',
-      });
+      expect(handleSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    const submitted = handleSubmit.mock.calls[0][0] as {
+      email: string;
+      password: string;
+      termsAcceptedAt: Date;
+      honeypot?: string;
+    };
+    expect(submitted.email).toBe('newuser@example.com');
+    expect(submitted.password).toBe('SecurePass123!');
+    expect(submitted.termsAcceptedAt).toBeInstanceOf(Date);
+
+    expect(api.auth.register).toHaveBeenCalledWith({
+      email: 'newuser@example.com',
+      password: 'SecurePass123!',
     });
   });
 

@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleAI — Card Types nel Layout Mobile</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══ DESIGN TOKENS ═══ */
+:root {
+  --bg: #faf8f5;
+  --bg-card: rgba(255,255,255,0.92);
+  --bg-muted: #f1ede8;
+  --text: #1a1a2e;
+  --text-sec: #64748b;
+  --text-muted: #94a3b8;
+  --border: rgba(0,0,0,0.07);
+  --shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.06), 0 1px 2px rgba(180,130,80,0.04);
+  --shadow-warm-md: 0 4px 12px rgba(180,130,80,0.08), 0 2px 4px rgba(180,130,80,0.04);
+  --shadow-warm-lg: 0 10px 30px rgba(180,130,80,0.12), 0 4px 8px rgba(180,130,80,0.06);
+  --shadow-warm-xl: 0 20px 50px rgba(180,130,80,0.16), 0 8px 16px rgba(180,130,80,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Nunito',sans-serif; background:#e8e4df; color:var(--text); padding:24px 16px; }
+h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
+
+.page-head { text-align:center; margin-bottom:28px; }
+.page-head h1 { font-size:1.4rem; }
+.page-head p { font-size:0.8rem; color:var(--text-sec); margin-top:4px; }
+
+/* ═══ PHONE GRID ═══ */
+.phone-grid {
+  display:flex; flex-wrap:wrap; gap:28px; justify-content:center;
+}
+.phone-col { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.phone-label {
+  font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.78rem;
+  text-transform:uppercase; letter-spacing:0.06em; display:flex; align-items:center; gap:6px;
+}
+.phone-sublabel { font-size:0.68rem; color:var(--text-muted); text-align:center; max-width:300px; }
+
+/* ═══ PHONE FRAME ═══ */
+.phone {
+  width:300px; height:650px; background:var(--bg); border-radius:32px;
+  border:2.5px solid #c8c0b5;
+  box-shadow:0 20px 60px rgba(0,0,0,0.12), 0 6px 20px rgba(0,0,0,0.08),
+             inset 0 0 0 1px rgba(255,255,255,0.3);
+  overflow:hidden; display:flex; flex-direction:column; position:relative;
+}
+
+/* Status bar */
+.sbar { height:36px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 22px 4px; font-size:10px; font-weight:600; flex-shrink:0; }
+.sbar .t { font-weight:700; }
+.sbar .i { display:flex; gap:3px; font-size:9px; }
+
+/* Navbar */
+.nav {
+  height:44px; display:flex; align-items:center; padding:0 12px;
+  background:var(--bg-card); backdrop-filter:blur(12px); border-bottom:1px solid var(--border);
+  flex-shrink:0; gap:8px;
+}
+.nav .logo { font-family:'Quicksand',sans-serif; font-weight:800; font-size:0.9rem; display:flex; align-items:center; gap:5px; }
+.nav .logo .d { width:22px; height:22px; border-radius:5px; display:flex; align-items:center; justify-content:center; color:white; font-size:11px; font-weight:800; }
+.nav .sp { flex:1; }
+.nav .av { width:26px; height:26px; border-radius:50%; color:white; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; border:1.5px solid white; box-shadow:var(--shadow-warm-sm); }
+
+/* Search */
+.srch { height:38px; padding:4px 12px; flex-shrink:0; }
+.srch input {
+  width:100%; height:30px; border-radius:15px; background:var(--bg-card); border:1px solid var(--border);
+  padding:0 12px 0 30px; font-size:11px; font-family:'Nunito',sans-serif; color:var(--text); outline:none;
+}
+.srch .w { position:relative; }
+.srch .ic { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); pointer-events:none; }
+
+/* Content area */
+.cnt { flex:1; display:flex; overflow:hidden; min-height:0; }
+
+/* Hand stack */
+.hand {
+  width:36px; flex-shrink:0; display:flex; flex-direction:column; align-items:center;
+  padding:6px 0; gap:5px; background:linear-gradient(90deg,rgba(0,0,0,0.02),transparent);
+}
+.hand .lbl {
+  writing-mode:vertical-rl; transform:rotate(180deg);
+  font-family:'Quicksand',sans-serif; font-size:7px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:4px;
+}
+.hc {
+  width:28px; height:40px; border-radius:6px; background:var(--bg-card);
+  border:1px solid var(--border); box-shadow:var(--shadow-warm-sm);
+  cursor:pointer; position:relative; overflow:hidden; transition:transform 0.2s;
+}
+.hc:hover { transform:scale(1.1); }
+.hc.act { outline:2px solid; outline-offset:1px; transform:scale(1.12); }
+.hc .e { position:absolute; left:0; top:0; bottom:0; width:3px; }
+.hc .mc { width:100%; height:22px; display:flex; align-items:center; justify-content:center; font-size:11px; }
+.hc .mt { position:absolute; bottom:1px; left:3px; font-size:4px; font-weight:700; font-family:'Quicksand',sans-serif; }
+
+/* Focused area */
+.farea { flex:1; display:flex; flex-direction:column; padding:6px 8px 6px 3px; min-width:0; }
+
+/* Focused card */
+.swp { flex:1; position:relative; border-radius:14px; overflow:hidden; min-height:0; }
+.fc {
+  position:absolute; inset:0; background:var(--bg-card);
+  backdrop-filter:blur(12px); border:1px solid var(--border);
+  border-radius:14px; overflow:hidden; box-shadow:var(--shadow-warm-xl);
+  display:flex; flex-direction:column; outline:2px solid transparent; outline-offset:2px;
+}
+.fc .ab { height:3px; width:100%; flex-shrink:0; }
+.fc .cov {
+  flex-shrink:0; position:relative; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+.fc .cov .gr {
+  position:absolute; bottom:0; left:0; right:0; height:50%;
+  background:linear-gradient(to top,var(--bg-card),transparent); pointer-events:none;
+}
+.fc .cov .badge {
+  position:absolute; top:8px; left:8px; padding:2px 8px; border-radius:16px;
+  font-family:'Quicksand',sans-serif; font-size:8px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.06em; color:white; backdrop-filter:blur(8px);
+}
+.fc .cov .rat {
+  position:absolute; top:8px; right:8px; padding:3px 8px; border-radius:10px;
+  background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); color:#fbbf24;
+  font-size:10px; font-weight:700; display:flex; align-items:center; gap:3px;
+}
+.fc .bod { flex:1; padding:10px 12px; display:flex; flex-direction:column; gap:5px; overflow-y:auto; }
+.fc .tit { font-family:'Quicksand',sans-serif; font-size:1rem; font-weight:700; line-height:1.2; }
+.fc .sub { font-size:0.72rem; color:var(--text-sec); line-height:1.3; }
+.fc .met { display:flex; flex-wrap:wrap; gap:5px; margin-top:2px; }
+.fc .chip {
+  display:flex; align-items:center; gap:3px; font-size:10px; color:var(--text-sec);
+  background:var(--bg-muted); padding:3px 8px; border-radius:16px; font-weight:600;
+}
+.fc .chip .ci { font-size:11px; }
+.fc .chip.status { font-weight:700; font-size:9px; text-transform:uppercase; letter-spacing:0.04em; }
+.fc .qa { display:flex; gap:6px; margin-top:auto; padding-top:6px; }
+.fc .qb {
+  width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.85);
+  backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.6);
+  box-shadow:var(--shadow-warm-sm); display:flex; align-items:center; justify-content:center;
+  font-size:13px; cursor:pointer; transition:transform 0.2s;
+}
+.fc .qb:hover { transform:scale(1.1); }
+.fc .qb.pri { color:white; border:none; }
+
+/* Swipe hints */
+.sh {
+  position:absolute; top:50%; transform:translateY(-50%); width:22px; height:38px;
+  border-radius:11px; background:rgba(0,0,0,0.05); display:flex; align-items:center;
+  justify-content:center; color:var(--text-muted); font-size:14px; z-index:5;
+}
+.sh.l { left:-2px; }
+.sh.r { right:2px; }
+
+/* Card links */
+.clinks { flex-shrink:0; padding:5px 0 3px; }
+.clinks-in {
+  display:flex; align-items:center; gap:3px; padding:5px 8px;
+  border-radius:10px; background:var(--bg-card); border:1px solid var(--border);
+  box-shadow:var(--shadow-warm-sm);
+}
+.clinks-lbl {
+  font-size:6px; color:var(--text-muted); font-weight:700; text-transform:uppercase;
+  letter-spacing:0.06em; margin-right:2px; font-family:'Quicksand',sans-serif;
+}
+.cl-btn {
+  display:flex; flex-direction:column; align-items:center; gap:1px;
+  padding:2px 6px; border-radius:8px; cursor:pointer; border:none; background:transparent;
+}
+.cl-btn:hover { background:var(--bg-muted); }
+.cl-btn .li { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; border:1px solid var(--border); background:var(--bg-card); }
+.cl-btn .ll { font-size:6px; font-weight:700; color:var(--text-sec); font-family:'Quicksand',sans-serif; }
+
+/* Action bar */
+.abar {
+  height:56px; flex-shrink:0; padding:0 10px 14px;
+  background:var(--bg-card); backdrop-filter:blur(16px);
+  border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-around;
+}
+.ai {
+  display:flex; flex-direction:column; align-items:center; gap:1px;
+  cursor:pointer; border:none; background:transparent; padding:4px 8px; border-radius:8px;
+}
+.ai:hover { background:var(--bg-muted); }
+.ai .ao { font-size:16px; }
+.ai .al { font-size:7px; font-weight:700; color:var(--text-sec); font-family:'Quicksand',sans-serif; }
+.ai.act .ao, .ai.act .al { color:hsl(25,95%,45%); }
+
+/* ═══ ENTITY-SPECIFIC CARD BODIES ═══ */
+
+/* Session: no cover image, status-heavy */
+.fc .session-header {
+  padding:12px; display:flex; align-items:center; gap:10px;
+}
+.fc .session-header .sh-icon {
+  width:48px; height:48px; border-radius:12px; display:flex; align-items:center;
+  justify-content:center; font-size:24px;
+}
+.fc .session-header .sh-info { flex:1; }
+.fc .session-header .sh-title { font-family:'Quicksand',sans-serif; font-size:0.95rem; font-weight:700; }
+.fc .session-header .sh-sub { font-size:0.7rem; color:var(--text-sec); }
+
+.fc .session-players {
+  display:flex; gap:-4px; padding:0 12px;
+}
+.fc .session-players .sp {
+  width:28px; height:28px; border-radius:50%; border:2px solid white;
+  display:flex; align-items:center; justify-content:center; font-size:10px;
+  font-weight:700; color:white; margin-left:-6px; box-shadow:var(--shadow-warm-sm);
+}
+.fc .session-players .sp:first-child { margin-left:0; }
+
+.fc .session-scores {
+  margin:8px 12px; border-radius:10px; background:var(--bg-muted); padding:8px;
+}
+.fc .session-scores .ss-row {
+  display:flex; justify-content:space-between; padding:4px 0;
+  font-size:11px; border-bottom:1px solid var(--border);
+}
+.fc .session-scores .ss-row:last-child { border:none; }
+.fc .session-scores .ss-name { font-weight:600; }
+.fc .session-scores .ss-pts { font-weight:800; font-family:'Quicksand',sans-serif; }
+
+/* Agent: no image, config-focused */
+.fc .agent-vis {
+  padding:16px; display:flex; flex-direction:column; align-items:center; gap:6px;
+}
+.fc .agent-avatar {
+  width:64px; height:64px; border-radius:16px; display:flex; align-items:center;
+  justify-content:center; font-size:32px; box-shadow:var(--shadow-warm-md);
+}
+.fc .agent-status {
+  padding:3px 10px; border-radius:12px; font-size:9px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.06em;
+}
+
+.fc .agent-stats {
+  display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:0 12px;
+}
+.fc .agent-stat {
+  background:var(--bg-muted); border-radius:10px; padding:8px; text-align:center;
+}
+.fc .agent-stat .as-val { font-family:'Quicksand',sans-serif; font-size:1.1rem; font-weight:800; }
+.fc .agent-stat .as-lbl { font-size:8px; color:var(--text-muted); font-weight:600; }
+
+/* Chat: message-preview style */
+.fc .chat-msgs {
+  padding:0 12px; display:flex; flex-direction:column; gap:6px; flex:1; overflow-y:auto;
+}
+.fc .chat-msg {
+  max-width:85%; padding:8px 10px; border-radius:12px; font-size:11px; line-height:1.4;
+}
+.fc .chat-msg.user {
+  align-self:flex-end; background:hsl(220,80%,55%); color:white;
+  border-bottom-right-radius:4px;
+}
+.fc .chat-msg.ai {
+  align-self:flex-start; background:var(--bg-muted); color:var(--text);
+  border-bottom-left-radius:4px;
+}
+.fc .chat-msg .msg-from { font-size:8px; font-weight:700; opacity:0.7; margin-bottom:2px; }
+
+/* Document/KB: file-preview style */
+.fc .doc-preview {
+  margin:8px 12px; border-radius:10px; background:var(--bg-muted);
+  padding:12px; display:flex; flex-direction:column; gap:8px;
+}
+.fc .doc-preview .dp-icon { font-size:36px; text-align:center; }
+.fc .doc-preview .dp-info { font-size:11px; color:var(--text-sec); }
+.fc .doc-preview .dp-pages {
+  display:flex; gap:4px; flex-wrap:wrap;
+}
+.fc .doc-preview .dp-page {
+  width:32px; height:42px; background:white; border-radius:4px;
+  border:1px solid var(--border); display:flex; align-items:center;
+  justify-content:center; font-size:7px; color:var(--text-muted);
+}
+
+/* Player: avatar + stats */
+.fc .player-vis {
+  padding:16px; display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.fc .player-avatar {
+  width:72px; height:72px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; font-size:28px; color:white; font-weight:700;
+  font-family:'Quicksand',sans-serif; box-shadow:var(--shadow-warm-lg);
+}
+.fc .player-stats {
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin:0 12px; width:100%;
+}
+.fc .player-stat {
+  background:var(--bg-muted); border-radius:10px; padding:8px 4px; text-align:center;
+}
+.fc .player-stat .ps-val { font-family:'Quicksand',sans-serif; font-size:1rem; font-weight:800; }
+.fc .player-stat .ps-lbl { font-size:7px; color:var(--text-muted); font-weight:600; text-transform:uppercase; }
+
+/* Event: banner style */
+.fc .event-banner {
+  position:relative; height:40%; display:flex; align-items:flex-end;
+  padding:12px; overflow:hidden;
+}
+.fc .event-banner .eb-bg {
+  position:absolute; inset:0;
+}
+.fc .event-banner .eb-overlay {
+  position:absolute; inset:0;
+  background:linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+}
+.fc .event-banner .eb-content { position:relative; z-index:1; color:white; }
+.fc .event-banner .eb-date {
+  font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
+  opacity:0.8; margin-bottom:2px;
+}
+.fc .event-banner .eb-title {
+  font-family:'Quicksand',sans-serif; font-size:1.1rem; font-weight:700;
+  text-shadow:0 2px 8px rgba(0,0,0,0.3);
+}
+.fc .event-details {
+  display:flex; flex-wrap:wrap; gap:6px; margin:8px 12px;
+}
+.fc .event-detail {
+  display:flex; align-items:center; gap:4px; font-size:10px; color:var(--text-sec);
+  background:var(--bg-muted); padding:4px 8px; border-radius:12px;
+}
+.fc .event-cta {
+  margin:auto 12px 0; display:flex; gap:6px;
+}
+.fc .event-cta button {
+  flex:1; padding:8px; border-radius:10px; border:none; font-family:'Quicksand',sans-serif;
+  font-weight:700; font-size:11px; cursor:pointer;
+}
+
+/* ═══ SECTION SEPARATOR ═══ */
+.section-sep {
+  width:100%; max-width:1200px; margin:40px auto 24px;
+  text-align:center; position:relative;
+}
+.section-sep::before {
+  content:''; position:absolute; top:50%; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--border),transparent);
+}
+.section-sep span {
+  position:relative; background:#e8e4df; padding:0 16px;
+  font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.85rem;
+  color:var(--text-sec); text-transform:uppercase; letter-spacing:0.06em;
+}
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>7 Entity Types nel Mobile Card-Focus Layout</h1>
+  <p>Come ogni tipo di entità appare nella focused card view — basato sui 14 adapter reali dell'app</p>
+</div>
+
+<!-- ═══ ROW 1: GAME + SESSION + AGENT ═══ -->
+<div class="section-sep"><span>Entità Primarie</span></div>
+
+<div class="phone-grid">
+
+  <!-- ═══ 1. GAME CARD (MeepleLibraryGameCard) ═══ -->
+  <div class="phone-col">
+    <span class="phone-label" style="color:hsl(25,95%,45%);">● Game — Libreria</span>
+    <span class="phone-sublabel">MeepleLibraryGameCard · Cover + rating + meta + flip + 6 quick actions</span>
+    <div class="phone">
+      <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
+      <div class="nav">
+        <div class="logo"><div class="d" style="background:hsl(25,95%,45%);">🎲</div> MeepleAI</div>
+        <div class="sp"></div>
+        <div class="av" style="background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,83%,40%));">MR</div>
+      </div>
+      <div class="srch"><div class="w"><span class="ic">🔍</span><input placeholder="Cerca nella libreria..." readonly></div></div>
+      <div class="cnt">
+        <div class="hand">
+          <span class="lbl">La tua mano</span>
+          <div class="hc act" style="outline-color:hsla(25,95%,45%,0.5);"><div class="e" style="background:hsl(25,95%,45%);"></div><div class="mc" style="background:linear-gradient(135deg,#1e88e5,#0d47a1);">🔷</div><div class="mt">Azul</div></div>
+          <div class="hc"><div class="e" style="background:hsl(25,95%,45%);"></div><div class="mc" style="background:linear-gradient(135deg,#e65100,#bf360c);">🏝️</div><div class="mt">Catan</div></div>
+          <div class="hc"><div class="e" style="background:hsl(25,95%,45%);"></div><div class="mc" style="background:linear-gradient(135deg,#81c784,#388e3c);">🐦</div><div class="mt">Wingspan</div></div>
+          <div class="hc"><div class="e" style="background:hsl(25,95%,45%);"></div><div class="mc" style="background:linear-gradient(135deg,#795548,#4e342e);">🦊</div><div class="mt">Root</div></div>
+          <div class="hc"><div class="e" style="background:hsl(25,95%,45%);"></div><div class="mc" style="background:linear-gradient(135deg,#ab47bc,#6a1b9a);">🐿️</div><div class="mt">Everdell</div></div>
+        </div>
+        <div class="farea">
+          <div class="swp">
+            <div class="sh l">‹</div><div class="sh r">›</div>
+            <div class="fc" style="outline-color:hsla(25,95%,45%,0.4);">
+              <div class="ab" style="background:hsl(25,95%,45%);"></div>
+              <div class="cov" style="height:38%;background:linear-gradient(135deg,#1e88e5 0%,#0d47a1 50%,#ffc107 100%);font-size:48px;">
+                🔷
+                <div class="gr"></div>
+                <div class="badge" style="background:hsla(25,95%,45%,0.85);">Game</div>
+                <div class="rat">⭐ 7.8</div>
+              </div>
+              <div class="bod">
+                <div class="tit">Azul</div>
+                <div class="sub">Plan B Games · 2017</div>
+                <div class="met">
+                  <span class="chip"><span class="ci">👥</span> 2–4</span>
+                  <span class="chip"><span class="ci">⏱️</span> 30–45m</span>
+                  <span class="chip"><span class="ci">🧩</span> 1.77</span>
+                  <span class="chip status" style="background:hsla(25,95%,45%,0.12);color:hsl(25,95%,45%);">In Libreria</span>
+                </div>
+                <div style="display:flex;gap:4px;margin-top:4px;">
+                  <span class="chip" style="background:hsla(142,70%,45%,0.1);color:hsl(142,70%,35%);font-size:9px;">✓ KB Indicizzato</span>
+                  <span class="chip" style="background:hsla(38,92%,50%,0.1);color:hsl(38,92%,40%);font-size:9px;">🤖 Agente attivo</span>
+                </div>
+                <div class="qa">
+                  <div class="qb pri" style="background:hsl(25,95%,45%);box-shadow:0 4px 12px hsla(25,95%,45%,0.3);">▶️</div>
+                  <div class="qb">🤖</div>
+                  <div class="qb">📋</div>
+                  <div class="qb">🔄</div>
+                  <div class="qb">❤️</div>
+                  <div class="qb">📤</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="clinks"><div class="clinks-in">
+            <span class="clinks-lbl">LINK</span>
+            <button class="cl-btn"><span class="li" style="color:hsl(240,60%,55%);">🎯</span><span class="ll">Sessioni</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(38,92%,50%);">🤖</span><span class="ll">Agente</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(210,40%,55%);">📚</span><span class="ll">KB</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(220,80%,55%);">💬</span><span class="ll">Chat</span></button>
+          </div></div>
+        </div>
+      </div>
+      <div class="abar">
+        <div class="ai act"><span class="ao">📚</span><span class="al">Libreria</span></div>
+        <div class="ai"><span class="ao">🔍</span><span class="al">Catalogo</span></div>
+        <div class="ai"><span class="ao">💬</span><span class="al">Chat</span></div>
+        <div class="ai"><span class="ao">🎯</span><span class="al">Sessioni</span></div>
+        <div class="ai"><span class="ao">👤</span><span class="al">Profilo</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 2. SESSION CARD (MeepleSessionCard) ═══ -->
+  <div class="phone-col">
+    <span class="phone-label" style="color:hsl(240,60%,55%);">● Session — In Corso</span>
+    <span class="phone-sublabel">MeepleSessionCard · No cover, status + giocatori + punteggi + 7 quick actions</span>
+    <div class="phone">
+      <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
+      <div class="nav">
+        <div class="logo"><div class="d" style="background:hsl(240,60%,55%);">🎯</div> MeepleAI</div>
+        <div class="sp"></div>
+        <div class="av" style="background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,83%,40%));">MR</div>
+      </div>
+      <div class="srch"><div class="w"><span class="ic">🔍</span><input placeholder="Cerca sessioni..." readonly></div></div>
+      <div class="cnt">
+        <div class="hand">
+          <span class="lbl">Sessioni attive</span>
+          <div class="hc act" style="outline-color:hsla(240,60%,55%,0.5);"><div class="e" style="background:hsl(240,60%,55%);"></div><div class="mc" style="background:hsl(240,60%,55%,0.15);">🎯</div><div class="mt">Azul</div></div>
+          <div class="hc"><div class="e" style="background:hsl(240,60%,55%);"></div><div class="mc" style="background:hsl(240,60%,55%,0.1);">🏆</div><div class="mt">Catan</div></div>
+          <div class="hc"><div class="e" style="background:hsl(240,60%,55%);"></div><div class="mc" style="background:hsl(240,60%,55%,0.1);">📊</div><div class="mt">Root</div></div>
+        </div>
+        <div class="farea">
+          <div class="swp">
+            <div class="sh l">‹</div><div class="sh r">›</div>
+            <div class="fc" style="outline-color:hsla(240,60%,55%,0.4);">
+              <div class="ab" style="background:hsl(240,60%,55%);"></div>
+              <div class="session-header" style="background:hsl(240,60%,55%,0.06);">
+                <div class="sh-icon" style="background:hsl(240,60%,55%,0.15);">🎯</div>
+                <div class="sh-info">
+                  <div class="sh-title">Serata Azul</div>
+                  <div class="sh-sub">Sessione #a3f8 · Casa di Marco</div>
+                </div>
+                <span class="chip status" style="background:hsla(142,70%,45%,0.12);color:hsl(142,70%,35%);">In Corso</span>
+              </div>
+              <div class="bod" style="padding-top:4px;">
+                <div class="met">
+                  <span class="chip"><span class="ci">🎲</span> Azul</span>
+                  <span class="chip"><span class="ci">⏱️</span> 45 min</span>
+                  <span class="chip"><span class="ci">📊</span> Turno 3/5</span>
+                </div>
+                <div class="session-players" style="margin-top:6px;">
+                  <div class="sp" style="background:hsl(262,83%,58%);">MR</div>
+                  <div class="sp" style="background:hsl(25,95%,45%);">LB</div>
+                  <div class="sp" style="background:hsl(142,70%,45%);">GV</div>
+                  <div class="sp" style="background:hsl(350,89%,55%);">AR</div>
+                </div>
+                <div class="session-scores">
+                  <div class="ss-row"><span class="ss-name">👑 Marco R.</span><span class="ss-pts" style="color:hsl(25,95%,45%);">42 pt</span></div>
+                  <div class="ss-row"><span class="ss-name">Lucia B.</span><span class="ss-pts">38 pt</span></div>
+                  <div class="ss-row"><span class="ss-name">Giovanni V.</span><span class="ss-pts">35 pt</span></div>
+                  <div class="ss-row"><span class="ss-name">Anna R.</span><span class="ss-pts">29 pt</span></div>
+                </div>
+                <div class="qa">
+                  <div class="qb pri" style="background:hsl(240,60%,55%);box-shadow:0 4px 12px hsla(240,60%,55%,0.3);">▶️</div>
+                  <div class="qb">🧰</div>
+                  <div class="qb">📊</div>
+                  <div class="qb">📤</div>
+                  <div class="qb">🤖</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="clinks"><div class="clinks-in">
+            <span class="clinks-lbl">LINK</span>
+            <button class="cl-btn"><span class="li" style="color:hsl(25,95%,45%);">🎲</span><span class="ll">Gioco</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(262,83%,58%);">👥</span><span class="ll">Giocatori</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(38,92%,50%);">🤖</span><span class="ll">Agente</span></button>
+          </div></div>
+        </div>
+      </div>
+      <div class="abar">
+        <div class="ai"><span class="ao">📚</span><span class="al">Libreria</span></div>
+        <div class="ai"><span class="ao">🔍</span><span class="al">Catalogo</span></div>
+        <div class="ai"><span class="ao">💬</span><span class="al">Chat</span></div>
+        <div class="ai act"><span class="ao">🎯</span><span class="al">Sessioni</span></div>
+        <div class="ai"><span class="ao">👤</span><span class="al">Profilo</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 3. AGENT CARD (MeepleAgentCard) ═══ -->
+  <div class="phone-col">
+    <span class="phone-label" style="color:hsl(38,92%,50%);">● Agent — Attivo</span>
+    <span class="phone-sublabel">MeepleAgentCard · No cover, avatar + status + stats grid + 3 quick actions</span>
+    <div class="phone">
+      <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
+      <div class="nav">
+        <div class="logo"><div class="d" style="background:hsl(38,92%,50%);">🤖</div> MeepleAI</div>
+        <div class="sp"></div>
+        <div class="av" style="background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,83%,40%));">MR</div>
+      </div>
+      <div class="srch"><div class="w"><span class="ic">🔍</span><input placeholder="Cerca agenti AI..." readonly></div></div>
+      <div class="cnt">
+        <div class="hand">
+          <span class="lbl">I tuoi agenti</span>
+          <div class="hc act" style="outline-color:hsla(38,92%,50%,0.5);"><div class="e" style="background:hsl(38,92%,50%);"></div><div class="mc" style="background:hsl(38,92%,50%,0.15);">🤖</div><div class="mt">Azul</div></div>
+          <div class="hc"><div class="e" style="background:hsl(38,92%,50%);"></div><div class="mc" style="background:hsl(38,92%,50%,0.1);">🧠</div><div class="mt">Catan</div></div>
+        </div>
+        <div class="farea">
+          <div class="swp">
+            <div class="sh l">‹</div><div class="sh r">›</div>
+            <div class="fc" style="outline-color:hsla(38,92%,50%,0.4);">
+              <div class="ab" style="background:hsl(38,92%,50%);"></div>
+              <div class="agent-vis" style="background:hsl(38,92%,50%,0.04);">
+                <div class="agent-avatar" style="background:linear-gradient(135deg,hsl(38,92%,50%),hsl(38,80%,35%));">🤖</div>
+                <div class="tit" style="text-align:center;">Azul Rules Expert</div>
+                <div class="sub" style="text-align:center;">RAG Strategy · GPT-4o-mini</div>
+                <div class="agent-status" style="background:hsla(142,70%,45%,0.12);color:hsl(142,70%,35%);">● Attivo</div>
+              </div>
+              <div class="bod" style="padding-top:0;">
+                <div class="agent-stats">
+                  <div class="agent-stat"><div class="as-val" style="color:hsl(38,92%,50%);">342</div><div class="as-lbl">Invocazioni</div></div>
+                  <div class="agent-stat"><div class="as-val" style="color:hsl(38,92%,50%);">12</div><div class="as-lbl">Documenti</div></div>
+                  <div class="agent-stat"><div class="as-val" style="color:hsl(38,92%,50%);">98%</div><div class="as-lbl">Accuratezza</div></div>
+                  <div class="agent-stat"><div class="as-val" style="color:hsl(38,92%,50%);">1.2s</div><div class="as-lbl">Tempo medio</div></div>
+                </div>
+                <div class="qa" style="margin-top:12px;">
+                  <div class="qb pri" style="background:hsl(38,92%,50%);box-shadow:0 4px 12px hsla(38,92%,50%,0.3);">💬</div>
+                  <div class="qb">📊</div>
+                  <div class="qb">⚙️</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="clinks"><div class="clinks-in">
+            <span class="clinks-lbl">LINK</span>
+            <button class="cl-btn"><span class="li" style="color:hsl(25,95%,45%);">🎲</span><span class="ll">Gioco</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(210,40%,55%);">📚</span><span class="ll">KB</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(220,80%,55%);">💬</span><span class="ll">Chat</span></button>
+          </div></div>
+        </div>
+      </div>
+      <div class="abar">
+        <div class="ai"><span class="ao">📚</span><span class="al">Libreria</span></div>
+        <div class="ai"><span class="ao">🔍</span><span class="al">Catalogo</span></div>
+        <div class="ai"><span class="ao">💬</span><span class="al">Chat</span></div>
+        <div class="ai act"><span class="ao">🤖</span><span class="al">Agenti</span></div>
+        <div class="ai"><span class="ao">👤</span><span class="al">Profilo</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ROW 2: CHAT + DOCUMENT + PLAYER + EVENT ═══ -->
+<div class="section-sep"><span>Entità Secondarie</span></div>
+
+<div class="phone-grid">
+
+  <!-- ═══ 4. CHAT CARD (MeepleChatCard) ═══ -->
+  <div class="phone-col">
+    <span class="phone-label" style="color:hsl(220,80%,55%);">● Chat — Attiva</span>
+    <span class="phone-sublabel">MeepleChatCard · Preview messaggi + agent info + 5 quick actions</span>
+    <div class="phone">
+      <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
+      <div class="nav">
+        <div class="logo"><div class="d" style="background:hsl(220,80%,55%);">💬</div> MeepleAI</div>
+        <div class="sp"></div>
+        <div class="av" style="background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,83%,40%));">MR</div>
+      </div>
+      <div class="srch"><div class="w"><span class="ic">🔍</span><input placeholder="Cerca nelle chat..." readonly></div></div>
+      <div class="cnt">
+        <div class="hand">
+          <span class="lbl">Conversazioni</span>
+          <div class="hc act" style="outline-color:hsla(220,80%,55%,0.5);"><div class="e" style="background:hsl(220,80%,55%);"></div><div class="mc" style="background:hsl(220,80%,55%,0.15);">💬</div><div class="mt">Azul</div></div>
+          <div class="hc"><div class="e" style="background:hsl(220,80%,55%);"></div><div class="mc" style="background:hsl(220,80%,55%,0.1);">🗨️</div><div class="mt">Catan</div></div>
+        </div>
+        <div class="farea">
+          <div class="swp">
+            <div class="sh l">‹</div><div class="sh r">›</div>
+            <div class="fc" style="outline-color:hsla(220,80%,55%,0.4);">
+              <div class="ab" style="background:hsl(220,80%,55%);"></div>
+              <div style="padding:10px 12px;background:hsl(220,80%,55%,0.05);display:flex;align-items:center;gap:8px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:hsl(38,92%,50%,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;">🤖</div>
+                <div>
+                  <div class="tit" style="font-size:0.85rem;">Come si gioca ad Azul?</div>
+                  <div class="sub">Azul Rules Expert · 12 messaggi</div>
+                </div>
+                <span class="chip status" style="background:hsla(142,70%,45%,0.12);color:hsl(142,70%,35%);margin-left:auto;">Attiva</span>
+              </div>
+              <div class="bod" style="padding-top:8px;">
+                <div class="chat-msgs">
+                  <div class="chat-msg user">
+                    <div class="msg-from">Tu</div>
+                    Come funziona il punteggio delle righe completate?
+                  </div>
+                  <div class="chat-msg ai">
+                    <div class="msg-from">🤖 Azul Expert</div>
+                    Quando completi una riga orizzontale, guadagni punti pari al numero di tessere adiacenti (orizzontali + verticali) collegate alla tessera appena piazzata.
+                  </div>
+                  <div class="chat-msg user">
+                    <div class="msg-from">Tu</div>
+                    E le colonne?
+                  </div>
+                  <div class="chat-msg ai">
+                    <div class="msg-from">🤖 Azul Expert</div>
+                    Le colonne completate danno 7 punti bonus a fine partita. Sono un obiettivo chiave!
+                  </div>
+                </div>
+                <div class="qa">
+                  <div class="qb pri" style="background:hsl(220,80%,55%);box-shadow:0 4px 12px hsla(220,80%,55%,0.3);">💬</div>
+                  <div class="qb">📤</div>
+                  <div class="qb">📋</div>
+                  <div class="qb">🗑️</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="clinks"><div class="clinks-in">
+            <span class="clinks-lbl">LINK</span>
+            <button class="cl-btn"><span class="li" style="color:hsl(25,95%,45%);">🎲</span><span class="ll">Gioco</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(38,92%,50%);">🤖</span><span class="ll">Agente</span></button>
+          </div></div>
+        </div>
+      </div>
+      <div class="abar">
+        <div class="ai"><span class="ao">📚</span><span class="al">Libreria</span></div>
+        <div class="ai"><span class="ao">🔍</span><span class="al">Catalogo</span></div>
+        <div class="ai act"><span class="ao">💬</span><span class="al">Chat</span></div>
+        <div class="ai"><span class="ao">🎯</span><span class="al">Sessioni</span></div>
+        <div class="ai"><span class="ao">👤</span><span class="al">Profilo</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 5. DOCUMENT/KB CARD (MeepleKbCard) ═══ -->
+  <div class="phone-col">
+    <span class="phone-label" style="color:hsl(210,40%,55%);">● Document — KB</span>
+    <span class="phone-sublabel">MeepleKbCard · File preview + status indexed/processing + 4 quick actions</span>
+    <div class="phone">
+      <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
+      <div class="nav">
+        <div class="logo"><div class="d" style="background:hsl(210,40%,55%);">📄</div> MeepleAI</div>
+        <div class="sp"></div>
+        <div class="av" style="background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,83%,40%));">MR</div>
+      </div>
+      <div class="srch"><div class="w"><span class="ic">🔍</span><input placeholder="Cerca documenti..." readonly></div></div>
+      <div class="cnt">
+        <div class="hand">
+          <span class="lbl">I tuoi documenti</span>
+          <div class="hc act" style="outline-color:hsla(210,40%,55%,0.5);"><div class="e" style="background:hsl(210,40%,55%);"></div><div class="mc" style="background:hsl(210,40%,55%,0.15);">📄</div><div class="mt">Azul</div></div>
+          <div class="hc"><div class="e" style="background:hsl(210,40%,55%);"></div><div class="mc" style="background:hsl(210,40%,55%,0.1);">📄</div><div class="mt">Catan</div></div>
+          <div class="hc"><div class="e" style="background:hsl(210,40%,55%);"></div><div class="mc" style="background:hsl(210,40%,55%,0.1);">📄</div><div class="mt">Root</div></div>
+        </div>
+        <div class="farea">
+          <div class="swp">
+            <div class="sh l">‹</div><div class="sh r">›</div>
+            <div class="fc" style="outline-color:hsla(210,40%,55%,0.4);">
+              <div class="ab" style="background:hsl(210,40%,55%);"></div>
+              <div style="padding:10px 12px;background:hsl(210,40%,55%,0.05);display:flex;align-items:center;gap:8px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:hsl(210,40%,55%,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;">📄</div>
+                <div>
+                  <div class="tit" style="font-size:0.85rem;">azul_rulebook.pdf</div>
+                  <div class="sub">Azul · Regolamento base</div>
+                </div>
+                <span class="chip status" style="background:hsla(142,70%,45%,0.12);color:hsl(142,70%,35%);margin-left:auto;">Indicizzato</span>
+              </div>
+              <div class="bod" style="padding-top:4px;">
+                <div class="met">
+                  <span class="chip"><span class="ci">📄</span> 12 pagine</span>
+                  <span class="chip"><span class="ci">💾</span> 2.4 MB</span>
+                  <span class="chip"><span class="ci">📊</span> 48 chunks</span>
+                </div>
+                <div class="doc-preview">
+                  <div class="dp-icon">📑</div>
+                  <div class="dp-pages">
+                    <div class="dp-page">p.1</div><div class="dp-page">p.2</div><div class="dp-page">p.3</div>
+                    <div class="dp-page">p.4</div><div class="dp-page">p.5</div><div class="dp-page">p.6</div>
+                    <div class="dp-page" style="opacity:0.5;">+6</div>
+                  </div>
+                  <div class="dp-info">
+                    Estratto il 15 Gen 2026 · OCR: SmolDocling · Embedding: e5-large
+                  </div>
+                </div>
+                <div class="qa">
+                  <div class="qb pri" style="background:hsl(210,40%,55%);box-shadow:0 4px 12px hsla(210,40%,55%,0.3);">💬</div>
+                  <div class="qb">⬇️</div>
+                  <div class="qb">🔄</div>
+                  <div class="qb">🗑️</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="clinks"><div class="clinks-in">
+            <span class="clinks-lbl">LINK</span>
+            <button class="cl-btn"><span class="li" style="color:hsl(25,95%,45%);">🎲</span><span class="ll">Gioco</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(38,92%,50%);">🤖</span><span class="ll">Agente</span></button>
+          </div></div>
+        </div>
+      </div>
+      <div class="abar">
+        <div class="ai"><span class="ao">📚</span><span class="al">Libreria</span></div>
+        <div class="ai"><span class="ao">🔍</span><span class="al">Catalogo</span></div>
+        <div class="ai"><span class="ao">💬</span><span class="al">Chat</span></div>
+        <div class="ai act"><span class="ao">📄</span><span class="al">KB</span></div>
+        <div class="ai"><span class="ao">👤</span><span class="al">Profilo</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 6. PLAYER CARD (MeeplePlayerCard) ═══ -->
+  <div class="phone-col">
+    <span class="phone-label" style="color:hsl(262,83%,58%);">● Player</span>
+    <span class="phone-sublabel">MeeplePlayerCard · Avatar + stats + minimal (no cover, no flip, 2 quick actions)</span>
+    <div class="phone">
+      <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
+      <div class="nav">
+        <div class="logo"><div class="d" style="background:hsl(262,83%,58%);">👥</div> MeepleAI</div>
+        <div class="sp"></div>
+        <div class="av" style="background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,83%,40%));">MR</div>
+      </div>
+      <div class="srch"><div class="w"><span class="ic">🔍</span><input placeholder="Cerca giocatori..." readonly></div></div>
+      <div class="cnt">
+        <div class="hand">
+          <span class="lbl">Al tavolo</span>
+          <div class="hc act" style="outline-color:hsla(262,83%,58%,0.5);"><div class="e" style="background:hsl(262,83%,58%);"></div><div class="mc" style="background:hsl(262,83%,58%,0.15);">M</div><div class="mt">Marco</div></div>
+          <div class="hc"><div class="e" style="background:hsl(262,83%,58%);"></div><div class="mc" style="background:hsl(25,95%,45%,0.15);">L</div><div class="mt">Lucia</div></div>
+          <div class="hc"><div class="e" style="background:hsl(262,83%,58%);"></div><div class="mc" style="background:hsl(142,70%,45%,0.15);">G</div><div class="mt">Giov.</div></div>
+          <div class="hc"><div class="e" style="background:hsl(262,83%,58%);"></div><div class="mc" style="background:hsl(350,89%,60%,0.15);">A</div><div class="mt">Anna</div></div>
+        </div>
+        <div class="farea">
+          <div class="swp">
+            <div class="sh l">‹</div><div class="sh r">›</div>
+            <div class="fc" style="outline-color:hsla(262,83%,58%,0.4);">
+              <div class="ab" style="background:hsl(262,83%,58%);"></div>
+              <div class="player-vis" style="background:hsl(262,83%,58%,0.04);">
+                <div class="player-avatar" style="background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,70%,40%));">MR</div>
+                <div class="tit" style="text-align:center;">Marco Rossi</div>
+                <div class="sub" style="text-align:center;">@marco_games · Top 5%</div>
+              </div>
+              <div class="bod" style="padding-top:0;">
+                <div class="player-stats">
+                  <div class="player-stat"><div class="ps-val" style="color:hsl(262,83%,58%);">142</div><div class="ps-lbl">Partite</div></div>
+                  <div class="player-stat"><div class="ps-val" style="color:hsl(262,83%,58%);">67%</div><div class="ps-lbl">Vittorie</div></div>
+                  <div class="player-stat"><div class="ps-val" style="color:hsl(262,83%,58%);">23</div><div class="ps-lbl">Giochi</div></div>
+                </div>
+                <div style="margin-top:8px;">
+                  <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;font-family:'Quicksand',sans-serif;">GIOCHI PREFERITI</div>
+                  <div class="met">
+                    <span class="chip" style="background:hsla(25,95%,45%,0.1);color:hsl(25,95%,45%);">🔷 Azul</span>
+                    <span class="chip" style="background:hsla(25,95%,45%,0.1);color:hsl(25,95%,45%);">🏝️ Catan</span>
+                    <span class="chip" style="background:hsla(25,95%,45%,0.1);color:hsl(25,95%,45%);">🐦 Wingspan</span>
+                  </div>
+                </div>
+                <div class="qa">
+                  <div class="qb pri" style="background:hsl(262,83%,58%);box-shadow:0 4px 12px hsla(262,83%,58%,0.3);">🎯</div>
+                  <div class="qb">📊</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="clinks"><div class="clinks-in">
+            <span class="clinks-lbl">LINK</span>
+            <button class="cl-btn"><span class="li" style="color:hsl(240,60%,55%);">🎯</span><span class="ll">Sessioni</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(25,95%,45%);">📚</span><span class="ll">Libreria</span></button>
+          </div></div>
+        </div>
+      </div>
+      <div class="abar">
+        <div class="ai"><span class="ao">📚</span><span class="al">Libreria</span></div>
+        <div class="ai"><span class="ao">🔍</span><span class="al">Catalogo</span></div>
+        <div class="ai"><span class="ao">💬</span><span class="al">Chat</span></div>
+        <div class="ai act"><span class="ao">👥</span><span class="al">Giocatori</span></div>
+        <div class="ai"><span class="ao">👤</span><span class="al">Profilo</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 7. EVENT CARD ═══ -->
+  <div class="phone-col">
+    <span class="phone-label" style="color:hsl(350,89%,60%);">● Event</span>
+    <span class="phone-sublabel">MeepleCard event · Banner hero + data/luogo + CTA iscrizione</span>
+    <div class="phone">
+      <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
+      <div class="nav">
+        <div class="logo"><div class="d" style="background:hsl(350,89%,60%);">🎪</div> MeepleAI</div>
+        <div class="sp"></div>
+        <div class="av" style="background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,83%,40%));">MR</div>
+      </div>
+      <div class="srch"><div class="w"><span class="ic">🔍</span><input placeholder="Cerca eventi..." readonly></div></div>
+      <div class="cnt">
+        <div class="hand">
+          <span class="lbl">I tuoi eventi</span>
+          <div class="hc act" style="outline-color:hsla(350,89%,60%,0.5);"><div class="e" style="background:hsl(350,89%,60%);"></div><div class="mc" style="background:hsl(350,89%,60%,0.15);">🏆</div><div class="mt">Torneo</div></div>
+          <div class="hc"><div class="e" style="background:hsl(350,89%,60%);"></div><div class="mc" style="background:hsl(350,89%,60%,0.1);">🎲</div><div class="mt">Serata</div></div>
+        </div>
+        <div class="farea">
+          <div class="swp">
+            <div class="sh l">‹</div><div class="sh r">›</div>
+            <div class="fc" style="outline-color:hsla(350,89%,60%,0.4);">
+              <div class="ab" style="background:hsl(350,89%,60%);"></div>
+              <div class="event-banner" style="height:38%;">
+                <div class="eb-bg" style="background:linear-gradient(135deg,hsl(350,89%,55%),hsl(350,70%,30%));"></div>
+                <div class="eb-overlay"></div>
+                <div class="eb-content">
+                  <div class="eb-date">📅 Sabato 22 Marzo 2026 · 18:00</div>
+                  <div class="eb-title">MeepleAI Tournament</div>
+                </div>
+                <div class="badge" style="background:hsla(350,89%,60%,0.85);position:absolute;top:8px;left:8px;">Event</div>
+              </div>
+              <div class="bod">
+                <div class="sub">Grand Finals · Ludoteca Centrale · Milano</div>
+                <div class="event-details">
+                  <span class="chip"><span class="ci">👥</span> 32 posti</span>
+                  <span class="chip"><span class="ci">🎲</span> Azul, Catan, Root</span>
+                  <span class="chip"><span class="ci">🏆</span> Premi</span>
+                  <span class="chip status" style="background:hsla(350,89%,60%,0.12);color:hsl(350,89%,50%);">12 iscritti</span>
+                </div>
+                <div style="background:var(--bg-muted);border-radius:10px;padding:8px;font-size:11px;color:var(--text-sec);line-height:1.5;">
+                  Torneo a eliminazione diretta su 3 giochi. Fase a gironi + semifinali + finale. Premi per i primi 3 classificati!
+                </div>
+                <div class="event-cta">
+                  <button style="background:hsl(350,89%,60%);color:white;box-shadow:0 4px 12px hsla(350,89%,60%,0.3);">🎯 Iscriviti</button>
+                  <button style="background:var(--bg-muted);color:var(--text-sec);">📋 Dettagli</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="clinks"><div class="clinks-in">
+            <span class="clinks-lbl">LINK</span>
+            <button class="cl-btn"><span class="li" style="color:hsl(25,95%,45%);">🎲</span><span class="ll">Giochi</span></button>
+            <button class="cl-btn"><span class="li" style="color:hsl(240,60%,55%);">🎯</span><span class="ll">Sessioni</span></button>
+          </div></div>
+        </div>
+      </div>
+      <div class="abar">
+        <div class="ai"><span class="ao">📚</span><span class="al">Libreria</span></div>
+        <div class="ai"><span class="ao">🔍</span><span class="al">Catalogo</span></div>
+        <div class="ai"><span class="ao">💬</span><span class="al">Chat</span></div>
+        <div class="ai act"><span class="ao">🎪</span><span class="al">Eventi</span></div>
+        <div class="ai"><span class="ao">👤</span><span class="al">Profilo</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center;margin:32px auto;max-width:800px;font-size:0.78rem;color:var(--text-sec);line-height:1.6;">
+  <strong>Pattern comune</strong>: Ogni tipo di entità mantiene la stessa struttura (NavBar → Search → Hand + Focus Card + Links → ActionBar) ma il <strong>corpo della card</strong> si adatta radicalmente: cover con rating (Game), punteggi live (Session), stats grid (Agent), messaggi preview (Chat), file preview (Document), avatar + stats (Player), banner + CTA (Event).
+</div>
+
+</body>
+</html>

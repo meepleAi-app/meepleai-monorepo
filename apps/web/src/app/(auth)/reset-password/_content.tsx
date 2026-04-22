@@ -1,26 +1,35 @@
 'use client';
 
 /**
- * Password Reset Page (AUTH-04) - App Router
+ * Password Reset Page — v2 AuthCard migration (Task 13).
  *
- * Two-mode password reset flow with AuthLayout (Issue #2231):
- * 1. Request Mode (no token): User enters email to request reset
- * 2. Reset Mode (with token): User sets new password
+ * Two-mode flow:
+ * 1. Request mode (no ?token=): user enters email to receive reset instructions.
+ * 2. Reset mode (?token=<t>): token is verified, then user sets a new password.
+ *
+ * Auto-redirects already-authenticated users to /chat. After a successful
+ * reset, attempts a best-effort auto-login and redirects to /chat (or /)
+ * after a 2-second delay.
  */
 
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type JSX } from 'react';
 
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { AccessibleFormInput, AccessibleButton } from '@/components/accessible';
-import { AuthLayout } from '@/components/layouts';
-import { Button } from '@/components/ui/primitives/button';
+import { AuthCard } from '@/components/ui/v2/auth-card';
+import { Btn } from '@/components/ui/v2/btn';
+import { InputField } from '@/components/ui/v2/input-field';
+import { PwdInput } from '@/components/ui/v2/pwd-input';
+import { SuccessCard } from '@/components/ui/v2/success-card';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 
-// Type definitions
+// ---------------------------------------------------------------------------
+// Types & helpers
+// ---------------------------------------------------------------------------
+
 type AuthUser = {
   id: string;
   email: string;
@@ -28,522 +37,418 @@ type AuthUser = {
   role: string;
 };
 
-type PasswordStrength = 'weak' | 'medium' | 'strong';
-
 interface PasswordValidation {
-  minLength: boolean;
-  hasUppercase: boolean;
-  hasLowercase: boolean;
-  hasNumber: boolean;
-  isValid: boolean;
-  strength: PasswordStrength;
+  readonly minLength: boolean;
+  readonly hasUppercase: boolean;
+  readonly hasLowercase: boolean;
+  readonly hasNumber: boolean;
+  readonly isValid: boolean;
 }
 
-// Password validation utility
-const validatePassword = (password: string): PasswordValidation => {
+function validatePassword(password: string): PasswordValidation {
   const minLength = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
-
-  const requirementsMet = [minLength, hasUppercase, hasLowercase, hasNumber].filter(Boolean).length;
-
-  let strength: PasswordStrength = 'weak';
-  if (requirementsMet === 4) {
-    strength = 'strong';
-  } else if (requirementsMet >= 2 && minLength) {
-    strength = 'medium';
-  }
-
   return {
     minLength,
     hasUppercase,
     hasLowercase,
     hasNumber,
     isValid: minLength && hasUppercase && hasLowercase && hasNumber,
-    strength,
   };
-};
+}
 
-// Password strength indicator component
-const PasswordStrengthIndicator = ({ strength }: { strength: PasswordStrength }) => {
-  const strengthConfig = {
-    weak: {
-      color: 'bg-red-500',
-      text: 'Weak',
-      textColor: 'text-red-500',
-      width: 'w-1/3',
-    },
-    medium: {
-      color: 'bg-orange-500',
-      text: 'Medium',
-      textColor: 'text-orange-500',
-      width: 'w-2/3',
-    },
-    strong: {
-      color: 'bg-green-500',
-      text: 'Strong',
-      textColor: 'text-green-500',
-      width: 'w-full',
-    },
-  };
+// ---------------------------------------------------------------------------
+// Suspense fallback
+// ---------------------------------------------------------------------------
 
-  const config = strengthConfig[strength];
-
+export function ResetPasswordFallback(): JSX.Element {
+  const { t } = useTranslation();
   return (
-    <div className="space-y-2" role="status" aria-live="polite">
-      <div className="flex justify-between items-center">
-        <span className="text-sm text-slate-600 dark:text-slate-400">Password strength:</span>
-        <span className={`text-sm font-medium ${config.textColor}`}>{config.text}</span>
+    <main className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+      <div className="animate-pulse" data-testid="reset-password-loading">
+        {t('auth.resetPassword.loadingTitle')}
       </div>
-      <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-        <motion.div
-          className={`h-full ${config.color}`}
-          initial={{ width: 0 }}
-          animate={{ width: config.width }}
-          transition={{ duration: 0.3 }}
-        />
-      </div>
-    </div>
+    </main>
   );
-};
+}
 
-export function ResetPasswordPageContent() {
+// ---------------------------------------------------------------------------
+// Main content
+// ---------------------------------------------------------------------------
+
+export function ResetPasswordPageContent(): JSX.Element | null {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
+
   const token = searchParams?.get('token') ?? null;
+  const mode: 'request' | 'reset' = token ? 'reset' : 'request';
 
-  // Mode: 'request' (no token) or 'reset' (with token)
-  const mode = token ? 'reset' : 'request';
-
-  // Authentication state
+  // Auth state
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Request mode state
+  // Request-mode state
   const [email, setEmail] = useState('');
   const [requestSuccess, setRequestSuccess] = useState(false);
 
-  // Reset mode state
+  // Reset-mode state
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordValidation, setPasswordValidation] = useState<PasswordValidation>({
-    minLength: false,
-    hasUppercase: false,
-    hasLowercase: false,
-    hasNumber: false,
-    isValid: false,
-    strength: 'weak',
-  });
   const [resetSuccess, setResetSuccess] = useState(false);
 
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Check if user is already authenticated
+  const passwordValidation = validatePassword(newPassword);
+
+  // Auth guard: redirect to /chat if already authenticated
   useEffect(() => {
+    let cancelled = false;
     const checkAuth = async () => {
       try {
         const user = await api.auth.getMe();
+        if (cancelled) return;
         if (user) {
           setAuthUser(user);
-          // Redirect to chat if already logged in
           void router.push('/chat');
         }
       } catch {
-        setAuthUser(null);
+        if (!cancelled) setAuthUser(null);
       } finally {
-        setIsCheckingAuth(false);
+        if (!cancelled) setIsCheckingAuth(false);
       }
     };
-
     void checkAuth();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
-  // Verify token on page load (reset mode only)
+  // Token verification on mount (reset mode only)
   useEffect(() => {
-    if (mode === 'reset' && token && typeof token === 'string') {
-      const verifyToken = async () => {
-        setIsLoading(true);
-        setErrorMessage('');
-        try {
-          await api.auth.verifyResetToken(token);
-          setTokenValid(true);
-        } catch (err) {
+    if (mode !== 'reset' || !token) return;
+    let cancelled = false;
+    const verify = async () => {
+      setIsLoading(true);
+      setErrorMessage('');
+      try {
+        await api.auth.verifyResetToken(token);
+        if (!cancelled) setTokenValid(true);
+      } catch (err) {
+        if (!cancelled) {
           setTokenValid(false);
-          setErrorMessage(getErrorMessage(err, 'Invalid or expired reset token.'));
-        } finally {
-          setIsLoading(false);
+          setErrorMessage(getErrorMessage(err, t('auth.resetPassword.invalidTokenFromServer')));
         }
-      };
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    void verify();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, token, t]);
 
-      void verifyToken();
-    }
-  }, [mode, token]);
+  // ------------------------- Handlers -------------------------
 
-  // Update password validation on password change
-  useEffect(() => {
-    if (newPassword) {
-      setPasswordValidation(validatePassword(newPassword));
-    } else {
-      setPasswordValidation({
-        minLength: false,
-        hasUppercase: false,
-        hasLowercase: false,
-        hasNumber: false,
-        isValid: false,
-        strength: 'weak',
-      });
-    }
-  }, [newPassword]);
-
-  // Handle request reset submission
-  const handleRequestReset = async (e: FormEvent) => {
+  const handleRequestSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setIsLoading(true);
-
     try {
       await api.auth.requestPasswordReset(email);
       setRequestSuccess(true);
     } catch (err) {
-      setErrorMessage(getErrorMessage(err, 'Failed to send reset email. Please try again.'));
+      setErrorMessage(getErrorMessage(err, t('auth.resetPassword.genericRequestError')));
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle password reset submission
-  const handleConfirmReset = async (e: FormEvent) => {
+  const handleConfirmSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
-    // Client-side validation
     if (!passwordValidation.isValid) {
-      setErrorMessage('Password does not meet all requirements.');
+      setErrorMessage(t('auth.resetPassword.passwordRequirements'));
       return;
     }
-
     if (newPassword !== confirmPassword) {
-      setErrorMessage('Passwords do not match.');
+      setErrorMessage(t('auth.resetPassword.passwordsDoNotMatch'));
       return;
     }
-
-    if (!token || typeof token !== 'string') {
-      setErrorMessage('Invalid reset token.');
+    if (!token) {
+      setErrorMessage(t('auth.resetPassword.invalidToken'));
       return;
     }
 
     setIsLoading(true);
-
     try {
-      // Confirm password reset
       await api.auth.confirmPasswordReset(token, newPassword);
-
       setResetSuccess(true);
 
-      // Auto-login after reset
+      // Best-effort auto-login. Email may not be known in reset mode — we
+      // preserve legacy behaviour (pass '' if we don't have it) and fall
+      // through to the login page if auto-login fails or 2FA is required.
       try {
         const loginResponse = await api.auth.login({
-          email: email || '', // Email might not be known in reset mode
+          email: email || '',
           password: newPassword,
         });
-
-        // Handle 2FA requirement or successful login
         if (loginResponse.user && !loginResponse.requiresTwoFactor) {
           setAuthUser(loginResponse.user);
-          // Redirect to chat after 2 seconds
           setTimeout(() => {
             void router.push('/chat');
           }, 2000);
         } else {
-          // If 2FA required or auto-login fails, redirect to login page
           setTimeout(() => {
             void router.push('/');
           }, 2000);
         }
       } catch {
-        // If auto-login fails, redirect to login page
         setTimeout(() => {
           void router.push('/');
         }, 2000);
       }
     } catch (err) {
-      setErrorMessage(getErrorMessage(err, 'Failed to reset password. Please try again.'));
+      setErrorMessage(getErrorMessage(err, t('auth.resetPassword.genericConfirmError')));
       setIsLoading(false);
     }
   };
 
-  // Show loading state while checking authentication
+  const handleTryAgain = () => {
+    setRequestSuccess(false);
+    setEmail('');
+    setErrorMessage('');
+  };
+
+  // ------------------------- Render -------------------------
+
+  // 1. Checking authentication
   if (isCheckingAuth) {
     return (
-      <AuthLayout title="Loading...">
-        <div className="text-center py-8">
-          <div className="animate-spin text-4xl mb-4">⏳</div>
-          <p className="text-slate-400">Loading...</p>
+      <AuthCard title={t('auth.resetPassword.loadingTitle')}>
+        <div className="text-center py-8" data-testid="reset-password-auth-check">
+          <div className="animate-pulse text-muted-foreground text-sm">
+            {t('auth.resetPassword.loadingTitle')}
+          </div>
         </div>
-      </AuthLayout>
+      </AuthCard>
     );
   }
 
-  // User is already authenticated, redirecting...
+  // 2. Already authenticated: redirecting to /chat
   if (authUser && !resetSuccess) {
     return null;
   }
 
-  // Request Reset Mode
-  if (mode === 'request' && !requestSuccess) {
-    return (
-      <AuthLayout
-        title="Reset Password"
-        subtitle="Enter your email address and we'll send you instructions to reset your password"
-      >
-        {errorMessage && (
-          <div
-            role="alert"
-            aria-live="polite"
-            className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-4"
-          >
-            {errorMessage}
-          </div>
-        )}
+  const backToLogin = (
+    <Link
+      href="/"
+      className="font-medium text-foreground hover:underline"
+      data-testid="reset-password-back-to-login"
+    >
+      {t('auth.resetPassword.backToLogin')}
+    </Link>
+  );
 
-        <form noValidate onSubmit={handleRequestReset} className="space-y-4">
-          <AccessibleFormInput
-            label="Email Address"
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            placeholder="you@example.com"
-            inputClassName="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-ring"
-          />
-
-          <AccessibleButton
-            type="submit"
-            variant="primary"
-            className="w-full mt-6"
-            isLoading={isLoading}
-            loadingText="Sending..."
-            disabled={!email.trim()}
-          >
-            Send Reset Instructions
-          </AccessibleButton>
-        </form>
-
-        <div className="text-center mt-4">
-          <Link
-            href="/"
-            className="text-sm text-primary hover:text-primary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
-          >
-            ← Back to Login
-          </Link>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  // Request Success State
+  // 3. Request mode — success state
   if (mode === 'request' && requestSuccess) {
     return (
-      <AuthLayout>
-        <div className="text-center space-y-4 py-4">
-          <div className="text-6xl mb-4">✉️</div>
-          <h2 className="text-2xl font-bold text-green-400">Check Your Email</h2>
-          <p className="text-slate-600 dark:text-slate-300">
-            We've sent password reset instructions to <strong>{email}</strong>.
-          </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Didn't receive the email? Check your spam folder or{' '}
-            <button
-              onClick={() => {
-                setRequestSuccess(false);
-                setEmail('');
-              }}
-              className="text-primary hover:text-primary/80 underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
-            >
-              try again
-            </button>
-            .
-          </p>
-          <div className="pt-4">
-            <Button variant="secondary" asChild>
-              <Link href="/">Back to Login</Link>
-            </Button>
-          </div>
-        </div>
-      </AuthLayout>
+      <AuthCard title={t('auth.resetPassword.sentTitle')} footerAction={backToLogin}>
+        <SuccessCard
+          emoji="✉️"
+          body={t('auth.resetPassword.sentBody', { email })}
+          cta={t('auth.resetPassword.tryAgain')}
+          onCta={handleTryAgain}
+        />
+      </AuthCard>
     );
   }
 
-  // Reset Password Mode - Token Verification
-  if (mode === 'reset' && tokenValid === null) {
+  // 4. Request mode — form
+  if (mode === 'request') {
     return (
-      <AuthLayout title="Verifying...">
-        <div className="text-center space-y-4 py-8">
-          <div className="animate-spin text-4xl mb-4">⏳</div>
-          <p className="text-slate-400">Verifying reset token...</p>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  // Reset Password Mode - Invalid Token
-  if (mode === 'reset' && tokenValid === false) {
-    return (
-      <AuthLayout
-        title="Invalid or Expired Link"
-        subtitle="This password reset link is no longer valid"
+      <AuthCard
+        title={t('auth.resetPassword.title')}
+        subtitle={t('auth.resetPassword.subtitle')}
+        footerAction={backToLogin}
       >
-        <div className="text-center space-y-4 py-4">
-          <div className="text-6xl mb-4">⚠️</div>
-          {errorMessage && <p className="text-sm text-red-400">{errorMessage}</p>}
-          <div className="pt-4 space-y-2">
-            <Button asChild className="w-full">
-              <Link href="/reset-password">Request New Reset Link</Link>
-            </Button>
-            <Button variant="secondary" asChild className="w-full">
-              <Link href="/">Back to Login</Link>
-            </Button>
-          </div>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  // Reset Password Mode - Valid Token
-  if (mode === 'reset' && tokenValid === true && !resetSuccess) {
-    return (
-      <AuthLayout title="Set New Password" subtitle="Choose a strong password for your account">
         {errorMessage && (
           <div
             role="alert"
             aria-live="polite"
-            className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-4"
+            className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg mb-4 text-sm"
+            data-testid="reset-password-error"
           >
             {errorMessage}
           </div>
         )}
 
-        <form noValidate onSubmit={handleConfirmReset} className="space-y-4">
-          <AccessibleFormInput
-            label="New Password"
-            type="password"
-            value={newPassword}
-            onChange={e => setNewPassword(e.target.value)}
+        <form noValidate onSubmit={handleRequestSubmit} className="space-y-4">
+          <InputField
+            label={t('auth.resetPassword.email')}
+            type="email"
+            value={email}
+            onChange={setEmail}
             required
-            autoComplete="new-password"
-            inputClassName="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-ring"
+            autoComplete="email"
+            placeholder={t('auth.resetPassword.placeholder')}
           />
 
-          {/* Password Requirements */}
-          {newPassword && (
-            <div className="space-y-2">
-              <PasswordStrengthIndicator strength={passwordValidation.strength} />
-              <div className="text-sm space-y-1">
-                <div
-                  className={`flex items-center gap-2 ${
-                    passwordValidation.minLength
-                      ? 'text-green-400'
-                      : 'text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  <span aria-hidden="true">{passwordValidation.minLength ? '✓' : '○'}</span>
-                  <span>At least 8 characters</span>
-                </div>
-                <div
-                  className={`flex items-center gap-2 ${
-                    passwordValidation.hasUppercase
-                      ? 'text-green-400'
-                      : 'text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  <span aria-hidden="true">{passwordValidation.hasUppercase ? '✓' : '○'}</span>
-                  <span>At least 1 uppercase letter</span>
-                </div>
-                <div
-                  className={`flex items-center gap-2 ${
-                    passwordValidation.hasLowercase
-                      ? 'text-green-400'
-                      : 'text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  <span aria-hidden="true">{passwordValidation.hasLowercase ? '✓' : '○'}</span>
-                  <span>At least 1 lowercase letter</span>
-                </div>
-                <div
-                  className={`flex items-center gap-2 ${
-                    passwordValidation.hasNumber
-                      ? 'text-green-400'
-                      : 'text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  <span aria-hidden="true">{passwordValidation.hasNumber ? '✓' : '○'}</span>
-                  <span>At least 1 number</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <AccessibleFormInput
-            label="Confirm Password"
-            type="password"
-            value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
-            required
-            autoComplete="new-password"
-            error={
-              confirmPassword && newPassword !== confirmPassword
-                ? 'Passwords do not match'
-                : undefined
-            }
-            inputClassName="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-ring"
-          />
-
-          <AccessibleButton
+          <Btn
             type="submit"
             variant="primary"
-            className="w-full mt-6"
-            isLoading={isLoading}
-            loadingText="Resetting..."
+            fullWidth
+            className="mt-6"
+            loading={isLoading}
+            disabled={!email.trim()}
+            data-testid="reset-password-submit"
+          >
+            {isLoading ? t('auth.resetPassword.sending') : t('auth.resetPassword.submitCta')}
+          </Btn>
+        </form>
+      </AuthCard>
+    );
+  }
+
+  // 5. Reset mode — verifying token
+  if (mode === 'reset' && tokenValid === null) {
+    return (
+      <AuthCard title={t('auth.resetPassword.verifyingTitle')}>
+        <div className="text-center py-8" data-testid="reset-password-verifying">
+          <div className="animate-pulse text-muted-foreground text-sm">
+            {t('auth.resetPassword.verifyingBody')}
+          </div>
+        </div>
+      </AuthCard>
+    );
+  }
+
+  // 6. Reset mode — invalid token
+  if (mode === 'reset' && tokenValid === false) {
+    return (
+      <AuthCard
+        title={t('auth.resetPassword.invalidLinkTitle')}
+        subtitle={t('auth.resetPassword.invalidLinkSubtitle')}
+        footerAction={backToLogin}
+      >
+        <div className="text-center py-4 space-y-4" data-testid="reset-password-invalid-token">
+          {errorMessage && (
+            <p role="alert" className="text-sm text-destructive">
+              {errorMessage}
+            </p>
+          )}
+          <Btn
+            variant="primary"
+            fullWidth
+            onClick={() => router.push('/reset-password')}
+            data-testid="reset-password-request-new"
+          >
+            {t('auth.resetPassword.invalidLinkCta')}
+          </Btn>
+        </div>
+      </AuthCard>
+    );
+  }
+
+  // 7. Reset mode — success state
+  if (mode === 'reset' && resetSuccess) {
+    return (
+      <AuthCard title={t('auth.resetPassword.successTitle')}>
+        <div
+          className="flex flex-col items-center text-center gap-3 p-6"
+          data-testid="reset-password-success"
+          role="status"
+          aria-live="polite"
+        >
+          <div
+            aria-hidden="true"
+            className="w-16 h-16 flex items-center justify-center rounded-full bg-[hsl(var(--c-toolkit)/0.1)] text-3xl"
+          >
+            <span>✅</span>
+          </div>
+          <p className="font-body text-sm text-muted-foreground m-0">
+            {t('auth.resetPassword.successBody')}
+          </p>
+        </div>
+      </AuthCard>
+    );
+  }
+
+  // 8. Reset mode — valid token, password form
+  if (mode === 'reset' && tokenValid === true) {
+    const confirmMismatch = confirmPassword && newPassword !== confirmPassword;
+    return (
+      <AuthCard
+        title={t('auth.resetPassword.confirmTitle')}
+        subtitle={t('auth.resetPassword.confirmSubtitle')}
+        footerAction={backToLogin}
+      >
+        {errorMessage && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg mb-4 text-sm"
+            data-testid="reset-password-error"
+          >
+            {errorMessage}
+          </div>
+        )}
+
+        <form noValidate onSubmit={handleConfirmSubmit} className="space-y-4">
+          <PwdInput
+            label={t('auth.resetPassword.passwordLabel')}
+            value={newPassword}
+            onChange={setNewPassword}
+            required
+            autoComplete="new-password"
+            showStrength
+            toggleShowLabel={t('auth.visibility.show')}
+            toggleHideLabel={t('auth.visibility.hide')}
+            strengthPrefix={t('auth.meter.prefix')}
+            strengthLabels={[
+              t('auth.meter.weak'),
+              t('auth.meter.weak'),
+              t('auth.meter.fair'),
+              t('auth.meter.good'),
+              t('auth.meter.strong'),
+            ]}
+          />
+
+          <PwdInput
+            label={t('auth.resetPassword.confirmPasswordLabel')}
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            required
+            autoComplete="new-password"
+            error={confirmMismatch ? t('auth.resetPassword.passwordsDoNotMatch') : undefined}
+            toggleShowLabel={t('auth.visibility.show')}
+            toggleHideLabel={t('auth.visibility.hide')}
+          />
+
+          <Btn
+            type="submit"
+            variant="primary"
+            fullWidth
+            className="mt-6"
+            loading={isLoading}
             disabled={
               !passwordValidation.isValid ||
               newPassword !== confirmPassword ||
               !confirmPassword.trim()
             }
+            data-testid="reset-password-confirm"
           >
-            Reset Password
-          </AccessibleButton>
+            {isLoading ? t('auth.resetPassword.resetting') : t('auth.resetPassword.confirmCta')}
+          </Btn>
         </form>
-
-        <div className="text-center mt-4">
-          <Link
-            href="/"
-            className="text-sm text-primary hover:text-primary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
-          >
-            ← Back to Login
-          </Link>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  // Reset Success State
-  if (mode === 'reset' && resetSuccess) {
-    return (
-      <AuthLayout
-        title="Password Reset Successful"
-        subtitle="Your password has been successfully reset"
-      >
-        <div className="text-center space-y-4 py-4">
-          <div className="text-6xl mb-4">✅</div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Redirecting to chat...</p>
-          <div className="animate-spin text-2xl mx-auto w-fit">⏳</div>
-        </div>
-      </AuthLayout>
+      </AuthCard>
     );
   }
 

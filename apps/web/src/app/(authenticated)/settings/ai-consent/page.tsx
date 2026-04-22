@@ -9,8 +9,10 @@ import React, { useEffect, useState } from 'react';
 
 import { Brain, Globe, Save, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 
-import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
+import { SettingsList } from '@/components/ui/v2/settings-list';
+import { SettingsRow } from '@/components/ui/v2/settings-row';
+import { ToggleSwitch } from '@/components/ui/v2/toggle-switch';
 import { useToast } from '@/hooks/useToast';
 
 const CURRENT_CONSENT_VERSION = '1.0.0';
@@ -165,8 +167,8 @@ export default function AiConsentPage() {
       </div>
 
       {/* AI Processing Consent */}
-      <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
-        <div className="flex items-start gap-4 mb-6">
+      <div className="mb-6">
+        <div className="flex items-start gap-4 mb-3">
           <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
             <Brain className="h-6 w-6 text-purple-600 dark:text-purple-400" />
           </div>
@@ -179,24 +181,27 @@ export default function AiConsentPage() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between py-2">
-          <div>
-            <p className="font-medium">AI question answering</p>
-            <p className="text-sm text-muted-foreground">
-              Use AI models to generate answers from game rulebooks and knowledge base
-            </p>
-          </div>
-          <Switch
-            checked={consent.consentedToAiProcessing}
-            onCheckedChange={checked => updateConsent('consentedToAiProcessing', checked)}
-            data-testid="ai-processing-toggle"
+        <SettingsList ariaLabel="AI-Powered Features">
+          <SettingsRow
+            label="AI question answering"
+            description="Use AI models to generate answers from game rulebooks and knowledge base"
+            trailing={
+              <span data-testid="ai-processing-toggle">
+                <ToggleSwitch
+                  checked={consent.consentedToAiProcessing}
+                  onCheckedChange={checked => updateConsent('consentedToAiProcessing', checked)}
+                  ariaLabel="AI question answering"
+                  entity="agent"
+                />
+              </span>
+            }
           />
-        </div>
+        </SettingsList>
       </div>
 
       {/* External Provider Consent */}
-      <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
-        <div className="flex items-start gap-4 mb-6">
+      <div className="mb-6">
+        <div className="flex items-start gap-4 mb-3">
           <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/20">
             <Globe className="h-6 w-6 text-amber-600 dark:text-amber-400" />
           </div>
@@ -209,21 +214,25 @@ export default function AiConsentPage() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between py-2">
-          <div>
-            <p className="font-medium">Allow external AI providers</p>
-            <p className="text-sm text-muted-foreground">
-              When disabled, only local AI models (Ollama) will be used. This may result in slower
-              or less accurate answers.
-            </p>
-          </div>
-          <Switch
-            checked={consent.consentedToExternalProviders}
-            onCheckedChange={checked => updateConsent('consentedToExternalProviders', checked)}
-            disabled={!consent.consentedToAiProcessing}
-            data-testid="external-providers-toggle"
+        <SettingsList ariaLabel="External AI Providers">
+          <SettingsRow
+            label="Allow external AI providers"
+            description="When disabled, only local AI models (Ollama) will be used. This may result in slower or less accurate answers."
+            trailing={
+              <span data-testid="external-providers-toggle">
+                <ToggleSwitch
+                  checked={consent.consentedToExternalProviders}
+                  onCheckedChange={checked =>
+                    updateConsent('consentedToExternalProviders', checked)
+                  }
+                  disabled={!consent.consentedToAiProcessing}
+                  ariaLabel="Allow external AI providers"
+                  entity="agent"
+                />
+              </span>
+            }
           />
-        </div>
+        </SettingsList>
 
         {!consent.consentedToAiProcessing && (
           <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">

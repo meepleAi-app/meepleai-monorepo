@@ -407,32 +407,130 @@ jobs:
           echo "  Web built: ${{ needs.detect-changes.outputs.deploy_web }}"
 
   # Run database migrations BEFORE deploying new code
+  #
+  # Strategy (fix for historical bug where this job only did `docker pull`):
+  #   1. Generate an idempotent SQL migration script via `dotnet ef migrations script --idempotent`
+  #   2. SCP the SQL to the staging server
+  #   3. Create a pre-migration DB backup (pg_dump | gzip) for rollback safety
+  #   4. Apply the SQL via `docker exec postgres psql -v ON_ERROR_STOP=1 -f ...`
+  #   5. Verify __EFMigrationsHistory reflects the latest migration
+  #   6. Pull new API image (for the downstream deploy job)
+  #
+  # Idempotent SQL means every migration is wrapped in `IF NOT EXISTS` against
+  # `__EFMigrationsHistory`, so re-running is a no-op if no new migrations.
+  # If psql fails mid-stream, ON_ERROR_STOP=1 aborts the whole script and the
+  # backup created in step 3 can be restored with `pg_restore`.
   migrate-db:
     name: Database Migration
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: [build]
     if: vars.DEPLOY_METHOD == 'ssh'
     steps:
-      - name: Run Migrations via SSH
+      - name: Checkout source at deploy SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install dotnet-ef tool
+        # Idempotent: use pre-installed tool if present (self-hosted runner may
+        # already have dotnet-ef from a newer SDK). `dotnet tool install` does
+        # not support downgrades, so skipping install when a compatible version
+        # exists avoids exit 1 on runners with ef 10.x already global.
+        run: |
+          if dotnet tool list --global | awk '{print $1}' | grep -qx 'dotnet-ef'; then
+            echo "dotnet-ef already installed globally — using existing version:"
+            dotnet tool list --global | grep '^dotnet-ef'
+          else
+            dotnet tool install --global dotnet-ef --version 9.*
+          fi
+
+      - name: Restore and build API project
+        working-directory: apps/api/src/Api
+        run: |
+          dotnet restore
+          dotnet build --no-restore -c Release
+
+      - name: Generate idempotent migration SQL
+        working-directory: apps/api/src/Api
+        run: |
+          # Note: no --no-build — dotnet-ef needs the project built. We built
+          # it in the previous step but ef defaults to Debug configuration,
+          # so we let it trigger its own build without the flag to avoid
+          # Release/Debug path mismatches.
+          dotnet ef migrations script --idempotent -o /tmp/migrations.sql
+          lines=$(wc -l < /tmp/migrations.sql)
+          echo "✅ Generated ${lines} lines of SQL at /tmp/migrations.sql"
+          if [ "$lines" -lt 10 ]; then
+            echo "❌ SQL output suspiciously small (< 10 lines). Aborting."
+            exit 1
+          fi
+
+      - name: Apply migrations on staging
         env:
           SSH_HOST: ${{ secrets.STAGING_HOST }}
           SSH_USER: ${{ secrets.STAGING_USER }}
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           API_IMAGE: ${{ needs.build.outputs.api_image }}
         run: |
-          # Setup SSH
+          set -euo pipefail
+
+          # Setup SSH key
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
-          # Pull new API image on server (migrations auto-apply on startup)
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            "$SSH_USER@$SSH_HOST" \
-            "docker pull $API_IMAGE && echo '✅ API image pulled'" || {
-            echo "⚠️ Image pull failed — deploy will use cached image"
-          }
+          SSH_CMD="ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST"
+          SCP_CMD="scp -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no"
 
+          # Step 1 — pre-migration backup with integrity check.
+          # pipefail is active in the inner shell so a pg_dump failure stops
+          # the chain; gzip -t then verifies the gz is a complete, valid
+          # archive before we consider the backup usable. If any part fails
+          # we delete the partial file so an operator can't accidentally
+          # restore from a truncated dump later.
+          BACKUP_NAME="pre-migration-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+          echo "📦 Creating pre-migration backup: ${BACKUP_NAME}"
+          $SSH_CMD "set -o pipefail; docker exec meepleai-postgres pg_dump -U meepleai -d meepleai_staging --no-owner --no-acl | gzip > /tmp/${BACKUP_NAME} && gzip -t /tmp/${BACKUP_NAME} && ls -lh /tmp/${BACKUP_NAME} || { echo '❌ backup failed — removing partial file'; rm -f /tmp/${BACKUP_NAME}; exit 1; }"
+
+          # Step 2 — upload idempotent SQL to server
+          echo "📤 Uploading migrations.sql to server..."
+          $SCP_CMD /tmp/migrations.sql "$SSH_USER@$SSH_HOST:/tmp/migrations.sql"
+
+          # Step 3 — apply SQL inside postgres container with ON_ERROR_STOP=1.
+          # Use a heredoc to ship a small remote script. psql's exit code is
+          # captured directly into `rc` on the next line; the `tail` (log
+          # output) and cleanup run unconditionally after, and their own
+          # exit codes never mask psql's result. Final `exit $rc` propagates
+          # the real psql outcome back through SSH to the runner.
+          echo "🔧 Applying migrations via psql..."
+          ssh -i "$HOME/.ssh/deploy_key" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" bash <<'REMOTE_APPLY'
+          set -u
+          docker cp /tmp/migrations.sql meepleai-postgres:/tmp/migrations.sql
+          docker exec meepleai-postgres psql -U meepleai -d meepleai_staging -v ON_ERROR_STOP=1 -f /tmp/migrations.sql > /tmp/migrations.log 2>&1
+          rc=$?
+          echo "--- psql log (tail -20) ---"
+          tail -20 /tmp/migrations.log 2>/dev/null || true
+          echo "--- end log ---"
+          docker exec meepleai-postgres rm -f /tmp/migrations.sql /tmp/migrations.log 2>/dev/null || true
+          rm -f /tmp/migrations.sql /tmp/migrations.log
+          exit $rc
+          REMOTE_APPLY
+
+          # Step 4 — verify migration history
+          echo "🔍 Verifying applied migrations..."
+          $SSH_CMD "docker exec meepleai-postgres psql -U meepleai -d meepleai_staging -c 'SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY \"MigrationId\" DESC LIMIT 5;'"
+
+          # Step 5 — pull new API image for downstream deploy job
+          echo "📥 Pulling new API image..."
+          $SSH_CMD "docker pull $API_IMAGE && echo '✅ API image pulled'"
+
+          # Cleanup SSH key
           rm -f ~/.ssh/deploy_key
 
   # Snapshot previous performance baseline before deploy overwrites DEPLOYMENT.json

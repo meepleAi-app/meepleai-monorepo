@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MeepleAI — Desktop Patterns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<style>
+  .stage { padding: 96px 24px 80px; }
+
+  /* Desktop frame (scaled preview of a larger window) */
+  .desk {
+    width: 100%; max-width: 1280px; margin: 32px auto 0;
+    height: 720px; border-radius: 14px; overflow: hidden;
+    background: var(--bg-card); border: 1px solid var(--border);
+    box-shadow: 0 30px 80px rgba(90,60,20,.18), 0 0 0 1px var(--border);
+    display: flex; flex-direction: column;
+  }
+  [data-theme="dark"] .desk { box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  .desk-chrome {
+    height: 36px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 14px; gap: 8px; background: var(--bg-muted);
+    border-bottom: 1px solid var(--border); font-size: 11px;
+    color: var(--text-muted); font-family: var(--f-mono);
+  }
+  .desk-chrome .dots { display: flex; gap: 6px; }
+  .desk-chrome .dot { width: 11px; height: 11px; border-radius: 50%; background: #ccc; }
+  .desk-chrome .dot:nth-child(1) { background: #ff5f57; }
+  .desk-chrome .dot:nth-child(2) { background: #febc2e; }
+  .desk-chrome .dot:nth-child(3) { background: #28c840; }
+  .desk-chrome .url {
+    flex: 1; text-align: center; padding: 3px 10px;
+    background: var(--bg-card); border-radius: 6px; margin: 0 14%;
+  }
+  .desk-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+
+  /* Shared top nav in desktop */
+  .dtop {
+    height: 52px; flex-shrink: 0;
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 18px; background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
+  .dtop .dbrand {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--f-display); font-weight: 700;
+  }
+  .dtop .dbrand-mark {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: linear-gradient(135deg, hsl(var(--c-game)), hsl(var(--c-event)));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800;
+  }
+  .dtop .dsearch {
+    flex: 1; max-width: 480px; margin: 0 auto;
+    position: relative;
+  }
+  .dtop .dsearch input {
+    width: 100%; padding: 7px 10px 7px 30px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-muted); font-size: 12px;
+    color: var(--text); outline: none; font-family: inherit;
+  }
+  .dtop .dsearch::before {
+    content: '🔍'; position: absolute; left: 10px; top: 6px; font-size: 13px; opacity: .6;
+  }
+  .dtop .davatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: hsl(var(--c-player)); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 11px;
+  }
+
+  /* Pattern selector */
+  .pat-sw {
+    display: flex; gap: 8px; justify-content: center; margin: 16px auto 0;
+    max-width: 900px; flex-wrap: wrap;
+  }
+  .pat-sw button {
+    padding: 10px 16px; border-radius: 10px; font-family: var(--f-display);
+    font-weight: 700; font-size: 13px; background: var(--bg-card);
+    border: 1.5px solid var(--border); color: var(--text-sec); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: all .2s;
+  }
+  .pat-sw button .psvg { opacity: .7; }
+  .pat-sw button:hover { transform: translateY(-1px); }
+  .pat-sw button.active {
+    background: hsl(var(--c-game)); color: #fff;
+    border-color: transparent;
+  }
+  .pat-sw button.active .psvg { opacity: 1; }
+
+  .pat-caption {
+    max-width: 1000px; margin: 16px auto 0; text-align: center;
+    color: var(--text-sec); font-size: 14px; line-height: 1.55;
+  }
+  .pat-caption strong { color: var(--text); }
+  .pat-pill {
+    display: inline-flex; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    background: hsl(var(--c-game) / .12); color: hsl(var(--c-game));
+    font-family: var(--f-display); font-weight: 700; font-size: 11px;
+    text-transform: uppercase; letter-spacing: .05em; margin-right: 8px;
+  }
+
+  /* ═══ PATTERN A: Split view (Linear/Mail) ═══ */
+  .pA { display: flex; flex-direction: column; height: 100%; width: 100%; }
+  .pA-body { flex: 1; display: grid; grid-template-columns: 220px 420px 1fr; overflow: hidden; }
+  .pA-side {
+    background: var(--bg); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 14px 10px;
+  }
+  .pA-side .grp {
+    font-family: var(--f-mono); font-size: 9px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .08em;
+    padding: 10px 8px 4px; font-weight: 700;
+  }
+  .pA-side .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 600; color: var(--text-sec);
+  }
+  .pA-side .nav-item .bdg {
+    margin-left: auto; padding: 0 6px; border-radius: 999px;
+    background: var(--bg-muted); font-size: 9px; font-weight: 800;
+    color: var(--text-muted); font-family: var(--f-display);
+  }
+  .pA-side .nav-item.act { background: hsl(var(--c-game) / .12); color: hsl(var(--c-game)); }
+  .pA-side .nav-item.act .bdg { background: hsl(var(--c-game)); color: #fff; }
+  .pA-list {
+    border-right: 1px solid var(--border); overflow-y: auto;
+    background: var(--bg-card);
+  }
+  .pA-list .lhead {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: var(--bg-card); z-index: 2;
+  }
+  .pA-list .lhead h3 {
+    font-size: 16px; font-weight: 700; font-family: var(--f-display);
+  }
+  .pA-list .lhead .ftabs {
+    display: flex; gap: 4px; margin-top: 6px; font-size: 11px;
+  }
+  .pA-list .lhead .ftab {
+    padding: 2px 8px; border-radius: 999px; background: var(--bg-muted);
+    color: var(--text-sec); cursor: pointer; font-family: var(--f-display);
+    font-weight: 700; font-size: 10px;
+  }
+  .pA-list .lhead .ftab.act { background: hsl(var(--e, var(--c-game))); color: #fff; }
+  .pA-li {
+    display: flex; gap: 10px; padding: 12px 16px;
+    border-bottom: 1px solid var(--border-light); cursor: pointer;
+  }
+  .pA-li.sel { background: hsl(var(--e) / .08); border-left: 3px solid hsl(var(--e)); padding-left: 13px; }
+  .pA-li:hover { background: var(--bg-hover); }
+  .pA-li .cov {
+    width: 36px; height: 46px; border-radius: 5px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: rgba(255,255,255,.85);
+  }
+  .pA-li .ti { font-size: 13px; font-weight: 700; line-height: 1.2; }
+  .pA-li .sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .pA-li .meta { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+  .pA-li .m {
+    font-size: 9px; padding: 1px 5px; border-radius: 4px;
+    background: hsl(var(--e) / .12); color: hsl(var(--e));
+    font-family: var(--f-display); font-weight: 700;
+  }
+
+  .pA-detail { overflow-y: auto; padding: 0; background: var(--bg); }
+  .pA-detail .dhero {
+    position: relative; height: 220px;
+    display: flex; align-items: flex-end; padding: 24px;
+  }
+  .pA-detail .dhero .dcov {
+    position: absolute; inset: 0;
+  }
+  .pA-detail .dhero .dgrad {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,.55), transparent 60%);
+  }
+  .pA-detail .dhero .dem {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 80px; opacity: .4; color: #fff;
+  }
+  .pA-detail .dhero .dbdg {
+    position: absolute; top: 16px; left: 20px;
+    padding: 4px 10px; border-radius: 999px;
+    background: rgba(0,0,0,.45); color: #fff; backdrop-filter: blur(6px);
+    font-family: var(--f-display); font-weight: 800; font-size: 10px; text-transform: uppercase;
+  }
+  .pA-detail .dti {
+    position: relative; color: #fff;
+    font-family: var(--f-display); font-size: 32px; font-weight: 700;
+    text-shadow: 0 2px 12px rgba(0,0,0,.3);
+  }
+  .pA-detail .dbody { padding: 20px 24px; }
+  .pA-detail .dchips {
+    display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap;
+  }
+  .pA-detail .dchips .c {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 6px; background: var(--bg-muted);
+    color: var(--text-sec); font-size: 11px; font-weight: 700;
+  }
+  .pA-detail .dconn {
+    display: flex; gap: 6px; margin-top: 16px; flex-wrap: wrap;
+  }
+  .pA-detail .dconn .cp {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .pA-detail .dconn .cp .n {
+    background: currentColor; color: #fff; padding: 0 6px; border-radius: 999px;
+    font-size: 9px; font-weight: 800; mix-blend-mode: normal;
+  }
+  .pA-detail .dconn .cp .n span { color: #fff; mix-blend-mode: luminosity; }
+  .pA-detail .dact { display: flex; gap: 8px; margin-top: 16px; }
+  .pA-detail .dact .b {
+    padding: 9px 14px; border-radius: 8px; border: none;
+    font-family: var(--f-display); font-weight: 700; font-size: 12px; cursor: pointer;
+  }
+  .pA-detail .dact .b.pri { background: hsl(var(--e)); color: #fff; }
+  .pA-detail .dact .b.sec { background: var(--bg-muted); color: var(--text-sec); }
+  .pA-detail .dtabs {
+    display: flex; gap: 4px; border-bottom: 1px solid var(--border);
+    margin-top: 20px;
+  }
+  .pA-detail .dtab {
+    padding: 10px 14px; font-family: var(--f-display);
+    font-weight: 700; font-size: 12px; color: var(--text-muted);
+    border-bottom: 2px solid transparent; cursor: pointer;
+    display: inline-flex; gap: 4px;
+  }
+  .pA-detail .dtab.act { color: hsl(var(--e)); border-bottom-color: hsl(var(--e)); }
+  .pA-detail .dtab .tb {
+    background: hsl(var(--e)); color: #fff;
+    font-size: 9px; font-weight: 800; padding: 1px 5px;
+    border-radius: 999px;
+  }
+  .pA-detail .dgrid { padding: 16px 0; }
+  .pA-detail .dstat-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+    margin-top: 10px;
+  }
+  .pA-detail .dstat {
+    padding: 14px; border-radius: 10px; background: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+  .pA-detail .dstat .v { font-family: var(--f-display); font-size: 24px; font-weight: 800; color: hsl(var(--e)); }
+  .pA-detail .dstat .l { font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: .05em; margin-top: 2px; }
+  .pA-detail h5 {
+    font-family: var(--f-display); font-size: 12px; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--text); margin-top: 16px;
+  }
+  .pA-detail p.dtext { font-size: 13px; color: var(--text-sec); line-height: 1.55; margin-top: 6px; }
+
+  /* ═══ PATTERN B: Sidebar + Main + Right drawer (Notion/Slack) ═══ */
+  .pB { display: flex; flex-direction: column; height: 100%; width: 100%; }
+  .pB-body { flex: 1; display: grid; grid-template-columns: 240px 1fr 380px; overflow: hidden; }
+  .pB-side {
+    background: var(--bg); border-right: 1px solid var(--border);
+    padding: 14px 10px; overflow-y: auto;
+  }
+  .pB-side .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 600; color: var(--text-sec);
+  }
+  .pB-side .nav-item .icn {
+    width: 22px; height: 22px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; background: var(--bg-muted);
+  }
+  .pB-side .nav-item.act { background: var(--bg-muted); color: var(--text); }
+  .pB-side .tree {
+    margin-top: 4px; margin-left: 14px; padding-left: 10px;
+    border-left: 1px solid var(--border); font-size: 12px;
+  }
+  .pB-side .tree-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 6px; border-radius: 5px; cursor: pointer;
+    font-size: 12px; color: var(--text-muted);
+  }
+  .pB-side .tree-item:hover { background: var(--bg-hover); color: var(--text); }
+  .pB-side .tree-item.act { background: hsl(var(--e) / .12); color: hsl(var(--e)); font-weight: 700; }
+
+  .pB-main {
+    overflow-y: auto; padding: 24px 32px;
+    background: var(--bg-card);
+  }
+  .pB-main .mcrumbs {
+    font-size: 12px; color: var(--text-muted); margin-bottom: 14px;
+    display: flex; gap: 4px; align-items: center;
+  }
+  .pB-main .mcrumbs .crumb { cursor: pointer; }
+  .pB-main .mcrumbs .crumb:hover { color: var(--text); }
+  .pB-main .mhead {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 6px;
+  }
+  .pB-main .mhero {
+    width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: #fff;
+  }
+  .pB-main h2 {
+    font-size: 28px; font-family: var(--f-display);
+    font-weight: 700; letter-spacing: -.01em;
+  }
+  .pB-main .msub { color: var(--text-sec); font-size: 14px; }
+  .pB-main .mchips {
+    display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap;
+  }
+  .pB-main .mchips .c {
+    padding: 4px 10px; border-radius: 6px; background: var(--bg-muted);
+    color: var(--text-sec); font-size: 11px; font-weight: 700;
+  }
+  .pB-main .mconn {
+    display: flex; gap: 6px; margin-top: 18px; flex-wrap: wrap;
+  }
+  .pB-main .cp {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .pB-main .cp.act { box-shadow: 0 0 0 2px hsl(var(--e2) / .5); }
+  .pB-main .cp .n {
+    padding: 1px 6px; border-radius: 999px; font-size: 9px; font-weight: 800;
+    background: currentColor;
+  }
+  .pB-main .cp .n span { color: #fff; mix-blend-mode: luminosity; }
+  .pB-main .mtabs {
+    display: flex; gap: 2px; margin-top: 22px; border-bottom: 1px solid var(--border);
+  }
+  .pB-main .mtab {
+    padding: 10px 16px; font-family: var(--f-display);
+    font-weight: 700; font-size: 13px; color: var(--text-muted);
+    border-bottom: 2px solid transparent; cursor: pointer;
+    display: inline-flex; gap: 5px;
+  }
+  .pB-main .mtab.act { color: hsl(var(--e)); border-bottom-color: hsl(var(--e)); }
+  .pB-main .mtab .tb {
+    background: hsl(var(--e)); color: #fff;
+    font-size: 9px; padding: 1px 6px; border-radius: 999px; font-weight: 800;
+  }
+  .pB-main .mstats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 16px; }
+  .pB-main .ms {
+    padding: 16px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border);
+  }
+  .pB-main .ms .v { font-family: var(--f-display); font-size: 28px; font-weight: 800; color: hsl(var(--e)); }
+  .pB-main .ms .l { font-size: 10px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-top: 2px; letter-spacing: .05em; }
+  .pB-main .msess-list { margin-top: 12px; }
+  .pB-main .msess {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--border); margin-bottom: 6px;
+    cursor: pointer; background: var(--bg);
+  }
+  .pB-main .msess:hover { border-color: hsl(var(--e2, var(--c-session)) / .4); transform: translateX(2px); transition: .2s; }
+  .pB-main .msess .mcov {
+    width: 32px; height: 38px; border-radius: 5px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: rgba(255,255,255,.85);
+  }
+  .pB-main .msess .mti { font-size: 13px; font-weight: 700; }
+  .pB-main .msess .mmeta { font-size: 11px; color: var(--text-muted); }
+  .pB-main .msess .mar { margin-left: auto; color: hsl(var(--c-session)); }
+
+  /* Right drawer */
+  .pB-drawer {
+    background: var(--bg); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .pB-drawer .dh {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .pB-drawer .dh .icn {
+    width: 28px; height: 28px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 14px; background: hsl(var(--e));
+  }
+  .pB-drawer .dh .ti { flex: 1; font-family: var(--f-display); font-weight: 700; font-size: 14px; }
+  .pB-drawer .dh .ax {
+    width: 26px; height: 26px; border-radius: 50%; border: none;
+    background: var(--bg-muted); color: var(--text-sec); cursor: pointer;
+    font-size: 11px;
+  }
+  .pB-drawer .dt { display: flex; border-bottom: 1px solid var(--border); padding: 0 10px; }
+  .pB-drawer .dt-tab {
+    padding: 10px 14px; font-family: var(--f-display); font-size: 12px;
+    font-weight: 700; color: var(--text-muted); border-bottom: 2px solid transparent;
+    cursor: pointer; display: inline-flex; gap: 4px;
+  }
+  .pB-drawer .dt-tab.act { color: hsl(var(--e)); border-bottom-color: hsl(var(--e)); }
+  .pB-drawer .dt-tab .b {
+    background: hsl(var(--e)); color: #fff; padding: 0 5px;
+    border-radius: 999px; font-size: 9px; font-weight: 800;
+  }
+  .pB-drawer .dc {
+    flex: 1; overflow-y: auto; padding: 14px 16px;
+    font-size: 12px; line-height: 1.55;
+  }
+  .pB-drawer .dc .ir {
+    display: flex; justify-content: space-between;
+    padding: 5px 0; border-bottom: 1px solid var(--border-light);
+  }
+  .pB-drawer .dc .ir .l { color: var(--text-muted); }
+  .pB-drawer .dc .ir .v { font-weight: 700; }
+  .pB-drawer .dc h4 {
+    font-family: var(--f-display); font-size: 11px; margin: 14px 0 6px;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .pB-drawer .dfoot {
+    padding: 10px 14px; border-top: 1px solid var(--border);
+    display: flex; gap: 6px; background: var(--bg-card);
+  }
+  .pB-drawer .dfoot .b {
+    padding: 8px 12px; border-radius: 8px; border: none;
+    font-family: var(--f-display); font-weight: 700; font-size: 11px; cursor: pointer;
+  }
+  .pB-drawer .dfoot .b.pri { background: hsl(var(--e)); color: #fff; flex: 1; }
+  .pB-drawer .dfoot .b.sec { background: var(--bg-muted); color: var(--text-sec); }
+
+  /* ═══ PATTERN C: Full-page + persistent tabs (Vercel/GitHub) ═══ */
+  .pC { display: flex; flex-direction: column; height: 100%; width: 100%; }
+  .pC-top2 {
+    padding: 20px 32px 0; background: var(--bg-card);
+  }
+  .pC-crumbs {
+    font-size: 12px; color: var(--text-muted); display: flex; gap: 6px;
+    align-items: center; margin-bottom: 14px;
+  }
+  .pC-crumbs .crumb { padding: 2px 6px; border-radius: 4px; cursor: pointer; }
+  .pC-crumbs .crumb:hover { background: var(--bg-hover); color: var(--text); }
+  .pC-crumbs .sep { color: var(--text-muted); }
+  .pC-hero {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 16px;
+  }
+  .pC-hero .cov {
+    width: 72px; height: 88px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; color: rgba(255,255,255,.85); box-shadow: var(--shadow-sm);
+  }
+  .pC-hero h2 {
+    font-size: 30px; font-family: var(--f-display); font-weight: 700;
+  }
+  .pC-hero .sub { color: var(--text-sec); font-size: 14px; margin-top: 4px; }
+  .pC-hero .chips {
+    display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .pC-hero .chips .c {
+    padding: 3px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; background: var(--bg-muted); color: var(--text-sec);
+  }
+  .pC-hero .chips .c.acc {
+    background: hsl(var(--c-game) / .12); color: hsl(var(--c-game));
+    font-family: var(--f-display); text-transform: uppercase; letter-spacing: .04em;
+  }
+  .pC-hero .acts { margin-left: auto; display: flex; gap: 8px; }
+  .pC-hero .acts .b {
+    padding: 9px 14px; border-radius: 8px; font-family: var(--f-display);
+    font-weight: 700; font-size: 12px; cursor: pointer; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--text-sec);
+  }
+  .pC-hero .acts .b.pri { background: hsl(var(--c-game)); color: #fff; border-color: transparent; }
+  .pC-tabs {
+    display: flex; gap: 2px; border-bottom: 1px solid var(--border); padding: 0 16px;
+  }
+  .pC-tab {
+    padding: 12px 18px; font-family: var(--f-display);
+    font-weight: 700; font-size: 13px; color: var(--text-muted);
+    border-bottom: 2px solid transparent; cursor: pointer;
+    display: inline-flex; gap: 6px; align-items: center;
+  }
+  .pC-tab.act { color: hsl(var(--e, var(--c-game))); border-bottom-color: hsl(var(--e, var(--c-game))); }
+  .pC-tab .b {
+    padding: 1px 7px; border-radius: 999px; font-size: 10px;
+    font-weight: 800; background: var(--bg-muted); color: var(--text-muted);
+  }
+  .pC-tab.act .b { background: hsl(var(--e, var(--c-game))); color: #fff; }
+  .pC-content {
+    flex: 1; overflow-y: auto; padding: 24px 32px; background: var(--bg);
+  }
+  .pC-content h3 { font-size: 18px; margin-bottom: 12px; }
+  .pC-content .grid-cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px; margin-top: 12px;
+  }
+  .pC-content .gc {
+    padding: 14px; border-radius: 12px; background: var(--bg-card);
+    border: 1px solid var(--border); cursor: pointer; transition: all .2s;
+  }
+  .pC-content .gc:hover { border-color: hsl(var(--e2) / .4); transform: translateY(-2px); }
+  .pC-content .gc .gchead {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .pC-content .gc .gcicon {
+    width: 28px; height: 28px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; background: hsl(var(--e2) / .15); color: hsl(var(--e2));
+  }
+  .pC-content .gc .gctype {
+    font-size: 9px; font-family: var(--f-display); text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text-muted); font-weight: 700;
+  }
+  .pC-content .gc .gcti { font-size: 14px; font-weight: 700; font-family: var(--f-display); }
+  .pC-content .gc .gcsub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .pC-content .gc .gcmeta {
+    display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .pC-content .gc .gcm {
+    padding: 2px 6px; border-radius: 4px; background: var(--bg-muted);
+    font-size: 10px; font-weight: 700; color: var(--text-sec);
+  }
+  .pC-stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px;
+  }
+  .pC-stat {
+    padding: 14px 16px; border-radius: 12px; background: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+  .pC-stat .v {
+    font-family: var(--f-display); font-size: 26px; font-weight: 800;
+  }
+  .pC-stat .l {
+    font-size: 10px; text-transform: uppercase; color: var(--text-muted);
+    font-weight: 700; margin-top: 3px; letter-spacing: .05em;
+  }
+
+  /* Hide pattern unless active */
+  .pane { display: none; }
+  .pane.on { display: flex; }
+
+  /* Legend */
+  .legend {
+    max-width: 1000px; margin: 20px auto 0;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .legend .lg {
+    padding: 14px; border-radius: 12px; background: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+  .legend .lg h5 {
+    font-family: var(--f-display); font-size: 12px; margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .legend .lg p { font-size: 12px; color: var(--text-sec); line-height: 1.5; }
+  .legend .lg .pros { margin-top: 6px; font-size: 11px; color: var(--text-muted); }
+  .legend .lg .pros strong { color: hsl(var(--c-toolkit)); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<nav class="hub-nav">
+  <a href="index.html" class="brand" style="color:inherit;"><span class="brand-mark">M</span><span>MeepleAI</span></a>
+  <span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--bg-muted);font-family:var(--f-mono);color:var(--text-muted);">02 · Desktop Patterns</span>
+  <div class="spacer"></div>
+  <a href="01-screens.html">← Screens</a>
+  <a href="index.html">Hub</a>
+  <a href="03-drawer-variants.html">Drawer →</a>
+</nav>
+
+<button class="theme-toggle" id="themeToggle">🌗 <span id="themeLabel">Light</span></button>
+
+<div class="stage">
+  <div class="stage-wrap">
+    <h1>Desktop patterns <span style="color:hsl(var(--c-chat));">a confronto</span></h1>
+    <p class="lead">
+      Stesso contenuto, 3 filosofie di navigazione. Ognuna privilegia una cosa diversa: ampiezza di contesto,
+      rapidità di browsing, profondità di navigazione. Clicca i pulsanti per switchare pattern.
+    </p>
+
+    <div class="pat-sw" id="patSw">
+      <button data-pat="A" class="active">
+        <svg class="psvg" width="18" height="14" viewBox="0 0 18 14" fill="none"><rect x="0.5" y="0.5" width="3.5" height="13" rx="1" stroke="currentColor"/><rect x="5" y="0.5" width="5" height="13" rx="1" stroke="currentColor"/><rect x="11" y="0.5" width="6.5" height="13" rx="1" stroke="currentColor"/></svg>
+        A · Split view
+      </button>
+      <button data-pat="B">
+        <svg class="psvg" width="18" height="14" viewBox="0 0 18 14" fill="none"><rect x="0.5" y="0.5" width="4" height="13" rx="1" stroke="currentColor"/><rect x="5.5" y="0.5" width="7" height="13" rx="1" stroke="currentColor"/><rect x="13.5" y="0.5" width="4" height="13" rx="1" stroke="currentColor" stroke-dasharray="1.5 1"/></svg>
+        B · Sidebar + Drawer
+      </button>
+      <button data-pat="C">
+        <svg class="psvg" width="18" height="14" viewBox="0 0 18 14" fill="none"><rect x="0.5" y="0.5" width="17" height="4.5" rx="1" stroke="currentColor"/><rect x="0.5" y="6" width="17" height="1.5" rx="0" stroke="currentColor"/><rect x="0.5" y="8.5" width="17" height="5" rx="1" stroke="currentColor"/></svg>
+        C · Tabs persistenti
+      </button>
+    </div>
+
+    <div class="pat-caption" id="patCaption"></div>
+
+    <div class="desk">
+      <div class="desk-chrome">
+        <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="url">meepleai.app/<span id="urlPath">azul</span></div>
+      </div>
+      <div class="desk-body">
+
+        <!-- ═══ PATTERN A: Split view (Linear / Mail style) ═══ -->
+        <div class="pane pA on" id="pane-A">
+          <div class="dtop">
+            <div class="dbrand"><span class="dbrand-mark">M</span><span>MeepleAI</span></div>
+            <div class="dsearch"><input placeholder="Cerca in tutto..."></div>
+            <button class="btn sm" style="background:hsl(var(--c-game));color:#fff;">+ Nuovo</button>
+            <div class="davatar">MR</div>
+          </div>
+          <div class="pA-body">
+            <aside class="pA-side">
+              <div class="grp">Workspace</div>
+              <div class="nav-item"><span>🏠</span>Home</div>
+              <div class="nav-item"><span>📊</span>Dashboard</div>
+              <div class="grp">Entità</div>
+              <div class="nav-item act"><span>🎲</span>Giochi<span class="bdg">8</span></div>
+              <div class="nav-item"><span>👤</span>Giocatori<span class="bdg">5</span></div>
+              <div class="nav-item"><span>🎯</span>Sessioni<span class="bdg">6</span></div>
+              <div class="nav-item"><span>🤖</span>Agenti<span class="bdg">5</span></div>
+              <div class="nav-item"><span>📄</span>KB Docs<span class="bdg">7</span></div>
+              <div class="nav-item"><span>💬</span>Chat<span class="bdg">5</span></div>
+              <div class="nav-item"><span>📅</span>Eventi<span class="bdg">4</span></div>
+              <div class="nav-item"><span>🧰</span>Toolkit<span class="bdg">4</span></div>
+              <div class="grp">Recenti</div>
+              <div class="nav-item"><span style="width:8px;height:8px;border-radius:50%;background:hsl(var(--c-session));display:inline-block;"></span>Serata Azul</div>
+              <div class="nav-item"><span style="width:8px;height:8px;border-radius:50%;background:hsl(var(--c-chat));display:inline-block;"></span>Come si gioca...</div>
+              <div class="nav-item"><span style="width:8px;height:8px;border-radius:50%;background:hsl(var(--c-event));display:inline-block;"></span>Serata da Marco</div>
+            </aside>
+
+            <div class="pA-list" id="pAList"></div>
+            <div class="pA-detail" id="pADetail"></div>
+          </div>
+        </div>
+
+        <!-- ═══ PATTERN B: Sidebar + Main + Drawer ═══ -->
+        <div class="pane pB" id="pane-B">
+          <div class="dtop">
+            <div class="dbrand"><span class="dbrand-mark">M</span><span>MeepleAI</span></div>
+            <div class="dsearch"><input placeholder="Cerca..."></div>
+            <div class="davatar">MR</div>
+          </div>
+          <div class="pB-body">
+            <aside class="pB-side">
+              <div style="font-family:var(--f-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;padding:6px 10px;">Workspace</div>
+              <div class="nav-item"><span class="icn">🏠</span>Home</div>
+              <div class="nav-item act"><span class="icn" style="background:hsl(var(--c-game) / .15);color:hsl(var(--c-game));">🎲</span>Libreria</div>
+              <div class="tree">
+                <div class="tree-item e-game act" style="--e:var(--c-game);">▼ Azul</div>
+                <div class="tree-item" style="padding-left:16px;">📄 azul-regole-ita.pdf</div>
+                <div class="tree-item" style="padding-left:16px;">📄 azul-rules-en.pdf</div>
+                <div class="tree-item" style="padding-left:16px;">🤖 Azul Rules Expert</div>
+                <div class="tree-item">▸ Catan</div>
+                <div class="tree-item">▸ Wingspan</div>
+                <div class="tree-item">▸ Brass</div>
+              </div>
+              <div class="nav-item" style="margin-top:6px;"><span class="icn">🎯</span>Sessioni</div>
+              <div class="nav-item"><span class="icn">🤖</span>Agenti</div>
+              <div class="nav-item"><span class="icn">💬</span>Chat</div>
+              <div class="nav-item"><span class="icn">📅</span>Eventi</div>
+              <div class="nav-item"><span class="icn">🧰</span>Toolkit</div>
+              <div style="font-family:var(--f-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;padding:12px 10px 4px;">Team</div>
+              <div class="nav-item"><span class="icn" style="background:hsl(var(--c-player) / .15);color:hsl(var(--c-player));">MR</span>Marco R.</div>
+              <div class="nav-item"><span class="icn" style="background:hsl(var(--c-player) / .15);color:hsl(var(--c-player));">ST</span>Sara T.</div>
+              <div class="nav-item"><span class="icn" style="background:hsl(var(--c-player) / .15);color:hsl(var(--c-player));">LB</span>Luca B.</div>
+            </aside>
+
+            <main class="pB-main e-game" id="pBMain" style="--e:var(--c-game);"></main>
+
+            <aside class="pB-drawer e-session" id="pBDrawer" style="--e:var(--c-session);"></aside>
+          </div>
+        </div>
+
+        <!-- ═══ PATTERN C: Full-page + tabs persistenti ═══ -->
+        <div class="pane pC" id="pane-C">
+          <div class="dtop">
+            <div class="dbrand"><span class="dbrand-mark">M</span><span>MeepleAI</span></div>
+            <div class="dsearch"><input placeholder="Cerca..."></div>
+            <div class="davatar">MR</div>
+          </div>
+          <div class="pC-top2">
+            <div class="pC-crumbs">
+              <span class="crumb">🏠 Home</span>
+              <span class="sep">/</span>
+              <span class="crumb">🎲 Giochi</span>
+              <span class="sep">/</span>
+              <span class="crumb" style="color:var(--text);">Azul</span>
+            </div>
+            <div class="pC-hero">
+              <div class="cov" id="pCCov">🔷</div>
+              <div>
+                <h2 id="pCTi">Azul</h2>
+                <div class="sub" id="pCSub">Plan B Games · 2017 · Michael Kiesling</div>
+                <div class="chips">
+                  <span class="c acc">In libreria</span>
+                  <span class="c">👥 2–4 giocatori</span>
+                  <span class="c">⏱️ 30–45m</span>
+                  <span class="c">🧩 Peso 1.77</span>
+                  <span class="c">⭐ 7.8</span>
+                </div>
+              </div>
+              <div class="acts">
+                <button class="b">🤖 Chiedi AI</button>
+                <button class="b">🔧 Setup</button>
+                <button class="b pri">▶️ Gioca</button>
+              </div>
+            </div>
+          </div>
+          <div class="pC-tabs">
+            <div class="pC-tab act e-game" style="--e:var(--c-game);">📋 Overview</div>
+            <div class="pC-tab e-kb" style="--e:var(--c-kb);">📄 KB <span class="b">3</span></div>
+            <div class="pC-tab e-agent" style="--e:var(--c-agent);">🤖 Agenti <span class="b">1</span></div>
+            <div class="pC-tab e-chat" style="--e:var(--c-chat);">💬 Chat <span class="b">2</span></div>
+            <div class="pC-tab e-session" style="--e:var(--c-session);">🎯 Sessioni <span class="b">2</span></div>
+            <div class="pC-tab e-toolkit" style="--e:var(--c-toolkit);">🧰 Toolkit <span class="b">1</span></div>
+            <div class="pC-tab">📊 Stats</div>
+            <div class="pC-tab">📜 Storico</div>
+          </div>
+          <div class="pC-content" id="pCContent"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="lg">
+        <h5 style="color:hsl(var(--c-game));">A · Split view</h5>
+        <p>Sidebar stretta + lista selezionabile + pannello dettaglio. Alla <em>Linear</em>/<em>Mail</em>/<em>Superhuman</em>.</p>
+        <div class="pros"><strong>✓ Best for:</strong> browsing veloce, triage, scan di molte entità dello stesso tipo.</div>
+      </div>
+      <div class="lg">
+        <h5 style="color:hsl(var(--c-chat));">B · Sidebar + Drawer</h5>
+        <p>Nav gerarchica + documento principale + drawer laterale per entità correlate. Alla <em>Notion</em>/<em>Slack</em>.</p>
+        <div class="pros"><strong>✓ Best for:</strong> lavoro profondo, esplorazione relazioni, multi-context.</div>
+      </div>
+      <div class="lg">
+        <h5 style="color:hsl(var(--c-toolkit));">C · Tabs persistenti</h5>
+        <p>Hero fisso + tab orizzontali che restano visibili. Alla <em>Vercel</em>/<em>GitHub</em>/<em>Stripe</em>.</p>
+        <div class="pros"><strong>✓ Best for:</strong> navigazione tra aspetti di una singola entità, dashboard monografica.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+  // Theme
+  const root = document.documentElement;
+  root.setAttribute('data-theme', localStorage.getItem('mai-theme') || 'light');
+  document.getElementById('themeLabel').textContent = root.getAttribute('data-theme') === 'dark' ? 'Dark' : 'Light';
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('mai-theme', next);
+    document.getElementById('themeLabel').textContent = next === 'dark' ? 'Dark' : 'Light';
+  });
+
+  const GAME_ID = 'g-azul';
+
+  // ═══ PATTERN A: Split view renderer ═══
+  let selId = GAME_ID;
+
+  function renderPAList() {
+    const games = DS.games;
+    const html = `
+      <div class="lhead">
+        <div>
+          <h3>🎲 Giochi <span style="color:var(--text-muted);font-weight:600;font-size:13px;">(${games.length})</span></h3>
+          <div class="ftabs">
+            <div class="ftab act" style="--e:var(--c-game);background:hsl(var(--c-game));color:#fff;">Tutto</div>
+            <div class="ftab">Preferiti</div>
+            <div class="ftab">Recenti</div>
+            <div class="ftab">Wishlist</div>
+          </div>
+        </div>
+      </div>
+      ${games.map(g => `
+        <div class="pA-li e-game ${g.id === selId ? 'sel' : ''}" style="--e:var(--c-game);" data-id="${g.id}">
+          <div class="cov" style="background:${g.cover};">${g.coverEmoji}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="ti">${g.title}</div>
+            <div class="sub">${g.publisher} · ${g.year}</div>
+            <div class="meta">
+              <span class="m">${g.badge}</span>
+              <span class="m" style="background:var(--bg-muted);color:var(--text-sec);">⭐ ${g.rating}</span>
+              <span class="m" style="background:var(--bg-muted);color:var(--text-sec);">${g.totalPlays}p</span>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    `;
+    document.getElementById('pAList').innerHTML = html;
+    document.querySelectorAll('.pA-li').forEach(li => {
+      li.addEventListener('click', () => {
+        selId = li.dataset.id;
+        renderPAList(); renderPADetail();
+      });
+    });
+  }
+
+  function renderPADetail() {
+    const g = DS.byId[selId]; if (!g) return;
+    const sessions = DS.sessions.filter(s => s.gameId === g.id);
+    const agents = DS.agents.filter(a => a.gameId === g.id);
+    const kbs = DS.kbs.filter(k => k.gameId === g.id);
+    const chats = DS.chats.filter(c => c.gameId === g.id);
+    const tks = DS.toolkits.filter(t => t.gameId === g.id);
+    const conns = [
+      { t:'agent', n: agents.length, em:'🤖', lb:'Agenti' },
+      { t:'kb', n: kbs.length, em:'📄', lb:'KB' },
+      { t:'chat', n: chats.length, em:'💬', lb:'Chat' },
+      { t:'session', n: sessions.length, em:'🎯', lb:'Sessioni' },
+      { t:'toolkit', n: tks.length, em:'🧰', lb:'Toolkit' },
+    ].filter(c => c.n > 0);
+
+    document.getElementById('pADetail').style.setProperty('--e', `var(--c-${g.type})`);
+    document.getElementById('pADetail').innerHTML = `
+      <div class="dhero">
+        <div class="dcov" style="background:${g.cover};"></div>
+        <div class="dem">${g.coverEmoji}</div>
+        <div class="dgrad"></div>
+        <div class="dbdg" style="background:hsl(var(--c-game));">${g.badge}</div>
+        <div class="dti">${g.title}</div>
+      </div>
+      <div class="dbody">
+        <div style="color:var(--text-sec);font-size:13px;">${g.publisher} · ${g.year} · ${g.author}</div>
+        <div class="dchips">
+          <div class="c">👥 ${g.players}</div>
+          <div class="c">⏱️ ${g.duration}</div>
+          <div class="c">🧩 ${g.weight}</div>
+          <div class="c">⭐ ${g.rating}</div>
+        </div>
+        <div class="dconn">
+          ${conns.map(c => `
+            <div class="cp" style="background:hsl(var(--c-${c.t}) / .12);color:hsl(var(--c-${c.t}));">
+              ${c.em} <span class="n"><span>${c.n}</span></span> ${c.lb}
+            </div>
+          `).join('')}
+        </div>
+        <div class="dact">
+          <button class="b pri" style="--e:var(--c-game);">▶️ Gioca</button>
+          <button class="b sec">🤖 Chiedi AI</button>
+          <button class="b sec">🔧 Setup</button>
+        </div>
+        <div class="dtabs">
+          <div class="dtab act" style="--e:var(--c-game);">📋 Info</div>
+          <div class="dtab" style="--e:var(--c-game);">📊 Stats <span class="tb">${g.totalPlays}</span></div>
+          <div class="dtab" style="--e:var(--c-game);">📜 Storico</div>
+        </div>
+        <div class="dgrid">
+          <div class="dstat-row" style="--e:var(--c-game);">
+            <div class="dstat"><div class="v">${g.totalPlays}</div><div class="l">Partite</div></div>
+            <div class="dstat"><div class="v" style="color:hsl(var(--c-toolkit));">${Math.round(g.winRate*100)}%</div><div class="l">Win Rate</div></div>
+            <div class="dstat"><div class="v" style="color:hsl(var(--c-chat));">${g.avgScore}</div><div class="l">Avg Score</div></div>
+          </div>
+          <h5>Descrizione</h5>
+          <p class="dtext">${g.title} è un gioco di ${g.author}, pubblicato da ${g.publisher} nel ${g.year}. Per ${g.players} giocatori, durata ${g.duration}, complessità ${g.weight}.</p>
+          <h5>Sessioni recenti</h5>
+          ${sessions.slice(0,3).map(s => `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--border);border-radius:8px;margin-top:6px;cursor:pointer;">
+              <div style="width:32px;height:38px;border-radius:5px;background:${s.cover};display:flex;align-items:center;justify-content:center;color:#fff;">${s.coverEmoji}</div>
+              <div style="flex:1;"><div style="font-weight:700;font-size:12px;">${s.title}</div><div style="font-size:10px;color:var(--text-muted);">${s.subtitle}</div></div>
+              <div style="padding:2px 6px;border-radius:4px;background:hsl(var(--c-session) / .12);color:hsl(var(--c-session));font-size:9px;font-family:var(--f-display);font-weight:700;">${s.badge}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // ═══ PATTERN B: Sidebar + Drawer ═══
+  function renderPB() {
+    const g = DS.byId['g-azul'];
+    const sessions = DS.sessions.filter(s => s.gameId === g.id);
+    const kbs = DS.kbs.filter(k => k.gameId === g.id);
+    const chats = DS.chats.filter(c => c.gameId === g.id);
+    const agents = DS.agents.filter(a => a.gameId === g.id);
+    document.getElementById('pBMain').innerHTML = `
+      <div class="mcrumbs">
+        <span class="crumb">Libreria</span> / <span class="crumb">Giochi</span> / <span class="crumb" style="color:var(--text);">Azul</span>
+      </div>
+      <div class="mhead">
+        <div class="mhero" style="background:${g.cover};">${g.coverEmoji}</div>
+        <div>
+          <h2>${g.title}</h2>
+          <div class="msub">${g.publisher} · ${g.year} · ${g.author}</div>
+        </div>
+      </div>
+      <div class="mchips">
+        <div class="c" style="background:hsl(var(--c-game) / .12);color:hsl(var(--c-game));font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em;">${g.badge}</div>
+        <div class="c">👥 ${g.players}</div>
+        <div class="c">⏱️ ${g.duration}</div>
+        <div class="c">🧩 ${g.weight}</div>
+        <div class="c">⭐ ${g.rating}</div>
+      </div>
+      <div class="mconn">
+        <div class="cp e-agent act" style="--e:var(--c-agent);--e2:var(--c-session);color:hsl(var(--c-agent));background:hsl(var(--c-agent) / .12);">🤖 <span class="n"><span>${agents.length}</span></span> Agenti</div>
+        <div class="cp" style="color:hsl(var(--c-kb));background:hsl(var(--c-kb) / .12);">📄 <span class="n"><span>${kbs.length}</span></span> KB</div>
+        <div class="cp" style="color:hsl(var(--c-chat));background:hsl(var(--c-chat) / .12);">💬 <span class="n"><span>${chats.length}</span></span> Chat</div>
+        <div class="cp act" style="--e2:var(--c-session);color:hsl(var(--c-session));background:hsl(var(--c-session) / .12);box-shadow:0 0 0 2px hsl(var(--c-session) / .35);">🎯 <span class="n"><span>${sessions.length}</span></span> Sessioni</div>
+      </div>
+      <div class="mtabs">
+        <div class="mtab act" style="--e:var(--c-game);">📋 Overview</div>
+        <div class="mtab">📊 Stats <span class="tb" style="background:var(--bg-muted);color:var(--text-muted);">${g.totalPlays}</span></div>
+        <div class="mtab">📜 Storico</div>
+      </div>
+      <div class="mstats">
+        <div class="ms" style="--e:var(--c-game);"><div class="v">${g.totalPlays}</div><div class="l">Partite</div></div>
+        <div class="ms" style="--e:var(--c-toolkit);"><div class="v">${Math.round(g.winRate*100)}%</div><div class="l">Win Rate</div></div>
+        <div class="ms" style="--e:var(--c-chat);"><div class="v">${g.avgScore}</div><div class="l">Avg Score</div></div>
+      </div>
+      <h5 style="font-family:var(--f-display);font-size:12px;text-transform:uppercase;letter-spacing:.04em;margin-top:20px;margin-bottom:8px;">🎯 Sessioni di ${g.title}</h5>
+      <div class="msess-list">
+        ${sessions.map(s => `
+          <div class="msess" style="--e2:var(--c-session);">
+            <div class="mcov" style="background:${s.cover};">${s.coverEmoji}</div>
+            <div style="flex:1;">
+              <div class="mti">${s.title}</div>
+              <div class="mmeta">${s.subtitle} · ${s.playerIds.length} giocatori</div>
+            </div>
+            <div style="padding:2px 8px;border-radius:4px;background:hsl(var(--c-session) / .12);color:hsl(var(--c-session));font-size:10px;font-family:var(--f-display);font-weight:700;">${s.badge}</div>
+            <span class="mar">→</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // Drawer shows selected session
+    const s = sessions[0];
+    document.getElementById('pBDrawer').innerHTML = `
+      <div class="dh">
+        <div class="icn">${s.coverEmoji}</div>
+        <div class="ti">${s.title}</div>
+        <button class="ax">✕</button>
+      </div>
+      <div class="dt">
+        <div class="dt-tab act">📋 Live</div>
+        <div class="dt-tab">🔧 Toolkit <span class="b">${s.toolCount}</span></div>
+        <div class="dt-tab">🕒 Timeline</div>
+      </div>
+      <div class="dc">
+        <div class="ir"><span class="l">Stato</span><span class="v" style="color:hsl(var(--c-session));">${s.badge}</span></div>
+        <div class="ir"><span class="l">Turno</span><span class="v">${s.turn}</span></div>
+        <div class="ir"><span class="l">Codice</span><span class="v" style="font-family:var(--f-mono);">${s.code}</span></div>
+        <div class="ir"><span class="l">Durata</span><span class="v">${s.duration}</span></div>
+        <h4>Giocatori (${s.playerIds.length})</h4>
+        ${s.playerIds.map(id => {
+          const p = DS.byId[id]; if (!p) return '';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-light);cursor:pointer;">
+            <div style="width:26px;height:26px;border-radius:50%;background:hsl(var(--c-player));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;">${p.initials}</div>
+            <span style="flex:1;font-size:12px;font-weight:700;">${p.title}</span>
+            <span style="color:hsl(var(--c-player));">→</span>
+          </div>`;
+        }).join('')}
+        <h4>Tools attivi</h4>
+        ${DS.tools.slice(0, s.toolCount).map(t => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-light);cursor:pointer;">
+            <div style="width:24px;height:24px;border-radius:5px;background:hsl(var(--c-tool) / .15);color:hsl(var(--c-tool));display:flex;align-items:center;justify-content:center;font-size:13px;">${t.coverEmoji}</div>
+            <span style="flex:1;font-size:12px;font-weight:700;">${t.title}</span>
+            <span style="color:hsl(var(--c-tool));">→</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="dfoot">
+        <button class="b pri">▶️ Riprendi</button>
+        <button class="b sec">📊</button>
+        <button class="b sec">↗️</button>
+      </div>
+    `;
+  }
+
+  // ═══ PATTERN C: Tabs persistenti ═══
+  function renderPC() {
+    const g = DS.byId['g-azul'];
+    document.getElementById('pCCov').style.background = g.cover;
+    document.getElementById('pCCov').textContent = g.coverEmoji;
+    document.getElementById('pCTi').textContent = g.title;
+    document.getElementById('pCSub').textContent = `${g.publisher} · ${g.year} · ${g.author}`;
+
+    const kbs = DS.kbs.filter(k => k.gameId === g.id);
+    const agents = DS.agents.filter(a => a.gameId === g.id);
+    const chats = DS.chats.filter(c => c.gameId === g.id);
+    const sessions = DS.sessions.filter(s => s.gameId === g.id);
+
+    document.getElementById('pCContent').innerHTML = `
+      <div class="pC-stats-row">
+        <div class="pC-stat"><div class="v" style="color:hsl(var(--c-game));">${g.totalPlays}</div><div class="l">Partite giocate</div></div>
+        <div class="pC-stat"><div class="v" style="color:hsl(var(--c-toolkit));">${Math.round(g.winRate*100)}%</div><div class="l">Win rate</div></div>
+        <div class="pC-stat"><div class="v" style="color:hsl(var(--c-chat));">${g.avgScore}</div><div class="l">Avg score</div></div>
+        <div class="pC-stat"><div class="v" style="color:hsl(var(--c-event));">⭐ ${g.rating}</div><div class="l">BGG rating</div></div>
+      </div>
+
+      <h3 style="font-family:var(--f-display);margin-bottom:8px;">🔗 Entità collegate</h3>
+      <p style="color:var(--text-sec);font-size:13px;margin-bottom:16px;">Tutto ciò che è correlato ad <strong>${g.title}</strong> nel tuo workspace.</p>
+
+      <div class="grid-cards">
+        ${agents.map(a => `
+          <div class="gc" style="--e2:var(--c-agent);">
+            <div class="gchead">
+              <div class="gcicon">🤖</div>
+              <div style="flex:1;"><div class="gctype" style="color:hsl(var(--c-agent));">Agent</div></div>
+              <div style="padding:1px 6px;border-radius:4px;background:hsl(var(--c-toolkit) / .15);color:hsl(var(--c-toolkit));font-size:9px;font-weight:700;font-family:var(--f-display);">${a.badge}</div>
+            </div>
+            <div class="gcti">${a.title}</div>
+            <div class="gcsub">${a.model} · ${a.strategy}</div>
+            <div class="gcmeta">
+              <span class="gcm">${a.invocations} inv</span>
+              <span class="gcm">${a.avgLatency}</span>
+            </div>
+          </div>
+        `).join('')}
+        ${kbs.map(k => `
+          <div class="gc" style="--e2:var(--c-kb);">
+            <div class="gchead">
+              <div class="gcicon">📄</div>
+              <div style="flex:1;"><div class="gctype" style="color:hsl(var(--c-kb));">KB Doc</div></div>
+              <div style="padding:1px 6px;border-radius:4px;background:hsl(var(--c-toolkit) / .15);color:hsl(var(--c-toolkit));font-size:9px;font-weight:700;font-family:var(--f-display);">${k.badge}</div>
+            </div>
+            <div class="gcti" style="font-family:var(--f-mono);font-size:12px;">${k.title}</div>
+            <div class="gcsub">${k.size} · ${k.pages} pagine</div>
+            <div class="gcmeta">
+              <span class="gcm">${k.chunks || '—'} chunks</span>
+            </div>
+          </div>
+        `).join('')}
+        ${chats.map(c => `
+          <div class="gc" style="--e2:var(--c-chat);">
+            <div class="gchead">
+              <div class="gcicon">💬</div>
+              <div style="flex:1;"><div class="gctype" style="color:hsl(var(--c-chat));">Chat</div></div>
+              <div style="font-size:9px;color:var(--text-muted);">${c.lastAt}</div>
+            </div>
+            <div class="gcti">${c.title}</div>
+            <div class="gcsub">${DS.byId[c.agentId]?.title}</div>
+            <div class="gcmeta">
+              <span class="gcm">${c.msgCount} msg</span>
+            </div>
+          </div>
+        `).join('')}
+        ${sessions.slice(0, 4).map(s => `
+          <div class="gc" style="--e2:var(--c-session);">
+            <div class="gchead">
+              <div class="gcicon">🎯</div>
+              <div style="flex:1;"><div class="gctype" style="color:hsl(var(--c-session));">Session</div></div>
+              <div style="padding:1px 6px;border-radius:4px;background:hsl(var(--c-session) / .15);color:hsl(var(--c-session));font-size:9px;font-weight:700;font-family:var(--f-display);">${s.badge}</div>
+            </div>
+            <div class="gcti">${s.title}</div>
+            <div class="gcsub">${s.playerIds.length} giocatori · ${s.duration}</div>
+            <div class="gcmeta">
+              <span class="gcm">Turno ${s.turn}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Pattern switching
+  const captions = {
+    A: `<span class="pat-pill">Pattern A</span> <strong>Split view</strong> · Sidebar compatta con conteggi per tipo entity · Lista filtrabile in mezzo · Detail a destra. Tre colonne che si bilanciano, mai piu' di un livello di profondita' tra te e i dati.`,
+    B: `<span class="pat-pill">Pattern B</span> <strong>Sidebar + Drawer laterale</strong> · Nav ad albero (workspace + team) · Main area per entity corrente · Drawer contestuale che mostra un'entita' correlata senza perdere il contesto principale. Clicca un pip nella main area per cambiare cosa appare nel drawer.`,
+    C: `<span class="pat-pill">Pattern C</span> <strong>Tabs persistenti</strong> · Hero + breadcrumb + azioni sempre visibili · Tab colorate per tipo entita' con count · Tutte le sezioni di un'entita' raggiungibili con un click. Ottimo quando l'utente lavora a lungo su una singola entita'.`,
+  };
+  const capEl = document.getElementById('patCaption');
+  capEl.innerHTML = captions.A;
+
+  document.querySelectorAll('#patSw button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#patSw button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      const p = b.dataset.pat;
+      document.querySelectorAll('.pane').forEach(x => x.classList.remove('on'));
+      document.getElementById('pane-' + p).classList.add('on');
+      capEl.innerHTML = captions[p];
+      document.getElementById('urlPath').textContent = {A:'library/azul', B:'azul/sessions/serata', C:'games/azul'}[p];
+    });
+  });
+
+  renderPAList();
+  renderPADetail();
+  renderPB();
+  renderPC();
+</script>
+
+</body>
+</html>

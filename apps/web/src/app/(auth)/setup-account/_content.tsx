@@ -14,20 +14,18 @@
 
 import { useEffect, useState, FormEvent } from 'react';
 
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { AccessibleFormInput, AccessibleButton } from '@/components/accessible';
 import { AuthLayout } from '@/components/layouts';
-import { Button } from '@/components/ui/primitives/button';
+import { Btn } from '@/components/ui/v2/btn';
+import { InputField } from '@/components/ui/v2/input-field';
+import { PwdInput } from '@/components/ui/v2/pwd-input';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // ──────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────
-
-type PasswordStrength = 'weak' | 'medium' | 'strong';
 
 interface PasswordValidation {
   minLength: boolean;
@@ -35,7 +33,6 @@ interface PasswordValidation {
   hasLowercase: boolean;
   hasNumber: boolean;
   isValid: boolean;
-  strength: PasswordStrength;
 }
 
 interface InvitationValidation {
@@ -55,22 +52,12 @@ const validatePassword = (password: string): PasswordValidation => {
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
 
-  const requirementsMet = [minLength, hasUppercase, hasLowercase, hasNumber].filter(Boolean).length;
-
-  let strength: PasswordStrength = 'weak';
-  if (requirementsMet === 4) {
-    strength = 'strong';
-  } else if (requirementsMet >= 2 && minLength) {
-    strength = 'medium';
-  }
-
   return {
     minLength,
     hasUppercase,
     hasLowercase,
     hasNumber,
     isValid: minLength && hasUppercase && hasLowercase && hasNumber,
-    strength,
   };
 };
 
@@ -79,52 +66,6 @@ const getApiBase = (): string => {
     return process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
   }
   return '';
-};
-
-// ──────────────────────────────────────────────
-// Password Strength Indicator
-// ──────────────────────────────────────────────
-
-const PasswordStrengthIndicator = ({ strength }: { strength: PasswordStrength }) => {
-  const strengthConfig = {
-    weak: {
-      color: 'bg-red-500',
-      text: 'Debole',
-      textColor: 'text-red-500',
-      width: 'w-1/3',
-    },
-    medium: {
-      color: 'bg-orange-500',
-      text: 'Media',
-      textColor: 'text-orange-500',
-      width: 'w-2/3',
-    },
-    strong: {
-      color: 'bg-green-500',
-      text: 'Forte',
-      textColor: 'text-green-500',
-      width: 'w-full',
-    },
-  };
-
-  const config = strengthConfig[strength];
-
-  return (
-    <div className="space-y-2" role="status" aria-live="polite">
-      <div className="flex justify-between items-center">
-        <span className="text-sm text-slate-600 dark:text-slate-400">Sicurezza password:</span>
-        <span className={`text-sm font-medium ${config.textColor}`}>{config.text}</span>
-      </div>
-      <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-        <motion.div
-          className={`h-full ${config.color}`}
-          initial={{ width: 0 }}
-          animate={{ width: config.width }}
-          transition={{ duration: 0.3 }}
-        />
-      </div>
-    </div>
-  );
 };
 
 // ──────────────────────────────────────────────
@@ -149,7 +90,6 @@ export function SetupAccountContent() {
     hasLowercase: false,
     hasNumber: false,
     isValid: false,
-    strength: 'weak',
   });
 
   // UI state
@@ -232,7 +172,6 @@ export function SetupAccountContent() {
         hasLowercase: false,
         hasNumber: false,
         isValid: false,
-        strength: 'weak',
       });
     }
   }, [password]);
@@ -317,9 +256,9 @@ export function SetupAccountContent() {
             Token mancante. Utilizza il link ricevuto nell&apos;email di invito.
           </p>
           <div className="pt-4">
-            <Button variant="secondary" asChild>
+            <Btn variant="secondary" asChild>
               <Link href="/login">Vai al Login</Link>
-            </Button>
+            </Btn>
           </div>
         </div>
       </AuthLayout>
@@ -343,13 +282,13 @@ export function SetupAccountContent() {
           <div className="text-6xl mb-4">&#9888;&#65039;</div>
           <div className="pt-4 space-y-2">
             {isAlreadyUsed && (
-              <Button asChild className="w-full">
+              <Btn asChild fullWidth>
                 <Link href="/login">Vai al Login</Link>
-              </Button>
+              </Btn>
             )}
-            <Button variant="secondary" asChild className="w-full">
+            <Btn variant="secondary" asChild fullWidth>
               <Link href="/">Torna alla Home</Link>
-            </Button>
+            </Btn>
           </div>
         </div>
       </AuthLayout>
@@ -373,6 +312,9 @@ export function SetupAccountContent() {
   }
 
   // Valid token: show password form
+  const confirmError =
+    confirmPassword && password !== confirmPassword ? 'Le password non coincidono' : undefined;
+
   return (
     <AuthLayout
       title="Configura Account"
@@ -390,121 +332,115 @@ export function SetupAccountContent() {
 
       <form noValidate onSubmit={handleSubmit} className="space-y-4">
         {/* Email (readonly) */}
-        <AccessibleFormInput
+        <InputField
           label="Email"
           type="email"
           value={validationResult?.email ?? ''}
-          readOnly
+          onChange={() => {
+            /* readonly */
+          }}
           autoComplete="email"
-          inputClassName="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 cursor-not-allowed"
+          disabled
         />
 
         {/* Display Name (readonly) */}
         {validationResult?.displayName && (
-          <AccessibleFormInput
+          <InputField
             label="Nome"
             type="text"
             value={validationResult.displayName}
-            readOnly
-            inputClassName="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 cursor-not-allowed"
+            onChange={() => {
+              /* readonly */
+            }}
+            disabled
           />
         )}
 
         {/* Password */}
-        <AccessibleFormInput
+        <PwdInput
           label="Password"
-          type="password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={setPassword}
           required
           autoComplete="new-password"
           placeholder="Inserisci la password"
-          inputClassName="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-ring"
+          showStrength
+          strengthPrefix="Sicurezza password:"
         />
 
         {/* Password Requirements */}
         {password && (
-          <div className="space-y-2">
-            <PasswordStrengthIndicator strength={passwordValidation.strength} />
-            <div className="text-sm space-y-1">
-              <div
-                className={`flex items-center gap-2 ${
-                  passwordValidation.minLength
-                    ? 'text-green-400'
-                    : 'text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                <span aria-hidden="true">{passwordValidation.minLength ? '\u2713' : '\u25CB'}</span>
-                <span>Almeno 8 caratteri</span>
-              </div>
-              <div
-                className={`flex items-center gap-2 ${
-                  passwordValidation.hasUppercase
-                    ? 'text-green-400'
-                    : 'text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                <span aria-hidden="true">
-                  {passwordValidation.hasUppercase ? '\u2713' : '\u25CB'}
-                </span>
-                <span>Almeno 1 lettera maiuscola</span>
-              </div>
-              <div
-                className={`flex items-center gap-2 ${
-                  passwordValidation.hasLowercase
-                    ? 'text-green-400'
-                    : 'text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                <span aria-hidden="true">
-                  {passwordValidation.hasLowercase ? '\u2713' : '\u25CB'}
-                </span>
-                <span>Almeno 1 lettera minuscola</span>
-              </div>
-              <div
-                className={`flex items-center gap-2 ${
-                  passwordValidation.hasNumber
-                    ? 'text-green-400'
-                    : 'text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                <span aria-hidden="true">{passwordValidation.hasNumber ? '\u2713' : '\u25CB'}</span>
-                <span>Almeno 1 numero</span>
-              </div>
+          <div className="text-sm space-y-1">
+            <div
+              className={`flex items-center gap-2 ${
+                passwordValidation.minLength
+                  ? 'text-green-400'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              <span aria-hidden="true">{passwordValidation.minLength ? '\u2713' : '\u25CB'}</span>
+              <span>Almeno 8 caratteri</span>
+            </div>
+            <div
+              className={`flex items-center gap-2 ${
+                passwordValidation.hasUppercase
+                  ? 'text-green-400'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              <span aria-hidden="true">
+                {passwordValidation.hasUppercase ? '\u2713' : '\u25CB'}
+              </span>
+              <span>Almeno 1 lettera maiuscola</span>
+            </div>
+            <div
+              className={`flex items-center gap-2 ${
+                passwordValidation.hasLowercase
+                  ? 'text-green-400'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              <span aria-hidden="true">
+                {passwordValidation.hasLowercase ? '\u2713' : '\u25CB'}
+              </span>
+              <span>Almeno 1 lettera minuscola</span>
+            </div>
+            <div
+              className={`flex items-center gap-2 ${
+                passwordValidation.hasNumber
+                  ? 'text-green-400'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              <span aria-hidden="true">{passwordValidation.hasNumber ? '\u2713' : '\u25CB'}</span>
+              <span>Almeno 1 numero</span>
             </div>
           </div>
         )}
 
         {/* Confirm Password */}
-        <AccessibleFormInput
+        <PwdInput
           label="Conferma Password"
-          type="password"
           value={confirmPassword}
-          onChange={e => setConfirmPassword(e.target.value)}
+          onChange={setConfirmPassword}
           required
           autoComplete="new-password"
           placeholder="Conferma la password"
-          error={
-            confirmPassword && password !== confirmPassword
-              ? 'Le password non coincidono'
-              : undefined
-          }
-          inputClassName="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-ring"
+          error={confirmError}
         />
 
         {/* Submit */}
-        <AccessibleButton
+        <Btn
           type="submit"
-          variant="primary"
-          className="w-full mt-6"
-          isLoading={isSubmitting}
-          loadingText="Attivazione in corso..."
+          fullWidth
+          className="mt-6"
+          loading={isSubmitting}
           disabled={
             !passwordValidation.isValid || password !== confirmPassword || !confirmPassword.trim()
           }
         >
-          Configura Account
-        </AccessibleButton>
+          {isSubmitting ? 'Attivazione in corso...' : 'Configura Account'}
+        </Btn>
       </form>
 
       <div className="text-center mt-4">

@@ -87,12 +87,24 @@
     "login": {
       "emailLabel": "Email",
       "emailPlaceholder": "tu@esempio.com",
+      "forgotPassword": "Password dimenticata?",
+      "genericError": "Accesso fallito. Riprova.",
       "loadingMessage": "Caricamento...",
       "loggingIn": "Accesso in corso...",
       "loginButton": "Accedi",
+      "noAccount": "Non hai un account?",
       "passwordLabel": "Password",
       "passwordPlaceholder": "••••••••",
-      "signInTo": "Accedi a MeepleAI"
+      "registerCta": "Registrati",
+      "signInTo": "Accedi a MeepleAI",
+      "subtitle": "Bentornato su MeepleAI",
+      "title": "Accedi"
+    },
+    "modal": {
+      "loginTab": "Accedi",
+      "registerTab": "Registrati",
+      "tabsLabel": "Modalità di autenticazione",
+      "title": "Accedi o registrati"
     },
     "oauth": {
       "discord": "Continua con Discord",
@@ -110,25 +122,67 @@
       "displayNameOptional": "Nome Visualizzato (Opzionale)",
       "displayNamePlaceholder": "Mario Rossi",
       "email": "Email",
+      "emailLabel": "Email",
       "emailPlaceholder": "tu@esempio.com",
       "error": "Registrazione fallita. Riprova.",
+      "genericError": "Registrazione fallita. Riprova.",
       "hasAccount": "Hai già un account?",
+      "inviteOauthDisabled": "L'accesso OAuth non è disponibile durante l'alpha. Richiedi l'accesso qui sotto.",
+      "inviteOnlySubtitle": "La registrazione è attualmente solo su invito",
+      "inviteOnlyTitle": "Richiedi accesso",
+      "loginCta": "Accedi",
       "password": "Password",
       "passwordHelp": "Deve contenere maiuscole, minuscole e numeri (min 8 caratteri)",
+      "passwordLabel": "Password",
       "passwordPlaceholder": "••••••••",
+      "privacyLink": "Privacy Policy",
+      "registerButton": "Registrati",
       "role": "Ruolo",
       "selectRole": "Seleziona un ruolo",
       "signIn": "Accedi",
       "submit": "Registrati",
+      "subtitle": "Unisciti a MeepleAI per iniziare",
       "success": "Registrazione completata! Puoi ora accedere.",
+      "termsAnd": "e la",
+      "termsLink": "Termini di servizio",
+      "termsPrefix": "Accetto i",
+      "termsRequired": "Devi accettare i termini per continuare",
       "title": "Registrati"
     },
     "resetPassword": {
-      "email": "Email",
+      "backToLogin": "← Torna al login",
+      "confirmCta": "Reimposta password",
+      "confirmPasswordLabel": "Conferma password",
+      "confirmSubtitle": "Scegli una password robusta per il tuo account",
+      "confirmTitle": "Imposta una nuova password",
+      "email": "Indirizzo email",
       "error": "Impossibile inviare il link di reimpostazione. Riprova.",
+      "genericConfirmError": "Impossibile reimpostare la password. Riprova.",
+      "genericRequestError": "Impossibile inviare l'email. Riprova.",
+      "invalidLinkCta": "Richiedi un nuovo link",
+      "invalidLinkSubtitle": "Questo link di reimpostazione non è più valido",
+      "invalidLinkTitle": "Link non valido o scaduto",
+      "invalidToken": "Token di reimpostazione non valido.",
+      "invalidTokenFromServer": "Token di reimpostazione non valido o scaduto.",
+      "loadingTitle": "Caricamento...",
+      "passwordLabel": "Nuova password",
+      "passwordRequirements": "La password non soddisfa tutti i requisiti.",
+      "passwordsDoNotMatch": "Le password non corrispondono",
+      "placeholder": "tu@esempio.com",
+      "resetting": "Reimpostazione...",
+      "sending": "Invio in corso...",
+      "sentBody": "Abbiamo inviato le istruzioni di reimpostazione a {email}. Controlla lo spam se non la vedi.",
+      "sentTitle": "Controlla la tua email",
       "submit": "Invia link di reimpostazione",
+      "submitCta": "Invia le istruzioni",
+      "subtitle": "Inserisci la tua email e ti invieremo le istruzioni per reimpostare la password",
       "success": "Link di reimpostazione inviato! Controlla la tua email.",
-      "title": "Reimposta password"
+      "successBody": "La tua password è stata reimpostata. Reindirizzamento...",
+      "successTitle": "Password reimpostata con successo",
+      "title": "Reimposta password",
+      "tryAgain": "Riprova",
+      "verifyingBody": "Verifica del token in corso...",
+      "verifyingTitle": "Verifica in corso..."
     },
     "session": {
       "expired": "La tua sessione è scaduta. Accedi nuovamente.",
@@ -143,9 +197,11 @@
       "code": "Codice di verifica",
       "error": "Codice non valido. Riprova.",
       "submit": "Verifica",
-      "title": "Autenticazione a due fattori"
+      "title": "Autenticazione a due fattori",
+      "verificationSubtitle": "Inserisci il codice dell'app di autenticazione per continuare."
     },
     "emailVerification": {
+      "pageTitle": "Verifica email",
       "verifying": "Verifica email in corso...",
       "pending": {
         "title": "Controlla la tua email",
@@ -198,6 +254,17 @@
           "description": "Si è verificato un errore durante la verifica. Riprova."
         }
       }
+    },
+    "meter": {
+      "weak": "Debole",
+      "fair": "Discreta",
+      "good": "Buona",
+      "strong": "Ottima",
+      "prefix": "Password:"
+    },
+    "visibility": {
+      "show": "Mostra password",
+      "hide": "Nascondi password"
     }
   },
   "chat": {

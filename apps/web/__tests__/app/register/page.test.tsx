@@ -1,7 +1,7 @@
 /**
  * Register Page Content Tests (invite-only registration feature)
  *
- * 1. Shows register form (AuthModal) when public registration is enabled
+ * 1. Shows register form when public registration is enabled
  * 2. Shows RequestAccessForm when public registration is disabled
  */
 
@@ -30,6 +30,11 @@ vi.mock('@/hooks/useTranslation', () => ({
   }),
 }));
 
+// Mock useAuth so RegisterForm mount doesn't hit real auth client
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({ register: vi.fn() }),
+}));
+
 // Mock next/navigation (required by RegisterPageContent)
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
@@ -37,10 +42,9 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/register',
 }));
 
-// Mock AuthModal so we don't render its full internals
-vi.mock('@/components/auth', () => ({
-  AuthModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="auth-modal">AuthModal</div> : null,
+// Mock RegisterForm so we don't render its full internals; expose a stable testid
+vi.mock('@/components/auth/RegisterForm', () => ({
+  RegisterForm: () => <div data-testid="register-form">RegisterForm</div>,
 }));
 
 // Mock RequestAccessForm to keep the test focused on the page's branching logic
@@ -74,13 +78,13 @@ describe('RegisterPageContent', () => {
     } as any);
   });
 
-  it('shows AuthModal (register form) when public registration is enabled', async () => {
+  it('shows RegisterForm when public registration is enabled', async () => {
     mockGetRegistrationMode.mockResolvedValueOnce({ publicRegistrationEnabled: true });
 
     render(<RegisterPageContent />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('auth-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('register-form')).toBeInTheDocument();
     });
 
     expect(screen.queryByTestId('request-access-form')).not.toBeInTheDocument();
@@ -95,7 +99,7 @@ describe('RegisterPageContent', () => {
       expect(screen.getByTestId('request-access-form')).toBeInTheDocument();
     });
 
-    expect(screen.queryByTestId('auth-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('register-form')).not.toBeInTheDocument();
   });
 
   it('defaults to RequestAccessForm (invite-only) when API call fails', async () => {
@@ -107,6 +111,6 @@ describe('RegisterPageContent', () => {
       expect(screen.getByTestId('request-access-form')).toBeInTheDocument();
     });
 
-    expect(screen.queryByTestId('auth-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('register-form')).not.toBeInTheDocument();
   });
 });

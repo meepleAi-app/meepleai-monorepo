@@ -111,4 +111,20 @@ describe('ConnectionChipPopover', () => {
     await userEvent.keyboard('{Escape}');
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it('renders iconOverride in the popover header when provided', () => {
+    const Custom = () => <svg data-testid="popover-header-icon" />;
+    render(
+      <ConnectionChipPopover
+        open
+        onOpenChange={() => {}}
+        items={items}
+        entityType="session"
+        iconOverride={<Custom />}
+      >
+        <button>trigger</button>
+      </ConnectionChipPopover>
+    );
+    expect(screen.getByTestId('popover-header-icon')).toBeInTheDocument();
+  });
 });

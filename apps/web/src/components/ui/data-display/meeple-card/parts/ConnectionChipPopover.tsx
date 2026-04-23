@@ -21,6 +21,8 @@ export interface ConnectionChipPopoverProps {
   createLabel?: string;
   entityType: MeepleEntityType;
   children: ReactNode;
+  /** Optional icon override. Falls through from ConnectionChip so the popover header matches the chip face. */
+  iconOverride?: ReactNode;
 }
 
 export function ConnectionChipPopover({
@@ -31,6 +33,7 @@ export function ConnectionChipPopover({
   createLabel = 'Create',
   entityType,
   children,
+  iconOverride,
 }: ConnectionChipPopoverProps) {
   const tokens = entityTokens(entityType);
   const Icon = entityIcons[entityType];
@@ -56,7 +59,7 @@ export function ConnectionChipPopover({
           className="flex items-center gap-2 border-b px-3 py-2 text-xs font-semibold uppercase tracking-wide"
           style={{ borderColor: tokens.border, color: tokens.solid }}
         >
-          <Icon size={14} strokeWidth={ENTITY_ICON_STROKE} aria-hidden="true" />
+          {iconOverride ?? <Icon size={14} strokeWidth={ENTITY_ICON_STROKE} aria-hidden="true" />}
           <span>
             {label} ({items.length})
           </span>

@@ -198,6 +198,7 @@ export function ConnectionChip({
         onCreate={onCreate}
         createLabel={createLabel}
         entityType={entityType}
+        iconOverride={iconOverride}
       >
         {buttonEl}
       </ConnectionChipPopover>

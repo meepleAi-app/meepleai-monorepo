@@ -64,6 +64,35 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
         return entity is null ? null : MapToDomain(entity, entity.Claims);
     }
 
+    public async Task<MechanicAnalysis?> GetByIdIgnoringFiltersAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.MechanicAnalyses
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity is null ? null : MapToDomain(entity, claims: Array.Empty<MechanicClaimEntity>());
+    }
+
+    public async Task<MechanicAnalysis?> GetByIdWithClaimsIgnoringFiltersAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.MechanicAnalyses
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .AsSplitQuery()
+            .Include(a => a.Claims)
+                .ThenInclude(c => c.Citations)
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity is null ? null : MapToDomain(entity, entity.Claims);
+    }
+
     public async Task<MechanicAnalysis?> GetPublishedForSharedGameAsync(
         Guid sharedGameId,
         CancellationToken cancellationToken = default)

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicExtractor;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Filters;
 using MediatR;
 
@@ -12,6 +13,9 @@ namespace Api.Routing;
 /// <list type="bullet">
 ///   <item><c>POST /admin/mechanic-analyses</c> — kicks off the LLM pipeline (202 Accepted).</item>
 ///   <item><c>GET  /admin/mechanic-analyses/{id}/status</c> — polls pipeline progress.</item>
+///   <item><c>POST /admin/mechanic-analyses/{id}/submit-review</c> — Draft/Rejected → InReview.</item>
+///   <item><c>POST /admin/mechanic-analyses/{id}/approve</c> — InReview → Published.</item>
+///   <item><c>POST /admin/mechanic-analyses/{id}/suppress</c> — T5 kill-switch (orthogonal).</item>
 /// </list>
 /// The admin's user id is always read from the validated session (never trusted from the body).
 /// </summary>
@@ -82,6 +86,81 @@ internal static class AdminMechanicAnalysesEndpoints
         .WithDescription(
             "Returns the current status of a mechanic analysis including per-section " +
             "LLM execution metrics (provider, model, tokens, latency, cost).");
+
+        // POST /api/v1/admin/mechanic-analyses/{id}/submit-review
+        // Draft/Rejected → InReview. Requires at least one claim on the aggregate.
+        group.MapPost("/{id:guid}/submit-review", async (
+            Guid id,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var adminId = session!.User!.Id;
+
+            var command = new SubmitMechanicAnalysisForReviewCommand(id, adminId);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Ok(response);
+        })
+        .WithName("AdminSubmitMechanicAnalysisForReview")
+        .WithSummary("Submit a mechanic analysis for admin review")
+        .WithDescription(
+            "Transitions the aggregate from Draft or Rejected to InReview. Resubmission from " +
+            "Rejected resets pending/rejected claims. Suppression is orthogonal — a suppressed " +
+            "analysis can still be resubmitted.");
+
+        // POST /api/v1/admin/mechanic-analyses/{id}/approve
+        // InReview → Published. Requires every claim to be Approved (409 otherwise).
+        group.MapPost("/{id:guid}/approve", async (
+            Guid id,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var reviewerId = session!.User!.Id;
+
+            var command = new ApproveMechanicAnalysisCommand(id, reviewerId);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Ok(response);
+        })
+        .WithName("AdminApproveMechanicAnalysis")
+        .WithSummary("Approve a mechanic analysis and publish it")
+        .WithDescription(
+            "Transitions the aggregate from InReview to Published. All claims must be in " +
+            "Approved status; otherwise the endpoint returns 409 with a breakdown.");
+
+        // POST /api/v1/admin/mechanic-analyses/{id}/suppress
+        // Orthogonal kill-switch (T5). Allowed from any status, including Published.
+        group.MapPost("/{id:guid}/suppress", async (
+            Guid id,
+            SuppressMechanicAnalysisRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var actorId = session!.User!.Id;
+
+            var command = new SuppressMechanicAnalysisCommand(
+                AnalysisId: id,
+                ActorId: actorId,
+                Reason: request.Reason,
+                RequestSource: request.RequestSource,
+                RequestedAt: request.RequestedAt);
+
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Ok(response);
+        })
+        .WithName("AdminSuppressMechanicAnalysis")
+        .WithSummary("Apply the T5 takedown kill-switch on a mechanic analysis")
+        .WithDescription(
+            "Applies suppression (hides the analysis from player-facing queries via the global " +
+            "IsSuppressed query filter). Suppression is orthogonal to the lifecycle — allowed " +
+            "from any status. Returns 409 when the aggregate is already suppressed.");
     }
 }
 
@@ -101,3 +180,17 @@ internal sealed record GenerateMechanicAnalysisRequest(
 /// is not coupled to the internal command record.
 /// </summary>
 internal sealed record CostCapOverrideRequest(decimal NewCapUsd, string Reason);
+
+/// <summary>
+/// Request body for <c>POST /admin/mechanic-analyses/{id}/suppress</c>. Mirrors
+/// <see cref="SuppressMechanicAnalysisCommand"/> but stays in the Routing layer to keep the
+/// public HTTP contract decoupled from the internal command record. The actor id is sourced
+/// from the validated session (never from the body).
+/// </summary>
+/// <param name="Reason">Legally significant justification for the takedown (20–500 chars).</param>
+/// <param name="RequestSource">Origin of the takedown request (Email, Legal, Other).</param>
+/// <param name="RequestedAt">Optional UTC timestamp of when the takedown notice was received.</param>
+internal sealed record SuppressMechanicAnalysisRequest(
+    string Reason,
+    SuppressionRequestSource RequestSource,
+    DateTime? RequestedAt = null);

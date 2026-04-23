@@ -33,6 +33,28 @@ public interface IMechanicAnalysisRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Loads a <see cref="MechanicAnalysis"/> by its primary key without its claim graph,
+    /// bypassing the <see cref="MechanicAnalysis.IsSuppressed"/> global query filter. Used by
+    /// lifecycle operations where suppression is orthogonal to the transition (e.g. the
+    /// Suppress command itself must be able to detect already-suppressed rows and yield 409
+    /// rather than 404; ADR-051 T5).
+    /// </summary>
+    Task<MechanicAnalysis?> GetByIdIgnoringFiltersAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads a <see cref="MechanicAnalysis"/> by its primary key with the full claim and
+    /// citation graph, bypassing the <see cref="MechanicAnalysis.IsSuppressed"/> global query
+    /// filter. Used by lifecycle operations (SubmitForReview, Approve) that must inspect claims
+    /// on rows that may be simultaneously suppressed — suppression is orthogonal to the
+    /// lifecycle state machine (ADR-051 T5).
+    /// </summary>
+    Task<MechanicAnalysis?> GetByIdWithClaimsIgnoringFiltersAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the currently published (non-suppressed) analysis for a shared game,
     /// or <c>null</c> if none exists. At most one <see cref="Enums.MechanicAnalysisStatus.Published"/>
     /// analysis may exist per shared game at a time (uniqueness enforced by partial index

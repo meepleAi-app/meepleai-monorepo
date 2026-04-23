@@ -1,3 +1,7 @@
+// Baseline DOM regression test for navItems rendering across Grid/List/Featured/Focus.
+// Intentionally uses 4 independent describe blocks instead of describe.each:
+// Vitest 3.x cannot populate toMatchInlineSnapshot() inside parameterised suites
+// (dynamic test names break snapshot call-site association). Do not consolidate.
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { GridCard } from '../GridCard';

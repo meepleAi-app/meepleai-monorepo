@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -35,6 +35,7 @@ export function ConnectionChipPopover({
   const tokens = entityTokens(entityType);
   const Icon = entityIcons[entityType];
   const label = entityLabel[entityType];
+  const headerId = useId();
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -43,6 +44,7 @@ export function ConnectionChipPopover({
       <PopoverContent
         align="start"
         sideOffset={6}
+        aria-labelledby={headerId}
         className="w-56 p-0 overflow-hidden"
         style={{
           border: `1px solid ${tokens.border}`,
@@ -50,6 +52,7 @@ export function ConnectionChipPopover({
         }}
       >
         <div
+          id={headerId}
           className="flex items-center gap-2 border-b px-3 py-2 text-xs font-semibold uppercase tracking-wide"
           style={{ borderColor: tokens.border, color: tokens.solid }}
         >

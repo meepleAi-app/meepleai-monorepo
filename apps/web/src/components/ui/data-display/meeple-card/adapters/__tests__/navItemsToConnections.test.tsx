@@ -55,4 +55,13 @@ describe('navItemsToConnections — happy path', () => {
       expect.stringMatching(/navItems\[1\].*onPlusClick.*dropped.*count>0/)
     );
   });
+
+  it('W2: onClick without href → emits indexed warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    navItemsToConnections([
+      { label: 'A', entity: 'session', href: '/a', icon: null },
+      { label: 'B', entity: 'session', onClick: () => {}, icon: null },
+    ]);
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/navItems\[1\].*onClick.*no href/));
+  });
 });

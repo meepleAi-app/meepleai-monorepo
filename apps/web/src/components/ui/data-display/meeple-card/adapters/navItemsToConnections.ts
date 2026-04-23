@@ -15,6 +15,11 @@ export function navItemsToConnections(items: NavFooterItem[]): ConnectionChipPro
         );
       }
     }
+    if (it.onClick && !it.href) {
+      devWarnOnce(
+        `[MeepleCard adapter] navItems[${idx}].onClick has no href fallback; ConnectionChip requires href for navigation. Consider adding href or removing onClick.`
+      );
+    }
     return {
       entityType: it.entity,
       label: it.label,

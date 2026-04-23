@@ -135,6 +135,11 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameStateTemplateEntity> GameStateTemplates => Set<GameStateTemplateEntity>(); // ISSUE-2400: Sprint 3 - Game state templates
     public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
     public DbSet<MechanicDraftEntity> MechanicDrafts => Set<MechanicDraftEntity>(); // Mechanic Extractor: Variant C draft workspace
+    public DbSet<MechanicAnalysisEntity> MechanicAnalyses => Set<MechanicAnalysisEntity>(); // ISSUE-523: Mechanic Extractor M1.1 — AI-first analysis aggregate
+    public DbSet<MechanicClaimEntity> MechanicClaims => Set<MechanicClaimEntity>(); // ISSUE-523: Child of MechanicAnalysis
+    public DbSet<MechanicCitationEntity> MechanicCitations => Set<MechanicCitationEntity>(); // ISSUE-523: Child of MechanicClaim (ADR-051 T1 quote cap)
+    public DbSet<MechanicStatusAuditEntity> MechanicStatusAudits => Set<MechanicStatusAuditEntity>(); // ISSUE-523: T6 audit trail for lifecycle transitions
+    public DbSet<MechanicSuppressionAuditEntity> MechanicSuppressionAudits => Set<MechanicSuppressionAuditEntity>(); // ISSUE-523: T5 audit trail for suppressions
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management

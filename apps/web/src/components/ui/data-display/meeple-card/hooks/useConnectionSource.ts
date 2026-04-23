@@ -1,4 +1,4 @@
-import { devWarnOnce, __resetDevWarnDedup } from './devWarn';
+import { devWarnOnce } from './devWarn';
 
 import type { ConnectionChipProps, MeepleCardProps } from '../types';
 
@@ -40,6 +40,3 @@ export function useConnectionSource(
 
   return { source: null, items: [], variant, warnings };
 }
-
-// Retrocompat alias for existing tests that import __resetWarnDedup from this module.
-export const __resetWarnDedup = __resetDevWarnDedup;

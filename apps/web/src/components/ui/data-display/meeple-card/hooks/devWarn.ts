@@ -22,6 +22,10 @@ export function __resetDevWarnDedup(): void {
 }
 
 export function devWarnOnce(msg: string): void {
+  // NOTE: `process.env.NODE_ENV` is intentionally read at runtime (not a
+  // compile-time constant) so Vitest's `vi.stubEnv('NODE_ENV', ...)` remains
+  // effective. In Next.js production builds, the bundler inlines this check
+  // and eliminates the branch — covered by the prod build, not by unit tests.
   if (process.env.NODE_ENV === 'production') return;
   if (seenMessages.has(msg)) return;
   seenMessages.add(msg);

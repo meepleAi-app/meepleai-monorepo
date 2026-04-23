@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useConnectionSource, __resetWarnDedup } from '../useConnectionSource';
+import { useConnectionSource } from '../useConnectionSource';
+import { __resetDevWarnDedup } from '../devWarn';
 
 describe('useConnectionSource', () => {
   beforeEach(() => {
-    __resetWarnDedup();
+    __resetDevWarnDedup();
     vi.restoreAllMocks();
   });
 

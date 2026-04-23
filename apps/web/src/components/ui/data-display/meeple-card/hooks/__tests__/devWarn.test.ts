@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { devWarnOnce, __resetDevWarnDedup } from '../devWarn';
 
 describe('devWarnOnce', () => {
   beforeEach(() => {
     __resetDevWarnDedup();
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
-  afterEach(() => vi.unstubAllEnvs());
 
   it('emits a warning exactly once for identical messages', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});

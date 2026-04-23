@@ -107,7 +107,15 @@ export interface MeepleCardProps {
   badge?: string;
   coverLabels?: CoverLabel[];
   actions?: MeepleCardAction[];
+  /**
+   * @deprecated Use `connections` instead. Migrate by 2026-07-15.
+   * See docs/superpowers/specs/2026-04-23-connectionchip-step-1.6-renderer-integration.md
+   */
   navItems?: NavFooterItem[];
+  /**
+   * @deprecated Use `connections` instead. Runtime migration deferred to Step 1.7.
+   * Runtime rendering is unchanged in Step 1.6; this JSDoc raises awareness only.
+   */
   manaPips?: ManaPip[];
   connections?: ConnectionChipProps[];
   connectionsVariant?: 'footer' | 'inline' | 'auto';

@@ -1,0 +1,37 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { navItemsToConnections } from '../navItemsToConnections';
+import { __resetDevWarnDedup } from '../../hooks/devWarn';
+
+describe('navItemsToConnections — happy path', () => {
+  beforeEach(() => __resetDevWarnDedup());
+
+  it('maps label/entity/count/href/disabled 1:1 and forwards icon to iconOverride', () => {
+    const iconNode = <i data-testid="legacy-icon" />;
+    const out = navItemsToConnections([
+      { label: 'L', entity: 'session', count: 3, href: '/s', disabled: true, icon: iconNode },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      entityType: 'session',
+      label: 'L',
+      count: 3,
+      href: '/s',
+      disabled: true,
+    });
+    expect(out[0].iconOverride).toBe(iconNode);
+  });
+
+  it('defaults count to 0 when omitted', () => {
+    const out = navItemsToConnections([{ label: 'L', entity: 'kb', icon: null }]);
+    expect(out[0].count).toBe(0);
+  });
+
+  it('preserves iconOverride as null when icon is explicitly null', () => {
+    const out = navItemsToConnections([{ label: 'L', entity: 'kb', icon: null }]);
+    expect(out[0].iconOverride).toBeNull();
+  });
+
+  it('returns empty array for empty input', () => {
+    expect(navItemsToConnections([])).toEqual([]);
+  });
+});

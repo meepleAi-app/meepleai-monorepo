@@ -98,4 +98,25 @@ describe('ConnectionChip', () => {
     expect(btn.getAttribute('aria-label')).toMatch(/99 or more/i);
     expect(btn.getAttribute('aria-label')).not.toMatch(/150/);
   });
+
+  it('does NOT render as Link when hasCreate is true and href is provided (even with count 0)', () => {
+    const onCreate = vi.fn();
+    render(<ConnectionChip entityType="player" count={0} href="/players" onCreate={onCreate} />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeInTheDocument();
+  });
+
+  it('invokes onCreate when clicked with href + count 0 + onCreate', async () => {
+    const onCreate = vi.fn();
+    render(<ConnectionChip entityType="player" count={0} href="/players" onCreate={onCreate} />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders as disabled button when href is provided and disabled is true', () => {
+    render(<ConnectionChip entityType="kb" count={0} href="/kb/123" disabled />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    const btn = screen.getByRole('button');
+    expect(btn).toBeDisabled();
+  });
 });

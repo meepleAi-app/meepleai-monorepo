@@ -92,6 +92,13 @@ describe('ConnectionChip', () => {
     expect(link.getAttribute('aria-label')).toMatch(/3/);
   });
 
+  it('renders as Link when count > 0 and href provided but no items preloaded', () => {
+    render(<ConnectionChip entityType="session" count={3} href="/sessions" />);
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/sessions');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('uses "99 or more" in aria-label when count exceeds 99', () => {
     render(<ConnectionChip entityType="session" count={150} />);
     const btn = screen.getByRole('button');

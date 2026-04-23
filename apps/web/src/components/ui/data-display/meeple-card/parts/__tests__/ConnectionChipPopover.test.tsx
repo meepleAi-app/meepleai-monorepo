@@ -87,11 +87,8 @@ describe('ConnectionChipPopover', () => {
         <button>trigger</button>
       </ConnectionChipPopover>
     );
-    // Radix Popover renders content in a Portal. The Content element exposes role="dialog";
-    // fallback strategy: cerca per role, se null fallback sul wrapper Radix data attribute.
-    const content =
-      document.querySelector('[role="dialog"]') ??
-      document.querySelector('[data-radix-popper-content-wrapper] > *');
+    // Radix Popover renders content in a Portal. PopoverContent exposes role="dialog" by default.
+    const content = document.querySelector('[role="dialog"]');
     expect(content).toBeTruthy();
 
     const labelledBy = content?.getAttribute('aria-labelledby');

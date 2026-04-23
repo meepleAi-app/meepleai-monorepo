@@ -41,7 +41,7 @@ describe('ConnectionChip', () => {
     const onCreate = vi.fn();
     render(<ConnectionChip entityType="player" count={0} onCreate={onCreate} disabled />);
     const btn = screen.getByRole('button');
-    expect(btn).toHaveAttribute('aria-disabled', 'true');
+    expect(btn).toBeDisabled();
     await userEvent.click(btn);
     expect(onCreate).not.toHaveBeenCalled();
   });
@@ -83,5 +83,12 @@ describe('ConnectionChip', () => {
     const btn = screen.getByRole('button');
     expect(btn.getAttribute('aria-label')).toMatch(/5/);
     expect(btn.getAttribute('aria-label')?.toLowerCase()).toMatch(/session/);
+  });
+
+  it('renders as a link when href is provided and no items/popover', () => {
+    render(<ConnectionChip entityType="kb" count={3} href="/kb/123" />);
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/kb/123');
+    expect(link.getAttribute('aria-label')).toMatch(/3/);
   });
 });

@@ -49,6 +49,7 @@ export function OwnershipBadge({ value, size = 20, className }: OwnershipBadgePr
 
   return (
     <span
+      role="img"
       data-testid={`ownership-badge-${value}`}
       aria-label={LABEL[value]}
       title={LABEL[value]}

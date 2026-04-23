@@ -3,6 +3,7 @@
 import { useState, type CSSProperties } from 'react';
 
 import { Plus } from 'lucide-react';
+import Link from 'next/link';
 
 import { entityLabel } from '../tokens';
 import { entityTokens } from '../tokens';
@@ -141,6 +142,7 @@ export function ConnectionChip({
     } else if (hasCreate) {
       onCreate?.();
     }
+    // href without items/create is rendered as <Link>, no click handler needed here.
   };
 
   const ariaLabel = hasCount
@@ -149,21 +151,35 @@ export function ConnectionChip({
       ? (createLabel ?? `Aggiungi ${labelEffective}`)
       : labelEffective;
 
+  const rootClassName = `group/chip relative inline-flex flex-col items-center outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+    disabled ? 'cursor-not-allowed opacity-40' : isInteractive ? 'cursor-pointer' : 'cursor-default'
+  }`;
+  const rootStyle = { ['--tw-ring-color' as string]: tokens.solid } as CSSProperties;
+
+  // Render as <Link> when href is provided and there's no popover to open.
+  if (href && !hasItems && !disabled) {
+    return (
+      <Link
+        href={href}
+        aria-label={ariaLabel}
+        onClick={hasCreate ? () => onCreate?.() : undefined}
+        className={rootClassName}
+        style={rootStyle}
+      >
+        {chipInner}
+        {labelEl}
+      </Link>
+    );
+  }
+
   const buttonEl = (
     <button
       type="button"
       aria-label={ariaLabel}
-      aria-disabled={disabled || undefined}
       disabled={disabled}
       onClick={handleActivate}
-      className={`group/chip relative inline-flex flex-col items-center outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-        disabled
-          ? 'cursor-not-allowed opacity-40'
-          : isInteractive
-            ? 'cursor-pointer'
-            : 'cursor-default'
-      }`}
-      style={{ ['--tw-ring-color' as string]: tokens.solid } as CSSProperties}
+      className={rootClassName}
+      style={rootStyle}
     >
       {chipInner}
       {labelEl}

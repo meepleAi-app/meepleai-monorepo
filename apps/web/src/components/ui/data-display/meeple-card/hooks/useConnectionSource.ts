@@ -1,3 +1,5 @@
+import { devWarnOnce, __resetDevWarnDedup } from './devWarn';
+
 import type { ConnectionChipProps, MeepleCardProps } from '../types';
 
 type Source = 'connections' | 'navItems' | 'manaPips' | null;
@@ -7,21 +9,6 @@ export interface UseConnectionSourceResult {
   items: ConnectionChipProps[];
   variant: 'footer' | 'inline';
   warnings: string[];
-}
-
-const seenMessages = new Set<string>();
-
-/** Test-only helper to reset dedup state between tests. */
-export function __resetWarnDedup(): void {
-  seenMessages.clear();
-}
-
-function devWarn(msg: string): void {
-  if (process.env.NODE_ENV === 'production') return;
-  if (seenMessages.has(msg)) return;
-  seenMessages.add(msg);
-
-  console.warn(msg);
 }
 
 export function useConnectionSource(
@@ -38,7 +25,7 @@ export function useConnectionSource(
       const msg =
         '[MeepleCard] Dual source detected: `connections` takes precedence over `navItems`/`manaPips`. Remove one to silence this warning.';
       warnings.push(msg);
-      devWarn(msg);
+      devWarnOnce(msg);
     }
     return { source: 'connections', items: props.connections, variant, warnings };
   }
@@ -53,3 +40,6 @@ export function useConnectionSource(
 
   return { source: null, items: [], variant, warnings };
 }
+
+// Retrocompat alias for existing tests that import __resetWarnDedup from this module.
+export const __resetWarnDedup = __resetDevWarnDedup;

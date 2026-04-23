@@ -37,3 +37,35 @@ describe('FocusCard connections path', () => {
     expect(warn.mock.calls.filter(c => /navItems.*deprecated/.test(c[0]))).toHaveLength(1);
   });
 });
+
+describe('FocusCard adapter path', () => {
+  beforeEach(() => {
+    __resetDeprecationDedup();
+  });
+
+  it('S9: FocusCard with adapter flag keeps 3 interactive elements, aria-labels preserved', () => {
+    render(
+      <FocusCard
+        entity="game"
+        title="X"
+        __useConnectionsForNavItems
+        navItems={[
+          { label: '3 sessioni', entity: 'session', count: 3, href: '/s/1', icon: <i /> },
+          { label: '2 KB', entity: 'kb', count: 2, href: '/k/1', icon: <i /> },
+          {
+            label: 'Nuovo',
+            entity: 'player',
+            count: 0,
+            showPlus: true,
+            onPlusClick: () => {},
+            icon: <i />,
+          },
+        ]}
+      />
+    );
+    const interactive = [...screen.queryAllByRole('link'), ...screen.queryAllByRole('button')];
+    expect(interactive).toHaveLength(3);
+    const labels = interactive.map(el => el.getAttribute('aria-label')?.toLowerCase());
+    expect(labels.filter(Boolean)).toHaveLength(3);
+  });
+});

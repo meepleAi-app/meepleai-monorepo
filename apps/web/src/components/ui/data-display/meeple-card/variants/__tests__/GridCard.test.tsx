@@ -37,3 +37,32 @@ describe('GridCard connections path', () => {
     expect(warn.mock.calls.filter(c => /navItems.*deprecated/.test(c[0]))).toHaveLength(1);
   });
 });
+
+describe('GridCard adapter path', () => {
+  beforeEach(() => {
+    __resetDeprecationDedup();
+  });
+
+  it('S4: navItems adapter path renders ConnectionChipStrip with equivalent DOM', () => {
+    render(
+      <GridCard
+        entity="game"
+        title="X"
+        navItems={[
+          {
+            label: '3 sessioni',
+            entity: 'session',
+            count: 3,
+            href: '/s',
+            icon: <i data-testid="i1" />,
+          },
+        ]}
+        __useConnectionsForNavItems
+      />
+    );
+    expect(screen.getByTestId('connection-chip-strip')).toBeInTheDocument();
+    expect(screen.getByTestId('i1')).toBeInTheDocument();
+    expect(screen.queryByTestId('nav-footer')).toBeNull();
+    expect(screen.getByRole('link', { name: /3.*session/i })).toBeInTheDocument();
+  });
+});

@@ -19,7 +19,10 @@ export function NavFooter({ items, size = 'sm' }: NavFooterProps) {
   const iconSize = size === 'md' ? 'h-8 w-8 text-[15px]' : 'h-7 w-7 text-[13px]';
 
   return (
-    <div className="flex items-center justify-center gap-2 border-t border-[var(--mc-border-light)] bg-[var(--mc-nav-footer-bg)] px-2.5 py-1.5 backdrop-blur-lg">
+    <div
+      data-testid="nav-footer"
+      className="flex items-center justify-center gap-2 border-t border-[var(--mc-border-light)] bg-[var(--mc-nav-footer-bg)] px-2.5 py-1.5 backdrop-blur-lg"
+    >
       {items.map((item, i) => {
         const color = entityHsl(item.entity);
         const glowColor = entityHsl(item.entity, 0.15);

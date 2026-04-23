@@ -44,6 +44,38 @@ export const entityIcon: Record<MeepleEntityType, string> = {
   tool: '🔧',
 };
 
+/**
+ * Named derived colors for an entity.
+ *
+ * Replaces inline `entityHsl(entity, 0.12)` calls with semantic names.
+ * Use these when styling ConnectionChip, badges, popovers, etc.
+ */
+export interface EntityTokens {
+  solid: string; // full color — icons, badge bg
+  fill: string; // 0.12 — chip bg default
+  border: string; // 0.35 — chip border default
+  hover: string; // 0.22 — chip bg on hover
+  glow: string; // 0.18 — box-shadow spread
+  shadow: string; // 0.25 — box-shadow drop
+  muted: string; // 0.06 — empty/disabled bg
+  dashed: string; // 0.25 — dashed border empty state
+  textOn: string; // text color on solid bg
+}
+
+export function entityTokens(entity: MeepleEntityType): EntityTokens {
+  return {
+    solid: entityHsl(entity),
+    fill: entityHsl(entity, 0.12),
+    border: entityHsl(entity, 0.35),
+    hover: entityHsl(entity, 0.22),
+    glow: entityHsl(entity, 0.18),
+    shadow: entityHsl(entity, 0.25),
+    muted: entityHsl(entity, 0.06),
+    dashed: entityHsl(entity, 0.25),
+    textOn: '#ffffff',
+  };
+}
+
 export const statusColors: Record<string, { bg: string; text: string }> = {
   owned: { bg: '#dcfce7', text: '#166534' },
   wishlist: { bg: '#fef3c7', text: '#92400e' },

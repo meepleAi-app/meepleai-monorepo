@@ -35,6 +35,18 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         [MechanicAnalysisStatus.Published] = Array.Empty<MechanicAnalysisStatus>()
     };
 
+    /// <summary>
+    /// System-initiated rejection reasons, used by <see cref="AutoRejectFromDraft"/>.
+    /// Distinguishes automated failures (cost cap, LLM catastrophic) from human-initiated
+    /// rejections during review.
+    /// </summary>
+    public static class AutoRejectionReasons
+    {
+        public const string CostCapExceeded = "cost_cap_exceeded";
+        public const string LlmGenerationFailed = "llm_generation_failed";
+        public const string ValidationFailedBeyondRetry = "validation_failed_beyond_retry";
+    }
+
     // === Core identity / lineage ===
 
     public Guid SharedGameId { get; private set; }
@@ -424,6 +436,50 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         RejectionReason = reason.Trim();
 
         AddDomainEvent(new MechanicAnalysisStatusChangedEvent(Id, previous, Status, reviewerId, RejectionReason));
+    }
+
+    /// <summary>
+    /// System-initiated rejection from <see cref="MechanicAnalysisStatus.Draft"/>, bypassing the
+    /// normal <c>Draft → InReview → Rejected</c> flow. Used by the generation pipeline (M1.2) when
+    /// the run aborts mid-generation (cost cap exceeded, catastrophic LLM failure, validation beyond
+    /// retry budget). Preserves any partial claims generated so far as evidence.
+    /// </summary>
+    /// <param name="reason">One of <see cref="AutoRejectionReasons"/> constants; free-form strings
+    /// are accepted for forward-compatibility but discouraged.</param>
+    /// <param name="actorId">The admin who initiated the generation run; recorded as reviewer for
+    /// audit consistency (T6).</param>
+    /// <param name="utcNow">Timestamp for the rejection event.</param>
+    /// <exception cref="InvalidMechanicAnalysisStateException">
+    /// Thrown if the aggregate is not currently in <see cref="MechanicAnalysisStatus.Draft"/>.
+    /// </exception>
+    public void AutoRejectFromDraft(string reason, Guid actorId, DateTime utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ArgumentException("Auto-rejection reason is required.", nameof(reason));
+        }
+
+        if (actorId == Guid.Empty)
+        {
+            throw new ArgumentException("ActorId cannot be empty.", nameof(actorId));
+        }
+
+        if (Status != MechanicAnalysisStatus.Draft)
+        {
+            throw new InvalidMechanicAnalysisStateException(
+                Id,
+                Status,
+                "auto-reject from draft",
+                MechanicAnalysisStatus.Draft);
+        }
+
+        var previous = Status;
+        Status = MechanicAnalysisStatus.Rejected;
+        ReviewedBy = actorId;
+        ReviewedAt = utcNow;
+        RejectionReason = reason.Trim();
+
+        AddDomainEvent(new MechanicAnalysisStatusChangedEvent(Id, previous, Status, actorId, RejectionReason));
     }
 
     /// <summary>

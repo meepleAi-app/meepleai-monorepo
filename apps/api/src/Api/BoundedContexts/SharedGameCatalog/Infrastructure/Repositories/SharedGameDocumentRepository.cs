@@ -209,6 +209,19 @@ internal sealed class SharedGameDocumentRepository : RepositoryBase, ISharedGame
             .ConfigureAwait(false);
     }
 
+    public async Task<bool> IsPdfLinkedToGameAsync(
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbContext.SharedGameDocuments
+            .AsNoTracking()
+            .AnyAsync(
+                d => d.SharedGameId == sharedGameId && d.PdfDocumentId == pdfDocumentId,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     // Mapping methods
 
     private static SharedGameDocument MapToDomain(SharedGameDocumentEntity entity)

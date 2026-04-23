@@ -51,6 +51,22 @@ public interface IMechanicAnalysisRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the existing non-rejected analysis for the (SharedGame, PdfDocument, PromptVersion)
+    /// tuple, or <c>null</c> if none exists. Supports T7 idempotency (ADR-051 §3.5): the generation
+    /// pipeline uses this lookup to short-circuit duplicate runs with the same prompt version.
+    /// </summary>
+    /// <remarks>
+    /// Rejected analyses (<see cref="Enums.MechanicAnalysisStatus.Rejected"/>) are excluded from
+    /// this lookup so operators can retry the same prompt version after a failure. Suppressed rows
+    /// are included to prevent silently creating a duplicate while a takedown is in effect.
+    /// </remarks>
+    Task<MechanicAnalysis?> FindByPromptVersionAsync(
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        string promptVersion,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Marks a previously loaded <see cref="MechanicAnalysis"/> as modified.
     /// Intended for entities loaded as <c>AsNoTracking</c> or detached.
     /// Tracked entities do not require an explicit call.

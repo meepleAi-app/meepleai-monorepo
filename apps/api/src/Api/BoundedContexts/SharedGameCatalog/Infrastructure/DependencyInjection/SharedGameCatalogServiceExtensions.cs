@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnalysis;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
@@ -65,6 +66,18 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IRulebookChunkAnalyzer, LlmRulebookChunkAnalyzer>();
         services.AddScoped<IRulebookMerger, LlmRulebookMerger>();
         services.AddScoped<IBackgroundRulebookAnalysisOrchestrator, BackgroundRulebookAnalysisOrchestrator>();
+
+        // ISSUE-524 / M1.2: Mechanic Extractor services (ADR-051).
+        // Pipeline flow: handler → create Draft aggregate → enqueue IMechanicAnalysisExecutor
+        // on a fresh DI scope → executor loads aggregate, runs IMechanicAnalysisPipeline,
+        // parses with MechanicOutputParser, persists, publishes domain events.
+        // Singleton: prompts are embedded assembly resources + internal ConcurrentDictionary cache.
+        // Scoped would silently defeat the cache (new instance per request).
+        services.AddSingleton<IMechanicPromptProvider, EmbeddedMechanicPromptProvider>();
+        services.AddScoped<IMechanicOutputValidator, MechanicOutputValidator>();
+        services.AddScoped<IAnalysisCostEstimator, AnalysisCostEstimator>();
+        services.AddScoped<IMechanicAnalysisPipeline, MechanicAnalysisPipeline>();
+        services.AddScoped<IMechanicAnalysisExecutor, MechanicAnalysisExecutor>();
 
         // Issue #2729: Review lock configuration service with caching (Singleton for cache sharing)
         services.AddSingleton<IReviewLockConfigService, ReviewLockConfigService>();

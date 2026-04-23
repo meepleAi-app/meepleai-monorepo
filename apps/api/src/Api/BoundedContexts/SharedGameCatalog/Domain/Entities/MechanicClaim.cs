@@ -120,6 +120,41 @@ public sealed class MechanicClaim : Entity<Guid>
     }
 
     /// <summary>
+    /// Rehydrates a claim from persistence. Used exclusively by the repository's
+    /// <c>MapToDomain</c>; bypasses validation because invariants were enforced at creation time.
+    /// </summary>
+    public static MechanicClaim Reconstitute(
+        Guid id,
+        Guid analysisId,
+        MechanicSection section,
+        string text,
+        int displayOrder,
+        MechanicClaimStatus status,
+        Guid? reviewedBy,
+        DateTime? reviewedAt,
+        string? rejectionNote,
+        IEnumerable<MechanicCitation> citations)
+    {
+        ArgumentNullException.ThrowIfNull(citations);
+
+        var claim = new MechanicClaim
+        {
+            Id = id,
+            AnalysisId = analysisId,
+            Section = section,
+            Text = text,
+            DisplayOrder = displayOrder,
+            Status = status,
+            ReviewedBy = reviewedBy,
+            ReviewedAt = reviewedAt,
+            RejectionNote = rejectionNote
+        };
+
+        claim._citations.AddRange(citations);
+        return claim;
+    }
+
+    /// <summary>
     /// Approves the claim. Idempotent: re-approving is a no-op.
     /// </summary>
     internal void Approve(Guid reviewerId, DateTime utcNow)

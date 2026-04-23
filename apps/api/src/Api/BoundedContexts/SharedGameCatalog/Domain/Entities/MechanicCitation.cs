@@ -131,6 +131,27 @@ public sealed class MechanicCitation : Entity<Guid>
             displayOrder: displayOrder);
     }
 
+    /// <summary>
+    /// Rehydrates a citation from persistence. Used exclusively by the repository's
+    /// <c>MapToDomain</c>; bypasses validation because invariants were enforced at creation time.
+    /// </summary>
+    public static MechanicCitation Reconstitute(
+        Guid id,
+        Guid claimId,
+        int pdfPage,
+        string quote,
+        Guid? chunkId,
+        int displayOrder)
+    {
+        return new MechanicCitation(
+            id: id,
+            claimId: claimId,
+            pdfPage: pdfPage,
+            quote: quote,
+            chunkId: chunkId,
+            displayOrder: displayOrder);
+    }
+
     private static readonly char[] WhitespaceSeparators =
         { ' ', '\t', '\n', '\r', '\f', '\v' };
 

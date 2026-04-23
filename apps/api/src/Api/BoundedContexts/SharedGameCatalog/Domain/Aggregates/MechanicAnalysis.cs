@@ -77,7 +77,15 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
 
     public IReadOnlyList<MechanicClaim> Claims => _claims.AsReadOnly();
 
-    /// <summary>EF Core constructor.</summary>
+    /// <summary>
+    /// Optimistic concurrency token — PostgreSQL's system <c>xmin</c> column value as seen at
+    /// load time. Round-tripped through the aggregate so detached <c>DbContext.Update</c> in the
+    /// repository preserves the original token (instead of defaulting to 0 and triggering a
+    /// spurious concurrency exception on every save).
+    /// </summary>
+    public uint XminVersion { get; private set; }
+
+    /// <summary>EF Core constructor / repository reconstitution.</summary>
     private MechanicAnalysis() : base()
     {
     }
@@ -180,6 +188,83 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             {
                 analysis._claims.Add(claim);
             }
+        }
+
+        return analysis;
+    }
+
+    /// <summary>
+    /// Rehydrates an aggregate from persistence. Used exclusively by the repository's
+    /// <c>MapToDomain</c>; bypasses validation because invariants were already enforced when
+    /// the aggregate was originally created. Does NOT raise domain events.
+    /// </summary>
+    /// <remarks>
+    /// Pre-loaded <paramref name="claims"/> are attached as-is; the repository is responsible
+    /// for materializing the full graph (Claim + Citations) before calling this factory.
+    /// </remarks>
+    public static MechanicAnalysis Reconstitute(
+        Guid id,
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        string promptVersion,
+        MechanicAnalysisStatus status,
+        Guid createdBy,
+        DateTime createdAt,
+        Guid? reviewedBy,
+        DateTime? reviewedAt,
+        string? rejectionReason,
+        int totalTokensUsed,
+        decimal estimatedCostUsd,
+        string modelUsed,
+        string provider,
+        decimal costCapUsd,
+        DateTime? costCapOverrideAt,
+        Guid? costCapOverrideBy,
+        string? costCapOverrideReason,
+        bool isSuppressed,
+        DateTime? suppressedAt,
+        Guid? suppressedBy,
+        string? suppressionReason,
+        DateTime? suppressionRequestedAt,
+        SuppressionRequestSource? suppressionRequestSource,
+        IEnumerable<MechanicClaim> claims,
+        uint xminVersion = 0)
+    {
+        ArgumentNullException.ThrowIfNull(claims);
+
+        var analysis = new MechanicAnalysis
+        {
+            XminVersion = xminVersion,
+            // Base Entity<Guid>.Id has a protected setter, accessible from this derived type.
+            Id = id,
+            SharedGameId = sharedGameId,
+            PdfDocumentId = pdfDocumentId,
+            PromptVersion = promptVersion,
+            Status = status,
+            CreatedBy = createdBy,
+            CreatedAt = createdAt,
+            ReviewedBy = reviewedBy,
+            ReviewedAt = reviewedAt,
+            RejectionReason = rejectionReason,
+            TotalTokensUsed = totalTokensUsed,
+            EstimatedCostUsd = estimatedCostUsd,
+            ModelUsed = modelUsed,
+            Provider = provider,
+            CostCapUsd = costCapUsd,
+            CostCapOverrideAt = costCapOverrideAt,
+            CostCapOverrideBy = costCapOverrideBy,
+            CostCapOverrideReason = costCapOverrideReason,
+            IsSuppressed = isSuppressed,
+            SuppressedAt = suppressedAt,
+            SuppressedBy = suppressedBy,
+            SuppressionReason = suppressionReason,
+            SuppressionRequestedAt = suppressionRequestedAt,
+            SuppressionRequestSource = suppressionRequestSource
+        };
+
+        foreach (var claim in claims)
+        {
+            analysis._claims.Add(claim);
         }
 
         return analysis;

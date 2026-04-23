@@ -20,6 +20,11 @@ function formatCount(count: number): string {
   return count > 99 ? '99+' : String(count);
 }
 
+function formatCountForLabel(count: number, label: string): string {
+  if (count > 99) return `99 or more ${label}`;
+  return `${count} ${label}`;
+}
+
 export function ConnectionChip({
   entityType,
   count = 0,
@@ -146,7 +151,7 @@ export function ConnectionChip({
   };
 
   const ariaLabel = hasCount
-    ? `${count} ${labelEffective}`
+    ? formatCountForLabel(count, labelEffective)
     : hasCreate
       ? (createLabel ?? `Aggiungi ${labelEffective}`)
       : labelEffective;

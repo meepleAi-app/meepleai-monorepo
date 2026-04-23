@@ -91,4 +91,11 @@ describe('ConnectionChip', () => {
     expect(link).toHaveAttribute('href', '/kb/123');
     expect(link.getAttribute('aria-label')).toMatch(/3/);
   });
+
+  it('uses "99 or more" in aria-label when count exceeds 99', () => {
+    render(<ConnectionChip entityType="session" count={150} />);
+    const btn = screen.getByRole('button');
+    expect(btn.getAttribute('aria-label')).toMatch(/99 or more/i);
+    expect(btn.getAttribute('aria-label')).not.toMatch(/150/);
+  });
 });

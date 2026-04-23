@@ -1,9 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { navItemsToConnections } from '../navItemsToConnections';
 import { __resetDevWarnDedup } from '../../hooks/devWarn';
 
 describe('navItemsToConnections — happy path', () => {
   beforeEach(() => __resetDevWarnDedup());
+
+  it('maps count=0 + showPlus + onPlusClick → onCreate', () => {
+    const fn = vi.fn();
+    const out = navItemsToConnections([
+      { label: 'L', entity: 'player', count: 0, showPlus: true, onPlusClick: fn, icon: null },
+    ]);
+    expect(out[0].onCreate).toBe(fn);
+  });
 
   it('maps label/entity/count/href/disabled 1:1 and forwards icon to iconOverride', () => {
     const iconNode = <i data-testid="legacy-icon" />;

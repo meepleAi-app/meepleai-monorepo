@@ -258,76 +258,367 @@ git commit -m "feat(meeple-card): add optional iconOverride to ConnectionChip"
 
 ---
 
-## Task 4: Create `navItemsToConnections` adapter (TDD)
+## Task 3b: Extract shared `devWarnOnce` module
+
+**Context:** Task 4 (adapter) will emit W2/W3 warnings. Spec §8.2 mandates dedup to avoid noisy consoles when a card re-renders. `useConnectionSource` already dedups W4 with a private `Set<string>`. We lift that into a shared module so the adapter reuses the same dedup strategy — DRY + single source of truth.
+
+**Scope note:** this module dedups **by message string** (W2/W3/W4). W1 (deprecation, emitted by the dispatcher in Task 5) uses a **different** granularity — *per MeepleCard instance per page session* (spec §R1.6.4) — and therefore keeps its own `WeakSet<object>` in Task 5.4. Do NOT unify the two.
 
 **Files:**
-- Create: `apps/web/src/components/ui/data-display/meeple-card/adapters/navItemsToConnections.ts`
-- Create: `apps/web/src/components/ui/data-display/meeple-card/adapters/__tests__/navItemsToConnections.test.ts`
+- Create: `apps/web/src/components/ui/data-display/meeple-card/hooks/devWarn.ts`
+- Create: `apps/web/src/components/ui/data-display/meeple-card/hooks/__tests__/devWarn.test.ts`
+- Modify: `apps/web/src/components/ui/data-display/meeple-card/hooks/useConnectionSource.ts` (refactor to import from `./devWarn`; re-export `__resetWarnDedup` alias)
 
-- [ ] **Step 4.1: Write failing tests — one per warning code W1–W3, plus happy paths**
+- [ ] **Step 3b.1: Write failing tests**
 
 ```ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { navItemsToConnections } from '../navItemsToConnections';
+// hooks/__tests__/devWarn.test.ts
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { devWarnOnce, __resetDevWarnDedup } from '../devWarn';
 
-describe('navItemsToConnections', () => {
-  beforeEach(() => vi.restoreAllMocks());
-
-  it('maps label/entity/count/href/disabled 1:1', () => {
-    const out = navItemsToConnections([
-      { label: 'L', entity: 'session', count: 3, href: '/s', disabled: true, icon: <i /> },
-    ]);
-    expect(out[0]).toMatchObject({ entityType: 'session', label: 'L', count: 3, href: '/s', disabled: true });
-    expect(out[0].iconOverride).toBeDefined();
+describe('devWarnOnce', () => {
+  beforeEach(() => {
+    __resetDevWarnDedup();
+    vi.restoreAllMocks();
   });
+  afterEach(() => vi.unstubAllEnvs());
 
-  it('maps count=0 + showPlus + onPlusClick → onCreate', () => {
-    const fn = vi.fn();
-    const out = navItemsToConnections([{ label: 'L', entity: 'player', count: 0, showPlus: true, onPlusClick: fn, icon: null }]);
-    expect(out[0].onCreate).toBe(fn);
-  });
-
-  it('W3: count>0 + onPlusClick → onCreate dropped + warn', () => {
+  it('emits a warning exactly once for identical messages', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const fn = vi.fn();
-    const out = navItemsToConnections([{ label: 'L', entity: 'player', count: 2, showPlus: true, onPlusClick: fn, icon: null }]);
-    expect(out[0].onCreate).toBeUndefined();
-    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/onPlusClick.*dropped.*count>0/));
+    devWarnOnce('duplicate message');
+    devWarnOnce('duplicate message');
+    devWarnOnce('duplicate message');
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
-  it('W2: onClick without href → warn', () => {
+  it('emits distinct messages independently', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    navItemsToConnections([{ label: 'L', entity: 'session', onClick: () => {}, icon: null }]);
-    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/onClick.*no href/));
+    devWarnOnce('a');
+    devWarnOnce('b');
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+
+  it('is silent in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    devWarnOnce('should not appear');
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('__resetDevWarnDedup allows re-emission after reset', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    devWarnOnce('msg');
+    __resetDevWarnDedup();
+    devWarnOnce('msg');
+    expect(warn).toHaveBeenCalledTimes(2);
   });
 });
 ```
 
-- [ ] **Step 4.2: Run to verify FAIL**
+- [ ] **Step 3b.2: Run to verify FAIL**
 
-Run: `pnpm test navItemsToConnections`
-Expected: all tests FAIL with "module not found".
+Run: `pnpm --filter @meepleai/web test devWarn`
+Expected: FAIL with "module not found".
 
-- [ ] **Step 4.3: Implement the adapter**
+- [ ] **Step 3b.3: Implement `devWarn.ts`**
+
+```ts
+// hooks/devWarn.ts
+
+/**
+ * Shared dev-only warning helper with per-message deduplication.
+ *
+ * Granularity: dedups by message string (module-global Set). Appropriate for
+ * warnings where the message itself is specific enough to identify the issue —
+ * e.g. W2 (onClick without href, indexed), W3 (onPlusClick dropped, indexed),
+ * W4 (dual source detected in useConnectionSource).
+ *
+ * NOT appropriate for W1 (deprecation of navItems/manaPips): spec §R1.6.4
+ * requires per-MeepleCard-instance dedup, so the dispatcher in Task 5 uses a
+ * separate `WeakSet<object>` keyed by the props object. Do NOT unify them.
+ *
+ * Silent in production.
+ */
+const seenMessages = new Set<string>();
+
+/** Test-only helper to reset dedup state between tests. */
+export function __resetDevWarnDedup(): void {
+  seenMessages.clear();
+}
+
+export function devWarnOnce(msg: string): void {
+  if (process.env.NODE_ENV === 'production') return;
+  if (seenMessages.has(msg)) return;
+  seenMessages.add(msg);
+  console.warn(msg);
+}
+```
+
+- [ ] **Step 3b.4: Refactor `useConnectionSource` to consume `devWarnOnce`**
+
+In `hooks/useConnectionSource.ts`:
+- Remove the local `seenMessages`/`devWarn` block (currently L12–L25).
+- Replace with: `import { devWarnOnce, __resetDevWarnDedup } from './devWarn';`
+- Replace the internal `devWarn(msg)` call (currently L41) with `devWarnOnce(msg)`.
+- Re-export the alias expected by existing tests:
+  ```ts
+  // Retrocompat: existing tests import `__resetWarnDedup` from this module.
+  export const __resetWarnDedup = __resetDevWarnDedup;
+  ```
+
+- [ ] **Step 3b.5: Run tests to verify green**
+
+Run: `pnpm --filter @meepleai/web test devWarn useConnectionSource`
+Expected: all PASS (4 new devWarn + 7 existing useConnectionSource).
+
+- [ ] **Step 3b.6: Commit**
+
+```bash
+git add apps/web/src/components/ui/data-display/meeple-card/hooks/
+git commit -m "refactor(meeple-card): extract devWarnOnce shared dedup module"
+```
+
+---
+
+## Task 3c: Apply `iconOverride` to `ConnectionChipPopover` header
+
+**Context:** Spec §8.3 states *"ConnectionChip renders `iconOverride` in both the main chip face **and the popover header**"*. Task 3 added it only to the chip face. This task closes the gap so the adapter (Task 4) can guarantee visual parity between legacy `navItems` icons and popover-rendered items when connections include preloaded items with overrides.
+
+**Files:**
+- Modify: `apps/web/src/components/ui/data-display/meeple-card/parts/ConnectionChipPopover.tsx` (accept + render `iconOverride` in header)
+- Modify: `apps/web/src/components/ui/data-display/meeple-card/parts/ConnectionChip.tsx` (forward `iconOverride` prop when rendering popover)
+- Modify: `apps/web/src/components/ui/data-display/meeple-card/parts/__tests__/ConnectionChipPopover.test.tsx` (assert override in header)
+
+- [ ] **Step 3c.1: Write failing test**
+
+```tsx
+// ConnectionChipPopover.test.tsx — new test
+it('renders iconOverride in the popover header when provided', async () => {
+  const Custom = () => <svg data-testid="popover-header-icon" />;
+  render(
+    <ConnectionChipPopover
+      entityType="session"
+      count={2}
+      items={[{ id: '1', label: 'First', href: '/s/1' }]}
+      label="Sessions"
+      iconOverride={<Custom />}
+    />
+  );
+  await userEvent.click(screen.getByRole('button'));
+  expect(await screen.findByTestId('popover-header-icon')).toBeInTheDocument();
+});
+```
+
+- [ ] **Step 3c.2: Run to verify FAIL**
+
+Run: `pnpm test ConnectionChipPopover`
+Expected: FAIL — either prop type missing or icon absent in rendered header.
+
+- [ ] **Step 3c.3: Add `iconOverride` to `ConnectionChipPopoverProps` and render it**
+
+In `ConnectionChipPopover.tsx`:
+```tsx
+interface ConnectionChipPopoverProps {
+  // ...existing props
+  /** Optional icon override — falls through from ConnectionChip. Rendered in header. */
+  iconOverride?: React.ReactNode;
+}
+```
+
+In the header JSX (wherever the default `<Icon />` currently renders), use the same nullish-coalesce pattern as the chip face:
+
+```tsx
+{iconOverride ?? (
+  <Icon size={16} strokeWidth={ENTITY_ICON_STROKE} aria-hidden="true" />
+)}
+```
+
+- [ ] **Step 3c.4: Forward `iconOverride` from `ConnectionChip`**
+
+In `ConnectionChip.tsx`, where `<ConnectionChipPopover ... />` is rendered, pass `iconOverride={iconOverride}` alongside existing props.
+
+- [ ] **Step 3c.5: Run tests**
+
+Run: `pnpm test ConnectionChip`
+Expected: all PASS (17 existing ConnectionChip + popover tests green, 1 new popover-header test green).
+
+- [ ] **Step 3c.6: Commit**
+
+```bash
+git add apps/web/src/components/ui/data-display/meeple-card/parts/
+git commit -m "feat(meeple-card): propagate iconOverride to ConnectionChipPopover header"
+```
+
+---
+
+## Task 4: Create `navItemsToConnections` adapter (TDD, incremental)
+
+**Context:** Adapter bridges the legacy `NavFooterItem[]` shape to the new `ConnectionChipProps[]`. Field mapping is mostly 1:1; two legacy fields are lossy (`onClick`-without-`href` and `onPlusClick`-with-`count>0`) and must emit dev warnings per spec §8.2 (W2, W3). We implement in four small TDD red/green cycles so each lossy branch gets its own failing test and own green commit — keeps reviewer diff minimal and isolates any regression to a single commit.
+
+**Dependencies:** Task 3b (`devWarnOnce`) must be merged so warnings dedup correctly.
+
+**Files:**
+- Create: `apps/web/src/components/ui/data-display/meeple-card/adapters/navItemsToConnections.ts`
+- Create: `apps/web/src/components/ui/data-display/meeple-card/adapters/__tests__/navItemsToConnections.test.ts`
+- Create: `apps/web/src/components/ui/data-display/meeple-card/adapters/index.ts` (barrel)
+
+---
+
+### Task 4.1: Happy-path 1:1 field mapping
+
+- [ ] **Step 4.1.1: Write failing test**
+
+```ts
+// adapters/__tests__/navItemsToConnections.test.ts
+import { describe, it, expect, beforeEach } from 'vitest';
+import { navItemsToConnections } from '../navItemsToConnections';
+import { __resetDevWarnDedup } from '../../hooks/devWarn';
+
+describe('navItemsToConnections — happy path', () => {
+  beforeEach(() => __resetDevWarnDedup());
+
+  it('maps label/entity/count/href/disabled 1:1 and forwards icon to iconOverride', () => {
+    const iconNode = <i data-testid="legacy-icon" />;
+    const out = navItemsToConnections([
+      { label: 'L', entity: 'session', count: 3, href: '/s', disabled: true, icon: iconNode },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      entityType: 'session',
+      label: 'L',
+      count: 3,
+      href: '/s',
+      disabled: true,
+    });
+    expect(out[0].iconOverride).toBe(iconNode);
+  });
+
+  it('defaults count to 0 when omitted', () => {
+    const out = navItemsToConnections([{ label: 'L', entity: 'kb', icon: null }]);
+    expect(out[0].count).toBe(0);
+  });
+
+  it('preserves iconOverride as null when icon is explicitly null', () => {
+    const out = navItemsToConnections([{ label: 'L', entity: 'kb', icon: null }]);
+    expect(out[0].iconOverride).toBeNull();
+  });
+
+  it('returns empty array for empty input', () => {
+    expect(navItemsToConnections([])).toEqual([]);
+  });
+});
+```
+
+- [ ] **Step 4.1.2: Run to verify FAIL** — `pnpm test navItemsToConnections` → module not found.
+
+- [ ] **Step 4.1.3: Implement minimal happy path**
 
 ```ts
 // adapters/navItemsToConnections.ts
 import type { ConnectionChipProps, NavFooterItem } from '../types';
 
-function devWarn(msg: string) {
-  if (process.env.NODE_ENV !== 'production') console.warn(msg);
+export function navItemsToConnections(items: NavFooterItem[]): ConnectionChipProps[] {
+  return items.map((it) => ({
+    entityType: it.entity,
+    label: it.label,
+    count: it.count ?? 0,
+    href: it.href,
+    disabled: it.disabled,
+    iconOverride: it.icon,
+  }));
 }
+```
+
+- [ ] **Step 4.1.4: Run — 4 PASS.**
+
+- [ ] **Step 4.1.5: Commit**
+
+```bash
+git add apps/web/src/components/ui/data-display/meeple-card/adapters/navItemsToConnections.ts apps/web/src/components/ui/data-display/meeple-card/adapters/__tests__/navItemsToConnections.test.ts
+git commit -m "feat(meeple-card): add navItemsToConnections with 1:1 field mapping"
+```
+
+---
+
+### Task 4.2: Map `onPlusClick` → `onCreate` (count=0 path)
+
+- [ ] **Step 4.2.1: Add failing test**
+
+```ts
+it('maps count=0 + showPlus + onPlusClick → onCreate', () => {
+  const fn = vi.fn();
+  const out = navItemsToConnections([
+    { label: 'L', entity: 'player', count: 0, showPlus: true, onPlusClick: fn, icon: null },
+  ]);
+  expect(out[0].onCreate).toBe(fn);
+});
+```
+
+Add `vi` to the vitest import if not already present.
+
+- [ ] **Step 4.2.2: Run to verify FAIL.**
+
+- [ ] **Step 4.2.3: Extend implementation**
+
+In the `.map((it) => ...)` body, before `return`:
+
+```ts
+let onCreate: (() => void) | undefined;
+if (it.showPlus && it.onPlusClick && (it.count ?? 0) === 0) {
+  onCreate = it.onPlusClick;
+}
+```
+
+And add `onCreate` to the returned object.
+
+- [ ] **Step 4.2.4: Run — all PASS.**
+
+- [ ] **Step 4.2.5: Commit**
+
+```bash
+git commit -am "feat(meeple-card): map onPlusClick→onCreate for count=0"
+```
+
+---
+
+### Task 4.3: Emit W3 warning for `onPlusClick` dropped at `count>0`
+
+**Rationale for indexed message:** each `navItems[idx]` is a distinct data point — the warning message embeds `idx` so a developer inspecting a card with 5 items immediately knows which item is misconfigured. Dedup (via `devWarnOnce`) uses the full message including `[idx]`, so identical mistakes on different indices surface separately; re-renders of the same index stay silent.
+
+- [ ] **Step 4.3.1: Add failing test**
+
+```ts
+it('W3: count>0 + onPlusClick → onCreate dropped, emits indexed warning', () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const fn = vi.fn();
+  const out = navItemsToConnections([
+    { label: 'A', entity: 'player', count: 0, icon: null },
+    { label: 'B', entity: 'player', count: 2, showPlus: true, onPlusClick: fn, icon: null },
+  ]);
+  expect(out[1].onCreate).toBeUndefined();
+  expect(warn).toHaveBeenCalledWith(expect.stringMatching(/navItems\[1\].*onPlusClick.*dropped.*count>0/));
+});
+```
+
+- [ ] **Step 4.3.2: Run to verify FAIL.**
+
+- [ ] **Step 4.3.3: Extend implementation — switch map callback to `(it, idx)` and import `devWarnOnce`**
+
+```ts
+import { devWarnOnce } from '../hooks/devWarn';
 
 export function navItemsToConnections(items: NavFooterItem[]): ConnectionChipProps[] {
   return items.map((it, idx) => {
     const count = it.count ?? 0;
     let onCreate: (() => void) | undefined;
     if (it.showPlus && it.onPlusClick) {
-      if (count === 0) onCreate = it.onPlusClick;
-      else devWarn(`[MeepleCard adapter] navItems[${idx}].onPlusClick was dropped: showPlus is rendered only when count>0 is false. Expose it via onCreate for count=0.`);
-    }
-    if (it.onClick && !it.href) {
-      devWarn(`[MeepleCard adapter] navItems[${idx}].onClick has no href fallback; ConnectionChip doesn't expose an onClick slot without href. Consider adding href.`);
+      if (count === 0) {
+        onCreate = it.onPlusClick;
+      } else {
+        devWarnOnce(
+          `[MeepleCard adapter] navItems[${idx}].onPlusClick was dropped: ConnectionChip only exposes +create affordance when count=0. Move this handler to onCreate or gate it upstream.`
+        );
+      }
     }
     return {
       entityType: it.entity,
@@ -342,13 +633,66 @@ export function navItemsToConnections(items: NavFooterItem[]): ConnectionChipPro
 }
 ```
 
-- [ ] **Step 4.4: Run — all PASS**
+- [ ] **Step 4.3.4: Run — all PASS.**
 
-- [ ] **Step 4.5: Commit**
+- [ ] **Step 4.3.5: Commit**
 
 ```bash
-git add apps/web/src/components/ui/data-display/meeple-card/adapters/
-git commit -m "feat(meeple-card): add navItems→connections adapter with lossy-field warnings"
+git commit -am "feat(meeple-card): emit W3 warn when onPlusClick dropped at count>0"
+```
+
+---
+
+### Task 4.4: Emit W2 warning for `onClick` without `href`
+
+- [ ] **Step 4.4.1: Add failing test**
+
+```ts
+it('W2: onClick without href → emits indexed warning', () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  navItemsToConnections([
+    { label: 'A', entity: 'session', href: '/a', icon: null },
+    { label: 'B', entity: 'session', onClick: () => {}, icon: null },
+  ]);
+  expect(warn).toHaveBeenCalledWith(expect.stringMatching(/navItems\[1\].*onClick.*no href/));
+});
+```
+
+- [ ] **Step 4.4.2: Run to verify FAIL.**
+
+- [ ] **Step 4.4.3: Extend implementation** — add inside the map body, after the W3 block:
+
+```ts
+if (it.onClick && !it.href) {
+  devWarnOnce(
+    `[MeepleCard adapter] navItems[${idx}].onClick has no href fallback; ConnectionChip requires href for navigation. Consider adding href or removing onClick.`
+  );
+}
+```
+
+- [ ] **Step 4.4.4: Run — all PASS.**
+
+- [ ] **Step 4.4.5: Commit**
+
+```bash
+git commit -am "feat(meeple-card): emit W2 warn when onClick provided without href"
+```
+
+---
+
+### Task 4.5: Add barrel export
+
+- [ ] **Step 4.5.1: Create `adapters/index.ts`**
+
+```ts
+export { navItemsToConnections } from './navItemsToConnections';
+```
+
+- [ ] **Step 4.5.2: Commit**
+
+```bash
+git add apps/web/src/components/ui/data-display/meeple-card/adapters/index.ts
+git commit -m "chore(meeple-card): add adapters barrel export"
 ```
 
 ---

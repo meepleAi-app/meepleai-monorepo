@@ -9,17 +9,19 @@ export interface UseConnectionSourceResult {
   warnings: string[];
 }
 
-const warnedInstances = new WeakSet<object>();
-/** Test-only helper — resets internal warn-dedup state between test cases. */
-export function __resetWarnDedup() {
-  // WeakSet has no clear() in all environments; reassignment is not possible for
-  // a const — so we mark a sentinel key instead. The dedup logic is extended in
-  // later tasks; for now this export satisfies the test contract.
-  (warnedInstances as any).clear?.();
+const seenMessages = new Set<string>();
+
+/** Test-only helper to reset dedup state between tests. */
+export function __resetWarnDedup(): void {
+  seenMessages.clear();
 }
 
-function devWarn(msg: string) {
-  if (process.env.NODE_ENV !== 'production') console.warn(msg);
+function devWarn(msg: string): void {
+  if (process.env.NODE_ENV === 'production') return;
+  if (seenMessages.has(msg)) return;
+  seenMessages.add(msg);
+
+  console.warn(msg);
 }
 
 export function useConnectionSource(
@@ -28,6 +30,9 @@ export function useConnectionSource(
   const warnings: string[] = [];
   const variant = props.connectionsVariant === 'inline' ? 'inline' : 'footer';
 
+  // Precedence per spec R1.6.3: `connections` takes priority even when empty
+  // (`connections: []` is an explicit "none"). `navItems` falls through when empty
+  // to preserve legacy null semantics. Do NOT unify these guards.
   if (props.connections !== undefined) {
     if (props.navItems !== undefined || props.manaPips !== undefined) {
       const msg =

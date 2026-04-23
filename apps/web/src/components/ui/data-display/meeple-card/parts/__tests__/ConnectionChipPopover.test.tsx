@@ -80,4 +80,35 @@ describe('ConnectionChipPopover', () => {
     // Radix Popover renders content in a Portal; query the full document.
     expect(document.querySelector('svg')).toBeTruthy();
   });
+
+  it('PopoverContent has aria-labelledby pointing to the header title', () => {
+    render(
+      <ConnectionChipPopover open onOpenChange={() => {}} items={items} entityType="session">
+        <button>trigger</button>
+      </ConnectionChipPopover>
+    );
+    // Radix Popover renders content in a Portal. PopoverContent exposes role="dialog" by default.
+    const content = document.querySelector('[role="dialog"]');
+    expect(content).toBeTruthy();
+
+    const labelledBy = content?.getAttribute('aria-labelledby');
+    expect(labelledBy).toBeTruthy();
+
+    const header = document.getElementById(labelledBy!);
+    expect(header).toBeTruthy();
+    // Header mostra "Session (N)" — il testo include l'entity label
+    expect(header?.textContent?.toLowerCase()).toMatch(/session/);
+  });
+
+  it('pressing Escape closes the popover', async () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ConnectionChipPopover open onOpenChange={onOpenChange} items={items} entityType="session">
+        <button>trigger</button>
+      </ConnectionChipPopover>
+    );
+    // Radix ascolta Escape a livello document; il focus non deve essere forzato dentro il popover.
+    await userEvent.keyboard('{Escape}');
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
 });

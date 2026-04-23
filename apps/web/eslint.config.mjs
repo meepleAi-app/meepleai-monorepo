@@ -12,6 +12,7 @@ import importPlugin from "eslint-plugin-import";
 
 // Custom security rules
 import noIncompleteSanitization from "./eslint-rules/no-incomplete-sanitization.js";
+import noDualConnectionSource from "./eslint-rules/no-dual-connection-source.js";
 
 export default [
   {
@@ -91,6 +92,7 @@ export default [
       "local": {
         rules: {
           "no-incomplete-sanitization": noIncompleteSanitization,
+          "no-dual-connection-source": noDualConnectionSource,
         },
       },
     },
@@ -239,6 +241,10 @@ export default [
       // SEC-008: Prevent incomplete sanitization (CWE-116)
       // Custom rule to detect unsafe .replace() patterns that don't escape backslashes
       "local/no-incomplete-sanitization": "error",
+
+      // MeepleCard Step 1.6 renderer integration: forbid dual connection sources
+      // Prevents <MeepleCard connections={...} navItems|manaPips={...} /> co-presence
+      "local/no-dual-connection-source": "error",
     },
     settings: {
       react: {

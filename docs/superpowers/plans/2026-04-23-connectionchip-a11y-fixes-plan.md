@@ -139,15 +139,22 @@ Co-Authored-By: Claude Opus 4 <noreply@anthropic.com>"
 
 ### - [ ] Step 1: Scrivere i test rossi per branching
 
-Aggiungere in `ConnectionChip.test.tsx` dopo il test `renders as a link when href is provided and no items/popover` (riga ~93):
+Aggiungere in `ConnectionChip.test.tsx` dopo il test `renders as a link when href is provided and no items/popover` (riga ~93).
+
+**Nota**: il primo caso è splittato in due `it()` separati per isolare la diagnostica del FAIL. Il primo verifica solo "non è un Link" (sicuramente FAIL con codice attuale perché `href+count=0+onCreate` entra nel ramo Link). Il secondo verifica il click handler (dipende dal rendering come button).
 
 ```tsx
-it('renders as button (not Link) when hasCreate is true and count is 0 even if href is provided', async () => {
+it('does NOT render as Link when hasCreate is true and href is provided (even with count 0)', () => {
   const onCreate = vi.fn();
   render(<ConnectionChip entityType="player" count={0} href="/players" onCreate={onCreate} />);
   expect(screen.queryByRole('link')).not.toBeInTheDocument();
-  const btn = screen.getByRole('button');
-  await userEvent.click(btn);
+  expect(screen.getByRole('button')).toBeInTheDocument();
+});
+
+it('invokes onCreate when clicked with href + count 0 + onCreate', async () => {
+  const onCreate = vi.fn();
+  render(<ConnectionChip entityType="player" count={0} href="/players" onCreate={onCreate} />);
+  await userEvent.click(screen.getByRole('button'));
   expect(onCreate).toHaveBeenCalledTimes(1);
 });
 
@@ -163,10 +170,13 @@ it('renders as disabled button when href is provided and disabled is true', () =
 
 Run:
 ```bash
-cd D:/Repositories/meepleai-monorepo-frontend/apps/web && pnpm vitest run src/components/ui/data-display/meeple-card/parts/__tests__/ConnectionChip.test.tsx -t "renders as button|renders as disabled button"
+cd D:/Repositories/meepleai-monorepo-frontend/apps/web && pnpm vitest run src/components/ui/data-display/meeple-card/parts/__tests__/ConnectionChip.test.tsx -t "does NOT render as Link|invokes onCreate when clicked|renders as disabled button"
 ```
 
-Expected: FAIL — primo test: Link renderizzato invece di button (e onCreate non chiamato). Secondo test: PASS già (disabled guard esiste), ma deve continuare a passare.
+Expected:
+- Test 1 ("does NOT render as Link"): **FAIL** — codice attuale renderizza `<Link>` perché guardia è `href && !hasItems && !disabled` senza `!hasCreate`
+- Test 2 ("invokes onCreate when clicked"): **FAIL** — l'handler `onClick` sul `<Link>` potrebbe non venir chiamato in JSDOM, o essere chiamato ma la navigation non impedita; diagnostica isolata
+- Test 3 ("renders as disabled button"): **PASS già** — `!disabled` guard esiste; continuerà a passare dopo l'impl
 
 ### - [ ] Step 3: Aggiornare branching per far vincere `onCreate`
 
@@ -219,7 +229,7 @@ Run:
 cd D:/Repositories/meepleai-monorepo-frontend/apps/web && pnpm vitest run src/components/ui/data-display/meeple-card/parts/__tests__/ConnectionChip.test.tsx
 ```
 
-Expected: 17 pass (15 precedenti + 2 nuovi). Particolare attenzione al test esistente `renders as a link when href is provided and no items/popover` (riga 88): deve continuare a passare perché non passa `onCreate`.
+Expected: 18 pass (15 precedenti + 3 nuovi). Particolare attenzione al test esistente `renders as a link when href is provided and no items/popover` (riga 88): deve continuare a passare perché non passa `onCreate`.
 
 ### - [ ] Step 5: Commit
 
@@ -257,14 +267,20 @@ it('PopoverContent has aria-labelledby pointing to the header title', () => {
       <button>trigger</button>
     </ConnectionChipPopover>
   );
-  // Radix Popover renders content in a Portal; use document queries.
-  const content = document.querySelector('[role="dialog"]');
+  // Radix Popover renders content in a Portal. The Content element exposes role="dialog";
+  // fallback strategy: cerca per role, se null fallback sul wrapper Radix data attribute.
+  const content =
+    document.querySelector('[role="dialog"]') ??
+    document.querySelector('[data-radix-popper-content-wrapper] > *');
   expect(content).toBeTruthy();
+
   const labelledBy = content?.getAttribute('aria-labelledby');
   expect(labelledBy).toBeTruthy();
+
   const header = document.getElementById(labelledBy!);
   expect(header).toBeTruthy();
-  expect(header?.textContent).toMatch(/session/i);
+  // Header mostra "Session (N)" — il testo include l'entity label
+  expect(header?.textContent?.toLowerCase()).toMatch(/session/);
 });
 
 it('pressing Escape closes the popover', async () => {
@@ -274,10 +290,13 @@ it('pressing Escape closes the popover', async () => {
       <button>trigger</button>
     </ConnectionChipPopover>
   );
+  // Radix ascolta Escape a livello document; il focus non deve essere forzato dentro il popover.
   await userEvent.keyboard('{Escape}');
   expect(onOpenChange).toHaveBeenCalledWith(false);
 });
 ```
+
+**Nota diagnostica**: se il test aria-labelledby fallisce sulla prima asserzione (`content` null), il `PopoverContent` non sta renderizzando `role="dialog"` — verificare la versione di `@radix-ui/react-popover`. Con versioni recenti (≥1.0) il role è impostato di default sul `Content`.
 
 ### - [ ] Step 2: Far fallire il test aria-labelledby
 
@@ -345,7 +364,7 @@ Run:
 cd D:/Repositories/meepleai-monorepo-frontend/apps/web && pnpm vitest run src/components/ui/data-display/meeple-card/
 ```
 
-Expected: tutti i test pass. Baseline post-Task 2: 137+4 = 141 test pass attesi dopo questa PR (4 nuovi in ConnectionChip.test + 2 in ConnectionChipPopover.test — `2+2+2=6` aggiunti, però ne abbiamo aggiunti 3 in Task 1+2 e 2 in Task 3 = 5. Baseline atteso: 142).
+Expected: tutti i test pass. Baseline: 137 precedenti + 1 (Task 1) + 3 (Task 2) + 2 (Task 3) = **143 test pass attesi**.
 
 Se fallimenti di test pre-esistenti NON introdotti in questa PR compaiono, annotarli ma non bloccare — eventuale issue separata.
 

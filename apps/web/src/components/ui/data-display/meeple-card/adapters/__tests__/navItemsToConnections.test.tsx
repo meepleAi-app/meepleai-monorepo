@@ -42,4 +42,17 @@ describe('navItemsToConnections — happy path', () => {
   it('returns empty array for empty input', () => {
     expect(navItemsToConnections([])).toEqual([]);
   });
+
+  it('W3: count>0 + onPlusClick → onCreate dropped, emits indexed warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fn = vi.fn();
+    const out = navItemsToConnections([
+      { label: 'A', entity: 'player', count: 0, icon: null },
+      { label: 'B', entity: 'player', count: 2, showPlus: true, onPlusClick: fn, icon: null },
+    ]);
+    expect(out[1].onCreate).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/navItems\[1\].*onPlusClick.*dropped.*count>0/)
+    );
+  });
 });

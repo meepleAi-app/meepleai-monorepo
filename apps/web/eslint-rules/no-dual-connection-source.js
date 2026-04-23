@@ -12,6 +12,14 @@
  * call site creates an ambiguous render contract and defeats the
  * adapter fallback, so we forbid the co-presence statically.
  *
+ * **Known limitations:**
+ * - Spread attributes (`<MeepleCard {...props} connections={x} />`) cannot be
+ *   statically analysed: if `props` happens to contain `navItems`/`manaPips`
+ *   the co-presence is invisible to this rule. The runtime `useConnectionSource`
+ *   hook still emits a dev-only "dual source" warning (W4) in that case, so the
+ *   invariant remains enforced at runtime — this rule only catches the
+ *   statically-detectable subset to provide immediate IDE feedback.
+ *
  * **References:**
  * - Spec: docs/superpowers/specs/2026-04-23-connectionchip-step-1.6-renderer-integration.md §R1.6.3 "Single-source invariant"
  * - Plan: docs/superpowers/plans/2026-04-23-connectionchip-step-1.6-renderer-integration.md §8

@@ -18,6 +18,7 @@ import { createRequire } from 'node:module';
 
 import { RuleTester } from 'eslint';
 
+// CJS interop: the rule file is `module.exports`, but Vitest runs ESM here.
 const require = createRequire(import.meta.url);
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const rule = require('../no-dual-connection-source.js');

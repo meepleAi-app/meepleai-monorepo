@@ -76,7 +76,9 @@ export function ConnectionChipPopover({
                   style={{ color: 'var(--mc-text, inherit)' }}
                 >
                   <span className="shrink-0" style={{ color: tokens.solid }}>
-                    <Icon size={14} strokeWidth={ENTITY_ICON_STROKE} aria-hidden="true" />
+                    {iconOverride ?? (
+                      <Icon size={14} strokeWidth={ENTITY_ICON_STROKE} aria-hidden="true" />
+                    )}
                   </span>
                   <span className="truncate">{item.label}</span>
                 </Link>

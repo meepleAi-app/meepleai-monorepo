@@ -112,8 +112,8 @@ describe('ConnectionChipPopover', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('renders iconOverride in the popover header when provided', () => {
-    const Custom = () => <svg data-testid="popover-header-icon" />;
+  it('renders iconOverride in the popover header and item rows when provided', () => {
+    const Custom = () => <svg data-testid="popover-icon-override" />;
     render(
       <ConnectionChipPopover
         open
@@ -125,6 +125,9 @@ describe('ConnectionChipPopover', () => {
         <button>trigger</button>
       </ConnectionChipPopover>
     );
-    expect(screen.getByTestId('popover-header-icon')).toBeInTheDocument();
+    // Radix renders content in a Portal — query via document.
+    // Expect exactly 1 header + N item rows = 1 + items.length overrides.
+    const overrides = document.querySelectorAll('[data-testid="popover-icon-override"]');
+    expect(overrides.length).toBe(1 + items.length);
   });
 });

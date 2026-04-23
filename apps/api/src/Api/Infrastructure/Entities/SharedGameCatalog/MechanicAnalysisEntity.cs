@@ -54,4 +54,5 @@ public class MechanicAnalysisEntity
     // === Navigation ===
     public SharedGameEntity SharedGame { get; set; } = default!;
     public ICollection<MechanicClaimEntity> Claims { get; set; } = new List<MechanicClaimEntity>();
+    public ICollection<MechanicAnalysisSectionRunEntity> SectionRuns { get; set; } = new List<MechanicAnalysisSectionRunEntity>();
 }

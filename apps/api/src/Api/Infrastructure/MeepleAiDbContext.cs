@@ -140,6 +140,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<MechanicCitationEntity> MechanicCitations => Set<MechanicCitationEntity>(); // ISSUE-523: Child of MechanicClaim (ADR-051 T1 quote cap)
     public DbSet<MechanicStatusAuditEntity> MechanicStatusAudits => Set<MechanicStatusAuditEntity>(); // ISSUE-523: T6 audit trail for lifecycle transitions
     public DbSet<MechanicSuppressionAuditEntity> MechanicSuppressionAudits => Set<MechanicSuppressionAuditEntity>(); // ISSUE-523: T5 audit trail for suppressions
+    public DbSet<MechanicAnalysisSectionRunEntity> MechanicAnalysisSectionRuns => Set<MechanicAnalysisSectionRunEntity>(); // ISSUE-524: M1.2 per-section provider/token tracking (B6=C)
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management

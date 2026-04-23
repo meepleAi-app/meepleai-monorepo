@@ -103,6 +103,8 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Infrastructure\Seeders\Catalog\Manifests\*.yml" />
+    <!-- ISSUE-524 / M1.2: MechanicExtractor prompts (ADR-051, B4=A: versioned via git) -->
+    <EmbeddedResource Include="BoundedContexts\SharedGameCatalog\Infrastructure\Prompts\MechanicExtractor\v1\*.md" />
   </ItemGroup>
   <!-- MeepleDev: exclude dev tools from Release builds -->
   <ItemGroup Condition="'$(Configuration)' == 'Release'">

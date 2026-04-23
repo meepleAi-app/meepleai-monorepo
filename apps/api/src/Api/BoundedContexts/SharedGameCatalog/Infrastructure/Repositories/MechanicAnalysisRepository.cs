@@ -98,6 +98,37 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
         return entities.Select(e => MapToDomain(e, e.Claims)).ToList();
     }
 
+    public async Task<MechanicAnalysis?> FindByPromptVersionAsync(
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        string promptVersion,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(promptVersion))
+        {
+            throw new ArgumentException("PromptVersion is required.", nameof(promptVersion));
+        }
+
+        // IgnoreQueryFilters so suppressed rows still block T7 idempotency collisions
+        // (a takedown on one row shouldn't silently spawn a duplicate).
+        // Exclude Rejected (status = 3) so operators can retry the same prompt version
+        // after an auto-rejection (cost cap, LLM failure).
+        var entity = await DbContext.MechanicAnalyses
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .AsSplitQuery()
+            .Include(a => a.Claims)
+                .ThenInclude(c => c.Citations)
+            .Where(a => a.SharedGameId == sharedGameId
+                        && a.PdfDocumentId == pdfDocumentId
+                        && a.PromptVersion == promptVersion
+                        && a.Status != (int)MechanicAnalysisStatus.Rejected)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity is null ? null : MapToDomain(entity, entity.Claims);
+    }
+
     public void Update(MechanicAnalysis analysis)
     {
         ArgumentNullException.ThrowIfNull(analysis);

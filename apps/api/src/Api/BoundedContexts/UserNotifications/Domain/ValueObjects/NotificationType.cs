@@ -91,6 +91,12 @@ internal sealed class NotificationType : ValueObject
     // Slack connection forcibly revoked by workspace admin
     public static readonly NotificationType SlackConnectionRevoked = new("slack_connection_revoked");
 
+    // ISSUE-524 / M1.2: Mechanic analysis pipeline lifecycle (async pipeline completion alerts).
+    // MechanicAnalysisReady fires when the aggregate transitions to InReview (pipeline succeeded).
+    // MechanicAnalysisRejected fires when the aggregate is auto-rejected mid-pipeline (e.g. cost cap).
+    public static readonly NotificationType MechanicAnalysisReady = new("mechanic_analysis_ready");
+    public static readonly NotificationType MechanicAnalysisRejected = new("mechanic_analysis_rejected");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -158,6 +164,8 @@ internal sealed class NotificationType : ValueObject
             "admin_manual_notification" => AdminManualNotification,
             "admin_pdf_processing_started" => AdminPdfProcessingStarted,
             "slack_connection_revoked" => SlackConnectionRevoked,
+            "mechanic_analysis_ready" => MechanicAnalysisReady,
+            "mechanic_analysis_rejected" => MechanicAnalysisRejected,
             // Legacy aliases — old type strings from DB or older clients map to new types
             "pdf_upload_completed" => DocumentReady,
             "processing_job_completed" => DocumentReady,

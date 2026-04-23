@@ -1,6 +1,9 @@
 'use client';
 
+import { navItemsToConnections } from '../adapters/navItemsToConnections';
+import { useConnectionSource } from '../hooks/useConnectionSource';
 import { AccentBorder } from '../parts/AccentBorder';
+import { ConnectionChipStrip } from '../parts/ConnectionChipStrip';
 import { Cover } from '../parts/Cover';
 import { EntityBadge } from '../parts/EntityBadge';
 import { ManaPips } from '../parts/ManaPips';
@@ -34,6 +37,8 @@ export function GridCard(props: MeepleCardProps) {
     className = '',
   } = props;
   const testId = props['data-testid'];
+
+  const { source, items: csItems, variant: csVariant } = useConnectionSource(props);
 
   const glowColor = entityHsl(entity, 0.4);
 
@@ -76,7 +81,15 @@ export function GridCard(props: MeepleCardProps) {
         {metadata.length > 0 && <MetaChips metadata={metadata} />}
       </div>
       {manaPips && manaPips.length > 0 && <ManaPips pips={manaPips} size="md" />}
-      {navItems.length > 0 && <NavFooter items={navItems} />}
+      {source === 'connections' && csItems.length > 0 && (
+        <ConnectionChipStrip connections={csItems} variant={csVariant} />
+      )}
+      {source === 'navItems' && !props.__useConnectionsForNavItems && navItems.length > 0 && (
+        <NavFooter items={navItems} />
+      )}
+      {source === 'navItems' && props.__useConnectionsForNavItems && navItems.length > 0 && (
+        <ConnectionChipStrip connections={navItemsToConnections(navItems)} variant={csVariant} />
+      )}
     </div>
   );
 }

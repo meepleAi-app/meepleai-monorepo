@@ -29,7 +29,11 @@ export function ConnectionChipStrip({ variant, connections, className }: Connect
       : 'flex items-center gap-1.5';
 
   return (
-    <div className={`${containerClass} ${className ?? ''}`.trim()} data-strip-variant={variant}>
+    <div
+      className={`${containerClass} ${className ?? ''}`.trim()}
+      data-strip-variant={variant}
+      data-testid="connection-chip-strip"
+    >
       {connections.map((chipProps, i) => (
         <ConnectionChip
           key={`${chipProps.entityType}-${i}`}

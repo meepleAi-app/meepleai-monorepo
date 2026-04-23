@@ -126,6 +126,8 @@ export interface MeepleCardProps {
   customColor?: string;
   /** Optional test id forwarded to the root wrapper element. */
   'data-testid'?: string;
+  /** @internal Opt-in: use ConnectionChipStrip for navItems-source rendering (A/B in tests). Remove in Step 2. */
+  __useConnectionsForNavItems?: boolean;
 }
 
 export interface Carousel3DProps {

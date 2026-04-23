@@ -2,7 +2,10 @@
 
 import Link from 'next/link';
 
+import { navItemsToConnections } from '../adapters/navItemsToConnections';
+import { useConnectionSource } from '../hooks/useConnectionSource';
 import { AccentBorder } from '../parts/AccentBorder';
+import { ConnectionChipStrip } from '../parts/ConnectionChipStrip';
 import { Cover } from '../parts/Cover';
 import { MetaChips } from '../parts/MetaChips';
 import { Rating } from '../parts/Rating';
@@ -25,6 +28,25 @@ export function FocusCard(props: MeepleCardProps) {
     className = '',
   } = props;
   const testId = props['data-testid'];
+
+  // FocusCard's chip row is visually an `inline` strip.
+  const { source, items: csItems } = useConnectionSource({
+    ...props,
+    connectionsVariant: 'inline',
+  });
+
+  const useConnectionsRenderer =
+    source === 'connections' || (source === 'navItems' && props.__useConnectionsForNavItems);
+
+  const connectionsForRender =
+    source === 'connections'
+      ? csItems
+      : source === 'navItems' && props.__useConnectionsForNavItems
+        ? navItemsToConnections(navItems)
+        : [];
+
+  const renderLegacyNavItems =
+    source === 'navItems' && !props.__useConnectionsForNavItems && navItems.length > 0;
 
   return (
     <div
@@ -51,8 +73,16 @@ export function FocusCard(props: MeepleCardProps) {
         </div>
       </div>
 
-      {/* NavItem chip row */}
-      {navItems.length > 0 && (
+      {/* Connections path — ConnectionChipStrip inline variant inside the
+          border-top container so it matches the legacy NavItem chip row */}
+      {useConnectionsRenderer && connectionsForRender.length > 0 && (
+        <div className="border-t border-[var(--mc-border-light)] px-4 py-3">
+          <ConnectionChipStrip connections={connectionsForRender} variant="inline" />
+        </div>
+      )}
+
+      {/* Legacy NavItem chip row (default) */}
+      {renderLegacyNavItems && (
         <div className="flex flex-wrap gap-2 border-t border-[var(--mc-border-light)] px-4 py-3">
           {navItems.map((item, i) => {
             const color = entityHsl(item.entity);

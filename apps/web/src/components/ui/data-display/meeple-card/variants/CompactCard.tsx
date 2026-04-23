@@ -9,6 +9,11 @@ export function CompactCard(props: MeepleCardProps) {
   const { entity, title, badge, manaPips, onClick, className = '' } = props;
   const testId = props['data-testid'];
 
+  // S10 documented no-op: CompactCard does not render `connections` or
+  // `navItems`. The dense list-item layout has no room for a chip strip;
+  // navigation affordances live on the parent container. If the caller
+  // passes `connections`, we silently ignore to preserve layout invariants.
+
   return (
     <div
       className={`group flex items-center gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-card)] px-2.5 py-2 shadow-[var(--mc-shadow-sm)] transition-transform duration-200 hover:scale-[1.02] ${className}`}

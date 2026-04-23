@@ -265,11 +265,13 @@ export default function MechanicAnalysesPage() {
 
   const canSuppress = !!status && !status.isSuppressed;
 
+  const parsedOverrideCap = Number.parseFloat(overrideCapUsd);
+  const isOverrideCapValid = Number.isFinite(parsedOverrideCap) && parsedOverrideCap > 0;
   const canGenerate =
     !!selectedGameId &&
     !!selectedPdfId &&
     costCapUsd !== '' &&
-    (!overrideEnabled || (!!overrideReason && overrideReason.length >= 20)) &&
+    (!overrideEnabled || (isOverrideCapValid && !!overrideReason && overrideReason.length >= 20)) &&
     !generateMutation.isPending;
 
   return (
@@ -655,7 +657,15 @@ export default function MechanicAnalysesPage() {
       )}
 
       {/* Suppress dialog */}
-      <AlertDialog open={suppressOpen} onOpenChange={setSuppressOpen}>
+      <AlertDialog
+        open={suppressOpen}
+        onOpenChange={open => {
+          setSuppressOpen(open);
+          if (!open) {
+            setSuppressReason('');
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Suppress this analysis?</AlertDialogTitle>

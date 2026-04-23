@@ -126,4 +126,12 @@ describe('ConnectionChip', () => {
     const btn = screen.getByRole('button');
     expect(btn).toBeDisabled();
   });
+
+  it('renders iconOverride instead of default entity icon when provided', () => {
+    const Custom = () => <svg data-testid="custom-icon" />;
+    const { container } = render(
+      <ConnectionChip entityType="kb" count={3} iconOverride={<Custom />} />
+    );
+    expect(container.querySelector('[data-testid="custom-icon"]')).toBeTruthy();
+  });
 });

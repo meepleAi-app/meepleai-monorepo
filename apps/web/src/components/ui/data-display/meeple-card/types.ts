@@ -76,6 +76,11 @@ export interface ConnectionChipProps {
   colorOverride?: string;
   disabled?: boolean;
   loading?: boolean;
+  /**
+   * Optional icon node to render instead of the default Lucide icon for `entityType`.
+   * Used by the `navItems → connections` adapter to preserve custom icons.
+   */
+  iconOverride?: import('react').ReactNode;
 }
 
 export type OwnershipBadge = 'owned' | 'wishlist' | 'archived';

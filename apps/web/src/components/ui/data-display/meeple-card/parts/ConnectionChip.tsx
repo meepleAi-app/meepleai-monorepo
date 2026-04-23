@@ -38,6 +38,7 @@ export function ConnectionChip({
   colorOverride,
   disabled = false,
   loading = false,
+  iconOverride,
 }: ConnectionChipProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const tokens = entityTokens(entityType);
@@ -88,12 +89,14 @@ export function ConnectionChip({
       className="relative inline-flex items-center justify-center rounded-full transition-all duration-200 group-hover/chip:scale-[1.08] group-hover/chip:bg-[var(--mc-chip-hover-bg)] group-hover/chip:shadow-[0_0_0_4px_var(--mc-chip-glow),0_4px_12px_var(--mc-chip-shadow)] motion-reduce:group-hover/chip:scale-100"
       style={chipFaceStyle}
     >
-      <Icon
-        size={iconPx}
-        strokeWidth={ENTITY_ICON_STROKE}
-        aria-hidden="true"
-        style={{ opacity: isEmpty ? (hasCreate ? 0.7 : 0.45) : 1 }}
-      />
+      {iconOverride ?? (
+        <Icon
+          size={iconPx}
+          strokeWidth={ENTITY_ICON_STROKE}
+          aria-hidden="true"
+          style={{ opacity: isEmpty ? (hasCreate ? 0.7 : 0.45) : 1 }}
+        />
+      )}
 
       {hasCount && (
         <span

@@ -1,0 +1,520 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
+using Api.SharedKernel.Domain.Entities;
+
+namespace Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
+
+/// <summary>
+/// Aggregate root for the AI-first Mechanic Extractor pipeline (ADR-051). Represents a single
+/// AI-generated analysis of a game's rulebook PDF, with a lifecycle state machine, per-claim
+/// review, suppression kill-switch (T5), and cost cap governance (T8).
+/// </summary>
+/// <remarks>
+/// Lifecycle state machine:
+/// <code>
+///   Draft (0) ──SubmitForReview──► InReview (1)
+///   InReview (1) ──Approve──────► Published (2)   (requires all claims Approved)
+///   InReview (1) ──Reject───────► Rejected (3)
+///   Rejected (3) ──SubmitForReview──► InReview (1) (re-submit after edits)
+/// </code>
+/// Suppression (<see cref="IsSuppressed"/>) is orthogonal to <see cref="Status"/>: a Published
+/// analysis may be suppressed without changing status. Global query filter hides suppressed rows
+/// from player-facing queries.
+/// </remarks>
+public sealed class MechanicAnalysis : AggregateRoot<Guid>
+{
+    private readonly List<MechanicClaim> _claims = new();
+
+    private static readonly Dictionary<MechanicAnalysisStatus, MechanicAnalysisStatus[]> ValidTransitions = new()
+    {
+        [MechanicAnalysisStatus.Draft] = new[] { MechanicAnalysisStatus.InReview },
+        [MechanicAnalysisStatus.InReview] = new[] { MechanicAnalysisStatus.Published, MechanicAnalysisStatus.Rejected },
+        [MechanicAnalysisStatus.Rejected] = new[] { MechanicAnalysisStatus.InReview },
+        [MechanicAnalysisStatus.Published] = Array.Empty<MechanicAnalysisStatus>()
+    };
+
+    // === Core identity / lineage ===
+
+    public Guid SharedGameId { get; private set; }
+    public Guid PdfDocumentId { get; private set; }
+    public string PromptVersion { get; private set; } = string.Empty;
+
+    // === Lifecycle ===
+
+    public MechanicAnalysisStatus Status { get; private set; }
+    public Guid CreatedBy { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public Guid? ReviewedBy { get; private set; }
+    public DateTime? ReviewedAt { get; private set; }
+    public string? RejectionReason { get; private set; }
+
+    // === LLM execution snapshot ===
+
+    public int TotalTokensUsed { get; private set; }
+    public decimal EstimatedCostUsd { get; private set; }
+    public string ModelUsed { get; private set; } = string.Empty;
+    public string Provider { get; private set; } = string.Empty;
+
+    // === T8 cost governance (ADR-051) ===
+
+    public decimal CostCapUsd { get; private set; }
+    public DateTime? CostCapOverrideAt { get; private set; }
+    public Guid? CostCapOverrideBy { get; private set; }
+    public string? CostCapOverrideReason { get; private set; }
+
+    // === T5 takedown kill-switch ===
+
+    public bool IsSuppressed { get; private set; }
+    public DateTime? SuppressedAt { get; private set; }
+    public Guid? SuppressedBy { get; private set; }
+    public string? SuppressionReason { get; private set; }
+    public DateTime? SuppressionRequestedAt { get; private set; }
+    public SuppressionRequestSource? SuppressionRequestSource { get; private set; }
+
+    // === Children ===
+
+    public IReadOnlyList<MechanicClaim> Claims => _claims.AsReadOnly();
+
+    /// <summary>EF Core constructor.</summary>
+    private MechanicAnalysis() : base()
+    {
+    }
+
+    private MechanicAnalysis(
+        Guid id,
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        string promptVersion,
+        Guid createdBy,
+        DateTime createdAt,
+        string modelUsed,
+        string provider,
+        decimal costCapUsd)
+        : base(id)
+    {
+        SharedGameId = sharedGameId;
+        PdfDocumentId = pdfDocumentId;
+        PromptVersion = promptVersion;
+        Status = MechanicAnalysisStatus.Draft;
+        CreatedBy = createdBy;
+        CreatedAt = createdAt;
+        ModelUsed = modelUsed;
+        Provider = provider;
+        CostCapUsd = costCapUsd;
+        IsSuppressed = false;
+        TotalTokensUsed = 0;
+        EstimatedCostUsd = 0m;
+    }
+
+    /// <summary>
+    /// Creates a new analysis in <see cref="MechanicAnalysisStatus.Draft"/> status with the
+    /// initial set of claims produced by the AI pipeline. The claims list can be empty if the
+    /// caller plans to populate it via subsequent calls (but the state will not be valid until
+    /// at least one claim exists).
+    /// </summary>
+    public static MechanicAnalysis Create(
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        string promptVersion,
+        Guid createdBy,
+        DateTime createdAt,
+        string modelUsed,
+        string provider,
+        decimal costCapUsd,
+        IEnumerable<MechanicClaim>? initialClaims = null)
+    {
+        if (sharedGameId == Guid.Empty)
+        {
+            throw new ArgumentException("SharedGameId cannot be empty.", nameof(sharedGameId));
+        }
+
+        if (pdfDocumentId == Guid.Empty)
+        {
+            throw new ArgumentException("PdfDocumentId cannot be empty.", nameof(pdfDocumentId));
+        }
+
+        if (string.IsNullOrWhiteSpace(promptVersion))
+        {
+            throw new ArgumentException("PromptVersion is required for reproducibility (ADR-051 T7).", nameof(promptVersion));
+        }
+
+        if (createdBy == Guid.Empty)
+        {
+            throw new ArgumentException("CreatedBy cannot be empty.", nameof(createdBy));
+        }
+
+        if (string.IsNullOrWhiteSpace(modelUsed))
+        {
+            throw new ArgumentException("ModelUsed is required.", nameof(modelUsed));
+        }
+
+        if (string.IsNullOrWhiteSpace(provider))
+        {
+            throw new ArgumentException("Provider is required.", nameof(provider));
+        }
+
+        if (costCapUsd <= 0m)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(costCapUsd),
+                costCapUsd,
+                "CostCapUsd must be strictly positive (ADR-051 T8).");
+        }
+
+        var analysis = new MechanicAnalysis(
+            id: Guid.NewGuid(),
+            sharedGameId: sharedGameId,
+            pdfDocumentId: pdfDocumentId,
+            promptVersion: promptVersion.Trim(),
+            createdBy: createdBy,
+            createdAt: createdAt,
+            modelUsed: modelUsed.Trim(),
+            provider: provider.Trim(),
+            costCapUsd: costCapUsd);
+
+        if (initialClaims is not null)
+        {
+            foreach (var claim in initialClaims)
+            {
+                analysis._claims.Add(claim);
+            }
+        }
+
+        return analysis;
+    }
+
+    /// <summary>
+    /// Adds a claim to a Draft analysis. Useful for incremental generation (one section at a time).
+    /// </summary>
+    public void AddClaim(MechanicClaim claim)
+    {
+        ArgumentNullException.ThrowIfNull(claim);
+
+        if (Status != MechanicAnalysisStatus.Draft)
+        {
+            throw new InvalidMechanicAnalysisStateException(
+                Id,
+                Status,
+                "add claim",
+                MechanicAnalysisStatus.Draft);
+        }
+
+        if (claim.AnalysisId != Id)
+        {
+            throw new ArgumentException(
+                $"Claim's AnalysisId ({claim.AnalysisId}) does not match this analysis ({Id}).",
+                nameof(claim));
+        }
+
+        _claims.Add(claim);
+    }
+
+    /// <summary>
+    /// Records the LLM usage snapshot (tokens + actual cost) after generation completes.
+    /// Callable only in Draft — once submitted for review the snapshot is frozen.
+    /// </summary>
+    public void RecordUsage(int totalTokensUsed, decimal estimatedCostUsd)
+    {
+        if (Status != MechanicAnalysisStatus.Draft)
+        {
+            throw new InvalidMechanicAnalysisStateException(
+                Id,
+                Status,
+                "record LLM usage",
+                MechanicAnalysisStatus.Draft);
+        }
+
+        if (totalTokensUsed < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(totalTokensUsed), totalTokensUsed, "Must be non-negative.");
+        }
+
+        if (estimatedCostUsd < 0m)
+        {
+            throw new ArgumentOutOfRangeException(nameof(estimatedCostUsd), estimatedCostUsd, "Must be non-negative.");
+        }
+
+        TotalTokensUsed = totalTokensUsed;
+        EstimatedCostUsd = estimatedCostUsd;
+    }
+
+    // === State transitions ===
+
+    /// <summary>
+    /// Submits the analysis for admin review. Allowed from Draft (first submit) or Rejected
+    /// (resubmit after edits).
+    /// </summary>
+    public void SubmitForReview(Guid actorId, DateTime utcNow)
+    {
+        if (actorId == Guid.Empty)
+        {
+            throw new ArgumentException("ActorId cannot be empty.", nameof(actorId));
+        }
+
+        EnsureTransitionAllowed("submit for review", MechanicAnalysisStatus.InReview);
+
+        if (_claims.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Cannot submit MechanicAnalysis {Id} for review: no claims have been added.");
+        }
+
+        // Resubmission after rejection: reset claim statuses to Pending so the admin re-reviews them.
+        if (Status == MechanicAnalysisStatus.Rejected)
+        {
+            foreach (var claim in _claims)
+            {
+                claim.ResetToPending();
+            }
+
+            RejectionReason = null;
+        }
+
+        var previous = Status;
+        Status = MechanicAnalysisStatus.InReview;
+        ReviewedBy = null;
+        ReviewedAt = null;
+
+        AddDomainEvent(new MechanicAnalysisStatusChangedEvent(Id, previous, Status, actorId, note: null));
+    }
+
+    /// <summary>
+    /// Approves the analysis and transitions it to Published. Requires every claim to be Approved.
+    /// </summary>
+    public void Approve(Guid reviewerId, DateTime utcNow)
+    {
+        if (reviewerId == Guid.Empty)
+        {
+            throw new ArgumentException("ReviewerId cannot be empty.", nameof(reviewerId));
+        }
+
+        EnsureTransitionAllowed("approve", MechanicAnalysisStatus.Published);
+
+        if (_claims.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Cannot approve MechanicAnalysis {Id}: it has no claims.");
+        }
+
+        if (_claims.Any(c => c.Status != MechanicClaimStatus.Approved))
+        {
+            throw new InvalidOperationException(
+                $"Cannot approve MechanicAnalysis {Id}: not all claims are Approved " +
+                $"(Pending={_claims.Count(c => c.Status == MechanicClaimStatus.Pending)}, " +
+                $"Rejected={_claims.Count(c => c.Status == MechanicClaimStatus.Rejected)}).");
+        }
+
+        var previous = Status;
+        Status = MechanicAnalysisStatus.Published;
+        ReviewedBy = reviewerId;
+        ReviewedAt = utcNow;
+
+        AddDomainEvent(new MechanicAnalysisStatusChangedEvent(Id, previous, Status, reviewerId, note: null));
+    }
+
+    /// <summary>
+    /// Rejects the analysis with a reason. The analysis can later be resubmitted via
+    /// <see cref="SubmitForReview(Guid, DateTime)"/> after the author edits the claims.
+    /// </summary>
+    public void Reject(Guid reviewerId, string reason, DateTime utcNow)
+    {
+        if (reviewerId == Guid.Empty)
+        {
+            throw new ArgumentException("ReviewerId cannot be empty.", nameof(reviewerId));
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ArgumentException("Rejection reason is required.", nameof(reason));
+        }
+
+        EnsureTransitionAllowed("reject", MechanicAnalysisStatus.Rejected);
+
+        var previous = Status;
+        Status = MechanicAnalysisStatus.Rejected;
+        ReviewedBy = reviewerId;
+        ReviewedAt = utcNow;
+        RejectionReason = reason.Trim();
+
+        AddDomainEvent(new MechanicAnalysisStatusChangedEvent(Id, previous, Status, reviewerId, RejectionReason));
+    }
+
+    /// <summary>
+    /// Approves a single claim. Valid only while the analysis is InReview.
+    /// </summary>
+    public void ApproveClaim(Guid claimId, Guid reviewerId, DateTime utcNow)
+    {
+        var claim = RequireClaimUnderReview(claimId, "approve claim");
+        claim.Approve(reviewerId, utcNow);
+    }
+
+    /// <summary>
+    /// Rejects a single claim with a note. Valid only while the analysis is InReview.
+    /// </summary>
+    public void RejectClaim(Guid claimId, Guid reviewerId, string note, DateTime utcNow)
+    {
+        var claim = RequireClaimUnderReview(claimId, "reject claim");
+        claim.Reject(reviewerId, note, utcNow);
+    }
+
+    // === Suppression (T5 kill-switch) ===
+
+    /// <summary>
+    /// Applies a takedown (suppress) on the analysis. Allowed from any status — suppression is
+    /// orthogonal to lifecycle.
+    /// </summary>
+    public void Suppress(
+        Guid actorId,
+        string reason,
+        SuppressionRequestSource requestSource,
+        DateTime? requestedAt,
+        DateTime utcNow)
+    {
+        if (actorId == Guid.Empty)
+        {
+            throw new ArgumentException("ActorId cannot be empty.", nameof(actorId));
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ArgumentException("Suppression reason is required (legal evidence chain).", nameof(reason));
+        }
+
+        if (IsSuppressed)
+        {
+            throw new InvalidOperationException($"MechanicAnalysis {Id} is already suppressed.");
+        }
+
+        IsSuppressed = true;
+        SuppressedAt = utcNow;
+        SuppressedBy = actorId;
+        SuppressionReason = reason.Trim();
+        SuppressionRequestSource = requestSource;
+        SuppressionRequestedAt = requestedAt;
+
+        AddDomainEvent(new MechanicAnalysisSuppressedEvent(
+            Id,
+            actorId,
+            SuppressionReason,
+            requestSource,
+            requestedAt));
+    }
+
+    /// <summary>
+    /// Lifts the takedown. Clears all suppression tracking fields.
+    /// </summary>
+    public void Unsuppress(Guid actorId, string reason, DateTime utcNow)
+    {
+        if (actorId == Guid.Empty)
+        {
+            throw new ArgumentException("ActorId cannot be empty.", nameof(actorId));
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ArgumentException("Unsuppression reason is required.", nameof(reason));
+        }
+
+        if (!IsSuppressed)
+        {
+            throw new InvalidOperationException($"MechanicAnalysis {Id} is not suppressed.");
+        }
+
+        IsSuppressed = false;
+        SuppressedAt = null;
+        SuppressedBy = null;
+        SuppressionReason = null;
+        SuppressionRequestSource = null;
+        SuppressionRequestedAt = null;
+
+        AddDomainEvent(new MechanicAnalysisUnsuppressedEvent(Id, actorId, reason.Trim()));
+    }
+
+    // === T8 cost cap override ===
+
+    /// <summary>
+    /// Raises the cost cap with an admin justification. All three override fields are set
+    /// atomically (DB CHECK enforces all-or-none).
+    /// </summary>
+    public void OverrideCostCap(Guid actorId, decimal newCapUsd, string reason, DateTime utcNow)
+    {
+        if (actorId == Guid.Empty)
+        {
+            throw new ArgumentException("ActorId cannot be empty.", nameof(actorId));
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ArgumentException("Override reason is required.", nameof(reason));
+        }
+
+        if (newCapUsd <= 0m)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(newCapUsd),
+                newCapUsd,
+                "New cap must be strictly positive.");
+        }
+
+        if (newCapUsd <= CostCapUsd)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(newCapUsd),
+                newCapUsd,
+                $"New cap must be greater than the current cap ({CostCapUsd:C}).");
+        }
+
+        var previous = CostCapUsd;
+        CostCapUsd = newCapUsd;
+        CostCapOverrideAt = utcNow;
+        CostCapOverrideBy = actorId;
+        CostCapOverrideReason = reason.Trim();
+
+        AddDomainEvent(new MechanicAnalysisCostCapOverriddenEvent(
+            Id,
+            actorId,
+            previous,
+            newCapUsd,
+            CostCapOverrideReason));
+    }
+
+    // === Helpers ===
+
+    private void EnsureTransitionAllowed(string operation, MechanicAnalysisStatus target)
+    {
+        if (!ValidTransitions.TryGetValue(Status, out var allowedTargets) ||
+            Array.IndexOf(allowedTargets, target) < 0)
+        {
+            var allowedFrom = ValidTransitions
+                .Where(kv => kv.Value.Contains(target))
+                .Select(kv => kv.Key)
+                .ToArray();
+
+            throw new InvalidMechanicAnalysisStateException(
+                Id,
+                Status,
+                operation,
+                allowedFrom);
+        }
+    }
+
+    private MechanicClaim RequireClaimUnderReview(Guid claimId, string operation)
+    {
+        if (Status != MechanicAnalysisStatus.InReview)
+        {
+            throw new InvalidMechanicAnalysisStateException(
+                Id,
+                Status,
+                operation,
+                MechanicAnalysisStatus.InReview);
+        }
+
+        var claim = _claims.FirstOrDefault(c => c.Id == claimId)
+            ?? throw new InvalidOperationException(
+                $"Claim {claimId} does not belong to MechanicAnalysis {Id}.");
+
+        return claim;
+    }
+}

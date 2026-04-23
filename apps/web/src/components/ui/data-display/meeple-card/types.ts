@@ -57,6 +57,31 @@ export type CardStatus =
   | 'completed'
   | 'paused';
 
+export interface ConnectionItem {
+  id: string;
+  label: string;
+  href: string;
+}
+
+export interface ConnectionChipProps {
+  entityType: MeepleEntityType;
+  count?: number;
+  items?: ConnectionItem[];
+  size?: 'sm' | 'md';
+  showLabel?: boolean;
+  label?: string;
+  onCreate?: () => void;
+  createLabel?: string;
+  href?: string;
+  colorOverride?: string;
+  disabled?: boolean;
+  loading?: boolean;
+}
+
+export type OwnershipBadge = 'owned' | 'wishlist' | 'archived';
+
+export type LifecycleState = 'active' | 'idle' | 'completed' | 'setup' | 'processing' | 'failed';
+
 export interface CoverLabel {
   text: string;
   color?: string;
@@ -79,6 +104,10 @@ export interface MeepleCardProps {
   actions?: MeepleCardAction[];
   navItems?: NavFooterItem[];
   manaPips?: ManaPip[];
+  connections?: ConnectionChipProps[];
+  connectionsVariant?: 'footer' | 'inline' | 'auto';
+  ownership?: OwnershipBadge;
+  lifecycle?: LifecycleState;
   onClick?: () => void;
   flippable?: boolean;
   flipBackContent?: ReactNode;

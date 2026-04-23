@@ -195,6 +195,14 @@ namespace Api.Infrastructure.Migrations
                 unique: true,
                 filter: "status = 2 AND is_suppressed = false");
 
+            // T7 reproducibility: one non-rejected analysis per (game, pdf, prompt_version)
+            migrationBuilder.CreateIndex(
+                name: "ux_mechanic_analyses_shared_game_pdf_prompt",
+                table: "mechanic_analyses",
+                columns: new[] { "shared_game_id", "pdf_document_id", "prompt_version" },
+                unique: true,
+                filter: "status <> 3");
+
             migrationBuilder.CreateIndex(
                 name: "ix_mechanic_citations_chunk_id",
                 table: "mechanic_citations",

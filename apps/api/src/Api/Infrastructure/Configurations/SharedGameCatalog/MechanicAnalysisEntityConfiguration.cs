@@ -115,6 +115,15 @@ internal sealed class MechanicAnalysisEntityConfiguration : IEntityTypeConfigura
             .IsUnique()
             .HasFilter("status = 2 AND is_suppressed = false");
 
+        // T7 reproducibility (plan §2.2 + §3.5): one non-rejected analysis per
+        // (SharedGameId, PdfDocumentId, PromptVersion) tuple. Excluding Rejected (status=3)
+        // lets users re-run the same prompt after a rejection without collision,
+        // while a new PromptVersion bump always produces a fresh row.
+        builder.HasIndex(a => new { a.SharedGameId, a.PdfDocumentId, a.PromptVersion })
+            .HasDatabaseName("ux_mechanic_analyses_shared_game_pdf_prompt")
+            .IsUnique()
+            .HasFilter("status <> 3");
+
         // === FK to SharedGame ===
         builder.HasOne(a => a.SharedGame)
             .WithMany()

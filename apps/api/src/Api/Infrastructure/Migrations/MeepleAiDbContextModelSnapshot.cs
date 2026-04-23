@@ -9569,6 +9569,11 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_mechanic_analyses_status");
 
+                    b.HasIndex("SharedGameId", "PdfDocumentId", "PromptVersion")
+                        .IsUnique()
+                        .HasDatabaseName("ux_mechanic_analyses_shared_game_pdf_prompt")
+                        .HasFilter("status <> 3");
+
                     b.ToTable("mechanic_analyses", null, t =>
                         {
                             t.HasCheckConstraint("ck_mechanic_analyses_cost_cap_override_all_or_none", "(cost_cap_override_at IS NULL AND cost_cap_override_by IS NULL AND cost_cap_override_reason IS NULL) OR (cost_cap_override_at IS NOT NULL AND cost_cap_override_by IS NOT NULL AND cost_cap_override_reason IS NOT NULL)");

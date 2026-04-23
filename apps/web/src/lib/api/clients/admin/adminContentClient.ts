@@ -45,6 +45,17 @@ import {
   type GetEntityLinksParams,
   type ImportBggExpansionsResponse,
 } from '../../schemas/entity-link.schemas';
+import {
+  MechanicAnalysisGenerationResponseDtoSchema,
+  MechanicAnalysisLifecycleResponseDtoSchema,
+  MechanicAnalysisStatusDtoSchema,
+  MECHANIC_ANALYSES_ROUTES,
+  type GenerateMechanicAnalysisRequest,
+  type MechanicAnalysisGenerationResponseDto,
+  type MechanicAnalysisLifecycleResponseDto,
+  type MechanicAnalysisStatusDto,
+  type SuppressMechanicAnalysisRequest,
+} from '../../schemas/mechanic-analyses.schemas';
 import * as MechanicExtractorSchemas from '../../schemas/mechanic-extractor.schemas';
 
 import type { HttpClient } from '../../core/httpClient';
@@ -520,6 +531,59 @@ export function createAdminContentClient(http: HttpClient) {
     ): Promise<unknown> {
       const result = await http.post('/api/v1/admin/mechanic-extractor/finalize', request);
       if (!result) throw new Error('Failed to finalize mechanic analysis');
+      return result;
+    },
+
+    // ========== Mechanic Analyses (M1.2 async pipeline, ADR-051) ==========
+
+    async generateMechanicAnalysis(
+      request: GenerateMechanicAnalysisRequest
+    ): Promise<MechanicAnalysisGenerationResponseDto> {
+      const result = await http.post(
+        MECHANIC_ANALYSES_ROUTES.create,
+        request,
+        MechanicAnalysisGenerationResponseDtoSchema
+      );
+      if (!result) throw new Error('Failed to enqueue mechanic analysis pipeline');
+      return result;
+    },
+
+    async getMechanicAnalysisStatus(id: string): Promise<MechanicAnalysisStatusDto | null> {
+      return http.get(MECHANIC_ANALYSES_ROUTES.status(id), MechanicAnalysisStatusDtoSchema);
+    },
+
+    async submitMechanicAnalysisForReview(
+      id: string
+    ): Promise<MechanicAnalysisLifecycleResponseDto> {
+      const result = await http.post(
+        MECHANIC_ANALYSES_ROUTES.submitReview(id),
+        {},
+        MechanicAnalysisLifecycleResponseDtoSchema
+      );
+      if (!result) throw new Error('Failed to submit mechanic analysis for review');
+      return result;
+    },
+
+    async approveMechanicAnalysis(id: string): Promise<MechanicAnalysisLifecycleResponseDto> {
+      const result = await http.post(
+        MECHANIC_ANALYSES_ROUTES.approve(id),
+        {},
+        MechanicAnalysisLifecycleResponseDtoSchema
+      );
+      if (!result) throw new Error('Failed to approve mechanic analysis');
+      return result;
+    },
+
+    async suppressMechanicAnalysis(
+      id: string,
+      request: SuppressMechanicAnalysisRequest
+    ): Promise<MechanicAnalysisLifecycleResponseDto> {
+      const result = await http.post(
+        MECHANIC_ANALYSES_ROUTES.suppress(id),
+        request,
+        MechanicAnalysisLifecycleResponseDtoSchema
+      );
+      if (!result) throw new Error('Failed to suppress mechanic analysis');
       return result;
     },
 

@@ -30,7 +30,11 @@ function userMsg(id: string, content: string): ChatMessageItem {
   return { id, role: 'user', content };
 }
 
-function assistantMsg(id: string, content: string, extras: Partial<ChatMessageItem> = {}): ChatMessageItem {
+function assistantMsg(
+  id: string,
+  content: string,
+  extras: Partial<ChatMessageItem> = {}
+): ChatMessageItem {
   return { id, role: 'assistant', content, ...extras };
 }
 
@@ -217,7 +221,10 @@ describe('threadMessagesReducer', () => {
 
   it('does not mutate the input state for any action', () => {
     const snapshot: ThreadMessagesState = seed([userMsg('u1', 'hello')]);
-    const frozen = Object.freeze({ ...snapshot, messages: Object.freeze(snapshot.messages.slice()) });
+    const frozen = Object.freeze({
+      ...snapshot,
+      messages: Object.freeze(snapshot.messages.slice()),
+    });
     const actions: ThreadMessagesAction[] = [
       { type: 'APPEND', message: assistantMsg('a1', 'hi') },
       { type: 'PATCH_BY_ID', id: 'u1', patch: { content: 'edited' } },
@@ -251,12 +258,57 @@ describe('useThreadMessages (scaffold)', () => {
     const firstSend = result.current.sendMessage;
     const firstContinue = result.current.continueStream;
     const firstAbort = result.current.abortCurrent;
+    const firstBeginAbort = result.current.beginAbort;
     const firstReplace = result.current.replaceMessages;
+    const firstAppend = result.current.appendMessage;
+    const firstPatch = result.current.patchMessageById;
+    const firstRemove = result.current.removeMessageById;
     rerender();
     expect(result.current.sendMessage).toBe(firstSend);
     expect(result.current.continueStream).toBe(firstContinue);
     expect(result.current.abortCurrent).toBe(firstAbort);
+    expect(result.current.beginAbort).toBe(firstBeginAbort);
     expect(result.current.replaceMessages).toBe(firstReplace);
+    expect(result.current.appendMessage).toBe(firstAppend);
+    expect(result.current.patchMessageById).toBe(firstPatch);
+    expect(result.current.removeMessageById).toBe(firstRemove);
+  });
+
+  it('appendMessage dispatches APPEND (freshly-read state, not closure)', () => {
+    const { result } = renderHook(() => useThreadMessages());
+    act(() => {
+      result.current.appendMessage(userMsg('u1', 'hello'));
+    });
+    act(() => {
+      result.current.appendMessage(assistantMsg('a1', 'hi'));
+    });
+    expect(result.current.messages.map(m => m.id)).toEqual(['u1', 'a1']);
+  });
+
+  it('patchMessageById merges partial updates into the matching message', () => {
+    const { result } = renderHook(() => useThreadMessages());
+    act(() => {
+      result.current.appendMessage(assistantMsg('a1', 'partial'));
+    });
+    act(() => {
+      result.current.patchMessageById('a1', { content: 'final' });
+    });
+    expect(result.current.messages[0]).toEqual({
+      id: 'a1',
+      role: 'assistant',
+      content: 'final',
+    });
+  });
+
+  it('removeMessageById drops the matching message', () => {
+    const { result } = renderHook(() => useThreadMessages());
+    act(() => {
+      result.current.replaceMessages([userMsg('u1', 'a'), assistantMsg('a1', 'b')]);
+    });
+    act(() => {
+      result.current.removeMessageById('a1');
+    });
+    expect(result.current.messages.map(m => m.id)).toEqual(['u1']);
   });
 
   it('replaceMessages swaps the list synchronously', () => {
@@ -289,6 +341,39 @@ describe('useThreadMessages (scaffold)', () => {
     }).not.toThrow();
   });
 
+  it('beginAbort returns a fresh AbortController and aborts the previous one', () => {
+    const { result } = renderHook(() => useThreadMessages());
+
+    let first!: AbortController;
+    act(() => {
+      first = result.current.beginAbort();
+    });
+    expect(first.signal.aborted).toBe(false);
+
+    let second!: AbortController;
+    act(() => {
+      second = result.current.beginAbort();
+    });
+    // Starting a new abort cycle MUST cancel the previous in-flight controller
+    // so the single-stream invariant holds even if callers forget to abort.
+    expect(first.signal.aborted).toBe(true);
+    expect(second.signal.aborted).toBe(false);
+    expect(second).not.toBe(first);
+  });
+
+  it('abortCurrent aborts the controller returned by beginAbort', () => {
+    const { result } = renderHook(() => useThreadMessages());
+    let controller!: AbortController;
+    act(() => {
+      controller = result.current.beginAbort();
+    });
+    expect(controller.signal.aborted).toBe(false);
+    act(() => {
+      result.current.abortCurrent();
+    });
+    expect(controller.signal.aborted).toBe(true);
+  });
+
   it('sendMessage and continueStream are no-op stubs that resolve', async () => {
     // Scaffold contract: wiring lands in Tasks 4-6. The stubs must still
     // satisfy the TS signature and not reject so call-sites can be migrated
@@ -297,9 +382,7 @@ describe('useThreadMessages (scaffold)', () => {
     await expect(
       result.current.sendMessage('anything', { threadId: 't1' })
     ).resolves.toBeUndefined();
-    await expect(
-      result.current.continueStream('tok', { gameId: 'g1' })
-    ).resolves.toBeUndefined();
+    await expect(result.current.continueStream('tok', { gameId: 'g1' })).resolves.toBeUndefined();
     // State remains untouched because the stubs don't dispatch.
     expect(result.current.messages).toEqual([]);
     expect(result.current.streamStatus).toBe('idle');

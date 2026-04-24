@@ -424,18 +424,13 @@ describe('ChatThreadView — thread-message invariants (characterization)', () =
   // -------------------------------------------------------------------------
   // Invariant 5 — Hydration aborts stream
   //
-  // CURRENT BEHAVIOR (pre-extraction): the cleanup useEffect at
-  // ChatThreadView.tsx:184-190 has empty deps `[]`, so it ONLY fires on unmount,
-  // NOT on threadId change. Switching threads mid-stream leaks the in-flight
-  // controller.
-  //
-  // This test pins the current (buggy) behavior so the extraction PR
-  // (`docs/superpowers/plans/2026-04-24-chat-thread-state-hook.md`, Task 6)
-  // is forced to flip the assertion — that PR will change `.toBe(false)` to
-  // `.toBe(true)` in the same commit that wires the hook's hydration abort.
+  // After `useThreadMessages` extraction (Task 7): the hydration effect in
+  // ChatThreadView now calls `abortCurrent()` at the top before re-loading
+  // thread data. Switching threadId synchronously aborts any in-flight
+  // stream, closing the controller leak that existed pre-extraction.
   // -------------------------------------------------------------------------
 
-  it('invariant 5 (current/leaky): switching threadId does NOT abort the in-flight stream — FIXME flip after hook extraction', async () => {
+  it('invariant 5: switching threadId aborts the in-flight stream', async () => {
     setQaStreamScript(
       [
         { type: QA_EVENT_TYPES_REAL.TOKEN, data: 'slow' },
@@ -457,9 +452,7 @@ describe('ChatThreadView — thread-message invariants (characterization)', () =
       view.rerender(<ChatThreadView threadId="thread-2" />);
     });
 
-    // FIXME(useThreadMessages-extraction): this assertion must flip to .toBe(true)
-    // once the hook owns the hydration-abort lifecycle. See plan Task 6.4.
-    expect(streamInvocations[0]?.aborted).toBe(false);
+    expect(streamInvocations[0]?.aborted).toBe(true);
   });
 
   // -------------------------------------------------------------------------

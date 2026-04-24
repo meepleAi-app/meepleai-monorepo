@@ -84,12 +84,19 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
   // State
   const [thread, setThread] = useState<ThreadData | null>(null);
-  const [messages, setMessages] = useState<ChatMessageItem[]>([]);
 
-  // Phase 1 Strangler Fig — hook mirrors local state during migration.
-  // Tasks 3-6 dual-write to both sources; Task 7 removes the local useState.
+  // Phase 1 Strangler Fig (Task 7 flip) — useThreadMessages is now the sole
+  // source of truth for the message list + AbortController lifecycle.
   // Plan: docs/superpowers/plans/2026-04-24-chat-thread-state-hook.md
-  const { replaceMessages: replaceMessagesInHook } = useThreadMessages();
+  const {
+    messages,
+    replaceMessages: replaceMessagesInHook,
+    appendMessage,
+    patchMessageById,
+    removeMessageById,
+    abortCurrent,
+    beginAbort,
+  } = useThreadMessages();
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -112,7 +119,6 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const voicePrefs = useVoicePreferencesStore();
   const lastMessageWasVoiceRef = useRef(false);
   const handleSendRef = useRef<((content?: string) => void) | undefined>(undefined);
-  const qaAbortRef = useRef<AbortController | null>(null);
 
   const {
     state: voiceState,
@@ -165,12 +171,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         timestamp: new Date().toISOString(),
         followUpQuestions: metadata.followUpQuestions,
       };
-      setMessages(prev => {
-        const next = [...prev, assistantMessage];
-        // Phase 1 Task 4 — dual-write: mirror SSE-complete append into useThreadMessages.
-        replaceMessagesInHook(next);
-        return next;
-      });
+      appendMessage(assistantMessage);
       // TTS: auto-speak response when last message was voice-initiated
       if (voicePrefs.ttsEnabled && lastMessageWasVoiceRef.current) {
         speak(answer);
@@ -196,16 +197,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     streamState.currentAnswer,
   ]);
 
-  // Abort QA stream on unmount
-  useEffect(
-    () => () => {
-      qaAbortRef.current?.abort();
-    },
-    []
-  );
-
   // Load thread data
+  // NOTE: useThreadMessages owns the unmount cleanup for the in-flight stream.
+  // When threadId changes we ALSO abort synchronously at the top of the effect
+  // so switching threads never leaks a partial stream onto the new thread
+  // (invariant: tests/ChatThreadView.invariants.test.tsx).
   useEffect(() => {
+    abortCurrent();
     async function loadThread() {
       setIsLoading(true);
       setError(null);
@@ -267,12 +265,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             timestamp: new Date().toISOString(),
             followUpQuestions: followUps,
           };
-          setMessages([welcomeMessage]);
-          // Phase 1 Task 3 — dual-write: mirror hydration into useThreadMessages.
           replaceMessagesInHook([welcomeMessage]);
         } else {
-          setMessages(mappedMessages);
-          // Phase 1 Task 3 — dual-write: mirror hydration into useThreadMessages.
           replaceMessagesInHook(mappedMessages);
         }
       } catch {
@@ -283,15 +277,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     }
 
     void loadThread();
-  }, [threadId, replaceMessagesInHook]);
+  }, [threadId, replaceMessagesInHook, abortCurrent]);
 
   // Handle continuation — append more content to the last assistant message
   const handleContinue = useCallback(
     (continuationToken: string) => {
       void (async () => {
         setIsSending(true);
-        const abortController = new AbortController();
-        qaAbortRef.current = abortController;
+        const abortController = beginAbort();
         try {
           const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
           if (!lastAssistant || !thread?.gameId) return;
@@ -308,14 +301,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   : ((event.data as { token?: string })?.token ?? '');
               if (token) {
                 appendedContent += token;
-                const content = appendedContent;
-                setMessages(prev => {
-                  const next = prev.map(m =>
-                    m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m
-                  );
-                  // Phase 1 Task 5 — dual-write: mirror continuation token patch into useThreadMessages.
-                  replaceMessagesInHook(next);
-                  return next;
+                patchMessageById(lastAssistant.id, {
+                  content: appendedContent,
+                  continuationToken: undefined,
                 });
               }
             }
@@ -324,11 +312,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           /* handled */
         } finally {
           setIsSending(false);
-          qaAbortRef.current = null;
         }
       })();
     },
-    [messages, thread?.gameId, replaceMessagesInHook]
+    [messages, thread?.gameId, beginAbort, patchMessageById]
   );
 
   // Send message - SSE streaming when agentId available, REST fallback otherwise
@@ -348,12 +335,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         content: messageContent,
         timestamp: new Date().toISOString(),
       };
-      setMessages(prev => {
-        const next = [...prev, userMessage];
-        // Phase 1 Task 4 — dual-write: mirror optimistic user append into useThreadMessages.
-        replaceMessagesInHook(next);
-        return next;
-      });
+      appendMessage(userMessage);
 
       // QA stream path: game context available → use RAG QA streaming (#415)
       // Priority: gameId check FIRST because POST /agents/{id}/chat does not exist
@@ -367,15 +349,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           content: '',
           timestamp: new Date().toISOString(),
         };
-        setMessages(prev => {
-          const next = [...prev, assistantMessage];
-          // Phase 1 Task 6 — dual-write: mirror QA assistant placeholder into useThreadMessages.
-          replaceMessagesInHook(next);
-          return next;
-        });
+        appendMessage(assistantMessage);
 
-        const abortController = new AbortController();
-        qaAbortRef.current = abortController;
+        const abortController = beginAbort();
         let finalAnswer = '';
         let citations: unknown[] = [];
         let followUpQuestions: string[] = [];
@@ -401,29 +377,15 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               case QA_EVENT_TYPES.INLINE_CITATION: {
                 const data = event.data as { citations: InlineCitationMatch[] };
                 if (data.citations) {
-                  setMessages(prev => {
-                    const next = prev.map(m =>
-                      m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m
-                    );
-                    // Phase 1 Task 6 — dual-write: mirror inline-citation patch.
-                    replaceMessagesInHook(next);
-                    return next;
-                  });
+                  patchMessageById(assistantMsgId, { inlineCitations: data.citations });
                 }
                 break;
               }
               case QA_EVENT_TYPES.CONTINUATION_AVAILABLE: {
                 const data = event.data as ContinuationData;
                 if (data.continuationToken) {
-                  setMessages(prev => {
-                    const next = prev.map(m =>
-                      m.id === assistantMsgId
-                        ? { ...m, continuationToken: data.continuationToken }
-                        : m
-                    );
-                    // Phase 1 Task 6 — dual-write: mirror continuation-available patch.
-                    replaceMessagesInHook(next);
-                    return next;
+                  patchMessageById(assistantMsgId, {
+                    continuationToken: data.continuationToken,
                   });
                 }
                 break;
@@ -439,14 +401,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   }>;
                 };
                 if (data.citations) {
-                  setMessages(prev => {
-                    const next = prev.map(m =>
-                      m.id === assistantMsgId ? { ...m, snippets: data.citations } : m
-                    );
-                    // Phase 1 Task 6 — dual-write: mirror citations-snippets patch.
-                    replaceMessagesInHook(next);
-                    return next;
-                  });
+                  patchMessageById(assistantMsgId, { snippets: data.citations });
                 }
                 break;
               }
@@ -458,15 +413,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                     : ((event.data as { token?: string })?.token ?? '');
                 if (token) {
                   finalAnswer += token;
-                  const currentContent = finalAnswer;
-                  setMessages(prev => {
-                    const next = prev.map(m =>
-                      m.id === assistantMsgId ? { ...m, content: currentContent } : m
-                    );
-                    // Phase 1 Task 6 — dual-write: mirror token-accumulator patch.
-                    replaceMessagesInHook(next);
-                    return next;
-                  });
+                  patchMessageById(assistantMsgId, { content: finalAnswer });
                 }
                 break;
               }
@@ -497,20 +444,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           }
 
           // Update assistant message with final data (citations + followUpQuestions)
-          setMessages(prev => {
-            const next = prev.map(m =>
-              m.id === assistantMsgId
-                ? {
-                    ...m,
-                    content: finalAnswer,
-                    citations: citations as import('@/types').Citation[],
-                    followUpQuestions,
-                  }
-                : m
-            );
-            // Phase 1 Task 6 — dual-write: mirror final QA complete patch.
-            replaceMessagesInHook(next);
-            return next;
+          patchMessageById(assistantMsgId, {
+            content: finalAnswer,
+            citations: citations as import('@/types').Citation[],
+            followUpQuestions,
           });
 
           // Persist assistant message to backend
@@ -530,12 +467,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           if ((err as Error).name !== 'AbortError') {
             setError("Errore nell'invio del messaggio");
             // Remove optimistic assistant message on error
-            setMessages(prev => {
-              const next = prev.filter(m => m.id !== assistantMsgId);
-              // Phase 1 Task 6 — dual-write: mirror QA assistant rollback.
-              replaceMessagesInHook(next);
-              return next;
-            });
+            removeMessageById(assistantMsgId);
           }
         } finally {
           setIsSending(false);
@@ -570,19 +502,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               timestamp: m.timestamp,
             })
           );
-          setMessages(mapped);
-          // Phase 1 Task 4 — dual-write: mirror REST-fallback list replace into useThreadMessages.
           replaceMessagesInHook(mapped);
         }
       } catch {
         setError("Errore nell'invio del messaggio");
         // Remove optimistic message on error
-        setMessages(prev => {
-          const next = prev.filter(m => m.id !== userMessage.id);
-          // Phase 1 Task 4 — dual-write: mirror optimistic rollback into useThreadMessages.
-          replaceMessagesInHook(next);
-          return next;
-        });
+        removeMessageById(userMessage.id);
       } finally {
         setIsSending(false);
       }
@@ -599,6 +524,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       voicePrefs.ttsEnabled,
       speak,
       replaceMessagesInHook,
+      appendMessage,
+      patchMessageById,
+      removeMessageById,
+      beginAbort,
     ]
   );
 

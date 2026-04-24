@@ -40,7 +40,7 @@ import { toChatMessageProps } from './utils/toChatMessageProps';
 export type { ChatMessageItem, StreamStateForMessages };
 
 export interface ChatMessageListProps {
-  messages: ChatMessageItem[];
+  messages: ReadonlyArray<ChatMessageItem>;
   streamState: StreamStateForMessages;
   isEditor: boolean;
   isAdmin: boolean;

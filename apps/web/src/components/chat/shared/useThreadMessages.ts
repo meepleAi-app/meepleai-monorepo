@@ -55,14 +55,27 @@ export interface UseThreadMessagesResult {
   streamStatus: StreamStatus;
   currentAnswer: string;
   lastMessageWasVoice: boolean;
-  sendMessage: (
-    content: string,
-    ctx: ThreadSendContext,
-    options?: SendOptions
-  ) => Promise<void>;
+  sendMessage: (content: string, ctx: ThreadSendContext, options?: SendOptions) => Promise<void>;
   continueStream: (token: string, ctx: Pick<ThreadSendContext, 'gameId'>) => Promise<void>;
   abortCurrent: () => void;
+  /**
+   * Creates a new `AbortController`, stores it as the hook's current controller
+   * (so `abortCurrent` can abort it later), and returns it. Aborts any
+   * previous in-flight controller automatically to guarantee single-stream
+   * invariants. Used by consumers that still own the streaming loop locally
+   * while the hook's own `sendMessage` is still a stub.
+   */
+  beginAbort: () => AbortController;
   replaceMessages: (next: ReadonlyArray<ChatMessageItem>) => void;
+  /**
+   * Granular action dispatchers. These reach the reducer via the latest state
+   * snapshot (not a closure), so they are safe to call from long-lived
+   * callbacks (e.g. streaming `for await` loops) where the surrounding
+   * `messages` closure would otherwise be stale.
+   */
+  appendMessage: (msg: ChatMessageItem) => void;
+  patchMessageById: (id: string, patch: Partial<ChatMessageItem>) => void;
+  removeMessageById: (id: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,9 +158,7 @@ export function threadMessagesReducer(
 // Hook — owns the reducer and the AbortController lifecycle
 // ---------------------------------------------------------------------------
 
-export function useThreadMessages(
-  options: UseThreadMessagesOptions = {}
-): UseThreadMessagesResult {
+export function useThreadMessages(options: UseThreadMessagesOptions = {}): UseThreadMessagesResult {
   const [state, dispatch] = useReducer(threadMessagesReducer, initialThreadMessagesState);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -164,8 +175,27 @@ export function useThreadMessages(
     abortRef.current = null;
   }, []);
 
+  const beginAbort = useCallback(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    return controller;
+  }, []);
+
   const replaceMessages = useCallback((next: ReadonlyArray<ChatMessageItem>) => {
     dispatch({ type: 'REPLACE_ALL', messages: next });
+  }, []);
+
+  const appendMessage = useCallback((message: ChatMessageItem) => {
+    dispatch({ type: 'APPEND', message });
+  }, []);
+
+  const patchMessageById = useCallback((id: string, patch: Partial<ChatMessageItem>) => {
+    dispatch({ type: 'PATCH_BY_ID', id, patch });
+  }, []);
+
+  const removeMessageById = useCallback((id: string) => {
+    dispatch({ type: 'REMOVE_BY_ID', id });
   }, []);
 
   // Auto-abort in-flight stream on unmount. This is the single source of
@@ -210,6 +240,10 @@ export function useThreadMessages(
     sendMessage,
     continueStream,
     abortCurrent,
+    beginAbort,
     replaceMessages,
+    appendMessage,
+    patchMessageById,
+    removeMessageById,
   };
 }

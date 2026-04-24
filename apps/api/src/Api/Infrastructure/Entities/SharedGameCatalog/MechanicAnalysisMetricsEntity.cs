@@ -26,7 +26,7 @@ public class MechanicAnalysisMetricsEntity
     public string ThresholdsSnapshotJson { get; set; } = "{}";
 
     /// <summary>Per-claim match details (jsonb column).</summary>
-    public string MatchDetailsJson { get; set; } = "{}";
+    public string MatchDetailsJson { get; set; } = "[]";
 
     public DateTimeOffset ComputedAt { get; set; }
 

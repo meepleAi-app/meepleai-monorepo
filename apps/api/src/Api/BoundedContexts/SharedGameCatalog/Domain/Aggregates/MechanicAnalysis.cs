@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -88,6 +89,14 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     // === Children ===
 
     public IReadOnlyList<MechanicClaim> Claims => _claims.AsReadOnly();
+
+    // === AI comprehension certification (ADR-051 M2) ===
+
+    public CertificationStatus CertificationStatus { get; private set; } = CertificationStatus.NotEvaluated;
+    public DateTimeOffset? CertifiedAt { get; private set; }
+    public Guid? CertifiedByUserId { get; private set; }
+    public string? CertificationOverrideReason { get; private set; }
+    public Guid? LastMetricsId { get; private set; }
 
     /// <summary>
     /// Optimistic concurrency token — PostgreSQL's system <c>xmin</c> column value as seen at
@@ -619,6 +628,41 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             previous,
             newCapUsd,
             CostCapOverrideReason));
+    }
+
+    // === AI comprehension certification methods (ADR-051 M2) ===
+
+    /// <summary>
+    /// Syncs certification state from a freshly computed <see cref="MechanicAnalysisMetrics"/>
+    /// snapshot. Should be called by the application layer after each metrics computation run.
+    /// </summary>
+    public void ApplyMetricsResult(MechanicAnalysisMetrics metrics)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        if (metrics.MechanicAnalysisId != Id) throw new ArgumentException("Metrics do not belong to this analysis.", nameof(metrics));
+        LastMetricsId = metrics.Id;
+        CertificationStatus = metrics.CertificationStatus;
+        CertifiedAt = metrics.CertificationStatus == CertificationStatus.Certified ? metrics.ComputedAt : null;
+        CertificationOverrideReason = null;
+    }
+
+    /// <summary>
+    /// Admin escalation path: certifies the analysis despite failing automated thresholds.
+    /// Requires a justification of 20..500 characters and prior metrics to have been applied.
+    /// </summary>
+    public void CertifyViaOverride(string reason, Guid userId)
+    {
+        if (string.IsNullOrWhiteSpace(reason) || reason.Length is < 20 or > 500)
+            throw new ArgumentException("Reason must be 20..500 chars.", nameof(reason));
+        if (LastMetricsId is null)
+            throw new InvalidOperationException("Cannot override without prior metrics.");
+        if (CertificationStatus == CertificationStatus.Certified)
+            throw new InvalidOperationException("Already certified.");
+
+        CertificationStatus = CertificationStatus.Certified;
+        CertifiedAt = DateTimeOffset.UtcNow;
+        CertifiedByUserId = userId;
+        CertificationOverrideReason = reason;
     }
 
     // === Helpers ===

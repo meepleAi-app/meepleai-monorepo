@@ -104,6 +104,30 @@ public sealed class CertificationThresholdsConfigRepositoryIntegrationTests : IA
     }
 
     // ============================================================
+    // Edge case: missing seed row surfaces as InvalidOperationException
+    // (fail-fast diagnostic — no silent re-seeding mid-UoW).
+    // ============================================================
+
+    [Fact]
+    public async Task GetAsync_MissingSeedRow_Throws()
+    {
+        // Arrange: delete the migration-seeded singleton row to simulate a broken deployment.
+        var seeded = await _dbContext.CertificationThresholdsConfigs
+            .FirstOrDefaultAsync(c => c.Id == 1);
+        seeded.Should().NotBeNull("migration M2.0 must seed the singleton row");
+        _dbContext.CertificationThresholdsConfigs.Remove(seeded!);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        // Act
+        var act = async () => await _repository.GetAsync();
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*singleton row (Id=1) is missing*");
+    }
+
+    // ============================================================
     // Edge case: optimistic concurrency via xmin raises
     // DbUpdateConcurrencyException on concurrent writes.
     // ============================================================

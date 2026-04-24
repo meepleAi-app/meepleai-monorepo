@@ -33,20 +33,6 @@ internal sealed class MechanicAnalysisMetricsRepository : RepositoryBase, IMecha
         await DbContext.MechanicAnalysisMetrics.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<MechanicAnalysisMetrics?> GetByAnalysisAsync(
-        Guid analysisId,
-        CancellationToken cancellationToken = default)
-    {
-        var entity = await DbContext.MechanicAnalysisMetrics
-            .AsNoTracking()
-            .Where(m => m.MechanicAnalysisId == analysisId)
-            .OrderByDescending(m => m.ComputedAt)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        return entity is null ? null : MapToDomain(entity);
-    }
-
     public async Task<MechanicAnalysisMetrics?> GetLatestByAnalysisAsync(
         Guid analysisId,
         CancellationToken cancellationToken = default)

@@ -13,10 +13,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// Repository implementation for the <see cref="CertificationThresholdsConfig"/> aggregate (ADR-051 Sprint 1 / Task 15).
 /// </summary>
 /// <remarks>
-/// Singleton row (<c>Id = 1</c>) — the M2.0 migration seeds the default values on first apply, so
-/// <see cref="GetAsync"/> is guaranteed to find a row. If a deployment somehow loses the seed row,
-/// we fall back to <see cref="CertificationThresholdsConfig.Seed"/> and persist it to honour the
-/// interface contract (non-null result).
+/// Singleton row (<c>Id = 1</c>) is guaranteed by the M2.0 migration, which seeds the default
+/// thresholds on first apply. <see cref="GetAsync"/> therefore expects to find the row; absence
+/// indicates a broken deployment and surfaces as an <see cref="InvalidOperationException"/>.
+/// The repository never commits mid-Unit-of-Work (no <c>SaveChangesAsync</c> inside read/write
+/// methods) — persistence is always deferred to the caller's UoW boundary.
 /// Optimistic concurrency is enforced via PostgreSQL's <c>xmin</c> system column.
 /// </remarks>
 internal sealed class CertificationThresholdsConfigRepository : RepositoryBase, ICertificationThresholdsConfigRepository
@@ -33,25 +34,17 @@ internal sealed class CertificationThresholdsConfigRepository : RepositoryBase, 
             .FirstOrDefaultAsync(c => c.Id == 1, cancellationToken)
             .ConfigureAwait(false);
 
-        if (entity is not null)
+        if (entity is null)
         {
-            return MapToDomain(entity);
+            // Migration M2.0 seeds the singleton row; absence indicates a broken deployment.
+            // Fail fast rather than silently re-seeding — a mid-UoW SaveChangesAsync here would
+            // flush unrelated tracked changes and break test isolation.
+            throw new InvalidOperationException(
+                "CertificationThresholdsConfig singleton row (Id=1) is missing. " +
+                "Ensure the M2.0 migration has been applied.");
         }
 
-        // Defensive fallback: seed the singleton on first access if missing.
-        var seed = CertificationThresholdsConfig.Seed();
-        var seedEntity = MapToEntity(seed);
-        await DbContext.CertificationThresholdsConfigs.AddAsync(seedEntity, cancellationToken).ConfigureAwait(false);
-        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        // Reload so the returned aggregate carries the DB-assigned xmin token — without this,
-        // a subsequent UpdateAsync on the returned instance would fail concurrency checks
-        // (aggregate xmin = 0 vs DB row xmin > 0).
-        var reloaded = await DbContext.CertificationThresholdsConfigs
-            .AsNoTracking()
-            .FirstAsync(c => c.Id == 1, cancellationToken)
-            .ConfigureAwait(false);
-        return MapToDomain(reloaded);
+        return MapToDomain(entity);
     }
 
     public Task UpdateAsync(CertificationThresholdsConfig config, CancellationToken cancellationToken = default)

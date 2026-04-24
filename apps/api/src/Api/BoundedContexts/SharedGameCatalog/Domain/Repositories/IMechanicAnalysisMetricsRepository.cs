@@ -27,11 +27,6 @@ public interface IMechanicAnalysisMetricsRepository
     Task AddAsync(MechanicAnalysisMetrics metrics, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns the metrics snapshot for the specified analysis run, or <c>null</c> if not found.
-    /// </summary>
-    Task<MechanicAnalysisMetrics?> GetByAnalysisAsync(Guid analysisId, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Returns the most recent metrics snapshot for the specified analysis run,
     /// or <c>null</c> if none exists.
     /// </summary>

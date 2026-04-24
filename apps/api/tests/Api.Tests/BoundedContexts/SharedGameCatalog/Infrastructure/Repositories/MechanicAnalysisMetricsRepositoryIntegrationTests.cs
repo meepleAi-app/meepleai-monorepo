@@ -60,7 +60,7 @@ public sealed class MechanicAnalysisMetricsRepositoryIntegrationTests : IAsyncLi
     }
 
     // ============================================================
-    // Happy path: AddAsync + GetByAnalysisAsync round-trip
+    // Happy path: AddAsync + GetLatestByAnalysisAsync round-trip
     // ============================================================
 
     [Fact]
@@ -86,7 +86,7 @@ public sealed class MechanicAnalysisMetricsRepositoryIntegrationTests : IAsyncLi
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
-        var byAnalysis = await _repository.GetByAnalysisAsync(analysisId);
+        var byAnalysis = await _repository.GetLatestByAnalysisAsync(analysisId);
 
         // Assert
         byAnalysis.Should().NotBeNull();

@@ -9,6 +9,7 @@
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import {
   buildAgentNavItems,
+  buildChatConnections,
   buildGameNavItems,
   buildKbConnections,
   buildSessionNavItems,
@@ -20,7 +21,7 @@ import type {
 
 import type { ShowcaseStory } from '../types';
 
-type NavPreset = 'none' | 'game' | 'session' | 'kb' | 'agent';
+type NavPreset = 'none' | 'game' | 'session' | 'kb' | 'agent' | 'chat';
 
 type MeepleCardShowcaseProps = {
   entity: string;
@@ -85,10 +86,7 @@ function buildNavItems(
       );
       break;
     case 'kb': {
-      // Step 2 (2026-04-24): buildKbConnections returns ConnectionChipProps[].
-      // The showcase still drives the legacy NavFooter rendering path, so
-      // cast through unknown to bridge the transitional shape until the
-      // showcase is migrated to connections= alongside the cleanup commit.
+      // TODO(task-8): remove cast when showcase switches navItems= → connections= in the cleanup commit
       const kbConnections: ConnectionChipProps[] = buildKbConnections(
         { chunkCount: counts.chunkCount },
         disabled
@@ -101,6 +99,22 @@ function buildNavItems(
             }
       );
       items = kbConnections as unknown as NavFooterItem[];
+      break;
+    }
+    case 'chat': {
+      // TODO(task-8): remove cast when showcase switches navItems= → connections= in the cleanup commit
+      const chatConnections: ConnectionChipProps[] = buildChatConnections(
+        { messageCount: showCounts ? 24 : 0 },
+        disabled
+          ? {}
+          : {
+              onMessagesClick: noop,
+              onAgentLinkClick: noop,
+              onSourcesClick: noop,
+              onArchiveClick: noop,
+            }
+      );
+      items = chatConnections as unknown as NavFooterItem[];
       break;
     }
     case 'agent':
@@ -213,7 +227,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
     navPreset: {
       type: 'select',
       label: 'navPreset',
-      options: ['none', 'game', 'session', 'kb', 'agent'],
+      options: ['none', 'game', 'session', 'kb', 'agent', 'chat'],
       default: 'none',
     },
     navDisabled: { type: 'boolean', label: 'navDisabled', default: false },

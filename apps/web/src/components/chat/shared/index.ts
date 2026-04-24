@@ -9,3 +9,5 @@ export type {
   ChatMessageItem,
   StreamStateForMessages,
 } from './types';
+
+export { collectCitations, getSuggestedQuestions } from './messages';

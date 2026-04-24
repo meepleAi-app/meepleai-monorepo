@@ -29,6 +29,11 @@ public sealed class BagOfWordsKeywordExtractor : IKeywordExtractor
 
         var lowered = text.ToLowerInvariant();
         var buffer = new char[lowered.Length];
+        // Iterates UTF-16 code units (char), not Unicode runes. Non-BMP characters
+        // encoded as surrogate pairs are replaced with spaces rather than preserved,
+        // because char.IsLetter / char.IsDigit return false for unpaired surrogates.
+        // Acceptable for the IT+EN rulebook domain; switch to StringInfo /
+        // string.EnumerateRunes if non-BMP input ever becomes relevant.
         for (var i = 0; i < lowered.Length; i++)
         {
             var c = lowered[i];

@@ -25,9 +25,9 @@ internal static class KeywordExtractorResources
         "which", "who", "whom", "whose", "what", "when", "where", "why", "how",
 
         // Italian
-        "il", "la", "le", "lo", "gli", "i", "un", "una", "uno",
+        "il", "la", "le", "lo", "gli", "un", "una", "uno",
         "e", "o", "ma", "che", "di", "da", "del", "della", "delle",
-        "dei", "degli", "al", "alla", "alle", "ai", "agli", "in", "su",
+        "dei", "degli", "al", "alla", "alle", "ai", "agli", "su",
         "con", "per", "come", "questo", "questa", "questi", "queste",
         "quello", "quella", "quelli", "quelle", "è", "sono", "era", "erano",
         "essere", "stato", "stata", "ha", "ho", "hai", "avere", "aveva",

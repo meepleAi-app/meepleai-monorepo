@@ -718,6 +718,50 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         CertificationOverrideReason = reason;
     }
 
+    /// <summary>
+    /// Raises <see cref="MechanicAnalysisCertifiedEvent"/> for the admin-override certification
+    /// path (ADR-051 Sprint 1 / Task 24). Must be called only after <see cref="CertifyViaOverride"/>
+    /// has mutated <see cref="CertificationStatus"/> to <see cref="CertificationStatus.Certified"/>
+    /// and populated <see cref="CertifiedByUserId"/> + <see cref="CertificationOverrideReason"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Symmetric with <see cref="RaiseAutomaticCertificationEvent"/>: the event is dispatched from
+    /// the handler rather than inside <see cref="CertifyViaOverride"/> itself because the caller
+    /// owns the <c>IUnitOfWork</c> boundary — state mutation and event raise share the same
+    /// <c>SaveChangesAsync</c> commit, so either both happen or neither does.
+    /// </para>
+    /// <para>
+    /// <see cref="AggregateRoot{TId}.AddDomainEvent"/> is <c>protected</c>, so the application
+    /// handler cannot raise the event directly; this narrow method encodes the override path's
+    /// invariants (<c>WasOverride=true</c>, reason + actor id carried forward) and delegates
+    /// dispatch to the aggregate.
+    /// </para>
+    /// </remarks>
+    /// <param name="certifiedAt">Timestamp stamped on the event; the handler passes the same value
+    /// it used for <see cref="CertifyViaOverride"/> so the aggregate state and the event agree.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the aggregate is not currently <see cref="CertificationStatus.Certified"/> —
+    /// the caller must invoke <see cref="CertifyViaOverride"/> first.
+    /// </exception>
+    public void RaiseOverrideCertificationEvent(DateTimeOffset certifiedAt)
+    {
+        if (CertificationStatus != CertificationStatus.Certified)
+        {
+            throw new InvalidOperationException(
+                $"Cannot raise override certification event on MechanicAnalysis {Id}: " +
+                $"current CertificationStatus is {CertificationStatus}, expected Certified.");
+        }
+
+        AddDomainEvent(new MechanicAnalysisCertifiedEvent(
+            AnalysisId: Id,
+            SharedGameId: SharedGameId,
+            WasOverride: true,
+            OverrideReason: CertificationOverrideReason,
+            CertifiedByUserId: CertifiedByUserId ?? Guid.Empty,
+            CertifiedAt: certifiedAt));
+    }
+
     // === Helpers ===
 
     private void EnsureTransitionAllowed(string operation, MechanicAnalysisStatus target)

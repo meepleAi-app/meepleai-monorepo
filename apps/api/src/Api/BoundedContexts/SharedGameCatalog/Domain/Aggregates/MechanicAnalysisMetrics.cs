@@ -30,7 +30,8 @@ public sealed class MechanicAnalysisMetrics
         ValidatePct(coveragePct, nameof(coveragePct));
         ValidatePct(pageAccuracyPct, nameof(pageAccuracyPct));
         ValidatePct(bggMatchPct, nameof(bggMatchPct));
-        if (goldenVersionHash?.Length != 64) throw new ArgumentException("Hash must be 64 chars", nameof(goldenVersionHash));
+        ArgumentNullException.ThrowIfNull(goldenVersionHash);
+        if (goldenVersionHash.Length != 64) throw new ArgumentException("Hash must be 64 chars", nameof(goldenVersionHash));
 
         var overall = ComputeOverallScore(coveragePct, pageAccuracyPct, bggMatchPct);
         var status = thresholds.IsCertified(coveragePct, pageAccuracyPct, bggMatchPct, overall)

@@ -38,4 +38,17 @@ public class MechanicAnalysisMetricsTests
             CertificationThresholds.Default(), new string('a', 64), "{}");
         act.Should().Throw<ArgumentException>();
     }
+
+    [Fact]
+    public void Create_marks_metrics_NotCertified_when_below_thresholds()
+    {
+        var t = CertificationThresholds.Default();
+        var m = MechanicAnalysisMetrics.Create(
+            analysisId: Guid.NewGuid(), sharedGameId: Guid.NewGuid(),
+            coveragePct: 50, pageAccuracyPct: 50, bggMatchPct: 50,
+            thresholds: t, goldenVersionHash: new string('a', 64),
+            matchDetailsJson: "{}");
+
+        m.CertificationStatus.Should().Be(CertificationStatus.NotCertified);
+    }
 }

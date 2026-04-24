@@ -23,4 +23,26 @@ public sealed class MechanicGoldenBggTag
             ImportedAt = DateTimeOffset.UtcNow,
         };
     }
+
+    /// <summary>
+    /// Rehydrates a BGG tag from persistence. Used exclusively by the repository's mapping layer.
+    /// </summary>
+    public static MechanicGoldenBggTag Reconstitute(
+        Guid id,
+        Guid sharedGameId,
+        string name,
+        string category,
+        DateTimeOffset importedAt)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(category);
+        return new MechanicGoldenBggTag
+        {
+            Id = id,
+            SharedGameId = sharedGameId,
+            Name = name,
+            Category = category,
+            ImportedAt = importedAt,
+        };
+    }
 }

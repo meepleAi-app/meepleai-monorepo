@@ -72,6 +72,45 @@ public sealed class MechanicGoldenClaim
         DeletedAt = DateTimeOffset.UtcNow;
     }
 
+    /// <summary>
+    /// Rehydrates a claim from persistence. Used exclusively by the repository's
+    /// <c>MapToDomain</c>; bypasses validation because invariants were enforced at creation time.
+    /// </summary>
+    public static MechanicGoldenClaim Reconstitute(
+        Guid id,
+        Guid sharedGameId,
+        MechanicSection section,
+        string statement,
+        int expectedPage,
+        string sourceQuote,
+        string[] keywords,
+        float[]? embedding,
+        Guid curatorUserId,
+        DateTimeOffset createdAt,
+        DateTimeOffset updatedAt,
+        DateTimeOffset? deletedAt)
+    {
+        ArgumentNullException.ThrowIfNull(statement);
+        ArgumentNullException.ThrowIfNull(sourceQuote);
+        ArgumentNullException.ThrowIfNull(keywords);
+
+        return new MechanicGoldenClaim
+        {
+            Id = id,
+            SharedGameId = sharedGameId,
+            Section = section,
+            Statement = statement,
+            ExpectedPage = expectedPage,
+            SourceQuote = sourceQuote,
+            Keywords = keywords,
+            Embedding = embedding,
+            CuratorUserId = curatorUserId,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+            DeletedAt = deletedAt,
+        };
+    }
+
     private static void ValidateStatement(string s)
     {
         if (string.IsNullOrWhiteSpace(s) || s.Length > 500)

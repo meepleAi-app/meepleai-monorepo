@@ -56,6 +56,44 @@ public sealed class MechanicAnalysisMetrics
         };
     }
 
+    /// <summary>
+    /// Rehydrates a metrics snapshot from persistence. Used exclusively by the repository's mapping layer.
+    /// </summary>
+    public static MechanicAnalysisMetrics Reconstitute(
+        Guid id,
+        Guid mechanicAnalysisId,
+        Guid sharedGameId,
+        decimal coveragePct,
+        decimal pageAccuracyPct,
+        decimal bggMatchPct,
+        decimal overallScore,
+        CertificationStatus certificationStatus,
+        string goldenVersionHash,
+        string thresholdsSnapshotJson,
+        string matchDetailsJson,
+        DateTimeOffset computedAt)
+    {
+        ArgumentNullException.ThrowIfNull(goldenVersionHash);
+        ArgumentNullException.ThrowIfNull(thresholdsSnapshotJson);
+        ArgumentNullException.ThrowIfNull(matchDetailsJson);
+
+        return new MechanicAnalysisMetrics
+        {
+            Id = id,
+            MechanicAnalysisId = mechanicAnalysisId,
+            SharedGameId = sharedGameId,
+            CoveragePct = coveragePct,
+            PageAccuracyPct = pageAccuracyPct,
+            BggMatchPct = bggMatchPct,
+            OverallScore = overallScore,
+            CertificationStatus = certificationStatus,
+            GoldenVersionHash = goldenVersionHash,
+            ThresholdsSnapshotJson = thresholdsSnapshotJson,
+            MatchDetailsJson = matchDetailsJson,
+            ComputedAt = computedAt,
+        };
+    }
+
     private static void ValidatePct(decimal v, string name)
     {
         if (v is < 0 or > 100) throw new ArgumentException($"{name} must be 0..100", name);

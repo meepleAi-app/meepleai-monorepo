@@ -44,6 +44,10 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IRulebookAnalysisRepository, RulebookAnalysisRepository>(); // Issue #2402 Sprint 3
         services.AddScoped<IMechanicDraftRepository, MechanicDraftRepository>(); // Mechanic Extractor: Variant C drafts
         services.AddScoped<IMechanicAnalysisRepository, MechanicAnalysisRepository>(); // Issue #523: M1.1 Mechanic Analysis persistence
+        services.AddScoped<IMechanicGoldenClaimRepository, MechanicGoldenClaimRepository>(); // ADR-051 Sprint 1 / Task 15: golden claims
+        services.AddScoped<IMechanicGoldenBggTagRepository, MechanicGoldenBggTagRepository>(); // ADR-051 Sprint 1 / Task 15: BGG mechanic tags
+        services.AddScoped<IMechanicAnalysisMetricsRepository, MechanicAnalysisMetricsRepository>(); // ADR-051 Sprint 1 / Task 15: metrics snapshots
+        services.AddScoped<ICertificationThresholdsConfigRepository, CertificationThresholdsConfigRepository>(); // ADR-051 Sprint 1 / Task 15: thresholds config
         services.AddScoped<IShareRequestRepository, ShareRequestRepository>(); // Issue #2724: CreateShareRequest
         services.AddScoped<IBadgeRepository, BadgeRepository>(); // Issue #2731: Badge gamification system
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>(); // Issue #2731: User badge awards

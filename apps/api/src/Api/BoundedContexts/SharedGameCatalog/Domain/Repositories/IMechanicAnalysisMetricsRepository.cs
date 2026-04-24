@@ -24,28 +24,28 @@ public interface IMechanicAnalysisMetricsRepository
     /// Stages a new <see cref="MechanicAnalysisMetrics"/> snapshot for insertion.
     /// Persistence occurs at <c>SaveChangesAsync</c>.
     /// </summary>
-    Task AddAsync(MechanicAnalysisMetrics metrics, CancellationToken ct);
+    Task AddAsync(MechanicAnalysisMetrics metrics, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the metrics snapshot for the specified analysis run, or <c>null</c> if not found.
     /// </summary>
-    Task<MechanicAnalysisMetrics?> GetByAnalysisAsync(Guid analysisId, CancellationToken ct);
+    Task<MechanicAnalysisMetrics?> GetByAnalysisAsync(Guid analysisId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the most recent metrics snapshot for the specified analysis run,
     /// or <c>null</c> if none exists.
     /// </summary>
-    Task<MechanicAnalysisMetrics?> GetLatestByAnalysisAsync(Guid analysisId, CancellationToken ct);
+    Task<MechanicAnalysisMetrics?> GetLatestByAnalysisAsync(Guid analysisId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the per-game summary rows required by the admin validation dashboard.
     /// Each row reflects the latest computed score and certification status per shared game.
     /// </summary>
-    Task<IReadOnlyList<DashboardGameRow>> GetDashboardAsync(CancellationToken ct);
+    Task<IReadOnlyList<DashboardGameRow>> GetDashboardAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns up to <paramref name="take"/> historical metric snapshots for the specified shared game,
     /// ordered by computation time descending. Used for trend chart rendering on the admin detail page.
     /// </summary>
-    Task<IReadOnlyList<MechanicAnalysisMetrics>> GetTrendAsync(Guid sharedGameId, int take, CancellationToken ct);
+    Task<IReadOnlyList<MechanicAnalysisMetrics>> GetTrendAsync(Guid sharedGameId, int take, CancellationToken cancellationToken = default);
 }

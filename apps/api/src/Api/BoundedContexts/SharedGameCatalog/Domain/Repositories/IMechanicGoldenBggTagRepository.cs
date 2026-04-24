@@ -11,16 +11,16 @@ public interface IMechanicGoldenBggTagRepository
     /// <summary>
     /// Returns all BGG mechanic tags associated with the specified shared game.
     /// </summary>
-    Task<IReadOnlyList<MechanicGoldenBggTag>> GetByGameAsync(Guid sharedGameId, CancellationToken ct);
+    Task<IReadOnlyList<MechanicGoldenBggTag>> GetByGameAsync(Guid sharedGameId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Inserts or updates the full tag batch for the specified shared game in a single operation.
     /// Existing tags not present in <paramref name="tags"/> are left untouched.
     /// </summary>
-    Task UpsertBatchAsync(Guid sharedGameId, IReadOnlyList<(string Name, string Category)> tags, CancellationToken ct);
+    Task UpsertBatchAsync(Guid sharedGameId, IReadOnlyList<(string Name, string Category)> tags, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes the <see cref="MechanicGoldenBggTag"/> with the specified primary key.
     /// </summary>
-    Task DeleteAsync(Guid id, CancellationToken ct);
+    Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

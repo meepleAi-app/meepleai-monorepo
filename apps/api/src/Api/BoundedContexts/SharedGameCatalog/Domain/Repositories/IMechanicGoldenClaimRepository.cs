@@ -13,28 +13,29 @@ public interface IMechanicGoldenClaimRepository
     /// <summary>
     /// Returns all golden claims associated with the specified shared game.
     /// </summary>
-    Task<IReadOnlyList<MechanicGoldenClaim>> GetByGameAsync(Guid sharedGameId, CancellationToken ct);
+    Task<IReadOnlyList<MechanicGoldenClaim>> GetByGameAsync(Guid sharedGameId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the golden claim with the specified primary key, or <c>null</c> if not found.
     /// </summary>
-    Task<MechanicGoldenClaim?> GetByIdAsync(Guid id, CancellationToken ct);
+    Task<MechanicGoldenClaim?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Stages a new <see cref="MechanicGoldenClaim"/> for insertion.
     /// Persistence occurs at <c>SaveChangesAsync</c>.
     /// </summary>
-    Task AddAsync(MechanicGoldenClaim claim, CancellationToken ct);
+    Task AddAsync(MechanicGoldenClaim claim, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Marks a previously loaded <see cref="MechanicGoldenClaim"/> as modified.
     /// Persistence occurs at <c>SaveChangesAsync</c>.
     /// </summary>
-    Task UpdateAsync(MechanicGoldenClaim claim, CancellationToken ct);
+    Task UpdateAsync(MechanicGoldenClaim claim, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the <see cref="VersionHash"/> representing the current state of the golden-set
-    /// for the specified shared game. Used by the scoring pipeline to detect stale cached scores.
+    /// for the specified shared game, or <c>null</c> when no claims exist for the given game.
+    /// Used by the scoring pipeline to detect stale cached scores.
     /// </summary>
-    Task<VersionHash> GetVersionHashAsync(Guid sharedGameId, CancellationToken ct);
+    Task<VersionHash?> GetVersionHashAsync(Guid sharedGameId, CancellationToken cancellationToken = default);
 }

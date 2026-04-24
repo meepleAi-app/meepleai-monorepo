@@ -85,8 +85,11 @@ export default function MeepleCardDevPage() {
           description="Side-by-side comparison: connections prop (canonical) vs navItems prop with adapter (__useConnectionsForNavItems)."
         >
           <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-            Both cards should render visually equivalent footer rows. The adapter path proves the
-            navItems → connections migration preserves rendering parity.
+            Both cards render the canonical 4-slot game nav (KB, Agent, Chat, Sessioni) with
+            identical counts. Demo A uses the canonical <code>connections</code> prop; Demo B uses
+            the legacy <code>navItems</code> prop adapted via{' '}
+            <code>__useConnectionsForNavItems</code>. They MUST produce the same chip order, labels,
+            counts and footer row height.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
             <div>
@@ -100,9 +103,10 @@ export default function MeepleCardDevPage() {
                 connectionsVariant="footer"
                 connections={
                   [
-                    { entityType: 'session', count: 5, label: 'Sessioni' },
-                    { entityType: 'agent', count: 2, label: 'Agenti' },
                     { entityType: 'kb', count: 1, label: 'KB' },
+                    { entityType: 'agent', count: 2, label: 'Agent' },
+                    { entityType: 'chat', label: 'Chat', onCreate: () => alert('Chat plus') },
+                    { entityType: 'session', count: 5, label: 'Sessioni' },
                   ] satisfies ConnectionChipProps[]
                 }
               />

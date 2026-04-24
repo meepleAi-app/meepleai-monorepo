@@ -128,6 +128,24 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
         return entities.Select(e => MapToDomain(e, e.Claims)).ToList();
     }
 
+    public async Task<IReadOnlyList<Guid>> GetIdsByStatusAsync(
+        MechanicAnalysisStatus status,
+        CancellationToken cancellationToken = default)
+    {
+        // Id-only projection — no claim/citation graph hydration. Suppressed rows are included
+        // (IgnoreQueryFilters) because suppression is orthogonal to status: a Published analysis
+        // under takedown is still a candidate for metrics recalculation.
+        var ids = await DbContext.MechanicAnalyses
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(a => a.Status == (int)status)
+            .Select(a => a.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return ids;
+    }
+
     public async Task<MechanicAnalysis?> FindByPromptVersionAsync(
         Guid sharedGameId,
         Guid pdfDocumentId,

@@ -73,6 +73,22 @@ public interface IMechanicAnalysisRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the primary keys of every <see cref="MechanicAnalysis"/> in the given
+    /// <see cref="Enums.MechanicAnalysisStatus"/>, including suppressed rows (suppression is
+    /// orthogonal to status; ignores the global query filter). Used by the Sprint 1 mass-recalc
+    /// dispatcher (ADR-051 Task 25) to enumerate candidates without hydrating the full claim
+    /// graph; per-id handlers reload the aggregate fresh as they need it.
+    /// </summary>
+    /// <remarks>
+    /// Id-only projection — no claim or citation join — to keep the candidate enumeration cheap
+    /// even on large catalogs. Caller iterates and dispatches one
+    /// <see cref="Application.Commands.Validation.CalculateMechanicAnalysisMetricsCommand"/> per id.
+    /// </remarks>
+    Task<IReadOnlyList<Guid>> GetIdsByStatusAsync(
+        Enums.MechanicAnalysisStatus status,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds the existing non-rejected analysis for the (SharedGame, PdfDocument, PromptVersion)
     /// tuple, or <c>null</c> if none exists. Supports T7 idempotency (ADR-051 §3.5): the generation
     /// pipeline uses this lookup to short-circuit duplicate runs with the same prompt version.

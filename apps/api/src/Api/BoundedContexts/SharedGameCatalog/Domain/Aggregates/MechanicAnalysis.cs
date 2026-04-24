@@ -648,6 +648,48 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Raises <see cref="MechanicAnalysisCertifiedEvent"/> for the automatic (non-override)
+    /// certification path (ADR-051 M2). Must be called only after <see cref="ApplyMetricsResult"/>
+    /// has synced <see cref="CertificationStatus"/> to <see cref="CertificationStatus.Certified"/>
+    /// from a metrics computation that passed the configured thresholds.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This overload exists because <see cref="AggregateRoot{TId}.AddDomainEvent"/> is
+    /// <c>protected</c>: the application handler cannot raise the event directly, so the
+    /// aggregate exposes a narrow method that encodes the automatic path's invariants
+    /// (<c>WasOverride=false</c>, no override reason, no human actor) and delegates the
+    /// event dispatch to the aggregate.
+    /// </para>
+    /// <para>
+    /// <see cref="CertifiedByUserId"/> is <see cref="Guid.Empty"/> for the automatic path — there
+    /// is no human actor. The override path (<see cref="CertifyViaOverride"/>) carries a real user id.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the aggregate is not currently <see cref="CertificationStatus.Certified"/> —
+    /// the caller must apply metrics first and only invoke this method when the metrics produced
+    /// a passing score.
+    /// </exception>
+    public void RaiseAutomaticCertificationEvent(DateTimeOffset certifiedAt)
+    {
+        if (CertificationStatus != CertificationStatus.Certified)
+        {
+            throw new InvalidOperationException(
+                $"Cannot raise automatic certification event on MechanicAnalysis {Id}: " +
+                $"current CertificationStatus is {CertificationStatus}, expected Certified.");
+        }
+
+        AddDomainEvent(new MechanicAnalysisCertifiedEvent(
+            AnalysisId: Id,
+            SharedGameId: SharedGameId,
+            WasOverride: false,
+            OverrideReason: null,
+            CertifiedByUserId: Guid.Empty,
+            CertifiedAt: certifiedAt));
+    }
+
+    /// <summary>
     /// Admin escalation path: certifies the analysis despite failing automated thresholds.
     /// Requires a justification of 20..500 characters and prior metrics to have been applied.
     /// </summary>

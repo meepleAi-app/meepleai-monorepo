@@ -643,6 +643,7 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         LastMetricsId = metrics.Id;
         CertificationStatus = metrics.CertificationStatus;
         CertifiedAt = metrics.CertificationStatus == CertificationStatus.Certified ? metrics.ComputedAt : null;
+        CertifiedByUserId = null;
         CertificationOverrideReason = null;
     }
 
@@ -650,7 +651,7 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     /// Admin escalation path: certifies the analysis despite failing automated thresholds.
     /// Requires a justification of 20..500 characters and prior metrics to have been applied.
     /// </summary>
-    public void CertifyViaOverride(string reason, Guid userId)
+    public void CertifyViaOverride(string reason, Guid userId, DateTimeOffset utcNow)
     {
         if (string.IsNullOrWhiteSpace(reason) || reason.Length is < 20 or > 500)
             throw new ArgumentException("Reason must be 20..500 chars.", nameof(reason));
@@ -660,7 +661,7 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             throw new InvalidOperationException("Already certified.");
 
         CertificationStatus = CertificationStatus.Certified;
-        CertifiedAt = DateTimeOffset.UtcNow;
+        CertifiedAt = utcNow;
         CertifiedByUserId = userId;
         CertificationOverrideReason = reason;
     }

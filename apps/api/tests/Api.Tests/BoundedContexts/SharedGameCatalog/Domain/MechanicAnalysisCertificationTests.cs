@@ -27,7 +27,7 @@ public class MechanicAnalysisCertificationTests
     public void CertifyViaOverride_rejects_empty_reason()
     {
         var a = MechanicAnalysisTestFactory.NewNotCertified();
-        var act = () => a.CertifyViaOverride(reason: "", userId: Guid.NewGuid());
+        var act = () => a.CertifyViaOverride(reason: "", userId: Guid.NewGuid(), utcNow: DateTimeOffset.UtcNow);
         act.Should().Throw<ArgumentException>();
     }
 
@@ -35,7 +35,7 @@ public class MechanicAnalysisCertificationTests
     public void CertifyViaOverride_requires_LastMetricsId()
     {
         var a = MechanicAnalysisTestFactory.NewCompleted(); // no metrics yet
-        var act = () => a.CertifyViaOverride(reason: "Manual approval after human review of rulebook.", userId: Guid.NewGuid());
+        var act = () => a.CertifyViaOverride(reason: "Manual approval after human review of rulebook.", userId: Guid.NewGuid(), utcNow: DateTimeOffset.UtcNow);
         act.Should().Throw<InvalidOperationException>();
     }
 
@@ -43,8 +43,27 @@ public class MechanicAnalysisCertificationTests
     public void CertifyViaOverride_rejects_when_already_certified()
     {
         var a = MechanicAnalysisTestFactory.NewCertified();
-        var act = () => a.CertifyViaOverride(reason: "Manual approval after human review of rulebook.", userId: Guid.NewGuid());
+        var act = () => a.CertifyViaOverride(reason: "Manual approval after human review of rulebook.", userId: Guid.NewGuid(), utcNow: DateTimeOffset.UtcNow);
         act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void CertifyViaOverride_sets_all_fields_on_success()
+    {
+        // Arrange
+        var analysis = MechanicAnalysisTestFactory.NewNotCertified();
+        var reason = "Manual approval after human review of rulebook.";
+        var userId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        // Act
+        analysis.CertifyViaOverride(reason, userId, now);
+
+        // Assert
+        analysis.CertificationStatus.Should().Be(CertificationStatus.Certified);
+        analysis.CertifiedAt.Should().Be(now);
+        analysis.CertifiedByUserId.Should().Be(userId);
+        analysis.CertificationOverrideReason.Should().Be(reason);
     }
 }
 

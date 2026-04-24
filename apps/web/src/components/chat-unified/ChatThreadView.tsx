@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
 import { AgentSettingsDrawer } from '@/components/agent/settings';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { collectCitations, getSuggestedQuestions, useChatScroll } from '@/components/chat/shared';
 import { PageViewerPanel } from '@/components/chat/viewer/PageViewerPanel';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
 import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
@@ -72,7 +73,6 @@ export interface ChatThreadViewProps {
 
 export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const router = useRouter();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const isAdmin = isAdminOrAbove(user);
   const isEditor = isEditorOrAbove(user);
@@ -170,22 +170,16 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   });
 
   // Extract citations from all assistant messages
-  const allCitations = useMemo(() => messages.flatMap(m => m.citations ?? []), [messages]);
+  const allCitations = useMemo(() => collectCitations(messages), [messages]);
 
   // Extract last suggested questions
-  const suggestedQuestions = useMemo(() => {
-    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
-    return lastAssistant?.followUpQuestions ?? [];
-  }, [messages]);
+  const suggestedQuestions = useMemo(() => getSuggestedQuestions(messages), [messages]);
 
-  // Auto-scroll to bottom
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, streamState.currentAnswer, scrollToBottom]);
+  // Auto-scroll to bottom (extracted to chat/shared/useChatScroll — Phase 0 Task 3)
+  const { anchorRef: messagesEndRef } = useChatScroll<HTMLDivElement>([
+    messages,
+    streamState.currentAnswer,
+  ]);
 
   // Abort QA stream on unmount
   useEffect(

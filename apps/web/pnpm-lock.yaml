@@ -494,7 +494,7 @@ importers:
         specifier: ^6.2.5
         version: 6.2.5
       glob:
-        specifier: ^13.0.6
+        specifier: '>=10.5.0'
         version: 13.0.6
       husky:
         specifier: ^9.1.7
@@ -14740,7 +14740,7 @@ snapshots:
       '@typescript-eslint/types': 8.56.1
       '@typescript-eslint/visitor-keys': 8.56.1
       debug: 4.4.3
-      minimatch: 10.2.4
+      minimatch: 10.2.5
       semver: 7.7.4
       tinyglobby: 0.2.15
       ts-api-utils: 2.4.0(typescript@5.9.3)

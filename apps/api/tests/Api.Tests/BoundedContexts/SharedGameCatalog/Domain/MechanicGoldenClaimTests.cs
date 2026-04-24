@@ -134,4 +134,22 @@ public class MechanicGoldenClaimTests
 
         await act.Should().ThrowAsync<ArgumentException>();
     }
+
+    [Fact]
+    public async Task UpdateAsync_on_deactivated_claim_throws()
+    {
+        // Arrange: build a valid claim and deactivate it
+        var claim = await BuildValidClaim();
+        claim.Deactivate();
+
+        // Act + Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            claim.UpdateAsync(
+                statement: "Different statement.",
+                expectedPage: 4,
+                sourceQuote: "Different source quote.",
+                embedding: _emb.Object,
+                keywords: _kw.Object,
+                ct: default));
+    }
 }

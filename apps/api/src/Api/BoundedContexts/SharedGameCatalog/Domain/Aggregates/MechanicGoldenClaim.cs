@@ -48,6 +48,10 @@ public sealed class MechanicGoldenClaim
     public async Task UpdateAsync(string statement, int expectedPage, string sourceQuote,
         IEmbeddingService embedding, IKeywordExtractor keywords, CancellationToken ct)
     {
+        if (DeletedAt.HasValue)
+        {
+            throw new InvalidOperationException("Cannot update a deactivated claim.");
+        }
         ValidateStatement(statement);
         ValidatePage(expectedPage);
         ValidateSourceQuote(sourceQuote);

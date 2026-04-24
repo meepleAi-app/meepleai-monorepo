@@ -83,6 +83,12 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IMechanicAnalysisPipeline, MechanicAnalysisPipeline>();
         services.AddScoped<IMechanicAnalysisExecutor, MechanicAnalysisExecutor>();
 
+        // ADR-051 Sprint 1 / Task 18: AI comprehension validation - matching engine + keyword extractor.
+        // Consumed by CalculateMechanicAnalysisMetricsCommand to compute coverage/page-accuracy/BGG-match
+        // percentages by comparing analysis claims against curated golden claims + BGG mechanic tags.
+        services.AddScoped<IKeywordExtractor, BagOfWordsKeywordExtractor>();
+        services.AddScoped<IMechanicMatchingEngine, MechanicMatchingEngine>();
+
         // Issue #2729: Review lock configuration service with caching (Singleton for cache sharing)
         services.AddSingleton<IReviewLockConfigService, ReviewLockConfigService>();
 

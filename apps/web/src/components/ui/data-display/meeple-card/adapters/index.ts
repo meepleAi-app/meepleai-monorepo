@@ -1,1 +1,0 @@
-export { navItemsToConnections } from './navItemsToConnections';

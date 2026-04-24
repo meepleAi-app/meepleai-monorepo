@@ -1,8 +1,6 @@
-import { navIcons } from './icons';
+import type { ConnectionChipProps } from '../types';
 
-import type { NavFooterItem } from '../types';
-
-export interface PlayerNavCounts {
+export interface PlayerConnectionsCounts {
   totalWins: number;
   totalSessions: number;
   /** v1: not implemented — slot rendered disabled */
@@ -11,7 +9,7 @@ export interface PlayerNavCounts {
   achievementCount?: number;
 }
 
-export interface PlayerNavHandlers {
+export interface PlayerConnectionsHandlers {
   onWinsClick?: () => void;
   onSessionsClick?: () => void;
   onFavoritesClick?: () => void;
@@ -19,43 +17,39 @@ export interface PlayerNavHandlers {
 }
 
 /**
- * Build the 4-slot nav-footer for player entity cards.
+ * Build the 4-slot connection channel for player entity cards.
  *
  * Slots: Vittorie | Partite | Preferiti (v1 disabled) | Trofei (v1 disabled)
  */
-export function buildPlayerNavItems(
-  counts: PlayerNavCounts,
-  handlers: PlayerNavHandlers
-): NavFooterItem[] {
+export function buildPlayerConnections(
+  counts: PlayerConnectionsCounts,
+  handlers: PlayerConnectionsHandlers
+): ConnectionChipProps[] {
   return [
     {
-      icon: navIcons.trophy,
       label: 'Vittorie',
-      entity: 'player',
+      entityType: 'player',
       count: counts.totalWins > 0 ? counts.totalWins : undefined,
       disabled: !handlers.onWinsClick,
       onClick: handlers.onWinsClick,
     },
     {
-      icon: navIcons.partite,
       label: 'Partite',
-      entity: 'session',
+      entityType: 'session',
       count: counts.totalSessions > 0 ? counts.totalSessions : undefined,
       disabled: !handlers.onSessionsClick,
       onClick: handlers.onSessionsClick,
     },
     {
-      icon: navIcons.favorites,
       label: 'Preferiti',
-      entity: 'game',
+      entityType: 'game',
       count: counts.favoriteCount,
       disabled: counts.favoriteCount === undefined || !handlers.onFavoritesClick,
       onClick: handlers.onFavoritesClick,
     },
     {
-      icon: navIcons.achievement,
       label: 'Trofei',
-      entity: 'player',
+      entityType: 'player',
       count: counts.achievementCount,
       disabled: counts.achievementCount === undefined || !handlers.onAchievementsClick,
       onClick: handlers.onAchievementsClick,

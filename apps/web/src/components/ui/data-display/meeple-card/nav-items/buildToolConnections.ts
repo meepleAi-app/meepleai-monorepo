@@ -1,8 +1,6 @@
-import { navIcons } from './icons';
+import type { ConnectionChipProps } from '../types';
 
-import type { NavFooterItem } from '../types';
-
-export interface ToolNavHandlers {
+export interface ToolConnectionsHandlers {
   onUseClick?: () => void;
   onEditClick?: () => void;
   onDuplicateClick?: () => void;
@@ -10,39 +8,35 @@ export interface ToolNavHandlers {
 }
 
 /**
- * Build the 4-slot nav-footer for individual tool entity cards.
+ * Build the 4-slot connection channel for individual tool entity cards.
  *
  * Slots: Usa (action) | Modifica (action) | Duplica (action) | Storico
  *
  * Tools are pure action containers — no counts.
  */
-export function buildToolNavItems(handlers: ToolNavHandlers): NavFooterItem[] {
+export function buildToolConnections(handlers: ToolConnectionsHandlers): ConnectionChipProps[] {
   return [
     {
-      icon: navIcons.use,
       label: 'Usa',
-      entity: 'tool',
+      entityType: 'tool',
       disabled: !handlers.onUseClick,
       onClick: handlers.onUseClick,
     },
     {
-      icon: navIcons.edit,
       label: 'Modifica',
-      entity: 'tool',
+      entityType: 'tool',
       disabled: !handlers.onEditClick,
       onClick: handlers.onEditClick,
     },
     {
-      icon: navIcons.copy,
       label: 'Duplica',
-      entity: 'tool',
+      entityType: 'tool',
       disabled: !handlers.onDuplicateClick,
       onClick: handlers.onDuplicateClick,
     },
     {
-      icon: navIcons.history,
       label: 'Storico',
-      entity: 'tool',
+      entityType: 'tool',
       disabled: !handlers.onHistoryClick,
       onClick: handlers.onHistoryClick,
     },

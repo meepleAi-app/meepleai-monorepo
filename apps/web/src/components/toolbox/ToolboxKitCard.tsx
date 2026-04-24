@@ -3,7 +3,7 @@
 import React from 'react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { buildToolkitNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildToolkitConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { ToolboxDto } from '@/lib/api/schemas/toolbox.schemas';
 
 import { ToolPreviewChips } from './ToolPreviewChips';
@@ -45,7 +45,7 @@ export function ToolboxKitCard({
           { label: `${toolbox.sharedContext.players.length} players` },
           { label: `${toolbox.tools.length} tools` },
         ]}
-        navItems={buildToolkitNavItems(
+        connections={buildToolkitConnections(
           {
             toolCount: toolbox.tools.length,
             deckCount: 0,

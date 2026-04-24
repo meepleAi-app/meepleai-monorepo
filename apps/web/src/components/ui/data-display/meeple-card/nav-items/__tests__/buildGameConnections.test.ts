@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildGameNavItems } from '../buildGameNavItems';
+import { buildGameConnections } from '../buildGameConnections';
 
-describe('buildGameNavItems', () => {
+describe('buildGameConnections', () => {
   const handlers = {
     onKbClick: vi.fn(),
     onAgentClick: vi.fn(),
@@ -14,8 +14,8 @@ describe('buildGameNavItems', () => {
     onSessionPlus: vi.fn(),
   };
 
-  it('returns 4 nav items in fixed order: KB, Agent, Chat, Sessioni', () => {
-    const items = buildGameNavItems(
+  it('returns 4 connection items in fixed order: KB, Agent, Chat, Sessioni', () => {
+    const items = buildGameConnections(
       { kbCount: 3, agentCount: 1, chatCount: 5, sessionCount: 12 },
       handlers
     );
@@ -24,7 +24,7 @@ describe('buildGameNavItems', () => {
   });
 
   it('shows count when greater than 0', () => {
-    const items = buildGameNavItems(
+    const items = buildGameConnections(
       { kbCount: 3, agentCount: 1, chatCount: 0, sessionCount: 0 },
       handlers
     );
@@ -34,24 +34,24 @@ describe('buildGameNavItems', () => {
     expect(items[3].count).toBeUndefined();
   });
 
-  it('shows plus indicator when count is 0', () => {
-    const items = buildGameNavItems(
+  it('wires onCreate handler when count is 0', () => {
+    const items = buildGameConnections(
       { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
       handlers
     );
-    expect(items.every(i => i.showPlus)).toBe(true);
+    expect(items.every(i => typeof i.onCreate === 'function')).toBe(true);
   });
 
-  it('hides plus indicator when count is greater than 0', () => {
-    const items = buildGameNavItems(
+  it('leaves onCreate undefined when count is greater than 0', () => {
+    const items = buildGameConnections(
       { kbCount: 5, agentCount: 1, chatCount: 1, sessionCount: 1 },
       handlers
     );
-    expect(items.every(i => !i.showPlus)).toBe(true);
+    expect(items.every(i => i.onCreate === undefined)).toBe(true);
   });
 
   it('routes onClick to the correct handler per slot', () => {
-    const items = buildGameNavItems(
+    const items = buildGameConnections(
       { kbCount: 1, agentCount: 1, chatCount: 1, sessionCount: 1 },
       handlers
     );
@@ -66,7 +66,7 @@ describe('buildGameNavItems', () => {
   });
 
   it('marks slot as disabled when no click handler is provided', () => {
-    const items = buildGameNavItems(
+    const items = buildGameConnections(
       { kbCount: 1, agentCount: 0, chatCount: 0, sessionCount: 0 },
       { onKbClick: vi.fn() }
     );
@@ -77,13 +77,13 @@ describe('buildGameNavItems', () => {
   });
 
   it('uses entity colors per slot (kb, agent, chat, session)', () => {
-    const items = buildGameNavItems(
+    const items = buildGameConnections(
       { kbCount: 1, agentCount: 1, chatCount: 1, sessionCount: 1 },
       handlers
     );
-    expect(items[0].entity).toBe('kb');
-    expect(items[1].entity).toBe('agent');
-    expect(items[2].entity).toBe('chat');
-    expect(items[3].entity).toBe('session');
+    expect(items[0].entityType).toBe('kb');
+    expect(items[1].entityType).toBe('agent');
+    expect(items[2].entityType).toBe('chat');
+    expect(items[3].entityType).toBe('session');
   });
 });

@@ -1,31 +1,43 @@
 export { navIcons, type NavIconKey } from './icons';
 
-export { buildGameNavItems, type GameNavCounts, type GameNavHandlers } from './buildGameNavItems';
 export {
-  buildPlayerNavItems,
-  type PlayerNavCounts,
-  type PlayerNavHandlers,
-} from './buildPlayerNavItems';
+  buildGameConnections,
+  type GameConnectionsCounts,
+  type GameConnectionsHandlers,
+} from './buildGameConnections';
 export {
-  buildSessionNavItems,
-  type SessionNavCounts,
-  type SessionNavHandlers,
-} from './buildSessionNavItems';
+  buildPlayerConnections,
+  type PlayerConnectionsCounts,
+  type PlayerConnectionsHandlers,
+} from './buildPlayerConnections';
 export {
-  buildAgentNavItems,
-  type AgentNavCounts,
-  type AgentNavHandlers,
-} from './buildAgentNavItems';
-export { buildKbNavItems, type KbNavCounts, type KbNavHandlers } from './buildKbNavItems';
-export { buildChatNavItems, type ChatNavCounts, type ChatNavHandlers } from './buildChatNavItems';
+  buildSessionConnections,
+  type SessionConnectionsCounts,
+  type SessionConnectionsHandlers,
+} from './buildSessionConnections';
 export {
-  buildEventNavItems,
-  type EventNavCounts,
-  type EventNavHandlers,
-} from './buildEventNavItems';
+  buildAgentConnections,
+  type AgentConnectionsCounts,
+  type AgentConnectionsHandlers,
+} from './buildAgentConnections';
 export {
-  buildToolkitNavItems,
-  type ToolkitNavCounts,
-  type ToolkitNavHandlers,
-} from './buildToolkitNavItems';
-export { buildToolNavItems, type ToolNavHandlers } from './buildToolNavItems';
+  buildKbConnections,
+  type KbConnectionsCounts,
+  type KbConnectionsHandlers,
+} from './buildKbConnections';
+export {
+  buildChatConnections,
+  type ChatConnectionsCounts,
+  type ChatConnectionsHandlers,
+} from './buildChatConnections';
+export {
+  buildEventConnections,
+  type EventConnectionsCounts,
+  type EventConnectionsHandlers,
+} from './buildEventConnections';
+export {
+  buildToolkitConnections,
+  type ToolkitConnectionsCounts,
+  type ToolkitConnectionsHandlers,
+} from './buildToolkitConnections';
+export { buildToolConnections, type ToolConnectionsHandlers } from './buildToolConnections';

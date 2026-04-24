@@ -37,7 +37,7 @@ import { useNavigation } from '@/hooks/useNavigation';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRecentsStore } from '@/stores/use-recents';
 
-/** Agent card wrapper using MeepleAgentCard adapter for navItems wiring */
+/** Agent card wrapper using MeepleAgentCard adapter for connections wiring */
 function AgentCard({
   agent,
   onClick,

@@ -1,12 +1,10 @@
-import { navIcons } from './icons';
+import type { ConnectionChipProps } from '../types';
 
-import type { NavFooterItem } from '../types';
-
-export interface ChatNavCounts {
+export interface ChatConnectionsCounts {
   messageCount: number;
 }
 
-export interface ChatNavHandlers {
+export interface ChatConnectionsHandlers {
   onMessagesClick?: () => void;
   onAgentLinkClick?: () => void;
   onSourcesClick?: () => void;
@@ -14,7 +12,7 @@ export interface ChatNavHandlers {
 }
 
 /**
- * Build the 4-slot nav-footer for chat session entity cards.
+ * Build the 4-slot connection channel for chat session entity cards.
  *
  * Slot order matches the contract spec in
  * docs/superpowers/plans/2026-04-08-meeplecard-consumers-completion.md:
@@ -23,38 +21,34 @@ export interface ChatNavHandlers {
  *   2 = Agente (link to source agent)
  *   3 = Archivia (action)
  */
-export function buildChatNavItems(
-  counts: ChatNavCounts,
-  handlers: ChatNavHandlers
-): NavFooterItem[] {
+export function buildChatConnections(
+  counts: ChatConnectionsCounts,
+  handlers: ChatConnectionsHandlers
+): ConnectionChipProps[] {
   return [
     {
-      icon: navIcons.messages,
       label: 'Messaggi',
-      entity: 'chat',
+      entityType: 'chat',
       count: counts.messageCount > 0 ? counts.messageCount : undefined,
       disabled: !handlers.onMessagesClick,
       onClick: handlers.onMessagesClick,
     },
     {
-      icon: navIcons.kb,
       label: 'Sources',
-      entity: 'kb',
+      entityType: 'kb',
       // v1: not implemented (no sources count in chat schema)
       disabled: !handlers.onSourcesClick,
       onClick: handlers.onSourcesClick,
     },
     {
-      icon: navIcons.agent,
       label: 'Agente',
-      entity: 'agent',
+      entityType: 'agent',
       disabled: !handlers.onAgentLinkClick,
       onClick: handlers.onAgentLinkClick,
     },
     {
-      icon: navIcons.archive,
       label: 'Archivia',
-      entity: 'chat',
+      entityType: 'chat',
       disabled: !handlers.onArchiveClick,
       onClick: handlers.onArchiveClick,
     },

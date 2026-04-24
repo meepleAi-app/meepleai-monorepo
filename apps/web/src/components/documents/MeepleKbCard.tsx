@@ -36,7 +36,7 @@ import {
   type MeepleCardAction,
   type MeepleCardVariant,
 } from '@/components/ui/data-display/meeple-card';
-import { buildKbNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildKbConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 import { buildKbCardProps } from '@/lib/card-mappers';
 
@@ -163,9 +163,9 @@ export function MeepleKbCard({
     ? `${document.documentType.charAt(0).toUpperCase()}${document.documentType.slice(1)} — ${formatFileSize(document.fileSizeBytes)}`
     : formatFileSize(document.fileSizeBytes);
 
-  const navItems = useMemo(
+  const connections = useMemo(
     () =>
-      buildKbNavItems(
+      buildKbConnections(
         { chunkCount: undefined }, // chunkCount not available on PdfDocumentDto
         {
           onChunksClick: undefined, // disabled in v1
@@ -187,7 +187,7 @@ export function MeepleKbCard({
       subtitle={subtitle}
       badge={mapperProps.badge}
       metadata={mapperProps.metadata}
-      navItems={navItems}
+      connections={connections}
       className={className}
       onClick={() => (window.location.href = `/documents/${document.id}`)}
       actions={actions.length > 0 ? actions : undefined}

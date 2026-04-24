@@ -1,6 +1,6 @@
 /**
  * MeepleCard Story
- * Demonstrates all entity types, variants, feature toggles and NavFooter states.
+ * Demonstrates all entity types, variants, feature toggles and connection-chip states.
  *
  * Mirrors the visual scenarios documented in
  * admin-mockups/meeple-card-nav-buttons-mockup.html
@@ -8,16 +8,17 @@
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import {
-  buildAgentNavItems,
-  buildGameNavItems,
-  buildKbNavItems,
-  buildSessionNavItems,
+  buildAgentConnections,
+  buildChatConnections,
+  buildGameConnections,
+  buildKbConnections,
+  buildSessionConnections,
 } from '@/components/ui/data-display/meeple-card/nav-items';
-import type { NavFooterItem } from '@/components/ui/data-display/meeple-card/types';
+import type { ConnectionChipProps } from '@/components/ui/data-display/meeple-card/types';
 
 import type { ShowcaseStory } from '../types';
 
-type NavPreset = 'none' | 'game' | 'session' | 'kb' | 'agent';
+type NavPreset = 'none' | 'game' | 'session' | 'kb' | 'agent' | 'chat';
 
 type MeepleCardShowcaseProps = {
   entity: string;
@@ -36,10 +37,10 @@ type MeepleCardShowcaseProps = {
 
 const noop = () => undefined;
 
-function buildNavItems(
+function buildConnections(
   preset: NavPreset,
   { showCounts, disabled }: { showCounts: boolean; disabled: boolean }
-): NavFooterItem[] | undefined {
+): ConnectionChipProps[] | undefined {
   if (preset === 'none') return undefined;
 
   const counts = showCounts
@@ -50,10 +51,10 @@ function buildNavItems(
     ? {}
     : { onKbClick: noop, onAgentClick: noop, onChatClick: noop, onSessionClick: noop };
 
-  let items: NavFooterItem[];
+  let items: ConnectionChipProps[];
   switch (preset) {
-    case 'game':
-      items = buildGameNavItems(
+    case 'game': {
+      items = buildGameConnections(
         {
           kbCount: counts.kbCount,
           agentCount: counts.agentCount,
@@ -63,8 +64,9 @@ function buildNavItems(
         handlers
       );
       break;
-    case 'session':
-      items = buildSessionNavItems(
+    }
+    case 'session': {
+      items = buildSessionConnections(
         {
           playerCount: counts.playerCount,
           hasNotes: showCounts,
@@ -81,8 +83,9 @@ function buildNavItems(
             }
       );
       break;
-    case 'kb':
-      items = buildKbNavItems(
+    }
+    case 'kb': {
+      items = buildKbConnections(
         { chunkCount: counts.chunkCount },
         disabled
           ? {}
@@ -94,8 +97,23 @@ function buildNavItems(
             }
       );
       break;
-    case 'agent':
-      items = buildAgentNavItems(
+    }
+    case 'chat': {
+      items = buildChatConnections(
+        { messageCount: showCounts ? 24 : 0 },
+        disabled
+          ? {}
+          : {
+              onMessagesClick: noop,
+              onAgentLinkClick: noop,
+              onSourcesClick: noop,
+              onArchiveClick: noop,
+            }
+      );
+      break;
+    }
+    case 'agent': {
+      items = buildAgentConnections(
         { chatCount: counts.chatCount, kbCount: counts.kbCount },
         disabled
           ? {}
@@ -107,6 +125,7 @@ function buildNavItems(
             }
       );
       break;
+    }
     default:
       return undefined;
   }
@@ -124,7 +143,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
   title: 'MeepleCard',
   category: 'Data Display',
   description:
-    'Universal card component for games, players, agents, sessions, and more. Includes NavFooter states (grid/list/featured/disabled) matching the admin mockup.',
+    'Universal card component for games, players, agents, sessions, and more. Includes connection-chip states (grid/list/featured/disabled) matching the admin mockup.',
 
   component: function MeepleCardStory({
     entity,
@@ -140,7 +159,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
     navDisabled,
     navShowCounts,
   }: MeepleCardShowcaseProps) {
-    const navItems = buildNavItems(navPreset as NavPreset, {
+    const connections = buildConnections(navPreset as NavPreset, {
       showCounts: navShowCounts,
       disabled: navDisabled,
     });
@@ -155,7 +174,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
           rating={rating > 0 ? rating : undefined}
           ratingMax={10}
           badge={badge || undefined}
-          navItems={navItems}
+          connections={connections}
           imageUrl={
             entity === 'game'
               ? 'https://cf.geekdo-images.com/WPKk3MeT3EKhKnhFLB8OoA__itemrep/img/yJB95GXRb10MKzqxKOXGKjgMrPQ=/fit-in/246x300/filters:strip_icc()/pic3490053.jpg'
@@ -204,7 +223,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
     navPreset: {
       type: 'select',
       label: 'navPreset',
-      options: ['none', 'game', 'session', 'kb', 'agent'],
+      options: ['none', 'game', 'session', 'kb', 'agent', 'chat'],
       default: 'none',
     },
     navDisabled: { type: 'boolean', label: 'navDisabled', default: false },
@@ -237,9 +256,9 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
       label: 'With Wishlist',
       props: { showWishlist: true, title: 'Pandemic', subtitle: 'Z-Man Games', rating: 7.6 },
     },
-    // ─── NavFooter presets — mirror the 8 sections of the admin mockup ────────
+    // ─── Connection-chip presets — mirror the 8 sections of the admin mockup ──
     gameWithNav: {
-      label: 'Game + NavFooter',
+      label: 'Game + Connections',
       props: {
         entity: 'game',
         variant: 'grid',
@@ -251,7 +270,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
       },
     },
     gameFeaturedNav: {
-      label: 'Featured + NavFooter',
+      label: 'Featured + Connections',
       props: {
         entity: 'game',
         variant: 'featured',
@@ -263,7 +282,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
       },
     },
     sessionWithNav: {
-      label: 'Session + NavFooter',
+      label: 'Session + Connections',
       props: {
         entity: 'session',
         variant: 'grid',
@@ -275,7 +294,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
       },
     },
     kbWithNav: {
-      label: 'KB Document + NavFooter',
+      label: 'KB Document + Connections',
       props: {
         entity: 'kb',
         variant: 'grid',
@@ -287,7 +306,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
       },
     },
     agentWithNav: {
-      label: 'Agent + NavFooter',
+      label: 'Agent + Connections',
       props: {
         entity: 'agent',
         variant: 'grid',
@@ -299,7 +318,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
       },
     },
     navDisabled: {
-      label: 'NavFooter Disabled',
+      label: 'Connections Disabled',
       props: {
         entity: 'game',
         variant: 'grid',

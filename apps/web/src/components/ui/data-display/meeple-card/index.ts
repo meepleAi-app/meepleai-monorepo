@@ -6,7 +6,6 @@ export type {
   MeepleCardVariant,
   MeepleCardMetadata,
   MeepleCardAction,
-  NavFooterItem,
   CardStatus,
   CoverLabel,
   Carousel3DProps,

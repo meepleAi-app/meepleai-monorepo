@@ -246,7 +246,7 @@ function EntityTableRow({ card, onRowClick, isLast }: EntityTableRowProps) {
   const color = entityHsl(card.entity);
   const badgeBg = entityHsl(card.entity, 0.12);
   const borderBottomClass = isLast ? '' : 'border-b border-[var(--mc-border)]';
-  const navItems = card.navItems ?? [];
+  const connections = card.connections ?? [];
 
   const handleClick = () => {
     if (onRowClick) onRowClick(card);
@@ -348,19 +348,24 @@ function EntityTableRow({ card, onRowClick, isLast }: EntityTableRowProps) {
       {/* Nav */}
       <td className={`px-3.5 py-2.5 ${borderBottomClass}`}>
         <div className="flex items-center justify-end gap-1.5">
-          {navItems.length > 0 ? (
-            navItems.map((item, idx) => (
-              <TableNavIcon
-                key={`${item.label}-${idx}`}
-                entity={item.entity}
-                icon={item.icon}
-                label={item.label}
-                count={item.count}
-                showPlus={item.showPlus}
-                disabled={item.disabled}
-                onClick={item.onClick}
-              />
-            ))
+          {connections.length > 0 ? (
+            connections.map((c, idx) => {
+              const label = c.label ?? entityLabel[c.entityType];
+              const handler = c.onClick ?? c.onCreate;
+              const showPlus = c.onCreate !== undefined && (c.count === undefined || c.count === 0);
+              return (
+                <TableNavIcon
+                  key={`${label}-${idx}`}
+                  entity={c.entityType}
+                  icon={c.iconOverride ?? entityIcon[c.entityType]}
+                  label={label}
+                  count={c.count}
+                  showPlus={showPlus}
+                  disabled={c.disabled}
+                  onClick={handler}
+                />
+              );
+            })
           ) : (
             <span className="text-[var(--mc-text-muted)]">—</span>
           )}

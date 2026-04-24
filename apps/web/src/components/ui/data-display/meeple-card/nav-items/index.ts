@@ -25,7 +25,10 @@ export {
   type SessionNavHandlers,
 } from './buildSessionNavItems';
 export {
+  buildAgentConnections,
   buildAgentNavItems,
+  type AgentConnectionsCounts,
+  type AgentConnectionsHandlers,
   type AgentNavCounts,
   type AgentNavHandlers,
 } from './buildAgentNavItems';

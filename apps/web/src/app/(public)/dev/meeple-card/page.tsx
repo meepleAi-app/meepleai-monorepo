@@ -18,7 +18,7 @@ import {
   EntityTable,
 } from '@/components/ui/data-display/meeple-card';
 import {
-  buildAgentNavItems,
+  buildAgentConnections,
   buildChatConnections,
   buildEventNavItems,
   buildGameConnections,
@@ -437,7 +437,7 @@ export default function MeepleCardDevPage() {
                 { icon: '💬', label: 'Chat', onClick: () => alert('Chat') },
                 { icon: '⚙️', label: 'Config', onClick: () => alert('Config') },
               ]}
-              navItems={buildAgentNavItems(
+              connections={buildAgentConnections(
                 { chatCount: 18, kbCount: 12 },
                 {
                   onChatClick: () => alert('Chat'),
@@ -746,7 +746,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="RulesBot Pro"
                 subtitle="RAG · 12 fonti"
-                navItems={buildAgentNavItems(
+                connections={buildAgentConnections(
                   { chatCount: 3, kbCount: 12 },
                   {
                     onChatClick: () => alert('Chat!'),
@@ -1034,7 +1034,7 @@ export default function MeepleCardDevPage() {
                 subtitle: 'GPT-4o · Hybrid RAG',
                 status: 'active',
                 metadata: [{ label: 'Catan' }, { label: '450 chunks' }],
-                navItems: buildAgentNavItems(
+                connections: buildAgentConnections(
                   { chatCount: 2, kbCount: 3 },
                   {
                     onChatClick: () => alert('Chat'),
@@ -1705,7 +1705,7 @@ function DisabledNavItemsSection() {
             status="archived"
             badge="v1"
             metadata={[{ label: '0 invoc.' }]}
-            navItems={buildAgentNavItems(
+            connections={buildAgentConnections(
               { chatCount: 0, kbCount: 3 },
               { onKbClick: () => alert('KB') }
             ).map((item, i) => (i !== 1 ? { ...item, disabled: true } : item))}

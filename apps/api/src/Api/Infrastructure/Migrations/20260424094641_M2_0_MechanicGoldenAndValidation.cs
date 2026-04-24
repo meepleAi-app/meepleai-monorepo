@@ -30,11 +30,12 @@ namespace Api.Infrastructure.Migrations
             curator_user_id uuid NOT NULL REFERENCES ""Users""(""Id"") ON DELETE RESTRICT,
             created_at timestamptz NOT NULL DEFAULT now(),
             updated_at timestamptz NOT NULL DEFAULT now(),
-            deleted_at timestamptz NULL,
-            xmin xid NOT NULL DEFAULT 0
+            deleted_at timestamptz NULL
         );
         CREATE INDEX ix_mechanic_golden_claims_shared_game_id ON mechanic_golden_claims(shared_game_id) WHERE deleted_at IS NULL;
         CREATE INDEX ix_mechanic_golden_claims_embedding ON mechanic_golden_claims USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+        -- NOTE: ivfflat index built on empty table; requires REINDEX after bulk embedding load
+        -- (pgvector ivfflat does not update centroids incrementally; stale centroids cause silent seqscan fallback)
 
         CREATE TABLE mechanic_golden_bgg_tags (
             id uuid PRIMARY KEY,
@@ -70,8 +71,7 @@ namespace Api.Infrastructure.Migrations
             min_bgg_match_pct numeric(5,2) NOT NULL,
             min_overall_score numeric(5,2) NOT NULL,
             updated_at timestamptz NOT NULL DEFAULT now(),
-            updated_by_user_id uuid NULL REFERENCES ""Users""(""Id"") ON DELETE SET NULL,
-            xmin xid NOT NULL DEFAULT 0
+            updated_by_user_id uuid NULL REFERENCES ""Users""(""Id"") ON DELETE SET NULL
         );
         INSERT INTO certification_thresholds_config (id, min_coverage_pct, max_page_tolerance, min_bgg_match_pct, min_overall_score)
         VALUES (1, 70, 10, 80, 60) ON CONFLICT DO NOTHING;

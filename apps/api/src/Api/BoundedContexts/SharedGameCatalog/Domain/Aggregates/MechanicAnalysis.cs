@@ -249,6 +249,11 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         DateTime? suppressionRequestedAt,
         SuppressionRequestSource? suppressionRequestSource,
         IEnumerable<MechanicClaim> claims,
+        CertificationStatus certificationStatus = CertificationStatus.NotEvaluated,
+        DateTimeOffset? certifiedAt = null,
+        Guid? certifiedByUserId = null,
+        string? certificationOverrideReason = null,
+        Guid? lastMetricsId = null,
         uint xminVersion = 0)
     {
         ArgumentNullException.ThrowIfNull(claims);
@@ -280,7 +285,12 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             SuppressedBy = suppressedBy,
             SuppressionReason = suppressionReason,
             SuppressionRequestedAt = suppressionRequestedAt,
-            SuppressionRequestSource = suppressionRequestSource
+            SuppressionRequestSource = suppressionRequestSource,
+            CertificationStatus = certificationStatus,
+            CertifiedAt = certifiedAt,
+            CertifiedByUserId = certifiedByUserId,
+            CertificationOverrideReason = certificationOverrideReason,
+            LastMetricsId = lastMetricsId
         };
 
         foreach (var claim in claims)

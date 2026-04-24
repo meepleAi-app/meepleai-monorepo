@@ -522,6 +522,137 @@ public class CalculateMechanicAnalysisMetricsHandlerTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task Handle_WhenAnalysisAlreadyCertified_DoesNotRaiseDuplicateEvent()
+    {
+        // Regression for code-review finding on commit 4019c9f5:
+        // MechanicAnalysis.Reconstitute previously dropped the five certification-state fields,
+        // so an aggregate loaded from the DB always came back as NotEvaluated — re-invoking the
+        // metrics handler on an already-Certified analysis silently re-certified it and dispatched
+        // a duplicate MechanicAnalysisCertifiedEvent. This test rehydrates the aggregate with
+        // Certified state and verifies: (a) rehydration is faithful (pre-handler assertion),
+        // (b) CertifyViaOverride's "Already certified" guard can observe the rehydrated state,
+        // (c) re-running the handler dispatches exactly one event (not zero, not two) for this run.
+        var analysisId = Guid.NewGuid();
+        var priorMetricsId = Guid.NewGuid();
+        var priorCertifiedAt = new DateTimeOffset(2026, 4, 23, 10, 0, 0, TimeSpan.Zero);
+
+        var claimId = Guid.NewGuid();
+        var citationForClaim = MechanicCitation.Reconstitute(
+            id: Guid.NewGuid(),
+            claimId: claimId,
+            pdfPage: 1,
+            quote: "Quote",
+            chunkId: null,
+            displayOrder: 0);
+        var claim = MechanicClaim.Reconstitute(
+            id: claimId,
+            analysisId: analysisId,
+            section: MechanicSection.Summary,
+            text: "Claim text",
+            displayOrder: 0,
+            status: MechanicClaimStatus.Approved,
+            reviewedBy: Guid.NewGuid(),
+            reviewedAt: DateTime.UtcNow,
+            rejectionNote: null,
+            citations: new[] { citationForClaim });
+
+        var analysis = MechanicAnalysis.Reconstitute(
+            id: analysisId,
+            sharedGameId: Guid.NewGuid(),
+            pdfDocumentId: Guid.NewGuid(),
+            promptVersion: "v1",
+            status: MechanicAnalysisStatus.Published,
+            createdBy: Guid.NewGuid(),
+            createdAt: DateTime.UtcNow,
+            reviewedBy: Guid.NewGuid(),
+            reviewedAt: DateTime.UtcNow,
+            rejectionReason: null,
+            totalTokensUsed: 0,
+            estimatedCostUsd: 0m,
+            modelUsed: "gpt-4",
+            provider: "openai",
+            costCapUsd: 1m,
+            costCapOverrideAt: null,
+            costCapOverrideBy: null,
+            costCapOverrideReason: null,
+            isSuppressed: false,
+            suppressedAt: null,
+            suppressedBy: null,
+            suppressionReason: null,
+            suppressionRequestedAt: null,
+            suppressionRequestSource: null,
+            claims: new[] { claim },
+            certificationStatus: CertificationStatus.Certified,
+            certifiedAt: priorCertifiedAt,
+            certifiedByUserId: null,
+            certificationOverrideReason: null,
+            lastMetricsId: priorMetricsId);
+
+        // (a) Rehydration invariant — state must survive Reconstitute.
+        analysis.CertificationStatus.Should().Be(CertificationStatus.Certified);
+        analysis.CertifiedAt.Should().Be(priorCertifiedAt);
+        analysis.LastMetricsId.Should().Be(priorMetricsId);
+
+        // (b) Guard observability — override must reject on a rehydrated-Certified aggregate.
+        var overrideAct = () => analysis.CertifyViaOverride(
+            reason: new string('x', 50),
+            userId: Guid.NewGuid(),
+            utcNow: DateTimeOffset.UtcNow);
+        overrideAct.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Already certified*");
+
+        // (c) Re-invocation — handler must raise exactly one certified event for this run,
+        // regardless of prior certification state. (Handler re-computes metrics and applies them,
+        // so the event represents the current run, not an accumulated total across runs.)
+        var thresholdsConfig = CertificationThresholdsConfig.Seed();
+        var versionHash = new VersionHash(new string('a', 64));
+        SetupRepos(
+            analysis,
+            goldenClaims: Array.Empty<MechanicGoldenClaim>(),
+            bggTags: Array.Empty<MechanicGoldenBggTag>(),
+            thresholdsConfig: thresholdsConfig,
+            versionHash: versionHash);
+
+        _keywordExtractorMock
+            .Setup(k => k.Extract(It.IsAny<string>()))
+            .Returns(new[] { "kw" });
+        _embeddingServiceMock
+            .Setup(e => e.EmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new float[] { 0.1f });
+
+        var matchResult = new MatchResult(
+            CoveragePct: 95m,
+            PageAccuracyPct: 90m,
+            BggMatchPct: 92m,
+            Matches: new List<MatchDetail>
+            {
+                new(Guid.NewGuid(), claim.Id, true, 0)
+            });
+        _matchingEngineMock
+            .Setup(e => e.Match(
+                It.IsAny<IReadOnlyList<AnalysisClaim>>(),
+                It.IsAny<IReadOnlyList<MechanicGoldenClaim>>(),
+                It.IsAny<IReadOnlyList<MechanicGoldenBggTag>>(),
+                It.IsAny<IReadOnlyList<AnalysisMechanicTag>>(),
+                It.IsAny<CertificationThresholds>()))
+            .Returns(matchResult);
+        _metricsRepoMock
+            .Setup(m => m.AddAsync(It.IsAny<MechanicAnalysisMetrics>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        await _handler.Handle(
+            new CalculateMechanicAnalysisMetricsCommand(analysis.Id),
+            TestContext.Current.CancellationToken);
+
+        analysis.DomainEvents
+            .OfType<MechanicAnalysisCertifiedEvent>()
+            .Should().ContainSingle("re-certifying a rehydrated-Certified aggregate must raise exactly one event for the current run, not a duplicate");
+    }
+
     // ============================================================================================
     // Test helpers
     // ============================================================================================

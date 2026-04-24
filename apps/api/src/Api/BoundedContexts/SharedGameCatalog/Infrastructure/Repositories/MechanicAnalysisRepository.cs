@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
@@ -264,6 +265,11 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
                 ? null
                 : (SuppressionRequestSource)entity.SuppressionRequestSource.Value,
             claims: domainClaims,
+            certificationStatus: (CertificationStatus)entity.CertificationStatus,
+            certifiedAt: entity.CertifiedAt,
+            certifiedByUserId: entity.CertifiedByUserId,
+            certificationOverrideReason: entity.CertificationOverrideReason,
+            lastMetricsId: entity.LastMetricsId,
             xminVersion: entity.Xmin);
     }
 
@@ -325,6 +331,11 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             SuppressionRequestSource = analysis.SuppressionRequestSource is null
                 ? null
                 : (int)analysis.SuppressionRequestSource.Value,
+            CertificationStatus = (int)analysis.CertificationStatus,
+            CertifiedAt = analysis.CertifiedAt,
+            CertifiedByUserId = analysis.CertifiedByUserId,
+            CertificationOverrideReason = analysis.CertificationOverrideReason,
+            LastMetricsId = analysis.LastMetricsId,
             Xmin = analysis.XminVersion,
             Claims = analysis.Claims.Select(MapClaimToEntity).ToList()
         };

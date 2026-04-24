@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { sync as globSync } from 'glob';
 import { parse } from '@babel/parser';
@@ -12,6 +12,7 @@ interface Hit {
   file: string;
   line: number;
   componentName: string;
+  kind: 'navItems' | 'spread';
 }
 
 /**
@@ -34,6 +35,18 @@ interface Hit {
 describe('Step 2 — call-site migration coverage (Gate 1)', () => {
   it('zero production files use navItems= on Meeple* card components', () => {
     const root = resolve(__dirname, '..', '..', '..', '..', '..', '..'); // -> apps/web
+
+    // Safeguard 1 — path-drift sanity assertion. If the __dirname-relative
+    // path is wrong (e.g. package moved, or '..' segment count off), the
+    // glob below would return nothing and the loop would run 0 iterations,
+    // making the test pass vacuously. Verify root really points to apps/web
+    // by checking package.json exists there.
+    if (!existsSync(resolve(root, 'package.json'))) {
+      throw new Error(
+        `Gate 1 path drift: resolved root ${root} does not contain package.json. The __dirname-relative path is wrong; fix the number of '..' segments.`
+      );
+    }
+
     const files = globSync('src/{app,components}/**/*.tsx', {
       cwd: root,
       ignore: [
@@ -47,6 +60,13 @@ describe('Step 2 — call-site migration coverage (Gate 1)', () => {
       ],
       absolute: true,
     });
+
+    // Safeguard 2 — files-scanned floor. Production app has hundreds of
+    // .tsx files. If glob returned 0 or near-0 (e.g. cwd wrong, glob
+    // pattern broken), the loop would run too few iterations to surface
+    // real violations. >50 catches both vacuous-pass and severely
+    // truncated scans.
+    expect(files.length).toBeGreaterThan(50);
 
     const hits: Hit[] = [];
 
@@ -77,6 +97,23 @@ describe('Step 2 — call-site migration coverage (Gate 1)', () => {
               file: file.replace(root + '/', '').replace(root + '\\', ''),
               line: attr.loc?.start.line ?? -1,
               componentName: name.name,
+              kind: 'navItems',
+            });
+          }
+
+          // Safeguard 3 — JSXSpreadAttribute detection. <MeepleCard {...props} />
+          // is statically opaque: we cannot tell whether `navItems` is
+          // part of the spread payload without executing the code. Surface
+          // each spread as a separate hit kind so a human auditor can
+          // verify the spread doesn't carry `navItems` before Task 8
+          // cleanup (which deletes the navItems channel entirely).
+          for (const attr of path.node.attributes) {
+            if (attr.type !== 'JSXSpreadAttribute') continue;
+            hits.push({
+              file: file.replace(root + '/', '').replace(root + '\\', ''),
+              line: attr.loc?.start.line ?? -1,
+              componentName: name.name,
+              kind: 'spread',
             });
           }
         },
@@ -84,12 +121,31 @@ describe('Step 2 — call-site migration coverage (Gate 1)', () => {
     }
 
     if (hits.length > 0) {
-      const detail = hits
-        .map(h => `  ${h.file}:${h.line}  <${h.componentName} navItems=...>`)
-        .join('\n');
-      throw new Error(
-        `Found ${hits.length} unmigrated call-site(s) using navItems= on Meeple* cards:\n${detail}\n\nMigrate to connections= per spec docs/superpowers/specs/2026-04-24-connectionchip-step-2-call-site-migration-design.md.`
+      const navItemsHits = hits.filter(h => h.kind === 'navItems');
+      const spreadHits = hits.filter(h => h.kind === 'spread');
+      const lines: string[] = [];
+      if (navItemsHits.length > 0) {
+        lines.push(
+          `Found ${navItemsHits.length} unmigrated call-site(s) using navItems= on Meeple* cards:`
+        );
+        for (const h of navItemsHits) {
+          lines.push(`  ${h.file}:${h.line}  <${h.componentName} navItems=...>`);
+        }
+      }
+      if (spreadHits.length > 0) {
+        if (lines.length > 0) lines.push('');
+        lines.push(
+          `Found ${spreadHits.length} spread-attribute call-site(s) on Meeple* cards (statically opaque — must be audited manually):`
+        );
+        for (const h of spreadHits) {
+          lines.push(`  ${h.file}:${h.line}  <${h.componentName} {...} />`);
+        }
+      }
+      lines.push('');
+      lines.push(
+        'Migrate to connections= per spec docs/superpowers/specs/2026-04-24-connectionchip-step-2-call-site-migration-design.md.'
       );
+      throw new Error(lines.join('\n'));
     }
 
     expect(hits).toEqual([]);

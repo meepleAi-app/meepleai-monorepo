@@ -20,13 +20,13 @@ import {
 import {
   buildAgentConnections,
   buildChatConnections,
-  buildEventNavItems,
+  buildEventConnections,
   buildGameConnections,
   buildKbConnections,
   buildPlayerConnections,
   buildSessionConnections,
-  buildToolNavItems,
-  buildToolkitNavItems,
+  buildToolConnections,
+  buildToolkitConnections,
 } from '@/components/ui/data-display/meeple-card/nav-items';
 import type {
   ConnectionChipProps,
@@ -493,7 +493,7 @@ export default function MeepleCardDevPage() {
               badge="Finals"
               status="setup"
               metadata={[{ label: '32 team' }, { label: '15 Mar' }]}
-              navItems={buildEventNavItems(
+              connections={buildEventConnections(
                 { participantCount: 32, gameCount: 4 },
                 {
                   onParticipantsClick: () => alert('Participants'),
@@ -512,7 +512,7 @@ export default function MeepleCardDevPage() {
               status="active"
               tags={['Official', 'Stats', 'Dice']}
               metadata={[{ label: '6 strumenti' }, { label: '124 uso' }]}
-              navItems={buildToolkitNavItems(
+              connections={buildToolkitConnections(
                 { toolCount: 6, deckCount: 2, phaseCount: 4, useCount: 124 },
                 {
                   onToolsClick: () => alert('Tools'),
@@ -534,7 +534,7 @@ export default function MeepleCardDevPage() {
                 { icon: '🎲', label: 'Lancia', onClick: () => alert('Roll') },
                 { icon: '📋', label: 'Duplica', onClick: () => alert('Duplicate') },
               ]}
-              navItems={buildToolNavItems({
+              connections={buildToolConnections({
                 onUseClick: () => alert('Use'),
                 onEditClick: () => alert('Edit'),
                 onDuplicateClick: () => alert('Duplicate'),
@@ -800,7 +800,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Serata Lupus"
                 subtitle="Sabato 12 Apr"
-                navItems={buildEventNavItems(
+                connections={buildEventConnections(
                   { participantCount: 8, gameCount: 3 },
                   {
                     onParticipantsClick: () => alert('Participants!'),
@@ -819,7 +819,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Catan Tools"
                 subtitle="6 strumenti"
-                navItems={buildToolkitNavItems(
+                connections={buildToolkitConnections(
                   { toolCount: 6, deckCount: 2, phaseCount: 4, useCount: 18 },
                   {
                     onToolsClick: () => alert('Tools!'),
@@ -838,7 +838,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Dice Roller"
                 subtitle="6d6"
-                navItems={buildToolNavItems({
+                connections={buildToolConnections({
                   onUseClick: () => alert('Use!'),
                   onEditClick: () => alert('Edit!'),
                   onDuplicateClick: () => alert('Duplicate!'),

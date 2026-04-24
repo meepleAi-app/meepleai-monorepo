@@ -1,13 +1,11 @@
-import { navIcons } from './icons';
+import type { ConnectionChipProps } from '../types';
 
-import type { NavFooterItem } from '../types';
-
-export interface EventNavCounts {
+export interface EventConnectionsCounts {
   participantCount: number;
   gameCount: number;
 }
 
-export interface EventNavHandlers {
+export interface EventConnectionsHandlers {
   onParticipantsClick?: () => void;
   onLocationClick?: () => void;
   onGamesClick?: () => void;
@@ -15,44 +13,56 @@ export interface EventNavHandlers {
 }
 
 /**
- * Build the 4-slot nav-footer for event (game night) entity cards.
+ * Build the 4-slot connection channel for event (game night) entity cards.
  *
  * Slots: Partecipanti | Luogo (link) | Giochi | Data (link)
+ *
+ * Step 2 (2026-04-24): renamed from buildEventNavItems to buildEventConnections.
+ * Return shape changed from NavFooterItem[] to ConnectionChipProps[].
+ * Old name retained as deprecated re-export until cleanup commit 8.
  */
-export function buildEventNavItems(
-  counts: EventNavCounts,
-  handlers: EventNavHandlers
-): NavFooterItem[] {
+export function buildEventConnections(
+  counts: EventConnectionsCounts,
+  handlers: EventConnectionsHandlers
+): ConnectionChipProps[] {
   return [
     {
-      icon: navIcons.players,
       label: 'Partecipanti',
-      entity: 'player',
+      entityType: 'player',
       count: counts.participantCount > 0 ? counts.participantCount : undefined,
       disabled: !handlers.onParticipantsClick,
       onClick: handlers.onParticipantsClick,
     },
     {
-      icon: navIcons.location,
       label: 'Luogo',
-      entity: 'event',
+      entityType: 'event',
       disabled: !handlers.onLocationClick,
       onClick: handlers.onLocationClick,
     },
     {
-      icon: navIcons.games,
       label: 'Giochi',
-      entity: 'game',
+      entityType: 'game',
       count: counts.gameCount > 0 ? counts.gameCount : undefined,
       disabled: !handlers.onGamesClick,
       onClick: handlers.onGamesClick,
     },
     {
-      icon: navIcons.date,
       label: 'Data',
-      entity: 'event',
+      entityType: 'event',
       disabled: !handlers.onDateClick,
       onClick: handlers.onDateClick,
     },
   ];
 }
+
+/**
+ * @deprecated Use `buildEventConnections` instead. Will be removed in commit 8
+ * of the Step 2 migration PR.
+ */
+export const buildEventNavItems = buildEventConnections;
+
+/** @deprecated Use `EventConnectionsCounts` instead. Removed in commit 8. */
+export type EventNavCounts = EventConnectionsCounts;
+
+/** @deprecated Use `EventConnectionsHandlers` instead. Removed in commit 8. */
+export type EventNavHandlers = EventConnectionsHandlers;

@@ -49,13 +49,26 @@ export {
   type ChatNavHandlers,
 } from './buildChatNavItems';
 export {
+  buildEventConnections,
   buildEventNavItems,
+  type EventConnectionsCounts,
+  type EventConnectionsHandlers,
   type EventNavCounts,
   type EventNavHandlers,
 } from './buildEventNavItems';
 export {
+  buildToolkitConnections,
   buildToolkitNavItems,
+  type ToolkitConnectionsCounts,
+  type ToolkitConnectionsHandlers,
   type ToolkitNavCounts,
   type ToolkitNavHandlers,
 } from './buildToolkitNavItems';
-export { buildToolNavItems, type ToolNavHandlers } from './buildToolNavItems';
+// NOTE: buildToolNavItems has no Counts parameter — tools are pure action
+// containers. Only the Handlers type is exported.
+export {
+  buildToolConnections,
+  buildToolNavItems,
+  type ToolConnectionsHandlers,
+  type ToolNavHandlers,
+} from './buildToolNavItems';

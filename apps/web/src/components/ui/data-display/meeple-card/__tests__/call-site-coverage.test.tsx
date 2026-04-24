@@ -23,15 +23,63 @@ interface Hit {
  * JSX element whose name matches /^Meeple.*Card$/ AND has an attribute
  * named exactly `navItems`. Any match is a Step 2 violation.
  *
- * Design notes:
- * - We match `Meeple*Card` rather than `MeepleCard` directly because in
- *   production the card components are wrapper components (e.g.
- *   MeepleSessionCard) that forward props to MeepleCard. The wrappers
- *   are where authors actually write `navItems=...`.
- * - The old `navItems` prop on the wrapper components will be removed in
- *   commit 8 (Cleanup). Until commit 8, this test is the source of truth
- *   for "have we migrated everything?".
+ * ─── What throws vs what is allowlisted ──────────────────────────────────
+ *
+ * `navItems=` hits ALWAYS throw. Zero hits is the Step 2 exit criterion;
+ * the cleanup commit (Task 8) physically deletes the `navItems` prop
+ * from `MeepleCardProps`, which is safe only once every call-site has
+ * migrated to `connections=`.
+ *
+ * Spread attributes (`<MeepleCard {...foo} />`) are statically opaque:
+ * we cannot tell whether the spread payload carries `navItems` without
+ * executing the code. In Task 7 (2026-04-24) each of the 8 pre-existing
+ * spread sites was manually audited:
+ *
+ *   - `useMetadataToMeepleCard` return type: no navItems field
+ *   - `items`-mapped object literals (games/sessions/dashboard pages):
+ *     plain literals with explicit keys, no navItems assignment
+ *   - `entity-list-view`: spreads `cardProps` returned by
+ *     `renderItem: (item: T) => Omit<MeepleCardProps, 'entity' | 'variant'>`.
+ *     `Omit` structurally still permits `navItems`, but no consumer sets
+ *     it. Once Task 8 deletes `navItems` from `MeepleCardProps`, carriage
+ *     becomes mechanically impossible.
+ *
+ * We therefore allowlist the 8 known spread files below. Unknown spreads
+ * on `Meeple*Card` components still throw — this catches regressions
+ * where a new contributor adds a spread site without auditing it.
+ *
+ * Keyed by file only (not line) so edits that shift line numbers don't
+ * break the gate.
+ *
+ * ─── For future contributors ────────────────────────────────────────────
+ *
+ * If you add a new spread of `MeepleCard`-bound props on a `Meeple*Card`
+ * component, this gate will fail. To unblock:
+ *   1. Manually verify the spread source's type/shape does NOT include
+ *      `navItems` (and, post-Task-8, that the source doesn't carry any
+ *      field that has since been renamed).
+ *   2. Add your file path (normalized with forward slashes, relative to
+ *      `apps/web/`) to `SPREAD_ALLOWLIST` below.
+ *   3. Document your audit reason in the commit message.
  */
+const SPREAD_ALLOWLIST: ReadonlySet<string> = new Set([
+  // useMetadataToMeepleCard → no navItems field in return type
+  'src/app/admin/(dashboard)/shared-games/import/steps/Step3PreviewConfirm.tsx',
+  'src/app/admin/(dashboard)/shared-games/import/steps/Step2MetadataReview.tsx',
+  // plain object literal maps — explicit keys, no navItems
+  'src/app/(authenticated)/sessions/page.tsx',
+  'src/app/(authenticated)/games/page.tsx',
+  // MeepleCardProps[] items built inline; use manaPips, no navItems
+  'src/app/(authenticated)/dashboard/DashboardClient.tsx',
+  // renderItem returns Omit<MeepleCardProps, ...> — structurally allows
+  // navItems but no consumer sets it; Task 8 deletion makes it impossible
+  'src/components/ui/data-display/entity-list-view/entity-list-view.tsx',
+]);
+
+function normalize(p: string): string {
+  return p.replace(/\\/g, '/');
+}
+
 describe('Step 2 — call-site migration coverage (Gate 1)', () => {
   it('zero production files use navItems= on Meeple* card components', () => {
     const root = resolve(__dirname, '..', '..', '..', '..', '..', '..'); // -> apps/web
@@ -103,23 +151,22 @@ describe('Step 2 — call-site migration coverage (Gate 1)', () => {
             if (attr.name.type !== 'JSXIdentifier') continue;
             if (attr.name.name !== 'navItems') continue;
             hits.push({
-              file: file.replace(root + '/', '').replace(root + '\\', ''),
+              file: normalize(file.replace(root + '/', '').replace(root + '\\', '')),
               line: attr.loc?.start.line ?? -1,
               componentName: name.name,
               kind: 'navItems',
             });
           }
 
-          // Safeguard 3 — JSXSpreadAttribute detection. <MeepleCard {...props} />
-          // is statically opaque: we cannot tell whether `navItems` is
-          // part of the spread payload without executing the code. Surface
-          // each spread as a separate hit kind so a human auditor can
-          // verify the spread doesn't carry `navItems` before Task 8
-          // cleanup (which deletes the navItems channel entirely).
+          // JSXSpreadAttribute detection. <MeepleCard {...props} /> is
+          // statically opaque — we cannot tell whether `navItems` is part
+          // of the spread payload without executing the code. Surface
+          // each spread as a separate hit; the allowlist below declares
+          // which ones have been audited as safe.
           for (const attr of path.node.attributes) {
             if (attr.type !== 'JSXSpreadAttribute') continue;
             hits.push({
-              file: file.replace(root + '/', '').replace(root + '\\', ''),
+              file: normalize(file.replace(root + '/', '').replace(root + '\\', '')),
               line: attr.loc?.start.line ?? -1,
               componentName: name.name,
               kind: 'spread',
@@ -129,34 +176,46 @@ describe('Step 2 — call-site migration coverage (Gate 1)', () => {
       });
     }
 
-    if (hits.length > 0) {
-      const navItemsHits = hits.filter(h => h.kind === 'navItems');
-      const spreadHits = hits.filter(h => h.kind === 'spread');
-      const lines: string[] = [];
-      if (navItemsHits.length > 0) {
-        lines.push(
-          `Found ${navItemsHits.length} unmigrated call-site(s) using navItems= on Meeple* cards:`
-        );
-        for (const h of navItemsHits) {
-          lines.push(`  ${h.file}:${h.line}  <${h.componentName} navItems=...>`);
-        }
-      }
-      if (spreadHits.length > 0) {
-        if (lines.length > 0) lines.push('');
-        lines.push(
-          `Found ${spreadHits.length} spread-attribute call-site(s) on Meeple* cards (statically opaque — must be audited manually):`
-        );
-        for (const h of spreadHits) {
-          lines.push(`  ${h.file}:${h.line}  <${h.componentName} {...} />`);
-        }
+    const navItemsHits = hits.filter(h => h.kind === 'navItems');
+    const spreadHits = hits.filter(h => h.kind === 'spread');
+    const unaudited = spreadHits.filter(h => !SPREAD_ALLOWLIST.has(h.file));
+
+    const lines: string[] = [];
+
+    if (navItemsHits.length > 0) {
+      lines.push(
+        `Found ${navItemsHits.length} unmigrated call-site(s) using navItems= on Meeple* cards:`
+      );
+      for (const h of navItemsHits) {
+        lines.push(`  ${h.file}:${h.line}  <${h.componentName} navItems=...>`);
       }
       lines.push('');
       lines.push(
         'Migrate to connections= per spec docs/superpowers/specs/2026-04-24-connectionchip-step-2-call-site-migration-design.md.'
       );
+    }
+
+    if (unaudited.length > 0) {
+      if (lines.length > 0) lines.push('');
+      lines.push(
+        `Found ${unaudited.length} un-audited spread-attribute call-site(s) on Meeple* cards:`
+      );
+      for (const h of unaudited) {
+        lines.push(`  ${h.file}:${h.line}  <${h.componentName} {...} />`);
+      }
+      lines.push('');
+      lines.push(
+        'Spreads are statically opaque. Audit each new site to confirm no navItems is carried, then add the file path to SPREAD_ALLOWLIST in this test.'
+      );
+    }
+
+    if (lines.length > 0) {
       throw new Error(lines.join('\n'));
     }
 
-    expect(hits).toEqual([]);
+    // Informative assertions: navItems hits must be 0; spread hits are
+    // allowed only if every one is in the allowlist.
+    expect(navItemsHits).toEqual([]);
+    expect(unaudited).toEqual([]);
   });
 });

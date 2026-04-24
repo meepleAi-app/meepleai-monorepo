@@ -1,15 +1,13 @@
-import { navIcons } from './icons';
+import type { ConnectionChipProps } from '../types';
 
-import type { NavFooterItem } from '../types';
-
-export interface ToolkitNavCounts {
+export interface ToolkitConnectionsCounts {
   toolCount: number;
   deckCount: number;
   phaseCount: number;
   useCount: number;
 }
 
-export interface ToolkitNavHandlers {
+export interface ToolkitConnectionsHandlers {
   onToolsClick?: () => void;
   onDecksClick?: () => void;
   onPhasesClick?: () => void;
@@ -17,46 +15,58 @@ export interface ToolkitNavHandlers {
 }
 
 /**
- * Build the 4-slot nav-footer for toolkit entity cards.
+ * Build the 4-slot connection channel for toolkit entity cards.
  *
  * Slots: Tools | Decks | Phases | Storico (use count)
+ *
+ * Step 2 (2026-04-24): renamed from buildToolkitNavItems to buildToolkitConnections.
+ * Return shape changed from NavFooterItem[] to ConnectionChipProps[].
+ * Old name retained as deprecated re-export until cleanup commit 8.
  */
-export function buildToolkitNavItems(
-  counts: ToolkitNavCounts,
-  handlers: ToolkitNavHandlers
-): NavFooterItem[] {
+export function buildToolkitConnections(
+  counts: ToolkitConnectionsCounts,
+  handlers: ToolkitConnectionsHandlers
+): ConnectionChipProps[] {
   return [
     {
-      icon: navIcons.tools,
       label: 'Tools',
-      entity: 'tool',
+      entityType: 'tool',
       count: counts.toolCount > 0 ? counts.toolCount : undefined,
       disabled: !handlers.onToolsClick,
       onClick: handlers.onToolsClick,
     },
     {
-      icon: navIcons.decks,
       label: 'Decks',
-      entity: 'toolkit',
+      entityType: 'toolkit',
       count: counts.deckCount > 0 ? counts.deckCount : undefined,
       disabled: !handlers.onDecksClick,
       onClick: handlers.onDecksClick,
     },
     {
-      icon: navIcons.phases,
       label: 'Phases',
-      entity: 'toolkit',
+      entityType: 'toolkit',
       count: counts.phaseCount > 0 ? counts.phaseCount : undefined,
       disabled: !handlers.onPhasesClick,
       onClick: handlers.onPhasesClick,
     },
     {
-      icon: navIcons.history,
       label: 'Storico',
-      entity: 'session',
+      entityType: 'session',
       count: counts.useCount > 0 ? counts.useCount : undefined,
       disabled: !handlers.onHistoryClick,
       onClick: handlers.onHistoryClick,
     },
   ];
 }
+
+/**
+ * @deprecated Use `buildToolkitConnections` instead. Will be removed in commit 8
+ * of the Step 2 migration PR.
+ */
+export const buildToolkitNavItems = buildToolkitConnections;
+
+/** @deprecated Use `ToolkitConnectionsCounts` instead. Removed in commit 8. */
+export type ToolkitNavCounts = ToolkitConnectionsCounts;
+
+/** @deprecated Use `ToolkitConnectionsHandlers` instead. Removed in commit 8. */
+export type ToolkitNavHandlers = ToolkitConnectionsHandlers;

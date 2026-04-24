@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildToolkitNavItems } from '../buildToolkitNavItems';
+import { buildToolkitConnections, buildToolkitNavItems } from '../buildToolkitNavItems';
 
-describe('buildToolkitNavItems', () => {
+describe('buildToolkitConnections', () => {
   const handlers = {
     onToolsClick: vi.fn(),
     onDecksClick: vi.fn(),
@@ -10,8 +10,8 @@ describe('buildToolkitNavItems', () => {
     onHistoryClick: vi.fn(),
   };
 
-  it('returns 4 nav items in canonical order: Tools, Decks, Phases, Storico', () => {
-    const items = buildToolkitNavItems(
+  it('returns 4 connection items in canonical order: Tools, Decks, Phases, Storico', () => {
+    const items = buildToolkitConnections(
       { toolCount: 6, deckCount: 2, phaseCount: 4, useCount: 18 },
       handlers
     );
@@ -19,7 +19,7 @@ describe('buildToolkitNavItems', () => {
   });
 
   it('shows all 4 counts', () => {
-    const items = buildToolkitNavItems(
+    const items = buildToolkitConnections(
       { toolCount: 6, deckCount: 2, phaseCount: 4, useCount: 18 },
       handlers
     );
@@ -30,10 +30,25 @@ describe('buildToolkitNavItems', () => {
   });
 
   it('hides counts when 0', () => {
-    const items = buildToolkitNavItems(
+    const items = buildToolkitConnections(
       { toolCount: 0, deckCount: 0, phaseCount: 0, useCount: 0 },
       handlers
     );
     items.forEach(item => expect(item.count).toBeUndefined());
+  });
+
+  it('returns ConnectionChipProps shape with entityType (not entity)', () => {
+    const items = buildToolkitConnections(
+      { toolCount: 1, deckCount: 1, phaseCount: 1, useCount: 1 },
+      handlers
+    );
+    expect(items[0].entityType).toBe('tool');
+    expect(items[1].entityType).toBe('toolkit');
+    expect(items[2].entityType).toBe('toolkit');
+    expect(items[3].entityType).toBe('session');
+  });
+
+  it('deprecated alias buildToolkitNavItems still works', () => {
+    expect(buildToolkitNavItems).toBe(buildToolkitConnections);
   });
 });

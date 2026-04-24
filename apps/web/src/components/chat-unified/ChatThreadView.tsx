@@ -22,7 +22,12 @@ import { useRouter } from 'next/navigation';
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
 import { AgentSettingsDrawer } from '@/components/agent/settings';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { collectCitations, getSuggestedQuestions, useChatScroll } from '@/components/chat/shared';
+import {
+  collectCitations,
+  getSuggestedQuestions,
+  useChatScroll,
+  useThreadMessages,
+} from '@/components/chat/shared';
 import { PageViewerPanel } from '@/components/chat/viewer/PageViewerPanel';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
 import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
@@ -79,7 +84,19 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
   // State
   const [thread, setThread] = useState<ThreadData | null>(null);
-  const [messages, setMessages] = useState<ChatMessageItem[]>([]);
+
+  // Phase 1 Strangler Fig (Task 7 flip) — useThreadMessages is now the sole
+  // source of truth for the message list + AbortController lifecycle.
+  // Plan: docs/superpowers/plans/2026-04-24-chat-thread-state-hook.md
+  const {
+    messages,
+    replaceMessages: replaceMessagesInHook,
+    appendMessage,
+    patchMessageById,
+    removeMessageById,
+    abortCurrent,
+    beginAbort,
+  } = useThreadMessages();
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -102,7 +119,6 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const voicePrefs = useVoicePreferencesStore();
   const lastMessageWasVoiceRef = useRef(false);
   const handleSendRef = useRef<((content?: string) => void) | undefined>(undefined);
-  const qaAbortRef = useRef<AbortController | null>(null);
 
   const {
     state: voiceState,
@@ -155,7 +171,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         timestamp: new Date().toISOString(),
         followUpQuestions: metadata.followUpQuestions,
       };
-      setMessages(prev => [...prev, assistantMessage]);
+      appendMessage(assistantMessage);
       // TTS: auto-speak response when last message was voice-initiated
       if (voicePrefs.ttsEnabled && lastMessageWasVoiceRef.current) {
         speak(answer);
@@ -181,16 +197,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     streamState.currentAnswer,
   ]);
 
-  // Abort QA stream on unmount
-  useEffect(
-    () => () => {
-      qaAbortRef.current?.abort();
-    },
-    []
-  );
-
   // Load thread data
+  // NOTE: useThreadMessages owns the unmount cleanup for the in-flight stream.
+  // When threadId changes we ALSO abort synchronously at the top of the effect
+  // so switching threads never leaks a partial stream onto the new thread
+  // (invariant: tests/ChatThreadView.invariants.test.tsx).
   useEffect(() => {
+    abortCurrent();
     async function loadThread() {
       setIsLoading(true);
       setError(null);
@@ -252,9 +265,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             timestamp: new Date().toISOString(),
             followUpQuestions: followUps,
           };
-          setMessages([welcomeMessage]);
+          replaceMessagesInHook([welcomeMessage]);
         } else {
-          setMessages(mappedMessages);
+          replaceMessagesInHook(mappedMessages);
         }
       } catch {
         setError('Errore nel caricamento della conversazione');
@@ -264,15 +277,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     }
 
     void loadThread();
-  }, [threadId]);
+  }, [threadId, replaceMessagesInHook, abortCurrent]);
 
   // Handle continuation — append more content to the last assistant message
   const handleContinue = useCallback(
     (continuationToken: string) => {
       void (async () => {
         setIsSending(true);
-        const abortController = new AbortController();
-        qaAbortRef.current = abortController;
+        const abortController = beginAbort();
         try {
           const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
           if (!lastAssistant || !thread?.gameId) return;
@@ -289,12 +301,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   : ((event.data as { token?: string })?.token ?? '');
               if (token) {
                 appendedContent += token;
-                const content = appendedContent;
-                setMessages(prev =>
-                  prev.map(m =>
-                    m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m
-                  )
-                );
+                patchMessageById(lastAssistant.id, {
+                  content: appendedContent,
+                  continuationToken: undefined,
+                });
               }
             }
           }
@@ -302,11 +312,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           /* handled */
         } finally {
           setIsSending(false);
-          qaAbortRef.current = null;
         }
       })();
     },
-    [messages, thread?.gameId]
+    [messages, thread?.gameId, beginAbort, patchMessageById]
   );
 
   // Send message - SSE streaming when agentId available, REST fallback otherwise
@@ -326,7 +335,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         content: messageContent,
         timestamp: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, userMessage]);
+      appendMessage(userMessage);
 
       // QA stream path: game context available → use RAG QA streaming (#415)
       // Priority: gameId check FIRST because POST /agents/{id}/chat does not exist
@@ -340,10 +349,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           content: '',
           timestamp: new Date().toISOString(),
         };
-        setMessages(prev => [...prev, assistantMessage]);
+        appendMessage(assistantMessage);
 
-        const abortController = new AbortController();
-        qaAbortRef.current = abortController;
+        const abortController = beginAbort();
         let finalAnswer = '';
         let citations: unknown[] = [];
         let followUpQuestions: string[] = [];
@@ -369,24 +377,16 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               case QA_EVENT_TYPES.INLINE_CITATION: {
                 const data = event.data as { citations: InlineCitationMatch[] };
                 if (data.citations) {
-                  setMessages(prev =>
-                    prev.map(m =>
-                      m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m
-                    )
-                  );
+                  patchMessageById(assistantMsgId, { inlineCitations: data.citations });
                 }
                 break;
               }
               case QA_EVENT_TYPES.CONTINUATION_AVAILABLE: {
                 const data = event.data as ContinuationData;
                 if (data.continuationToken) {
-                  setMessages(prev =>
-                    prev.map(m =>
-                      m.id === assistantMsgId
-                        ? { ...m, continuationToken: data.continuationToken }
-                        : m
-                    )
-                  );
+                  patchMessageById(assistantMsgId, {
+                    continuationToken: data.continuationToken,
+                  });
                 }
                 break;
               }
@@ -401,11 +401,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   }>;
                 };
                 if (data.citations) {
-                  setMessages(prev =>
-                    prev.map(m =>
-                      m.id === assistantMsgId ? { ...m, snippets: data.citations } : m
-                    )
-                  );
+                  patchMessageById(assistantMsgId, { snippets: data.citations });
                 }
                 break;
               }
@@ -417,10 +413,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                     : ((event.data as { token?: string })?.token ?? '');
                 if (token) {
                   finalAnswer += token;
-                  const currentContent = finalAnswer;
-                  setMessages(prev =>
-                    prev.map(m => (m.id === assistantMsgId ? { ...m, content: currentContent } : m))
-                  );
+                  patchMessageById(assistantMsgId, { content: finalAnswer });
                 }
                 break;
               }
@@ -451,18 +444,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           }
 
           // Update assistant message with final data (citations + followUpQuestions)
-          setMessages(prev =>
-            prev.map(m =>
-              m.id === assistantMsgId
-                ? {
-                    ...m,
-                    content: finalAnswer,
-                    citations: citations as import('@/types').Citation[],
-                    followUpQuestions,
-                  }
-                : m
-            )
-          );
+          patchMessageById(assistantMsgId, {
+            content: finalAnswer,
+            citations: citations as import('@/types').Citation[],
+            followUpQuestions,
+          });
 
           // Persist assistant message to backend
           if (finalAnswer) {
@@ -481,7 +467,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           if ((err as Error).name !== 'AbortError') {
             setError("Errore nell'invio del messaggio");
             // Remove optimistic assistant message on error
-            setMessages(prev => prev.filter(m => m.id !== assistantMsgId));
+            removeMessageById(assistantMsgId);
           }
         } finally {
           setIsSending(false);
@@ -508,21 +494,20 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         });
 
         if (response?.messages) {
-          setMessages(
-            response.messages.map(
-              (m): ChatMessageItem => ({
-                id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
-                role: m.role as 'user' | 'assistant',
-                content: m.content,
-                timestamp: m.timestamp,
-              })
-            )
+          const mapped: ChatMessageItem[] = response.messages.map(
+            (m): ChatMessageItem => ({
+              id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+              timestamp: m.timestamp,
+            })
           );
+          replaceMessagesInHook(mapped);
         }
       } catch {
         setError("Errore nell'invio del messaggio");
         // Remove optimistic message on error
-        setMessages(prev => prev.filter(m => m.id !== userMessage.id));
+        removeMessageById(userMessage.id);
       } finally {
         setIsSending(false);
       }
@@ -538,6 +523,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       sendViaSSE,
       voicePrefs.ttsEnabled,
       speak,
+      replaceMessagesInHook,
+      appendMessage,
+      patchMessageById,
+      removeMessageById,
+      beginAbort,
     ]
   );
 

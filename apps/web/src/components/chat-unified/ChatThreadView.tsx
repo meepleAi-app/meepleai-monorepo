@@ -22,7 +22,12 @@ import { useRouter } from 'next/navigation';
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
 import { AgentSettingsDrawer } from '@/components/agent/settings';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { collectCitations, getSuggestedQuestions, useChatScroll } from '@/components/chat/shared';
+import {
+  collectCitations,
+  getSuggestedQuestions,
+  useChatScroll,
+  useThreadMessages,
+} from '@/components/chat/shared';
 import { PageViewerPanel } from '@/components/chat/viewer/PageViewerPanel';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
 import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
@@ -80,6 +85,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // State
   const [thread, setThread] = useState<ThreadData | null>(null);
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
+
+  // Phase 1 Strangler Fig — hook mirrors local state during migration.
+  // Tasks 3-6 dual-write to both sources; Task 7 removes the local useState.
+  // Plan: docs/superpowers/plans/2026-04-24-chat-thread-state-hook.md
+  const { replaceMessages: replaceMessagesInHook } = useThreadMessages();
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -253,8 +263,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             followUpQuestions: followUps,
           };
           setMessages([welcomeMessage]);
+          // Phase 1 Task 3 — dual-write: mirror hydration into useThreadMessages.
+          replaceMessagesInHook([welcomeMessage]);
         } else {
           setMessages(mappedMessages);
+          // Phase 1 Task 3 — dual-write: mirror hydration into useThreadMessages.
+          replaceMessagesInHook(mappedMessages);
         }
       } catch {
         setError('Errore nel caricamento della conversazione');
@@ -264,7 +278,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     }
 
     void loadThread();
-  }, [threadId]);
+  }, [threadId, replaceMessagesInHook]);
 
   // Handle continuation — append more content to the last assistant message
   const handleContinue = useCallback(

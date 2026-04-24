@@ -11,3 +11,4 @@ export type {
 } from './types';
 
 export { collectCitations, getSuggestedQuestions } from './messages';
+export { useChatScroll, type UseChatScrollResult } from './useChatScroll';

@@ -851,6 +851,63 @@
     }
   },
   "pages": {
+    "errors": {
+      "notFound": {
+        "eyebrow": "404",
+        "title": "Page not found",
+        "subtitle": "The page you're looking for doesn't exist or has been moved.",
+        "homeCta": "Back to home",
+        "exploreCta": "Explore games"
+      },
+      "serverError": {
+        "eyebrow": "500",
+        "title": "Something went wrong",
+        "subtitle": "An unexpected error occurred. Please retry or return home.",
+        "retryCta": "Retry",
+        "homeCta": "Back to home",
+        "digestLabel": "Error ID"
+      },
+      "offline": {
+        "title": "You're offline",
+        "subtitle": "Don't worry — you can still access content saved in cache.",
+        "retryCta": "Retry connection",
+        "homeCta": "Back to home",
+        "statsTitle": "Available offline",
+        "sessionsLabel": "Sessions",
+        "cachedGamesLabel": "Cached games",
+        "pendingLabel": "Pending actions",
+        "onlineStatus": "Connection restored",
+        "offlineStatus": "No connection"
+      }
+    },
+    "cookieSettings": {
+      "title": "Cookie preferences",
+      "subtitle": "Manage your cookie consent. You can update these settings at any time.",
+      "categories": {
+        "essential": {
+          "label": "Essential cookies",
+          "description": "Required for the site to function (session, core preferences). They cannot be disabled."
+        },
+        "analytics": {
+          "label": "Analytics cookies",
+          "description": "Help us understand how you use the site, in aggregated and anonymous form."
+        },
+        "functional": {
+          "label": "Functional cookies",
+          "description": "Improve your experience by remembering your choices (theme, language)."
+        }
+      },
+      "actions": {
+        "save": "Save preferences",
+        "acceptAll": "Accept all",
+        "rejectAll": "Reject optional"
+      },
+      "savedToast": "Preferences saved",
+      "policyLink": "Read the full cookie policy"
+    },
+    "cookies": {
+      "managePreferencesCta": "Manage preferences"
+    },
     "about": {
       "title": "About MeepleAI",
       "description": "Discover who we are and our mission to improve your gaming experience",
@@ -921,7 +978,11 @@
           "title": "Personal Library",
           "description": "Save your games and access them quickly. Track your collection and preferences."
         }
-      }
+      },
+      "stepsHeading": "How it works",
+      "featuresHeading": "Main features",
+      "aboutCta": "Learn more about MeepleAI",
+      "faqCta": "Browse the FAQ"
     },
     "blog": {
       "title": "Blog",

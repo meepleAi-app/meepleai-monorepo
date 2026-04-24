@@ -486,6 +486,31 @@ export default [
       "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
+  // Enforce chat/shared boundary: shared primitives are leaf modules and MUST
+  // NOT depend on feature-layer chat modules (chat-unified or chat/panel).
+  // See docs/superpowers/plans/2026-04-24-chat-shared-primitives-phase-0.md (AC-8).
+  {
+    files: ["src/components/chat/shared/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "**/components/chat-unified/**",
+                "@/components/chat-unified/**",
+                "**/components/chat/panel/**",
+                "@/components/chat/panel/**",
+              ],
+              message:
+                "chat/shared/* MUST NOT depend on chat-unified/* or chat/panel/*. Shared primitives are leaf modules.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Configuration for components rendering user-uploaded images.
   // `next/image` requires width/height at build time, which doesn't work for
   // user-uploaded content with runtime dimensions. Plain `<img>` is the correct
